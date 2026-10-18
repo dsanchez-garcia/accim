@@ -67,7 +67,7 @@ us_version=EnergyPlus_version, verboseMode=verboseMode)
 TypeError: unsupported operand type(s) for //: 'int' and 'NoneType'
 ```
 
-If you get an error similar to the one above, you are probably trying to run `addAccis()` with an IDF whose EnergyPlus version is 8.9 or older. To solve this problem, you need to update the IDF’s EnergyPlus version to 9.1 or later; it is recommended to update it to the latest version supported by accim (25.2). To do so, you need to run EP-Launch, go to the Utilities tab, look for and select IDFversionUpdater; run IDFVersionUpdater; then choose the file to update, select the new version and finally update file.
+If you get an error similar to the one above, you are probably trying to run `addAccis()` with an IDF whose EnergyPlus version is 8.9 or older. To solve this problem, you need to update the IDF’s EnergyPlus version to 9.1 or later; it is recommended to update it to the latest version supported by accim (26.2). To do so, you need to run EP-Launch, go to the Utilities tab, look for and select IDFversionUpdater; run IDFVersionUpdater; then choose the file to update, select the new version and finally update file.
 
 ![Troubleshooting_IDFversion_01](images/accim_troubleshooting_02_idf_version.png)
 
@@ -83,7 +83,7 @@ You can also update the IDF from Python with `accim.utils.update_idf_version()`,
 from accim.utils import update_idf_version
 update_idf_version(
     input_idf_path='old_model.idf',
-    ep_version_target='25.2',
+    ep_version_target='26.2',
     output_idf_name='model_v{version}.idf',
 )
 ```
@@ -92,7 +92,7 @@ update_idf_version(
 
 `ValueError: 8.9 is not a valid EnergyPlus_version.`
 
-`addAccis()` accepts `EnergyPlus_version` values from ‘9.1’ to ‘25.2’, or ‘auto’, which reads the version of each IDF. For an IDF of another version, update it as explained above.
+`addAccis()` accepts `EnergyPlus_version` values from ‘9.1’ to ‘26.2’, or ‘auto’, which reads the version of each IDF. For an IDF of another version, update it as explained above.
 
 ---
 

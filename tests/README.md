@@ -4,7 +4,7 @@ This directory contains test suites for the accim library.
 
 ## Structure
 
-- `core/`: Tests for the modules outside `parametric_and_optimisation` (`accim.sim`, `accim.run`, `accim.data`, `accim.utils`). They do not run EnergyPlus; the few that read an IDD of EnergyPlus 25.1 or 25.2 are skipped when it is not installed
+- `core/`: Tests for the modules outside `parametric_and_optimisation` (`accim.sim`, `accim.run`, `accim.data`, `accim.utils`). The few that read an IDD of EnergyPlus 25.1, 25.2 or 26.2 are skipped when that version is not installed. Those of 26.2 update a sample IDF with its transition programs and run `addAccis` in a separate Python process, and one of them simulates 1 day with EnergyPlus 26.2; the others do not run simulations
 - `parametric_and_optimisation/`: Test suite for the parametric and optimisation module
 - `test_data/`: Shared test data files (IDF models and EPW weather files)
 

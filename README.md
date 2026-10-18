@@ -32,7 +32,7 @@ If you use this package, please cite us:
 ## 2.0 Requirements
 To use accim, the following must be installed:
 - Python 3.9 or newer
-- EnergyPlus (any version between 9.1 and 25.2 those included)
+- EnergyPlus (any version between 9.1 and 26.2 those included)
 
 ## 2.1 Installation
 First of all, you need to install the package. There are two options:
@@ -114,7 +114,7 @@ Once you run this code, you will be asked to enter some information at the termi
         Output_freqs=list, # Output_freqs: ['timestep', 'hourly', 'daily', 'monthly', 'runperiod']. For instance: Output_freqs=['hourly', 'runperiod'],
         Output_gen_dataframe=bool, # Output_keep_existing: True or False. For instance: Output_keep_existing=False,
         Output_take_dataframe=pandas Dataframe,
-        EnergyPlus_version=str, # EnergyPlus_version: '9.1', '9.2', '9.3', '9.4', '9.5', '9.6', '22.1', '22.2', '23.1', '23.2', '24.1', '24.2', '25.1', '25.2' or 'auto'. For instance: EnergyPlus_version='25.1',
+        EnergyPlus_version=str, # EnergyPlus_version: '9.1', '9.2', '9.3', '9.4', '9.5', '9.6', '22.1', '22.2', '23.1', '23.2', '24.1', '24.2', '25.1', '25.2', '26.1', '26.2' or 'auto'. For instance: EnergyPlus_version='25.1',
         TempCtrl=str, # TempCtrl: 'temperature' or 'temp', or 'pmv'. For instance: TempCtrl='temp',
         ComfStand=list, # it is the Comfort Standard. Can be any integer from 0 to 22. For instance: ComfStand=[0, 1, 2, 3],
         CAT=list, # it is the Category. Can be 1, 2, 3, 80, 85 or 90. For instance: CAT=[3, 80],

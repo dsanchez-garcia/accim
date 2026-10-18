@@ -18,8 +18,29 @@ def scan_zones(self):
     """
     Used to scan the occupied zones in an idf.
 
+    :raises ValueError: If the idf has no People objects, since the occupied zones are those of the
+        People objects. EnergyPlus 26.2 can also describe the occupants with People:Definition and
+        People:Instance objects, which accim does not read.
     """
     from accim.sim.apmv_setpoints import _resolve_targets
+
+    if len(self.idf1.idfobjects['PEOPLE']) == 0:
+        try:
+            people_instances = self.idf1.idfobjects['PEOPLE:INSTANCE']
+        except KeyError:
+            # The IDDs before EnergyPlus 26.2 have no People:Instance objects
+            people_instances = []
+        if len(people_instances) > 0:
+            raise ValueError(
+                'The model describes its occupants with People:Definition and People:Instance objects, '
+                'which EnergyPlus 26.2 introduced and accim does not support yet. accim finds the occupied '
+                'zones and adds the thermal comfort models in People objects, so please describe the '
+                'occupants with People objects, which are still valid in EnergyPlus 26.2.'
+            )
+        raise ValueError(
+            'The model has no People objects. accim finds the occupied zones and adds the thermal comfort '
+            'models in People objects, so the model needs at least one.'
+        )
 
     target_data = _resolve_targets(self.idf1)
 

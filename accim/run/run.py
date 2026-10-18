@@ -40,7 +40,7 @@ def get_iddfile_from_idfs(idfnames: list) -> str:
 
     :param idfnames: A list of the IDF file names.
     :type idfnames: list
-    :return: The path of the IDD file, for instance 'C:/EnergyPlusV25-2-0/Energy+.idd'.
+    :return: The path of the IDD file, for instance 'C:/EnergyPlusV26-2-0/Energy+.idd'.
     :rtype: str
     """
     versions = set()
@@ -103,7 +103,7 @@ def runEp(
     :param num_CPUs: An integer. The number of CPUs to be used.
     :type num_CPUs: int
     :param EnergyPlus_version: A string.
-        It should be the EnergyPlus version of the IDFs, from '9.1' to '25.2',
+        It should be the EnergyPlus version of the IDFs, from '9.1' to '26.2',
         or 'auto' to read it from the IDFs. Default is None, which asks for it.
     :type EnergyPlus_version: str
     """

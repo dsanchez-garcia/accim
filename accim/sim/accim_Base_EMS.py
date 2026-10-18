@@ -618,6 +618,27 @@ def addEMSProgramsBase(self, ScriptType: str = None, verboseMode: bool = True):
             print('Added - SetASTnoTol Program')
     #    print([program for program in self.idf1.idfobjects['EnergyManagementSystem:Program'] if program.Name == 'SetASTnoTol'])
 
+    # SetComfTemp (custom model) reads m and n, and CountHours_<zone> reads ACSTnoTol and AHSTnoTol,
+    # before SetAST and SetASTnoTol set them in the same timestep. Since EnergyPlus 26.1, the first
+    # timestep of each environment stops with "used in expression has not been initialized" (before,
+    # they kept the values of the previous pass), so they are set to 0 at BeginNewEnvironment
+    # (see addEMSPCMBase). The first timestep of an environment is a warmup timestep, and the
+    # setpoints are calculated after m and n are set.
+    if 'InitASTvariables' in programlist:
+        if verboseMode:
+            print('Not added - InitASTvariables Program')
+    else:
+        self.idf1.newidfobject(
+            'EnergyManagementSystem:Program',
+            Name='InitASTvariables',
+            Program_Line_1='set m = 0',
+            Program_Line_2='set n = 0',
+            Program_Line_3='set ACSTnoTol = 0',
+            Program_Line_4='set AHSTnoTol = 0'
+            )
+        if verboseMode:
+            print('Added - InitASTvariables Program')
+
     for zonename in self.ems_objs_name:
         if 'CountHoursNoApp_'+zonename in programlist:
             if verboseMode:
@@ -1089,6 +1110,9 @@ def addEMSPCMBase(self, verboseMode: bool = True):
     top_level_programs = [p for p in programlist if p not in subroutine_programs]
     top_level_programs = sorted(top_level_programs, key=_pcm_priority)
 
+    # Programs that initialise variables once, at the beginning of each environment
+    new_environment_programs = {'InitASTvariables'}
+
     for i in top_level_programs:
         if i in pcmlist:
             if verboseMode:
@@ -1097,7 +1121,8 @@ def addEMSPCMBase(self, verboseMode: bool = True):
             self.idf1.newidfobject(
                 'EnergyManagementSystem:ProgramCallingManager',
                 Name=i,
-                EnergyPlus_Model_Calling_Point="BeginTimestepBeforePredictor",
+                EnergyPlus_Model_Calling_Point=('BeginNewEnvironment' if i in new_environment_programs
+                                                else "BeginTimestepBeforePredictor"),
                 Program_Name_1=i
                 )
             if verboseMode:

@@ -14,4 +14,4 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-epvers_space_objs = ['9.6', '22.1', '22.2', '23.1', '23.2', '24.1', '24.2', '25.1', '25.2']
+epvers_space_objs = ['9.6', '22.1', '22.2', '23.1', '23.2', '24.1', '24.2', '25.1', '25.2', '26.1', '26.2']

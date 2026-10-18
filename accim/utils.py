@@ -586,6 +586,10 @@ def get_idd_path_from_ep_version(EnergyPlus_version: str):
         iddfile = 'C:/EnergyPlusV25-1-0/Energy+.idd'
     elif EnergyPlus_version.lower() == '25.2':
         iddfile = 'C:/EnergyPlusV25-2-0/Energy+.idd'
+    elif EnergyPlus_version.lower() == '26.1':
+        iddfile = 'C:/EnergyPlusV26-1-0/Energy+.idd'
+    elif EnergyPlus_version.lower() == '26.2':
+        iddfile = 'C:/EnergyPlusV26-2-0/Energy+.idd'
     else:
         iddfile = 'not-supported'
 
@@ -1312,6 +1316,7 @@ def read_eso_using_readvarseso(
     # B. Búsqueda automática en rutas por defecto
     if not readvars_path:
         common_paths = [
+            r'C:\EnergyPlusV26-2-0', r'C:\EnergyPlusV26-1-0',
             r'C:\EnergyPlusV25-2-0', r'C:\EnergyPlusV25-1-0', r'C:\EnergyPlusV24-2-0', r'C:\EnergyPlusV24-1-0',
             r'C:\EnergyPlusV23-2-0', r'C:\EnergyPlusV23-1-0',
             r'C:\EnergyPlusV22-2-0', r'C:\EnergyPlusV22-1-0',

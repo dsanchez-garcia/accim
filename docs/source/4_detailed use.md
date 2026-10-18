@@ -79,7 +79,7 @@ Enter the Output frequencies separated by space (timestep, hourly, daily, monthl
 
 Do you want to generate a dataframe to see all outputs? (true or false): false
 
-Enter the EnergyPlus version (9.1 to 25.2, or auto): auto
+Enter the EnergyPlus version (9.1 to 26.2, or auto): auto
 
 Enter the Temperature Control method (temperature or pmv): temperature
 ```
@@ -92,7 +92,7 @@ where:
 *   Output_type can be ‘standard’, ‘detailed’, ‘simplified’ or ‘custom’ and it refers to the simulation results: ‘standard’ means that results will contain the full selection relevant to accim;‘detailed’ is mainly used for testing the software tool; ‘simplified’ means that results are just going to be the hourly operative temperature and VRF consumption of each zone, mainly used when you need the results not to be heavy files, because you are going to run a lot of simulations and capacity is limited; and finally, ‘custom’ allows the user to specify the outputs to be kept or removed by entering them in the python console.
 *   Output_freqs (Output frequencies) can be timestep, hourly, daily, monthly and/or runperiod, and these must be entered separated by space. It will add the specified output type (standard or simplified) in all entered frequencies.
 *   Also, a pandas DataFrame instance can be created containing all Output:Variable objects. This allows the user to filter the DataFrame as needed, so that it only contains the needed Output:Variable objects, and then it can be entered in the argument `Output_take_dataframe`
-*   EnergyPlus_version can be ‘auto’ or a version from ‘9.1’ to ‘25.2’. With ‘auto’ (the default when the arguments are given in the function call), accim reads the version of each IDF and uses the IDD file of that version of EnergyPlus, which must be installed in its default path (for instance, “C:\EnergyPlusV25-2-0” for an IDF of EnergyPlus 25.2). If you enter a version, for instance ‘9.1’, accim will look for the E+9.1.0 IDD file in path “C:\EnergyPlusV9-1-0”.
+*   EnergyPlus_version can be ‘auto’ or a version from ‘9.1’ to ‘26.2’. With ‘auto’ (the default when the arguments are given in the function call), accim reads the version of each IDF and uses the IDD file of that version of EnergyPlus, which must be installed in its default path (for instance, “C:\EnergyPlusV26-2-0” for an IDF of EnergyPlus 26.2). If you enter a version, for instance ‘9.1’, accim will look for the E+9.1.0 IDD file in path “C:\EnergyPlusV9-1-0”.
 *   Temperature Control method can be ‘temperature’ or ‘temp’, or ‘pmv’. If ‘temp’ is used, the setpoint will be the operative temperature, otherwise if ‘pmv’ is used, the setpoint will be the PMV index.
 
 accis will show on the prompt command dialog all the objects it adds, and those that doesn’t need to be added because were already in the IDF, and finally ask you to enter some values to set up the IDFs as you desire. Please refer to the section titled ‘Setting up the target IDFs’.
@@ -114,7 +114,7 @@ If you have run `accis.addAccis()`, you will be asked in the prompt to enter a f
 | `Output_freqs` | list of `'timestep'`, `'hourly'`, `'daily'`, `'monthly'` and `'runperiod'` | asked |
 | `Output_gen_dataframe` | `True` or `False` | asked with the prompts; otherwise, no DataFrame |
 | `Output_take_dataframe` | pandas DataFrame | `None` |
-| `EnergyPlus_version` | `'auto'`, or from `'9.1'` to `'25.2'` | `'auto'` |
+| `EnergyPlus_version` | `'auto'`, or from `'9.1'` to `'26.2'` | `'auto'` |
 | `TempCtrl` | `'temperature'` (or `'temp'`) or `'pmv'` | asked |
 | `ComfStand` | list of numbers from 0 to 22, or 99 (custom model) | asked |
 | `CustAST_m`, `CustAST_n`, `CustAST_ACSToffset`, `CustAST_AHSToffset`, `CustAST_ACSTaul`, `CustAST_ACSTall`, `CustAST_AHSTaul`, `CustAST_AHSTall` | numbers (only used with `ComfStand=[99]`) | 0 |
@@ -330,7 +330,7 @@ Enter the Output frequencies separated by space (timestep, hourly, daily, monthl
 
 Do you want to generate a dataframe to see all outputs? (true or false): false
 
-Enter the EnergyPlus version (9.1 to 25.2, or auto): auto
+Enter the EnergyPlus version (9.1 to 26.2, or auto): auto
 
 Enter the Temperature Control method (temperature or pmv): temperature
 ```
@@ -601,7 +601,7 @@ run.runEp(
 )
 ```
 
-If you omit `runOnlyAccim`, `confirmRun` or `EnergyPlus_version`, `runEp()` asks for them in the prompt. Before running, it lists the IDFs, the EPWs and the simulations, and their number, and asks for your confirmation (unless `confirmRun=True`), because you might start thousands of simulations by mistake. `EnergyPlus_version` is the version of the IDFs, from ‘9.1’ to ‘25.2’, or ‘auto’ to read it from the IDFs, which must then be of the same version; `num_CPUs` is 2 by default.
+If you omit `runOnlyAccim`, `confirmRun` or `EnergyPlus_version`, `runEp()` asks for them in the prompt. Before running, it lists the IDFs, the EPWs and the simulations, and their number, and asks for your confirmation (unless `confirmRun=True`), because you might start thousands of simulations by mistake. `EnergyPlus_version` is the version of the IDFs, from ‘9.1’ to ‘26.2’, or ‘auto’ to read it from the IDFs, which must then be of the same version; `num_CPUs` is 2 by default.
 
 Afterwards, you’ll see the calculations progress, and you’ll get the usual simulation files of each simulation: `.audit`, `.eio`, `.err`, `.eso`, `.csv`, `Table.csv`, `Table.htm` and so on, all of them named `IDF name[EPW name`. You might need to keep these in order to debug some error, or any other reason, but if you only need the CSV files with the hourly results, you can run the `removefiles()` function:
 
