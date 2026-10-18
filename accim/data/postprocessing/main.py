@@ -166,6 +166,7 @@ class Table:
         import numpy as np
         import csv
         from besos.eppy_funcs import get_building
+        from accim.utils import get_people_objects
 
         self.frequency = frequency
         self.normalised_energy_units = normalised_energy_units
@@ -715,7 +716,8 @@ class Table:
                 spacenames = []
                 # spacenames_for_ems_uniquekey_people = []
                 zonenames_from_space = []
-                for people in building.idfobjects['PEOPLE']:
+                # People objects, and the People:Instance objects of EnergyPlus 26.2
+                for people in get_people_objects(building):
                     for spacelist in [i for i in building.idfobjects['SPACELIST'] if i.Name == people.Zone_or_ZoneList_or_Space_or_SpaceList_Name]:
                         for space in [i for i in building.idfobjects['SPACE'] if i.Space_Type == spacelist.Name]:
                             # spacenames_for_ems_uniquekey.append(f'{space.Name} {spacelist.Name}')

@@ -181,7 +181,9 @@ def apply_heating_activation_time_sch(idf_path: str, apply_to_occupancy: bool = 
 
     if apply_to_occupancy:
         if sch_added:
-            for people in [i for i in building.idfobjects['people']]:
+            from accim.utils import get_people_objects
+            # People objects, and the People:Instance objects of EnergyPlus 26.2
+            for people in get_people_objects(building):
                 people.Number_of_People_Schedule_Name = 'Heating_activation_time_chile'
             print('Heating_activation_time_chile has been used in all occupancy schedules in the model.')
             building.savecopy(new_idf)

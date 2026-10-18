@@ -19,7 +19,7 @@ import pandas as pd
 from besos.IDF_class import IDF
 import besos.objectives
 import eppy
-from accim.utils import transform_ddmm_to_int
+from accim.utils import transform_ddmm_to_int, get_people_objects, get_people_definition, is_people_instance
 import accim.sim.accim_Main_single_idf as accim_Main
 
 # ==============================================================================
@@ -98,6 +98,10 @@ def _resolve_targets(building: IDF) -> List[Dict[str, str]]:
     """
     Analyzes the IDF to find all 'People' objects and resolves their target Zones or Spaces
     for EMS application. It follows a strict Global Hierarchy to determine the target level.
+
+    The 'People:Instance' objects of EnergyPlus 26.2 are resolved in the same way: EnergyPlus
+    names their outputs after the People:Instance object (never after its People:Definition),
+    following the same rules as for People objects.
 
     The logic is based on the presence of specific object types in the model to ensure
     compatibility with both legacy (Zone-based) and modern (Space-based) EnergyPlus versions.
@@ -202,9 +206,9 @@ def _resolve_targets(building: IDF) -> List[Dict[str, str]]:
                 break
         return items
 
-    # --- 2. ITERATE PEOPLE OBJECTS ---
-    # We process every 'People' object in the model to determine what it controls.
-    for people in building.idfobjects['PEOPLE']:
+    # --- 2. ITERATE PEOPLE AND PEOPLE:INSTANCE OBJECTS ---
+    # We process every 'People' (and 'People:Instance') object in the model to determine what it controls.
+    for people in get_people_objects(building):
 
         # Robustly find the container name (the field name varies by E+ version)
         container_name = ""
@@ -374,7 +378,8 @@ def apply_apmv_setpoints(
     """
 
     # --- 1. RESOLVE TARGETS ---
-    # Identify all zones or spaces that need EMS control based on the 'People' objects present in the model.
+    # Identify all zones or spaces that need EMS control based on the 'People' objects present in the model
+    # (and the 'People:Instance' objects of EnergyPlus 26.2).
     # This step abstracts away the complexity of ZoneLists, SpaceLists, and Spaces.
     target_data = _resolve_targets(building)
 
@@ -1179,8 +1184,8 @@ def get_input_template_dictionary(building: IDF) -> Dict[str, str]:
 
 def set_zones_always_occupied(building: IDF, verbose_mode: bool = True):
     """
-    Sets the occupancy schedule of all 'People' objects to 'On' (always occupied).
-    If the 'On' schedule does not exist, it creates it.
+    Sets the occupancy schedule of all 'People' objects (and 'People:Instance' objects, in
+    EnergyPlus 26.2) to 'On' (always occupied). If the 'On' schedule does not exist, it creates it.
 
     :param building: The BESOS/eppy IDF object.
     :param verbose_mode: If True, prints success messages. Warnings are always printed.
@@ -1202,8 +1207,8 @@ def set_zones_always_occupied(building: IDF, verbose_mode: bool = True):
     else:
         warnings.warn("Schedule 'On' already exists. Using existing schedule.")
 
-    # Apply to all People objects
-    for i in building.idfobjects['people']:
+    # Apply to all People and People:Instance objects
+    for i in get_people_objects(building):
         i.Number_of_People_Schedule_Name = 'On'
 
     if verbose_mode:
@@ -1323,7 +1328,9 @@ def set_pmv_input_parameters(
     Modifies 'People' objects in the IDF to set the parameters that influence the PMV calculation.
 
     It creates 'Schedule:Compact' objects for the specified parameters and assigns them
-    to the People objects.
+    to the People objects. In models of EnergyPlus 26.2 with 'People:Instance' objects, the
+    schedules are assigned to the People:Instance objects, and the Fanger model is set in the
+    'People:Definition' objects they reference.
 
     IMPORTANT: If a parameter is set to None (default), it will NOT be modified in the IDF.
     This allows you to update only specific parameters (e.g., just air velocity) without
@@ -1387,8 +1394,8 @@ def set_pmv_input_parameters(
 
     sch_comp_objs = [s.Name for s in building.idfobjects['Schedule:Compact']]
 
-    # 3. Iterate over People objects
-    for people in building.idfobjects['PEOPLE']:
+    # 3. Iterate over People and People:Instance objects
+    for people in get_people_objects(building):
         p_name = people.Name
 
         # --- A. Find the Target Key for this Person ---
@@ -1494,4 +1501,13 @@ def set_pmv_input_parameters(
         # --- D. Ensure Fanger Model ---
         # Only force Fanger if we actually touched this object
         if any_modified:
-            people.Thermal_Comfort_Model_1_Type = 'Fanger'
+            if is_people_instance(people):
+                # The thermal comfort models of a People:Instance object are in its People:Definition
+                definition = get_people_definition(building, people)
+                if definition is None:
+                    warnings.warn(f"People:Definition '{people.People_Definition_Name}' of People:Instance "
+                                  f"'{p_name}' not found: the Fanger model could not be set.")
+                else:
+                    definition.Thermal_Comfort_Model_1_Type = 'Fanger'
+            else:
+                people.Thermal_Comfort_Model_1_Type = 'Fanger'

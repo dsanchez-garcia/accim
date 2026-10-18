@@ -283,6 +283,22 @@ def test_occupied_uses_people_zonelist_while_air_conditioned_uses_hvac_zones():
     assert sim.set_building_floor_area(mode='air-condicioned') == pytest.approx(20.8)
 
 
+def test_occupied_reads_people_instance_objects():
+    # EnergyPlus 26.2 can describe the occupants with People:Instance objects instead of People objects.
+    # Before, the occupied floor area of this model was 0.
+    idf = make_idf(
+        'model_26_2.idf',
+        zones=['LivingRoom', 'Hall', 'OFFICE'],
+        floors={'LivingRoom': 8.4, 'Hall': 7.2, 'OFFICE': 5.2},
+        people_target='Allzones',
+        zonelist_zones=['LivingRoom', 'OFFICE'],
+    )
+    idf.idfobjects['PEOPLE:INSTANCE'] = idf.idfobjects.pop('PEOPLE')
+    sim = DummySimulation([idf])
+
+    assert sim.set_building_floor_area(mode='occupied') == pytest.approx(13.6)
+
+
 def test_air_conditioned_detects_zone_hvac_equipment_connections():
     idf = make_idf(
         'equipment_connections.idf',

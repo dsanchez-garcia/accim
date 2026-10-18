@@ -212,7 +212,8 @@ def modify_timesteps_path(idfpath: str, timesteps: int):
 
 def set_occupancy_to_always(idf_object: besos.IDF_class.IDF) -> besos.IDF_class.IDF:
     """
-    Sets the occupancy to always occupied for all zones with people object.
+    Sets the occupancy to always occupied for all zones with people object
+    (People objects, and the People:Instance objects of EnergyPlus 26.2).
 
     :param idf_object: the IDF class from besos or eppy
     :type idf_object: IDF
@@ -230,7 +231,7 @@ def set_occupancy_to_always(idf_object: besos.IDF_class.IDF) -> besos.IDF_class.
             Field_4='1'
         )
 
-    obj_ppl = [i for i in idf_object.idfobjects['people']]
+    obj_ppl = get_people_objects(idf_object)
     for ppl in obj_ppl:
         ppl.Number_of_People_Schedule_Name = 'On 24/7'
         print(f'{ppl.Name} Number of People Schedule Name has been set to always occupied.')
@@ -669,19 +670,77 @@ def get_available_fields(
     return formatted_fields
 
 
+def get_people_objects(idf: besos.IDF_class.IDF) -> List[Any]:
+    """
+    Returns the objects that place the occupants in the model: the People objects and the
+    People:Instance objects, which EnergyPlus 26.2 introduced.
+
+    A People:Instance object has the fields of a People object that accim reads: the name, the
+    Zone, ZoneList, Space or SpaceList, and the schedules (occupancy, activity, work efficiency,
+    clothing insulation and air velocity). EnergyPlus also names their outputs in the same way, so
+    accim handles both alike. The number of people and the thermal comfort models of a
+    People:Instance object are in the People:Definition object it references
+    (see `get_people_definition`).
+
+    Args:
+        idf (besos.IDF_class.IDF): The IDF model object.
+
+    Returns:
+        List[Any]: The People objects, followed by the People:Instance objects.
+    """
+    people_objs = list(idf.idfobjects['PEOPLE'])
+    try:
+        people_objs.extend(idf.idfobjects['PEOPLE:INSTANCE'])
+    except KeyError:
+        # The IDDs before EnergyPlus 26.2 have no People:Instance objects
+        pass
+    return people_objs
+
+
+def is_people_instance(people_obj: Any) -> bool:
+    """
+    Returns True if the object is a People:Instance object (EnergyPlus 26.2 and later), and False
+    if it is a People object.
+
+    Args:
+        people_obj (Any): An object returned by `get_people_objects`.
+    """
+    return str(getattr(people_obj, 'key', '')).upper() == 'PEOPLE:INSTANCE'
+
+
+def get_people_definition(idf: besos.IDF_class.IDF, people_instance: Any) -> Optional[Any]:
+    """
+    Returns the People:Definition object referenced by a People:Instance object
+    (EnergyPlus 26.2 and later).
+
+    Args:
+        idf (besos.IDF_class.IDF): The IDF model object.
+        people_instance (Any): A People:Instance object of the model.
+
+    Returns:
+        Optional[Any]: The People:Definition object, or None if the model has none with that name.
+    """
+    definition_name = str(people_instance.People_Definition_Name).strip().upper()
+    for definition in idf.idfobjects['PEOPLE:DEFINITION']:
+        if str(definition.Name).strip().upper() == definition_name:
+            return definition
+    return None
+
+
 def get_people_hierarchy(idf: besos.IDF_class.IDF) -> Dict[str, Any]:
     """
     Extracts the relationship between People objects and the physical Spaces they occupy.
 
     Since a 'People' object can reference a Zone, a ZoneList, a Space, or a SpaceList,
     this function resolves all these references down to a list of specific Space names.
+    The People:Instance objects of EnergyPlus 26.2 are included in the same way.
 
     Args:
         idf (Union[IDF, IDF_class]): The IDF model object.
 
     Returns:
-        Dict[str, Any]: A dictionary where keys are People object names and values
-                        contain the target reference and the resolved list of spaces.
+        Dict[str, Any]: A dictionary where keys are the names of the People and People:Instance
+                        objects and values contain the target reference and the resolved list of spaces.
                         Example:
                         {
                             "Residential Living Occupants": {
@@ -747,10 +806,10 @@ def get_people_hierarchy(idf: besos.IDF_class.IDF) -> Dict[str, Any]:
         resolver_map[zl_upper] = all_spaces_in_list
         type_map[zl_upper] = "ZoneList"
 
-    # 2. PROCESS PEOPLE OBJECTS
+    # 2. PROCESS PEOPLE AND PEOPLE:INSTANCE OBJECTS
     people_hierarchy = {}
 
-    for person in idf.idfobjects['PEOPLE']:
+    for person in get_people_objects(idf):
         p_name = person.Name
         # The critical field that links People to Geometry
         target_name = person.Zone_or_ZoneList_or_Space_or_SpaceList_Name
@@ -775,7 +834,8 @@ def get_people_names_for_ems(
         output_format: str = 'list'
 ) -> Union[List[str], Dict[str, List[str]]]:
     """
-    Generates unique instance names for People objects applied to spaces.
+    Generates unique instance names for People objects (and the People:Instance objects of
+    EnergyPlus 26.2) applied to spaces.
 
     Naming Pattern: "{SpaceName} {PeopleName}"
     Example: "Floor_1 Residential Living Occupants"
@@ -928,7 +988,8 @@ def get_idf_hierarchy_with_people(idf: besos.IDF_class.IDF) -> Dict[str, Any]:
         - "people": The name of the associated People object (str) or None.
 
     The function resolves the 'People' object assignment regardless of whether
-    it is assigned to a Space, a Zone, a SpaceList, or a ZoneList.
+    it is assigned to a Space, a Zone, a SpaceList, or a ZoneList. The People:Instance
+    objects of EnergyPlus 26.2 are handled as People objects.
 
     Args:
         idf (besos.IDF_class.IDF): The BESOS IDF model object.
@@ -1030,8 +1091,8 @@ def get_idf_hierarchy_with_people(idf: besos.IDF_class.IDF) -> Dict[str, Any]:
         zonelist_map[zl.Name.upper()] = members
         hierarchy["groups"]["zone_lists"][zl.Name] = [m for m in zl.obj[2:]]
 
-    # --- STEP 4: PROCESS PEOPLE (Inject into Space Dicts) ---
-    people_objs = idf.idfobjects['PEOPLE']
+    # --- STEP 4: PROCESS PEOPLE AND PEOPLE:INSTANCE (Inject into Space Dicts) ---
+    people_objs = get_people_objects(idf)
 
     for person in people_objs:
         p_name = person.Name

@@ -16,6 +16,7 @@
 
 """Add EnergyPlus objects in common to both ExistingHVAC and VRFsystem."""
 from accim.lists import epvers_space_objs
+from accim.utils import get_people_definition
 
 def setComfFieldsPeople(
         self,
@@ -29,9 +30,16 @@ def setComfFieldsPeople(
     to Thermal Comfort Model types 1 and 2 fields of the existing People
     objects.
 
+    In models of EnergyPlus 26.2 with People:Instance objects, the thermal comfort
+    models are in the People:Definition objects they reference, so the same models
+    are set in those People:Definition objects (models 1 and 2, Fanger as model 3
+    if TempCtrl is 'pmv', and the other models empty, as in the People objects).
+
     :param EnergyPlus_version: Inherited from class `accim.sim.accis.addAccis`
     :param TempCtrl: Inherited from class `accim.sim.accis.addAccis`
     :param verboseMode: Inherited from class `accim.sim.accis.addAccis`
+    :raises ValueError: If a People:Instance object references a People:Definition
+        object that is not in the model.
     """
     ppl = ([people for people in self.idf1.idfobjects['PEOPLE']])
 
@@ -173,12 +181,33 @@ def setComfFieldsPeople(
                 firstpeopleobject = self.idf1.idfobjects['PEOPLE'][0]
                 self.idf1.removeidfobject(firstpeopleobject)
 
-    ppl = ([people for people in self.idf1.idfobjects['PEOPLE']])
+    try:
+        people_instances = list(self.idf1.idfobjects['PEOPLE:INSTANCE'])
+    except KeyError:
+        # The IDDs before EnergyPlus 26.2 have no People:Instance objects
+        people_instances = []
+
+    definitions = []
+    for instance in people_instances:
+        definition = get_people_definition(self.idf1, instance)
+        if definition is None:
+            raise ValueError(
+                f'The People:Instance object "{instance.Name}" references the People:Definition object '
+                f'"{instance.People_Definition_Name}", which is not in the model.'
+            )
+        if all(definition is not d for d in definitions):
+            definitions.append(definition)
+
+    comfort_models = ['AdaptiveASH55', 'AdaptiveCEN15251', 'Fanger' if TempCtrl == 'pmv' else '', '', '', '', '']
+    for definition in definitions:
+        for n, comfort_model in enumerate(comfort_models, start=1):
+            setattr(definition, f'Thermal_Comfort_Model_{n}_Type', comfort_model)
 
     if verboseMode:
         print('The people objects in the model have been amended.')
+        if len(definitions) > 0:
+            print('The People:Definition objects of the People:Instance objects in the model have been amended.')
         # print(*peoplelist,sep="\n")
-    del ppl, firstpeopleobject
 
 
 def saveaccim(self, verboseMode: bool = True):

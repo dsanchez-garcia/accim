@@ -428,6 +428,8 @@ class AnalysisMixin:
     def _resolve_occupied_zone_names(self, idf: Any) -> set:
         """Resolve occupied zone names from PEOPLE object targets.
 
+        The PEOPLE:INSTANCE objects of EnergyPlus 26.2 are read as PEOPLE objects.
+
         Parameters
         ----------
         idf : Any
@@ -453,7 +455,8 @@ class AnalysisMixin:
             'Zone_or_ZoneList_Name',
             'Zone_Name',
         ]
-        for people in self._idf_objects(idf, 'PEOPLE'):
+        people_objects = list(self._idf_objects(idf, 'PEOPLE')) + list(self._idf_objects(idf, 'PEOPLE:INSTANCE'))
+        for people in people_objects:
             target = self._first_existing_attr(people, people_target_fields)
             if target:
                 targets.append(target)

@@ -9,11 +9,14 @@ EnergyPlus 26.1 and 26.2 were added later in the same places. Before, addAccis r
 runEp with 'auto' stopped because they were not supported, the addAccis of
 accis_single_idf_funcs (used by the parametric module) rejected the IDFs of 26.x even with
 EnergyPlus_version=None, and read_eso_using_readvarseso did not look for ReadVarsESO in their
-installation folders. accim only reads People objects, so a model of 26.2 that describes its
-occupants with the new People:Definition and People:Instance objects now stops with a clear error.
+installation folders. A model without People objects now stops with a clear error.
 Since EnergyPlus 26.1, a variable that a program reads before another one sets it stops the
 simulation in the first timestep of each environment, which stopped the custom model; the program
 InitASTvariables now sets those variables at BeginNewEnvironment.
+
+accim also reads the People:Definition and People:Instance objects of EnergyPlus 26.2, which it
+rejected before (see test_people_instance.py): the sample model converted to these objects gives the
+same results as with People objects, with addAccis and with aPMV setpoints.
 """
 import builtins
 import os
@@ -24,6 +27,7 @@ import sys
 from pathlib import Path
 from types import SimpleNamespace
 
+import pandas as pd
 import pytest
 
 import accim.lists
@@ -265,15 +269,6 @@ def test_runep_uses_the_version_corrected_in_the_prompt(fake_run_folder, monkeyp
     assert _FakeIDF.iddname == IDD_26_2
 
 
-def test_scan_zones_rejects_people_instance_objects():
-    # EnergyPlus 26.2 can describe the occupants with People:Definition and People:Instance objects.
-    # Before, accim found no occupied zones and stopped with an UnboundLocalError in setComfFieldsPeople.
-    idf = SimpleNamespace(idfobjects={'PEOPLE': [], 'PEOPLE:INSTANCE': [SimpleNamespace(Name='People Zone1')]})
-
-    with pytest.raises(ValueError, match='People:Definition and People:Instance objects'):
-        scan_zones(SimpleNamespace(idf1=idf))
-
-
 def test_scan_zones_rejects_models_without_people():
     # The IDDs before EnergyPlus 26.2 have no People:Instance objects
     idf = SimpleNamespace(idfobjects={'PEOPLE': []})
@@ -364,8 +359,12 @@ def idf_26_2(tmp_path_factory):
 
 def _run_in_new_process(script, folder):
     # eppy only sets one IDD per process, and the other tests of the session may have set the IDD of
-    # EnergyPlus 25.1 or 25.2.
-    result = subprocess.run([sys.executable, '-c', script, str(folder)], capture_output=True, text=True, timeout=900)
+    # EnergyPlus 25.1 or 25.2. PYTHONPATH makes the new process import accim from this repository
+    # instead of the installed accim (an editable installation may point to another checkout).
+    pythonpath = [str(REPO)] + ([os.environ['PYTHONPATH']] if os.environ.get('PYTHONPATH') else [])
+    env = dict(os.environ, PYTHONPATH=os.pathsep.join(pythonpath))
+    result = subprocess.run([sys.executable, '-c', script, str(folder)], capture_output=True, text=True, timeout=900,
+                            env=env)
     assert result.returncode == 0, result.stdout[-3000:] + result.stderr[-3000:]
     return result
 
@@ -451,3 +450,133 @@ def test_custom_model_simulates_with_26_2(idf_26_2, tmp_path):
     err = (tmp_path / 'out' / 'eplusout.err').read_text(encoding='utf-8', errors='ignore')
     assert 'has not been initialized' not in err
     assert 'EnergyPlus Completed Successfully' in err, err[-3000:]
+
+
+# The sample model in people/ (People objects) and the same model in instances/, where each People object
+# becomes a People:Definition named '<name> Definition' and a People:Instance with the name of the People
+# object and the values of its fields. Both are simulated for one summer day with EnergyPlus 26.2.
+_PEOPLE_AND_INSTANCES_SCRIPT = """
+import os, subprocess, sys
+from pathlib import Path
+from besos.eppy_funcs import get_building
+from accim.utils import reduce_runtime
+root = Path(sys.argv[1]).resolve()
+building = get_building(str(root / 'instances' / 'TestModel.idf'))
+for people in list(building.idfobjects['PEOPLE']):
+    definition = building.newidfobject('PEOPLE:DEFINITION', Name=people.Name + ' Definition')
+    instance = building.newidfobject('PEOPLE:INSTANCE', Name=people.Name, People_Definition_Name=definition.Name)
+    for obj in (definition, instance):
+        for field in obj.fieldnames[2:]:
+            if field in people.fieldnames:
+                obj[field] = people[field]
+    building.removeidfobject(people)
+building.save()
+
+
+def simulate_1_summer_day(model):
+    reduce_runtime(idf_object=model, runperiod_begin_month=7, runperiod_begin_day_of_month=15,
+                   runperiod_end_month=7, runperiod_end_day_of_month=15)
+    model.idfobjects['SimulationControl'][0].Run_Simulation_for_Sizing_Periods = 'No'
+    model.saveas('model_1_day.idf')
+    subprocess.run(['C:/EnergyPlusV26-2-0/energyplus.exe', '-w', str(root / 'Seville.epw'), '-d', 'out',
+                    'model_1_day.idf'], capture_output=True)
+"""
+
+_ADDACCIS_PEOPLE_AND_INSTANCES_SCRIPT = _PEOPLE_AND_INSTANCES_SCRIPT + """
+from accim.sim import accis
+for folder in ['people', 'instances']:
+    os.chdir(root / folder)
+    accis.addAccis(
+        ScriptType='vrf_mm', SupplyAirTempInputMethod='temperature difference', Output_type='standard',
+        Output_freqs=['hourly'], Output_keep_existing=False, EnergyPlus_version='auto', TempCtrl='temperature',
+        ComfStand=[1], CAT=[3], ComfMod=[3], HVACmode=[2], VentCtrl=[0], confirmGen=True, verboseMode=False,
+    )
+    output_idf = [p for p in Path('.').glob('TestModel[[]*.idf')][0]
+    simulate_1_summer_day(get_building(str(output_idf)))
+"""
+
+_APMV_PEOPLE_AND_INSTANCES_SCRIPT = _PEOPLE_AND_INSTANCES_SCRIPT + """
+from accim.sim.apmv_setpoints import add_vrf_system, apply_apmv_setpoints, set_pmv_input_parameters
+for folder in ['people', 'instances']:
+    os.chdir(root / folder)
+    building = get_building('TestModel.idf')
+    add_vrf_system(building, verbose_mode=False)
+    apply_apmv_setpoints(
+        building, outputs_freq=['hourly'], adap_coeff_cooling=0.293, adap_coeff_heating=-0.293,
+        pmv_cooling_sp=0.5, pmv_heating_sp=-0.5, cooling_season_start='01/05', cooling_season_end='01/10',
+        verbose_mode=False,
+    )
+    set_pmv_input_parameters(building, air_velocity=0.1, work_efficiency=0.0, verbose_mode=False)
+    simulate_1_summer_day(building)
+"""
+
+PEOPLE_NAMES = {'People Block1:Zone1', 'People Block1:Zone2'}
+
+
+def _idf_objects(text, object_type):
+    """Return the fields of each object of a type in an IDF text, without comments, with the empty ones."""
+    objects = []
+    for block in text.split(';'):
+        fields = [f.strip() for f in ''.join(line.split('!')[0] for line in block.splitlines()).split(',')]
+        if fields[0].upper() == object_type.upper():
+            objects.append(fields[1:])
+    return objects
+
+
+def _people_and_instances_folders(idf_26_2, tmp_path):
+    for folder in ['people', 'instances']:
+        (tmp_path / folder).mkdir()
+        shutil.copy(idf_26_2, tmp_path / folder / 'TestModel.idf')
+    shutil.copy(SAMPLE_EPW, tmp_path / 'Seville.epw')
+
+
+def _simulated_idfs(tmp_path):
+    return {folder: (tmp_path / folder / 'model_1_day.idf').read_text(encoding='utf-8', errors='ignore')
+            for folder in ['people', 'instances']}
+
+
+def _hourly_results(folder):
+    err = (folder / 'out' / 'eplusout.err').read_text(encoding='utf-8', errors='ignore')
+    assert 'EnergyPlus Completed Successfully' in err, err[-3000:]
+    return pd.read_csv(folder / 'out' / 'eplusout.csv')
+
+
+@needs_26_2
+def test_people_instances_simulate_as_people_with_addaccis_and_26_2(idf_26_2, tmp_path):
+    # Before, addAccis stopped in scan_zones with a ValueError for the model with People:Instance objects
+    _people_and_instances_folders(idf_26_2, tmp_path)
+
+    _run_in_new_process(_ADDACCIS_PEOPLE_AND_INSTANCES_SCRIPT, tmp_path)
+
+    idfs = _simulated_idfs(tmp_path)
+    assert _idf_objects(idfs['instances'], 'People') == []
+    assert {fields[0] for fields in _idf_objects(idfs['instances'], 'People:Instance')} == PEOPLE_NAMES
+    definitions = _idf_objects(idfs['instances'], 'People:Definition')
+    assert [fields[10:12] for fields in definitions] == [['AdaptiveASH55', 'AdaptiveCEN15251']] * 2
+    # The EMS sensors read the outputs of the instances, named after the People:Instance objects
+    sensors = _ems_objects(idfs['instances'], 'EnergyManagementSystem:Sensor')
+    assert sensors == _ems_objects(idfs['people'], 'EnergyManagementSystem:Sensor')
+    assert {key for name, key, variable in sensors if variable == 'People Occupant Count'} == PEOPLE_NAMES
+    pd.testing.assert_frame_equal(_hourly_results(tmp_path / 'instances'), _hourly_results(tmp_path / 'people'))
+
+
+@needs_26_2
+def test_people_instances_simulate_as_people_with_apmv_setpoints_and_26_2(idf_26_2, tmp_path):
+    # Before, add_vrf_system stopped in scan_zones with a ValueError for the model with People:Instance objects
+    _people_and_instances_folders(idf_26_2, tmp_path)
+
+    _run_in_new_process(_APMV_PEOPLE_AND_INSTANCES_SCRIPT, tmp_path)
+
+    idfs = _simulated_idfs(tmp_path)
+    # set_pmv_input_parameters sets the schedules of the instances and the Fanger model of their definitions
+    instances = {fields[0]: (fields[6], fields[10]) for fields in _idf_objects(idfs['instances'], 'People:Instance')}
+    assert instances == {
+        'People Block1:Zone1': ('Sch_Eff_People_Block1_Zone1', 'Sch_Vel_People_Block1_Zone1'),
+        'People Block1:Zone2': ('Sch_Eff_People_Block1_Zone2', 'Sch_Vel_People_Block1_Zone2'),
+    }
+    definitions = _idf_objects(idfs['instances'], 'People:Definition')
+    assert [fields[10:13] for fields in definitions] == [['Fanger', 'AdaptiveCEN15251', 'Fanger']] * 2
+    sensors = _ems_objects(idfs['instances'], 'EnergyManagementSystem:Sensor')
+    assert sensors == _ems_objects(idfs['people'], 'EnergyManagementSystem:Sensor')
+    assert {key for name, key, variable in sensors if variable == 'Zone Thermal Comfort Fanger Model PMV'} == PEOPLE_NAMES
+    pd.testing.assert_frame_equal(_hourly_results(tmp_path / 'instances'), _hourly_results(tmp_path / 'people'))

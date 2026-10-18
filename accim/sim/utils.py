@@ -18,28 +18,19 @@ def scan_zones(self):
     """
     Used to scan the occupied zones in an idf.
 
-    :raises ValueError: If the idf has no People objects, since the occupied zones are those of the
-        People objects. EnergyPlus 26.2 can also describe the occupants with People:Definition and
-        People:Instance objects, which accim does not read.
+    The occupied zones are those of the People objects and, in EnergyPlus 26.2, of the People:Instance
+    objects, which have their thermal comfort models in the People:Definition objects they reference.
+
+    :raises ValueError: If the idf has no People or People:Instance objects.
     """
     from accim.sim.apmv_setpoints import _resolve_targets
+    from accim.utils import get_people_objects
 
-    if len(self.idf1.idfobjects['PEOPLE']) == 0:
-        try:
-            people_instances = self.idf1.idfobjects['PEOPLE:INSTANCE']
-        except KeyError:
-            # The IDDs before EnergyPlus 26.2 have no People:Instance objects
-            people_instances = []
-        if len(people_instances) > 0:
-            raise ValueError(
-                'The model describes its occupants with People:Definition and People:Instance objects, '
-                'which EnergyPlus 26.2 introduced and accim does not support yet. accim finds the occupied '
-                'zones and adds the thermal comfort models in People objects, so please describe the '
-                'occupants with People objects, which are still valid in EnergyPlus 26.2.'
-            )
+    if len(get_people_objects(self.idf1)) == 0:
         raise ValueError(
-            'The model has no People objects. accim finds the occupied zones and adds the thermal comfort '
-            'models in People objects, so the model needs at least one.'
+            'The model has no People objects or People:Instance objects (EnergyPlus 26.2 and later). '
+            'accim finds the occupied zones in these objects and adds the thermal comfort models to them '
+            '(to the People:Definition objects of the People:Instance objects), so the model needs at least one.'
         )
 
     target_data = _resolve_targets(self.idf1)
