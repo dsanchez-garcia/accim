@@ -15,6 +15,14 @@ This log is a lightweight, session-scoped complement to the repository's
 existing tracking files — it does not replace them (see
 [[decisions.md#2026-09-13 — `notes/work-log.md` complements, not replaces, existing tracking files|the related decision]]).
 
+## 2026-10-19 — Documentation after 0.8.2
+
+- **Objective**: Check whether the documentation needed updates after 0.8.2, and update what was left.
+- **Affected files**: `docs/source/4_detailed use.md`, `docs/source/8_pdfs_for_prev_versions.md`, the pages of `using_addAccis`, `full_example_IBPSA` and `research_paper_case_study`; [[../DEVLOG.md]].
+- **Finding or decision**: The pages already described 0.8.2, and `using_Table` run again gives the same page. Only the version banners (v0.7.8 in the executed pages, v0.8.0 in the transcripts of `Detailed use`) and the page of previous versions were left. The author chose to run again only the three How-to notebooks that print the banner, not the parametric ones.
+- **Validation**: same figures and results in the three pages; the differences are the banner, `InitASTvariables`, the order of the zones and the shortened logs. Details in [[../DEVLOG.md]].
+- **Next step**: the parametric pages still print v0.7.8.
+
 ## 2026-10-19 — Release 0.8.2
 
 - **Objective**: Publish accim 0.8.2 (with `accim-samples`): EnergyPlus 26.1 and 26.2, the `People:Definition` and `People:Instance` objects of 26.2, and the fixes of `TempCtrl='pmv'`, `ComfStand=[0]` and `Table`.

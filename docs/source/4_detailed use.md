@@ -33,7 +33,7 @@ Then you’ll be asked in the prompt to enter some information so that python kn
 
 ```
 --------------------------------------------------------
-Adaptive-Comfort-Control-Implemented Model (ACCIM) v0.8.0
+Adaptive-Comfort-Control-Implemented Model (ACCIM) v0.8.2
 --------------------------------------------------------
 
 This tool allows to apply adaptive setpoint temperatures. 
@@ -284,7 +284,7 @@ When we hit enter, we’ll be asked to enter some information regarding the Scri
 ```
 
 --------------------------------------------------------
-Adaptive-Comfort-Control-Implemented Model (ACCIM) v0.8.0
+Adaptive-Comfort-Control-Implemented Model (ACCIM) v0.8.2
 --------------------------------------------------------
 
 This tool allows to apply adaptive setpoint temperatures.
