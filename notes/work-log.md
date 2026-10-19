@@ -15,6 +15,14 @@ This log is a lightweight, session-scoped complement to the repository's
 existing tracking files — it does not replace them (see
 [[decisions.md#2026-09-13 — `notes/work-log.md` complements, not replaces, existing tracking files|the related decision]]).
 
+## 2026-10-19 — Maintenance guide of the documentation
+
+- **Objective**: Write a guide in `docs` with everything needed to maintain the documentation, to reread it when in doubt.
+- **Affected files**: `docs/README.md`; [[../DEVLOG.md]].
+- **Finding or decision**: Written in Spanish, for the author, outside `docs/source`, so that Sphinx does not publish it. Found while checking it: the ComfMod figure of `4_detailed use.md` is linked from MDPI, which answers 403 to Read the Docs, so it is missing from the PDF and the EPUB; `docs/Makefile` points to `.` instead of `source`.
+- **Validation**: the two scripts of the guide were run; its links and paths exist; markdown-it renders it. Details in [[../DEVLOG.md]].
+- **Next step**: none.
+
 ## 2026-10-19 — Documentation after 0.8.2
 
 - **Objective**: Check whether the documentation needed updates after 0.8.2, and update what was left.
