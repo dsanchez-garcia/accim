@@ -45,11 +45,6 @@ Active short-term tasks.
   - Definition of done: Tests cover missing file paths and assert actionable error messages in hourly/output retrieval methods.
   - References: `accim/parametric_and_optimisation/main.py`, `tests/parametric_and_optimisation/test_sim_file_cleanup.py`
 
-- [ ] [P2][todo] Check `Table` with models whose zones have several spaces
-  - Context: Since 2026-10-18, accim simulates models with `Space` objects where a zone has several occupant instances (a zone of several spaces, a SpaceList that covers several spaces of a zone, a remainder space): the EMS objects of such a zone are named after the zone (`<suffix>` = zone name), while the zones with one instance keep `<Space>_<People>`. Before, these models stopped in EnergyPlus, so `Table` never read their results. `Table` finds the occupied zones of models with SpaceLists through OpenStudio conventions (spaces whose Space Type is the name of the SpaceList) and renames zone columns after spaces, which assumes one space per zone.
-  - Definition of done: `Table` (and the parametric readers of hourly outputs) checked with the outputs of a model with a zone of two spaces and with a SpaceList of several spaces per zone; fixed if the zones are not found or are mixed up.
-  - References: `accim/data/postprocessing/main.py` (occupied zones, around the `SPACELIST` branch), `accim/sim/apmv_setpoints.py` (`_resolve_targets`), `DEVLOG.md` (2026-10-18, "Names of the occupant instances in models with Space objects").
-
 - [ ] [P2][todo] Deterministic order of the occupied zones in `scan_zones`
   - Context: `scan_zones` builds `occupiedZones_orig` with `list(set(...))`, so the order of the zones, and of the objects that accim creates for each zone in the output IDFs (VRF systems, thermostats, outdoor air objects), changes from one Python process to another (string hashing). The results should not change, but two runs of `addAccis` on the same model give output IDFs that differ in the order of their objects, which makes comparisons harder (on 2026-10-18 they were compared with `PYTHONHASHSEED=0`).
   - Definition of done: the zones in the order of the targets (`list(dict.fromkeys(...))`), with a test; a check that the results do not change.

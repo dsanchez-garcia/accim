@@ -33,6 +33,181 @@ def _legend_handles(leg):
     handles = getattr(leg, 'legend_handles', None)
     return handles if handles is not None else leg.legendHandles
 
+
+# The outputs that Table averages over time, and over the occupant instances of a zone; it adds up the others
+_AVERAGED_OUTPUTS = [
+    'Environment:Site Outdoor Air Drybulb Temperature',
+    'Environment:Site Wind Speed',
+    'Environment:Site Outdoor Air Relative Humidity',
+    'EMS:Comfort Temperature',
+    'EMS:Adaptive Cooling Setpoint Temperature',
+    'EMS:Adaptive Heating Setpoint Temperature',
+    'EMS:Adaptive Cooling Setpoint Temperature_No Tolerance',
+    'EMS:Adaptive Heating Setpoint Temperature_No Tolerance',
+    'EMS:Ventilation Setpoint Temperature',
+    'EMS:Minimum Outdoor Temperature for ventilation',
+    # 'Zone Thermostat Operative Temperature',
+    # 'Zone Operative Temperature',
+    'Zone Operative Temperature',
+    'Zone Thermal Comfort CEN 15251 Adaptive Model Running Average Outdoor Air Temperature',
+    'Zone Thermal Comfort ASHRAE 55 Adaptive Model Running Average Outdoor Air Temperature',
+    'Zone Thermal Comfort Fanger Model PMV',
+    'Zone Thermal Comfort Fanger Model PPD'
+]
+
+
+def _longest_name_in(text: str, names) -> Union[str, None]:
+    """
+    The longest of the names that the text contains, ignoring the case, or None. The columns of a zone contain the
+    name of the zone, and so the names that are part of it ('Block1:Zone1' in 'Block1:Zone10'): the longest is the
+    zone of the column.
+    """
+    text = text.upper()
+    found = [name for name in names if name and name.upper() in text]
+    return max(found, key=len) if found else None
+
+
+def _replace_names(columns, replacements: dict, names=()) -> list:
+    """
+    Replace names in the columns in one pass, ignoring the case: at each position, the longest of the keys of
+    replacements and of the other names that is there is taken, and only the keys are replaced, so a name is not
+    replaced within a longer one ('Zone 1' within 'Zone 10'), nor twice.
+    """
+    import re
+
+    targets = {name.upper(): value for name, value in replacements.items() if name}
+    alternatives = sorted(set(targets) | {name.upper() for name in names if name}, key=len, reverse=True)
+    if not targets:
+        return list(columns)
+    pattern = re.compile('|'.join(re.escape(a) for a in alternatives), re.IGNORECASE)
+    return [pattern.sub(lambda match: targets.get(match.group(0).upper(), match.group(0)), column)
+            for column in columns]
+
+
+def _occupied_zones(building, columns: list, spacelists: bool):
+    """
+    Find the occupied zones of a model and the names Table gives them, from the targets of the EMS of accim
+    (one per occupied zone, see accim.sim.apmv_setpoints._resolve_targets), and the columns of the outputs of
+    the occupants and of the EMS outputs to rename, so that Table finds them with the name of their zone.
+
+    A zone is named after its space if it has one occupant instance, placed through a SpaceList named like the
+    Space Type of the space (the conventions of OpenStudio, only in models with SpaceLists), and after the zone
+    otherwise, like the EMS objects of a zone with several instances. Table attributes the outputs keyed by the
+    names of the instances to the zone whose name they contain, so these columns are renamed after their zone:
+    - the outputs of the instances of a zone with several instances, which get the same name;
+    - in models with Space objects, the outputs of a zone with one instance whose names contain the name of
+      another zone, such as those of the instance 'Space 2 People Block1:Zone1' of Block1:Zone2.
+    The EMS outputs (and schedules) of each zone end with the suffix of its target, which is the name of the
+    zone, or '<Space>_<People>', with the characters that EMS names cannot have (such as ':' and blanks)
+    replaced by '_' ('Block1_Zone1'). The suffix becomes the name of the zone in Table ('BLOCK1:ZONE1'), except
+    for the zones named after their spaces whose suffix is '<Space>_<People>', where only the name of the space
+    is given back ('Space_1_Occupants' becomes 'SPACE 1_OCCUPANTS', and 'Floor_1_Residential_Living_Occupants'
+    does not change).
+
+    :param building: The model, read with besos.
+    :param columns: The names of the columns, in uppercase.
+    :param spacelists: True if the model has SpaceLists.
+    :return: A dictionary {name of the zone in uppercase: name of the zone in Table}, in the order Table
+        renames the zones after their spaces, and a dictionary {column: new name of the column}.
+    """
+    import warnings
+    # Imported here, as in accim.sim.utils.scan_zones
+    from accim.sim.apmv_setpoints import _resolve_targets, _sanitize_ems_name
+    from accim.utils import get_energyplus_spaces, get_people_instances, get_people_objects
+
+    with warnings.catch_warnings():
+        # The warning about remainder spaces is for addAccis
+        warnings.simplefilter('ignore')
+        targets = _resolve_targets(building)
+    instances = {i['name'].upper(): i for i in get_people_instances(building)}
+    zones = get_energyplus_spaces(building)
+    spaces = list(building.idfobjects['SPACE']) if spacelists else []
+    space_index = {str(s.Name).strip().upper(): n for n, s in enumerate(spaces)}
+    people = get_people_objects(building)
+
+    names = {}
+    order = {}
+    named_after_spaces = set()
+    for target in targets:
+        zone = target['zone_name'].upper()
+        names[zone] = zones[zone]['zone'] if zone in zones else target['zone_name']
+        instance = instances.get(target['instance_keys'][0].upper())
+        if (len(target['instance_keys']) == 1 and instance is not None and instance['assignment'] == 'SpaceList'
+                and instance['space'].upper() in space_index):
+            space = spaces[space_index[instance['space'].upper()]]
+            if str(space.Space_Type).strip().upper() == instance['container'].upper():
+                names[zone] = str(space.Name).strip()
+                named_after_spaces.add(zone)
+                # The zones are renamed after their spaces as before: in the order of the People objects, and
+                # of the Space objects for each of them
+                people_index = next((n for n, p in enumerate(people) if p is instance['object']), len(people))
+                order[zone] = (people_index, space_index[instance['space'].upper()])
+    names = dict(sorted(names.items(), key=lambda item: order.get(item[0], (len(people), len(spaces)))))
+
+    has_spaces = any(zone['explicit'] for zone in zones.values())
+    new_keys = {}
+    new_suffixes = {}
+    for target in targets:
+        zone = target['zone_name'].upper()
+        name = names[zone].upper()
+        keys = [k.upper() for k in target['instance_keys']]
+        suffix = target['ems_suffix'].upper()
+        others = [z for z in zones if z != zone]
+        ambiguous = (len(keys) == 1 and has_spaces
+                     and any(o in keys[0] or _sanitize_ems_name(o) in suffix for o in others))
+        if len(keys) > 1 or ambiguous:
+            for key in keys:
+                new_keys[key] = name
+        if zone in named_after_spaces and not ambiguous:
+            sanitized = _sanitize_ems_name(names[zone]).upper()
+            if sanitized != name and suffix.startswith(sanitized + '_'):
+                new_suffixes[suffix] = name + suffix[len(sanitized):]
+        elif suffix != name:
+            new_suffixes[suffix] = name
+
+    def longest(candidates, matches):
+        found = [c for c in candidates if matches(c)]
+        return max(found, key=len) if found else None
+
+    renamed = {}
+    suffixes = [t['ems_suffix'].upper() for t in targets]
+    for column in columns:
+        key = longest(instances, lambda k: column.startswith(k + ':'))
+        if key is not None:
+            if key in new_keys:
+                renamed[column] = new_keys[key] + column[len(key):]
+            continue
+        # EMS outputs ('EMS:<Output>_<suffix> [unit](frequency)') and schedules ('<name>_<suffix>:Schedule Value')
+        head = column.split(' [')[0]
+        if head.endswith(':SCHEDULE VALUE'):
+            head = head[:-len(':SCHEDULE VALUE')]
+        suffix = longest(suffixes, lambda s: head.endswith('_' + s))
+        if suffix is not None and suffix in new_suffixes:
+            start = len(head) - len(suffix)
+            renamed[column] = column[:start] + new_suffixes[suffix] + column[start + len(suffix):]
+    return names, renamed
+
+
+def _rename_and_merge_columns(df, renamed: dict):
+    """
+    Rename the columns of df, and merge those that get the same name: their mean for the outputs that Table
+    averages, and their sum for the others.
+    """
+    import pandas as pd
+
+    df = df.rename(columns=renamed)
+    for name in df.columns[df.columns.duplicated()].unique():
+        position = list(df.columns).index(name)
+        same = df.loc[:, df.columns == name].apply(pd.to_numeric, errors='coerce')
+        if any(output.upper() in name.upper() for output in _AVERAGED_OUTPUTS):
+            merged = same.mean(axis=1)
+        else:
+            merged = same.sum(axis=1, min_count=1)
+        df = df.loc[:, df.columns != name]
+        df.insert(position, name, merged)
+    return df
+
+
 class Table:
     """Generates a table or dataframe using the EnergyPlus simulation
     results CSV files available in the current folder.
@@ -81,11 +256,22 @@ class Table:
         Used to try to match the cities in the EPW file name with actual cities.
         To be used if EPWs have not been previously renamed with rename_epw_files().
     :type level_excluded_zones: list
+    :param block_zone_hierarchy: A dictionary {block: [zones]}, for the occupied zones whose names do not
+        have the pattern 'block:zone' of DesignBuilder. If it is None, Table asks for the blocks and their zones.
+        In models with SpaceLists, a zone with one occupant instance placed through a SpaceList named like the
+        Space Type of its space (the conventions of OpenStudio) is named after its space, and the other zones,
+        such as those of several spaces, after the zone; the zones whose names already have the pattern
+        'block:zone' keep them. The outputs of the occupants of a zone with several occupant instances are
+        merged into one column: their mean for the outputs that Table averages (such as the running mean outdoor
+        temperature, PMV and PPD), and their sum for the others.
+    :type block_zone_hierarchy: dict
     :param split_epw_names: It splits the EPW name into Country_City_RCPscenario-Year format.
         To be used if EPWs do have been previously renamed with rename_epw_files().
     :type split_epw_names: bool
     :param normalised_energy_units: A bool, can be True or False.
-        Used to show Wh or Wh/m2 units.
+        Used to show Wh or Wh/m2 units. If True, the energy of each zone is divided by the floor area of the
+        zone, and the block and building totals by the floor area of the occupied zones of the block or the
+        building.
     :type normalised_energy_units: bool
     :param rename_cols: A bool, can be True or False.
         Used to keep the original name of EnergyPlus outputs or rename them for understanding
@@ -166,7 +352,6 @@ class Table:
         import numpy as np
         import csv
         from besos.eppy_funcs import get_building
-        from accim.utils import get_people_objects
 
         self.frequency = frequency
         self.normalised_energy_units = normalised_energy_units
@@ -441,25 +626,7 @@ class Table:
                 df['count'] = 1
                 agg_dict.update({'count': 'count'})
 
-                aggregation_list_mean = [
-                    'Environment:Site Outdoor Air Drybulb Temperature',
-                    'Environment:Site Wind Speed',
-                    'Environment:Site Outdoor Air Relative Humidity',
-                    'EMS:Comfort Temperature',
-                    'EMS:Adaptive Cooling Setpoint Temperature',
-                    'EMS:Adaptive Heating Setpoint Temperature',
-                    'EMS:Adaptive Cooling Setpoint Temperature_No Tolerance',
-                    'EMS:Adaptive Heating Setpoint Temperature_No Tolerance',
-                    'EMS:Ventilation Setpoint Temperature',
-                    'EMS:Minimum Outdoor Temperature for ventilation',
-                    # 'Zone Thermostat Operative Temperature',
-                    # 'Zone Operative Temperature',
-                    'Zone Operative Temperature',
-                    'Zone Thermal Comfort CEN 15251 Adaptive Model Running Average Outdoor Air Temperature',
-                    'Zone Thermal Comfort ASHRAE 55 Adaptive Model Running Average Outdoor Air Temperature',
-                    'Zone Thermal Comfort Fanger Model PMV',
-                    'Zone Thermal Comfort Fanger Model PPD'
-                ]
+                aggregation_list_mean = _AVERAGED_OUTPUTS
 
                 for i in df.columns:
                     for j in aggregation_list_mean:
@@ -709,44 +876,44 @@ class Table:
 
         allzones = [i.Name for i in building.idfobjects['ZONE']]
 
-        occupied_zone_list = []
         try:
-            if len(building.idfobjects['SPACELIST']) > 0:
-                # spacenames_for_ems_uniquekey = []
-                spacenames = []
-                # spacenames_for_ems_uniquekey_people = []
-                zonenames_from_space = []
-                # People objects, and the People:Instance objects of EnergyPlus 26.2
-                for people in get_people_objects(building):
-                    for spacelist in [i for i in building.idfobjects['SPACELIST'] if i.Name == people.Zone_or_ZoneList_or_Space_or_SpaceList_Name]:
-                        for space in [i for i in building.idfobjects['SPACE'] if i.Space_Type == spacelist.Name]:
-                            # spacenames_for_ems_uniquekey.append(f'{space.Name} {spacelist.Name}')
-                            spacenames.append(space.Name)
-                            # spacenames_for_ems_uniquekey_people.append(f'{space.Name} {people.Name}')
-                            # occupiedZones_orig_osm.append(space.Zone_Name)
-                            occupied_zone_list.append(space.Name)
-                            for zone in [i for i in building.idfobjects['ZONE'] if space.Zone_Name == i.Name]:
-                                zonenames_from_space.append(zone.Name)
-                                df.columns = [i.replace(zone.Name.upper(), space.Name.upper()) for i in df.columns]
-            else:
-                for zone in allzones:
-                    for col in df.columns:
-                        if zone.lower() in col.lower():
-                            occupied_zone_list.append(zone)
+            spacelists = len(building.idfobjects['SPACELIST']) > 0
         except KeyError:
-            for zone in allzones:
-                for col in df.columns:
-                    if zone.lower() in col.lower():
-                        occupied_zone_list.append(zone)
+            # The IDDs before EnergyPlus 9.6 have no SpaceLists
+            spacelists = False
+
+        # The occupied zones, from the targets of the EMS of accim (one per occupied zone), and the columns of the
+        # outputs of the occupants whose names do not identify their zone, renamed after it (see _occupied_zones)
+        zone_names, renamed_columns = _occupied_zones(building, list(df.columns), spacelists)
+        df = _rename_and_merge_columns(df, renamed_columns)
+
+        if spacelists:
+            # A zone of one occupant instance placed through a SpaceList named like the Space Type of its space
+            # (OpenStudio) is named after its space; the other zones, such as those of several spaces, keep
+            # their names. The names are replaced in one pass, so that the name of a zone is not replaced within
+            # the name of another
+            occupied_zone_list = list(zone_names.values())
+            df.columns = _replace_names(
+                df.columns, {zone: name.upper() for zone, name in zone_names.items() if name.upper() != zone},
+                [zone.upper() for zone in allzones])
+        else:
+            # The zones whose names the columns contain (the longest, so that Block1:Zone1 is not found in the
+            # columns of Block1:Zone10)
+            column_zones = {_longest_name_in(col, allzones) for col in df.columns}
+            occupied_zone_list = [zone for zone in allzones if zone in column_zones]
         occupied_zone_list = list(set(occupied_zone_list))
 
+        hierarchy_dict = {}
         if not(all(len(i.split(':')) == 2 for i in occupied_zone_list)):
+            # The zones whose names already have the pattern block:zone keep them (for instance, a zone of several
+            # spaces in a model with SpaceLists), so only the others need a block
+            zones_with_block = [i.upper() for i in occupied_zone_list if len(i.split(':')) == 2]
             if block_zone_hierarchy is None:
                 print(
                     'Regarding occupied zones, we have not found a clear hierarchical pattern of blocks and zones. '
                     'The zones we have found are:'
                 )
-                print(occupied_zone_list)
+                print([i for i in occupied_zone_list if len(i.split(':')) != 2])
                 block_list = list(i.upper() for i in input('Please enter all Blocks separated by semicolon (;): ').split(';'))
                 hierarchy_dict = {}
                 for i in block_list:
@@ -757,14 +924,15 @@ class Table:
             else:
                 # hierarchy_dict = block_zone_hierarchy
                 hierarchy_dict = {i.upper(): [k.upper() for k in j] for i, j in block_zone_hierarchy.items()}
+            hierarchy_dict = {i: [k for k in j if k not in zones_with_block] for i, j in hierarchy_dict.items()}
 
-            for i in hierarchy_dict:
-                for j in hierarchy_dict[i]:
-                    df.columns = [k.replace(j, i + '_' + j) for k in df.columns]
-                    # df.columns = [k.replace(j.upper().replace(' ', '_'), i + '_' + j) for k in df.columns]
+            # In one pass, so that the name of a zone is not replaced within the name of another, nor twice
+            df.columns = _replace_names(
+                df.columns, {j: i + '_' + j for i in hierarchy_dict for j in hierarchy_dict[i]},
+                zones_with_block + [name.upper() for name in zone_names.values()] + [zone.upper() for zone in allzones])
 
             print('Finally, the occupied zones after renaming them following the pattern block_zone are:')
-            occupied_zone_list = []
+            occupied_zone_list = list(zones_with_block)
             for i in hierarchy_dict:
                 for j in hierarchy_dict[i]:
                     occupied_zone_list.append(f'{i}:{j}')
@@ -782,6 +950,28 @@ class Table:
         # occupied_zone_list = [i.split(' ')[0][:-5] for i in OpTempColumn]
         occupied_zone_list = list(dict.fromkeys(occupied_zone_list))
 
+        # The name of each occupied zone in the columns, once named after its space and given its block, to find
+        # the outputs of its HVAC system and its floor area
+        zone_names_in_columns = {}
+        for zone, name in zone_names.items():
+            block = next((i for i in hierarchy_dict if name.upper() in hierarchy_dict[i]), None)
+            zone_names_in_columns[zone] = name if block is None else f'{block}:{name.upper()}'
+
+        # The zone of each column: the longest of the names of the zones in the columns that it contains (the
+        # occupied zones, as Table names them, and the other zones of the model), so that the columns of
+        # Block1:Zone10 are not taken for those of Block1:Zone1
+        column_zone_names = list(occupied_zone_list)
+        for zone in allzones:
+            name = zone_names_in_columns.get(zone.upper(), zone)
+            if name.upper() not in [i.upper() for i in column_zone_names]:
+                column_zone_names.append(name)
+        zones_of_columns = {}
+
+        def zone_of(column):
+            if column not in zones_of_columns:
+                zones_of_columns[column] = _longest_name_in(column, column_zone_names)
+            return zones_of_columns[column]
+
         occBZlist_underscore = [i.replace(':', '_') for i in occupied_zone_list]
 
         # Step: scanning zones for hvac_zone_list
@@ -789,7 +979,6 @@ class Table:
         hvac_zone_list = [i.Zone_or_ZoneList_Name for i in building.idfobjects['ZoneControl:Thermostat']]
 
         hvac_zone_list = list(dict.fromkeys(hvac_zone_list))
-        hvac_zone_list_underscore = [i.replace(':', '_') for i in hvac_zone_list]
 
         # Step: scanning blocks for block_list
         block_list = list(set([i.split(':')[0] for i in occupied_zone_list]))
@@ -823,12 +1012,19 @@ class Table:
             'VRF INDOOR UNIT': 'Total Energy Demand (Wh)',
             'VRF OUTDOOR UNIT': 'Total Energy Consumption (Wh)'
         }
+        # The zone of each of these columns, which are named after the zones of hvac_zone_list
+        zone_total_columns = {}
         for output in BZoutputDict:
             if any([output.lower() in i.lower() for i in df.columns]):
                 for block_zone in hvac_zone_list:
-                    df[f'{block_zone}' + '_' + BZoutputDict[output] + ' (summed)_pymod'] = df[
-                        [i for i in df.columns if block_zone.lower() in i.lower() and output in i and '_pymod' not in i]
+                    # The columns of the zone have the name it has in Table
+                    zone_name = zone_names_in_columns.get(block_zone.upper(), block_zone)
+                    column = f'{block_zone}' + '_' + BZoutputDict[output] + ' (summed)_pymod'
+                    df[column] = df[
+                        [i for i in df.columns
+                         if (zone_of(i) or '').upper() == zone_name.upper() and output in i and '_pymod' not in i]
                     ].sum(axis=1)
+                    zone_total_columns[column] = zone_name
         # df.to_excel('checkpoint_01.xlsx')
 
         # Step: generating block and or building summed or mean columns
@@ -897,17 +1093,32 @@ class Table:
                 level_excluded_zones = []
                 print('No zones have been excluded from level computations.')
 
+        # The columns of a block are those of its zones (and those of no zone that contain the name of the block,
+        # the longest, so that the columns of Block10 are not taken for those of Block1), and the columns of the
+        # excluded zones are those of these zones
+        def in_block(column, block):
+            zone = zone_of(column)
+            if zone is None:
+                return (_longest_name_in(column, block_list) or '').upper() == block.upper()
+            return ':' in zone and zone.split(':')[0].upper() == block.upper()
+
+        excluded_zones = [i.upper() for i in level_excluded_zones]
+
+        def excluded(column):
+            zone = zone_of(column)
+            return zone is not None and zone.upper() in excluded_zones
+
         if normalised_energy_units:
             for output in outputdict_normalisation:
                 if any('block' in i for i in level):
                     for block in block_list:
                         df[f'{block}' + '_Total_' + outputdict_normalisation[output] + ' (summed)_pymod'] = df[
                             [i for i in df.columns if
-                             block.lower() in i.lower() and output.upper() in i.upper() and '_pymod' not in i.lower() and not (any(k.upper() in i.upper() for k in level_excluded_zones))]
+                             in_block(i, block) and output.upper() in i.upper() and '_pymod' not in i.lower() and not excluded(i)]
                         ].sum(axis=1)
                 if any('building' in i for i in level):
                     df['Building_Total_' + outputdict_normalisation[output] + ' (summed)_pymod'] = df[
-                        [i for i in df.columns if output.upper() in i.upper() and '_pymod' not in i.lower() and not (any(k.upper() in i for k in level_excluded_zones))]
+                        [i for i in df.columns if output.upper() in i.upper() and '_pymod' not in i.lower() and not excluded(i)]
                     ].sum(axis=1)
 
         if any('block' in i for i in level):
@@ -916,22 +1127,22 @@ class Table:
                     if any([output.lower() in i.lower() for i in df.columns]):
                         if any('sum' in j for j in level_agg_func):
                             df[f'{block}' + '_Total_' + outputdict[output] + ' (summed)_pymod'] = df[
-                                [i for i in df.columns if block.lower() in i.lower() and output.upper() in i.upper() and '_pymod' not in i.lower() and not (any(k.upper() in i.upper() for k in level_excluded_zones))]
+                                [i for i in df.columns if in_block(i, block) and output.upper() in i.upper() and '_pymod' not in i.lower() and not excluded(i)]
                             ].sum(axis=1)
                         if any('mean' in j for j in level_agg_func):
                             df[f'{block}' + '_Total_' + outputdict[output] + ' (mean)_pymod'] = df[
                                 [i for i in df.columns
-                                 if block.lower() in i.lower() and output.upper() in i.upper() and '_pymod' not in i.lower()]
+                                 if in_block(i, block) and output.upper() in i.upper() and '_pymod' not in i.lower()]
                             ].mean(axis=1)
         if any('building' in i for i in level):
             for output in outputdict:
                 if any([output.lower() in i.lower() for i in df.columns]):
                     if any('sum' in j for j in level_agg_func):
                         df['Building_Total_' + outputdict[output] + ' (summed)_pymod'] = df[
-                            [i for i in df.columns if output.upper() in i.upper() and '_pymod' not in i.lower() and not (any(k.upper() in i for k in level_excluded_zones))]].sum(axis=1)
+                            [i for i in df.columns if output.upper() in i.upper() and '_pymod' not in i.lower() and not excluded(i)]].sum(axis=1)
                     if any('mean' in j for j in level_agg_func):
                         df['Building_Total_' + outputdict[output] + ' (mean)_pymod'] = df[
-                            [i for i in df.columns if output.upper() in i.upper() and '_pymod' not in i.lower() and not (any(k.upper() in i for k in level_excluded_zones))]].mean(axis=1)
+                            [i for i in df.columns if output.upper() in i.upper() and '_pymod' not in i.lower() and not excluded(i)]].mean(axis=1)
 
         # df.to_excel('checkpoint_02.xlsx')
 
@@ -956,11 +1167,21 @@ class Table:
 
         # Step: normalising energy units if requested
         if normalised_energy_units:
+            # The energy of each zone (its zone totals, and the columns of the zone) is divided by the floor area
+            # of the zone, the EMS output named after the zone
+            zone_floor_areas = {}
+            for i in df.columns:
+                if 'Zone Floor Area'.upper() in i.upper() and '_pymod' not in i.lower() and zone_of(i) is not None:
+                    zone_floor_areas.setdefault(zone_of(i).upper(), i)
+            not_normalised = []
             for i in df.columns:
                 if '(Wh)' in i or '(WH)' in i:
-                    for j in hvac_zone_list_underscore:
-                        if j in i:
-                            df[i] = df[i] / df[[i for i in df.columns if 'Zone Floor Area'.upper() in i.upper() and j.lower() in i.lower()][0]]
+                    if i in zone_total_columns or not (i.endswith('_pymod') or 'WHOLE BUILDING' in i.upper()):
+                        zone = zone_total_columns.get(i, zone_of(i))
+                        if zone is not None and zone.upper() in zone_floor_areas:
+                            df[i] = df[i] / df[zone_floor_areas[zone.upper()]]
+                        else:
+                            not_normalised.append(i)
                     for k in block_list:
                         if k + '_Total_' in i:
                             df[i] = df[i] / df[
@@ -985,6 +1206,10 @@ class Table:
                         #                  and 'Building_Total_'.lower() in i.lower()][0]]
                         #     except IndexError:
                         #         print('Facility Total HVAC Electricity Demand Rate has not been computed in normalisez energy consumption.')
+            if not_normalised:
+                print('The following energy columns have not been divided by a floor area, because their zone or its '
+                      'floor area has not been found, so they are not per m2 although their units say so:')
+                print(*not_normalised, sep='\n')
 
         # df.to_excel('checkpoint_03-0.xlsx')
 
@@ -1317,14 +1542,15 @@ class Table:
                 for crit in renaming_criteria_bz:
                     if '(summed)' not in col and '(mean)' not in col:
                         if crit.upper() in col.upper():
-                            for block_zone in occupied_zone_list:
-                                if block_zone.upper() in col.upper():
-                                    if energy_units.upper() in col.upper():
-                                        temp = {col: block_zone + '_' + renaming_criteria_bz[crit] + ' ' + energy_units}
-                                        all_cols_renamed.update(temp)
-                                    else:
-                                        temp = {col: block_zone + '_' + renaming_criteria_bz[crit]}
-                                        all_cols_renamed.update(temp)
+                            # The zone of the column, if it is occupied
+                            block_zone = zone_of(col)
+                            if block_zone in occupied_zone_list:
+                                if energy_units.upper() in col.upper():
+                                    temp = {col: block_zone + '_' + renaming_criteria_bz[crit] + ' ' + energy_units}
+                                    all_cols_renamed.update(temp)
+                                else:
+                                    temp = {col: block_zone + '_' + renaming_criteria_bz[crit]}
+                                    all_cols_renamed.update(temp)
 
             for col in df.columns:
                 for crit in renaming_criteria:
