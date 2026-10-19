@@ -15,6 +15,14 @@ This log is a lightweight, session-scoped complement to the repository's
 existing tracking files — it does not replace them (see
 [[decisions.md#2026-09-13 — `notes/work-log.md` complements, not replaces, existing tracking files|the related decision]]).
 
+## 2026-10-19 — Release guide
+
+- **Objective**: Write a guide, like the one of the documentation, for building the distributions of accim and uploading them to PyPI.
+- **Affected files**: `packaging/README.md`, `docs/README.md` (link to it); [[../DEVLOG.md]].
+- **Finding or decision**: Written in Spanish, for the author, in `packaging`, which no distribution includes. Found while writing it: the wheel of accim installs a top-level `tests` package in site-packages, and the editable install of the author's Python keeps the metadata of 0.7.6.
+- **Validation**: the checks of `release.py` that upload nothing (`tools`, `check`, `upload --dry-run`) and the commands of the smoke test ran. Details in [[../DEVLOG.md]].
+- **Next step**: exclude `tests` from the packages of `setup.py` in the next release.
+
 ## 2026-10-19 — Maintenance guide of the documentation
 
 - **Objective**: Write a guide in `docs` with everything needed to maintain the documentation, to reread it when in doubt.

@@ -322,6 +322,9 @@ export PYTHONPATH=<carpeta>
 
 ## 8. Al publicar una versión
 
+Lo que toca a la documentación. La construcción del paquete y la subida a PyPI están en
+[../packaging/README.md](../packaging/README.md).
+
 1. `__version__` en `accim/__init__.py`: `conf.py` la lee, así que las páginas la muestran en
    cuanto se compila `master`.
 2. Las dos cabeceras de las transcripciones de `4_detailed use.md` (§5).
