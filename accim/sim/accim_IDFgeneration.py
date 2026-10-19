@@ -1356,6 +1356,8 @@ def genIDF(self,
                     if ComfStand_value == 0:
                         SetInputData[0].Program_Line_2 = 'set CAT = 1'
                         SetInputData[0].Program_Line_3 = 'set ComfMod = 0'
+                        # ComfStand 0 has no ComfMod loop; its SetAST lines do not depend on ComfMod
+                        ComfMod_value = 0
                         for HVACmode_value in self.HVACmode_List:
                             SetInputData[0].Program_Line_4 = 'set HVACmode = ' + str(HVACmode_value)
                             if HVACmode_value == 0:

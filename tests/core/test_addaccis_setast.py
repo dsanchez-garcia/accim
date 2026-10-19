@@ -5,7 +5,8 @@ lines (SetpointAcc, m, n and 'run SetAST_Master'), before, genIDF kept 16 lines 
 output IDF (len(obj) > 18) in the branches that append the lines of the comfort model, so the
 second and later output IDFs had lines of the previous one. When the cut fell inside an if block,
 EnergyPlus stopped ("Missing an ENDIF"). Now each output IDF has the 4 base lines followed by the
-lines of its comfort model.
+lines of its comfort model. ComfStand 0 has no ComfMod loop, so when it was the only standard,
+genIDF stopped with UnboundLocalError ('ComfMod_value'); its lines do not depend on ComfMod.
 
 With TempCtrl='pmv' the output IDF has no comfort model (the Fanger thermostat controls the zones),
 so SetAST keeps only its 4 base lines. Before, genIDF stopped with UnboundLocalError, because its
@@ -24,7 +25,7 @@ REPO = Path(__file__).resolve().parents[2]
 SAMPLE_IDF = (REPO / 'accim' / 'sample_files' / 'sample IDFs' / 'input_IDFs'
               / 'TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2510.idf')
 IDD_25_1 = Path('C:/EnergyPlusV25-1-0/Energy+.idd')
-COMFSTAND_NAMES = {'INT ASHRAE55': 2, 'IND IMAC C NV': 7}
+COMFSTAND_NAMES = {'ESP CTE': 0, 'INT ASHRAE55': 2, 'IND IMAC C NV': 7}
 
 
 def _setast_lines(idf_path):
@@ -45,6 +46,9 @@ def _setast_lines(idf_path):
     ('vrf_ac', dict(ComfStand=[2, 7], CAT=[80], ComfMod=[0, 3], HVACmode=[0]), 4),
     # Mixed mode: the branches that wrote them from Program_Line_17
     ('vrf_mm', dict(ComfStand=[2], CAT=[80], ComfMod=[0, 3], HVACmode=[2], VentCtrl=[0]), 2),
+    # ComfStand 0 as the only standard, in both branches of ComfStand 0
+    ('vrf_ac', dict(ComfStand=[0], CAT=[1], ComfMod=[0], HVACmode=[0]), 1),
+    ('vrf_mm', dict(ComfStand=[0], CAT=[1], ComfMod=[0], HVACmode=[2], VentCtrl=[0]), 1),
 ])
 def test_each_output_idf_has_the_setast_lines_of_its_comfort_model(tmp_path, monkeypatch, ScriptType,
                                                                     extra_args, n_idfs):
@@ -68,7 +72,9 @@ def test_each_output_idf_has_the_setast_lines_of_its_comfort_model(tmp_path, mon
     assert len(output_idfs) == n_idfs
     for idf_path in output_idfs:
         comfstand = COMFSTAND_NAMES[re.search(r'\[CS_([^\[]+)', idf_path.name).group(1)]
-        comfmod = float(re.search(r'\[CM_([\d.]+)', idf_path.name).group(1))
+        comfmod = re.search(r'\[CM_([^\[]+)', idf_path.name).group(1)
+        # The output IDFs of ComfStand 0 have no ComfMod ('CM_X'), and SetInputData sets ComfMod = 0
+        comfmod = 0 if comfmod == 'X' else float(comfmod)
         lines = _setast_lines(idf_path)
 
         assert lines[3] == 'run SetAST_Master', idf_path.name
