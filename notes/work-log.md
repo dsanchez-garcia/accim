@@ -21,7 +21,7 @@ existing tracking files — it does not replace them (see
 - **Affected files**: `accim/__init__.py`, [[../CHANGELOG.md]]; [[../DEVLOG.md]].
 - **Finding or decision**: The author kept 0.8.2 although the release adds features (Semantic Versioning would make it 0.9.0). From TestPyPI only `accim` and `accim-samples` were installed (`--no-deps`), with the dependencies from PyPI. The clean environments get newer libraries than the development one (eppy 0.6.7, pandas 3.0.6), and accim works with them.
 - **Validation**: tests; three clean venvs (local wheels, TestPyPI, PyPI) with imports and a 1-day simulation with EnergyPlus 26.2; GitHub release. Details in [[../DEVLOG.md]].
-- **Next step**: activate `v0.8.2` in Read the Docs.
+- **Next step**: none; `v0.8.2` is active in Read the Docs.
 
 ## 2026-10-17 — Release 0.8.1 (`pulp<4`)
 
