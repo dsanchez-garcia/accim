@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.2] - 2026-10-19
+
 ### Added
 - **EnergyPlus 26.1 and 26.2**: `addAccis()` accepts `EnergyPlus_version='26.1'` and `'26.2'` (and IDFs of these versions with `'auto'`), and so do `runEp()`, `get_idd_path_from_ep_version()` and the `addAccis()` of `accim.sim.accis_single_idf_funcs`, which the parametric module uses and which rejected the IDFs of 26.x even with `EnergyPlus_version=None`. `read_eso_using_readvarseso()` looks for ReadVarsESO in the folders of EnergyPlus 26.2 and 26.1 first. The prompts, messages, docstrings, README and documentation say 9.1 to 26.2.
 - **`People:Definition` and `People:Instance` objects of EnergyPlus 26.2**: EnergyPlus 26.2 can describe the occupants with a `People:Instance` object (zone or space, schedules) that references a `People:Definition` object (number of people, heat gain fractions, thermal comfort models), instead of a `People` object. accim reads the `People:Instance` objects as `People` objects, to find the occupied zones and the names of the outputs that the EMS sensors read (EnergyPlus names them after the `People:Instance` object, with the same rules as for `People` objects), and sets the thermal comfort models in the `People:Definition` objects they reference. This applies to `addAccis()`, the parametric module, `add_vrf_system()`, `apply_apmv_setpoints()`, `set_pmv_input_parameters()` (schedules in the `People:Instance` objects, Fanger model in their `People:Definition` objects), `set_zones_always_occupied()`, `set_occupancy_to_always()`, `get_people_hierarchy()`, `get_idf_hierarchy_with_people()`, `apply_heating_activation_time_sch()`, `Table` and the occupied floor area of the parametric analysis. New functions in `accim.utils`: `get_people_objects()`, `is_people_instance()` and `get_people_definition()`. Before, accim stopped with a `ValueError` when the model only had these objects.
@@ -450,7 +452,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 A detailed changelog for versions prior to 0.7.5 was not formally maintained in this file.
 
 ---
-[Unreleased]: https://github.com/dsanchez-garcia/accim/compare/v0.8.1...HEAD
+[Unreleased]: https://github.com/dsanchez-garcia/accim/compare/v0.8.2...HEAD
+[0.8.2]: https://github.com/dsanchez-garcia/accim/compare/v0.8.1...v0.8.2
 [0.8.1]: https://github.com/dsanchez-garcia/accim/compare/v0.8.0...v0.8.1
 [0.8.0]: https://github.com/dsanchez-garcia/accim/compare/v0.7.7...v0.8.0
 [0.7.7]: https://github.com/dsanchez-garcia/accim/compare/v0.7.6...v0.7.7
