@@ -1356,6 +1356,8 @@ def genIDF(self,
                     if ComfStand_value == 0:
                         SetInputData[0].Program_Line_2 = 'set CAT = 1'
                         SetInputData[0].Program_Line_3 = 'set ComfMod = 0'
+                        # ComfStand 0 has no ComfMod loop; its SetAST lines do not depend on ComfMod
+                        ComfMod_value = 0
                         for HVACmode_value in self.HVACmode_List:
                             SetInputData[0].Program_Line_4 = 'set HVACmode = ' + str(HVACmode_value)
                             if HVACmode_value == 0:
@@ -1674,7 +1676,9 @@ def genIDF(self,
                     print(outputname)
                     # time.sleep(0.1)
                     # pbar.update(1)
-                replace_SetAST_dynamic_lines(SetAST[0], ComfStand_value, ComfMod_value)
+                # The Fanger thermostat controls the zones, so SetAST keeps its 4 base lines, without
+                # the lines of a comfort model; 'run SetAST_Master' still sets ACST and AHST (with the
+                # comfort model of SetInputData) for the other EMS programs.
                 idf1.savecopy(outputname)
                 self.output_idf_dict.update({outputname: idf1})
         # pbar.close()

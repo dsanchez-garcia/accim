@@ -45,11 +45,6 @@ Active short-term tasks.
   - Definition of done: Tests cover missing file paths and assert actionable error messages in hourly/output retrieval methods.
   - References: `accim/parametric_and_optimisation/main.py`, `tests/parametric_and_optimisation/test_sim_file_cleanup.py`
 
-- [ ] [P1][todo] Fix `addAccis(TempCtrl='pmv')`
-  - Context: Found on 2026-10-18 while checking EnergyPlus 26.2, and the same with 25.2: `genIDF` stops with `UnboundLocalError: cannot access local variable 'ComfStand_value'`, because its PMV branch calls `replace_SetAST_dynamic_lines(SetAST[0], ComfStand_value, ComfMod_value)` and these variables only exist in the loops of the temperature branch. Before `dd116ea` (2026-10-16) the branch called `get_SetAST_lines(ComfStand_value, ComfMod_value)`, with the same problem. accim 0.8.0 and 0.8.1 have it, so no output IDF can be generated with PMV control.
-  - Definition of done: decide what SetAST must contain in the PMV output IDFs (probably only its base lines); a test that runs `addAccis` with `TempCtrl='pmv'`; an output IDF simulated without errors.
-  - References: `accim/sim/accim_IDFgeneration.py` (`genIDF`, branch `elif TempCtrl.lower() == 'pmv'`), `tests/core/test_addaccis_setast.py`.
-
 - [ ] [P2][todo] Check `Table` with models whose zones have several spaces
   - Context: Since 2026-10-18, accim simulates models with `Space` objects where a zone has several occupant instances (a zone of several spaces, a SpaceList that covers several spaces of a zone, a remainder space): the EMS objects of such a zone are named after the zone (`<suffix>` = zone name), while the zones with one instance keep `<Space>_<People>`. Before, these models stopped in EnergyPlus, so `Table` never read their results. `Table` finds the occupied zones of models with SpaceLists through OpenStudio conventions (spaces whose Space Type is the name of the SpaceList) and renames zone columns after spaces, which assumes one space per zone.
   - Definition of done: `Table` (and the parametric readers of hourly outputs) checked with the outputs of a model with a zone of two spaces and with a SpaceList of several spaces per zone; fixed if the zones are not found or are mixed up.
