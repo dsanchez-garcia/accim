@@ -205,8 +205,8 @@ def test_space_list_without_space_types_finds_the_zones(tmp_path, monkeypatch):
     assert _values(table, 'Block1:Zone1_PMV') == pytest.approx(MEAN_OF_1A_AND_1B[1])
     assert _values(table, 'Block1:Zone2_PMV') == INSTANCE_2[1]
     assert _values(table, 'Block1:Zone2_EN16798-1 Running mean outdoor temperature (°C)') == INSTANCE_2[0]
-    # Nor are its EMS outputs: they are named after their zone, as those of a zone of several instances
-    assert _values(table, 'EMS:COMFORTABLE HOURS_NO APPLICABILITY_BLOCK1_ZONE2 [H](HOURLY)') == \
+    # Nor are its EMS outputs: they are named after their zone, as those of the other zones
+    assert _values(table, 'Block1:Zone2_Comfortable Hours_No Applicability (h)') == \
         ZONE_VALUES['Block1:Zone2']['comfortable']
     assert _values(table, 'Block1_Total_Cooling Energy Demand (Wh) (summed)') == [400.0, 600.0]
     assert _values(table, 'Building_Total_Comfortable Hours_No Applicability (h) (summed)') == [1.0, 2.0]
@@ -248,7 +248,11 @@ def test_openstudio_model_with_one_space_per_zone_keeps_the_names_of_the_spaces(
         assert _values(table, f'{name}_Zone Operative Temperature (°C)') == ZONE_VALUES[zone]['temperature']
     assert _values(table, 'BLOCK1:SPACE 1_PMV') == INSTANCE_1A[1]
     assert _values(table, 'BLOCK1:SPACE 2_PMV') == INSTANCE_2[1]
-    assert 'EMS:COMFORTABLE HOURS_NO APPLICABILITY_SPACE_1_OCCUPANTS [H](HOURLY)' in table.df.columns
+    # The EMS outputs ('..._Space_1_Occupants', with the blank of the space replaced by '_') are named after
+    # the spaces too, so they get the block (see tests/core/test_table_columns.py)
+    assert _values(table, 'BLOCK1:SPACE 1_Comfortable Hours_No Applicability (h)') == \
+        ZONE_VALUES['Block1:Zone1']['comfortable']
+    assert _values(table, 'BLOCK1_Total_Comfortable Hours_No Applicability (h) (summed)') == [1.0, 2.0]
 
 
 def test_model_without_spaces_keeps_its_columns(tmp_path, monkeypatch):
@@ -264,6 +268,7 @@ def test_model_without_spaces_keeps_its_columns(tmp_path, monkeypatch):
     assert sorted(table.occupied_zone_list) == ['Block1:Zone1', 'Block1:Zone2']
     assert _values(table, 'Block1:Zone1_PMV') == INSTANCE_1A[1]
     assert _values(table, 'Block1:Zone2_PMV') == INSTANCE_2[1]
-    assert _values(table, 'EMS:COMFORTABLE HOURS_NO APPLICABILITY_BLOCK1_ZONE1 [H](HOURLY)') == \
+    # The EMS outputs are named after their zones (see tests/core/test_table_columns.py)
+    assert _values(table, 'Block1:Zone1_Comfortable Hours_No Applicability (h)') == \
         ZONE_VALUES['Block1:Zone1']['comfortable']
     assert _values(table, 'Block1:Zone2_Cooling Energy Demand (Wh)') == ZONE_VALUES['Block1:Zone2']['cooling']
