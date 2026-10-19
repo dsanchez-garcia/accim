@@ -33,6 +33,143 @@ def _legend_handles(leg):
     handles = getattr(leg, 'legend_handles', None)
     return handles if handles is not None else leg.legendHandles
 
+
+# The outputs that Table averages over time, and over the occupant instances of a zone; it adds up the others
+_AVERAGED_OUTPUTS = [
+    'Environment:Site Outdoor Air Drybulb Temperature',
+    'Environment:Site Wind Speed',
+    'Environment:Site Outdoor Air Relative Humidity',
+    'EMS:Comfort Temperature',
+    'EMS:Adaptive Cooling Setpoint Temperature',
+    'EMS:Adaptive Heating Setpoint Temperature',
+    'EMS:Adaptive Cooling Setpoint Temperature_No Tolerance',
+    'EMS:Adaptive Heating Setpoint Temperature_No Tolerance',
+    'EMS:Ventilation Setpoint Temperature',
+    'EMS:Minimum Outdoor Temperature for ventilation',
+    # 'Zone Thermostat Operative Temperature',
+    # 'Zone Operative Temperature',
+    'Zone Operative Temperature',
+    'Zone Thermal Comfort CEN 15251 Adaptive Model Running Average Outdoor Air Temperature',
+    'Zone Thermal Comfort ASHRAE 55 Adaptive Model Running Average Outdoor Air Temperature',
+    'Zone Thermal Comfort Fanger Model PMV',
+    'Zone Thermal Comfort Fanger Model PPD'
+]
+
+
+def _occupied_zones(building, columns: list, spacelists: bool):
+    """
+    Find the occupied zones of a model and the names Table gives them, from the targets of the EMS of accim
+    (one per occupied zone, see accim.sim.apmv_setpoints._resolve_targets), and the columns of the outputs of
+    the occupants whose names do not identify their zone.
+
+    A zone is named after its space if it has one occupant instance, placed through a SpaceList named like the
+    Space Type of the space (the conventions of OpenStudio, only in models with SpaceLists), and after the zone
+    otherwise, like the EMS objects of a zone with several instances. Table attributes the outputs keyed by the
+    names of the instances, and the EMS outputs whose names end with the suffix of the target, to the zone whose
+    name they contain, so these columns are renamed after their zone:
+    - the outputs of the instances of a zone with several instances, which get the same name;
+    - in models with Space objects, the outputs of a zone with one instance whose names contain the name of
+      another zone, such as those of the instance 'Space 2 People Block1:Zone1' of Block1:Zone2. The EMS
+      outputs end with the name of the zone (sanitized, as in the EMS objects), or with the name of the space
+      if the zone is named after it.
+
+    :param building: The model, read with besos.
+    :param columns: The names of the columns, in uppercase.
+    :param spacelists: True if the model has SpaceLists.
+    :return: A dictionary {name of the zone in uppercase: name of the zone in Table}, in the order Table
+        renames the zones after their spaces, and a dictionary {column: new name of the column}.
+    """
+    import warnings
+    # Imported here, as in accim.sim.utils.scan_zones
+    from accim.sim.apmv_setpoints import _resolve_targets, _sanitize_ems_name
+    from accim.utils import get_energyplus_spaces, get_people_instances, get_people_objects
+
+    with warnings.catch_warnings():
+        # The warning about remainder spaces is for addAccis
+        warnings.simplefilter('ignore')
+        targets = _resolve_targets(building)
+    instances = {i['name'].upper(): i for i in get_people_instances(building)}
+    zones = get_energyplus_spaces(building)
+    spaces = list(building.idfobjects['SPACE']) if spacelists else []
+    space_index = {str(s.Name).strip().upper(): n for n, s in enumerate(spaces)}
+    people = get_people_objects(building)
+
+    names = {}
+    order = {}
+    for target in targets:
+        zone = target['zone_name'].upper()
+        names[zone] = zones[zone]['zone'] if zone in zones else target['zone_name']
+        instance = instances.get(target['instance_keys'][0].upper())
+        if (len(target['instance_keys']) == 1 and instance is not None and instance['assignment'] == 'SpaceList'
+                and instance['space'].upper() in space_index):
+            space = spaces[space_index[instance['space'].upper()]]
+            if str(space.Space_Type).strip().upper() == instance['container'].upper():
+                names[zone] = str(space.Name).strip()
+                # The zones are renamed after their spaces as before: in the order of the People objects, and
+                # of the Space objects for each of them
+                people_index = next((n for n, p in enumerate(people) if p is instance['object']), len(people))
+                order[zone] = (people_index, space_index[instance['space'].upper()])
+    names = dict(sorted(names.items(), key=lambda item: order.get(item[0], (len(people), len(spaces)))))
+
+    has_spaces = any(zone['explicit'] for zone in zones.values())
+    new_keys = {}
+    new_suffixes = {}
+    for target in targets:
+        zone = target['zone_name'].upper()
+        name = names[zone].upper()
+        keys = [k.upper() for k in target['instance_keys']]
+        if len(keys) == 1:
+            suffix = target['ems_suffix'].upper()
+            others = [z for z in zones if z != zone]
+            if not (has_spaces and any(o in keys[0] or _sanitize_ems_name(o) in suffix for o in others)):
+                continue
+            new_suffixes[suffix] = name if name != zone else _sanitize_ems_name(names[zone]).upper()
+        for key in keys:
+            new_keys[key] = name
+
+    def longest(candidates, matches):
+        found = [c for c in candidates if matches(c)]
+        return max(found, key=len) if found else None
+
+    renamed = {}
+    suffixes = [t['ems_suffix'].upper() for t in targets]
+    for column in columns:
+        key = longest(instances, lambda k: column.startswith(k + ':'))
+        if key is not None:
+            if key in new_keys:
+                renamed[column] = new_keys[key] + column[len(key):]
+            continue
+        # EMS outputs ('EMS:<Output>_<suffix> [unit](frequency)') and schedules ('<name>_<suffix>:Schedule Value')
+        head = column.split(' [')[0]
+        if head.endswith(':SCHEDULE VALUE'):
+            head = head[:-len(':SCHEDULE VALUE')]
+        suffix = longest(suffixes, lambda s: head.endswith('_' + s))
+        if suffix is not None and suffix in new_suffixes:
+            start = len(head) - len(suffix)
+            renamed[column] = column[:start] + new_suffixes[suffix] + column[start + len(suffix):]
+    return names, renamed
+
+
+def _rename_and_merge_columns(df, renamed: dict):
+    """
+    Rename the columns of df, and merge those that get the same name: their mean for the outputs that Table
+    averages, and their sum for the others.
+    """
+    import pandas as pd
+
+    df = df.rename(columns=renamed)
+    for name in df.columns[df.columns.duplicated()].unique():
+        position = list(df.columns).index(name)
+        same = df.loc[:, df.columns == name].apply(pd.to_numeric, errors='coerce')
+        if any(output.upper() in name.upper() for output in _AVERAGED_OUTPUTS):
+            merged = same.mean(axis=1)
+        else:
+            merged = same.sum(axis=1, min_count=1)
+        df = df.loc[:, df.columns != name]
+        df.insert(position, name, merged)
+    return df
+
+
 class Table:
     """Generates a table or dataframe using the EnergyPlus simulation
     results CSV files available in the current folder.
@@ -81,6 +218,15 @@ class Table:
         Used to try to match the cities in the EPW file name with actual cities.
         To be used if EPWs have not been previously renamed with rename_epw_files().
     :type level_excluded_zones: list
+    :param block_zone_hierarchy: A dictionary {block: [zones]}, for the occupied zones whose names do not
+        have the pattern 'block:zone' of DesignBuilder. If it is None, Table asks for the blocks and their zones.
+        In models with SpaceLists, a zone with one occupant instance placed through a SpaceList named like the
+        Space Type of its space (the conventions of OpenStudio) is named after its space, and the other zones,
+        such as those of several spaces, after the zone; the zones whose names already have the pattern
+        'block:zone' keep them. The outputs of the occupants of a zone with several occupant instances are
+        merged into one column: their mean for the outputs that Table averages (such as the running mean outdoor
+        temperature, PMV and PPD), and their sum for the others.
+    :type block_zone_hierarchy: dict
     :param split_epw_names: It splits the EPW name into Country_City_RCPscenario-Year format.
         To be used if EPWs do have been previously renamed with rename_epw_files().
     :type split_epw_names: bool
@@ -166,7 +312,6 @@ class Table:
         import numpy as np
         import csv
         from besos.eppy_funcs import get_building
-        from accim.utils import get_people_objects
 
         self.frequency = frequency
         self.normalised_energy_units = normalised_energy_units
@@ -441,25 +586,7 @@ class Table:
                 df['count'] = 1
                 agg_dict.update({'count': 'count'})
 
-                aggregation_list_mean = [
-                    'Environment:Site Outdoor Air Drybulb Temperature',
-                    'Environment:Site Wind Speed',
-                    'Environment:Site Outdoor Air Relative Humidity',
-                    'EMS:Comfort Temperature',
-                    'EMS:Adaptive Cooling Setpoint Temperature',
-                    'EMS:Adaptive Heating Setpoint Temperature',
-                    'EMS:Adaptive Cooling Setpoint Temperature_No Tolerance',
-                    'EMS:Adaptive Heating Setpoint Temperature_No Tolerance',
-                    'EMS:Ventilation Setpoint Temperature',
-                    'EMS:Minimum Outdoor Temperature for ventilation',
-                    # 'Zone Thermostat Operative Temperature',
-                    # 'Zone Operative Temperature',
-                    'Zone Operative Temperature',
-                    'Zone Thermal Comfort CEN 15251 Adaptive Model Running Average Outdoor Air Temperature',
-                    'Zone Thermal Comfort ASHRAE 55 Adaptive Model Running Average Outdoor Air Temperature',
-                    'Zone Thermal Comfort Fanger Model PMV',
-                    'Zone Thermal Comfort Fanger Model PPD'
-                ]
+                aggregation_list_mean = _AVERAGED_OUTPUTS
 
                 for i in df.columns:
                     for j in aggregation_list_mean:
@@ -709,31 +836,27 @@ class Table:
 
         allzones = [i.Name for i in building.idfobjects['ZONE']]
 
-        occupied_zone_list = []
         try:
-            if len(building.idfobjects['SPACELIST']) > 0:
-                # spacenames_for_ems_uniquekey = []
-                spacenames = []
-                # spacenames_for_ems_uniquekey_people = []
-                zonenames_from_space = []
-                # People objects, and the People:Instance objects of EnergyPlus 26.2
-                for people in get_people_objects(building):
-                    for spacelist in [i for i in building.idfobjects['SPACELIST'] if i.Name == people.Zone_or_ZoneList_or_Space_or_SpaceList_Name]:
-                        for space in [i for i in building.idfobjects['SPACE'] if i.Space_Type == spacelist.Name]:
-                            # spacenames_for_ems_uniquekey.append(f'{space.Name} {spacelist.Name}')
-                            spacenames.append(space.Name)
-                            # spacenames_for_ems_uniquekey_people.append(f'{space.Name} {people.Name}')
-                            # occupiedZones_orig_osm.append(space.Zone_Name)
-                            occupied_zone_list.append(space.Name)
-                            for zone in [i for i in building.idfobjects['ZONE'] if space.Zone_Name == i.Name]:
-                                zonenames_from_space.append(zone.Name)
-                                df.columns = [i.replace(zone.Name.upper(), space.Name.upper()) for i in df.columns]
-            else:
-                for zone in allzones:
-                    for col in df.columns:
-                        if zone.lower() in col.lower():
-                            occupied_zone_list.append(zone)
+            spacelists = len(building.idfobjects['SPACELIST']) > 0
         except KeyError:
+            # The IDDs before EnergyPlus 9.6 have no SpaceLists
+            spacelists = False
+
+        # The occupied zones, from the targets of the EMS of accim (one per occupied zone), and the columns of the
+        # outputs of the occupants whose names do not identify their zone, renamed after it (see _occupied_zones)
+        zone_names, renamed_columns = _occupied_zones(building, list(df.columns), spacelists)
+        df = _rename_and_merge_columns(df, renamed_columns)
+
+        occupied_zone_list = []
+        if spacelists:
+            # A zone of one occupant instance placed through a SpaceList named like the Space Type of its space
+            # (OpenStudio) is named after its space; the other zones, such as those of several spaces, keep
+            # their names
+            for zone, name in zone_names.items():
+                occupied_zone_list.append(name)
+                if name.upper() != zone:
+                    df.columns = [i.replace(zone, name.upper()) for i in df.columns]
+        else:
             for zone in allzones:
                 for col in df.columns:
                     if zone.lower() in col.lower():
@@ -741,12 +864,15 @@ class Table:
         occupied_zone_list = list(set(occupied_zone_list))
 
         if not(all(len(i.split(':')) == 2 for i in occupied_zone_list)):
+            # The zones whose names already have the pattern block:zone keep them (for instance, a zone of several
+            # spaces in a model with SpaceLists), so only the others need a block
+            zones_with_block = [i.upper() for i in occupied_zone_list if len(i.split(':')) == 2]
             if block_zone_hierarchy is None:
                 print(
                     'Regarding occupied zones, we have not found a clear hierarchical pattern of blocks and zones. '
                     'The zones we have found are:'
                 )
-                print(occupied_zone_list)
+                print([i for i in occupied_zone_list if len(i.split(':')) != 2])
                 block_list = list(i.upper() for i in input('Please enter all Blocks separated by semicolon (;): ').split(';'))
                 hierarchy_dict = {}
                 for i in block_list:
@@ -757,6 +883,7 @@ class Table:
             else:
                 # hierarchy_dict = block_zone_hierarchy
                 hierarchy_dict = {i.upper(): [k.upper() for k in j] for i, j in block_zone_hierarchy.items()}
+            hierarchy_dict = {i: [k for k in j if k not in zones_with_block] for i, j in hierarchy_dict.items()}
 
             for i in hierarchy_dict:
                 for j in hierarchy_dict[i]:
@@ -764,7 +891,7 @@ class Table:
                     # df.columns = [k.replace(j.upper().replace(' ', '_'), i + '_' + j) for k in df.columns]
 
             print('Finally, the occupied zones after renaming them following the pattern block_zone are:')
-            occupied_zone_list = []
+            occupied_zone_list = list(zones_with_block)
             for i in hierarchy_dict:
                 for j in hierarchy_dict[i]:
                     occupied_zone_list.append(f'{i}:{j}')
