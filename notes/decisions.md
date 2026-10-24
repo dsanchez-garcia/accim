@@ -11,6 +11,13 @@ Durable architectural/process decisions for this repository and its Obsidian
 vault. Newest first. Use [[templates/decision-record.md|the decision-record
 template]] to add a new entry.
 
+## 2026-10-24 — Fail-closed checkpoints and execution-owned cleanup
+
+- **Status**: accepted
+- **Context**: The author authorized autonomous implementation of the integrity block identified in [[../docs/refactor-sim-v1-review.md]]. Older checkpoints could omit results or reuse a different evaluation, and filename-pattern cleanup did not establish ownership.
+- **Decision**: Resume only versioned checkpoints with validated content and evaluation identity; reject unverifiable legacy state instead of silently trusting or overwriting it. Restrict automatic cleanup to explicitly created workspaces/files, and coordinate writers with OS locks. The contracts and limitations are documented in [[../docs/source/checkpoint_integrity.rst]].
+- **Consequences**: Legacy result inspection remains available, but execution resume may require a fresh output directory. Custom external dependencies must be declared. CLI and public runner names stay unchanged; this does not establish scientific correctness of the comfort formulas or thread safety of the full BESOS stack.
+
 ## 2026-10-15 — Hourly results of the parametric notebooks only where they are analysed
 
 - **Status**: accepted

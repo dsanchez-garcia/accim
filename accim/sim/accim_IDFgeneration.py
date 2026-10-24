@@ -16,6 +16,7 @@
 
 """Generate IDFs."""
 from accim.sim.setAST_models import get_SetAST_lines
+from accim.sim._workspace import cleanup_after_generation
 
 
 def replace_SetAST_dynamic_lines(SetAST, ComfStand_value, ComfMod_value):
@@ -884,6 +885,7 @@ def inputData(self, ScriptType: str = None):
     }
 
 
+@cleanup_after_generation
 def genIDF(self,
     ScriptType: str = None,
     TempCtrl: str = None,
@@ -1081,10 +1083,8 @@ def genIDF(self,
         suffix = '[NS_' + NameSuffix
 
     if filelist_pymod is None:
-        filelist_pymod = ([file for file in listdir() if file.endswith('_pymod.idf')])
-        filelist_pymod = ([file.split('.idf')[0] for file in filelist_pymod])
-    else:
-        filelist_pymod = ([file.split('.idf')[0] for file in filelist_pymod if file.endswith('_pymod.idf')])
+        filelist_pymod = list(getattr(self, '_owned_pymod_files', ()))
+    filelist_pymod = [os.path.splitext(file)[0] for file in filelist_pymod if file.endswith('_pymod.idf')]
     # print(filelist_pymod)
 
     # Characters not admitted: & ^ , = % " / \ : * ? " < > |
@@ -1686,8 +1686,5 @@ def genIDF(self,
         if verboseMode:
             print('IDF generation has been shut down')
 
-    filelist_pymod = ([file for file in listdir() if file.endswith('_pymod.idf')])
-    for file in filelist_pymod:
-        os.remove(file)
 
     # del SetInputData

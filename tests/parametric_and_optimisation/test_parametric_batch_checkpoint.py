@@ -7,6 +7,12 @@ import accim.parametric_and_optimisation.main as main_module
 from accim.parametric_and_optimisation.main import ParametricSimulation
 
 
+@pytest.fixture(autouse=True)
+def synthetic_checkpoint_identity(monkeypatch):
+    monkeypatch.setattr(main_module.SimulationBase, '_checkpoint_evaluation_identity',
+                        lambda self, **kwargs: {'schema': 1, 'synthetic': 'batch-tests'})
+
+
 class _DummyProblem:
     def __init__(self, inputs, outputs):
         self._inputs = inputs
@@ -85,8 +91,7 @@ def test_parametric_batch_checkpoint_roundtrip(tmp_path, monkeypatch):
     checkpoint_path = out_dir / 'outputs_param_simulation_checkpoint_latest.pkl'
     assert checkpoint_path.exists()
 
-    # The checkpoint is persisted in the 'state_v2' dict format (not a plain
-    # DataFrame): completed task signatures + pointers to batch pickle files.
+    # A versioned manifest includes identity and fingerprints of each batch.
     checkpoint_state = sim._load_parametric_checkpoint_state(checkpoint_path=str(checkpoint_path))
     assert len(checkpoint_state['completed_signatures']) == 5
 
@@ -134,7 +139,15 @@ def test_parametric_resume_from_checkpoint_skips_completed_tasks(tmp_path, monke
             }
         )
 
-    pd.DataFrame(precomputed_rows).to_pickle(checkpoint_path)
+    batch = sim._save_parametric_batch_chunk(
+        pd.DataFrame(precomputed_rows), str(out_dir / 'chunks'), 0,
+    )
+    sim._save_parametric_checkpoint(
+        [], str(checkpoint_path), total_tasks=4, completed_tasks=2,
+        completed_signatures={row['_accim_task_signature'] for row in precomputed_rows},
+        batch_pickles=[batch], input_plan=sim.parameters_values_df,
+        evaluation_identity={'schema': 1, 'synthetic': 'batch-tests'},
+    )
 
     results = sim.run_parametric_simulation(
         out_dir=str(out_dir),
@@ -150,8 +163,7 @@ def test_parametric_resume_from_checkpoint_skips_completed_tasks(tmp_path, monke
     assert len(results) == 4
     assert sorted(results['x'].tolist()) == [1, 2, 3, 4]
 
-    # The checkpoint is persisted in the 'state_v2' dict format (not a plain
-    # DataFrame): reconstruct the full results via the batch pickle pointers.
+    # Reconstruct the full results via the validated batch pointers.
     refreshed_checkpoint_state = sim._load_parametric_checkpoint_state(checkpoint_path=str(checkpoint_path))
     assert len(refreshed_checkpoint_state['completed_signatures']) == 4
 

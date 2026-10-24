@@ -25,6 +25,8 @@ from typing import Literal, List, Union, Optional, Any, Sequence
 import warnings
 import functools
 import difflib
+import tempfile
+import copy
 import accim
 import numpy as np
 import pandas as pd
@@ -48,6 +50,9 @@ from accim.parametric_and_optimisation.plotting import PlottingMixin
 from accim.parametric_and_optimisation.patches import GlobalAllCapsDict, _patched_eval_func, _patched_to_platypus, _ensure_run_energyplus_copies_in_idf
 from accim.parametric_and_optimisation.mn_filter import MNFilter, MNFilterMapping
 from accim.parametric_and_optimisation.file_cleanup import normalize_sim_file_cleanup_options, sim_file_policy_will_remove_extension, prune_simulation_output_files
+from accim.parametric_and_optimisation import _checkpoint
+from accim.parametric_and_optimisation._execution import isolated_run, owns_path, remove_owned_directory
+from accim.parametric_and_optimisation._pareto import non_dominated_mask
 import accim.parametric_and_optimisation.params_dicts as params_dicts
 allowed_output_freqs = Literal['timestep', 'hourly', 'daily', 'monthly', 'runperiod']
 
@@ -389,6 +394,8 @@ def _run_single_evaluation_worker(
         # at the same time may try to create it together, so it is created here first.
         os.makedirs(os.path.join(str(evaluator_out_dir), besos_config.out_wrapper), exist_ok=True)
     evaluator = EvaluatorEP(problem=prob, building=b, epw=epw, out_dir=evaluator_out_dir)
+    # Never let BESOS replace a shared BESOS_Errors directory on failure.
+    evaluator.err_dir = None
     if getattr(prob, 'add_outputs', None):
         # BESOS only records the add_outputs of an evaluation once this list exists.
         prob.pre_optimisation()
@@ -419,6 +426,7 @@ def _run_single_evaluation_worker(
                     sim_dir=sim_dir,
                     sim_files_extensions=sim_files_extensions,
                     sim_files_policy=sim_files_policy,
+                    owned_root=out_dir,
                 )
             except Exception:
                 # Never fail a simulation because post-run file cleanup failed.
@@ -3100,6 +3108,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         self.outputs_duplicates_after_injection_ = self.autocorrect_output_duplicates(idf_scope='all', warn=True) if len(self.buildings) > 0 else {}
         self.last_run_type = None
         self.simulation_summary: Optional[dict] = None
+        self.sim_outputs = None
         # Save an initial IDF backup right after addAccis/apply_apmv_setpoints so the
         # modified IDF (with EMS scripts and outputs already injected) is always
         # recoverable, even if run_parametric_simulation / run_optimisation are not called yet.
@@ -3271,6 +3280,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         sim_dirs: Sequence[Any],
         sim_files_extensions: Optional[tuple[str, ...]],
         sim_files_policy: str,
+        owned_root: Optional[str] = None,
     ) -> dict:
         """Apply post-run cleanup policy to a sequence of simulation folders.
 
@@ -3327,6 +3337,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                 sim_dir=sim_dir_path,
                 sim_files_extensions=sim_files_extensions,
                 sim_files_policy=sim_files_policy,
+                owned_root=owned_root,
             )
             stats['processed_dirs'] += int(cleanup_stats.get('processed', False))
             stats['removed_files'] += int(cleanup_stats.get('removed_files', 0))
@@ -3358,8 +3369,6 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         --------
         result = self._save_idf_backup(label=..., out_dir=...)
         """
-        import datetime
-        timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
         if out_dir is None:
             raise ValueError(
                 "'out_dir' must be specified when saving an IDF backup. "
@@ -3371,15 +3380,27 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         os.makedirs(backup_dir, exist_ok=True)
         suffix = f'_{label}' if label else ''
         self.idf_backup_path = []
-        for i, b in enumerate(self.buildings):
-            idf_basename = os.path.basename(b.idfname).replace('.idf', '') if hasattr(b, 'idfname') and b.idfname else f'unknown_idf_{i}'
-            filename = f'accim_idf_backup_{idf_basename}{suffix}_{timestamp}.idf'
-            backup_path = os.path.join(backup_dir, filename)
-            b.savecopy(backup_path)
+        self._idf_backup_by_id = {}
+        for idf_basename, b in self._get_buildings_by_idf().items():
+            safe_name = re.sub(r'[^A-Za-z0-9_.-]+', '_', idf_basename)
+            fd, backup_path = tempfile.mkstemp(prefix=f'accim_idf_backup_{safe_name}{suffix}_', suffix='.idf', dir=os.path.abspath(backup_dir))
+            os.close(fd)
+            try:
+                b.savecopy(backup_path)
+            except Exception:
+                os.remove(backup_path)
+                raise
+            self._idf_backup_by_id[idf_basename] = os.path.abspath(backup_path)
             self.idf_backup_path.append(os.path.abspath(backup_path))
         if len(self.idf_backup_path) == 1:
             self.idf_backup_path = self.idf_backup_path[0]
         return self.idf_backup_path
+
+    def _checkpoint_evaluation_identity(self, *, epws, options, checkpoint_context=None):
+        return _checkpoint.evaluation_identity(
+            self, models=getattr(self, '_idf_backup_by_id', {}), epws=epws,
+            options=options, context=checkpoint_context,
+        )
 
     def get_output_variables_df_from_idf(self, idf_scope: Any = 'all') -> pd.DataFrame:
         """Gets a pandas DataFrame which contains the Output:Variable objects from the idf.
@@ -5076,9 +5097,14 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
 
             idf_id = self._get_idf_identifier(selected_building, selected_idx)
             safe_idf_id = re.sub(r'[^A-Za-z0-9_.-]+', '_', idf_id)
-            temp_path = f'{temp_prefix}_{selected_idx}_{safe_idf_id}.idf'
-            selected_building.savecopy(temp_path)
-            building_for_testsim = get_building(temp_path)
+            fd, temp_path = tempfile.mkstemp(prefix=f'{temp_prefix}_{selected_idx}_{safe_idf_id}_', suffix='.idf')
+            os.close(fd)
+            try:
+                selected_building.savecopy(temp_path)
+                building_for_testsim = get_building(temp_path)
+            except Exception:
+                os.remove(temp_path)
+                raise
 
         if reduce_sim_time:
             reduce_runtime(
@@ -5186,12 +5212,14 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         if len(scoped_buildings) > 1:
             meter_dfs = []
             variable_dfs = []
+            discovery_dirs = []
             for idx, building in scoped_buildings:
                 scoped_outputs = self._get_outputs_df_from_testsim(
                     reduce_sim_time=reduce_sim_time,
                     idf_scope=idx,
                     keep_available_outputs=keep_available_outputs,
                 )
+                discovery_dirs.extend(scoped_outputs.get('out_dirs', []))
                 df_meters = scoped_outputs['meters']
                 df_vars = scoped_outputs['variables']
                 idf_id = self._get_idf_identifier(building, idx)
@@ -5202,6 +5230,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             return {
                 'meters': pd.concat(meter_dfs, ignore_index=True) if meter_dfs else pd.DataFrame(columns=['key_name', 'frequency']),
                 'variables': pd.concat(variable_dfs, ignore_index=True) if variable_dfs else pd.DataFrame(columns=['key_value', 'variable_name', 'frequency']),
+                'out_dirs': discovery_dirs,
             }
 
         if len(scoped_buildings) == 0:
@@ -5377,6 +5406,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         return {
             'meters': df_outputmeters,
             'variables': df_outputvariables,
+            'out_dirs': [available_outputs.out_dir],
         }
 
     # ------------------------------------------------------------------
@@ -5403,8 +5433,9 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         :param refresh: when False, reuse cached results in ``self.available_outputs_``.
         :param idf_scope: IDFs to discover. Defaults to 'all'. Use 'first', an index,
             an IDF name, or a list of selectors to run fewer test simulations.
-        :param keep_available_outputs: when False (default), removes the temporary
-            ``available_outputs`` directory once discovery is done.
+        :param keep_available_outputs: retain this invocation's unique discovery
+            directory. Its actual paths are reported in ``meta``; existing
+            ``available_outputs`` files are never removed or overwritten.
         :return: dictionary with keys ``meters``, ``variables`` and ``meta``.
         
         Usage
@@ -5445,7 +5476,6 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             'idf_scope': scope_label,
             'keep_available_outputs': keep_available_outputs,
         }
-        cleanup_generated_rdd_mdd_dir = False
 
         if prefer == 'rdd_mdd':
             out_dir = 'available_outputs'
@@ -5477,11 +5507,11 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                     force_temp_copy=True,
                 )
                 try:
-                    import shutil
                     from besos.eplus_funcs import run_building
 
-                    if os.path.isdir(out_dir):
-                        shutil.rmtree(out_dir, ignore_errors=True)
+                    out_dir = tempfile.mkdtemp(prefix='available_outputs_', dir=os.getcwd())
+                    rdd_path = os.path.join(out_dir, 'eplusout.rdd')
+                    mdd_path = os.path.join(out_dir, 'eplusout.mdd')
 
                     # IDF mode keeps RDD/MDD rows parseable by get_rdd_file_as_df/get_mdd_file_as_df.
                     self._ensure_output_variable_dictionary_for_building(
@@ -5496,6 +5526,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                             out_dir=out_dir,
                             epw=self.epws[0],
                             stdout_mode='Verbose',
+                            err_dir=None,
                         )
                     except Exception as exc:
                         run_error = exc
@@ -5516,8 +5547,9 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                         raise RuntimeError(
                             "Failed to parse generated RDD/MDD files with prefer='rdd_mdd'."
                         ) from exc
-                    cleanup_generated_rdd_mdd_dir = not keep_available_outputs
                 finally:
+                    if out_dir != 'available_outputs' and not keep_available_outputs:
+                        remove_owned_directory(out_dir, out_dir)
                     if temp_path is not None:
                         try:
                             from os import remove
@@ -5542,7 +5574,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             )
             df_meters = outputs_from_testsim['meters']
             df_vars = outputs_from_testsim['variables']
-            meta.update({'source': 'testsimeplus', 'out_dir': 'available_outputs'})
+            meta.update({'source': 'testsimeplus', 'out_dirs': outputs_from_testsim.get('out_dirs', [])})
 
         # Normalize column dtypes minimally
         for df, cols in ((df_meters, ['key_name', 'frequency']), (df_vars, ['key_value', 'variable_name', 'frequency'])):
@@ -5551,9 +5583,6 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                     df[c] = df[c].astype(str)
 
         self.available_outputs_ = {'df_meters': df_meters.copy(), 'df_vars': df_vars.copy(), 'meta': dict(meta)}
-        if cleanup_generated_rdd_mdd_dir:
-            import shutil
-            shutil.rmtree('available_outputs', ignore_errors=True)
         return {
             'meters': df_meters,
             'variables': df_vars,
@@ -6685,7 +6714,10 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
     ):
         """Sets the besos EPProblem class instance, using for inputs the parameters previously set in the set_parameters
         method, and for outputs, those set using the set_output_readers method.
-        
+
+        If no readers have been configured, the problem has no objectives. This
+        supports parametric sweeps; optimisation still requires explicit objectives.
+
         :param minimize_outputs: only used in optimisation; a list containing booleans to specify if the outputs must
             be minimized (True), maximized (False), or just show the output (None).
         :param constraints: only used in optimisation;
@@ -7919,7 +7951,10 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         result = self.set_evaluator(epw=..., out_dir=..., building=...)
         """
         b = building if building is not None else self.building
-        evaluator = EvaluatorEP(problem=self.problem, building=b, epw=epw, out_dir=out_dir)
+        # BESOS setup adds output objects; do not change the prepared baseline
+        # whose fingerprint must remain stable across repeated calls.
+        evaluator = EvaluatorEP(problem=self.problem, building=copy.deepcopy(b), epw=epw, out_dir=out_dir)
+        evaluator.err_dir = None
         return evaluator
 
     def _run_evaluator_df_apply(
@@ -8295,15 +8330,15 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S_%f')
         chunk_name = f'{file_prefix}_{int(batch_idx):05d}_{timestamp}.pkl'
         chunk_path = os.path.abspath(os.path.join(batches_dir, chunk_name))
-        chunk_tmp_path = f'{chunk_path}.tmp'
-        batch_df.to_pickle(chunk_tmp_path)
-        os.replace(chunk_tmp_path, chunk_path)
+        _checkpoint.validate_frame(batch_df, signatures=True, nonempty=True, context='new result batch')
+        _checkpoint.atomic_pickle(batch_df, chunk_path)
         return chunk_path
 
     @staticmethod
     def _load_parametric_checkpoint_state(checkpoint_path: str) -> dict:
-        """Load parametric checkpoint in either legacy-DataFrame format or the
-        new state-dict format.
+        """Load a versioned, integrity-checked parametric checkpoint.
+
+        Legacy checkpoints cannot establish evaluation identity and are rejected.
         
         Parameters
         ----------
@@ -8318,73 +8353,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         --------
         result = self._load_parametric_checkpoint_state(checkpoint_path=...)
         """
-        payload = pd.read_pickle(checkpoint_path)
-
-        if isinstance(payload, pd.DataFrame):
-            legacy_df = payload.copy()
-            if '_accim_task_signature' not in legacy_df.columns:
-                return {
-                    'completed_signatures': set(),
-                    'batch_pickles': [],
-                    'legacy_results_df': None,
-                    'total_tasks': None,
-                    'completed_tasks': None,
-                    'input_plan': None,
-                }
-
-            legacy_df['_accim_task_signature'] = legacy_df['_accim_task_signature'].astype(str)
-            legacy_df = legacy_df.drop_duplicates(
-                subset=['_accim_task_signature'],
-                keep='last',
-            ).reset_index(drop=True)
-            return {
-                'completed_signatures': set(legacy_df['_accim_task_signature'].tolist()),
-                'batch_pickles': [],
-                'legacy_results_df': legacy_df,
-                'total_tasks': None,
-                'completed_tasks': int(len(legacy_df)),
-                'input_plan': None,
-            }
-
-        if not isinstance(payload, dict):
-            raise ValueError(
-                'Parametric checkpoint must contain a DataFrame (legacy) or a dictionary payload.'
-            )
-
-        completed_signatures_raw = payload.get('completed_signatures', [])
-        if isinstance(completed_signatures_raw, (set, tuple)):
-            completed_signatures_raw = list(completed_signatures_raw)
-        if not isinstance(completed_signatures_raw, list):
-            completed_signatures_raw = []
-
-        completed_signatures = {
-            str(signature)
-            for signature in completed_signatures_raw
-            if signature is not None and str(signature).strip() != ''
-        }
-
-        batch_pickles_raw = payload.get('batch_pickles', [])
-        if isinstance(batch_pickles_raw, (set, tuple)):
-            batch_pickles_raw = list(batch_pickles_raw)
-        if not isinstance(batch_pickles_raw, list):
-            batch_pickles_raw = []
-
-        batch_pickles = []
-        for entry in batch_pickles_raw:
-            if isinstance(entry, (str, os.PathLike)):
-                batch_pickles.append(os.path.abspath(os.fspath(entry)))
-
-        input_plan_raw = payload.get('input_plan')
-        input_plan = input_plan_raw.copy() if isinstance(input_plan_raw, pd.DataFrame) else None
-
-        return {
-            'completed_signatures': completed_signatures,
-            'batch_pickles': batch_pickles,
-            'legacy_results_df': None,
-            'total_tasks': payload.get('total_tasks'),
-            'completed_tasks': payload.get('completed_tasks'),
-            'input_plan': input_plan,
-        }
+        return _checkpoint.load_parametric(checkpoint_path)
 
     @staticmethod
     def _parametric_plans_match(
@@ -8443,7 +8412,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             return False
 
     @staticmethod
-    def _merge_parametric_batch_pickles(batch_pickles: list) -> pd.DataFrame:
+    def _merge_parametric_batch_pickles(batch_pickles: list, batch_metadata=None, required_columns=()) -> pd.DataFrame:
         """Merge persisted parametric batch pickle files into a single DataFrame.
         
         Parameters
@@ -8459,36 +8428,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         --------
         result = self._merge_parametric_batch_pickles(batch_pickles=...)
         """
-        if len(batch_pickles) == 0:
-            return pd.DataFrame()
-
-        frames = []
-        for pickle_path in batch_pickles:
-            if not isinstance(pickle_path, (str, os.PathLike)):
-                continue
-            path = os.path.abspath(os.fspath(pickle_path))
-            if not os.path.exists(path):
-                warnings.warn(
-                    f'Batch pickle not found during merge: {path}',
-                    UserWarning,
-                )
-                continue
-            chunk_df = pd.read_pickle(path)
-            if isinstance(chunk_df, pd.DataFrame) and len(chunk_df) > 0:
-                frames.append(chunk_df)
-
-        if len(frames) == 0:
-            return pd.DataFrame()
-
-        merged_df = pd.concat(frames, ignore_index=True)
-        if '_accim_task_signature' in merged_df.columns:
-            merged_df['_accim_task_signature'] = merged_df['_accim_task_signature'].astype(str)
-            merged_df = merged_df.drop_duplicates(
-                subset=['_accim_task_signature'],
-                keep='last',
-            ).reset_index(drop=True)
-
-        return merged_df
+        return _checkpoint.read_batches(batch_pickles, batch_metadata, required_columns)
 
     @staticmethod
     def _save_parametric_checkpoint(
@@ -8499,6 +8439,8 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         completed_signatures: Optional[set] = None,
         batch_pickles: Optional[list] = None,
         input_plan: Optional[pd.DataFrame] = None,
+        evaluation_identity: Optional[dict] = None,
+        batch_metadata: Optional[dict] = None,
     ) -> int:
         """Persist current parametric results state for crash-safe resume.
         
@@ -8530,59 +8472,13 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         --------
         result = self._save_parametric_checkpoint(all_results=..., checkpoint_path=..., total_tasks=..., ...)
         """
-        import datetime
-
-        checkpoint_tmp_path = f'{checkpoint_path}.tmp'
-        meta_rows = 0
-        if completed_signatures is not None or batch_pickles is not None:
-            signatures_list = sorted(
-                {
-                    str(signature)
-                    for signature in (completed_signatures or set())
-                    if signature is not None and str(signature).strip() != ''
-                }
-            )
-            normalized_pickles = []
-            for pickle_path in (batch_pickles or []):
-                if isinstance(pickle_path, (str, os.PathLike)):
-                    normalized_pickles.append(os.path.abspath(os.fspath(pickle_path)))
-            payload = {
-                'saved_at': datetime.datetime.now().isoformat(timespec='seconds'),
-                'checkpoint_path': checkpoint_path,
-                'checkpoint_format': 'state_v2',
-                'completed_signatures': signatures_list,
-                'batch_pickles': normalized_pickles,
-                'completed_tasks': int(completed_tasks),
-                'total_tasks': int(total_tasks),
-                'input_plan': input_plan.copy() if isinstance(input_plan, pd.DataFrame) else None,
-            }
-            pd.to_pickle(payload, checkpoint_tmp_path)
-            meta_rows = int(len(signatures_list))
-        else:
-            checkpoint_df = pd.DataFrame(all_results)
-            if '_accim_task_signature' in checkpoint_df.columns:
-                checkpoint_df = checkpoint_df.drop_duplicates(
-                    subset=['_accim_task_signature'],
-                    keep='last',
-                ).reset_index(drop=True)
-            checkpoint_df.to_pickle(checkpoint_tmp_path)
-            meta_rows = int(len(checkpoint_df))
-
-        os.replace(checkpoint_tmp_path, checkpoint_path)
-
-        meta_payload = {
-            'saved_at': datetime.datetime.now().isoformat(timespec='seconds'),
-            'checkpoint_path': checkpoint_path,
-            'rows_in_checkpoint': int(meta_rows),
-            'completed_tasks': int(completed_tasks),
-            'total_tasks': int(total_tasks),
-        }
-        meta_path = f'{checkpoint_path}.meta.json'
-        meta_tmp_path = f'{meta_path}.tmp'
-        with open(meta_tmp_path, 'w', encoding='utf-8') as meta_file:
-            json.dump(meta_payload, meta_file, indent=2)
-        os.replace(meta_tmp_path, meta_path)
-        return int(meta_rows)
+        if completed_tasks != len(completed_signatures or set()):
+            raise _checkpoint.CheckpointError('Checkpoint completed task count mismatch.')
+        return _checkpoint.save_parametric(
+            checkpoint_path, signatures=completed_signatures or set(), paths=batch_pickles or [],
+            total_tasks=total_tasks, input_plan=input_plan, identity=evaluation_identity,
+            receipts=batch_metadata,
+        )
 
     @staticmethod
     def _default_optimisation_checkpoint_path(out_dir: str) -> str:
@@ -8617,6 +8513,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         total_cases: int,
         completed_cases: int,
         resume_signature: Optional[str] = None,
+        evaluation_identity: Optional[dict] = None,
     ) -> int:
         """Persist optimisation case-level checkpoint state atomically.
         
@@ -8641,36 +8538,12 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         --------
         result = self._save_optimisation_checkpoint(checkpoint_cases=..., checkpoint_path=..., total_cases=..., ...)
         """
-        import datetime
-
-        payload = {
-            'saved_at': datetime.datetime.now().isoformat(timespec='seconds'),
-            'checkpoint_path': checkpoint_path,
-            'total_cases': int(total_cases),
-            'completed_cases': int(completed_cases),
-            'case_count': int(len(checkpoint_cases)),
-            'resume_signature': resume_signature,
-            'cases': checkpoint_cases,
-        }
-
-        checkpoint_tmp_path = f'{checkpoint_path}.tmp'
-        pd.to_pickle(payload, checkpoint_tmp_path)
-        os.replace(checkpoint_tmp_path, checkpoint_path)
-
-        meta_payload = {
-            'saved_at': payload['saved_at'],
-            'checkpoint_path': checkpoint_path,
-            'total_cases': int(total_cases),
-            'completed_cases': int(completed_cases),
-            'case_count': int(len(checkpoint_cases)),
-            'resume_signature': resume_signature,
-        }
-        meta_path = f'{checkpoint_path}.meta.json'
-        meta_tmp_path = f'{meta_path}.tmp'
-        with open(meta_tmp_path, 'w', encoding='utf-8') as meta_file:
-            json.dump(meta_payload, meta_file, indent=2)
-        os.replace(meta_tmp_path, meta_path)
-        return int(len(checkpoint_cases))
+        if completed_cases != len(checkpoint_cases):
+            raise _checkpoint.CheckpointError('Checkpoint completed case count mismatch.')
+        return _checkpoint.save_optimisation(
+            checkpoint_path, cases=checkpoint_cases, total_cases=total_cases,
+            resume_signature=resume_signature, identity=evaluation_identity,
+        )
 
     @staticmethod
     def _load_optimisation_checkpoint(checkpoint_path: str) -> dict:
@@ -8689,27 +8562,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         --------
         result = self._load_optimisation_checkpoint(checkpoint_path=...)
         """
-        payload = pd.read_pickle(checkpoint_path)
-        if not isinstance(payload, dict):
-            raise ValueError(
-                'Optimisation checkpoint must contain a dictionary payload.'
-            )
-
-        cases = payload.get('cases', payload)
-        if not isinstance(cases, dict):
-            raise ValueError(
-                "Optimisation checkpoint payload key 'cases' must be a dictionary."
-            )
-
-        return {
-            'saved_at': payload.get('saved_at'),
-            'checkpoint_path': payload.get('checkpoint_path', checkpoint_path),
-            'total_cases': payload.get('total_cases'),
-            'completed_cases': payload.get('completed_cases'),
-            'case_count': payload.get('case_count', len(cases)),
-            'resume_signature': payload.get('resume_signature'),
-            'cases': cases,
-        }
+        return _checkpoint.load_optimisation(checkpoint_path)
 
     def _iter_parametric_task_blueprints(
         self,
@@ -8767,18 +8620,8 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         --------
         result = self._iter_parametric_task_blueprints(grouped_dfs=..., epws=..., out_dir=..., ...)
         """
-        backup_paths = []
-        if hasattr(self, 'idf_backup_path') and self.idf_backup_path:
-            backup_paths = self.idf_backup_path if isinstance(self.idf_backup_path, list) else [self.idf_backup_path]
-
         for (idf_basename, df_for_idf) in grouped_dfs.items():
-            idf_backup_file = None
-            for path in backup_paths:
-                basename = os.path.basename(path)
-                if f'_{idf_basename}_' in basename or f'_{idf_basename}.' in basename:
-                    idf_backup_file = path
-                    break
-
+            idf_backup_file = getattr(self, '_idf_backup_by_id', {}).get(idf_basename)
             if not idf_backup_file:
                 idf_backup_file = idf_basename if idf_basename.lower().endswith('.idf') else f'{idf_basename}.idf'
 
@@ -9299,6 +9142,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
 
         return report
 
+    @isolated_run
     def run_parametric_simulation(
         self,
         epws: list = None,
@@ -9316,6 +9160,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         export_summary_json: bool = False,
         summary_json_path: Optional[str] = None,
         accim_results_root: Optional[str] = None,
+        checkpoint_context: Optional[dict] = None,
     ) -> pd.DataFrame:
         """Runs the parametric simulation.
         
@@ -9343,6 +9188,12 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             batch at ``<out_dir>/outputs_param_simulation_checkpoint_latest.pkl``.
         :param resume_from_checkpoint: False (default) runs from scratch. Use True to
             resume from the default checkpoint path, or provide a checkpoint pickle path.
+            Corrupt, incompatible and legacy checkpoints raise ValueError without
+            overwriting them. Only load trusted pickle files.
+        :param checkpoint_context: optional dictionary of additional dependencies
+            used by custom selectors/reducers, such as a dataset revision or a
+            pathlib.Path whose contents must be hashed. Required for external state
+            not described by the IDF/problem. Ignored without checkpointing.
         :param resume_plan_source: controls what happens when ``resume_from_checkpoint``
             finds a checkpoint whose stored sampling plan does not match the ``df``
             passed to this call (this typically happens when a non-deterministic
@@ -9367,6 +9218,9 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         Notes::
         
             - Per-file cleanup is applied only when ``keep_dirs=True``.
+              New simulations/logs live under a unique ``accim_run_*`` directory;
+              existing/resumed artifact directories are never cleaned by this call.
+              Concurrent writers to the same result directory/checkpoint are rejected.
               If ``keep_dirs=False``, BESOS does not retain simulation folders and
               ``sim_files_extensions``/``sim_files_policy`` are ignored.
             - This cleanup only touches files inside each simulation subdirectory;
@@ -9403,6 +9257,8 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         """
         if batch_size is not None and (not isinstance(batch_size, int) or batch_size <= 0):
             raise ValueError("Argument 'batch_size' must be a positive integer or None.")
+        if resume_plan_source not in {'auto', 'checkpoint', 'provided'}:
+            raise ValueError("resume_plan_source must be 'auto', 'checkpoint' or 'provided'.")
         (sim_files_extensions_normalized, sim_files_policy_normalized) = normalize_sim_file_cleanup_options(
             sim_files_extensions=sim_files_extensions,
             sim_files_policy=sim_files_policy,
@@ -9436,7 +9292,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             accim_results_root=accim_results_root,
         )
         os.makedirs(out_dir, exist_ok=True)
-        self._warn_if_out_dir_too_long_for_energyplus(out_dir, 'run_parametric_simulation')
+        self._warn_if_out_dir_too_long_for_energyplus(self._active_run_root, 'run_parametric_simulation')
         batches_dir = self._default_parametric_batches_dir(out_dir=out_dir)
         os.makedirs(batches_dir, exist_ok=True)
 
@@ -9452,40 +9308,18 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
 
         checkpoint_completed_signatures = set()
         checkpoint_batch_pickles = []
-        legacy_checkpoint_seed_df = None
         checkpoint_input_plan = None
+        checkpoint_state = None
+        batch_metadata = {}
         resume_requested = bool(resume_from_checkpoint)
+        checkpoint_enabled = checkpoint_every_batch or resume_requested
         if resume_requested:
             if os.path.exists(checkpoint_path):
-                try:
-                    checkpoint_state = self._load_parametric_checkpoint_state(checkpoint_path=checkpoint_path)
-                except Exception as exc:
-                    warnings.warn(
-                        f'Could not read checkpoint at {checkpoint_path}: {exc}. Resume will start from scratch.',
-                        UserWarning,
-                    )
-                    checkpoint_state = {
-                        'completed_signatures': set(),
-                        'batch_pickles': [],
-                        'legacy_results_df': None,
-                        'input_plan': None,
-                    }
-
-                checkpoint_completed_signatures = set(
-                    checkpoint_state.get('completed_signatures', set()) or set()
-                )
-                checkpoint_batch_pickles = []
-                for pickle_path in (checkpoint_state.get('batch_pickles', []) or []):
-                    if os.path.exists(pickle_path):
-                        checkpoint_batch_pickles.append(os.path.abspath(os.fspath(pickle_path)))
-                    else:
-                        warnings.warn(
-                            f'Checkpoint references missing batch pickle: {pickle_path}',
-                            UserWarning,
-                        )
-
-                legacy_checkpoint_seed_df = checkpoint_state.get('legacy_results_df')
-                checkpoint_input_plan = checkpoint_state.get('input_plan')
+                checkpoint_state = self._load_parametric_checkpoint_state(checkpoint_path=checkpoint_path)
+                checkpoint_completed_signatures = set(checkpoint_state['completed_signatures'])
+                checkpoint_batch_pickles = list(checkpoint_state['batch_pickles'])
+                checkpoint_input_plan = checkpoint_state['input_plan']
+                batch_metadata = dict(checkpoint_state['batch_metadata'])
             elif isinstance(resume_from_checkpoint, str):
                 raise FileNotFoundError(
                     f"Checkpoint file not found: {checkpoint_path}"
@@ -9535,7 +9369,9 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                         "new 'df' instead (this will likely make resume re-run everything).",
                         UserWarning,
                     )
-                    df = checkpoint_input_plan
+            if resume_plan_source != 'provided':
+                # Even near-equal floating point plans use the exact saved values.
+                df = checkpoint_input_plan.copy()
 
         grouped_dfs = self._prepare_dataframe_for_buildings(df=df, epws=epws)
         
@@ -9544,6 +9380,22 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         output_specs = self._serialize_problem_outputs()
         add_output_specs = self._serialize_problem_add_outputs()
         add_output_names = self._get_problem_add_output_names()
+        required_result_columns = list(problem_names_outputs) + list(add_output_names) + ['idf', 'epw']
+        if keep_input:
+            required_result_columns += list(problem_names_inputs)
+        if keep_dirs:
+            required_result_columns.append('output_dir')
+        evaluation_identity = None
+        if checkpoint_enabled:
+            evaluation_identity = self._checkpoint_evaluation_identity(
+                epws=epws, checkpoint_context=checkpoint_context,
+                options={'kind': 'parametric', 'keep_input': keep_input, 'keep_dirs': keep_dirs,
+                         'extensions': sim_files_extensions_normalized, 'policy': sim_files_policy_normalized,
+                         'mn_filter': self.mn_filter.to_dict() if getattr(self, 'mn_filter', None) is not None else None},
+            )
+        if checkpoint_state is not None:
+            _checkpoint.require_same_identity(checkpoint_state['evaluation_identity'], evaluation_identity)
+            _checkpoint.read_batches(checkpoint_batch_pickles, batch_metadata, required_result_columns)
         if processes > 1:
             unresolved_funcs = [
                 spec.get('func') for spec in (output_specs + add_output_specs)
@@ -9575,20 +9427,10 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         # are returned in this order, whatever the order in which the simulations finish.
         task_order = []
 
-        if isinstance(legacy_checkpoint_seed_df, pd.DataFrame) and len(legacy_checkpoint_seed_df) > 0:
-            seed_pickle = self._save_parametric_batch_chunk(
-                batch_results=legacy_checkpoint_seed_df,
-                batches_dir=batches_dir,
-                batch_idx=0,
-                file_prefix='outputs_param_simulation_resume_seed',
-            )
-            if seed_pickle is not None:
-                checkpoint_batch_pickles.append(seed_pickle)
-
         for task in self._iter_parametric_task_blueprints(
             grouped_dfs=grouped_dfs,
             epws=epws,
-            out_dir=out_dir,
+            out_dir=self._active_run_root,
             problem_names_inputs=problem_names_inputs,
             problem_names_outputs=problem_names_outputs,
             output_specs=output_specs,
@@ -9700,13 +9542,15 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                         result['_accim_task_signature'] = str(task.get('signature'))
                         batch_results.append(result)
 
+                _checkpoint.validate_frame(pd.DataFrame(batch_results), required=required_result_columns,
+                                           signatures=True, nonempty=True, context='new result batch')
                 return batch_results
 
             scheduled_signatures = set(checkpoint_completed_signatures)
             for task in self._iter_parametric_task_blueprints(
                 grouped_dfs=grouped_dfs,
                 epws=epws,
-                out_dir=out_dir,
+                out_dir=self._active_run_root,
                 problem_names_inputs=problem_names_inputs,
                 problem_names_outputs=problem_names_outputs,
                 output_specs=output_specs,
@@ -9731,11 +9575,6 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                 batch_results = _run_parametric_batch(batch_tasks, batch_idx)
                 batch_tasks = []
 
-                completed_signatures.update(
-                    result.get('_accim_task_signature')
-                    for result in batch_results
-                    if result.get('_accim_task_signature') is not None
-                )
                 batch_pickle = self._save_parametric_batch_chunk(
                     batch_results=batch_results,
                     batches_dir=batches_dir,
@@ -9743,6 +9582,8 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                 )
                 if batch_pickle is not None:
                     batch_pickles.append(batch_pickle)
+                    batch_metadata[batch_pickle] = _checkpoint.batch_receipt(batch_pickle)
+                    completed_signatures.update(result['_accim_task_signature'] for result in batch_results)
                 del batch_results
                 gc.collect()
 
@@ -9755,6 +9596,8 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                         completed_signatures=completed_signatures,
                         batch_pickles=batch_pickles,
                         input_plan=df,
+                        evaluation_identity=evaluation_identity,
+                        batch_metadata=batch_metadata,
                     )
                     print(
                         '[run_parametric_simulation] Checkpoint saved '
@@ -9765,11 +9608,6 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             if len(batch_tasks) > 0:
                 batch_idx += 1
                 batch_results = _run_parametric_batch(batch_tasks, batch_idx)
-                completed_signatures.update(
-                    result.get('_accim_task_signature')
-                    for result in batch_results
-                    if result.get('_accim_task_signature') is not None
-                )
                 batch_pickle = self._save_parametric_batch_chunk(
                     batch_results=batch_results,
                     batches_dir=batches_dir,
@@ -9777,6 +9615,8 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                 )
                 if batch_pickle is not None:
                     batch_pickles.append(batch_pickle)
+                    batch_metadata[batch_pickle] = _checkpoint.batch_receipt(batch_pickle)
+                    completed_signatures.update(result['_accim_task_signature'] for result in batch_results)
                 del batch_results
                 gc.collect()
 
@@ -9789,6 +9629,8 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                         completed_signatures=completed_signatures,
                         batch_pickles=batch_pickles,
                         input_plan=df,
+                        evaluation_identity=evaluation_identity,
+                        batch_metadata=batch_metadata,
                     )
                     print(
                         '[run_parametric_simulation] Checkpoint saved '
@@ -9798,20 +9640,23 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
 
         batch_pickles = list(dict.fromkeys(batch_pickles))
 
-        if (checkpoint_every_batch or resume_requested) and total_tasks > 0:
-            self._save_parametric_checkpoint(
-                all_results=[],
-                checkpoint_path=checkpoint_path,
-                total_tasks=total_tasks,
-                completed_tasks=len(completed_signatures),
-                completed_signatures=completed_signatures,
-                batch_pickles=batch_pickles,
-                input_plan=df,
-            )
-
         outputs_param_simulation = self._merge_parametric_batch_pickles(
             batch_pickles=batch_pickles,
+            batch_metadata=batch_metadata,
+            required_columns=required_result_columns,
         )
+
+        actual_signatures = set(outputs_param_simulation.get('_accim_task_signature', []))
+        missing_signatures = task_signatures - actual_signatures
+        if missing_signatures:
+            raise _checkpoint.CheckpointError(f'Incomplete result coverage: {len(missing_signatures)} planned tasks are missing.')
+        if checkpoint_enabled and total_tasks > 0:
+            self._save_parametric_checkpoint(
+                all_results=[], checkpoint_path=checkpoint_path, total_tasks=total_tasks,
+                completed_tasks=len(completed_signatures), completed_signatures=completed_signatures,
+                batch_pickles=batch_pickles, input_plan=df,
+                evaluation_identity=evaluation_identity, batch_metadata=batch_metadata,
+            )
 
         if '_accim_task_signature' in outputs_param_simulation.columns:
             outputs_param_simulation = outputs_param_simulation[
@@ -9825,8 +9670,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             # simulations finish in any order, and repeated rows of the plan, simulated once,
             # keep a row each (the sensitivity analyses need one result per row of the sample).
             results_by_signature = outputs_param_simulation.set_index('_accim_task_signature', drop=False)
-            ordered_signatures = [signature for signature in task_order if signature in results_by_signature.index]
-            outputs_param_simulation = results_by_signature.loc[ordered_signatures].reset_index(drop=True)
+            outputs_param_simulation = results_by_signature.loc[task_order].reset_index(drop=True)
 
         if total_tasks > 0 and len(outputs_param_simulation) == 0:
             warnings.warn(
@@ -9847,6 +9691,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                 sim_dirs=outputs_param_simulation['output_dir'].tolist(),
                 sim_files_extensions=sim_files_extensions_normalized,
                 sim_files_policy=sim_files_policy_normalized,
+                owned_root=self._active_run_root,
             )
             if cleanup_stats['removed_files'] > 0:
                 print(
@@ -9869,7 +9714,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         self.evaluators = {} 
         
         import datetime
-        timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
+        timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S_%f')
         
         self.outputs_param_simulation.attrs['idf_backup_path'] = getattr(self, 'idf_backup_path', [])
         self.outputs_param_simulation.attrs['epws'] = epws
@@ -10068,6 +9913,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         self.last_run_type = 'optimisation'
         return total
 
+    @isolated_run
     def run_optimisation(
             self,
             epws: list = None,
@@ -10090,6 +9936,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             summary_json_path: Optional[str] = None,
             accim_results_root: Optional[str] = None,
             show_progress: bool = True,
+            checkpoint_context: Optional[dict] = None,
     ) -> pd.DataFrame:
         """Runs the optimisation.
         
@@ -10139,6 +9986,11 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             IDF/EPW case so already completed cases can be reused after interruptions.
         :param resume_from_checkpoint: False (default) runs all cases from scratch. Use True
             to resume from the default checkpoint path, or provide an explicit checkpoint path.
+            Only completed cases with matching model/weather/problem/engine identity
+            are reused. Invalid or legacy checkpoints raise ValueError; no optimiser
+            population or random state is restored. Only load trusted pickle files.
+        :param checkpoint_context: optional dictionary of external dependency revisions
+            or pathlib.Path objects for content hashing; see run_parametric_simulation.
         :param export_summary_json: when True, exports ``self.simulation_summary``
             automatically to a JSON file at the end of the run.
         :param summary_json_path: optional path for the summary JSON export. Ignored
@@ -10156,6 +10008,8 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         
             - If ``keep_sim_files='none'``, simulation directories are removed and
               ``sim_files_extensions``/``sim_files_policy`` are ignored.
+              Cleanup is limited to the unique ``accim_run_*`` workspace created
+              by this call. Prior and resumed directories/logs are left untouched.
             - If ``keep_sim_files='non-dominated'``, dominated directories may be
               deleted entirely; extension cleanup is then applied only to remaining
               directories.
@@ -10177,6 +10031,12 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         Use `SimulationBase.run_optimisation` within ACCIM parametric and optimisation workflows.
         """
         algorithm_options = {} if algorithm_options is None else dict(algorithm_options)
+        if keep_sim_files not in {'all', 'non-dominated', 'none'}:
+            raise ValueError("keep_sim_files must be 'all', 'non-dominated' or 'none'.")
+        if keep_df not in {'all', 'non-dominated'}:
+            raise ValueError("keep_df must be 'all' or 'non-dominated'.")
+        if not isinstance(keep_sim_files_batch_size, int) or keep_sim_files_batch_size <= 0:
+            raise ValueError('keep_sim_files_batch_size must be a positive integer.')
         if epws is None:
             epws = getattr(self, 'epws', [])
         if not epws:
@@ -10219,9 +10079,13 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         }
         if getattr(self, 'mn_filter', None) is not None:
             resume_signature_payload['mn_filter'] = self.mn_filter.to_dict()
-        resume_signature = hashlib.sha1(
-            json.dumps(resume_signature_payload, sort_keys=True, ensure_ascii=True, default=str).encode('utf-8')
-        ).hexdigest()
+        resume_signature = None
+        if checkpoint_every_case or resume_from_checkpoint:
+            try:
+                signature_text = json.dumps(resume_signature_payload, sort_keys=True, ensure_ascii=True, allow_nan=False)
+            except TypeError:
+                signature_text = json.dumps(_checkpoint.Fingerprint().value(resume_signature_payload), sort_keys=True, ensure_ascii=True)
+            resume_signature = hashlib.sha1(signature_text.encode('utf-8')).hexdigest()
 
         checkpoint_path = self._default_optimisation_checkpoint_path(out_dir=out_dir)
         if isinstance(resume_from_checkpoint, str):
@@ -10232,31 +10096,27 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
 
         resume_requested = bool(resume_from_checkpoint)
         checkpoint_cases = {}
+        checkpoint_enabled = checkpoint_every_case or resume_requested
+        self._save_idf_backup(label='pre_optimisation', out_dir=out_dir)
+        evaluation_identity = None
+        if checkpoint_enabled:
+            evaluation_identity = self._checkpoint_evaluation_identity(
+                epws=epws, checkpoint_context=checkpoint_context,
+                options={'kind': 'optimisation', 'settings': resume_signature_payload,
+                         'keep_sim_files': keep_sim_files, 'extensions': sim_files_extensions_normalized,
+                         'policy': sim_files_policy_normalized},
+            )
+        required_history_columns = list(self.problem.names('inputs')) + list(self.problem.names('outputs')) + list(self.problem.names('constraints'))
         if resume_requested:
             if os.path.exists(checkpoint_path):
                 checkpoint_payload = self._load_optimisation_checkpoint(checkpoint_path=checkpoint_path)
-                checkpoint_cases = checkpoint_payload.get('cases', {}) if isinstance(checkpoint_payload, dict) else {}
-                checkpoint_cases = checkpoint_cases if isinstance(checkpoint_cases, dict) else {}
-                checkpoint_signature = checkpoint_payload.get('resume_signature') if isinstance(checkpoint_payload, dict) else None
-                if checkpoint_signature is None:
-                    warnings.warn(
-                        'Checkpoint found but it does not contain a compatibility signature. '
-                        'For safety, this optimisation run will start from scratch.',
-                        UserWarning,
-                    )
-                    checkpoint_cases = {}
-                elif checkpoint_signature != resume_signature:
-                    warnings.warn(
-                        'Checkpoint found but optimisation settings do not match this run. '
-                        'For safety, this optimisation run will start from scratch.',
-                        UserWarning,
-                    )
-                    checkpoint_cases = {}
-                else:
-                    print(
-                        '[run_optimisation] Resuming from checkpoint: '
-                        f'{len(checkpoint_cases)} completed case(s) detected.'
-                    )
+                _checkpoint.require_same_identity(checkpoint_payload['evaluation_identity'], evaluation_identity)
+                if checkpoint_payload.get('resume_signature') != resume_signature:
+                    raise _checkpoint.CheckpointError('Incompatible checkpoint optimisation settings. Start a fresh run in another directory.')
+                checkpoint_cases = checkpoint_payload['cases']
+                _checkpoint.validate_optimisation_cases(checkpoint_cases, required_history_columns)
+                for case in checkpoint_cases.values():
+                    _checkpoint.validate_frame(case['outputs_full'], required=self._get_problem_add_output_names(), context='checkpoint additional outputs')
             elif isinstance(resume_from_checkpoint, str):
                 raise FileNotFoundError(f'Checkpoint file not found: {checkpoint_path}')
             else:
@@ -10276,9 +10136,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         if pareto_separate_by_idf:
             pareto_group_by.append('idf')
         os.makedirs(out_dir, exist_ok=True)
-        self._warn_if_out_dir_too_long_for_energyplus(out_dir, 'run_optimisation')
-        # Save an IDF backup into the results folder before starting
-        self._save_idf_backup(label='pre_optimisation', out_dir=out_dir)
+        self._warn_if_out_dir_too_long_for_energyplus(os.path.join(self._active_run_root, 'case_12345678'), 'run_optimisation')
         mn_filter_mapping = self._build_mn_filter_mapping()
         from besos.evaluator import AbstractEvaluator
         if not hasattr(AbstractEvaluator, '_original_to_platypus'):
@@ -10373,7 +10231,9 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
 
                     if progress_reporter is not None:
                         progress_reporter.start_case(case_counter, idf_basename, epwname)
-                    evaluator = self.set_evaluator(epw=epw, out_dir=out_dir, building=b)
+                    case_dir = tempfile.mkdtemp(prefix='case_', dir=self._active_run_root)
+                    evaluator = self.set_evaluator(epw=epw, out_dir=case_dir, building=b)
+                    evaluator._owned_run_root = self._active_run_root
                     evaluator._keep_sim_files = keep_sim_files
                     evaluator._mn_filter_map = mn_filter_mapping
                     evaluator._keep_sim_files_batch_size = keep_sim_files_batch_size
@@ -10382,12 +10242,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                     evaluator._sim_files_policy = sim_files_policy_normalized
                     evaluator._optimisation_eval_records = []
                     evaluator._store_optimisation_records_in_memory = bool(keep_sim_files == 'non-dominated')
-                    evaluator._optimisation_log_base = os.path.join(out_dir, f'optim_eval_log_{idf_basename}_{epwname}_{os.getpid()}')
-                    for log_file in pyglob.glob(f'{evaluator._optimisation_log_base}_*.jsonl'):
-                        try:
-                            os.remove(log_file)
-                        except OSError:
-                            pass
+                    evaluator._optimisation_log_base = os.path.join(case_dir, 'optim_eval_log')
                     if processes > 1 and hasattr(evaluator, '_building') and hasattr(evaluator._building, 'idfobjects'):
                         evaluator._building.idfobjects = GlobalAllCapsDict(evaluator._building.idfobjects)
                     if algorithm == 'GeneticAlgorithm':
@@ -10431,6 +10286,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                     outputs_dict.update({key: outputs_optimisation})
                     full_outputs_optimisation = self._build_full_optimisation_outputs_df(evaluator=evaluator, epwname=epwname)
                     full_outputs_optimisation['idf'] = idf_basename
+                    _checkpoint.validate_frame(full_outputs_optimisation, required=required_history_columns + self._get_problem_add_output_names(), nonempty=True, context='optimisation history')
                     full_outputs_dict.update({key: full_outputs_optimisation})
                     evaluators.update({key: evaluator})
                     if progress_reporter is not None:
@@ -10450,6 +10306,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                             total_cases=total_cases,
                             completed_cases=len(checkpoint_cases),
                             resume_signature=resume_signature,
+                            evaluation_identity=evaluation_identity,
                         )
                         print(
                             '[run_optimisation] Checkpoint saved '
@@ -10469,6 +10326,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                 total_cases=total_cases,
                 completed_cases=len(checkpoint_cases),
                 resume_signature=resume_signature,
+                evaluation_identity=evaluation_identity,
             )
 
         if len(outputs_dict) == 0 or len(full_outputs_dict) == 0:
@@ -10491,32 +10349,17 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             group_by=pareto_group_by,
         )
         if keep_sim_files == 'non-dominated':
-            import shutil
+            retained_dirs = set(outputs_optimisation.loc[outputs_optimisation['pareto-optimal'], 'simulation_directory'].dropna())
             for (idx, row) in outputs_optimisation[~outputs_optimisation['pareto-optimal']].iterrows():
                 sim_dir = row.get('simulation_directory')
-                if pd.notna(sim_dir) and isinstance(sim_dir, str) and os.path.exists(sim_dir):
-                    try:
-                        shutil.rmtree(sim_dir)
-                    except Exception:
-                        pass
-                outputs_optimisation.at[idx, 'simulation_directory'] = pd.NA
-                outputs_optimisation.at[idx, 'simulation_output_csv_path'] = pd.NA
+                if isinstance(sim_dir, str) and sim_dir not in retained_dirs and (
+                    not os.path.exists(sim_dir) or remove_owned_directory(sim_dir, self._active_run_root)
+                ):
+                    outputs_optimisation.at[idx, 'simulation_directory'] = pd.NA
+                    outputs_optimisation.at[idx, 'simulation_output_csv_path'] = pd.NA
         elif keep_sim_files == 'none':
-            import shutil
-            import glob
-            worker_dirs = glob.glob(os.path.join(out_dir, 'BESOS_Output*'))
-            for w_dir in worker_dirs:
-                if os.path.isdir(w_dir):
-                    try:
-                        shutil.rmtree(w_dir)
-                    except Exception:
-                        pass
-            log_files = glob.glob(os.path.join(out_dir, 'optim_eval_log_*.jsonl'))
-            for log_file in log_files:
-                try:
-                    os.remove(log_file)
-                except OSError:
-                    pass
+            # The decorator removes only this invocation's owned workspace,
+            # after histories have been loaded and exported successfully.
             outputs_optimisation['simulation_directory'] = pd.NA
             outputs_optimisation['simulation_output_csv_path'] = pd.NA
 
@@ -10529,6 +10372,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                 sim_dirs=outputs_optimisation['simulation_directory'].tolist(),
                 sim_files_extensions=sim_files_extensions_normalized,
                 sim_files_policy=sim_files_policy_normalized,
+                owned_root=self._active_run_root,
             )
             if cleanup_stats['removed_files'] > 0:
                 print(
@@ -10719,49 +10563,22 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         if outputs_optimisation_full.empty:
             outputs_optimisation_full['pareto-optimal'] = pd.Series(dtype=bool)
             return outputs_optimisation_full
-        output_names = self.problem.names('outputs')
-        minimize_outputs = getattr(self.problem, 'minimize_outputs', None)
-        if minimize_outputs is None:
-            minimize_flags = [True] * len(output_names)
-        else:
-            minimize_flags = [m if m is not None else True for m in minimize_outputs]
-
-        def _is_pareto_optimal(costs: np.ndarray) -> np.ndarray:
-            """
-            Return a boolean mask of length n where True means the row is
-            Pareto-non-dominated (all objectives already in minimisation space).
-
-            Solution i is dominated iff there exists j such that:
-              j <= i on ALL objectives  AND  j < i on AT LEAST ONE objective.
-            """
-            n = costs.shape[0]
-            is_pareto = np.ones(n, dtype=bool)
-            for i in range(n):
-                if not is_pareto[i]:
-                    continue
-                others_mask = np.arange(n) != i
-                dominated_i = np.all(costs[others_mask] <= costs[i], axis=1) & np.any(costs[others_mask] < costs[i], axis=1)
-                if np.any(dominated_i):
-                    is_pareto[i] = False
-            return is_pareto
-
-        def _pareto_mask_for_group(group: pd.DataFrame) -> pd.Series:
-            """Compute Pareto mask for a single EPW group."""
-            objective_data = group[output_names].values.astype(float)
-            for (j, minimise) in enumerate(minimize_flags):
-                if not minimise:
-                    objective_data[:, j] = -objective_data[:, j]
-            mask = _is_pareto_optimal(objective_data)
-            return pd.Series(mask, index=group.index)
+        output_names = list(self.problem.names('outputs'))
+        constraint_names = list(self.problem.names('constraints'))
+        missing = [name for name in output_names + constraint_names if name not in outputs_optimisation_full.columns]
+        if missing:
+            raise ValueError(f'Missing objective/constraint columns for Pareto annotation: {missing}')
         if group_by is None:
             group_by = ['epw'] if 'epw' in outputs_optimisation_full.columns and outputs_optimisation_full['epw'].notna().any() else []
         group_by = [col for col in group_by if col in outputs_optimisation_full.columns]
-        pareto_mask = pd.Series(False, index=outputs_optimisation_full.index)
-        if len(group_by) == 0:
-            pareto_mask = _pareto_mask_for_group(outputs_optimisation_full)
-        else:
-            for (_, group) in outputs_optimisation_full.groupby(group_by, sort=False, dropna=False):
-                pareto_mask.loc[group.index] = _pareto_mask_for_group(group)
+        # Work positionally: input DataFrames may have duplicate index labels.
+        working = outputs_optimisation_full.reset_index(drop=True)
+        groups = working.groupby(group_by, sort=False, dropna=False) if group_by else [(None, working)]
+        pareto_mask = np.zeros(len(working), dtype=bool)
+        for _, group in groups:
+            pareto_mask[group.index.to_numpy()] = non_dominated_mask(
+                self.problem, group[output_names].to_numpy(), group[constraint_names].to_numpy()
+            )
         outputs_optimisation_full['pareto-optimal'] = pareto_mask
         return outputs_optimisation_full
 
@@ -10853,7 +10670,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         """
         import json
         import datetime
-        timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
+        timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S_%f')
         os.makedirs(out_dir, exist_ok=True)
         # Update the IDF backup with the exact building state used for this optimisation run
         self._save_idf_backup(label='pre_optimisation', out_dir=out_dir)

@@ -16,6 +16,7 @@ stats = prune_simulation_output_files('path/to/sim', extensions, policy)
 
 import os
 from typing import Literal, Optional, Sequence, Union
+from accim.parametric_and_optimisation._execution import is_link, owns_path
 
 SimFilePolicy = Literal['keep', 'delete']
 
@@ -239,6 +240,8 @@ def prune_simulation_output_files(
     sim_dir: Union[str, os.PathLike],
     sim_files_extensions: Optional[Union[str, Sequence[str]]],
     sim_files_policy: str = 'keep',
+    *,
+    owned_root: Optional[Union[str, os.PathLike]] = None,
 ) -> dict:
     """Remove files in ``sim_dir`` according to an extension policy.
 
@@ -283,13 +286,16 @@ def prune_simulation_output_files(
         return result
 
     dir_path = os.path.abspath(os.fspath(sim_dir))
-    if not os.path.isdir(dir_path):
+    if not os.path.isdir(dir_path) or is_link(dir_path):
+        return result
+    if owned_root is not None and not owns_path(dir_path, owned_root):
         return result
 
     extensions_set = set(extensions)
     result['processed'] = True
 
-    for root, _, files in os.walk(dir_path):
+    for root, dirs, files in os.walk(dir_path):
+        dirs[:] = [name for name in dirs if not is_link(os.path.join(root, name))]
         for filename in files:
             result['scanned_files'] += 1
             file_extension = os.path.splitext(filename)[1].lower()
@@ -301,13 +307,19 @@ def prune_simulation_output_files(
                 continue
 
             file_path = os.path.join(root, filename)
+            if is_link(file_path):
+                continue
             try:
                 os.remove(file_path)
                 result['removed_files'] += 1
             except OSError:
                 result['remove_errors'] += 1
 
-    for root, dirs, _ in os.walk(dir_path, topdown=False):
+    visited_dirs = []
+    for root, dirs, _ in os.walk(dir_path):
+        dirs[:] = [name for name in dirs if not is_link(os.path.join(root, name))]
+        visited_dirs.append((root, list(dirs)))
+    for root, dirs in reversed(visited_dirs):
         for dirname in dirs:
             subdir_path = os.path.join(root, dirname)
             try:

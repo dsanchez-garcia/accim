@@ -3,9 +3,16 @@ import json
 import hashlib
 
 import pandas as pd
+import pytest
 
 import accim.parametric_and_optimisation.main as main_module
 from accim.parametric_and_optimisation.main import OptimisationSimulation
+
+
+@pytest.fixture(autouse=True)
+def synthetic_checkpoint_identity(monkeypatch):
+    monkeypatch.setattr(main_module.SimulationBase, '_checkpoint_evaluation_identity',
+                        lambda self, **kwargs: {'schema': 1, 'synthetic': 'optimisation-tests'})
 
 
 class _DummyBuilding:
@@ -172,7 +179,7 @@ def test_optimisation_disables_in_memory_records_when_keep_sim_files_all(tmp_pat
     assert calls[0]['store_in_memory'] is False
 
 
-def test_optimisation_resume_ignores_incompatible_checkpoint_signature(tmp_path, monkeypatch):
+def test_optimisation_resume_rejects_incompatible_checkpoint_signature(tmp_path, monkeypatch):
     monkeypatch.setattr(pd.DataFrame, 'to_excel', lambda self, *args, **kwargs: None, raising=False)
     monkeypatch.setattr(OptimisationSimulation, 'set_evaluator', _fake_set_evaluator)
     monkeypatch.setattr(OptimisationSimulation, '_build_full_optimisation_outputs_df', _fake_build_full_outputs_df)
@@ -201,15 +208,13 @@ def test_optimisation_resume_ignores_incompatible_checkpoint_signature(tmp_path,
     monkeypatch.setattr(main_module.optimizer, 'NSGAII', _make_fake_nsgaii(second_calls))
 
     sim_changed = _make_lightweight_optimisation(epws=['A.epw'])
-    sim_changed.run_optimisation(
-        out_dir=str(out_dir),
-        algorithm='NSGAII',
-        evaluations=4,
-        population_size=2,
-        processes=1,
-        resume_from_checkpoint=True,
-    )
-
-    assert len(second_calls) == 1
+    before = (out_dir / 'outputs_optimisation_checkpoint_latest.pkl').read_bytes()
+    with pytest.raises(ValueError, match='Incompatible checkpoint'):
+        sim_changed.run_optimisation(
+            out_dir=str(out_dir), algorithm='NSGAII', evaluations=4,
+            population_size=2, processes=1, resume_from_checkpoint=True,
+        )
+    assert second_calls == []
+    assert (out_dir / 'outputs_optimisation_checkpoint_latest.pkl').read_bytes() == before
 
 

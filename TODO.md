@@ -55,10 +55,25 @@ Active short-term tasks.
   - Definition of done: EnergyPlus 26.1 installed and the checks of the DEVLOG entry of 2026-10-18 repeated with it (or the version removed from the lists if something fails).
   - References: `DEVLOG.md` (2026-10-18, "EnergyPlus 26.1 and 26.2").
 
-- [ ] [P2][todo] Review the branch `refactor/sim-v1` and decide what to bring to `master`
-  - Context: `refactor/sim-v1` holds the old refactoring towards accim 1.0 (the "1.0.0 clean-break release": new API, modernised docstrings, documentation and notebooks, more tests, and the code review of 2026-07-19), with 36 commits from 2026-05-27 to 2026-07-19 and about 118 files changed. Development went on with 0.7.x in `master` instead (69 commits since the two split at `c03250f`), so the branch was never merged. It was kept on purpose on 2026-10-17, when the other branches were merged into `master` and deleted.
-  - Definition of done: each change of the branch checked against the current `master` and marked as port, adapt or drop; the useful parts brought in small PRs with their tests; then the branch deleted.
-  - References: `origin/refactor/sim-v1`; `git log c03250f..origin/refactor/sim-v1`; the CHANGELOG of that branch (1.0.0 entry).
+- [ ] [P1][todo] Preserve per-IDF scope throughout output selection and application
+  - Context: Selection collapses identical output requests from IDFs A/B into A alone, and meter application still uses a global request list. Checkpoint/cleanup integrity and constraint-aware Pareto were implemented separately on 2026-10-24 (see `DEVLOG.md`); they do not fix this scope loss.
+  - Definition of done: Retain IDF scope through discovery/selection, deduplication, variable/meter setters and preflight verification; add regression tests without EnergyPlus and integration tests with two buildings.
+  - References: [Review, section 4.3](docs/refactor-sim-v1-review.md); `tests/parametric_and_optimisation/10_test_outputs_preflight.py`.
+
+- [ ] [P1][todo] Validate single/batch EMS behavior and comfort-model invariants
+  - Context: Current single paths differ in existing-HVAC resolution and Scheduled ventilation, AC-only modification assumes a mixed-mode program, and advertised CS6 modes have no setpoint assignments. Other comfort-counter and setpoint-order findings need independent numerical oracles.
+  - Definition of done: Cover AC/MM, existing HVAC, schedules and occupant mappings through both entry points; validate every advertised model/mode and comfort-hour partition; resolve the CS6 formula against its scientific source before changing it.
+  - References: [Review, sections 4.2 and 4.3](docs/refactor-sim-v1-review.md); `notes/questions.md`; `accim/sim/setAST_models.py`.
+
+- [ ] [P1][todo] Replace executable IDF argument parsing without breaking generated offsets
+  - Context: `get_accim_args` still evaluates IDF text with `eval`. A direct `literal_eval` substitution changes generated constant sums such as `3.5 + 1` from numbers into strings, so the historical proposal needs adaptation.
+  - Definition of done: A bounded numeric-expression parser preserving required constant arithmetic and inert Erl-text fallback; reject executable calls/attributes and test that payloads are never executed; retain ACCIS/aPMV round trips and verifier numeric contracts.
+  - References: [Review, section 4.2](docs/refactor-sim-v1-review.md); `accim/utils.py` (`get_accim_args`).
+
+- [ ] [P2][todo] Adapt the remaining useful sim-v1 refactor incrementally from current code
+  - Context: Review completed on 2026-10-24 against `master` at `1a2f5947` and `refactor/sim-v1` at `ef1ec593` (117/36 exclusive commits, common ancestor `c03250f`). All 36 historical commits have a port/adapt/drop disposition; three small fixes were ported on the review branch. A wholesale merge would regress current features.
+  - Definition of done: Small tested changes sharing current setup/injection and combination generation behind compatible public APIs; harden/adapt goldens and repair numbered-test collection; preserve EnergyPlus 26.x, current parametric contracts and packaging. Keep CLI default until an optional API backend has end-to-end parity evidence. Do not delete the historical branch as part of the review.
+  - References: [Review, sections 6-10](docs/refactor-sim-v1-review.md); `DEVLOG.md` (2026-10-24); `benchmarks/energyplus_api.py`.
 
 - [ ] [P2][todo] Review the archived branch `feat/comfort-metrics-experiment-api` (tag `archive/feat-comfort-metrics-experiment-api`)
   - Context: Work of 2026-09-30 that was never merged: comfort metric APIs independent of the control (`accim/sim/comfort_metrics.py`, with tests), the workflows of the paper experiments inside the package (`accim/parametric_and_optimisation/paper_experiments.py` and the prepared experiment scripts) and their documentation (`docs/source/comfort_metrics.rst`, README). The branch was deleted on 2026-10-17 and kept as a tag, also on GitHub. It split from `master` at `853e9b4`, 26 commits before the `master` of that day, and part of it may overlap with the hourly indicators added later (`compute_hourly_indicators`). It also brings back the Spanish description of the module for the paper, removed from the repository on 2026-10-16: do not bring that back.

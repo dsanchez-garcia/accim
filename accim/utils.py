@@ -61,7 +61,7 @@ class WorkspaceArtifactCleaner:
             '.git', '__pycache__', '.ipynb_checkpoints', '.idea', '.pytest_cache',
             '.mypy_cache', '.venv', 'venv'
         ])
-        self._baseline_files: set[str] = set()
+        self._baseline_files: Optional[set[str]] = None
         self.generated_files: List[str] = []
         self.files_planned_for_deletion: List[str] = []
         self.files_deleted: List[str] = []
@@ -88,7 +88,7 @@ class WorkspaceArtifactCleaner:
         return sorted(set(self._iter_relative_files()))
 
     def get_generated_files(self) -> List[str]:
-        if not self._baseline_files:
+        if self._baseline_files is None:
             raise RuntimeError("Initial state not captured. Call capture_initial_state() first.")
         current = set(self._iter_relative_files())
         self.generated_files = sorted(current - self._baseline_files)
@@ -356,6 +356,9 @@ class print_available_outputs_mod:
         :param version: Deprecated.
         :param name:
         :param frequency:
+        :param out_dir: Prefix/location for a new unique discovery directory;
+            the actual path is available as ``self.out_dir``.
+        :param keep_out_dir: Keep only this invocation's directory, including on failure.
         """
         # backwards compatibility
         if version:
@@ -370,7 +373,16 @@ class print_available_outputs_mod:
             name = name.lower()
         if frequency is not None:
             frequency = frequency.lower()
-        results = run_building(building, stdout_mode="Verbose", out_dir=out_dir)
+        from accim.parametric_and_optimisation._execution import remove_owned_directory
+        requested_dir = os.path.abspath(os.fspath(out_dir))
+        parent_dir = os.path.dirname(requested_dir)
+        os.makedirs(parent_dir, exist_ok=True)
+        self.out_dir = tempfile.mkdtemp(prefix=os.path.basename(requested_dir) + '_', dir=parent_dir)
+        try:
+            results = run_building(building, stdout_mode="Verbose", out_dir=self.out_dir, err_dir=None)
+        finally:
+            if not keep_out_dir:
+                remove_owned_directory(self.out_dir, self.out_dir)
         outputlist = []
         for key in results.keys():
             if name is not None:
@@ -397,12 +409,6 @@ class print_available_outputs_mod:
             else:
                 self.meterreaderlist.append(outputlist[i])
 
-        # Cleanup by default to avoid leaving transient discovery folders.
-        if not keep_out_dir:
-            try:
-                shutil.rmtree(out_dir, ignore_errors=True)
-            except Exception:
-                pass
         # return outputlist, self.meterreaderlist, self.variablereaderlist
 
 

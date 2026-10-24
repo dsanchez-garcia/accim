@@ -17,6 +17,7 @@
 """Class for accim."""
 from accim.utils import get_idd_path_from_ep_version
 from accim.sim.accim_ExistingHVAC_resolver import resolve_hvac_zone_map
+from accim.sim._workspace import copy_job_input, cleanup_failed_job
 
 
 class accimJob():
@@ -84,6 +85,7 @@ class accimJob():
     from accim.sim.utils import scan_zones
 
 
+    @cleanup_failed_job
     def __init__(self,
                  filename_temp,
                  ScriptType: str = None,
@@ -107,7 +109,9 @@ class accimJob():
         from accim.utils import amend_idf_version_from_dsb
         from besos.eppy_funcs import get_building
 
-        fname1 = filename_temp + '.idf'
+        if EnergyPlus_version.lower() != 'auto' and get_idd_path_from_ep_version(EnergyPlus_version) == 'not-supported':
+            raise ValueError('EnergyPlus version not supported. Only works for versions between EnergyPlus 9.1 (enter 9.1) and EnergyPlus 26.2 (enter 26.2)')
+        fname1 = copy_job_input(self, filename_temp + '.idf', filename_temp + '_pymod.idf')
 
         # Checking if idf version is suitable: when exported from Designbuilder 7.X, the version is 9.4.0.002
         amend_idf_version_from_dsb(fname1)

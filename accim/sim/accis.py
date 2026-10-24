@@ -24,6 +24,7 @@ by adding the Adaptive Comfort Control Implementation Script (ACCIS)
 import pandas as pd
 from accim import __version__
 from accim import lists
+from accim.sim._workspace import batch_workspace
 
 
 class addAccis:
@@ -209,6 +210,7 @@ class addAccis:
         window and door original names following the format
         {'idf filename': [list of window and door original names]}
     """
+    @batch_workspace
     def __init__(
         self,
         idfs: list = None,
@@ -641,26 +643,24 @@ class addAccis:
                 print('Ending with file:')
                 print(file)
                 print('''\n=======================END OF GENERIC IDF FILE GENERATION PROCESS=======================\n''')
-            valid_pymod_files.append(file.split('.idf')[0] + '_pymod.idf')
+            valid_pymod_files.append(z.filename + '.idf')
 
         if Output_gen_dataframe:
-            self.df_outputs = pd.concat(df_outputs_to_concat)
+            self.df_outputs = pd.concat(df_outputs_to_concat) if df_outputs_to_concat else pd.DataFrame()
 
         if verboseMode:
             print('The following IDFs will not work, and therefore these will be deleted:')
         if len(notWorkingIDFs) > 0:
             if verboseMode:
                 print(*notWorkingIDFs, sep="\n")
-            filelist_pymod = ([file for file in listdir() if file.endswith('.idf')
-                         and '_pymod' in file])
-
-            for file in notWorkingIDFs:
-                for i in filelist_pymod:
-                    if file in i:
-                        remove(i)
+            # The workspace finalizer removes only files created by this call.
         else:
             if verboseMode:
                 print('None')
+
+        if not valid_pymod_files:
+            self.output_idfs = {}
+            return
 
         if verboseMode:
             print('''\n=======================START OF OUTPUT IDF FILES GENERATION PROCESS=======================\n''')
@@ -767,6 +767,7 @@ class addAccis:
                     filelist_pymod=valid_pymod_files,
                     ScriptType=ScriptType,
                     TempCtrl=TempCtrl,
+                    confirmGen=confirmGen,
                 )
         elif ScriptType.lower() == 'ex_ac' or ScriptType.lower() == 'vrf_ac':
             if all(args_needed_ac):
@@ -857,6 +858,7 @@ class addAccis:
                     filelist_pymod=valid_pymod_files,
                     ScriptType=ScriptType,
                     TempCtrl=TempCtrl,
+                    confirmGen=confirmGen,
                 )
         self.output_idfs = z.output_idf_dict
         if verboseMode:

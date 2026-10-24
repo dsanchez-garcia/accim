@@ -1,0 +1,62 @@
+{
+  "date": "2026-10-24",
+  "script": "benchmarks/energyplus_api.py",
+  "base_commit": "1a2f5947",
+  "platform": "Windows-11-10.0.26220-SP0",
+  "python": "3.14.0, 64-bit",
+  "energyplus_version": "26.2.0-4bd7a1f26f",
+  "scope": "Serial engine invocation in a resident Python worker, including CLI process startup or API state creation/deletion; not end-to-end ACCIM/BESOS throughput.",
+  "repeats_per_backend": 5,
+  "warmup_pairs_excluded": 1,
+  "measured_pair_order": ["api,cli", "cli,api", "api,cli", "cli,api", "api,cli"],
+  "comparison_tolerances": {"relative": 1e-10, "absolute": 1e-9},
+  "cases": [
+    {
+      "name": "one-zone-annual",
+      "idf": "C:/EnergyPlusV26-2-0/ExampleFiles/1ZoneUncontrolled.idf",
+      "epw": "C:/EnergyPlusV26-2-0/WeatherData/USA_CO_Golden-NREL.724666_TMY3.epw",
+      "engine_flags": ["-r", "-a"],
+      "api_setup_seconds": 0.071893,
+      "cli_seconds": [19.740241, 19.451913, 19.480764, 18.951013, 19.051768],
+      "api_seconds": [20.723033, 18.889653, 19.897757, 18.987789, 20.395487],
+      "cli_median_seconds": 19.451913,
+      "api_median_seconds": 19.897757,
+      "api_to_cli_median_ratio": 1.022920,
+      "csv_parity_passed": true,
+      "compared_time_series": {
+        "eplusout.csv": {"rows": 8760, "numeric_cells": 1183366},
+        "eplusmtr.csv": {"rows": 8760, "numeric_cells": 26280}
+      },
+      "raw_results": "D:/Python/accim-api-audit-20261024/one-zone-annual/results.json"
+    },
+    {
+      "name": "accim-custom-one-day",
+      "idf_source": "tests/core/test_energyplus_versions.py::test_custom_model_simulates_with_26_2",
+      "idf": "D:/Python/accim-api-audit-20261024/prepared/test_custom_model_simulates_wi0/custom_model_1_day.idf",
+      "model": "Two-zone TestModel, vrf_ac, CS99, CAT80, CM3, HVACmode0, m=0.31, n=17.8; one-day weather run, no sizing-period simulation.",
+      "epw": "Seville.epw copied by the same fixture",
+      "engine_flags": ["-r"],
+      "api_setup_seconds": 0.066780,
+      "cli_seconds": [3.093892, 3.070082, 3.248727, 2.987575, 3.576127],
+      "api_seconds": [2.827793, 2.900153, 2.987198, 2.776103, 2.827968],
+      "cli_median_seconds": 3.093892,
+      "api_median_seconds": 2.827968,
+      "api_to_cli_median_ratio": 0.914049,
+      "csv_parity_passed": true,
+      "compared_time_series": {
+        "eplusout.csv": {"rows": 24, "numeric_cells": 144}
+      },
+      "notes": "No meter CSV emitted by either backend; ReadVarsESO reports the absent MTR. Input sample retains its known orphan IdealLoads diagnostics. Success here means matching emitted series and successful engine completion, not a warning-free model.",
+      "raw_results": "D:/Python/accim-api-audit-20261024/accim-custom-one-day/results.json"
+    }
+  ],
+  "limitations": [
+    "Five pairs per case on one workstation and one engine release; no general speedup claim or statistical significance claim.",
+    "API import/DLL initialization is reported separately; starting a new Python interpreter for every evaluation was not measured.",
+    "Both backends use exactly the same model, weather and engine flags within a case.",
+    "No concurrent simulations, memory profiling, control callbacks, PythonPlugin or interrupted-state recovery measured.",
+    "CSV checks cover emitted variable/meter time series, not arbitrary artifacts or all model/control configurations.",
+    "Raw JSON outside the repository retains input SHA256 hashes, warmup times and per-run artifact paths; times in this summary are rounded to six decimals."
+  ]
+}
+

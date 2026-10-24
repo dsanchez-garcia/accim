@@ -19,6 +19,8 @@ import os
 import json
 import functools
 from accim.parametric_and_optimisation.file_cleanup import prune_simulation_output_files
+from accim.parametric_and_optimisation._execution import owns_path, remove_owned_directory
+from accim.parametric_and_optimisation._pareto import non_dominated_mask
 
 class GlobalAllCapsDict(dict):
     """Dictionary wrapper that resolves keys case-insensitively in uppercase.
@@ -239,12 +241,14 @@ def _patched_eval_func(evaluator, all_outputs):
 
     sim_files_extensions = getattr(evaluator, '_sim_files_extensions', None)
     sim_files_policy = getattr(evaluator, '_sim_files_policy', 'keep')
-    if keep_dirs and eval_record.get('sim_dir') is not None and sim_files_extensions is not None:
+    owned_root = getattr(evaluator, '_owned_run_root', None)
+    if keep_dirs and sim_files_extensions is not None and owns_path(eval_record.get('sim_dir'), owned_root):
         try:
             prune_simulation_output_files(
                 sim_dir=eval_record['sim_dir'],
                 sim_files_extensions=sim_files_extensions,
                 sim_files_policy=sim_files_policy,
+                owned_root=owned_root,
             )
         except Exception:
             # Never fail optimisation because post-run cleanup failed.
@@ -305,38 +309,18 @@ def _patched_eval_func(evaluator, all_outputs):
     if keep_dirs and keep_sim_files == 'non-dominated' and store_records_in_memory:
         records = evaluator._optimisation_eval_records
         if len(records) > 0 and len(records) % getattr(evaluator, '_keep_sim_files_batch_size', 50) == 0:
-            import shutil
-            import numpy as np
-            minimize_flags = getattr(evaluator.problem, 'minimize_outputs', None)
             output_names = evaluator.problem.names('outputs')
             n_outputs = len(output_names)
-            if minimize_flags is None:
-                minimize_flags = [True] * n_outputs
-            else:
-                minimize_flags = [m if m is not None else True for m in minimize_flags]
-            costs = np.zeros((len(records), n_outputs))
-            for (i, rec) in enumerate(records):
-                costs[i, :] = rec['results'][:n_outputs]
-            for (j, minimize) in enumerate(minimize_flags):
-                if not minimize:
-                    costs[:, j] = -costs[:, j]
-            n = costs.shape[0]
-            is_pareto = np.ones(n, dtype=bool)
-            for i in range(n):
-                if not is_pareto[i]:
-                    continue
-                others_mask = np.arange(n) != i
-                dominated_i = np.all(costs[others_mask] <= costs[i], axis=1) & np.any(costs[others_mask] < costs[i], axis=1)
-                if np.any(dominated_i):
-                    is_pareto[i] = False
-            for i in range(n):
+            is_pareto = non_dominated_mask(
+                evaluator.problem,
+                [rec['results'][:n_outputs] for rec in records],
+                [rec['results'][n_outputs:] for rec in records],
+            )
+            retained_dirs = {rec.get('sim_dir') for rec, keep in zip(records, is_pareto) if keep}
+            for i in range(len(records)):
                 if not is_pareto[i]:
                     sim_dir = records[i].get('sim_dir')
-                    if sim_dir is not None and os.path.exists(sim_dir):
-                        try:
-                            shutil.rmtree(sim_dir)
-                        except Exception:
-                            pass
+                    if sim_dir not in retained_dirs and remove_owned_directory(sim_dir, owned_root):
                         records[i]['sim_dir'] = None
     return evaluator.package_for_platypus(results)
 

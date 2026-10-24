@@ -15,6 +15,22 @@ This log is a lightweight, session-scoped complement to the repository's
 existing tracking files — it does not replace them (see
 [[decisions.md#2026-09-13 — `notes/work-log.md` complements, not replaces, existing tracking files|the related decision]]).
 
+## 2026-10-24 — Integrity implementation after the sim-v1 review
+
+- **Objective**: Implement checkpoint integrity, execution-owned cleanup and constraint-aware Pareto autonomously, without changing comfort formulas or the EnergyPlus backend.
+- **Affected files**: Code/tests listed in [[../DEVLOG.md]], [[../docs/source/checkpoint_integrity.rst]], [[../benchmarks/checkpoint_integrity_smoke.py]], [[../TODO.md]], [[decisions.md]] and the review follow-up.
+- **Finding or decision**: Implemented on `review/refactor-sim-v1-20261024`, retaining prior changes. Resume rejects unverifiable state; cleanup requires ownership, including batch working copies. The compatibility policy and external-dependency limits are recorded in [[decisions.md]] and the user guide.
+- **Validation**: 444 tests passed (83 added cases), plus three explicitly selected discovery tests; real EnergyPlus 26.2 serial/two-worker checks and completed-case resume preserved results/additional outputs and source files. Documentation built; details and retained evidence paths are in [[../DEVLOG.md]]. No commits or pushes.
+- **Next step**: The remaining per-IDF output-scope, safe expression parsing and EMS/domain tasks in [[../TODO.md]] precede broader shared-engine extraction; the CS6 question in [[questions.md]] remains open.
+
+## 2026-10-24 — sim-v1 review and EnergyPlus API experiment
+
+- **Objective**: Review the old refactor against maintained development and assess the EnergyPlus Python API, working on a new branch.
+- **Affected files**: [[../docs/refactor-sim-v1-review.md]], [[../benchmarks/energyplus_api.py]], three production fixes and their tests listed in [[../DEVLOG.md]], [[../TODO.md]], [[questions.md]].
+- **Finding or decision**: Work is on `review/refactor-sim-v1-20261024`, based on current master. The review classifies the historical commits for selective adaptation, not a wholesale merge; the parametric module exists in both snapshots. Three compatible fixes were recovered; no engine or formula migration was made. See the review for evidence and API limitations.
+- **Validation**: Current baseline 339 tests passed; seven newly exposed failures fixed; final suite 361 passed. Historical tests and 24 CLI/API runs are documented in [[../DEVLOG.md]], with measured CSV parity and retained benchmark results. Original branches unchanged; temporary audit worktree removed safely. No commits or pushes.
+- **Next step**: Follow the integrity/correctness tasks in [[../TODO.md]] before broader extraction; resolve the CS6 domain question in [[questions.md]].
+
 ## 2026-10-19 — Release guide
 
 - **Objective**: Write a guide, like the one of the documentation, for building the distributions of accim and uploading them to PyPI.

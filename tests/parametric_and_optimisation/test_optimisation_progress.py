@@ -113,7 +113,9 @@ class _StopBeforeSimulating(Exception):
 
 
 def test_run_optimisation_progress_counts_the_extra_offspring(monkeypatch, tmp_path, capsys):
+    from besos.problem import EPProblem
     sim = _lightweight_optimisation()
+    sim.problem = EPProblem()
     sim.buildings = [_DummyBuilding('idf_a.idf')]
     sim.building = sim.buildings[0]
 

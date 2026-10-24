@@ -103,6 +103,7 @@ def morph_epws(
                         'ssp585_2050', 'ssp585_2080']
 
     for folder_name, epw_name, folder_path, epw_path in [i for i in directory_file_paths]:
+        parent_folder_path = os.path.dirname(folder_path)
         # List files in the folder path
         files_in_folder = [ i for i in os.listdir(folder_path) if i.endswith('.epw')]
 
@@ -119,7 +120,6 @@ def morph_epws(
                         print(f"Renamed {file_name} to {new_file_name}")
 
                     # Move the renamed file to the parent folder
-                    parent_folder_path = os.path.dirname(folder_path)
                     moved_file_path = os.path.join(parent_folder_path, new_file_name)
                     shutil.move(new_file_path, moved_file_path)
                     if verbose:

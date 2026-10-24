@@ -68,6 +68,7 @@ If you are new to accim, start with :doc:`1_requirements`, :doc:`2_installation`
    jupyter_notebooks/parametric_and_optimisation_examples/index
    hourly_plotting
    filter_output_csvs
+   checkpoint_integrity
 
 .. toctree::
    :maxdepth: 7
