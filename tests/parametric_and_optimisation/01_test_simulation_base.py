@@ -127,10 +127,11 @@ def test_idf_backup():
         parameters_type='accim predefined model'
     )
 
-    backup_path = sim._save_idf_backup(label='test_backup')
+    backup_path = sim._save_idf_backup(label='test_backup', out_dir='./test_idf_backup')
     ts.log_test("IDF Backup", "PASS" if os.path.exists(backup_path) else "FAIL",
              f"Backup: {backup_path}")
     assert os.path.exists(backup_path)
+    assert os.path.dirname(os.path.abspath(backup_path)) == os.path.abspath('./test_idf_backup')
 
 if __name__ == '__main__':
     test_simulationbase_init_accim_predef

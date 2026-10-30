@@ -20,6 +20,13 @@ import accim.utils
 import pandas as pd
 from besos import eppy_funcs as ef
 from accim.parametric_and_optimisation.main import ParametricSimulation
+import sys
+from importlib.metadata import version
+from pathlib import Path
+
+# Raíz del repositorio, para usar los helpers de tests/test_setup.py al ejecutar el script directamente
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+from tests.test_setup import enable_sizing  # noqa: E402
 
 OUT_SOBOL     = 'test_05_sobol_results'
 OUT_FACTORIAL = 'test_05_factorial_results'
@@ -41,7 +48,7 @@ ACCIS_PARAMS_RANGE = {
 # ---------------------------------------------------------------------------
 try:
     import SALib
-    print(f"SALib disponible: v{SALib.__version__}")
+    print(f"SALib disponible: v{version('SALib')}")
 except ImportError:
     raise ImportError(
         "SALib no está instalado. Ejecuta: pip install SALib\n"
@@ -60,6 +67,8 @@ def build_range_sim():
         runperiod_end_month=7,
         runperiod_end_day_of_month=31,
     )
+    # Dimensionado de los sistemas VRF (autosize), que el IDF no tiene activado
+    enable_sizing(building)
     sim = ParametricSimulation(
         buildings=[building],
         epws=EPW_BOTH,

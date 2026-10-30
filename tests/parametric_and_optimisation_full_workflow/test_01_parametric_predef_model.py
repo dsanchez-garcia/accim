@@ -21,6 +21,12 @@ import accim.utils
 import pandas as pd
 from besos import eppy_funcs as ef
 from accim.parametric_and_optimisation.main import ParametricSimulation
+import sys
+from pathlib import Path
+
+# Raíz del repositorio, para usar los helpers de tests/test_setup.py al ejecutar el script directamente
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+from tests.test_setup import enable_sizing  # noqa: E402
 
 OUT_DIR = 'test_01_predef_results'
 
@@ -48,6 +54,8 @@ for building in buildings:
         runperiod_end_month=7,
         runperiod_end_day_of_month=31,
     )
+    # Dimensionado de los sistemas VRF (autosize), que los IDFs no tienen activado
+    enable_sizing(building)
 
 # ---------------------------------------------------------------------------
 # 2. Instanciar ParametricSimulation — predefined model, output_freqs hourly+monthly
@@ -120,7 +128,11 @@ print(f"  Parámetros disponibles ({len(available)}): {available}")
 
 parametric.set_parameters(
     accis_params_dict={
-        'ComfStand': [0, 1],   # ESP CTE + EN16798
+        # EN16798 cat. I + ASHRAE55 80 % (ComfMod 3); el plan descarta cada norma con la categoría de la otra.
+        # ESP CTE (ComfStand 0) solo tiene consignas con ComfMod 0, que el plan no admite para ComfStand 0.
+        'ComfStand': [1, 2],
+        'CAT': [1, 80],
+        'ComfMod': [3],
         'HVACmode': [0, 2],    # AC + mixed-mode
     }
 )

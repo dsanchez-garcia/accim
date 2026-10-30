@@ -26,7 +26,7 @@ flujo de trabajo completo (no tests unitarios parciales).
 
 ### `test_02_parametric_wrapper_and_bypass.py`
 - **Clases**: `AccimPredefModelsParamSim` · `ParametricSimulation(bypass_addAccis=True)` · `parameters_type=None`
-- **IDFs**: B · **EPWs**: seville_2024 + madrid_2024
+- **IDFs**: B (wrapper y `parameters_type=None`) + D (bypass) · **EPWs**: seville_2024 + madrid_2024
 - **Cubre**: `sampling_custom` (dict / list / DataFrame), `set_building_floor_area`
   (custom + list), `plot_categorical_boxplots(sharey=False, show_points=False)`
 
@@ -55,21 +55,31 @@ flujo de trabajo completo (no tests unitarios parciales).
 
 ## Cómo ejecutar
 
-### Ejecución directa (recomendada para desarrollo)
+Desde esta carpeta (los scripts usan los IDFs y EPWs de la carpeta y escriben en ella sus resultados), con
+pytest:
+
 ```powershell
 cd d:\Python\accim\tests\parametric_and_optimisation_full_workflow
-python test_01_parametric_predef_model.py
+python -m pytest test_01_parametric_predef_model.py -s -p no:cacheprovider
 ```
 
-### Con pytest (desde la raíz del proyecto)
-Los scripts **no** tienen funciones `test_*` (son scripts de flujo de trabajo completo),
-por lo que se ejecutan como módulos, no como tests de pytest unitarios.
-El `conftest.py` garantiza que el directorio de trabajo sea esta carpeta.
+Los scripts **no** tienen funciones `test_*` (son scripts de flujo de trabajo completo): se ejecutan cuando
+pytest los importa, así que pytest termina con «no tests ran» (código 5) si el script llega al final, y con
+un error de colección si falla. El `conftest.py` solo cambia el directorio de trabajo para las funciones de
+test, no al importar los scripts, de ahí que haya que ejecutarlos desde esta carpeta.
 
-```powershell
-cd d:\Python\accim
-python -m pytest tests/parametric_and_optimisation_full_workflow/test_01_parametric_predef_model.py -s
-```
+No los ejecutes directamente (`python test_01_parametric_predef_model.py`) en Windows: con `processes=2`,
+los procesos de las simulaciones vuelven a importar el script, que no tiene `if __name__ == '__main__':`, y
+repiten todo el flujo, con lo que el pool de procesos se rompe (`BrokenProcessPool`). Con pytest, esos
+procesos importan el `__main__` de pytest, que no se vuelve a ejecutar.
+
+## Preparación de los modelos
+
+Los IDFs `SF_Detached_*` no tienen periodos de dimensionado y tienen desactivado el dimensionado de zonas,
+que necesitan los sistemas VRF (autosize) que añade accim. Los scripts llaman a `enable_sizing()` de
+`tests/test_setup.py`, que activa el dimensionado y añade unos días del EPW como periodos de dimensionado
+(que no se simulan). eppy lee todos los modelos de un proceso con el IDD del primero, así que todos los
+modelos de un script deben ser de la misma versión de EnergyPlus (9.6).
 
 ## Periodo de simulación
 

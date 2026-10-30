@@ -19,6 +19,12 @@ import accim.utils
 import pandas as pd
 from besos import eppy_funcs as ef
 from accim.parametric_and_optimisation.main import ParametricSimulation
+import sys
+from pathlib import Path
+
+# Raíz del repositorio, para usar los helpers de tests/test_setup.py al ejecutar el script directamente
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+from tests.test_setup import enable_sizing  # noqa: E402
 
 OUT_MORRIS = 'test_03_morris_results'
 OUT_LHS    = 'test_03_lhs_results'
@@ -44,6 +50,8 @@ def build_custom_sim(out_freqs=None):
         runperiod_end_month=7,
         runperiod_end_day_of_month=31,
     )
+    # Dimensionado de los sistemas VRF (autosize), que el IDF no tiene activado
+    enable_sizing(building)
     sim = ParametricSimulation(
         buildings=[building],
         epws=EPW_ALL_3,

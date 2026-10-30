@@ -28,6 +28,12 @@ import accim.utils
 import pandas as pd
 from besos import eppy_funcs as ef
 from accim.parametric_and_optimisation.main import OptimisationSimulation
+import sys
+from pathlib import Path
+
+# Raíz del repositorio, para usar los helpers de tests/test_setup.py al ejecutar el script directamente
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+from tests.test_setup import enable_sizing  # noqa: E402
 
 OUT_DIR = 'test_04_optim_results'
 
@@ -54,6 +60,8 @@ accim.utils.reduce_runtime(
     runperiod_end_month=7,
     runperiod_end_day_of_month=31,
 )
+# Dimensionado de los sistemas VRF (autosize), que el IDF no tiene activado
+enable_sizing(building)
 
 # ---------------------------------------------------------------------------
 # 2. Instanciar OptimisationSimulation
@@ -202,8 +210,6 @@ optim.outputs_optimisation = df_optim  # restaurar
 # 10. plot_best_compromise_solutions
 # ---------------------------------------------------------------------------
 print("\n=== [10] plot_best_compromise_solutions ===")
-output_names = ['Heating:Electricity', 'Cooling:Electricity']
-optim.problem.names = lambda t: output_names if t == 'outputs' else []
 mcdm_df = optim.plot_best_compromise_solutions(
     out_dir=OUT_DIR,
     mcdm_configs=[
@@ -370,6 +376,8 @@ accim.utils.reduce_runtime(
     runperiod_end_month=7,
     runperiod_end_day_of_month=31,
 )
+# Dimensionado de los sistemas VRF (autosize), que el IDF no tiene activado
+enable_sizing(building2)
 optim2 = OptimisationSimulation(
     buildings=[building2],
     epws=[EPW_SEV],
@@ -411,6 +419,8 @@ accim.utils.reduce_runtime(
     runperiod_end_month=7,
     runperiod_end_day_of_month=31,
 )
+# Dimensionado de los sistemas VRF (autosize), que el IDF no tiene activado
+enable_sizing(building3)
 optim3 = OptimisationSimulation(
     buildings=[building3],
     epws=[EPW_MAD],

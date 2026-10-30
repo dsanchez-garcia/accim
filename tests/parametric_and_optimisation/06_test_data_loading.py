@@ -18,7 +18,8 @@ def test_load_parametric_csv():
         parameters_type='accim predefined model'
     )
 
-    sim1.set_parameters(accis_params_dict={'ComfStand': [0, 1]})
+    sim1.set_parameters(accis_params_dict={'CAT': [1, 2]})
+    ts.set_meter_readers(sim1)
     sim1.set_problem()
     sim1.sampling_full_set()
 
@@ -35,12 +36,12 @@ def test_load_parametric_csv():
         bypass_addAccis=True
     )
 
-    csv_path = './test_load_param_csv/param_results.csv'
+    csv_path = ts.latest_output('./test_load_param_csv', 'outputs_param_simulation', 'csv')
     results2 = sim2.load_outputs_parametric(csv_path=csv_path)
 
     ts.log_test("Load Parametric CSV", "PASS" if len(results2) > 0 else "FAIL",
              f"Loaded rows: {len(results2)}")
-    assert len(results2) > 0
+    assert len(results2) == len(results1) == 2
 
 def test_load_parametric_pickle():
     """Test: Cargar outputs parametricos desde Pickle."""
@@ -53,7 +54,8 @@ def test_load_parametric_pickle():
         parameters_type='accim predefined model'
     )
 
-    sim1.set_parameters(accis_params_dict={'ComfStand': [0, 1]})
+    sim1.set_parameters(accis_params_dict={'CAT': [1, 2]})
+    ts.set_meter_readers(sim1)
     sim1.set_problem()
     sim1.sampling_full_set()
 
@@ -69,11 +71,12 @@ def test_load_parametric_pickle():
         bypass_addAccis=True
     )
 
-    pickle_path = './test_load_param_pickle/param_results.pickle'
+    pickle_path = ts.latest_output('./test_load_param_pickle', 'outputs_param_simulation', 'pkl')
     results = sim2.load_outputs_parametric(pickle_path=pickle_path)
 
     ts.log_test("Load Parametric Pickle", "PASS" if len(results) > 0 else "FAIL",
              f"Loaded rows: {len(results)}")
+    assert len(results) == 2
 
 def test_load_optimization_csv():
     """Test: Cargar outputs optimización desde CSV."""
@@ -86,8 +89,9 @@ def test_load_optimization_csv():
         parameters_type='accim predefined model'
     )
 
-    sim1.set_parameters(accis_params_dict={'ComfStand': [0, 1]})
-    sim1.set_problem(minimize_outputs=['HVAC energy'])
+    sim1.set_parameters(accis_params_dict={'CAT': [1, 2, 3]})
+    ts.set_meter_readers(sim1, meters=['Electricity:HVAC'])
+    sim1.set_problem(minimize_outputs=[True])
 
     sim1.run_optimisation(
         out_dir='./test_load_optim_csv',
@@ -104,11 +108,12 @@ def test_load_optimization_csv():
         bypass_addAccis=True
     )
 
-    csv_path = './test_load_optim_csv/optim_results_full.csv'
+    csv_path = ts.latest_output('./test_load_optim_csv', 'outputs_optimisation', 'csv')
     results = sim2.load_outputs_optimisation(csv_path=csv_path)
 
     ts.log_test("Load Optimization CSV", "PASS" if len(results) > 0 else "FAIL",
              f"Loaded rows: {len(results)}")
+    assert len(results) > 0
 
 if __name__ == '__main__':
     test_load_parametric_csv()

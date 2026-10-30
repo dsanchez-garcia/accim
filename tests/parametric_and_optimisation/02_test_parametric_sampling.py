@@ -40,10 +40,10 @@ def test_sampling_lhs():
     sim = ts.ParametricSimulation(
         buildings=buildings,
         epws=ts.TEST_CATEGORIES['fast']['epws'],
-        parameters_type='accim predefined model'
+        parameters_type='accim custom model'
     )
 
-    sim.set_parameters(accis_params_dict={'CAT': [70, 90]})  # Rango
+    sim.set_parameters(accis_params_dict=dict(ts.CUSTOM_RANGES))  # Rangos (tuplas)
     df_var = sim.get_output_variables_df_from_idf()
     df_meter = sim.get_output_meters_df_from_idf()
     if not df_var.empty:
@@ -66,10 +66,10 @@ def test_sampling_sobol():
     sim = ts.ParametricSimulation(
         buildings=buildings,
         epws=ts.TEST_CATEGORIES['fast']['epws'],
-        parameters_type='accim predefined model'
+        parameters_type='accim custom model'
     )
 
-    sim.set_parameters(accis_params_dict={'CAT': [70, 90], 'ComfMod': [2, 4]})
+    sim.set_parameters(accis_params_dict=dict(ts.CUSTOM_RANGES))
     df_var = sim.get_output_variables_df_from_idf()
     df_meter = sim.get_output_meters_df_from_idf()
     if not df_var.empty:
@@ -82,7 +82,8 @@ def test_sampling_sobol():
 
     ts.log_test("Sobol Sampling", "PASS" if len(sim.parameters_values_df) > 0 else "FAIL",
              f"Samples: {len(sim.parameters_values_df)}")
-    assert len(sim.parameters_values_df) > 0
+    # Saltelli: N * (2 * parámetros + 2) muestras
+    assert len(sim.parameters_values_df) == 64 * (2 * 2 + 2)
 
 def test_sampling_morris():
     """Test: Morris Sensitivity Analysis."""
@@ -92,10 +93,10 @@ def test_sampling_morris():
     sim = ts.ParametricSimulation(
         buildings=buildings,
         epws=ts.TEST_CATEGORIES['fast']['epws'],
-        parameters_type='accim predefined model'
+        parameters_type='accim custom model'
     )
 
-    sim.set_parameters(accis_params_dict={'CAT': [70, 90], 'ComfMod': [2, 4]})
+    sim.set_parameters(accis_params_dict=dict(ts.CUSTOM_RANGES))
     df_var = sim.get_output_variables_df_from_idf()
     df_meter = sim.get_output_meters_df_from_idf()
     if not df_var.empty:
@@ -108,7 +109,8 @@ def test_sampling_morris():
 
     ts.log_test("Morris Sampling", "PASS" if len(sim.parameters_values_df) > 0 else "FAIL",
              f"Samples: {len(sim.parameters_values_df)}")
-    assert len(sim.parameters_values_df) > 0
+    # Morris: N trayectorias * (parámetros + 1) muestras
+    assert len(sim.parameters_values_df) == 2 * (2 + 1)
 
 def test_sampling_full_factorial():
     """Test: Full Factorial Design."""
@@ -118,10 +120,11 @@ def test_sampling_full_factorial():
     sim = ts.ParametricSimulation(
         buildings=buildings,
         epws=ts.TEST_CATEGORIES['fast']['epws'],
-        parameters_type='accim predefined model'
+        parameters_type='accim custom model'
     )
 
-    sim.set_parameters(accis_params_dict={'ComfStand': [0, 1], 'HVACmode': [0, 2]})
+    # El diseño factorial completo es de rangos: 2 niveles de cada uno de los 2 parámetros
+    sim.set_parameters(accis_params_dict=dict(ts.CUSTOM_RANGES))
     df_var = sim.get_output_variables_df_from_idf()
     df_meter = sim.get_output_meters_df_from_idf()
     if not df_var.empty:
@@ -148,6 +151,7 @@ def test_sampling_custom_list_of_dicts():
     )
 
     sim.set_parameters(accis_params_dict={'ComfStand': [0, 1]})
+    ts.set_meter_readers(sim)
     sim.set_problem()
 
     custom_plan = [
@@ -172,6 +176,7 @@ def test_sampling_custom_multi_idf_epw():
     )
 
     sim.set_parameters(accis_params_dict={'ComfStand': [0, 1]})
+    ts.set_meter_readers(sim)
     sim.set_problem()
 
     # Mapeo personalizado: IDF_B con seville, IDF_D con madrid

@@ -39,7 +39,8 @@ def test_get_hourly_df():
         parameters_type='accim predefined model'
     )
 
-    sim.set_parameters(accis_params_dict={'ComfStand': [0]})
+    sim.set_parameters(accis_params_dict={'ComfMod': [3]})
+    ts.set_meter_readers(sim)
     sim.set_problem()
     sim.sampling_full_set()
 
@@ -48,10 +49,12 @@ def test_get_hourly_df():
         processes=1
     )
 
-    sim.get_hourly_df()
+    sim.get_hourly_df(start_date='2024-06-24 01')
 
     ts.log_test("Get Hourly DF", "PASS" if sim.outputs_param_simulation_hourly is not None else "FAIL",
              f"Shape: {sim.outputs_param_simulation_hourly.shape if sim.outputs_param_simulation_hourly is not None else 'N/A'}")
+    assert sim.outputs_param_simulation_hourly is not None
+    assert len(sim.outputs_param_simulation_hourly) > 0
 
 def test_get_monthly_df():
     """Test: Generar DataFrame mensual."""
@@ -64,7 +67,8 @@ def test_get_monthly_df():
         parameters_type='accim predefined model'
     )
 
-    sim.set_parameters(accis_params_dict={'ComfStand': [0]})
+    sim.set_parameters(accis_params_dict={'ComfMod': [3]})
+    ts.set_meter_readers(sim)
     sim.set_problem()
     sim.sampling_full_set()
 
@@ -73,10 +77,12 @@ def test_get_monthly_df():
         processes=1
     )
 
-    sim.get_monthly_df()
+    sim.get_monthly_df(start_date='2024-06-24 01')
 
     ts.log_test("Get Monthly DF", "PASS" if sim.outputs_param_simulation_monthly is not None else "FAIL",
              f"Shape: {sim.outputs_param_simulation_monthly.shape if sim.outputs_param_simulation_monthly is not None else 'N/A'}")
+    assert sim.outputs_param_simulation_monthly is not None
+    assert len(sim.outputs_param_simulation_monthly) > 0
 
 def test_sensitivity_analysis_morris():
     """Test: Análisis de sensibilidad Morris."""
@@ -86,11 +92,12 @@ def test_sensitivity_analysis_morris():
     sim = ts.ParametricSimulation(
         buildings=buildings,
         epws=ts.TEST_CATEGORIES['fast']['epws'][:1],
-        parameters_type='accim predefined model'
+        parameters_type='accim custom model'
     )
 
-    sim.set_parameters(accis_params_dict={'CAT': [[70, 90]], 'ComfMod': [[2, 4]]})
-    sim.set_problem(minimize_outputs=['HVAC energy'])
+    sim.set_parameters(accis_params_dict=dict(ts.CUSTOM_RANGES))
+    ts.set_meter_readers(sim, meters=['Electricity:HVAC'])
+    sim.set_problem(minimize_outputs=[True])
     sim.sampling_morris(num_samples=2, num_levels=4)
 
     sim.run_parametric_simulation(
@@ -98,9 +105,12 @@ def test_sensitivity_analysis_morris():
         processes=1
     )
 
-    sim.run_sensitivity_analysis_by_epw(method='morris', out_dir='./test_sa_morris_results')
+    sa_results = sim.run_sensitivity_analysis_by_epw(method='morris', out_dir='./test_sa_morris_results')
 
-    ts.log_test("SA Morris", "PASS" if hasattr(sim, 'sa_results') else "FAIL")
+    ts.log_test("SA Morris", "PASS" if sa_results else "FAIL")
+    # {epw: {output: resultados de SALib}}, con un EPW y un output
+    assert len(sa_results) == 1
+    assert all(len(by_output) == 1 for by_output in sa_results.values())
 
 def test_sensitivity_analysis_sobol():
     """Test: Análisis de sensibilidad Sobol."""
@@ -110,21 +120,25 @@ def test_sensitivity_analysis_sobol():
     sim = ts.ParametricSimulation(
         buildings=buildings,
         epws=ts.TEST_CATEGORIES['fast']['epws'][:1],
-        parameters_type='accim predefined model'
+        parameters_type='accim custom model'
     )
 
-    sim.set_parameters(accis_params_dict={'CAT': [[70, 90]], 'ComfMod': [[2, 4]]})
-    sim.set_problem(minimize_outputs=['HVAC energy'])
-    sim.sampling_sobol(num_samples=32)
+    sim.set_parameters(accis_params_dict=dict(ts.CUSTOM_RANGES))
+    ts.set_meter_readers(sim, meters=['Electricity:HVAC'])
+    sim.set_problem(minimize_outputs=[True])
+    # N * (2 * parámetros + 2) simulaciones: N=2 (potencia de 2) para que el test sea corto
+    sim.sampling_sobol(num_samples=2)
 
     sim.run_parametric_simulation(
         out_dir='./test_sa_sobol',
         processes=1
     )
 
-    sim.run_sensitivity_analysis_by_epw(method='sobol', out_dir='./test_sa_sobol_results')
+    sa_results = sim.run_sensitivity_analysis_by_epw(method='sobol', out_dir='./test_sa_sobol_results')
 
-    ts.log_test("SA Sobol", "PASS" if hasattr(sim, 'sa_results') else "FAIL")
+    ts.log_test("SA Sobol", "PASS" if sa_results else "FAIL")
+    assert len(sa_results) == 1
+    assert all(len(by_output) == 1 for by_output in sa_results.values())
 
 if __name__ == '__main__':
     test_set_building_floor_area()

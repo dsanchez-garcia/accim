@@ -23,9 +23,10 @@ def test_complete_workflow():
         output_freqs=['hourly', 'monthly']
     )
 
-    param_sim.set_parameters(accis_params_dict={'ComfStand': [0, 1], 'HVACmode': [0, 2]})
-    param_sim.set_problem(minimize_outputs=['HVAC energy'])
-    param_sim.sampling_full_factorial(level=2)
+    param_sim.set_parameters(accis_params_dict={'CAT': [1, 2], 'HVACmode': [0, 2]})
+    ts.set_meter_readers(param_sim)
+    param_sim.set_problem()
+    param_sim.sampling_full_set()
 
     param_results = param_sim.run_parametric_simulation(
         out_dir='./test_integration_param',
@@ -33,9 +34,11 @@ def test_complete_workflow():
         keep_input=True
     )
     print(f"✓ Parametric completed: {len(param_results)} simulations")
+    # 4 combinaciones x 2 IDFs x 2 EPWs
+    assert len(param_results) == 16
 
     print("\n[STEP 3] Get Hourly Data...")
-    param_sim.get_hourly_df(start_date='2024-06-01 01', normalize_per_m2=False)
+    param_sim.get_hourly_df(start_date='2024-06-24 01', normalize_per_m2=False)
     print(f"✓ Hourly data generated: {param_sim.outputs_param_simulation_hourly.shape}")
 
     print("\n[STEP 4] Get Monthly Data...")
@@ -49,8 +52,9 @@ def test_complete_workflow():
         parameters_type='accim predefined model'
     )
 
-    optim_sim.set_parameters(accis_params_dict={'ComfStand': [0, 1, 2], 'HVACmode': [0, 2]})
-    optim_sim.set_problem(minimize_outputs=['HVAC energy', 'PPD'])
+    optim_sim.set_parameters(accis_params_dict={'CAT': [1, 2, 3], 'HVACmode': [0, 2]})
+    ts.set_meter_readers(optim_sim)
+    optim_sim.set_problem(minimize_outputs=[True, True])
 
     optim_results = optim_sim.run_optimisation(
         out_dir='./test_integration_optim',

@@ -37,9 +37,10 @@ def test_optimization_basic():
         parameters_type='accim predefined model'
     )
 
-    sim.set_parameters(accis_params_dict={'ComfStand': [0, 1], 'HVACmode': [0, 2]})
+    sim.set_parameters(accis_params_dict={'CAT': [1, 2, 3], 'HVACmode': [0, 2]})
+    ts.set_meter_readers(sim)
     sim.set_problem(
-        minimize_outputs=['HVAC energy', 'PPD'],
+        minimize_outputs=[True, True],
         constraints=None
     )
 
@@ -54,6 +55,8 @@ def test_optimization_basic():
     ts.log_test("Optimization NSGAII", "PASS" if len(results) > 0 else "FAIL",
              f"Results: {len(results)} rows, Pareto-optimal: {(results['pareto-optimal']==True).sum()}")
     assert 'pareto-optimal' in results.columns
+    assert len(results) >= 4
+    assert results[ts.METERS].notna().all().all()
 
 def test_optimization_all_algorithms():
     """Test: Todos los algoritmos disponibles."""
@@ -69,8 +72,9 @@ def test_optimization_all_algorithms():
                 parameters_type='accim predefined model'
             )
 
-            sim.set_parameters(accis_params_dict={'ComfStand': [0, 1]})
-            sim.set_problem(minimize_outputs=['HVAC energy'])
+            sim.set_parameters(accis_params_dict={'CAT': [1, 2, 3]})
+            ts.set_meter_readers(sim, meters=['Electricity:HVAC'])
+            sim.set_problem(minimize_outputs=[True])
 
             results = sim.run_optimisation(
                 out_dir=f'./test_optim_{algo}',
@@ -92,12 +96,13 @@ def test_optimization_multi_epw():
     buildings = ts.prepare_buildings(ts.TEST_CATEGORIES['fast']['idfs'][:1])
     sim = ts.OptimisationSimulation(
         buildings=buildings,
-        epws=ts.TEST_CATEGORIES['fast']['epws'][:2],
+        epws=ts.TEST_CATEGORIES['medium']['epws'],
         parameters_type='accim predefined model'
     )
 
-    sim.set_parameters(accis_params_dict={'ComfStand': [0, 1]})
-    sim.set_problem(minimize_outputs=['HVAC energy'])
+    sim.set_parameters(accis_params_dict={'CAT': [1, 2, 3]})
+    ts.set_meter_readers(sim, meters=['Electricity:HVAC'])
+    sim.set_problem(minimize_outputs=[True])
 
     results = sim.run_optimisation(
         out_dir='./test_optim_multi_epw',
@@ -109,6 +114,8 @@ def test_optimization_multi_epw():
 
     ts.log_test("Optimization Multi-EPW", "PASS" if 'epw' in results.columns else "FAIL",
              f"EPWs in results: {results['epw'].nunique()}")
+    assert 'epw' in results.columns
+    assert results['epw'].nunique() == 2
 
 def test_optimization_keep_sim_files():
     """Test: Options para keep_sim_files."""
@@ -123,8 +130,9 @@ def test_optimization_keep_sim_files():
             parameters_type='accim predefined model'
         )
 
-        sim.set_parameters(accis_params_dict={'ComfStand': [0, 1]})
-        sim.set_problem(minimize_outputs=['HVAC energy'])
+        sim.set_parameters(accis_params_dict={'CAT': [1, 2, 3]})
+        ts.set_meter_readers(sim, meters=['Electricity:HVAC'])
+        sim.set_problem(minimize_outputs=[True])
 
         results = sim.run_optimisation(
             out_dir=f'./test_optim_keep_{keep_option}',
@@ -136,6 +144,7 @@ def test_optimization_keep_sim_files():
         )
 
         ts.log_test(f"Keep Files ({keep_option})", "PASS" if len(results) > 0 else "FAIL")
+        assert len(results) > 0
 
 def test_optimization_estimate_sims():
     """Test: Estimar cantidad de simulaciones."""
@@ -148,17 +157,20 @@ def test_optimization_estimate_sims():
         parameters_type='accim predefined model'
     )
 
-    sim.set_parameters(accis_params_dict={'ComfStand': [0, 1]})
-    sim.set_problem(minimize_outputs=['HVAC energy'])
+    sim.set_parameters(accis_params_dict={'CAT': [1, 2, 3]})
+    ts.set_meter_readers(sim, meters=['Electricity:HVAC'])
+    sim.set_problem(minimize_outputs=[True])
 
     estimate = sim.estimate_optimisation_sims(
         evaluations=10,
         population_size=5,
-        num_epws=2
+        epws=ts.TEST_CATEGORIES['medium']['epws']
     )
 
     ts.log_test("Estimate Sims", "PASS" if estimate is not None else "FAIL",
              f"Estimated sims: {estimate}")
+    # NSGA-II: 5 iniciales + 6 hijos (5 redondeado a par) por EPW
+    assert estimate == (5 + 6) * 2
 
 if __name__ == '__main__':
     test_optimization_basic()

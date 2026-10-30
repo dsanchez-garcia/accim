@@ -33,7 +33,8 @@ def test_accim_predef_models_parametric():
         epws=ts.TEST_CATEGORIES['fast']['epws'][:1]
     )
 
-    sim.set_parameters()
+    sim.set_parameters(accis_params_dict={'ComfStand': [1], 'CAT': [1, 2], 'ComfMod': [3]})
+    ts.set_meter_readers(sim)
     sim.set_problem()
     sim.sampling_full_set()
 
@@ -44,6 +45,8 @@ def test_accim_predef_models_parametric():
 
     ts.log_test("AccimPredefModelsParamSim Parametric", "PASS" if len(results) > 0 else "FAIL",
              f"Results: {len(results)} rows")
+    assert len(results) == 2
+    assert results[ts.METERS].notna().all().all()
 
 if __name__ == '__main__':
     test_accim_predef_models_init()
