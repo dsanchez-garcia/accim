@@ -44,7 +44,7 @@ notebook and the input files it uses (IDFs, EPWs...):
 
 | Folder | Content | Page |
 | --- | --- | --- |
-| `addAccis` | Adaptive setpoint temperatures with `addAccis()` | {doc}`jupyter_notebooks/addAccis/using_addAccis` |
+| `addAccis` | Adaptive setpoint temperatures with `AddAccis()` (`addAccis()` before accim 1.0.0) | {doc}`jupyter_notebooks/addAccis/using_addAccis` |
 | `rename_epw_files` | Renaming EPW files | {doc}`jupyter_notebooks/rename_epw_files/using_rename_epw_files` |
 | `runEp` | Running simulations | {doc}`jupyter_notebooks/runEp/using_runEp` |
 | `Table` | Data analysis, figures and tables | {doc}`jupyter_notebooks/Table/using_Table` |

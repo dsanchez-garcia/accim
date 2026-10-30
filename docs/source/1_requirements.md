@@ -10,6 +10,8 @@ To use accim, the following must be installed:
 *   EnergyPlus (any version between 9.1 and 26.2, inclusive) in its default folder (e.g., `C:\EnergyPlusV26-2-0`). accim reads each IDF with the EnergyPlus version of the file, so the versions of your models must be installed, or the models updated to an installed version (see {doc}`5_troubleshooting`).
     *   accim finds the occupied zones and adds the thermal comfort models in the `People` objects of the model. EnergyPlus 26.2 can also describe the occupants with the new `People:Instance` objects, which reference `People:Definition` objects: accim reads the `People:Instance` objects as `People` objects, and adds the thermal comfort models to the `People:Definition` objects they reference. The models updated from earlier versions keep their `People` objects.
     *   In models with `Space` objects, EnergyPlus creates the occupants of each space a `People` object applies to, and accim reads them with the names EnergyPlus gives them. A zone whose occupants are in several spaces, or that has several `People` objects, is handled as one zone.
+    *   To run the simulations through the Python API of EnergyPlus instead of its Energy Management System ({ref}`python-api-backend`), the models must be of EnergyPlus 24.2 or later, whose API can read and write the variables of the Energy Management System.
+    *   If an EnergyPlus version is not installed in its default folder, set the environment variable `ACCIM_ENERGYPLUS_DIR` to its folder; accim uses it when the version is given explicitly (for instance, `energyplus_version='25.1'`) and with the Python API.
 
 accim is developed and tested on Windows.
 

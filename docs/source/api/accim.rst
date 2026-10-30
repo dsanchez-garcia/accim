@@ -11,22 +11,31 @@ Subpackages
    accim.parametric_and_optimisation
    accim.run
    accim.sim
+   accim.utils
 
 Submodules
 ----------
+
+accim.constants module
+----------------------
+
+.. automodule:: accim.constants
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+accim.energyplus module
+-----------------------
+
+.. automodule:: accim.energyplus
+   :members:
+   :show-inheritance:
+   :undoc-members:
 
 accim.lists module
 ------------------
 
 .. automodule:: accim.lists
-   :members:
-   :show-inheritance:
-   :undoc-members:
-
-accim.utils module
-------------------
-
-.. automodule:: accim.utils
    :members:
    :show-inheritance:
    :undoc-members:

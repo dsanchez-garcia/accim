@@ -28,13 +28,14 @@ With accim you can:
   mixed-mode operation (:doc:`3_quick tutorial`, :doc:`4_detailed use`);
 - apply setpoints based on the adaptive predicted mean vote (aPMV)
   (:doc:`jupyter_notebooks/example_apmv_setpoints_paper/using_apmv_setpoints`);
-- rename the weather files, run the simulations and make tables and figures of the results
-  (How-to Guides);
+- rename the weather files, run the simulations (with the Energy Management System of EnergyPlus, or
+  through its Python API) and make tables and figures of the results (How-to Guides);
 - run parametric studies, sensitivity analyses and multi-objective optimisations of these controls
   (:doc:`parametric_and_optimisation`).
 
 If you are new to accim, start with :doc:`1_requirements`, :doc:`2_installation` and
-:doc:`3_quick tutorial`.
+:doc:`3_quick tutorial`. If you used accim 0.x, see :doc:`9_migration_guide`: since accim 1.0.0,
+the names follow the conventions of Python, and the old names still work.
 
 .. toctree::
    :maxdepth: 7
@@ -47,6 +48,7 @@ If you are new to accim, start with :doc:`1_requirements`, :doc:`2_installation`
    5_troubleshooting.md
    6_citation.md
    7_credits.md
+   9_migration_guide.md
 
 .. toctree::
    :maxdepth: 7

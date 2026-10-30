@@ -32,7 +32,7 @@ If you use this package, please cite us:
 ## 2.0 Requirements
 To use accim, the following must be installed:
 - Python 3.9 or newer
-- EnergyPlus (any version between 9.1 and 26.2 those included)
+- EnergyPlus (any version between 9.1 and 26.2 those included). To run the simulations through the Python API of EnergyPlus (section 2.2.3), EnergyPlus 24.2 or later
 
 ## 2.1 Installation
 First of all, you need to install the package. There are two options:
@@ -55,7 +55,7 @@ The Jupyter notebooks mentioned in section 2.2 are part of the sample files, in 
 
 | Folder | Content |
 | --- | --- |
-| `addAccis` | Adaptive setpoint temperatures with `addAccis()` (section 2.2.1) |
+| `addAccis` | Adaptive setpoint temperatures with `AddAccis()` (`addAccis()` before accim 1.0.0, section 2.2.1) |
 | `rename_epw_files` | Renaming EPW files (section 2.2.2) |
 | `runEp` | Running simulations (section 2.2.3) |
 | `Table` | Data analysis, figures and tables (section 2.2.4) |
@@ -86,7 +86,7 @@ You can also read the notebooks, with their outputs, without running them: in th
 
 ## 2.2 Usage
 
-
+Since accim 1.0.0, the names of the classes, functions and arguments follow the naming conventions of Python (PEP 8): `addAccis` is `AddAccis`, `ScriptType` is `script_type`, `runEp` is `run_ep`, and so on. The names of previous versions still work, with a `DeprecationWarning` that gives the new name, so the scripts written for them run without changes. The usage of `accim.parametric_and_optimisation` does not change. The migration guide lists all the new names: https://accim.readthedocs.io/en/master/9_migration_guide.html
 
 ### 2.2.1 Transforming PMV-based into adaptive setpoint temperatures
 
@@ -99,43 +99,43 @@ accim will take as input IDF files those located at the same path as the script.
 #### 2.2.1.1 Short version
 
     from accim.sim import accis
-    accis.addAccis()
+    accis.AddAccis()
 
 Once you run this code, you will be asked to enter some information at the terminal or python console to generate the output IDF files.
 
 #### 2.2.1.2 Longer version
 
     from accim.sim import accis
-    accis.addAccis(
-        ScriptType=str, # ScriptType: 'vrf_mm', 'vrf_ac', 'ex_mm', 'ex_ac'. For instance: ScriptType='vrf_ac',
-        SupplyAirTempInputMethod=str, # SupplyAirTempInputMethod: 'supply air temperature', 'temperature difference'. For instance: SupplyAirTempInputMethod='supply air temperature',
-        Output_keep_existing=bool, # Output_keep_existing: True or False. For instance: Output_keep_existing=False,
-        Output_type=str, # Output_type: 'simplified', 'standard', 'detailed' or 'custom'. For instance: Output_type='standard',
-        Output_freqs=list, # Output_freqs: ['timestep', 'hourly', 'daily', 'monthly', 'runperiod']. For instance: Output_freqs=['hourly', 'runperiod'],
-        Output_gen_dataframe=bool, # Output_keep_existing: True or False. For instance: Output_keep_existing=False,
-        Output_take_dataframe=pandas Dataframe,
-        EnergyPlus_version=str, # EnergyPlus_version: '9.1', '9.2', '9.3', '9.4', '9.5', '9.6', '22.1', '22.2', '23.1', '23.2', '24.1', '24.2', '25.1', '25.2', '26.1', '26.2' or 'auto'. For instance: EnergyPlus_version='25.1',
-        TempCtrl=str, # TempCtrl: 'temperature' or 'temp', or 'pmv'. For instance: TempCtrl='temp',
-        ComfStand=list, # it is the Comfort Standard. Can be any integer from 0 to 22. For instance: ComfStand=[0, 1, 2, 3],
-        CAT=list, # it is the Category. Can be 1, 2, 3, 80, 85 or 90. For instance: CAT=[3, 80],
-        ComfMod=list, # it is Comfort Mode. Can be 0, 1, 2 or 3. For instance: ComfMod=[0, 3],
-        SetpointAcc=float, # it is the accuracy of the setpoint temperatures
-        CoolSeasonStart=dd/mm date in string format or integer to represent the day of the year, # it is the start date for the cooling season
-        CoolSeasonEnd=dd/mm date in string format or integer to represent the day of the year, # it is the end date for the cooling season
-        HVACmode=list, # it is the HVAC mode. 0 for Full AC, 1 for NV and 2 for MM. For instance: HVACmode=[0, 2],
-        VentCtrl=list, # it is the Ventilation Control. Can be 0 or 1. For instance: VentCtrl=[0, 1],
-        MaxTempDiffVOF=float, # When the difference of operative and outdoor temperature exceeds MaxTempDiffVOF, windows will be opened the fraction of MultiplierVOF. For instance: MaxTempDiffVOF=20,
-        MinTempDiffVOF=float, # When the difference of operative and outdoor temperature is smaller than MinTempDiffVOF, windows will be fully opened. Between min and max, windows will be linearly opened. For instance: MinTempDiffVOF=1,
-        MultiplierVOF=float, # Fraction of window to be opened when temperature difference exceeds MaxTempDiffVOF. For instance: Multiplier=0.2,
-        VSToffset=list, # it is the offset for the ventilation setpoint. Can be any number, float or int. For instance: VSToffset=[-1.5, -1, 0, 1, 1.5],
-        MinOToffset=list, # it is the offset for the minimum outdoor temperature to ventilate. Can be any positive number, float or int. For instance: MinOToffset=[0.5, 1, 2],
-        MaxWindSpeed=list, # it is the maximum wind speed allowed for ventilation. Can be any positive number, float or int. For instance: MinOToffset=[2.5, 5, 10],
-        ASTtol_start=float, # it is the start of the tolerance sequence. For instance: ASTtol_start=0,
-        ASTtol_end_input=float, # it is the end of the tolerance sequence. For instance: ASTtol_start=2,
-        ASTtol_steps=float, # these are the steps of the tolerance sequence. For instance: ASTtol_steps=0.25,
-        NameSuffix=str # NameSuffix: some text you might want to add at the end of the output IDF file name. For instance: NameSuffix='whatever',
-        verboseMode=bool # verboseMode: True to print all process in screen, False to not to print it. Default is True. For instance: verboseMode=True,
-        confirmGen=bool # True to confirm automatically the generation of IDFs; if False, you'll be asked to confirm in command prompt. Default is False. For instance: confirmGen=False,
+    accis.AddAccis(
+        script_type=str, # 'vrf_mm', 'vrf_ac', 'ex_mm', 'ex_ac'. For instance: script_type='vrf_ac',
+        supply_air_temp_input_method=str, # 'supply air temperature', 'temperature difference'. For instance: supply_air_temp_input_method='supply air temperature',
+        output_keep_existing=bool, # True or False. For instance: output_keep_existing=False,
+        output_type=str, # 'simplified', 'standard', 'detailed' or 'custom'. For instance: output_type='standard',
+        output_freqs=list, # ['timestep', 'hourly', 'daily', 'monthly', 'runperiod']. For instance: output_freqs=['hourly', 'runperiod'],
+        output_gen_dataframe=bool, # True to keep a DataFrame with the Output:Variable objects in the attribute df_outputs. For instance: output_gen_dataframe=False,
+        output_take_dataframe=pandas Dataframe,
+        energyplus_version=str, # '9.1', '9.2', '9.3', '9.4', '9.5', '9.6', '22.1', '22.2', '23.1', '23.2', '24.1', '24.2', '25.1', '25.2', '26.1', '26.2' or 'auto'. For instance: energyplus_version='auto',
+        temp_ctrl=str, # 'temperature' or 'temp', or 'pmv'. For instance: temp_ctrl='temp',
+        comf_stand=list, # it is the Comfort Standard. Can be any integer from 0 to 22, or 99. For instance: comf_stand=[0, 1, 2, 3],
+        cat=list, # it is the Category. Can be 1, 2, 3, 80, 85 or 90. For instance: cat=[3, 80],
+        comf_mod=list, # it is Comfort Mode. Can be 0, 1, 2 or 3. For instance: comf_mod=[0, 3],
+        setpoint_acc=float, # it is the accuracy of the setpoint temperatures
+        cool_season_start=dd/mm date in string format or integer to represent the day of the year, # it is the start date for the cooling season
+        cool_season_end=dd/mm date in string format or integer to represent the day of the year, # it is the end date for the cooling season
+        hvac_mode=list, # it is the HVAC mode. 0 for Full AC, 1 for NV and 2 for MM. For instance: hvac_mode=[0, 2],
+        vent_ctrl=list, # it is the Ventilation Control. Can be 0, 1, 2 or 3. For instance: vent_ctrl=[0, 1],
+        max_temp_diff_vof=float, # When the difference of operative and outdoor temperature exceeds max_temp_diff_vof, windows will be opened the fraction of multiplier_vof. For instance: max_temp_diff_vof=20,
+        min_temp_diff_vof=float, # When the difference of operative and outdoor temperature is smaller than min_temp_diff_vof, windows will be fully opened. Between min and max, windows will be linearly opened. For instance: min_temp_diff_vof=1,
+        multiplier_vof=float, # Fraction of window to be opened when temperature difference exceeds max_temp_diff_vof. For instance: multiplier_vof=0.2,
+        vst_offset=list, # it is the offset for the ventilation setpoint. Can be any number, float or int. For instance: vst_offset=[-1.5, -1, 0, 1, 1.5],
+        min_ot_offset=list, # it is the offset for the minimum outdoor temperature to ventilate. Can be any positive number, float or int. For instance: min_ot_offset=[0.5, 1, 2],
+        max_wind_speed=list, # it is the maximum wind speed allowed for ventilation. Can be any positive number, float or int. For instance: max_wind_speed=[2.5, 5, 10],
+        ast_tol_start=float, # it is the start of the tolerance sequence. For instance: ast_tol_start=0,
+        ast_tol_end_input=float, # it is the end of the tolerance sequence. For instance: ast_tol_end_input=2,
+        ast_tol_steps=float, # these are the steps of the tolerance sequence. For instance: ast_tol_steps=0.25,
+        name_suffix=str, # some text you might want to add at the end of the output IDF file name. For instance: name_suffix='whatever',
+        verbose_mode=bool, # True to print all process in screen, False to not to print it. Default is True. For instance: verbose_mode=True,
+        confirm_gen=bool, # True to confirm automatically the generation of IDFs; if omitted, you'll be asked to confirm in command prompt. For instance: confirm_gen=True,
     )
 
 You can see a Jupyter Notebook in the link below:  
@@ -157,6 +157,15 @@ https://github.com/dsanchez-garcia/accim/blob/master/accim/sample_files/jupyter_
 
 To run it on your computer, copy the folder `jupyter_notebooks/runEp` of the sample files to a working folder (see section 2.1.1).
 
+The function `run_ep` (`runEp` before accim 1.0.0) runs each IDF of the working folder with each EPW:
+
+    from accim.run import run
+    run.run_ep(run_only_accim=True, confirm_run=True, num_cpus=2, energyplus_version='auto')
+
+With `backend='api'`, the EMS programs of the output IDFs run in Python through the Python API of EnergyPlus (EnergyPlus 24.2 or later), with the same results as the EMS of EnergyPlus; Python functions can then read and change the variables of the programs during the simulation (`accim.sim.energyplus_api`). See https://accim.readthedocs.io/en/master/4_detailed%20use.html#python-api-backend
+
+    results = run.run_ep(run_only_accim=True, confirm_run=True, num_cpus=2, backend='api')
+
 ### 2.2.4 Functions and methods for data analysis; making figures and tables
 
 You can see a Jupyter Notebook in the link below:  
@@ -176,7 +185,7 @@ https://www.youtube.com/watch?v=PQ34Pl7t4HA&t=3393s
 To run it on your computer, copy the folder `jupyter_notebooks/full_example_IBPSA` of the sample files to a working folder (see section 2.1.1).
 
 
-### 2.2.6 Using apmv_setpoints
+### 2.2.6 Using aPMV setpoints
 
 You can see a Jupyter Notebook in the link below:  
 https://github.com/dsanchez-garcia/accim/blob/master/accim/sample_files/jupyter_notebooks/example_apmv_setpoints_paper/using_apmv_setpoints.ipynb
@@ -185,11 +194,11 @@ To run it on your computer, copy the folder `jupyter_notebooks/example_apmv_setp
 
 You can apply aPMV setpoints to a building using the following function:
 
-    from accim.sim import apmv_setpoints
-    apmv_setpoints.apply_apmv_setpoints(
+    from accim.sim import apmv  # accim.sim.apmv_setpoints before accim 1.0.0
+    apmv.apply_apmv_setpoints(
         building=IDF_object, # building: the comprehensive eppy or besos IDF object
-        outputs_freq=list, # outputs_freq: ['timestep', 'hourly', 'daily', 'monthly', 'runperiod']. For instance: Output_freqs=['hourly', 'runperiod'],
-        other_PMV_related_outputs=bool, # other_PMV_related_outputs: True to include other PMV related outputs (e.g. Fanger PMV, PPD, etc). Default is True.
+        outputs_freq=list, # outputs_freq: ['timestep', 'hourly', 'daily', 'monthly', 'runperiod']. For instance: outputs_freq=['hourly', 'runperiod'],
+        other_pmv_related_outputs=bool, # other_pmv_related_outputs (other_PMV_related_outputs before accim 1.0.0): True to include other PMV related outputs (e.g. Fanger PMV, PPD, etc). Default is True.
         adap_coeff_cooling=float or dict, # adap_coeff_cooling: Adaptive coefficient (lambda) for cooling. Can be a single float (applied globally) or a dict {TargetName: Value}. Default is 0.293.
         adap_coeff_heating=float or dict, # adap_coeff_heating: Adaptive coefficient (lambda) for heating. Float or Dict {TargetName: Value}. Default is -0.293.
         pmv_cooling_sp=float or dict, # pmv_cooling_sp: Target aPMV setpoint for cooling. Float or Dict. Default is 0.5.

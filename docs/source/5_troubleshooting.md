@@ -67,7 +67,7 @@ us_version=EnergyPlus_version, verboseMode=verboseMode)
 TypeError: unsupported operand type(s) for //: 'int' and 'NoneType'
 ```
 
-If you get an error similar to the one above, you are probably trying to run `addAccis()` with an IDF whose EnergyPlus version is 8.9 or older. To solve this problem, you need to update the IDF’s EnergyPlus version to 9.1 or later; it is recommended to update it to the latest version supported by accim (26.2). To do so, you need to run EP-Launch, go to the Utilities tab, look for and select IDFversionUpdater; run IDFVersionUpdater; then choose the file to update, select the new version and finally update file.
+If you get an error similar to the one above (that of accim 0.x), you are probably trying to run `AddAccis()` with an IDF whose EnergyPlus version is 8.9 or older. Since accim 1.0.0, the error says so: `EnergyPlus 8.9 is not supported. accim only works with the versions between EnergyPlus 9.1 (enter 9.1) and EnergyPlus 26.2 (enter 26.2).` To solve this problem, you need to update the IDF’s EnergyPlus version to 9.1 or later; it is recommended to update it to the latest version supported by accim (26.2). To do so, you need to run EP-Launch, go to the Utilities tab, look for and select IDFversionUpdater; run IDFVersionUpdater; then choose the file to update, select the new version and finally update file.
 
 ![Troubleshooting_IDFversion_01](images/accim_troubleshooting_02_idf_version.png)
 
@@ -90,9 +90,9 @@ update_idf_version(
 
 ---
 
-`ValueError: 8.9 is not a valid EnergyPlus_version.`
+`ValueError: '8.9' is not a valid energyplus_version.`
 
-`addAccis()` accepts `EnergyPlus_version` values from ‘9.1’ to ‘26.2’, or ‘auto’, which reads the version of each IDF. For an IDF of another version, update it as explained above.
+`AddAccis()` accepts `energyplus_version` values from ‘9.1’ to ‘26.2’, or ‘auto’, which reads the version of each IDF. For an IDF of another version, update it as explained above.
 
 ---
 

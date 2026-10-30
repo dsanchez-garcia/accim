@@ -1,88 +1,18 @@
 accim.sim package
 =================
 
+Subpackages
+-----------
+
+.. toctree::
+   :maxdepth: 4
+
+   accim.sim.ems
+   accim.sim.energyplus_api
+   accim.sim.hvac
+
 Submodules
 ----------
-
-accim.sim.accim\_Base module
-----------------------------
-
-.. automodule:: accim.sim.accim_Base
-   :members:
-   :show-inheritance:
-   :undoc-members:
-
-accim.sim.accim\_Base\_EMS module
----------------------------------
-
-.. automodule:: accim.sim.accim_Base_EMS
-   :members:
-   :show-inheritance:
-   :undoc-members:
-
-accim.sim.accim\_ExistingHVAC module
-------------------------------------
-
-.. automodule:: accim.sim.accim_ExistingHVAC
-   :members:
-   :show-inheritance:
-   :undoc-members:
-
-accim.sim.accim\_ExistingHVAC\_EMS module
------------------------------------------
-
-.. automodule:: accim.sim.accim_ExistingHVAC_EMS
-   :members:
-   :show-inheritance:
-   :undoc-members:
-
-accim.sim.accim\_ExistingHVAC\_resolver module
-----------------------------------------------
-
-.. automodule:: accim.sim.accim_ExistingHVAC_resolver
-   :members:
-   :show-inheritance:
-   :undoc-members:
-
-accim.sim.accim\_IDFgeneration module
--------------------------------------
-
-.. automodule:: accim.sim.accim_IDFgeneration
-   :members:
-   :show-inheritance:
-   :undoc-members:
-
-accim.sim.accim\_Main module
-----------------------------
-
-.. automodule:: accim.sim.accim_Main
-   :members:
-   :show-inheritance:
-   :undoc-members:
-
-accim.sim.accim\_Main\_single\_idf module
------------------------------------------
-
-.. automodule:: accim.sim.accim_Main_single_idf
-   :members:
-   :show-inheritance:
-   :undoc-members:
-
-accim.sim.accim\_VRFsystem module
----------------------------------
-
-.. automodule:: accim.sim.accim_VRFsystem
-   :members:
-   :show-inheritance:
-   :undoc-members:
-
-accim.sim.accim\_VRFsystem\_EMS module
---------------------------------------
-
-.. automodule:: accim.sim.accim_VRFsystem_EMS
-   :members:
-   :show-inheritance:
-   :undoc-members:
 
 accim.sim.accis module
 ----------------------
@@ -108,10 +38,34 @@ accim.sim.accis\_single\_idf\_funcs module
    :show-inheritance:
    :undoc-members:
 
+accim.sim.apmv module
+---------------------
+
+.. automodule:: accim.sim.apmv
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
 accim.sim.apmv\_setpoints module
 --------------------------------
 
 .. automodule:: accim.sim.apmv_setpoints
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+accim.sim.arguments module
+--------------------------
+
+.. automodule:: accim.sim.arguments
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+accim.sim.build module
+----------------------
+
+.. automodule:: accim.sim.build
    :members:
    :show-inheritance:
    :undoc-members:
@@ -124,34 +78,66 @@ accim.sim.chile\_funcs module
    :show-inheritance:
    :undoc-members:
 
-accim.sim.dicts module
-----------------------
+accim.sim.generation module
+---------------------------
 
-.. automodule:: accim.sim.dicts
+.. automodule:: accim.sim.generation
    :members:
    :show-inheritance:
    :undoc-members:
 
-accim.sim.lists module
-----------------------
+accim.sim.idf\_tools module
+---------------------------
 
-.. automodule:: accim.sim.lists
+.. automodule:: accim.sim.idf_tools
    :members:
    :show-inheritance:
    :undoc-members:
 
-accim.sim.setAST\_models module
--------------------------------
+accim.sim.model module
+----------------------
 
-.. automodule:: accim.sim.setAST_models
+.. automodule:: accim.sim.model
    :members:
    :show-inheritance:
    :undoc-members:
 
-accim.sim.utils module
-----------------------
+accim.sim.outputs module
+------------------------
 
-.. automodule:: accim.sim.utils
+.. automodule:: accim.sim.outputs
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+accim.sim.people module
+-----------------------
+
+.. automodule:: accim.sim.people
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+accim.sim.prompts module
+------------------------
+
+.. automodule:: accim.sim.prompts
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+accim.sim.standards module
+--------------------------
+
+.. automodule:: accim.sim.standards
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+accim.sim.targets module
+------------------------
+
+.. automodule:: accim.sim.targets
    :members:
    :show-inheritance:
    :undoc-members:
