@@ -1,6 +1,7 @@
 import os
 import json
 import hashlib
+import re
 
 import pandas as pd
 
@@ -170,6 +171,30 @@ def test_optimisation_disables_in_memory_records_when_keep_sim_files_all(tmp_pat
 
     assert len(calls) == 1
     assert calls[0]['store_in_memory'] is False
+
+
+def test_optimisation_log_name_is_a_valid_file_name_with_epw_paths(tmp_path, monkeypatch):
+    # With EPWs given as paths, their drive and folders (``C:\\...``) must not reach the name of the log of the
+    # evaluations, which Windows rejected (OSError: [Errno 22] Invalid argument)
+    monkeypatch.setattr(pd.DataFrame, 'to_excel', lambda self, *args, **kwargs: None, raising=False)
+    monkeypatch.setattr(OptimisationSimulation, 'set_evaluator', _fake_set_evaluator)
+    monkeypatch.setattr(OptimisationSimulation, '_build_full_optimisation_outputs_df', _fake_build_full_outputs_df)
+
+    log_bases = []
+
+    def _fake_nsgaii(evaluator, evaluations, population_size, **kwargs):
+        log_bases.append(evaluator._optimisation_log_base)
+        return pd.DataFrame([{'x': 1.0, 'obj': 1.0}])
+
+    monkeypatch.setattr(main_module.optimizer, 'NSGAII', _fake_nsgaii)
+
+    out_dir = str(tmp_path / 'optim_epw_path')
+    sim = _make_lightweight_optimisation(epws=[str(tmp_path / 'weather' / 'Seville.epw')])
+    sim.run_optimisation(out_dir=out_dir, algorithm='NSGAII', evaluations=2, population_size=2, processes=1)
+
+    assert len(log_bases) == 1
+    assert os.path.dirname(log_bases[0]) == out_dir
+    assert re.fullmatch(r'optim_eval_log_[A-Za-z0-9_.-]+', os.path.basename(log_bases[0]))
 
 
 def test_optimisation_resume_ignores_incompatible_checkpoint_signature(tmp_path, monkeypatch):

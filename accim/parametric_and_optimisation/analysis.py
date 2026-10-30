@@ -2180,6 +2180,11 @@ class AnalysisMixin:
         epw_labels = filtered_outputs['epw'].unique()
         results_by_epw = {}
         original_df = self.outputs_param_simulation
+
+        def _parameter_names(res):
+            # The results of the Morris analysis of SALib have the names of the parameters; those of Sobol do not
+            return list(res['names']) if 'names' in res else list(self.problem.names('inputs'))
+
         for epw_label in epw_labels:
             raw_tag = str(epw_label).strip()
             if raw_tag.lower().endswith('.epw'):
@@ -2204,7 +2209,7 @@ class AnalysisMixin:
             rows = []
             if method == 'sobol':
                 for (output_name, res) in sa_results.items():
-                    for (param, s1, st) in zip(res['names'], res['S1'], res['ST']):
+                    for (param, s1, st) in zip(_parameter_names(res), res['S1'], res['ST']):
                         rows.append({'epw': epw_tag, 'output': output_name, 'parameter': param, 'S1': round(float(s1), 4), 'ST': round(float(st), 4)})
                 x_labels = ('S1 (first-order)', 'ST (total-order)')
                 bar_keys = ('S1', 'ST')
@@ -2214,7 +2219,7 @@ class AnalysisMixin:
                 ylim = (0, 1)
             else:
                 for (output_name, res) in sa_results.items():
-                    for (param, mu, mu_star, sigma) in zip(res['names'], res['mu'], res['mu_star'], res['sigma']):
+                    for (param, mu, mu_star, sigma) in zip(_parameter_names(res), res['mu'], res['mu_star'], res['sigma']):
                         rows.append({'epw': epw_tag, 'output': output_name, 'parameter': param, 'mu': round(float(mu), 4), 'mu_star': round(float(mu_star), 4), 'sigma': round(float(sigma), 4)})
                 x_labels = ('mu* (importance)', 'sigma (interactions)')
                 bar_keys = ('mu_star', 'sigma')
@@ -2244,13 +2249,13 @@ class AnalysisMixin:
             for (ax_idx, output_name) in enumerate(output_names_sa):
                 res = sa_results[output_name]
                 ax_sa = axes[0][ax_idx]
-                x = np.arange(len(res['names']))
+                x = np.arange(len(_parameter_names(res)))
                 vals_a = np.abs(res[bar_keys[0]])
                 vals_b = np.abs(res[bar_keys[1]])
                 ax_sa.bar(x - width / 2, vals_a, width, label=x_labels[0], color=bar_colours[0], alpha=0.85)
                 ax_sa.bar(x + width / 2, vals_b, width, label=x_labels[1], color=bar_colours[1], alpha=0.85)
                 ax_sa.set_xticks(x)
-                ax_sa.set_xticklabels(res['names'], rotation=30, ha='right', fontsize=9)
+                ax_sa.set_xticklabels(_parameter_names(res), rotation=30, ha='right', fontsize=9)
                 ax_sa.set_ylabel(y_label, fontsize=10)
                 ax_sa.set_title(f'{title_prefix} — {output_name}\n[{epw_tag}]', fontsize=10)
                 ax_sa.legend(fontsize=8)

@@ -10362,7 +10362,9 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                     evaluator._sim_files_policy = sim_files_policy_normalized
                     evaluator._optimisation_eval_records = []
                     evaluator._store_optimisation_records_in_memory = bool(keep_sim_files == 'non-dominated')
-                    evaluator._optimisation_log_base = os.path.join(out_dir, f'optim_eval_log_{idf_basename}_{epwname}_{os.getpid()}')
+                    # EPWs given as paths ('D:\\...\\Seville') cannot be part of a file name
+                    log_tag = re.sub(r'[^A-Za-z0-9_.-]+', '_', f'{idf_basename}_{epwname}')
+                    evaluator._optimisation_log_base = os.path.join(out_dir, f'optim_eval_log_{log_tag}_{os.getpid()}')
                     for log_file in pyglob.glob(f'{evaluator._optimisation_log_base}_*.jsonl'):
                         try:
                             os.remove(log_file)
