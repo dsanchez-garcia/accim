@@ -4,6 +4,7 @@ the API of EnergyPlus (pyenergyplus), and for run_ep(backend='api').
 The unit tests use a fake API that records what the controller does at each calling point. The last test
 runs an output IDF of AddAccis with both backends (EnergyPlus 25.1) and checks that the results are the same.
 """
+import math
 import shutil
 import subprocess
 from pathlib import Path
@@ -141,6 +142,9 @@ class _FakeExchange:
         self.handles = {'T_OUT': 1, 'OFFSET': 2, 'ACCIMAPI_SETSP_LOCAL': 3, 'HEATING_SP': 4}
         self.values = {1: 20.0, 2: 0.0, 3: 0.0, 4: 0.0}
         self.actuated = {}
+        # The type and the variable of each actuator, which the API sets as setActuatorValue (datatransfer.cc)
+        self.kinds = {}
+        self.actuator_values = {}
 
     def get_ems_global_handle(self, state, name):
         return self.handles.get(name, 0)
@@ -156,7 +160,17 @@ class _FakeExchange:
         return 7 if (component_type.upper(), control_type.upper(), unique_name.upper()) == known else -1
 
     def set_actuator_value(self, state, handle, value):
+        kind = self.kinds.get(handle, 'real')
+        if kind == 'integer':
+            # std::lround: to the nearest integer, halves away from 0
+            value = float(math.copysign(math.floor(abs(value) + 0.5), value))
+        elif kind == 'logical':
+            value = 1.0 if 0.99999 < value < 1.00001 else 0.0
+        self.actuator_values[handle] = value
         self.actuated[handle] = value
+
+    def get_actuator_value(self, state, handle):
+        return self.actuator_values.get(handle, 0.0)
 
     def reset_actuator(self, state, handle):
         self.actuated[handle] = None
@@ -169,6 +183,7 @@ class _FakeRuntime:
     def __init__(self):
         self.callbacks = {}
         self.stopped = False
+        self.messages = []
 
     def __getattr__(self, name):
         if name.startswith('callback_'):
@@ -177,6 +192,12 @@ class _FakeRuntime:
 
     def stop_simulation(self, state):
         self.stopped = True
+
+    def issue_warning(self, state, message):
+        self.messages.append(('warning', message))
+
+    def issue_severe(self, state, message):
+        self.messages.append(('severe', message))
 
     def fire(self, name):
         for function in self.callbacks[name]:
@@ -233,6 +254,40 @@ def test_actuators_with_values_that_are_not_null_are_actuated_with_their_number(
     assert exchange.values[4] == 0.0
 
 
+@pytest.mark.parametrize('kind, value, expected', [
+    ('real', 22.7, 22.7),
+    # The EMS rounds the integer actuators down (std::floor); the API alone would round 22.7 to 23 and -0.4 to 0
+    ('integer', 22.7, 22.0),
+    ('integer', -0.4, -1.0),
+    ('integer', 3, 3.0),
+    # The EMS only takes 1 as true; the API alone would take 1.000001 as true
+    ('logical', 1, 1.0),
+    ('logical', 1.000001, 0.0),
+    ('logical', 2, 0.0),
+])
+def test_actuators_are_set_as_the_ems_sets_them(kind, value, expected):
+    controller, api = _controller(MODEL.replace('set Heating_SP = Local,', f'set Heating_SP = {value},'))
+    api.exchange.kinds[7] = kind
+
+    api.runtime.fire('callback_begin_new_environment')
+    api.runtime.fire('callback_begin_system_timestep_before_predictor')
+
+    assert controller._actuator_kinds == {7: kind}
+    assert api.exchange.actuated == {7: expected}
+
+
+@pytest.mark.parametrize('kind, original', [('real', 2.5), ('integer', 3.0), ('logical', 1.0)])
+def test_finding_the_type_of_an_actuator_does_not_change_it(kind, original):
+    controller, api = _controller()
+    exchange = api.exchange
+    exchange.kinds[7] = kind
+    exchange.actuator_values[7] = original
+
+    assert controller._actuator_kind('state', 7) == kind
+    assert exchange.actuator_values[7] == original
+    assert exchange.actuated[7] is None
+
+
 def test_hooks_can_read_and_change_the_variables():
     calls = []
 
@@ -258,6 +313,15 @@ def test_errors_of_the_programs_stop_the_simulation():
 
     assert isinstance(controller.error, ErlRuntimeError)
     assert api.runtime.stopped
+
+
+def test_messages_of_the_programs_go_to_the_error_file():
+    controller, api = _controller(MODEL.replace('set Offset = 2;', 'set Offset = @SevereWarnEP 2;'))
+
+    api.runtime.fire('callback_begin_new_environment')
+
+    assert controller.get('Offset') == 2.0
+    assert api.runtime.messages == [('severe', 'EMS user program issued severe warning with error code = 2.00')]
 
 
 @pytest.mark.parametrize('extra, error, message', [
@@ -374,4 +438,43 @@ def test_the_ems_and_api_backends_give_the_same_results(tmp_path, monkeypatch):
     api_results = pd.read_csv(tmp_path / 'api' / 'run.csv')
     assert len(ems_results) == 3 * 24
     assert any('Adaptive Cooling Setpoint Temperature' in column for column in ems_results.columns)
+    pd.testing.assert_frame_equal(api_results, ems_results, check_exact=True)
+
+
+def _shading_example():
+    folder = _energyplus_with_api('25.1')
+    if folder is None:
+        return None
+    idf = folder / 'ExampleFiles' / 'EMSWindowShadeControl.idf'
+    epw = folder / 'WeatherData' / 'USA_IL_Chicago-OHare.Intl.AP.725300_TMY3.epw'
+    return (folder, idf, epw) if idf.exists() and epw.exists() else None
+
+
+@pytest.mark.skipif(_shading_example() is None, reason='needs EnergyPlus 25.1 (with its Python API) and its examples')
+def test_integer_actuators_are_set_as_with_the_ems(tmp_path):
+    # The status of a window shading control is an integer actuator. The example of EnergyPlus sets it to 6 (interior
+    # blind on); with 6.6, the EMS sets 6 (std::floor), and the API alone would set 7 (exterior blind on)
+    folder, idf, epw = _shading_example()
+    objects = parse_idf(idf.read_bytes().decode('latin-1'))
+    program = [o for o in objects if o.key == 'ENERGYMANAGEMENTSYSTEM:PROGRAM'
+               and o.fields[0].upper() == 'SET_SHADE_CONTROL_STATE'][0]
+    line = 'Set Zn001_Wall001_Win001_Shading_Deploy_Status = Shade_Status_Interior_Blind_On'
+    program.fields = [field + ' + 0.6' if field == line else field for field in program.fields]
+    assert sum(field.endswith(' + 0.6') for field in program.fields) == 2
+    run_period = [o for o in objects if o.key == 'RUNPERIOD'][0]
+    run_period.fields[1:7] = ['7', '1', '', '7', '3', '']
+    model = tmp_path / 'model.idf'
+    model.write_bytes(render_idf(objects).encode('latin-1'))
+
+    ems = subprocess.run([str(folder / 'energyplus.exe'), '-d', str(tmp_path / 'ems'), '-p', 'run', '-s', 'C', '-r',
+                          '-x', '-w', str(epw), str(model)], capture_output=True, text=True)
+    assert ems.returncode == 0, ems.stdout[-3000:]
+    results = run_simulations([(model, epw, {'output_directory': tmp_path / 'api', 'output_prefix': 'run'})],
+                              processes=1)
+    assert results[0].success, results[0].error
+
+    ems_results = pd.read_csv(tmp_path / 'ems' / 'run.csv')
+    api_results = pd.read_csv(tmp_path / 'api' / 'run.csv')
+    shading = [c for c in ems_results.columns if 'Surface Shading Device Is On Time Fraction' in c]
+    assert shading and (ems_results[shading] > 0).any().any()
     pd.testing.assert_frame_equal(api_results, ems_results, check_exact=True)

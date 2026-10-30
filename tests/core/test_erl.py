@@ -81,6 +81,42 @@ def test_erl_round_rounds_halves_away_from_zero():
     assert [erl_round(v) for v in (0.5, 1.5, 2.5, -0.5, -1.5, 2.4999)] == [1.0, 2.0, 3.0, -1.0, -2.0, 2.0]
 
 
+@pytest.mark.parametrize('function, level, text', [
+    ('@WarnEP', 'warning', 'EMS user program issued warning with error code = 3.50'),
+    ('@SevereWarnEP', 'severe', 'EMS user program issued severe warning with error code = 3.50'),
+])
+def test_warning_functions_report_their_error_code_and_return_it(function, level, text):
+    programs = ErlProgramSet({'P': [f'set Result = {function} 3.5']}, global_variables=['Result'])
+    received = []
+    programs.on_message = lambda *message: received.append(message)
+
+    programs.run('P')
+
+    assert programs.value('Result') == 3.5
+    assert programs.messages == received == [(level, text)]
+
+
+def test_programs_with_messages_report_them_once():
+    # The programs that report messages are evaluated with the exact rules: the fast path would evaluate the function
+    # again after the Null operand of the sum, and report the message twice
+    programs = ErlProgramSet({'P': ['set Result = (@WarnEP 2) + X']}, global_variables=['Result', 'X'])
+    programs.set('X', None)
+
+    programs.run('P')
+
+    assert programs.value('Result') is UNINITIALISED_NUMBER
+    assert len(programs.messages) == 1
+
+
+def test_fatal_halt_stops_the_simulation_also_while_sizing():
+    programs = ErlProgramSet({'P': ['set Result = @FatalHaltEP 2']}, global_variables=['Result'])
+    programs.strict = False
+
+    with pytest.raises(ErlRuntimeError, match='halted simulation with error code = 2.00'):
+        programs.run('P')
+    assert programs.messages == [('severe', 'EMS user program found serious problem and is halting simulation')]
+
+
 def test_names_are_case_insensitive():
     programs = ErlProgramSet({'P': ['SET x = 1', 'Set Y = X + 1']}, global_variables=['x', 'y'])
 

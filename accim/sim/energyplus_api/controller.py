@@ -12,7 +12,9 @@ The controller does what the EMS of EnergyPlus does (``EMSManager.cc``) at each 
 2. The built-in variables, internal variables and sensors are updated.
 3. The programs of the calling managers of the calling point run, in the order of the IDF.
 4. Each actuator is released if its variable is Null, and set to the number of its variable otherwise (0 for
-   the values that are not numbers, such as the errors while sizing).
+   the values that are not numbers, such as the errors while sizing). The integer actuators get the number
+   rounded down, and the logical ones are true only for 1, as with the EMS (the API itself would round the
+   integers and accept 1 within 1e-5), so the controller finds the type of each actuator when it first finds it.
 5. The global variables that EMS output variables report are written to EnergyPlus.
 
 While EnergyPlus sizes the systems (before the first environment), the serious errors of the programs
@@ -21,6 +23,7 @@ they stop the simulation.
 """
 
 import datetime
+import math
 from typing import Callable, Dict, List, Optional, Sequence, Tuple
 
 from accim.sim.ems.erl import BUILT_IN_VARIABLES, ErlProgramSet, is_number, variables_in_programs
@@ -97,6 +100,8 @@ class ErlController:
                         + [i[0] for i in self.internal_variables])
         self.programs = ErlProgramSet(ems.programs, global_variables=global_names,
                                       actuators=[a[0] for a in self.actuators])
+        # The messages of @WarnEP, @SevereWarnEP and @FatalHaltEP go to the error file of EnergyPlus
+        self.programs.on_message = self._issue_message
         # Before the first environment, EnergyPlus is sizing the systems
         self.programs.strict = False
         used = set().union(*variables_in_programs(ems.programs).values()) if ems.programs else set()
@@ -113,6 +118,8 @@ class ErlController:
         self._erl_handles: Dict[str, int] = {}
         self._actuator_handles: Dict[str, int] = {}
         self._actuator_handles_by_component: Dict[Tuple[str, str, str], int] = {}
+        # The type of the variable of each actuator ('real', 'integer' or 'logical'), by handle
+        self._actuator_kinds: Dict[int, str] = {}
         self._global_handles: Dict[str, int] = {}
         self._written: Dict[str, float] = {}
         self._all_resolved = False
@@ -228,6 +235,8 @@ class ErlController:
             if handle >= 0:
                 self._actuator_handles[name] = handle
                 self._actuator_handles_by_component[component] = handle
+                if handle not in self._actuator_kinds:
+                    self._actuator_kinds[handle] = self._actuator_kind(state, handle)
             else:
                 unresolved += 1
         for name, _, _ in self._reported:
@@ -240,6 +249,43 @@ class ErlController:
                 unresolved += 1
         # The objects that do not exist after the first environment begins will not exist later
         self._all_resolved = unresolved == 0 or self.environments > 0
+
+    def _actuator_kind(self, state, handle: int) -> str:
+        """The type of the variable of an actuator: 'real', 'integer' or 'logical'.
+
+        The API does not tell it. An integer actuator rounds 0.5 to 1, and a logical one takes it as false (0),
+        so the controller writes 0.5 and reads it back. Then it writes back the value the actuator had and
+        releases it, so the model does not change (no actuator of the model has been actuated before).
+        """
+        exchange = self.api.exchange
+        original = exchange.get_actuator_value(state, handle)
+        exchange.set_actuator_value(state, handle, 0.5)
+        probe = exchange.get_actuator_value(state, handle)
+        exchange.set_actuator_value(state, handle, original)
+        exchange.reset_actuator(state, handle)
+        if probe == 0.5:
+            return 'real'
+        return 'integer' if probe == 1.0 else 'logical'
+
+    def _api_value(self, handle: int, value: float) -> float:
+        """The value that makes the API set an actuator as the EMS does (``EMSManager.cc``).
+
+        The EMS sets the integer actuators to the number rounded down (``std::floor``), and the logical ones to true
+        only if the number is 1, while the API rounds to the nearest integer (``std::lround``) and takes as true the
+        numbers within 1e-5 of 1.
+        """
+        kind = self._actuator_kinds.get(handle, 'real')
+        if kind == 'integer':
+            return float(math.floor(value)) if math.isfinite(value) else value
+        if kind == 'logical':
+            return 1.0 if value == 1.0 else 0.0
+        return value
+
+    def _issue_message(self, level: str, text: str) -> None:
+        if self.api is None or self.state is None:
+            return
+        runtime = self.api.runtime
+        (runtime.issue_severe if level == 'severe' else runtime.issue_warning)(self.state, text)
 
     def _update_inputs(self, state) -> None:
         exchange = self.api.exchange
@@ -276,7 +322,7 @@ class ErlController:
         for name, handle in self._actuator_handles.items():
             value = self.programs.value(name)
             if is_number(value):
-                exchange.set_actuator_value(state, handle, value)
+                exchange.set_actuator_value(state, handle, self._api_value(handle, value))
             elif value is None or value.type == 'Null':
                 exchange.reset_actuator(state, handle)
             else:

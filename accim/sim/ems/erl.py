@@ -213,6 +213,11 @@ def _f_min(a, b):
 
 _DEG_TO_RADIANS = math.pi / 180.0
 
+#: Built-in functions that report an error code in the error file of EnergyPlus and return it; @FatalHaltEP also
+#: stops the simulation. The programs that use them are evaluated with the exact rules, so that a message is
+#: never reported twice
+_MESSAGE_FUNCTIONS = frozenset({'@WARNEP', '@SEVEREWARNEP', '@FATALHALTEP'})
+
 # Built-in functions: name -> (number of operands, name of the function of the fast path)
 _FUNCTIONS = {
     '@ROUND': (1, '_f_round'),
@@ -228,6 +233,9 @@ _FUNCTIONS = {
     '@MAX': (2, '_f_max'),
     '@MIN': (2, '_f_min'),
     '@ABS': (1, '_f_abs'),
+    '@WARNEP': (1, None),
+    '@SEVEREWARNEP': (1, None),
+    '@FATALHALTEP': (1, None),
 }
 
 _FAST_NAMESPACE = {
@@ -560,6 +568,8 @@ class _ExactEvaluator:
             return _f_max(a, args[1])
         if name == '@MIN':
             return _f_min(a, args[1])
+        if name in _MESSAGE_FUNCTIONS:
+            return self.owner.message_function(name, a)
         return abs(a)
 
     def is_true(self, tree: Tree, G: dict, L: dict, program: str) -> bool:
@@ -670,6 +680,35 @@ def _visit_tree(tree: Tree, found: set) -> None:
     elif tree[0] == 'func':
         for argument in tree[2]:
             _visit_tree(argument, found)
+
+
+def _visit_functions(tree: Tree, found: set) -> None:
+    if tree[0] == 'func':
+        found.add(tree[1])
+        for argument in tree[2]:
+            _visit_functions(argument, found)
+    elif tree[0] == 'lit':
+        _visit_functions(tree[1], found)
+    elif tree[0] == 'bin':
+        _visit_functions(tree[2], found)
+        _visit_functions(tree[3], found)
+
+
+def _functions_used(statements: list, found: set) -> set:
+    """Names of the built-in functions that the statements use."""
+    for statement in statements:
+        if statement[0] == 'set':
+            _visit_functions(statement[2], found)
+        elif statement[0] == 'if':
+            for condition, body in statement[1]:
+                _visit_functions(condition, found)
+                _functions_used(body, found)
+            if statement[2] is not None:
+                _functions_used(statement[2], found)
+        elif statement[0] == 'while':
+            _visit_functions(statement[1], found)
+            _functions_used(statement[2], found)
+    return found
 
 
 def _read_variables(statements: list, found: set) -> set:
@@ -853,6 +892,10 @@ class ErlProgramSet:
     :ivar variables: The values of the global variables that have been set.
     :ivar local_variables: The values of the local variables of each program that have been set.
     :ivar source: The Python code of each program.
+    :ivar messages: The messages of @WarnEP, @SevereWarnEP and @FatalHaltEP, as ``(level, text)``, with the level
+        'warning' or 'severe'.
+    :ivar on_message: Called with each message, as ``on_message(level, text)``; the Python API backend writes
+        them in the error file of EnergyPlus, as the EMS does.
     """
 
     def __init__(
@@ -869,6 +912,8 @@ class ErlProgramSet:
         self.variables.update(dict.fromkeys(self.actuators, NULL))
         self.local_variables: Dict[str, Dict[str, object]] = {}
         self.source: Dict[str, str] = {}
+        self.messages: List[Tuple[str, str]] = []
+        self.on_message: Optional[Callable[[str, str], None]] = None
         self._functions: Dict[str, Callable] = {}
         self._set_names: Dict[str, Set[str]] = {}
         evaluator = _ExactEvaluator(self)
@@ -878,8 +923,9 @@ class ErlProgramSet:
             statements = _parse_statements(name, lines)
             self._check_runs(name, statements, program_names)
             self._set_names[name] = _set_variables(statements, set())
+            exact = bool(_functions_used(statements, set()) & _MESSAGE_FUNCTIONS)
             try:
-                function, code = self._compile(name, statements, evaluator, exact=False)
+                function, code = self._compile(name, statements, evaluator, exact=exact)
             except (SyntaxError, RecursionError, MemoryError):
                 # Python cannot compile some expressions (too deeply nested): they are evaluated with the exact rules
                 function, code = self._compile(name, statements, evaluator, exact=True)
@@ -917,6 +963,26 @@ class ErlProgramSet:
     def program_names(self) -> List[str]:
         """Names (in upper case) of the compiled programs and subroutines."""
         return list(self._functions)
+
+    def message_function(self, name: str, number: float) -> float:
+        """Run @WarnEP, @SevereWarnEP or @FatalHaltEP: report the error code and return it.
+
+        As in EnergyPlus (``RuntimeLanguageProcessor.cc``), @FatalHaltEP stops the simulation, also while sizing.
+        """
+        code = f'{number:.2f}'
+        if name == '@WARNEP':
+            self._message('warning', f'EMS user program issued warning with error code = {code}')
+        elif name == '@SEVEREWARNEP':
+            self._message('severe', f'EMS user program issued severe warning with error code = {code}')
+        else:
+            self._message('severe', 'EMS user program found serious problem and is halting simulation')
+            raise ErlRuntimeError(f'EMS user program halted simulation with error code = {code}')
+        return number
+
+    def _message(self, level: str, text: str) -> None:
+        self.messages.append((level, text))
+        if self.on_message is not None:
+            self.on_message(level, text)
 
     def run(self, name: str) -> None:
         """Run a program (or subroutine), as an EMS program calling manager or a RUN instruction does."""
