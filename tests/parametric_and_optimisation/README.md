@@ -76,4 +76,5 @@ Tests require:
 - Tests use small simulation sizes to keep execution time reasonable.
 - Test files are designed to be independent and can be run in any order.
 - `04_test_optimization.py::test_optimization_all_algorithms` only logs the result of each algorithm: some
-  need options (`epsilons`, `divisions_outer`) or real-valued parameters (see `TODO.md`).
+  need options (`epsilons`, `divisions_outer`), real-valued parameters or larger populations, and PAES and
+  ParticleSwarm do not work with `run_optimisation()` (see `TODO.md`).
