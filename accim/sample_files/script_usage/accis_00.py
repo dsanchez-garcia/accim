@@ -5,16 +5,16 @@ outputlist = ['standard', 'simplified']
 
 for i in STlist:
     for j in outputlist:
-        accis.addAccis(
-            ScriptType='ex_ac',
-            Output_keep_existing=True,
-            Output_type=j,
-            Output_freqs=['hourly'],
-            EnergyPlus_version='22.2',
-            TempCtrl='temp',
-            ComfStand=[1],
-            CAT=[3],
-            ComfMod=[3],
-            NameSuffix=i+'_'+j,
-            confirmGen=True
+        accis.AddAccis(
+            script_type='ex_ac',
+            output_keep_existing=True,
+            output_type=j,
+            output_freqs=['hourly'],
+            energyplus_version='22.2',
+            temp_ctrl='temp',
+            comf_stand=[1],
+            cat=[3],
+            comf_mod=[3],
+            name_suffix=i+'_'+j,
+            confirm_gen=True
         )

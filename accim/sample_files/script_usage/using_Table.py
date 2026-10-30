@@ -23,7 +23,7 @@
 # 
 # - TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_3[CM_3[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X.idf
 # 
-# Next, we simulate these files with runEp(), so the CSVs we get are:
+# Next, we simulate these files with run_ep(), so the CSVs we get are:
 
 # In[1]:
 

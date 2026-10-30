@@ -5,40 +5,39 @@ from besos.parameters import RangeParameter,  Parameter, GenericSelector
 from besos.problem import EPProblem
 from besos.objectives import VariableReader, MeterReader
 
-import accim.sim.accis_single_idf_funcs as accis
+from accim.sim import accis
 
 ##
 
 building = ef.get_building('TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V940.idf')
 
-accis.addAccis(
+accis.add_accis_to_idf(
     idf=building,
-    ScriptType='vrf_mm',
-    SupplyAirTempInputMethod='temperature difference',
-    Output_keep_existing=False,
-    Output_type='standard',
-    Output_freqs=['hourly'],
-    EnergyPlus_version='9.4',
-    TempCtrl='temperature',
-    Output_gen_dataframe=True,
+    script_type='vrf_mm',
+    supply_air_temp_input_method='temperature difference',
+    output_keep_existing=False,
+    output_type='standard',
+    output_freqs=['hourly'],
+    energyplus_version='9.4',
+    temp_ctrl='temperature',
 )
 
 ##
 
 def modify_accis(building, value):
-    accis.modifyAccis(
+    accis.modify_accis(
         idf=building,
-        ComfStand=1,
-        CAT=3,
-        ComfMod=3,
-        # SetpointAcc=1000,
-        HVACmode=2,
-        VentCtrl=0,
-        CoolSeasonStart='01/02',
-        CoolSeasonEnd='01/03',
-        VSToffset=value,
-        # MinOToffset=50,
-        # MaxWindSpeed=50
+        comf_stand=1,
+        cat=3,
+        comf_mod=3,
+        # setpoint_acc=1000,
+        hvac_mode=2,
+        vent_ctrl=0,
+        cool_season_start='01/02',
+        cool_season_end='01/03',
+        vst_offset=value,
+        # min_ot_offset=50,
+        # max_wind_speed=50
     )
     return
 

@@ -4,21 +4,20 @@ from besos.parameters import RangeParameter, Parameter, GenericSelector
 from besos.problem import EPProblem
 from besos.objectives import MeterReader
 
-import accim.sim.accis_single_idf_funcs as accis
+from accim.sim import accis
 import accim.parametric_and_optimisation.funcs_for_besos.param_accis as bf
 
 building = ef.get_building('TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2310.idf')
 
-accis.addAccis(
+accis.add_accis_to_idf(
     idf=building,
-    ScriptType='vrf_mm',
-    SupplyAirTempInputMethod='temperature difference',
-    Output_keep_existing=False,
-    Output_type='standard',
-    Output_freqs=['hourly'],
-    # EnergyPlus_version='9.4',
-    TempCtrl='temperature',
-    # Output_gen_dataframe=True,
+    script_type='vrf_mm',
+    supply_air_temp_input_method='temperature difference',
+    output_keep_existing=False,
+    output_type='standard',
+    output_freqs=['hourly'],
+    # energyplus_version='9.4',
+    temp_ctrl='temperature',
 )
 
 # gv = [i for i in building.idfobjects['EnergyManagementSystem:GlobalVariable']]
