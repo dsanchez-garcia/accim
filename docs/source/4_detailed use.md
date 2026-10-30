@@ -40,18 +40,18 @@ Then you’ll be asked in the prompt to enter some information so that python kn
 
 ```
 --------------------------------------------------------
-Adaptive-Comfort-Control-Implemented Model (ACCIM) v0.8.2
+Adaptive-Comfort-Control-Implemented Model (ACCIM) v1.0.0
 --------------------------------------------------------
 
 This tool allows to apply adaptive setpoint temperatures. 
 For further information, please read the documentation: 
 https://accim.readthedocs.io/en/master/
 For a visual understanding of the tool, please visit the following jupyter notebooks:
--    Using addAccis() to apply adaptive setpoint temperatures
+-    Using AddAccis() to apply adaptive setpoint temperatures
 https://accim.readthedocs.io/en/master/jupyter_notebooks/addAccis/using_addAccis.html
 -    Using rename_epw_files() to rename the EPWs for proper data analysis after simulation
 https://accim.readthedocs.io/en/master/jupyter_notebooks/rename_epw_files/using_rename_epw_files.html
--    Using runEp() to directly run simulations with EnergyPlus
+-    Using run_ep() to directly run simulations with EnergyPlus
 https://accim.readthedocs.io/en/master/jupyter_notebooks/runEp/using_runEp.html
 -    Using the class Table() for data analysis
 https://accim.readthedocs.io/en/master/jupyter_notebooks/Table/using_Table.html
@@ -295,18 +295,18 @@ When we hit enter, we’ll be asked to enter some information regarding the Scri
 ```
 
 --------------------------------------------------------
-Adaptive-Comfort-Control-Implemented Model (ACCIM) v0.8.2
+Adaptive-Comfort-Control-Implemented Model (ACCIM) v1.0.0
 --------------------------------------------------------
 
 This tool allows to apply adaptive setpoint temperatures.
 For further information, please read the documentation:
 https://accim.readthedocs.io/en/master/
 For a visual understanding of the tool, please visit the following jupyter notebooks:
--    Using addAccis() to apply adaptive setpoint temperatures
+-    Using AddAccis() to apply adaptive setpoint temperatures
 https://accim.readthedocs.io/en/master/jupyter_notebooks/addAccis/using_addAccis.html
 -    Using rename_epw_files() to rename the EPWs for proper data analysis after simulation
 https://accim.readthedocs.io/en/master/jupyter_notebooks/rename_epw_files/using_rename_epw_files.html
--    Using runEp() to directly run simulations with EnergyPlus
+-    Using run_ep() to directly run simulations with EnergyPlus
 https://accim.readthedocs.io/en/master/jupyter_notebooks/runEp/using_runEp.html
 -    Using the class Table() for data analysis
 https://accim.readthedocs.io/en/master/jupyter_notebooks/Table/using_Table.html
@@ -350,7 +350,7 @@ When we hit enter, it’s going to add all the EnergyPlus objects needed:
 
 ```
 Basic input data:
-ScriptType is: vrf_mm
+Script type is: vrf_mm
 Supply Air Temperature Input Method is: temperature difference
 Output type is: standard
 Output frequencies are:
@@ -363,8 +363,8 @@ Starting with file:
 TestModel
 IDD location is: C:\EnergyPlusV25-1-0\Energy+.idd
 The occupied zones in the model TestModel are:
-Block1:Zone1
 Block1:Zone2
+Block1:Zone1
 The windows and doors in the model TestModel are:
 Block1_Zone2_Wall_3_0_0_0_0_0_Win
 .
@@ -374,13 +374,12 @@ Added Output:Meter for Cooling:EnergyTransfer (runperiod)
 Added Output:Meter for Heating:Electricity (runperiod)
 Added Output:Meter for Cooling:Electricity (runperiod)
 Modified - SimulationControl object: enabled Zone, System, and Plant Sizing Calculations
-IDF has been saved
 Ending with file:
 TestModel
 
 =======================END OF GENERIC IDF FILE GENERATION PROCESS=======================
 
-The following IDFs will not work, and therefore these will be deleted:
+The following IDFs will not work, so no output IDFs will be generated from them:
 None
 
 ```
@@ -520,6 +519,7 @@ Enter the ASTtol value from (if omitted, will be 0.1):
 Enter the ASTtol value to (if omitted, will be 0.1):
           Are you sure the numbers are correct? [y or [] / n]:
 Enter the ASTtol value steps (if omitted, will be 0.1):
+          Are you sure the number is correct? [y or [] / n]:
 ```
 
 Afterwards, ACCIS will let us know which the output IDFs are going to be, the total number of them and will ask for our confirmation to proceed:

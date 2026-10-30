@@ -11,7 +11,8 @@ in the code of the script that you run; to see all of them, run Python with `-W 
 The old names will be removed in a future version, so it is recommended to use the new ones.
 
 The usage of `accim.parametric_and_optimisation` (`ParametricSimulation`, `OptimisationSimulation`, the
-predefined models...) does not change at all.
+predefined models...) does not change at all. Its results only change for the models whose natural ventilation
+is given by `ZoneVentilation` objects, which accim 0.x did not control in this module (see section 9.3).
 
 ## 9.1 Classes, functions and modules
 
@@ -97,10 +98,21 @@ The prompts of `AddAccis` still show the old names (for instance, "Enter the Scr
 The output IDFs of accim 1.0.0 have the same objects as those of accim 0.x, except for the corrections below.
 The new version was checked against accim 0.x with the output IDFs of 29 configurations (all script types,
 temperature and PMV control, all the comfort standards, aPMV setpoints, `add_accis_to_idf` and `modify_accis`),
-which are identical apart from these corrections:
+which are identical apart from these corrections, and with short parametric and optimisation studies (the IDFs
+of each class of `accim.parametric_and_optimisation` and their results):
 
 - The output IDFs are the same in every run: the zones, and the objects of each zone, are always in the same
-  order. Before, the order of the zones could change from one run to another.
+  order. Before, the order of the zones could change from one run to another. Since EnergyPlus adds up some
+  results (the meters, for instance) in the order of the objects, the results of a model whose objects are in a
+  different order than with accim 0.x may differ in their last digits (rounding).
+- In mixed mode, `add_accis_to_idf`, and so `accim.parametric_and_optimisation`, controls the natural ventilation
+  of the models without AirflowNetwork through their `ZoneVentilation:WindandStackOpenArea` and
+  `ZoneVentilation:DesignFlowRate` objects, as `AddAccis` has done since accim 0.7.8: a schedule
+  `Vent_Sch_<zone>`, actuated by the EMS programs of the windows, opens them. In accim 0.x, the in-memory
+  functions left these objects with the schedules of the input model (always open in the sample models) and
+  added no programs for them, so the ventilation controls and the arguments of the opening factor
+  (`MaxTempDiffVOF`, `MinTempDiffVOF`, `MultiplierVOF`), `VSToffset`, `MinOToffset` and `MaxWindSpeed` had no
+  effect on these models, and their parametric and optimisation studies give different results now.
 - The combinations of comfort standard and comfort mode that have no setpoints (comfort standards 4, 5 and 99
   with the comfort modes 0, 1 and 2; 6 with 0 and 1; 11 with 0) are skipped with a warning. Before, accim wrote
   output IDFs for them, which stopped EnergyPlus (a setpoint used before it is set).

@@ -21,7 +21,7 @@ modified, runs the notebook there and writes ``<name>_executed.ipynb`` in the wo
 for the working folder (``D:\\runs``, for instance): EnergyPlus fails when the path of an output
 file is longer than 260 characters, and the names of the output files of accim are long.
 
-Some functions of accim ask questions: ``addAccis()`` when arguments are missing,
+Some functions of accim ask questions: ``AddAccis()`` when arguments are missing,
 ``rename_epw_files()``, and the figures of ``Table`` when the rows and columns are not renamed
 with arguments. ``run`` answers them with the answers in ``ANSWERS``, which are the ones the
 notebooks explain, and prints each question followed by its answer, as if it was typed. If a
@@ -94,8 +94,8 @@ _CUSTOM_OUTPUTS = ('Zone Operative Temperature;Adaptive Cooling Setpoint Tempera
                    'Adaptive Heating Setpoint Temperature_No Tolerance')
 ANSWERS = {
     'using_addAccis': {
-        'accis.addAccis()': _ADDACCIS_SHORT,
-        "Output_type='custom'": ['keep', _CUSTOM_OUTPUTS, 'keep', _CUSTOM_OUTPUTS],
+        'accis.AddAccis()': _ADDACCIS_SHORT,
+        "output_type='custom'": ['keep', _CUSTOM_OUTPUTS, 'keep', _CUSTOM_OUTPUTS],
     },
     'using_rename_epw_files': {
         'rename_epw_files(\n    confirm_deletion=False,\n)': ['0 1', 'Aberdeen', 'London', '', 'y'],

@@ -55,7 +55,7 @@ Revisada el 19/10/2026, con accim 0.8.2.
   Unicode que pdflatex no conoce desaparece del PDF sin que nada lo avise. Los que usan las páginas
   (λ, ≤, −, ⌈, ⌉ y algunos emoji) están definidos en `latex_elements` de `conf.py`: añade ahí los
   nuevos. Los 9 errores «Too deeply nested» del paso de LaTeX vienen de docstrings.
-- **URL que imprime el código.** `addAccis()` imprime enlaces a la portada, a cinco páginas de
+- **URL que imprime el código.** `AddAccis()` imprime enlaces a la portada, a cinco páginas de
   How-to y a `4_detailed%20use.html`, siempre en `/en/master/` (`accim/sim/accis.py`,
   `accis_single_idf.py` y `accis_single_idf_funcs.py`), y `accim/sim/accim_IDFgeneration.py` enlaza
   `html_files/full_setpoint_table.html` en GitHub (con htmlpreview). `README.md` también enlaza
@@ -128,17 +128,17 @@ Conviene compilar en local y mirar los avisos antes de subir cambios de las pág
     accim-samples tiene la suya, `packaging/accim-samples/README.md`, que también explica la
     instalación.
 
-## 5. Transcripciones de `addAccis()` en Detailed use
+## 5. Transcripciones de `AddAccis()` en Detailed use
 
-`4_detailed use.md` copia dos transcripciones de `addAccis()`: las preguntas, las respuestas y lo
+`4_detailed use.md` copia dos transcripciones de `AddAccis()`: las preguntas, las respuestas y lo
 que imprime.
 
 - Si solo cambia la versión, edita a mano las dos cabeceras.
-- Para regenerarlas, ejecuta `addAccis()` con un `input()` que lea las respuestas de un archivo y
+- Para regenerarlas, ejecuta `AddAccis()` con un `input()` que lea las respuestas de un archivo y
   las imprima tras cada pregunta, como si se hubieran escrito. Guarda esto como `transcript.py`:
 
   ```python
-  # Run addAccis() answering its questions with the lines of answers.txt (an empty line is
+  # Run AddAccis() answering its questions with the lines of answers.txt (an empty line is
   # hitting enter), and print each question followed by its answer, as if it was typed.
   import builtins
 
@@ -155,7 +155,7 @@ que imprime.
 
   from accim.sim import accis  # noqa: E402
 
-  accis.addAccis()
+  accis.AddAccis()
   ```
 
   En `answers.txt` va una respuesta por línea: lo que hay tras los dos puntos de cada pregunta en la
@@ -194,9 +194,9 @@ How-to Guides:
 
 | Página | Copia ejecutada, en `docs/source/jupyter_notebooks/` | Fuente, en `accim/sample_files/jupyter_notebooks/` | Tiempo |
 |---|---|---|---|
-| Using addAccis() | `addAccis/using_addAccis.ipynb` | `addAccis/` | 1 min |
+| Using AddAccis() | `addAccis/using_addAccis.ipynb` | `addAccis/` | 1 min |
 | Using rename_epw_files() | `rename_epw_files/using_rename_epw_files.ipynb` | `rename_epw_files/` | < 2 min |
-| Using runEp() | `runEp/using_runEp.ipynb` | `runEp/` | < 2 min |
+| Using run_ep() | `runEp/using_runEp.ipynb` | `runEp/` | < 2 min |
 | Using the class Table() | `Table/using_Table.ipynb` | `Table/` | 2 min |
 | Full example (IBPSA) | `full_example_IBPSA/full_example_IBPSA.ipynb` | `full_example_IBPSA/` | 6 min |
 | Research paper case study | `research_paper_case_study/research_paper_case_study.ipynb` | `research_paper_case_study_v0-7-3/` | 27 min |
@@ -262,10 +262,11 @@ python docs/prepare_parametric_notebooks.py export --executed-dir D:\runs_param 
 ### 7.4 Comprobar una página regenerada
 
 Cambios normales entre dos ejecuciones: la cabecera de versión de accim, las direcciones de los
-objetos (`0x...`), los tiempos, los metadatos de ejecución, el orden de las zonas y de algunas
-columnas (salen de conjuntos de Python y cambian de una ejecución a otra) y qué parte de un
-registro largo queda recortada (depende de los trozos en que llega la salida). En un notebook
-determinista, las tablas y las figuras de resultados no deberían cambiar.
+objetos (`0x...`), los tiempos, los metadatos de ejecución, el orden de algunas columnas (salen de
+conjuntos de Python y cambian de una ejecución a otra) y qué parte de un registro largo queda
+recortada (depende de los trozos en que llega la salida). Entre una página de accim 0.x y una de
+1.0.0 cambia también el orden de las zonas (en 1.0.0, el del IDF). En un notebook determinista, las
+tablas y las figuras de resultados no deberían cambiar.
 
 Para verlo, este script compara las salidas de una página con las de una revisión de git (`HEAD`,
 si no se indica): dice qué celdas cambian de código, las primeras líneas de texto distintas de cada
@@ -334,7 +335,7 @@ Lo que toca a la documentación. La construcción del paquete y la subida a PyPI
 5. Tras subir la etiqueta, activa la versión en Read the Docs (§2) y comprueba
    `/en/vX.Y.Z/` y su PDF. `8_pdfs_for_prev_versions.md` no cambia: el menú de Read the Docs añade
    la versión solo.
-6. Opcional: vuelve a ejecutar las páginas que imprimen la cabecera de `addAccis()` con la versión:
+6. Opcional: vuelve a ejecutar las páginas que imprimen la cabecera de `AddAccis()` con la versión:
    `using_addAccis`, `full_example_IBPSA` y `research_paper_case_study` (unos 35 min en total,
    §7.2) y, si quieres, las de los 12 notebooks paramétricos que también la imprimen (todos salvo
    03, 09, `wf3` y `wf5`, §7.3), sabiendo que cambian sus resultados aleatorios.
@@ -352,9 +353,9 @@ Lo que toca a la documentación. La construcción del paquete y la subida a PyPI
 - **`export` escribe «NOT EXPORTED».** Lee el motivo: errores en el notebook, código distinto de la
   fuente o rutas personales en las salidas (§7.2).
 - **`/en/stable/` da 404.** La versión `stable` está desactivada; los enlaces usan `/en/master/`.
-- **Las zonas salen en otro orden que en la versión anterior de la página.** Salen de un conjunto
-  (`set`); la tarea está en `TODO.md` («Deterministic order of the occupied zones in
-  `scan_zones`»).
+- **Las zonas salen en otro orden que en la versión anterior de la página.** Desde accim 1.0.0
+  salen en el orden del IDF, siempre el mismo; las páginas generadas con accim 0.x las tienen en el
+  orden de un conjunto (`set`), que cambiaba de una ejecución a otra.
 - **`make html` no funciona en `docs`.** El `Makefile` apunta a `.`; usa §3.
 
 ## 10. Pendiente (19/10/2026)
