@@ -11,6 +11,42 @@ Durable architectural/process decisions for this repository and its Obsidian
 vault. Newest first. Use [[templates/decision-record.md|the decision-record
 template]] to add a new entry.
 
+## 2026-10-30 — PEP 8 names with deprecated aliases for accim 0.x
+
+- **Status**: accepted
+- **Context**: The author asked to refactor accim to the conventions of Python, keeping the usage similar, and
+  allowed renaming the classes and arguments that break the rules; later, the usage of
+  `accim.parametric_and_optimisation` had to stay the same. Many scripts, notebooks and papers use the names
+  of 0.x (`addAccis`, `ScriptType`, `ComfStand`, `runEp`...).
+- **Decision**: In accim 1.0.0 the public names follow PEP 8 with a mechanical translation (`addAccis` ->
+  `AddAccis`, `ScriptType` -> `script_type`, `runEp` -> `run_ep`, `apmv_setpoints` -> `apmv`...), and every
+  old name stays as a deprecated alias (`accim/_deprecation.py`, `LEGACY_ARGUMENT_NAMES`) that warns with
+  `DeprecationWarning`. The classes used as functions (`rename_epw_files`, `Table`) keep their names, as PEP 8
+  allows. The parametric module keeps its API and only changes its internal calls. The prompts keep their
+  texts.
+- **Consequences**: The scripts of 0.x run unchanged (with warnings); the migration guide
+  (`docs/source/9_migration_guide.md`) lists the names; the aliases are removed in a future major version
+  ([[../ROADMAP.md]], R-03).
+
+## 2026-10-30 — The Python API backend runs the EMS programs of the IDF in Python
+
+- **Status**: accepted
+- **Context**: The author wanted to use accim through the Python API of EnergyPlus in parallel to eppy and the
+  EMS. The control logic of accim lives in the EMS programs that it writes in the output IDFs (SetAST,
+  ApplyAST, SetWindowOperation...). Writing that logic again in Python would give two implementations to keep
+  in sync, with results that could differ.
+- **Decision**: The backend reads the EMS objects of the IDF, runs EnergyPlus through `pyenergyplus` without
+  the programs, calling managers and actuators, and runs the programs in the callbacks of the API with an Erl
+  interpreter (`accim/sim/ems/erl.py`) that follows `RuntimeLanguageProcessor.cc` and `EMSManager.cc`
+  (operator grouping, Null and uninitialised values, errors while sizing, resets at each new environment,
+  actuators released when Null). Sensors and internal variables are read from the Erl variables of
+  EnergyPlus, so it requires EnergyPlus 24.2 or later (`getEMSGlobalVariableHandle`). `run_ep(backend='ems')`
+  stays the default.
+- **Consequences**: One source of truth (the IDF), identical results (checked against the EMS backend in the
+  tests), and Python hooks that can read and change the variables of the programs. The interpreter must follow
+  the changes of the EMS in new EnergyPlus versions (the tests compare both backends). Some EMS features are not
+  supported and raise an error ([[../ROADMAP.md]], R-05).
+
 ## 2026-10-15 — Hourly results of the parametric notebooks only where they are analysed
 
 - **Status**: accepted

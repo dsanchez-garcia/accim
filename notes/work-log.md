@@ -15,6 +15,14 @@ This log is a lightweight, session-scoped complement to the repository's
 existing tracking files — it does not replace them (see
 [[decisions.md#2026-09-13 — `notes/work-log.md` complements, not replaces, existing tracking files|the related decision]]).
 
+## 2026-10-30 — accim 1.0.0: refactoring and Python API backend
+
+- **Objective**: Refactor accim to the conventions of Python (PEP 8), faster and split into modules, and run its models through the Python API of EnergyPlus in parallel to eppy and the EMS, keeping the usage (and, at the author's request, the usage of `parametric_and_optimisation`); branch `v1.0.0`.
+- **Affected files**: `accim/sim/**` (rebuilt: `accis`, `model`, `build`, `generation`, `ems/`, `hvac/`, `energyplus_api/`...), `accim/utils/**` (package, lazy), `accim/run/run.py`, `accim/_deprecation.py`, `accim/_besos_compat.py`, `accim/energyplus.py`, `accim/constants.py`, `accim/data/postprocessing/*.py`, internal calls of `accim/parametric_and_optimisation/main.py`, `tests/core/**`, `docs/source/**`, `README.md`, `setup.py`; [[../CHANGELOG.md]], [[../DEVLOG.md]], [[../TODO.md]], [[../ROADMAP.md]].
+- **Finding or decision**: New names with deprecated aliases for those of 0.x (see [[decisions.md#2026-10-30 — PEP 8 names with deprecated aliases for accim 0.x|the decision]]); the API backend runs the EMS programs of the IDF in Python with the exact rules of the EMS, EnergyPlus 24.2 or later (see [[decisions.md#2026-10-30 — The Python API backend runs the EMS programs of the IDF in Python|the decision]]). The comparison with 0.8.2 found several bugs, fixed and listed in the CHANGELOG (combinations without setpoints, `SingleCooling`, `make_averages`, extra calling managers, tolerances...). A code review then found 6 more problems (Erl operators with Null, output variables in the scope of a program, long sums, `pow` of C, EPW names with dots, positional arguments of the deprecated class), checked against the source of EnergyPlus and fixed.
+- **Validation**: output IDFs byte-identical to 0.8.2 in 29 configurations (with the corrections); identical CSV files with both backends for the 10 model types of accim and 9 of the 11 EMS examples of EnergyPlus; `tests/core` 279 passed, `tests/parametric_and_optimisation` 209 passed; `AddAccis` about 3 times faster. Details in [[../DEVLOG.md]].
+- **Next step**: update the sample scripts and notebooks to the new names, then review, commit and release 1.0.0 (see [[../TODO.md]]).
+
 ## 2026-10-19 — Release guide
 
 - **Objective**: Write a guide, like the one of the documentation, for building the distributions of accim and uploading them to PyPI.

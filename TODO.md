@@ -20,6 +20,26 @@ Active short-term tasks.
 
 ## Backlog
 
+- [ ] [P1][todo] Update the sample scripts and notebooks to the names of accim 1.0.0
+  - Context: `accim/sample_files/script_usage/*.py` and the notebooks (How-to Guides and parametric examples) still use `addAccis`, `accis_single_idf`, `apmv_setpoints`, `runEp`, `ScriptType`... They work, with `DeprecationWarning`, but they should show the new names before the release of 1.0.0.
+  - Definition of done: the scripts and notebooks use `AddAccis`, `add_accis_to_idf`, `modify_accis`, `accim.sim.apmv`, `run_ep` and the snake-case arguments; the notebooks are run again and their pages exported (see `docs/README.md`); the transcripts of `4_detailed use.md` show the banner of 1.0.0.
+  - References: `docs/source/9_migration_guide.md`, branch `v1.0.0`.
+
+- [ ] [P1][todo] Release accim 1.0.0
+  - Context: Branch `v1.0.0` (refactoring to PEP 8, Python API backend). Not committed yet.
+  - Definition of done: the author reviews the branch, commits and merges it; `CHANGELOG.md` gets the date; accim and accim-samples 1.0.0 are published as in `packaging/README.md`.
+  - References: `CHANGELOG.md` (Unreleased), `DEVLOG.md` (2026-10-30).
+
+- [ ] [P2][todo] Fix or remove the stale numbered tests of the parametric module
+  - Context: The files `tests/parametric_and_optimisation/0X_test_*.py` are not collected by pytest by default (their names start with a number). Run explicitly, `01_test_simulation_base.py::test_idf_backup` (calls `save_idf_backup()` without `out_dir`) and `08_test_accim_predef_model.py::test_accim_predef_models_parametric` (calls `set_problem()` without outputs) fail, also on `master` (0.8.2).
+  - Definition of done: the numbered tests pass, or are renamed so that pytest collects them, or are removed.
+  - References: `tests/parametric_and_optimisation/README.md`.
+
+- [ ] [P2][todo] Python API backend: integer actuators
+  - Context: The EMS of EnergyPlus truncates the values of the integer actuators, and the API rounds them (`lround`). No model of accim uses integer actuators, but other models may.
+  - Definition of done: the controller sets integer actuators with the same value as the EMS (or documents the difference), with a test.
+  - References: `accim/sim/energyplus_api/controller.py`.
+
 - [ ] [P1][todo] Define backlog priority rules
   - Context: Standardize entry criteria for new tasks.
   - Definition of done: A short guideline with approved P0/P1/P2 criteria.
