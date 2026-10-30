@@ -15,3 +15,14 @@ https://accim.readthedocs.io/.
 """
 
 __version__ = '1.0.0'
+
+#: The subpackages and modules that ``import accim`` makes available as attributes (``accim.utils``...), which are
+#: imported when they are first used, so that importing accim is fast and has no side effects
+_SUBMODULES = ('constants', 'data', 'energyplus', 'lists', 'parametric_and_optimisation', 'run', 'sim', 'utils')
+
+
+def __getattr__(name):
+    if name in _SUBMODULES:
+        import importlib
+        return importlib.import_module(f'accim.{name}')
+    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

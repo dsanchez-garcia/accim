@@ -4,7 +4,10 @@ AddAccis writes one output IDF for each combination of comfort standard, categor
 ventilation control... Only a few EMS programs change between them, so IdfWriter renders the other objects
 once and writes the files that eppy would save, byte for byte.
 """
+import os
 import shutil
+import subprocess
+import sys
 import warnings
 from pathlib import Path
 
@@ -163,6 +166,28 @@ def test_idf_writer_writes_the_files_of_eppy(tmp_path):
     assert programs['SetInputData'].Program_Line_1 == 'set ComfStand = 99'
     assert programs['SetAST'].Program_Line_2 == 'set m = 0.31'
     assert programs['ApplyCAT'].Program_Line_1 == 'set CATcoolOffset = 0'
+
+
+@pytest.mark.skipif(not (IDD_25_1.exists() and SAMPLE_IDF.exists()),
+                    reason='needs EnergyPlus 25.1 and the sample IDF of the repository')
+def test_the_model_does_not_depend_on_the_hash_seed(tmp_path):
+    # accim 0.x took the zones from a set, so their order, and that of the objects of each zone, changed from one
+    # Python process to another (the hashes of strings)
+    shutil.copy(SAMPLE_IDF, tmp_path / 'model.idf')
+    script = (
+        'import sys\n'
+        'from accim.sim.accis import add_accis_to_idf, load_idf\n'
+        'idf = load_idf(sys.argv[1], "auto")\n'
+        'add_accis_to_idf(idf, script_type="vrf_mm", supply_air_temp_input_method="temperature difference",\n'
+        '                 output_type="standard", output_freqs=["hourly"], output_keep_existing=False,\n'
+        '                 temp_ctrl="temperature", verbose_mode=False)\n'
+        'idf.saveas(sys.argv[2])\n'
+    )
+    for seed in ('1', '2'):
+        subprocess.run([sys.executable, '-c', script, str(tmp_path / 'model.idf'), str(tmp_path / f'seed_{seed}.idf')],
+                       check=True, cwd=REPO, env=dict(os.environ, PYTHONHASHSEED=seed), timeout=600)
+
+    assert (tmp_path / 'seed_1.idf').read_bytes() == (tmp_path / 'seed_2.idf').read_bytes()
 
 
 def test_combination_is_hashable_and_comparable():

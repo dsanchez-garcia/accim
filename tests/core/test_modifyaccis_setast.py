@@ -97,6 +97,25 @@ def test_modify_accis_needs_the_accis(building):
         accis.modify_accis(building, comf_stand=1)
 
 
+def test_add_accis_to_idf_controls_the_scheduled_ventilation(building):
+    # The model ventilates through ZoneVentilation objects, without AirflowNetwork. In mixed mode, the programs
+    # of the windows actuate a schedule Vent_Sch_<zone> of each one, as AddAccis does (in accim 0.x, the
+    # in-memory functions, which the parametric module uses, left the ventilation uncontrolled)
+    accis.add_accis_to_idf(building, **ADD_ACCIS_ARGS)
+
+    ventilation = building.idfobjects['ZoneVentilation:WindandStackOpenArea']
+    assert ventilation
+    schedules = {s.Name for s in building.idfobjects['Schedule:Constant']}
+    actuated = {a.Actuated_Component_Unique_Name for a in building.idfobjects['EnergyManagementSystem:Actuator']}
+    programs = {p.Name for p in building.idfobjects['EnergyManagementSystem:Program']}
+    for vent in ventilation:
+        zone = vent.Zone_or_Space_Name
+        assert vent.Opening_Area_Fraction_Schedule_Name == f'Vent_Sch_{zone}'
+        assert f'Vent_Sch_{zone}' in schedules
+        assert f'Vent_Sch_{zone}' in actuated
+        assert f'SetWindowOperation_{zone}_Win'.replace(':', '_') in programs
+
+
 def test_deprecated_modifyaccis_keeps_m_and_n(building):
     with pytest.warns(DeprecationWarning, match='addAccis is deprecated'):
         accis_single_idf_funcs.addAccis(idf=building, **LEGACY_ADD_ACCIS_ARGS)

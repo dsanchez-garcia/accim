@@ -10,6 +10,7 @@ from pathlib import Path
 
 import pytest
 
+import accim
 import accim.utils
 from accim.utils import get_idd_path_from_ep_version
 
@@ -50,3 +51,15 @@ def test_get_idd_path_from_ep_version_accepts_the_old_argument_name():
     assert get_idd_path_from_ep_version('25.1') == 'C:/EnergyPlusV25-1-0/Energy+.idd'
     with pytest.warns(DeprecationWarning, match='EnergyPlus_version -> energyplus_version'):
         assert get_idd_path_from_ep_version(EnergyPlus_version='26.2') == 'C:/EnergyPlusV26-2-0/Energy+.idd'
+
+
+def test_subpackages_are_attributes_of_accim():
+    # ``import accim`` imports nothing else, and the subpackages are imported when they are first used
+    script = ('import sys, accim; loaded = "accim.utils" in sys.modules; '
+              'print(loaded, accim.utils.reduce_runtime.__module__)')
+    result = subprocess.run([sys.executable, '-c', script], capture_output=True, text=True, cwd=REPO, timeout=120)
+
+    assert result.returncode == 0, result.stderr
+    assert result.stdout.split() == ['False', 'accim.utils.editing']
+    with pytest.raises(AttributeError, match="has no attribute 'nothing'"):
+        accim.nothing
