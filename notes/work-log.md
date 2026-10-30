@@ -15,6 +15,14 @@ This log is a lightweight, session-scoped complement to the repository's
 existing tracking files — it does not replace them (see
 [[decisions.md#2026-09-13 — `notes/work-log.md` complements, not replaces, existing tracking files|the related decision]]).
 
+## 2026-10-30 — accim 1.0.0: parametric tests that run, and integer actuators of the API backend
+
+- **Objective**: Make the numbered tests and the full-workflow scripts of the parametric module run (they never had: 28 of 84 tests failed, also on `master`, and the 5 scripts stopped early), and set the integer actuators of the API backend as the EMS does.
+- **Affected files**: `tests/test_setup.py`, `tests/parametric_and_optimisation/*`, `tests/parametric_and_optimisation_full_workflow/*`, `accim/parametric_and_optimisation/main.py` and `analysis.py` (two internal fixes), `accim/sim/energyplus_api/controller.py`, `accim/sim/ems/erl.py`; [[../CHANGELOG.md]], [[../DEVLOG.md]], [[../TODO.md]], [[questions.md]].
+- **Finding or decision**: The tests were written for an older API and with test models that cannot size the VRF systems; fixed in the tests only, with a shared `enable_sizing()`. Running them found two crashes of the parametric module, fixed without changing its usage (an evaluation log named after the path of the EPW, and the Sobol analysis by EPW), and three problems left for the author in [[../TODO.md]]: ComfStand 0 (and 22) with the baseline ComfMod, the plan filter that stops its checks at a missing column, and the invalid baseline of `AccimPredefModelsParamSim`. The API backend now finds the type of each actuator and sets integer and logical actuators as the EMS (the API alone rounds them, which even crashed EnergyPlus in a test), and supports `@WarnEP`, `@SevereWarnEP` and `@FatalHaltEP`.
+- **Validation**: numbered tests 84 passed; the 5 full-workflow scripts run to the end; `tests/core` and `tests/parametric_and_optimisation` 510 passed; both backends give identical CSV files for an EnergyPlus example with an integer actuator set to 6.6. Details in [[../DEVLOG.md]].
+- **Next step**: the decisions of the author ([[questions.md]], [[decisions.md]], [[../TODO.md]]); run the parametric notebooks again; release.
+
 ## 2026-10-30 — accim 1.0.0: samples, notebooks and a check of the parametric module
 
 - **Objective**: After the push of `v1.0.0`, update the sample scripts, notebooks and transcripts to the names of 1.0.0, and deal with the stale tests of the parametric module.
