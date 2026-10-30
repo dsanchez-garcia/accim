@@ -11,6 +11,27 @@ Durable architectural/process decisions for this repository and its Obsidian
 vault. Newest first. Use [[templates/decision-record.md|the decision-record
 template]] to add a new entry.
 
+## 2026-10-30 — `add_accis_to_idf` builds the same model as `AddAccis`, including the scheduled natural ventilation
+
+- **Status**: accepted (to be confirmed by the author, since it changes results of the parametric module)
+- **Context**: In accim 0.8.2, `addAccis` (files) and `accis_single_idf_funcs.addAccis` (IDF objects, used by
+  `accim.parametric_and_optimisation`) were separate code paths. The scheduled natural ventilation of 0.7.8
+  (mixed mode through `ZoneVentilation` objects in models without AirflowNetwork) was only implemented in the
+  first one, so in the parametric module the ventilation of these models was not controlled, and its
+  ventilation parameters (`VentCtrl`, `MaxTempDiffVOF`, `VSToffset`...) had no effect. accim 1.0.0 builds both
+  from the same model and sequence (`AccimModel` in `accim/sim/model.py`, which finds the windows and the
+  scheduled ventilation, and `accim/sim/build.py`). A comparison of the parametric classes against 0.8.2
+  (session script, model of the parametric notebooks) found the difference: the IDFs of `vrf_ac` and the aPMV
+  setpoints are identical, and those of `vrf_mm` differ only in the objects of the scheduled ventilation.
+- **Decision**: Keep one sequence: `add_accis_to_idf` applies the scheduled natural ventilation, as `AddAccis`
+  does, and the change is documented as a fix (`CHANGELOG.md`, migration guide 9.3). The sizing calculations
+  are not part of it: `AddAccis` enables them and `add_accis_to_idf` does not, as in 0.8.2, which is an open
+  question ([[questions.md]]).
+- **Consequences**: The parametric and optimisation studies of mixed-mode models with `ZoneVentilation`
+  objects give different results than with 0.8.2, including those of the parametric example notebooks, whose
+  published pages were computed with 0.8.2 ([[../TODO.md]]). Reverting would need an option of `AccimModel`
+  that skips the scheduled ventilation for IDF objects.
+
 ## 2026-10-30 — PEP 8 names with deprecated aliases for accim 0.x
 
 - **Status**: accepted

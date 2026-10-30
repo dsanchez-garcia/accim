@@ -15,6 +15,14 @@ This log is a lightweight, session-scoped complement to the repository's
 existing tracking files — it does not replace them (see
 [[decisions.md#2026-09-13 — `notes/work-log.md` complements, not replaces, existing tracking files|the related decision]]).
 
+## 2026-10-30 — accim 1.0.0: samples, notebooks and a check of the parametric module
+
+- **Objective**: After the push of `v1.0.0`, update the sample scripts, notebooks and transcripts to the names of 1.0.0, and deal with the stale tests of the parametric module.
+- **Affected files**: `accim/sample_files/script_usage/*.py`, the notebooks of `accim/sample_files/jupyter_notebooks` and their pages in `docs/source/jupyter_notebooks`, `docs/source/4_detailed use.md`, `docs/source/9_migration_guide.md`, `docs/README.md`, `accim/__init__.py` (lazy subpackages), `tests/core/*.py`; [[../CHANGELOG.md]], [[../DEVLOG.md]], [[../TODO.md]], [[decisions.md]], [[questions.md]].
+- **Finding or decision**: A comparison of the parametric classes with 0.8.2 showed that `add_accis_to_idf` now applies the scheduled natural ventilation (mixed mode through `ZoneVentilation` objects), which in 0.8.2 only `addAccis` applied; kept and documented as a fix, since the results of the parametric module change for these models (see [[decisions.md#2026-10-30 — `add_accis_to_idf` builds the same model as `AddAccis`, including the scheduled natural ventilation|the decision]]). `add_accis_to_idf` still does not enable the sizing calculations, as in 0.8.2, which is why the full-workflow scripts of the parametric tests fail (open question in [[questions.md]]). All 28 failures of the numbered parametric tests are the same on `master`.
+- **Validation**: the 7 How-to notebooks run without errors and their figures do not change; `tests/core` and `tests/parametric_and_optimisation`: 490 passed, plus a new test of the hash seed. Details in [[../DEVLOG.md]].
+- **Next step**: the author confirms the decision and answers the question; run the parametric notebooks again with 1.0.0 (see [[../TODO.md]]).
+
 ## 2026-10-30 — accim 1.0.0: refactoring and Python API backend
 
 - **Objective**: Refactor accim to the conventions of Python (PEP 8), faster and split into modules, and run its models through the Python API of EnergyPlus in parallel to eppy and the EMS, keeping the usage (and, at the author's request, the usage of `parametric_and_optimisation`); branch `v1.0.0`.

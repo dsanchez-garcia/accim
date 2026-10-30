@@ -20,20 +20,25 @@ Active short-term tasks.
 
 ## Backlog
 
-- [ ] [P1][todo] Update the sample scripts and notebooks to the names of accim 1.0.0
-  - Context: `accim/sample_files/script_usage/*.py` and the notebooks (How-to Guides and parametric examples) still use `addAccis`, `accis_single_idf`, `apmv_setpoints`, `runEp`, `ScriptType`... They work, with `DeprecationWarning`, but they should show the new names before the release of 1.0.0.
-  - Definition of done: the scripts and notebooks use `AddAccis`, `add_accis_to_idf`, `modify_accis`, `accim.sim.apmv`, `run_ep` and the snake-case arguments; the notebooks are run again and their pages exported (see `docs/README.md`); the transcripts of `4_detailed use.md` show the banner of 1.0.0.
-  - References: `docs/source/9_migration_guide.md`, branch `v1.0.0`.
-
 - [ ] [P1][todo] Release accim 1.0.0
-  - Context: Branch `v1.0.0` (refactoring to PEP 8, Python API backend). Not committed yet.
-  - Definition of done: the author reviews the branch, commits and merges it; `CHANGELOG.md` gets the date; accim and accim-samples 1.0.0 are published as in `packaging/README.md`.
+  - Context: Branch `v1.0.0` (refactoring to PEP 8, Python API backend), pushed to `origin/v1.0.0`, not merged.
+  - Definition of done: the author reviews the branch and merges it; `CHANGELOG.md` gets the date; accim and accim-samples 1.0.0 are published as in `packaging/README.md`.
   - References: `CHANGELOG.md` (Unreleased), `DEVLOG.md` (2026-10-30).
 
+- [ ] [P1][todo] Run the parametric example notebooks again with accim 1.0.0
+  - Context: Their pages were computed with 0.8.2. In 1.0.0, `add_accis_to_idf` controls the natural ventilation of the mixed-mode models with `ZoneVentilation` objects, as `AddAccis` does (see `notes/decisions.md`), and the notebooks use such a model (`OSM_TestResidentialUnit_v01_onlygeometry_SchNatVent_v2520*.idf`), so their results change (in the one-week tests of the session, cooling 17% to 35% lower). Only their imports were updated for 1.0.0.
+  - Definition of done: the notebooks of `parametric_and_optimisation_examples` are run with 1.0.0 and exported with `docs/prepare_parametric_notebooks.py` (see `docs/README.md` §7.3), and their texts agree with the new results.
+  - References: `docs/source/9_migration_guide.md` (9.3), `CHANGELOG.md` (Fixed).
+
 - [ ] [P2][todo] Fix or remove the stale numbered tests of the parametric module
-  - Context: The files `tests/parametric_and_optimisation/0X_test_*.py` are not collected by pytest by default (their names start with a number). Run explicitly, `01_test_simulation_base.py::test_idf_backup` (calls `save_idf_backup()` without `out_dir`) and `08_test_accim_predef_model.py::test_accim_predef_models_parametric` (calls `set_problem()` without outputs) fail, also on `master` (0.8.2).
+  - Context: The files `tests/parametric_and_optimisation/0X_test_*.py` and `1X_test_*.py` are not collected by pytest by default (their names start with a number). Run explicitly (`python -m pytest <files> -p no:cacheprovider`, from a scratch folder: they write `./test_*` folders in the working folder), 28 of their 84 tests fail, the same on `master` (0.8.2), because they were written for an older API: `set_problem()` without `set_output_readers()` (19 tests: `sim_outputs` is missing), the sampling methods of ranges with lists (`{'CAT': [70, 90]}`; ranges are tuples), `minimize_outputs` with names instead of booleans, `set_parameters(apmv_params_dict=...)`, `estimate_optimisation_sims(num_epws=...)` (it takes `epws`), `output_type='custom'` (it asks for input), and `_save_idf_backup()` without `out_dir`. Their IDFs (`SF_Detached_*`) have zone sizing off, so their simulations of VRF models would also stop (see `notes/questions.md`).
   - Definition of done: the numbered tests pass, or are renamed so that pytest collects them, or are removed.
   - References: `tests/parametric_and_optimisation/README.md`.
+
+- [ ] [P2][todo] Fix the scripts of `tests/parametric_and_optimisation_full_workflow`
+  - Context: The 5 scripts fail, the same on `master`: `test_01` to `test_04` stop in the first test simulation, because their IDFs (`SF_Detached_*`) have zone sizing off and `add_accis_to_idf` does not enable it (see `notes/questions.md`); `test_02` (part B) also needs `OSM_TestResidentialUnit_v01_onlygeometry_SchNatVent_v2520.idf`, which is not in the folder; `test_05` reads `SALib.__version__`, which recent versions of SALib do not have.
+  - Definition of done: the scripts run to the end (with the decision of `notes/questions.md`).
+  - References: `tests/parametric_and_optimisation_full_workflow/README.md`.
 
 - [ ] [P2][todo] Python API backend: integer actuators
   - Context: The EMS of EnergyPlus truncates the values of the integer actuators, and the API rounds them (`lround`). No model of accim uses integer actuators, but other models may.
@@ -64,11 +69,6 @@ Active short-term tasks.
   - Context: Post-processing should fail with clear diagnostics when required simulation CSV artifacts were removed by storage policies.
   - Definition of done: Tests cover missing file paths and assert actionable error messages in hourly/output retrieval methods.
   - References: `accim/parametric_and_optimisation/main.py`, `tests/parametric_and_optimisation/test_sim_file_cleanup.py`
-
-- [ ] [P2][todo] Deterministic order of the occupied zones in `scan_zones`
-  - Context: `scan_zones` builds `occupiedZones_orig` with `list(set(...))`, so the order of the zones, and of the objects that accim creates for each zone in the output IDFs (VRF systems, thermostats, outdoor air objects), changes from one Python process to another (string hashing). The results should not change, but two runs of `addAccis` on the same model give output IDFs that differ in the order of their objects, which makes comparisons harder (on 2026-10-18 they were compared with `PYTHONHASHSEED=0`).
-  - Definition of done: the zones in the order of the targets (`list(dict.fromkeys(...))`), with a test; a check that the results do not change.
-  - References: `accim/sim/utils.py` (`scan_zones`).
 
 - [ ] [P2][todo] Simulate accim with EnergyPlus 26.1
   - Context: accim accepts EnergyPlus 26.1 since 2026-10-18, but only 26.2 was installed: 26.1 was checked against its IDD and transition rules (from 25.2, only the PIU air terminals change), without simulations. The EMS change of 26.1 (EnergyPlus pull request 11409) is the one that made `InitASTvariables` necessary.
