@@ -38,8 +38,8 @@ from besos.objectives import VariableReader, MeterReader
 from besos import IDF_class
 from accim.utils import print_available_outputs_mod, modify_timesteps, set_occupancy_to_always, remove_accents_in_idf, reduce_runtime, read_eso_using_readvarseso
 from accim.parametric_and_optimisation.utils import expand_to_hourly_dataframe, identify_hourly_columns
-import accim.sim.accis_single_idf_funcs as accis
-import accim.sim.apmv_setpoints as apmv
+import accim.sim.accis as accis
+import accim.sim.apmv as apmv
 import accim.parametric_and_optimisation.funcs_for_besos.param_accis as bf_accim
 import accim.parametric_and_optimisation.funcs_for_besos.param_apmv as bf_apmv
 import accim.parametric_and_optimisation.parameters as params
@@ -2931,7 +2931,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             make_averages: bool = False,
             debugging: bool = False,
             verbosemode: bool = True,
-            # Keep these defaults synchronized with accis.addAccis defaults.
+            # Keep these defaults synchronized with the defaults of accis.add_accis_to_idf.
             Output_take_dataframe: pd.DataFrame = None,
             EnergyPlus_version: str = None,
             VRFschedule: str = 'On 24/7',
@@ -2956,12 +2956,12 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         :param make_averages: to make average outputs
         :param debugging: True to generate the .EDD file
         :param verbosemode: True to print addAccis progress messages
-        :param Output_take_dataframe: forwarded to ``accis.addAccis``; see addAccis docs.
-        :param EnergyPlus_version: forwarded to ``accis.addAccis``; see addAccis docs.
-        :param VRFschedule: forwarded to ``accis.addAccis``; see addAccis docs.
-        :param eer: forwarded to ``accis.addAccis``; see addAccis docs.
-        :param cop: forwarded to ``accis.addAccis``; see addAccis docs.
-        :param hvac_zone_map: forwarded to ``accis.addAccis``; see addAccis docs.
+        :param Output_take_dataframe: forwarded to ``accim.sim.accis.add_accis_to_idf``.
+        :param EnergyPlus_version: forwarded to ``accim.sim.accis.add_accis_to_idf``.
+        :param VRFschedule: forwarded to ``accim.sim.accis.add_accis_to_idf``.
+        :param eer: forwarded to ``accim.sim.accis.add_accis_to_idf``.
+        :param cop: forwarded to ``accim.sim.accis.add_accis_to_idf``.
+        :param hvac_zone_map: forwarded to ``accim.sim.accis.add_accis_to_idf``.
         :param bypass_addAccis: True to skip the internal addAccis execution
         :param building: legacy alias for buildings, accepted for backward compatibility
         :param accim_results_root: optional base directory used to resolve relative
@@ -3032,39 +3032,19 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                     'Use clear_outputs(...) later if you want to remove them explicitly.'
                 )
             if not bypass_addAccis:
-                if isinstance(buildings, list):
-                    for b in buildings:
-                        accis.addAccis(
-                            idf=b,
-                            ScriptType=ScriptType,
-                            SupplyAirTempInputMethod=SupplyAirTempInputMethod,
-                            Output_type=output_type,
-                            Output_freqs=output_freqs,
-                            Output_keep_existing=keep_existing_on_init,
-                            Output_take_dataframe=Output_take_dataframe,
-                            EnergyPlus_version=EnergyPlus_version,
-                            TempCtrl=temp_ctrl,
-                            VRFschedule=VRFschedule,
-                            verboseMode=verbosemode,
-                            eer=eer,
-                            cop=cop,
-                            make_averages=make_averages,
-                            debugging=debugging,
-                            hvac_zone_map=hvac_zone_map,
-                        )
-                else:
-                    accis.addAccis(
-                        idf=buildings,
-                        ScriptType=ScriptType,
-                        SupplyAirTempInputMethod=SupplyAirTempInputMethod,
-                        Output_type=output_type,
-                        Output_freqs=output_freqs,
-                        Output_keep_existing=keep_existing_on_init,
-                        Output_take_dataframe=Output_take_dataframe,
-                        EnergyPlus_version=EnergyPlus_version,
-                        TempCtrl=temp_ctrl,
-                        VRFschedule=VRFschedule,
-                        verboseMode=verbosemode,
+                for b in (buildings if isinstance(buildings, list) else [buildings]):
+                    accis.add_accis_to_idf(
+                        b,
+                        script_type=ScriptType,
+                        supply_air_temp_input_method=SupplyAirTempInputMethod,
+                        output_type=output_type,
+                        output_freqs=output_freqs,
+                        output_keep_existing=keep_existing_on_init,
+                        output_take_dataframe=Output_take_dataframe,
+                        energyplus_version=EnergyPlus_version,
+                        temp_ctrl=temp_ctrl,
+                        vrf_schedule=VRFschedule,
+                        verbose_mode=verbosemode,
                         eer=eer,
                         cop=cop,
                         make_averages=make_averages,
@@ -13175,12 +13155,12 @@ class ParametricSimulation(SimulationBase):
         :param make_averages: create average outputs in addAccis.
         :param debugging: create EnergyPlus EDD debugging output.
         :param verbosemode: print addAccis progress messages.
-        :param Output_take_dataframe: forwarded to ``accis.addAccis``; see addAccis docs.
-        :param EnergyPlus_version: forwarded to ``accis.addAccis``; see addAccis docs.
-        :param VRFschedule: forwarded to ``accis.addAccis``; see addAccis docs.
-        :param eer: forwarded to ``accis.addAccis``; see addAccis docs.
-        :param cop: forwarded to ``accis.addAccis``; see addAccis docs.
-        :param hvac_zone_map: forwarded to ``accis.addAccis``; see addAccis docs.
+        :param Output_take_dataframe: forwarded to ``accim.sim.accis.add_accis_to_idf``.
+        :param EnergyPlus_version: forwarded to ``accim.sim.accis.add_accis_to_idf``.
+        :param VRFschedule: forwarded to ``accim.sim.accis.add_accis_to_idf``.
+        :param eer: forwarded to ``accim.sim.accis.add_accis_to_idf``.
+        :param cop: forwarded to ``accim.sim.accis.add_accis_to_idf``.
+        :param hvac_zone_map: forwarded to ``accim.sim.accis.add_accis_to_idf``.
         :param bypass_addAccis: skip addAccis/apply_apmv_setpoints preparation.
         :param building: legacy alias for buildings, accepted for backward compatibility.
         :param accim_results_root: optional base directory used to resolve
@@ -13341,12 +13321,12 @@ class OptimisationSimulation(SimulationBase):
         :param make_averages: create average outputs in addAccis.
         :param debugging: create EnergyPlus EDD debugging output.
         :param verbosemode: print addAccis progress messages.
-        :param Output_take_dataframe: forwarded to ``accis.addAccis``; see addAccis docs.
-        :param EnergyPlus_version: forwarded to ``accis.addAccis``; see addAccis docs.
-        :param VRFschedule: forwarded to ``accis.addAccis``; see addAccis docs.
-        :param eer: forwarded to ``accis.addAccis``; see addAccis docs.
-        :param cop: forwarded to ``accis.addAccis``; see addAccis docs.
-        :param hvac_zone_map: forwarded to ``accis.addAccis``; see addAccis docs.
+        :param Output_take_dataframe: forwarded to ``accim.sim.accis.add_accis_to_idf``.
+        :param EnergyPlus_version: forwarded to ``accim.sim.accis.add_accis_to_idf``.
+        :param VRFschedule: forwarded to ``accim.sim.accis.add_accis_to_idf``.
+        :param eer: forwarded to ``accim.sim.accis.add_accis_to_idf``.
+        :param cop: forwarded to ``accim.sim.accis.add_accis_to_idf``.
+        :param hvac_zone_map: forwarded to ``accim.sim.accis.add_accis_to_idf``.
         :param bypass_addAccis: skip addAccis/apply_apmv_setpoints preparation.
         :param building: legacy alias for buildings, accepted for backward compatibility.
         :param accim_results_root: optional base directory used to resolve
@@ -13628,12 +13608,12 @@ class AccimPredefModelsParamSim(ParametricSimulation):
         :param ScriptType: ACCIM script type: vrf_mm, vrf_ac, or ex_ac.
         :param SupplyAirTempInputMethod: ACCIM supply-air-temperature input mode.
         :param debugging: create EnergyPlus EDD debugging output.
-        :param Output_take_dataframe: forwarded to ``accis.addAccis``; see addAccis docs.
-        :param EnergyPlus_version: forwarded to ``accis.addAccis``; see addAccis docs.
-        :param VRFschedule: forwarded to ``accis.addAccis``; see addAccis docs.
-        :param eer: forwarded to ``accis.addAccis``; see addAccis docs.
-        :param cop: forwarded to ``accis.addAccis``; see addAccis docs.
-        :param hvac_zone_map: forwarded to ``accis.addAccis``; see addAccis docs.
+        :param Output_take_dataframe: forwarded to ``accim.sim.accis.add_accis_to_idf``.
+        :param EnergyPlus_version: forwarded to ``accim.sim.accis.add_accis_to_idf``.
+        :param VRFschedule: forwarded to ``accim.sim.accis.add_accis_to_idf``.
+        :param eer: forwarded to ``accim.sim.accis.add_accis_to_idf``.
+        :param cop: forwarded to ``accim.sim.accis.add_accis_to_idf``.
+        :param hvac_zone_map: forwarded to ``accim.sim.accis.add_accis_to_idf``.
         :param building: legacy alias for buildings, accepted for backward compatibility.
         :param accim_results_root: optional base directory used to resolve
             relative output directories.
@@ -13670,5 +13650,5 @@ class AccimPredefModelsParamSim(ParametricSimulation):
             remove_output_tables=remove_output_tables,
         )
         for b in self.buildings:
-            accis.modifyAccis(idf=b, ComfStand=99, ComfMod=3, CAT=80, HVACmode=2, VentCtrl=0)
+            accis.modify_accis(b, comf_stand=99, comf_mod=3, cat=80, hvac_mode=2, vent_ctrl=0)
 

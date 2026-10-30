@@ -1,10 +1,13 @@
-"""Tests for the EMS program SetAST after modifyAccis.
+"""Tests for modify_accis (modifyAccis in accim 0.x), which sets the arguments of the ACCIS of an IDF object.
 
 - accim.sim.accis_single_idf_funcs.modifyAccis (used by AccimPredefModelsParamSim) trimmed SetAST
   to len(obj) > 3, that is, to its first line, so it deleted 'set m' and 'set n' and left
   'run SetAST_Master' in line 2, where the parametric setter of m then wrote over it.
 - The method modifyAccis of accim.sim.accis_single_idf.addAccis trimmed SetAST to 16 lines,
   so a second call kept lines of the comfort model of the first one.
+
+modify_accis leaves the 4 base lines of SetAST: 'run SetAST_Master' runs the subprograms of the comfort
+standard and comfort mode of SetInputData, so the parametric setters that change them later work.
 """
 import shutil
 from pathlib import Path
@@ -12,15 +15,25 @@ from pathlib import Path
 import pytest
 
 from accim.parametric_and_optimisation.funcs_for_besos import param_accis
-from accim.sim import accis_single_idf, accis_single_idf_funcs
-from accim.sim.setAST_models import get_SetAST_lines
+from accim.sim import accis, accis_single_idf, accis_single_idf_funcs
+from accim.sim.ems.setast import get_setpoint_lines
 
 REPO = Path(__file__).resolve().parents[2]
 SAMPLE_IDF = (REPO / 'accim' / 'sample_files' / 'jupyter_notebooks' / 'parametric_and_optimisation_examples'
               / 'OSM_TestResidentialUnit_v01_onlygeometry_SchNatVent_v2520.idf')
 IDD_25_2 = Path('C:/EnergyPlusV25-2-0/Energy+.idd')
 
-ADDACCIS_ARGS = dict(
+ADD_ACCIS_ARGS = dict(
+    script_type='vrf_mm',
+    supply_air_temp_input_method='temperature difference',
+    output_type='simplified',
+    output_freqs=['hourly'],
+    output_keep_existing=True,
+    temp_ctrl='temperature',
+    verbose_mode=False,
+)
+# The names of accim 0.x, which the deprecated functions accept
+LEGACY_ADD_ACCIS_ARGS = dict(
     ScriptType='vrf_mm',
     SupplyAirTempInputMethod='temperature difference',
     Output_type='simplified',
@@ -42,16 +55,20 @@ def building(tmp_path):
     return get_building(str(tmp_path / 'model.idf'))
 
 
+def _program_lines(building, name):
+    program = [p for p in building.idfobjects['EnergyManagementSystem:Program'] if p.Name == name][0]
+    return list(program.obj[2:])
+
+
 def _setast_lines(building):
-    setast = [p for p in building.idfobjects['EnergyManagementSystem:Program'] if p.Name == 'SetAST'][0]
-    return list(setast.obj[2:])
+    return _program_lines(building, 'SetAST')
 
 
-def test_modifyaccis_keeps_m_and_n(building):
-    accis_single_idf_funcs.addAccis(idf=building, **ADDACCIS_ARGS)
+def test_modify_accis_keeps_m_and_n(building):
+    accis.add_accis_to_idf(building, **ADD_ACCIS_ARGS)
 
-    accis_single_idf_funcs.modifyAccis(idf=building, ComfStand=99, ComfMod=3, CAT=80, HVACmode=2, VentCtrl=0,
-                                       CustAST_m=0.3, CustAST_n=18)
+    accis.modify_accis(building, comf_stand=99, comf_mod=3, cat=80, hvac_mode=2, vent_ctrl=0, cust_ast_m=0.3,
+                       cust_ast_n=18)
     assert _setast_lines(building) == ['set SetpointAcc = 10000', 'set m = 0.3', 'set n = 18', 'run SetAST_Master']
 
     # The parametric setters of m and n replace their own lines and keep the call to SetAST_Master.
@@ -60,12 +77,49 @@ def test_modifyaccis_keeps_m_and_n(building):
     assert _setast_lines(building) == ['set SetpointAcc = 10000', 'set m = 0.25', 'set n = 17.5', 'run SetAST_Master']
 
 
+def test_modify_accis_sets_the_input_data_and_none_keeps_it(building):
+    accis.add_accis_to_idf(building, **ADD_ACCIS_ARGS)
+
+    accis.modify_accis(building, comf_stand=2, cat=80, comf_mod=3, hvac_mode=2, vent_ctrl=1,
+                       cool_season_start='01/06', cool_season_end=250, ast_tol=0.2)
+    assert _program_lines(building, 'SetInputData') == [
+        'set ComfStand = 2', 'set CAT = 80', 'set ComfMod = 3', 'set HVACmode = 2', 'set VentCtrl = 1',
+        'set VSToffset = 0', 'set MinOToffset = 50', 'set MaxWindSpeed = 50', 'set ACSTtol = -0.2',
+        'set AHSTtol = 0.2', 'set CoolSeasonStart = 152', 'set CoolSeasonEnd = 250']
+
+    accis.modify_accis(building, comf_stand=1)
+    assert _program_lines(building, 'SetInputData')[:5] == [
+        'set ComfStand = 1', 'set CAT = 80', 'set ComfMod = 3', 'set HVACmode = 2', 'set VentCtrl = 1']
+
+
+def test_modify_accis_needs_the_accis(building):
+    with pytest.raises(ValueError, match='Add the ACCIS first'):
+        accis.modify_accis(building, comf_stand=1)
+
+
+def test_deprecated_modifyaccis_keeps_m_and_n(building):
+    with pytest.warns(DeprecationWarning, match='addAccis is deprecated'):
+        accis_single_idf_funcs.addAccis(idf=building, **LEGACY_ADD_ACCIS_ARGS)
+
+    with pytest.warns(DeprecationWarning, match='modifyAccis is deprecated'):
+        accis_single_idf_funcs.modifyAccis(idf=building, ComfStand=99, ComfMod=3, CAT=80, HVACmode=2, VentCtrl=0,
+                                           CustAST_m=0.3, CustAST_n=18)
+    assert _setast_lines(building) == ['set SetpointAcc = 10000', 'set m = 0.3', 'set n = 18', 'run SetAST_Master']
+
+
 def test_second_modifyaccis_call_has_only_the_lines_of_its_comfort_model(building):
-    job = accis_single_idf.addAccis(idf=building, **ADDACCIS_ARGS)
+    # As in accim 0.x, the method modifyAccis of the deprecated class also appends the lines of the comfort model
+    with pytest.warns(DeprecationWarning, match='addAccis is deprecated'):
+        job = accis_single_idf.addAccis(idf=building, **LEGACY_ADD_ACCIS_ARGS)
 
     job.modifyAccis(ComfStand=2, CAT=80, ComfMod=0, HVACmode=2, VentCtrl=0)
     job.modifyAccis(ComfStand=2, CAT=80, ComfMod=3, HVACmode=2, VentCtrl=0)
 
     lines = _setast_lines(building)
     assert lines[3] == 'run SetAST_Master'
-    assert lines[4:] == get_SetAST_lines(2, 3)
+    assert lines[4:] == get_setpoint_lines(2, 3)
+    assert job.occupied_zones and job.windows_and_doors
+    # The EMS programs, as attributes of the object
+    assert list(job.SetAST.obj[2:]) == lines
+    assert job.SetInputData.Program_Line_1 == 'set ComfStand = 2'
+    assert job.SetVOFinputData.Name == 'SetVOFinputData'

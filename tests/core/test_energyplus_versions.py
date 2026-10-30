@@ -1,4 +1,4 @@
-"""Tests for the EnergyPlus versions accepted by addAccis, runEp and the IDD lookup.
+"""Tests for the EnergyPlus versions accepted by AddAccis, run_ep and the IDD lookup.
 
 Before, the lists of versions and get_idd_path_from_ep_version stopped at EnergyPlus 25.1, so
 addAccis(EnergyPlus_version='25.2') raised ValueError. runEp did not handle 'auto' (it called
@@ -16,11 +16,14 @@ InitASTvariables now sets those variables at BeginNewEnvironment.
 
 accim also reads the People:Definition and People:Instance objects of EnergyPlus 26.2, which it
 rejected before (see test_people_instance.py): the sample model converted to these objects gives the
-same results as with People objects, with addAccis and with aPMV setpoints.
+same results as with People objects, with AddAccis and with aPMV setpoints.
 
 In models with Space objects, the EMS sensors now read the names that EnergyPlus gives the occupant
 instances, and a zone with several instances is one target (see test_space_instance_names.py): the sample
 model with People assigned to a Space, to Zones of one and two spaces and to a SpaceList now simulates.
+
+accim 1.0.0 renamed addAccis to AddAccis (add_accis_to_idf for IDF objects) and runEp to run_ep, with
+arguments that follow PEP 8; the old names still work (see test_deprecation.py).
 """
 import builtins
 import os
@@ -35,14 +38,14 @@ import pandas as pd
 import pytest
 
 import accim.lists
-import accim.sim.accim_Main as accim_Main
-import accim.sim.accim_Main_single_idf as accim_Main_single_idf
-import accim.sim.lists
 import accim.utils
+import accim.utils.outputs
+from accim.constants import ENERGYPLUS_VERSIONS_WITH_SPACES, SUPPORTED_ENERGYPLUS_VERSIONS
+from accim.energyplus import idd_path, read_idf_version, unsupported_version_message
 from accim.run import run
-from accim.sim import accis, accis_single_idf_funcs
-from accim.sim.accim_Base_EMS import addEMSPCMBase
-from accim.sim.utils import scan_zones
+from accim.sim import accis
+from accim.sim.ems.programs import add_program_calling_managers
+from accim.sim.model import AccimModel
 from accim.utils import get_idd_path_from_ep_version
 
 IDD_25_2 = 'C:/EnergyPlusV25-2-0/Energy+.idd'
@@ -57,21 +60,25 @@ SAMPLE_EPW = (REPO / 'accim' / 'sample_files' / 'jupyter_notebooks' / 'parametri
               / 'Seville.epw')
 
 FIRST_STAGE_ARGS = dict(
-    ScriptType='vrf_ac',
-    SupplyAirTempInputMethod='supply air temperature',
-    Output_type='standard',
-    Output_freqs=['hourly'],
-    Output_keep_existing=False,
-    TempCtrl='temp',
+    script_type='vrf_ac',
+    supply_air_temp_input_method='supply air temperature',
+    output_type='standard',
+    output_freqs=['hourly'],
+    output_keep_existing=False,
+    temp_ctrl='temp',
 )
 
 
-class _ReachedAccimJob(Exception):
-    """Raised by the accimJob stub: addAccis validated its arguments and started with the IDFs."""
+class _Reached(Exception):
+    """Raised by the stubs: the function validated its arguments and started with the models."""
 
 
-def _stub_accim_job(*args, **kwargs):
-    raise _ReachedAccimJob(kwargs.get('EnergyPlus_version'))
+def _stub_load_idf(path, energyplus_version='auto'):
+    raise _Reached(energyplus_version)
+
+
+def _stub_accim_model(*args, **kwargs):
+    raise _Reached()
 
 
 def _no_prompts(prompt=''):
@@ -89,38 +96,72 @@ def _idd_path(version):
 
 @pytest.mark.parametrize('version', LATEST_VERSIONS)
 def test_version_lists_include_the_latest_versions(version):
+    assert version in SUPPORTED_ENERGYPLUS_VERSIONS
+    assert version in ENERGYPLUS_VERSIONS_WITH_SPACES
+    # The lists of accim 0.x
     assert version in accim.lists.fullEPversionsList
     assert version in accim.lists.epvers_space_objs
-    assert version in accim.sim.lists.epvers_space_objs
 
 
-@pytest.mark.parametrize('version', [v for v in accim.lists.fullEPversionsList if v != 'auto'])
-def test_every_listed_version_has_an_idd_path(version):
+@pytest.mark.parametrize('version', SUPPORTED_ENERGYPLUS_VERSIONS)
+def test_every_supported_version_has_an_idd_path(version):
     assert get_idd_path_from_ep_version(version) == _idd_path(version)
 
 
 def test_unlisted_versions_have_no_idd_path():
     assert get_idd_path_from_ep_version('26.3') == 'not-supported'
     assert get_idd_path_from_ep_version('auto') == 'not-supported'
+    with pytest.raises(ValueError, match=r'EnergyPlus 26\.2 \(enter 26\.2\)'):
+        idd_path('26.3')
+
+
+def test_unsupported_version_message_names_the_supported_versions():
+    message = unsupported_version_message('26.3')
+
+    assert 'EnergyPlus 26.3 is not supported' in message
+    assert 'EnergyPlus 9.1 (enter 9.1)' in message
+    assert 'EnergyPlus 26.2 (enter 26.2)' in message
+
+
+def test_read_idf_version(tmp_path):
+    _write_idf(tmp_path / 'a.idf', '25.2.0')
+    _write_idf(tmp_path / 'dsb.idf', '9.4.0.002')
+    (tmp_path / 'comment.idf').write_text('! Version, 8.9;\n  VERSION ,26.2;\n', encoding='utf-8')
+    (tmp_path / 'none.idf').write_text('Building, Office;\n')
+
+    assert read_idf_version(tmp_path / 'a.idf') == '25.2'
+    assert read_idf_version(tmp_path / 'dsb.idf') == '9.4'
+    assert read_idf_version(tmp_path / 'comment.idf') == '26.2'
+    with pytest.raises(ValueError, match='could not be read'):
+        read_idf_version(tmp_path / 'none.idf')
 
 
 @pytest.mark.parametrize('version', LATEST_VERSIONS)
 def test_addaccis_accepts_the_latest_versions(monkeypatch, version):
-    monkeypatch.setattr(accim_Main, 'accimJob', _stub_accim_job)
+    monkeypatch.setattr(accis, 'load_idf', _stub_load_idf)
     monkeypatch.setattr(builtins, 'input', _no_prompts)
 
-    with pytest.raises(_ReachedAccimJob) as reached:
-        accis.addAccis(idfs=['model.idf'], EnergyPlus_version=version, **FIRST_STAGE_ARGS)
+    with pytest.raises(_Reached) as reached:
+        accis.AddAccis(idfs=['model.idf'], energyplus_version=version, verbose_mode=False, **FIRST_STAGE_ARGS)
 
     assert str(reached.value) == version
 
 
 def test_addaccis_rejects_unlisted_version(monkeypatch):
-    monkeypatch.setattr(accim_Main, 'accimJob', _stub_accim_job)
+    monkeypatch.setattr(accis, 'load_idf', _stub_load_idf)
     monkeypatch.setattr(builtins, 'input', _no_prompts)
 
-    with pytest.raises(ValueError, match='26.3 is not a valid EnergyPlus_version'):
-        accis.addAccis(idfs=['model.idf'], EnergyPlus_version='26.3', **FIRST_STAGE_ARGS)
+    with pytest.raises(ValueError, match="'26.3' is not a valid energyplus_version"):
+        accis.AddAccis(idfs=['model.idf'], energyplus_version='26.3', **FIRST_STAGE_ARGS)
+
+
+def test_addaccis_rejects_the_idfs_of_unsupported_versions(monkeypatch):
+    # With 'auto', the version is that of each IDF
+    monkeypatch.setattr(accis, 'load_idf',
+                        lambda path, version='auto': SimpleNamespace(iddname='Energy+.idd', idd_version=(26, 3, 0)))
+
+    with pytest.raises(ValueError, match=r'EnergyPlus 26\.2 \(enter 26\.2\)'):
+        accis.AddAccis(idfs=['model.idf'], energyplus_version='auto', verbose_mode=False, **FIRST_STAGE_ARGS)
 
 
 def test_addaccis_prompt_accepts_26_2(monkeypatch):
@@ -131,53 +172,36 @@ def test_addaccis_prompt_accepts_26_2(monkeypatch):
         prompts.append(prompt)
         return next(answers)
 
-    monkeypatch.setattr(accim_Main, 'accimJob', _stub_accim_job)
+    monkeypatch.setattr(accis, 'load_idf', _stub_load_idf)
     monkeypatch.setattr(builtins, 'input', scripted_input)
 
-    with pytest.raises(_ReachedAccimJob) as reached:
-        accis.addAccis(idfs=['model.idf'])
+    with pytest.raises(_Reached) as reached:
+        accis.AddAccis(idfs=['model.idf'])
 
     assert str(reached.value) == '26.2'
     assert any('(9.1 to 26.2, or auto)' in p for p in prompts)
     assert not any('EnergyPlus version was not correct' in p for p in prompts)
 
 
-def test_accimjob_error_message_names_26_2(tmp_path):
-    _write_idf(tmp_path / 'model.idf', '26.3')
-
-    with pytest.raises(ValueError, match=r'EnergyPlus 26\.2 \(enter 26\.2\)'):
-        accim_Main.accimJob(
-            filename_temp=str(tmp_path / 'model'),
-            ScriptType='vrf_ac',
-            EnergyPlus_version='26.3',
-            TempCtrl='temp',
-            verboseMode=False,
-        )
-
-
-@pytest.mark.parametrize('idd_version, EnergyPlus_version, expected', [
-    ((26, 1, 0), None, '26.1'),
-    ((26, 2, 0), None, '26.2'),
-    ((26, 2, 0), 'auto', '26.2'),
-    ((26, 2, 0), '26.2', '26.2'),
+@pytest.mark.parametrize('idd_version, energyplus_version', [
+    ((26, 1, 0), None),
+    ((26, 2, 0), None),
+    ((26, 2, 0), 'auto'),
+    ((26, 2, 0), '26.2'),
 ])
-def test_single_idf_addaccis_accepts_26_x(monkeypatch, idd_version, EnergyPlus_version, expected):
-    monkeypatch.setattr(accim_Main_single_idf, 'accimJob', _stub_accim_job)
+def test_add_accis_to_idf_accepts_26_x(monkeypatch, idd_version, energyplus_version):
+    monkeypatch.setattr(accis, 'AccimModel', _stub_accim_model)
 
-    with pytest.raises(_ReachedAccimJob) as reached:
-        accis_single_idf_funcs.addAccis(idf=SimpleNamespace(idd_version=idd_version),
-                                        EnergyPlus_version=EnergyPlus_version, verboseMode=False,
-                                        **FIRST_STAGE_ARGS)
-
-    assert str(reached.value) == expected
+    with pytest.raises(_Reached):
+        accis.add_accis_to_idf(SimpleNamespace(idd_version=idd_version), energyplus_version=energyplus_version,
+                               verbose_mode=False, **FIRST_STAGE_ARGS)
 
 
-def test_single_idf_addaccis_rejects_unlisted_version(monkeypatch):
-    monkeypatch.setattr(accim_Main_single_idf, 'accimJob', _stub_accim_job)
+def test_add_accis_to_idf_rejects_unlisted_version(monkeypatch):
+    monkeypatch.setattr(accis, 'AccimModel', _stub_accim_model)
 
-    with pytest.raises(ValueError, match='26.3 is not a valid EnergyPlus_version'):
-        accis_single_idf_funcs.addAccis(idf=SimpleNamespace(idd_version=(26, 3, 0)), verboseMode=False,
-                                        **FIRST_STAGE_ARGS)
+    with pytest.raises(ValueError, match="'26.3' is not a valid energyplus_version"):
+        accis.add_accis_to_idf(SimpleNamespace(idd_version=(26, 3, 0)), verbose_mode=False, **FIRST_STAGE_ARGS)
 
 
 def test_get_iddfile_from_idfs_reads_the_idf_version(tmp_path):
@@ -186,7 +210,7 @@ def test_get_iddfile_from_idfs_reads_the_idf_version(tmp_path):
     _write_idf(tmp_path / 'dsb.idf', '9.4.0.002')
     _write_idf(tmp_path / 'new.idf', '26.2')
     # A comment with non-ASCII characters before the Version object, in UTF-8
-    (tmp_path / 'c.idf').write_text('! Oficina en Cádiz, año 2026\n  Version, 25.2;\n', encoding='utf-8')
+    (tmp_path / 'c.idf').write_text('! Oficina en C\u00e1diz, a\u00f1o 2026\n  Version, 25.2;\n', encoding='utf-8')
 
     idfs = [str(tmp_path / name) for name in ['a.idf', 'b.idf', 'c.idf']]
     assert run.get_iddfile_from_idfs(idfs) == IDD_25_2
@@ -212,7 +236,7 @@ def test_get_iddfile_from_idfs_rejects_mixed_or_unsupported_versions(tmp_path):
 
 
 class _FakeIDF:
-    """Replaces eppy's IDF in runEp: records the IDD and the IDF/EPW pairs, without reading them."""
+    """Replaces eppy's IDF in run_ep: records the IDD and the IDF/EPW pairs, without reading them."""
     iddname = None
 
     def __init__(self, idfname, epw):
@@ -236,10 +260,10 @@ def fake_run_folder(tmp_path, monkeypatch):
     return tmp_path
 
 
-def test_runep_auto_uses_the_idd_of_the_idf_version(fake_run_folder, monkeypatch, capsys):
+def test_run_ep_auto_uses_the_idd_of_the_idf_version(fake_run_folder, monkeypatch, capsys):
     monkeypatch.setattr(builtins, 'input', _no_prompts)
 
-    run.runEp(runOnlyAccim=True, confirmRun=False, EnergyPlus_version='auto')
+    run.run_ep(run_only_accim=True, confirm_run=False, energyplus_version='auto')
 
     assert _FakeIDF.iddname == IDD_25_2
     out = capsys.readouterr().out
@@ -247,42 +271,51 @@ def test_runep_auto_uses_the_idd_of_the_idf_version(fake_run_folder, monkeypatch
     assert 'sample_EPWs' not in out
 
 
-def test_runep_auto_accepts_idfs_of_26_2(fake_run_folder, monkeypatch):
+def test_run_ep_auto_accepts_idfs_of_26_2(fake_run_folder, monkeypatch):
     _write_idf(fake_run_folder / 'model[CS_INT EN16798[NS_X.idf', '26.2')
     monkeypatch.setattr(builtins, 'input', _no_prompts)
 
-    run.runEp(runOnlyAccim=True, confirmRun=False, EnergyPlus_version='auto')
+    run.run_ep(run_only_accim=True, confirm_run=False, energyplus_version='auto')
 
     assert _FakeIDF.iddname == IDD_26_2
 
 
 @pytest.mark.parametrize('version', LATEST_VERSIONS)
-def test_runep_accepts_the_latest_versions(fake_run_folder, monkeypatch, version):
+def test_run_ep_accepts_the_latest_versions(fake_run_folder, monkeypatch, version):
     monkeypatch.setattr(builtins, 'input', _no_prompts)
 
-    run.runEp(runOnlyAccim=True, confirmRun=False, EnergyPlus_version=version)
+    run.run_ep(run_only_accim=True, confirm_run=False, energyplus_version=version)
 
     assert _FakeIDF.iddname == _idd_path(version)
 
 
-def test_runep_uses_the_version_corrected_in_the_prompt(fake_run_folder, monkeypatch):
+def test_run_ep_uses_the_version_corrected_in_the_prompt(fake_run_folder, monkeypatch):
     monkeypatch.setattr(builtins, 'input', lambda prompt='': '26.2')
 
-    run.runEp(runOnlyAccim=True, confirmRun=False, EnergyPlus_version='30.1')
+    run.run_ep(run_only_accim=True, confirm_run=False, energyplus_version='30.1')
 
     assert _FakeIDF.iddname == IDD_26_2
 
 
-def test_scan_zones_rejects_models_without_people():
+def test_runep_is_a_deprecated_alias_with_the_old_arguments(fake_run_folder, monkeypatch):
+    monkeypatch.setattr(builtins, 'input', _no_prompts)
+
+    with pytest.warns(DeprecationWarning, match='use accim.run.run_ep instead'):
+        run.runEp(runOnlyAccim=True, confirmRun=False, EnergyPlus_version='auto')
+
+    assert _FakeIDF.iddname == IDD_25_2
+
+
+def test_accim_model_rejects_models_without_people():
     # The IDDs before EnergyPlus 26.2 have no People:Instance objects
     idf = SimpleNamespace(idfobjects={'PEOPLE': []})
 
     with pytest.raises(ValueError, match='The model has no People objects'):
-        scan_zones(SimpleNamespace(idf1=idf))
+        AccimModel(idf, 'vrf_ac', 'temperature', verbose_mode=False)
 
 
 class _FakeEMSModel:
-    """Minimal IDF for addEMSPCMBase: the EMS programs and the calling managers it creates."""
+    """Minimal IDF for add_program_calling_managers: the EMS programs and the calling managers it creates."""
 
     def __init__(self, program_names):
         self.idfobjects = {
@@ -300,13 +333,13 @@ def test_pcm_of_the_initialisation_program_runs_at_begin_new_environment():
     # Since EnergyPlus 26.1, a variable read before it is set in the first timestep of an environment
     # stops the simulation. SetComfTemp (custom model) reads m and n before SetAST sets them, so
     # InitASTvariables sets them at BeginNewEnvironment.
-    model = _FakeEMSModel(['SetComfTemp', 'SetAST_Master', 'SetAST', 'SetASTnoTol', 'InitASTvariables',
-                           'SetInputData'])
+    idf = _FakeEMSModel(['SetComfTemp', 'SetAST_Master', 'SetAST', 'SetASTnoTol', 'InitASTvariables', 'SetInputData'])
+    model = SimpleNamespace(idf=idf, ems_names=[], windows=[], is_mixed_mode=False, log=lambda *lines: None)
 
-    addEMSPCMBase(SimpleNamespace(idf1=model), verboseMode=False)
+    add_program_calling_managers(model)
 
     points = {pcm.Name: pcm.EnergyPlus_Model_Calling_Point
-              for pcm in model.idfobjects['EnergyManagementSystem:ProgramCallingManager']}
+              for pcm in idf.idfobjects['EnergyManagementSystem:ProgramCallingManager']}
     assert points.pop('InitASTvariables') == 'BeginNewEnvironment'
     assert 'SetAST_Master' not in points
     assert set(points.values()) == {'BeginTimestepBeforePredictor'}
@@ -337,9 +370,9 @@ def test_read_eso_using_readvarseso_prefers_the_newest_installation(tmp_path, mo
         calls.append(cmd)
         raise _ReachedReadVarsESO
 
-    monkeypatch.setattr(accim.utils.platform, 'system', lambda: 'Windows')
-    monkeypatch.setattr(accim.utils.os.path, 'exists', fake_exists)
-    monkeypatch.setattr(accim.utils.subprocess, 'run', fake_run)
+    monkeypatch.setattr(accim.utils.outputs.platform, 'system', lambda: 'Windows')
+    monkeypatch.setattr(accim.utils.outputs.os.path, 'exists', fake_exists)
+    monkeypatch.setattr(accim.utils.outputs.subprocess, 'run', fake_run)
 
     with pytest.raises(_ReachedReadVarsESO):
         accim.utils.read_eso_using_readvarseso(str(eso))
@@ -388,10 +421,10 @@ _ADDACCIS_VRF_MM_SCRIPT = """
 import os, sys
 os.chdir(sys.argv[1])
 from accim.sim import accis
-accis.addAccis(
-    ScriptType='vrf_mm', SupplyAirTempInputMethod='temperature difference', Output_type='standard',
-    Output_freqs=['hourly'], Output_keep_existing=False, EnergyPlus_version='auto', TempCtrl='temperature',
-    ComfStand=[1], CAT=[3], ComfMod=[3], HVACmode=[2], VentCtrl=[0], confirmGen=True, verboseMode=False,
+accis.AddAccis(
+    script_type='vrf_mm', supply_air_temp_input_method='temperature difference', output_type='standard',
+    output_freqs=['hourly'], output_keep_existing=False, energyplus_version='auto', temp_ctrl='temperature',
+    comf_stand=[1], cat=[3], comf_mod=[3], hvac_mode=[2], vent_ctrl=[0], confirm_gen=True, verbose_mode=False,
 )
 """
 
@@ -426,13 +459,13 @@ from pathlib import Path
 from accim.sim import accis
 from accim.utils import reduce_runtime
 from besos.eppy_funcs import get_building
-accis.addAccis(
-    ScriptType='vrf_ac', SupplyAirTempInputMethod='temperature difference', Output_type='simplified',
-    Output_freqs=['hourly'], Output_keep_existing=False, EnergyPlus_version='auto', TempCtrl='temperature',
-    ComfStand=[99], CAT=[80], ComfMod=[3], HVACmode=[0],
-    CustAST_m=0.31, CustAST_n=17.8, CustAST_ACSToffset=3.5, CustAST_AHSToffset=-3.5,
-    CustAST_ACSTaul=33.5, CustAST_ACSTall=10, CustAST_AHSTaul=33.5, CustAST_AHSTall=10,
-    confirmGen=True, verboseMode=False,
+accis.AddAccis(
+    script_type='vrf_ac', supply_air_temp_input_method='temperature difference', output_type='simplified',
+    output_freqs=['hourly'], output_keep_existing=False, energyplus_version='auto', temp_ctrl='temperature',
+    comf_stand=[99], cat=[80], comf_mod=[3], hvac_mode=[0],
+    cust_ast_m=0.31, cust_ast_n=17.8, cust_ast_acst_offset=3.5, cust_ast_ahst_offset=-3.5,
+    cust_ast_acst_aul=33.5, cust_ast_acst_all=10, cust_ast_ahst_aul=33.5, cust_ast_ahst_all=10,
+    confirm_gen=True, verbose_mode=False,
 )
 output_idf = [p for p in Path('.').glob('TestModel[[]*.idf')][0]
 building = get_building(str(output_idf))
@@ -490,17 +523,17 @@ _ADDACCIS_PEOPLE_AND_INSTANCES_SCRIPT = _PEOPLE_AND_INSTANCES_SCRIPT + """
 from accim.sim import accis
 for folder in ['people', 'instances']:
     os.chdir(root / folder)
-    accis.addAccis(
-        ScriptType='vrf_mm', SupplyAirTempInputMethod='temperature difference', Output_type='standard',
-        Output_freqs=['hourly'], Output_keep_existing=False, EnergyPlus_version='auto', TempCtrl='temperature',
-        ComfStand=[1], CAT=[3], ComfMod=[3], HVACmode=[2], VentCtrl=[0], confirmGen=True, verboseMode=False,
+    accis.AddAccis(
+        script_type='vrf_mm', supply_air_temp_input_method='temperature difference', output_type='standard',
+        output_freqs=['hourly'], output_keep_existing=False, energyplus_version='auto', temp_ctrl='temperature',
+        comf_stand=[1], cat=[3], comf_mod=[3], hvac_mode=[2], vent_ctrl=[0], confirm_gen=True, verbose_mode=False,
     )
     output_idf = [p for p in Path('.').glob('TestModel[[]*.idf')][0]
     simulate_1_summer_day(get_building(str(output_idf)))
 """
 
 _APMV_PEOPLE_AND_INSTANCES_SCRIPT = _PEOPLE_AND_INSTANCES_SCRIPT + """
-from accim.sim.apmv_setpoints import add_vrf_system, apply_apmv_setpoints, set_pmv_input_parameters
+from accim.sim.apmv import add_vrf_system, apply_apmv_setpoints, set_pmv_input_parameters
 for folder in ['people', 'instances']:
     os.chdir(root / folder)
     building = get_building('TestModel.idf')
@@ -547,7 +580,8 @@ def _hourly_results(folder):
 
 @needs_26_2
 def test_people_instances_simulate_as_people_with_addaccis_and_26_2(idf_26_2, tmp_path):
-    # Before, addAccis stopped in scan_zones with a ValueError for the model with People:Instance objects
+    # Before, addAccis stopped in scan_zones (now AccimModel) with a ValueError for the model with People:Instance
+    # objects
     _people_and_instances_folders(idf_26_2, tmp_path)
 
     _run_in_new_process(_ADDACCIS_PEOPLE_AND_INSTANCES_SCRIPT, tmp_path)
@@ -566,7 +600,8 @@ def test_people_instances_simulate_as_people_with_addaccis_and_26_2(idf_26_2, tm
 
 @needs_26_2
 def test_people_instances_simulate_as_people_with_apmv_setpoints_and_26_2(idf_26_2, tmp_path):
-    # Before, add_vrf_system stopped in scan_zones with a ValueError for the model with People:Instance objects
+    # Before, add_vrf_system stopped in scan_zones (now AccimModel) with a ValueError for the model with
+    # People:Instance objects
     _people_and_instances_folders(idf_26_2, tmp_path)
 
     _run_in_new_process(_APMV_PEOPLE_AND_INSTANCES_SCRIPT, tmp_path)
@@ -655,15 +690,15 @@ building.saveas('SpaceList.idf')
 os.remove('TestModel.idf')
 
 from accim.sim import accis
-accis.addAccis(
-    ScriptType='vrf_ac', SupplyAirTempInputMethod='supply air temperature', Output_type='standard',
-    Output_freqs=['hourly'], Output_keep_existing=False, EnergyPlus_version='auto', TempCtrl='temperature',
-    ComfStand=[1], CAT=[3], ComfMod=[3], HVACmode=[0], confirmGen=True, verboseMode=False,
+accis.AddAccis(
+    script_type='vrf_ac', supply_air_temp_input_method='supply air temperature', output_type='standard',
+    output_freqs=['hourly'], output_keep_existing=False, energyplus_version='auto', temp_ctrl='temperature',
+    comf_stand=[1], cat=[3], comf_mod=[3], hvac_mode=[0], confirm_gen=True, verbose_mode=False,
 )
 for output_idf in sorted(Path('.').glob('*[[]*.idf')):
     simulate_1_day(get_building(str(output_idf)), output_idf.name.split('[')[0])
 
-from accim.sim.apmv_setpoints import add_vrf_system, apply_apmv_setpoints
+from accim.sim.apmv import add_vrf_system, apply_apmv_setpoints
 building = get_building('ZoneOfTwoSpaces.idf')
 add_vrf_system(building, verbose_mode=False)
 apply_apmv_setpoints(building, outputs_freq=['hourly'], verbose_mode=False)

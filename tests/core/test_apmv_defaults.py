@@ -1,10 +1,10 @@
-"""Tests for the default values of accim.sim.apmv_setpoints.apply_apmv_setpoints.
+"""Tests for the default values of accim.sim.apmv.apply_apmv_setpoints (accim.sim.apmv_setpoints in accim 0.x).
 
 Before, the defaults were pmv_cooling_sp=-0.5 and pmv_heating_sp=0.5, the opposite of the
 docstring and of the defaults for missing dictionary keys (dflt_for_pmv_cooling_sp=0.5 and
 dflt_for_pmv_heating_sp=-0.5). Since the EMS takes them as aPMV setpoints, both PMV setpoints of
 the thermostat ended up at 0. The cooling season went from day 120 to day 210 (30 April to
-29 July); now it goes from 1 May to 1 October, as CoolSeasonStart and CoolSeasonEnd in addAccis.
+29 July); now it goes from 1 May to 1 October, as cool_season_start and cool_season_end in AddAccis.
 """
 import inspect
 import shutil
@@ -12,7 +12,7 @@ from pathlib import Path
 
 import pytest
 
-from accim.sim.apmv_setpoints import apply_apmv_setpoints
+from accim.sim.apmv import apply_apmv_setpoints
 
 REPO = Path(__file__).resolve().parents[2]
 SAMPLE_IDF = (REPO / 'accim' / 'sample_files' / 'jupyter_notebooks' / 'parametric_and_optimisation_examples'

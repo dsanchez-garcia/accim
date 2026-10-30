@@ -32,7 +32,7 @@ import besos.eppy_funcs
 import pytest
 
 from accim.data.postprocessing.main import Table
-from accim.sim.apmv_setpoints import _resolve_targets, _sanitize_ems_name
+from accim.sim.targets import resolve_targets, sanitize_ems_name
 
 
 class _Obj(SimpleNamespace):
@@ -103,7 +103,7 @@ def _model_without_spaces(zones, hierarchy=None):
         building=_FakeIDF(*[obj for zone in zones for obj in _zone(zone)],
                           *[_Obj(key='PEOPLE', Name=f'People {zone}', Zone_or_ZoneList_or_Space_or_SpaceList_Name=zone)
                             for zone in zones]),
-        ems_suffixes=[_sanitize_ems_name(zone) for zone in zones],
+        ems_suffixes=[sanitize_ems_name(zone) for zone in zones],
         hierarchy=hierarchy,
         zone_names=[f'{block.upper()}:{zone.upper()}' for block, block_zones in hierarchy.items()
                     for zone in block_zones] if hierarchy else zones,
@@ -132,16 +132,16 @@ CSV_NAME = 'Model[CS_INT EN16798[CA_3[CM_3[HM_0[VC_X[VO_X[MT_X[MW_X[AT_0.1[NS_X[
 def _outputs(building, ems_suffixes):
     """The columns of the CSV file: the EMS outputs of each target, and the outputs of each zone and instance."""
     columns = {'Environment:Site Outdoor Air Drybulb Temperature [C](Hourly)': [10.0, 11.0]}
-    for target, suffix, values in zip(_resolve_targets(building), ems_suffixes, ZONE_VALUES):
+    for target, suffix, values in zip(resolve_targets(building), ems_suffixes, ZONE_VALUES):
         # The test data have the names of accim
-        assert target['ems_suffix'] == suffix
-        zone = target['zone_name'].upper()
+        assert target.ems_suffix == suffix
+        zone = target.zone_name.upper()
         columns.update({
             f'EMS:Comfortable Hours_No Applicability_{suffix} [H](Hourly)': values['comfortable'],
             f'EMS:Zone Floor Area_{suffix} [m2](Hourly)': [values['area']] * 2,
             f'EMS:Zone Air Volume_{suffix} [m3](Hourly)': [values['volume']] * 2,
             f'{zone}:Zone Operative Temperature [C](Hourly)': values['temperature'],
-            f'{target["sensor_key"].upper()}:Zone Thermal Comfort CEN 15251 Adaptive Model Running Average Outdoor '
+            f'{target.sensor_key.upper()}:Zone Thermal Comfort CEN 15251 Adaptive Model Running Average Outdoor '
             f'Air Temperature [C](Hourly)': [20.0, 21.0],
             f'{zone} VRF INDOOR UNIT DX COOLING COIL:Cooling Coil Total Cooling Rate [W](Hourly)': values['cooling'],
             f'{zone} VRF INDOOR UNIT DX HEATING COIL:Heating Coil Heating Rate [W](Hourly)': values['heating'],

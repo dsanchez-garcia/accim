@@ -14,8 +14,9 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-import os
 from typing import Union
+
+from accim._deprecation import accepts_legacy_kwargs
 
 
 def _share_y_axis(reference_ax, ax):
@@ -87,7 +88,7 @@ def _replace_names(columns, replacements: dict, names=()) -> list:
 def _occupied_zones(building, columns: list, spacelists: bool):
     """
     Find the occupied zones of a model and the names Table gives them, from the targets of the EMS of accim
-    (one per occupied zone, see accim.sim.apmv_setpoints._resolve_targets), and the columns of the outputs of
+    (one per occupied zone, see accim.sim.targets.resolve_targets), and the columns of the outputs of
     the occupants and of the EMS outputs to rename, so that Table finds them with the name of their zone.
 
     A zone is named after its space if it has one occupant instance, placed through a SpaceList named like the
@@ -111,14 +112,13 @@ def _occupied_zones(building, columns: list, spacelists: bool):
         renames the zones after their spaces, and a dictionary {column: new name of the column}.
     """
     import warnings
-    # Imported here, as in accim.sim.utils.scan_zones
-    from accim.sim.apmv_setpoints import _resolve_targets, _sanitize_ems_name
-    from accim.utils import get_energyplus_spaces, get_people_instances, get_people_objects
+    from accim.sim.targets import resolve_targets, sanitize_ems_name as _sanitize_ems_name
+    from accim.utils.people import get_energyplus_spaces, get_people_instances, get_people_objects
 
     with warnings.catch_warnings():
         # The warning about remainder spaces is for addAccis
         warnings.simplefilter('ignore')
-        targets = _resolve_targets(building)
+        targets = [target.as_dict() for target in resolve_targets(building)]
     instances = {i['name'].upper(): i for i in get_people_instances(building)}
     zones = get_energyplus_spaces(building)
     spaces = list(building.idfobjects['SPACE']) if spacelists else []
@@ -281,10 +281,11 @@ class Table:
         If True, energy units will be in kWh or kWh/m2,
         otherwise these will be in Wh or Wh/m2.
     :type energy_units_in_kwh: bool
-    :param name_export_rows_with_NaN: This parameter shouldn't be generally used.
+    :param name_export_rows_with_nan: This parameter shouldn't be generally used.
         A string used as a name to export a xlsx file with the rows with NaNs.
         Used only to check the rows with NANs.
-    :type name_export_rows_with_NaN: str
+        (Its name was name_export_rows_with_NaN before accim 1.0.0.)
+    :type name_export_rows_with_nan: str
     :param name_export_rows_not_corr_agg: This parameter shouldn't be generally used.
         A string used as a name to export a xlsx file with the rows not correctly aggregated.
         Used only to check the aggregations are correct.
@@ -307,6 +308,7 @@ class Table:
         method ``wrangled_table`` with ``reshaping='pivot'``
     """
 
+    @accepts_legacy_kwargs({'name_export_rows_with_NaN': 'name_export_rows_with_nan'})
     def __init__(
         self,
         datasets: list = None,
@@ -327,7 +329,7 @@ class Table:
         rename_cols: bool = True,
         energy_units_in_kwh: bool = True,
         drop_nan: bool = False,
-        name_export_rows_with_NaN: str = None,
+        name_export_rows_with_nan: str = None,
         name_export_rows_not_corr_agg: str = None,
     ):
         """
@@ -344,13 +346,8 @@ class Table:
         # if custom_cols is None:
         #     custom_cols = []
 
-        import os
         import pandas as pd
-        from pathlib import Path
-        import datapackage
         import glob
-        import numpy as np
-        import csv
         from besos.eppy_funcs import get_building
 
         self.frequency = frequency
@@ -710,8 +707,8 @@ class Table:
         if len(rows_with_NaN) > 0:
             print('Please bear in mind if you are using CSVs with multiple frequencies, you will get NaNs. The following rows have NaN values:')
             print(rows_with_NaN)
-            if name_export_rows_with_NaN is not None:
-                rows_with_NaN.to_excel(f'{name_export_rows_with_NaN}[source_freq-{source_frequency}[freq-{frequency}[Rows_with_NaNs.xlsx')
+            if name_export_rows_with_nan is not None:
+                rows_with_NaN.to_excel(f'{name_export_rows_with_nan}[source_freq-{source_frequency}[freq-{frequency}[Rows_with_NaNs.xlsx')
 
         if self.frequency == 'hourly':
             not_correct_agg = df[df['count'] != 1]
@@ -2406,8 +2403,6 @@ class Table:
         :param rows_renaming_dict: A dictionary. Should follow the pattern {'old row name 1': 'new row name 1', 'old row name 2': 'new row name 2'}
         :param cols_renaming_dict: A dictionary. Should follow the pattern {'old col name 1': 'new col name 1', 'old col name 2': 'new col name 2'}
         """
-        import matplotlib.pyplot as plt
-        import matplotlib.lines as lines
         import copy
 
         if vars_to_gather_cols is None:
@@ -2541,7 +2536,7 @@ class Table:
 
         if len(data_on_y_axis_baseline_plot) > 0:
             if baseline is None:
-                print(f'No baseline has been specified. The list of available baselines is:')
+                print('No baseline has been specified. The list of available baselines is:')
                 print(all_cols)
                 baseline = input('Please choose one from the list above (it is case-sensitive) for baseline:')
 
@@ -2728,9 +2723,9 @@ class Table:
             self.y_list_sec.append(temp_row)
 
 
-        print(f'The number of rows and the list of these is going to be:')
+        print('The number of rows and the list of these is going to be:')
         print(f'No. of rows = {len(rows)}')
-        print(f'List of rows:')
+        print('List of rows:')
         print(*rows, sep='\n')
 
         self.rename_rows = 'n'
@@ -2742,7 +2737,7 @@ class Table:
                     for j in rows_renaming_dict:
                         if i == j:
                             self.rows_new_names.append(rows_renaming_dict[j])
-                print(f'The renamed rows are going to be:')
+                print('The renamed rows are going to be:')
                 print(*self.rows_new_names, sep='\n')
                 self.rename_rows = 'y'
         except TypeError:
@@ -2763,7 +2758,7 @@ class Table:
             for i in rows:
                 new_name = input(f'Please enter the new name for {i}: ')
                 self.rows_new_names.append(new_name)
-            print(f'The renamed rows are going to be:')
+            print('The renamed rows are going to be:')
             print(*self.rows_new_names, sep='\n')
             self.rename_rows = 'y'
 
@@ -2776,9 +2771,9 @@ class Table:
         #                 new_name = input(f'Please enter the new name for {i}: ')
         #                 self.rows_new_names.append(new_name)
 
-        print(f'The number of columns and the list of these is going to be:')
+        print('The number of columns and the list of these is going to be:')
         print(f'No. of columns = {len(cols)}')
-        print(f'List of columns:')
+        print('List of columns:')
         print(*cols, sep='\n')
 
         self.rename_cols = 'n'
@@ -2790,7 +2785,7 @@ class Table:
                     for j in cols_renaming_dict:
                         if i == j:
                             self.cols_new_names.append(cols_renaming_dict[j])
-                print(f'The renamed columns are going to be:')
+                print('The renamed columns are going to be:')
                 print(*self.cols_new_names, sep='\n')
                 self.rename_cols = 'y'
         except TypeError:
@@ -2812,7 +2807,7 @@ class Table:
             for i in cols:
                 new_name = input(f'Please enter the new name for {i}: ')
                 self.cols_new_names.append(new_name)
-            print(f'The renamed columns are going to be:')
+            print('The renamed columns are going to be:')
             print(*self.cols_new_names, sep='\n')
             self.rename_cols = 'y'
 
@@ -2943,7 +2938,6 @@ class Table:
             Must be greater than best_fit_linewidth.
         :type best_fit_background_linewidth: float
         """
-        import numpy as np
         import matplotlib.pyplot as plt
         import matplotlib.patheffects as pe
         from sklearn.linear_model import LinearRegression
@@ -3951,7 +3945,6 @@ class Table:
         :param set_facecolor: Usage is similar to matplotlib.axes.Axes.set_facecolor
         :type set_facecolor: any
         """
-        import numpy as np
         import matplotlib.pyplot as plt
         import pandas as pd
         import datetime

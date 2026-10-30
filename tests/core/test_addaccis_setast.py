@@ -1,14 +1,15 @@
-"""Tests for the EMS program SetAST of the output IDFs when addAccis generates several of them.
+"""Tests for the EMS program SetAST of the output IDFs when AddAccis (addAccis in accim 0.x) generates
+several of them.
 
-All output IDFs of an input IDF are saved from the same IDF object. Since the base SetAST has 4
-lines (SetpointAcc, m, n and 'run SetAST_Master'), before, genIDF kept 16 lines of the previous
-output IDF (len(obj) > 18) in the branches that append the lines of the comfort model, so the
-second and later output IDFs had lines of the previous one. When the cut fell inside an if block,
-EnergyPlus stopped ("Missing an ENDIF"). Now each output IDF has the 4 base lines followed by the
-lines of its comfort model. ComfStand 0 has no ComfMod loop, so when it was the only standard,
-genIDF stopped with UnboundLocalError ('ComfMod_value'); its lines do not depend on ComfMod.
+All output IDFs of an input IDF are written from the same model. Since the base SetAST has 4 lines
+(SetpointAcc, m, n and 'run SetAST_Master'), before, genIDF kept 16 lines of the previous output IDF
+(len(obj) > 18) in the branches that append the lines of the comfort model, so the second and later
+output IDFs had lines of the previous one. When the cut fell inside an if block, EnergyPlus stopped
+("Missing an ENDIF"). Now each output IDF has the 4 base lines followed by the lines of its comfort
+model. ComfStand 0 has no ComfMod loop, so when it was the only standard, genIDF stopped with
+UnboundLocalError ('ComfMod_value'); its lines do not depend on ComfMod.
 
-With TempCtrl='pmv' the output IDF has no comfort model (the Fanger thermostat controls the zones),
+With temp_ctrl='pmv' the output IDF has no comfort model (the Fanger thermostat controls the zones),
 so SetAST keeps only its 4 base lines. Before, genIDF stopped with UnboundLocalError, because its
 PMV branch appended the lines of a comfort model with variables of the loops of the temperature branch.
 """
@@ -19,7 +20,7 @@ from pathlib import Path
 import pytest
 
 from accim.sim import accis
-from accim.sim.setAST_models import get_SetAST_lines
+from accim.sim.ems.setast import get_setpoint_lines
 
 REPO = Path(__file__).resolve().parents[2]
 SAMPLE_IDF = (REPO / 'accim' / 'sample_files' / 'sample IDFs' / 'input_IDFs'
@@ -41,35 +42,36 @@ def _setast_lines(idf_path):
 
 @pytest.mark.skipif(not (IDD_25_1.exists() and SAMPLE_IDF.exists()),
                     reason='needs EnergyPlus 25.1 and the sample IDF of the repository')
-@pytest.mark.parametrize('ScriptType, extra_args, n_idfs', [
+@pytest.mark.parametrize('script_type, extra_args, n_idfs', [
     # Fully air-conditioned: the branches that appended the lines of the comfort model
-    ('vrf_ac', dict(ComfStand=[2, 7], CAT=[80], ComfMod=[0, 3], HVACmode=[0]), 4),
+    ('vrf_ac', dict(comf_stand=[2, 7], cat=[80], comf_mod=[0, 3], hvac_mode=[0]), 4),
     # Mixed mode: the branches that wrote them from Program_Line_17
-    ('vrf_mm', dict(ComfStand=[2], CAT=[80], ComfMod=[0, 3], HVACmode=[2], VentCtrl=[0]), 2),
+    ('vrf_mm', dict(comf_stand=[2], cat=[80], comf_mod=[0, 3], hvac_mode=[2], vent_ctrl=[0]), 2),
     # ComfStand 0 as the only standard, in both branches of ComfStand 0
-    ('vrf_ac', dict(ComfStand=[0], CAT=[1], ComfMod=[0], HVACmode=[0]), 1),
-    ('vrf_mm', dict(ComfStand=[0], CAT=[1], ComfMod=[0], HVACmode=[2], VentCtrl=[0]), 1),
+    ('vrf_ac', dict(comf_stand=[0], cat=[1], comf_mod=[0], hvac_mode=[0]), 1),
+    ('vrf_mm', dict(comf_stand=[0], cat=[1], comf_mod=[0], hvac_mode=[2], vent_ctrl=[0]), 1),
 ])
-def test_each_output_idf_has_the_setast_lines_of_its_comfort_model(tmp_path, monkeypatch, ScriptType,
+def test_each_output_idf_has_the_setast_lines_of_its_comfort_model(tmp_path, monkeypatch, script_type,
                                                                     extra_args, n_idfs):
     shutil.copy(SAMPLE_IDF, tmp_path / 'TestModel.idf')
     monkeypatch.chdir(tmp_path)
 
-    accis.addAccis(
-        ScriptType=ScriptType,
-        SupplyAirTempInputMethod='temperature difference',
-        Output_type='simplified',
-        Output_freqs=['hourly'],
-        Output_keep_existing=False,
-        EnergyPlus_version='auto',
-        TempCtrl='temperature',
-        confirmGen=True,
-        verboseMode=False,
+    job = accis.AddAccis(
+        script_type=script_type,
+        supply_air_temp_input_method='temperature difference',
+        output_type='simplified',
+        output_freqs=['hourly'],
+        output_keep_existing=False,
+        energyplus_version='auto',
+        temp_ctrl='temperature',
+        confirm_gen=True,
+        verbose_mode=False,
         **extra_args,
     )
 
     output_idfs = sorted(tmp_path.glob('TestModel[[]*.idf'))
     assert len(output_idfs) == n_idfs
+    assert sorted(job.output_idfs) == [p.name for p in output_idfs]
     for idf_path in output_idfs:
         comfstand = COMFSTAND_NAMES[re.search(r'\[CS_([^\[]+)', idf_path.name).group(1)]
         comfmod = re.search(r'\[CM_([^\[]+)', idf_path.name).group(1)
@@ -78,7 +80,7 @@ def test_each_output_idf_has_the_setast_lines_of_its_comfort_model(tmp_path, mon
         lines = _setast_lines(idf_path)
 
         assert lines[3] == 'run SetAST_Master', idf_path.name
-        assert lines[4:] == get_SetAST_lines(comfstand, comfmod), idf_path.name
+        assert lines[4:] == get_setpoint_lines(comfstand, comfmod), idf_path.name
         assert sum(re.match(r'if\b', l) is not None for l in lines) == \
                sum(re.match(r'endif\b', l) is not None for l in lines), idf_path.name
 
@@ -89,20 +91,20 @@ def test_pmv_output_idf_has_only_the_base_lines_of_setast(tmp_path, monkeypatch)
     shutil.copy(SAMPLE_IDF, tmp_path / 'TestModel.idf')
     monkeypatch.chdir(tmp_path)
 
-    accis.addAccis(
-        ScriptType='vrf_ac',
-        SupplyAirTempInputMethod='temperature difference',
-        Output_type='standard',
-        Output_freqs=['hourly'],
-        Output_keep_existing=False,
-        EnergyPlus_version='auto',
-        TempCtrl='pmv',
-        ComfStand=[1],
-        CAT=[3],
-        ComfMod=[3],
-        HVACmode=[0],
-        confirmGen=True,
-        verboseMode=False,
+    accis.AddAccis(
+        script_type='vrf_ac',
+        supply_air_temp_input_method='temperature difference',
+        output_type='standard',
+        output_freqs=['hourly'],
+        output_keep_existing=False,
+        energyplus_version='auto',
+        temp_ctrl='pmv',
+        comf_stand=[1],
+        cat=[3],
+        comf_mod=[3],
+        hvac_mode=[0],
+        confirm_gen=True,
+        verbose_mode=False,
     )
 
     output_idfs = sorted(tmp_path.glob('TestModel[[]*.idf'))

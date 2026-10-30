@@ -1,18 +1,6 @@
 # accim - Adaptive-Comfort-Control-Implemented Model
-# Copyright (C) 2021-2025 Daniel Sánchez-García
-
-# accim is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# any later version.
-
-# accim is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-# GNU General Public License for more details.
-
-# You should have received a copy of the GNU General Public License
-# along with this program. If not, see <https://www.gnu.org/licenses/>.
+# Copyright (C) 2021-2026 Daniel Sánchez-García
+# Distributed under the GNU General Public License v3 or later.
 
 """
 Multi-strategy resolver that maps existing HVAC object names to zone names.
@@ -427,7 +415,7 @@ def resolve_hvac_zone_map(
     hvac_type: str,
     hvac_obj_names: List[str],
     user_map: Optional[Dict] = None,
-    verboseMode: bool = True,
+    verbose_mode: bool = True,
 ) -> Dict[str, List[str]]:
     """
     Map each HVAC object name in *hvac_obj_names* to one or more zone names.
@@ -447,7 +435,7 @@ def resolve_hvac_zone_map(
     user_map : dict or None
         Optional override.  Format: ``{'HVAC Object Name': 'Zone Name'}``.
         May also map to a list of zone names for multi-zone explicit mappings.
-    verboseMode : bool
+    verbose_mode : bool
         If True, print the strategy used for each object.
 
     Returns
@@ -498,7 +486,7 @@ def resolve_hvac_zone_map(
             zones = _strategy_d(obj_name)
             strategy_label = 'D (legacy name-parsing fallback)'
 
-        if verboseMode:
+        if verbose_mode:
             print(
                 f"  ExistingHVAC resolver: '{obj_name}' "
                 f"-> {zones}  [Strategy {strategy_label}]"

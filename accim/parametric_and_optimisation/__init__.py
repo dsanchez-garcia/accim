@@ -54,7 +54,12 @@ explains each step. Usage Examples::
     classes for improved code organization and clarity.
 """
 
-from .main import (
+# besos does not support yet some versions of Python, dask and platypus
+from accim._besos_compat import apply_besos_patches
+
+apply_besos_patches()
+
+from .main import (  # noqa: E402
     ParametricSimulation,
     OptimisationSimulation,
     AccimPredefModelsParamSim,
@@ -65,7 +70,7 @@ from .main import (
     compare_multiple_pickles_with_reference,
     preflight_report,
 )
-from .hourly_plotting import (
+from .hourly_plotting import (  # noqa: E402
     HourlyPlottingMixin,
     adaptive_comfort_band,
     comfort_categories,

@@ -204,8 +204,6 @@ class rename_epw_files:
         """
         import glob
         import pandas as pd
-        import datapackage
-        import numpy as np
         import os
         # from geopy.exc import GeocoderUnavailable
         # from geopy.geocoders import Nominatim

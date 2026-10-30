@@ -27,9 +27,9 @@ from types import SimpleNamespace
 
 import pytest
 
-from accim.sim.accim_Base_EMS import addEMSSensorsBase
-from accim.sim.apmv_setpoints import _resolve_targets, apply_apmv_setpoints, set_pmv_input_parameters
-from accim.sim.utils import scan_zones
+from accim.sim.apmv import _resolve_targets, apply_apmv_setpoints, set_pmv_input_parameters
+from accim.sim.ems.objects import add_sensors
+from accim.sim.model import AccimModel
 from accim.utils import get_idf_hierarchy_with_people, get_people_hierarchy, get_people_names_for_ems
 
 
@@ -310,27 +310,28 @@ def test_set_pmv_input_parameters_reaches_people_of_a_zone_of_one_space():
     assert zone2.Work_Efficiency_Schedule_Name == 'Sch_Eff_People_Block1_Zone2'
 
 
-def test_scan_zones_gives_the_occupancy_sensors():
-    job = SimpleNamespace(idf1=_model(*TWO_SPACES_IN_ZONE_1, _people('People Block1:Zone1', 'Block1:Zone1'),
-                                      _people('People Block1:Zone2', 'Block1:Zone2')))
+def _accim_model_of_two_spaces_in_zone_1():
+    idf = _model(*TWO_SPACES_IN_ZONE_1, _people('People Block1:Zone1', 'Block1:Zone1'),
+                 _people('People Block1:Zone2', 'Block1:Zone2'))
+    return AccimModel(idf, 'vrf_ac', 'temperature', verbose_mode=False)
 
-    scan_zones(job)
 
-    assert job.ems_objs_name == ['Block1_Zone1', 'Space_2_People_Block1_Zone2']
-    assert job.ems_objs_key == ['Space 1a People Block1:Zone1', 'People Block1:Zone2']
-    assert job.ems_occupancy_keys == ['Block1:Zone1', 'People Block1:Zone2']
-    assert job.ems_occupancy_variables == ['Zone People Occupant Count', 'People Occupant Count']
+def test_accim_model_gives_the_occupancy_sensors():
+    model = _accim_model_of_two_spaces_in_zone_1()
+
+    assert model.ems_names == ['Block1_Zone1', 'Space_2_People_Block1_Zone2']
+    assert model.ems_keys == ['Space 1a People Block1:Zone1', 'People Block1:Zone2']
+    assert model.occupancy_keys == ['Block1:Zone1', 'People Block1:Zone2']
+    assert model.occupancy_variables == ['Zone People Occupant Count', 'People Occupant Count']
 
 
 def test_addaccis_occupancy_sensors_of_a_zone_with_several_instances():
-    job = SimpleNamespace(idf1=_model(*TWO_SPACES_IN_ZONE_1, _people('People Block1:Zone1', 'Block1:Zone1'),
-                                      _people('People Block1:Zone2', 'Block1:Zone2')))
-    scan_zones(job)
+    model = _accim_model_of_two_spaces_in_zone_1()
 
-    addEMSSensorsBase(job, ScriptType='vrf_ac', verboseMode=False)
+    add_sensors(model)
 
     sensors = {s.Name: (s.OutputVariable_or_OutputMeter_Index_Key_Name, s.OutputVariable_or_OutputMeter_Name)
-               for s in job.idf1.idfobjects['EnergyManagementSystem:Sensor']}
+               for s in model.idf.idfobjects['EnergyManagementSystem:Sensor']}
     assert sensors['Occ_count_Block1_Zone1'] == ('Block1:Zone1', 'Zone People Occupant Count')
     assert sensors['Occ_count_Space_2_People_Block1_Zone2'] == ('People Block1:Zone2', 'People Occupant Count')
     # The running mean outdoor temperatures are read from the first instance

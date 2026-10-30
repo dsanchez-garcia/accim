@@ -6,10 +6,10 @@ heat gain fractions and thermal comfort models), instead of a People object. Ene
 outputs of the instances after the People:Instance object, with the same rules as for People
 objects, never after the People:Definition object.
 
-Before, accim only read People objects: scan_zones stopped with a ValueError when the model only had
-People:Instance objects, setComfFieldsPeople stopped with an UnboundLocalError without People objects,
-and _resolve_targets, the aPMV functions and the hierarchy functions of accim.utils ignored the
-People:Instance objects. The tests with EnergyPlus 26.2 are in test_energyplus_versions.py, and the
+Before, accim only read People objects: scan_zones (now AccimModel) stopped with a ValueError when the
+model only had People:Instance objects, setComfFieldsPeople (now set_comfort_models) stopped with an
+UnboundLocalError without People objects, and _resolve_targets, the aPMV functions and the hierarchy
+functions of accim.utils ignored the People:Instance objects. The tests with EnergyPlus 26.2 are in test_energyplus_versions.py, and the
 test of the occupied floor area of the parametric module in
 tests/parametric_and_optimisation/test_analysis_floor_area.py.
 """
@@ -17,10 +17,10 @@ from types import SimpleNamespace
 
 import pytest
 
-from accim.sim.accim_Base import setComfFieldsPeople
-from accim.sim.apmv_setpoints import (_resolve_targets, get_available_target_names, set_pmv_input_parameters,
-                                      set_zones_always_occupied)
-from accim.sim.utils import scan_zones
+from accim.sim.apmv import (_resolve_targets, get_available_target_names, set_pmv_input_parameters,
+                            set_zones_always_occupied)
+from accim.sim.model import AccimModel
+from accim.sim.people import set_comfort_models
 from accim.utils import (get_idf_hierarchy_with_people, get_people_definition, get_people_hierarchy,
                          get_people_objects, is_people_instance, set_occupancy_to_always)
 
@@ -158,27 +158,30 @@ def test_resolve_targets_expands_a_people_instance_of_a_zone_list():
     assert get_available_target_names(idf) == ['Block1:Zone1 Office Occupants', 'Block1:Zone2 Office Occupants']
 
 
-def test_scan_zones_reads_people_instance_objects():
-    job = SimpleNamespace(idf1=_two_zone_model())
-
-    scan_zones(job)
-
-    assert sorted(job.occupiedZones_orig) == ['Block1:Zone1', 'Block1:Zone2']
-    assert job.ems_objs_name == ['Block1_Zone1', 'Block1_Zone2']
-    assert job.ems_objs_key == ['People Block1:Zone1', 'People Block1:Zone2']
-    assert job.ems_zonenames == ['Block1:Zone1', 'Block1:Zone2']
+def _model(idf, temp_ctrl='temperature'):
+    """The model of set_comfort_models: the IDF, the temperature control and the messages."""
+    return SimpleNamespace(idf=idf, temp_ctrl=temp_ctrl, log=lambda *lines: None)
 
 
-def test_scan_zones_rejects_models_without_people_or_people_instances():
+def test_accim_model_reads_people_instance_objects():
+    model = AccimModel(_two_zone_model(), 'vrf_ac', 'temperature', verbose_mode=False)
+
+    assert sorted(model.occupied_zones_orig) == ['Block1:Zone1', 'Block1:Zone2']
+    assert model.ems_names == ['Block1_Zone1', 'Block1_Zone2']
+    assert model.ems_keys == ['People Block1:Zone1', 'People Block1:Zone2']
+    assert model.ems_zones == ['Block1:Zone1', 'Block1:Zone2']
+
+
+def test_accim_model_rejects_models_without_people_or_people_instances():
     idf = _FakeIDF([_zone('Block1:Zone1'), _definition('Office Definition')])
 
     with pytest.raises(ValueError, match='The model has no People objects or People:Instance objects'):
-        scan_zones(SimpleNamespace(idf1=idf))
+        AccimModel(idf, 'vrf_ac', 'temperature', verbose_mode=False)
 
 
-@pytest.mark.parametrize('TempCtrl, model_3', [('temperature', ''), ('pmv', 'Fanger')])
-def test_setcomffieldspeople_sets_the_comfort_models_in_the_people_definitions(TempCtrl, model_3):
-    # Models 4 to 7 are emptied, as in the People objects that setComfFieldsPeople creates again
+@pytest.mark.parametrize('temp_ctrl, model_3', [('temperature', ''), ('pmv', 'Fanger')])
+def test_set_comfort_models_sets_the_comfort_models_in_the_people_definitions(temp_ctrl, model_3):
+    # Models 4 to 7 are emptied, as in the People objects
     shared = _definition('Office Definition', Thermal_Comfort_Model_4_Type='Pierce', Thermal_Comfort_Model_7_Type='KSU')
     unused = _definition('Unused Definition', Thermal_Comfort_Model_1_Type='KSU')
     idf = _FakeIDF([
@@ -187,7 +190,7 @@ def test_setcomffieldspeople_sets_the_comfort_models_in_the_people_definitions(T
         _instance('People Block1:Zone2', 'OFFICE DEFINITION', 'Block1:Zone2'),
     ])
 
-    setComfFieldsPeople(SimpleNamespace(idf1=idf), TempCtrl=TempCtrl, verboseMode=False)
+    set_comfort_models(_model(idf, temp_ctrl))
 
     assert [getattr(shared, f) for f in COMFORT_MODEL_FIELDS] == [
         'AdaptiveASH55', 'AdaptiveCEN15251', model_3, '', '', '', '']
@@ -196,11 +199,11 @@ def test_setcomffieldspeople_sets_the_comfort_models_in_the_people_definitions(T
     assert len(idf.idfobjects['PEOPLE:INSTANCE']) == 2
 
 
-def test_setcomffieldspeople_rejects_a_missing_people_definition():
+def test_set_comfort_models_rejects_a_missing_people_definition():
     idf = _FakeIDF([_instance('People Block1:Zone1', 'Missing Definition', 'Block1:Zone1')])
 
     with pytest.raises(ValueError, match='references the People:Definition object "Missing Definition"'):
-        setComfFieldsPeople(SimpleNamespace(idf1=idf), TempCtrl='temperature', verboseMode=False)
+        set_comfort_models(_model(idf))
 
 
 def test_set_pmv_input_parameters_changes_the_people_instances_and_their_definitions():

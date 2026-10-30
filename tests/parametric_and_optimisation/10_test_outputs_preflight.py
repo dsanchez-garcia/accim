@@ -96,10 +96,10 @@ def test_simulationbase_init_forwards_explicit_addaccis_kwargs(monkeypatch):
 
     captured_calls = []
 
-    def fake_addaccis(**kwargs):
+    def fake_add_accis_to_idf(idf, **kwargs):
         captured_calls.append(kwargs)
 
-    monkeypatch.setattr(main_module.accis, 'addAccis', fake_addaccis)
+    monkeypatch.setattr(main_module.accis, 'add_accis_to_idf', fake_add_accis_to_idf)
 
     buildings = ts.prepare_buildings(ts.TEST_CATEGORIES['fast']['idfs'])
     ts.ParametricSimulation(
@@ -121,21 +121,15 @@ def test_simulationbase_init_forwards_addaccis_defaults(monkeypatch):
     ts.print_section('TEST: addAccis passthrough defaults')
 
     captured_calls = []
-    addaccis_sig = inspect.signature(main_module.accis.addAccis)
+    addaccis_sig = inspect.signature(main_module.accis.add_accis_to_idf)
 
-    def fake_addaccis(**kwargs):
+    def fake_add_accis_to_idf(idf, **kwargs):
         captured_calls.append(kwargs)
 
-    monkeypatch.setattr(main_module.accis, 'addAccis', fake_addaccis)
+    monkeypatch.setattr(main_module.accis, 'add_accis_to_idf', fake_add_accis_to_idf)
 
-    replicated = [
-        'Output_take_dataframe',
-        'EnergyPlus_version',
-        'VRFschedule',
-        'eer',
-        'cop',
-        'hvac_zone_map',
-    ]
+    # The arguments of SimulationBase keep the names of accim 0.x; add_accis_to_idf follows PEP 8
+    replicated = ['output_take_dataframe', 'energyplus_version', 'vrf_schedule', 'eer', 'cop', 'hvac_zone_map']
 
     buildings = ts.prepare_buildings(ts.TEST_CATEGORIES['fast']['idfs'])
     ts.ParametricSimulation(
@@ -154,23 +148,24 @@ def test_simulationbase_init_forwards_addaccis_defaults(monkeypatch):
 def test_simulationbase_addaccis_default_sync_contract():
     ts.print_section('TEST: sincronización de defaults SimulationBase vs addAccis')
 
+    # (argument of SimulationBase, argument of add_accis_to_idf)
     replicated = [
-        'Output_take_dataframe',
-        'EnergyPlus_version',
-        'VRFschedule',
-        'eer',
-        'cop',
-        'hvac_zone_map',
+        ('Output_take_dataframe', 'output_take_dataframe'),
+        ('EnergyPlus_version', 'energyplus_version'),
+        ('VRFschedule', 'vrf_schedule'),
+        ('eer', 'eer'),
+        ('cop', 'cop'),
+        ('hvac_zone_map', 'hvac_zone_map'),
     ]
     base_sig = inspect.signature(main_module.SimulationBase.__init__)
-    addaccis_sig = inspect.signature(main_module.accis.addAccis)
+    addaccis_sig = inspect.signature(main_module.accis.add_accis_to_idf)
 
     mismatches = []
-    for param_name in replicated:
-        if base_sig.parameters[param_name].default != addaccis_sig.parameters[param_name].default:
+    for base_name, accis_name in replicated:
+        if base_sig.parameters[base_name].default != addaccis_sig.parameters[accis_name].default:
             mismatches.append(
-                f"{param_name}: SimulationBase={base_sig.parameters[param_name].default!r}, "
-                f"addAccis={addaccis_sig.parameters[param_name].default!r}"
+                f"{base_name}: SimulationBase={base_sig.parameters[base_name].default!r}, "
+                f"add_accis_to_idf={addaccis_sig.parameters[accis_name].default!r}"
             )
 
     assert not mismatches, (

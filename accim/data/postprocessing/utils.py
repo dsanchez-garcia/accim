@@ -18,7 +18,12 @@
 Classes and functions to perform data analytics after simulation runs.
 """
 
-def preview_Table_cols(datasets: list = []):
+from accim._deprecation import deprecated_alias
+
+__all__ = ['gen_csv_concatenated', 'genCSVconcatenated', 'preview_Table_cols', 'preview_table_cols']
+
+
+def preview_table_cols(datasets: list = None):
     """
     Function to return the list of EnergyPlus Output:Variable outputs columns
     from the first CSV file in the path, suitable to be computed in the class Table,
@@ -33,7 +38,7 @@ def preview_Table_cols(datasets: list = []):
     import glob
     # Step: generating list of output columns
 
-    if len(datasets) > 0:
+    if datasets:
         source_files = [
             f for f in datasets if
             'Table.csv' not in f and
@@ -61,7 +66,8 @@ def preview_Table_cols(datasets: list = []):
     sample_output_cols = [i for i in sample_output_cols_df.columns]
     return sample_output_cols
 
-def genCSVconcatenated(
+
+def gen_csv_concatenated(
         datasets: list = None,
         source_frequency: str = None,
         frequency: str = None,
@@ -164,3 +170,9 @@ def genCSVconcatenated(
     print(end - start)
 
     # todo pop up when process ends; by default True
+
+
+preview_Table_cols = deprecated_alias(preview_table_cols, 'accim.data.postprocessing.utils.preview_Table_cols',
+                                      'accim.data.postprocessing.utils.preview_table_cols')
+genCSVconcatenated = deprecated_alias(gen_csv_concatenated, 'accim.data.postprocessing.utils.genCSVconcatenated',
+                                      'accim.data.postprocessing.utils.gen_csv_concatenated')

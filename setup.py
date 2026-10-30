@@ -91,6 +91,8 @@ with open(path.join(this_directory, 'README.md'), encoding='utf-8') as f:
 #   pip install "accim[samples]" -> library + sample files (same version)
 SAMPLES_DIST_NAME = 'accim-samples'
 SAMPLES_PACKAGES = ['accim.sample_files', 'accim.sample_files.*']
+# The tests of the repository are not part of the distribution (find_packages finds tests/__init__.py)
+TEST_PACKAGES = ['tests', 'tests.*']
 
 setuptools.setup(
     name='accim',
@@ -109,7 +111,7 @@ setuptools.setup(
         'Operating System :: Microsoft :: Windows',
         'Topic :: Scientific/Engineering'
         ],
-    packages=setuptools.find_packages(exclude=SAMPLES_PACKAGES),
+    packages=setuptools.find_packages(exclude=SAMPLES_PACKAGES + TEST_PACKAGES),
     # package_data={
     #    '': [
     #        '*.csv',

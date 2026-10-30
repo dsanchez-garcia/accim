@@ -26,7 +26,7 @@ import besos.eppy_funcs
 import pytest
 
 from accim.data.postprocessing.main import Table
-from accim.sim.apmv_setpoints import _resolve_targets
+from accim.sim.targets import resolve_targets
 from accim.utils import get_people_instances
 
 
@@ -124,7 +124,7 @@ def _outputs(ems_suffixes, instances):
 def _table(tmp_path, monkeypatch, building, ems_suffixes, instances, **kwargs):
     """Run Table on a CSV file with the outputs of the model, with the names accim and EnergyPlus give them."""
     # The names of the test data are those of accim: the EMS suffixes of the targets and the instances
-    assert {t['zone_name']: t['ems_suffix'] for t in _resolve_targets(building)} == ems_suffixes
+    assert {t.zone_name: t.ems_suffix for t in resolve_targets(building)} == ems_suffixes
     assert [i['name'].upper() for i in get_people_instances(building)] == list(instances)
 
     columns = _outputs(ems_suffixes, instances)

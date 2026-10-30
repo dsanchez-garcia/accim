@@ -1,20 +1,12 @@
 # accim - Adaptive-Comfort-Control-Implemented Model
-# Copyright (C) 2021-2025 Daniel Sánchez-García
+# Copyright (C) 2021-2026 Daniel Sánchez-García
+# Distributed under the GNU General Public License v3 or later.
 
-# accim is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# any later version.
+"""Lists of accim 0.x, kept for compatibility: use :mod:`accim.constants`."""
 
-# accim is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-# GNU General Public License for more details.
+from accim.constants import ENERGYPLUS_VERSIONS_WITH_SPACES, SUPPORTED_ENERGYPLUS_VERSIONS
 
-# You should have received a copy of the GNU General Public License
-# along with this program. If not, see <https://www.gnu.org/licenses/>.
-
-"""Lists to be used in the whole project."""
-
-fullEPversionsList = ['9.1', '9.2', '9.3', '9.4', '9.5', '9.6', '22.1', '22.2', '23.1', '23.2', '24.1', '24.2', '25.1', '25.2', '26.1', '26.2', 'auto']
-epvers_space_objs = ['9.6', '22.1', '22.2', '23.1', '23.2', '24.1', '24.2', '25.1', '25.2', '26.1', '26.2']
+#: The EnergyPlus versions that accim supports, and 'auto'
+fullEPversionsList = list(SUPPORTED_ENERGYPLUS_VERSIONS) + ['auto']
+#: The EnergyPlus versions with Space and SpaceList objects
+epvers_space_objs = list(ENERGYPLUS_VERSIONS_WITH_SPACES)
