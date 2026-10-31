@@ -28,8 +28,11 @@ Examples
 --------
 avg = average_results(result)
 total = sum_results(result)
+checked_total = checked_sum_results(result)
 series = return_time_series(result)
 """
+import numpy as np
+
 
 def average_results(result):
     """Compute the arithmetic mean of ``result.data["Value"]``.
@@ -79,6 +82,56 @@ def sum_results(result):
     total = sum_results(result)
     """
     return result.data["Value"].sum()
+
+
+def checked_sum_results(result):
+    """Compute the sum of ``result.data["Value"]``, failing on missing or invalid values.
+
+    Unlike :func:`sum_results`, with which pandas skips the missing values (NaN), this reducer stops
+    with a ``ValueError`` when the result has no ``"Value"`` series, when the series is empty, not
+    numeric or not one-dimensional, when it has NaN or infinite values, or when the sum overflows.
+
+    Parameters
+    ----------
+    result : Any
+        BESOS/evaluator result object exposing ``data["Value"]``.
+
+    Returns
+    -------
+    float
+        Sum of all values in ``result.data["Value"]``, as a finite Python ``float``.
+
+    Raises
+    ------
+    ValueError
+        If the values are missing or invalid; the EnergyPlus error file of the evaluation usually
+        explains why.
+
+    Usage
+    -----
+    Use this reducer instead of :func:`sum_results` for cumulative objectives (energy, for
+    instance), so that an incomplete or failed simulation does not pass as a valid value. It makes
+    no unit conversion.
+
+    Examples
+    --------
+    total = checked_sum_results(result)
+    """
+    data = getattr(result, 'data', None)
+    if data is None or 'Value' not in data:
+        raise ValueError('The result has no "Value" series; check the EnergyPlus error file of the evaluation.')
+    try:
+        values = np.asarray(data['Value'], dtype=float)
+    except (TypeError, ValueError) as exc:
+        raise ValueError('The values of the objective must be numbers.') from exc
+    if values.ndim != 1 or values.size == 0 or not np.isfinite(values).all():
+        raise ValueError('The values of the objective must be a non-empty, one-dimensional series of finite '
+                         'numbers.')
+    with np.errstate(over='ignore', invalid='ignore'):
+        total = float(values.sum())
+    if not np.isfinite(total):
+        raise ValueError('The sum of the objective is not a finite number.')
+    return total
 
 
 def return_time_series(result):

@@ -137,6 +137,8 @@ setuptools.setup(
         'matplotlib',
         'numpy',
         'pandas',
+        # pandas writes the XLSX files of Table and accim.parametric_and_optimisation with openpyxl
+        'openpyxl>=3.1.5',
         'datapackage',
         'unidecode',
         'besos',
