@@ -15,6 +15,14 @@ This log is a lightweight, session-scoped complement to the repository's
 existing tracking files — it does not replace them (see
 [[decisions.md#2026-09-13 — `notes/work-log.md` complements, not replaces, existing tracking files|the related decision]]).
 
+## 2026-10-31 — The refs of the branch reviews deleted
+
+- **Objective**: Delete the refs reviewed in [[branch-reviews.md]], as the author confirmed.
+- **Affected files**: [[../TODO.md]] (the three review items removed), [[../DEVLOG.md]], [[branch-reviews.md]], [[decisions.md]].
+- **Finding or decision**: `refactor/sim-v1`, `review/refactor-sim-v1-20261024` and the tag `archive/feat-comfort-metrics-experiment-api` deleted locally and on `origin`, and the local tag `archive/codex-paper-simple-energy` deleted; a git bundle with their commits and the agent reports stay in the git-ignored `llm_project_files/branch_review_reports/`.
+- **Validation**: `git ls-remote origin` lists only `master` and `v1.0.0`; no local ref of the four is left.
+- **Next step**: none for the reviews; the open items are in [[../TODO.md]].
+
 ## 2026-10-31 — The last two recommendations: Pareto with constraints, checkpoints, comfort objectives
 
 - **Objective**: Apply the recommendations that the author chose for the last two questions of [[questions.md]].

@@ -29,7 +29,7 @@ template]] to add a new entry.
 - **Consequences**: the Pareto front of the optimisations with constraints changes (the evaluations that do not
   meet them no longer dominate those that do), and the evaluations without finite values are not pareto-optimal.
   A resumed run simulates again the tasks whose files or outputs changed, and those of the checkpoints written
-  before (0.x included), without any migration. The branch can be deleted when the author confirms.
+  before (0.x included), without any migration. The branch was deleted on 2026-10-31, when the author confirmed.
 
 ## 2026-10-31 — The comfort objective independent of the control comes from the adaptive comfort status of EnergyPlus
 
@@ -49,8 +49,8 @@ template]] to add a new entry.
 - **Consequences**: an optimisation can minimise the hours outside CEN 15251 or ASHRAE 55, a fixed reference,
   with no new EMS programs, outputs in the IDFs or work for the Python API backend. The objective is per zone
   (`People` object), and the hours of the design days count when the model simulates its sizing periods, as
-  with the other readers. WF4 and WF5 keep their objectives. The tag can be deleted when the author confirms
-  (`checked_sum_results` and `openpyxl` are already in `v1.0.0`).
+  with the other readers. WF4 and WF5 keep their objectives. The tag was deleted on 2026-10-31, when the author
+  confirmed (`checked_sum_results` and `openpyxl` are already in `v1.0.0`).
 
 ## 2026-10-31 — The fixes and tests of the branch reviews go to `v1.0.0`, before the release
 
@@ -65,8 +65,8 @@ template]] to add a new entry.
   `Table.wrangled_table(reshaping='pivot')`) and PR 4 (the golden master of the output IDFs in
   `tests/core/golden_master`, which also repeats the comparison with 0.8.2, and `tools/compare_backends.py`).
 - **Consequences**: `v1.0.0` holds everything that the reviews proposed to keep from `refactor/sim-v1` and the
-  comfort-metrics tag, so `refactor/sim-v1` can be deleted (locally and on `origin`) when the author confirms. The
-  tag and `review/refactor-sim-v1-20261024` wait for their own questions ([[questions.md]]).
+  comfort-metrics tag. After the decisions on the other two questions (above), the four refs of the reviews were
+  deleted on 2026-10-31, when the author confirmed (see [[branch-reviews.md]]).
 
 ## 2026-10-31 — accim removes the ideal loads systems of the input model when it adds its VRF systems
 

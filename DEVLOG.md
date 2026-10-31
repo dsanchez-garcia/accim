@@ -36,6 +36,13 @@ Recommended flow: track active work in `TODO.md`, move completed outcomes to `DE
 ## Entries
 
 ### 2026-10-31
+#### [done] The refs of the branch reviews deleted
+- Context: The three review items of the TODO (`refactor/sim-v1`, the tag `archive/feat-comfort-metrics-experiment-api` and the local tag `archive/codex-paper-simple-energy`, with the related branch `review/refactor-sim-v1-20261024`) were done (`notes/branch-reviews.md`, and the entries below): everything worth keeping is in `v1.0.0` or with the files of the paper. They only waited for the author to confirm the deletion of the refs, which the author did.
+- Changes: deleted, locally and on `origin`, the branches `refactor/sim-v1` (`ef1ec593`) and `review/refactor-sim-v1-20261024` (`6e090d59`) and the annotated tag `archive/feat-comfort-metrics-experiment-api` (tag `ef50329a`, commit `32c8942a`); and, locally, the annotated tag `archive/codex-paper-simple-energy` (tag `0b3877b6`, commit `aa1ce90b`; it was never pushed). Before, neither branch had a pull request or a commit that `origin` did not have; their commits were saved in a git bundle (1.6 MB, `git bundle verify` passed, `master` as its prerequisite) and the agent reports of the two branches (`docs/refactor-sim-v1-review.md`, `INFORME_REVISION_2026-07-19.md`, `PLAN_IMPLEMENTACION_2026-07-19.md`) as files, in `llm_project_files/branch_review_reports/` (git-ignored, on the computer of the author). The three items left `TODO.md`; `notes/branch-reviews.md` and `notes/decisions.md` record the deletion.
+- Files: `TODO.md`, `notes/branch-reviews.md`, `notes/decisions.md`, `notes/work-log.md`.
+- Verification: `git ls-remote origin` lists only the branches `master` and `v1.0.0`, and no `archive/` tag; locally, `git branch -a` and `git tag -l 'archive/*'` list none of the four refs.
+- Next step: none.
+
 #### [done] The last two recommendations: Pareto status with constraints, identity of the checkpoints, comfort objectives
 - Context: The author chose the recommendations of `notes/questions.md` for the integrity block of `review/refactor-sim-v1-20261024` and for a comfort objective independent of the control (decision records in `notes/decisions.md`; no question is open now).
 - Changes:

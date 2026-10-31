@@ -33,8 +33,13 @@ The author then chose the two recommendations of [[questions.md]]: of the integr
 `review/refactor-sim-v1-20261024` (section 1.3), only the Pareto status with constraints and the identity of the
 parametric checkpoints were adapted; and the comfort objective independent of the control comes from the adaptive
 comfort status of EnergyPlus (two reducers of `objectives.py`), not from the EMS module of the comfort-metrics tag
-(section 2). No ref has been deleted yet: `refactor/sim-v1`, `review/refactor-sim-v1-20261024` and the two tags
-wait for the confirmation of the author.
+(section 2). The four refs were deleted on 2026-10-31, when the author confirmed it: `refactor/sim-v1`
+(`ef1ec593`) and `review/refactor-sim-v1-20261024` (`6e090d59`), locally and on `origin`; the tag
+`archive/feat-comfort-metrics-experiment-api` (commit `32c8942a`), locally and on GitHub; and the local tag
+`archive/codex-paper-simple-energy` (commit `aa1ce90b`). The commands `git show <ref>:<path>` of this note no
+longer work: a git bundle with their commits, and the agent reports of the two branches, are kept outside the
+repository, in the git-ignored `llm_project_files/branch_review_reports/` of the computer of the author
+(`git fetch <bundle> 'refs/*:refs/restored/*'` brings the refs back).
 
 ## 1. Branch `refactor/sim-v1`
 
