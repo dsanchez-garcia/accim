@@ -1002,6 +1002,7 @@ def add_vrf_system(
     Adds a Variable Refrigerant Flow (VRF) system to each occupied zone of the model, controlled by
     thermal comfort (Fanger) thermostats, on which apply_apmv_setpoints can then act. The VRF systems are
     autosized, so the zone, system and plant sizing calculations of the model are enabled, as AddAccis does.
+    They replace the zone equipment of the model, so its ZoneHVAC:IdealLoadsAirSystem objects are removed.
 
     :param building: The BESOS/eppy IDF object.
     :param supply_air_temp_input_method: Method for supply air temperature ('supply air temperature' or

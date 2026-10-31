@@ -21,7 +21,6 @@ __all__ = [
     'add_vrf_schedules',
     'add_vrf_system',
     'check_ventilation',
-    'set_ideal_loads_availability_on',
     'set_pmv_setpoints',
 ]
 
@@ -127,14 +126,6 @@ def add_base_schedules(model: AccimModel) -> None:
                           'Until: 24:00, 0.5', type_limits='Temperature')
 
 
-def set_ideal_loads_availability_on(model: AccimModel) -> None:
-    """Make the heating and cooling of the ZoneHVAC:IdealLoadsAirSystem objects always available."""
-    for system in model.idf.idfobjects['ZoneHVAC:IdealLoadsAirSystem']:
-        system.Heating_Availability_Schedule_Name = 'On'
-        system.Cooling_Availability_Schedule_Name = 'On'
-    model.log('All ZoneHVAC:IdealLoadsAirSystem Heating and Cooling availability schedules has been set to on')
-
-
 def add_vrf_schedules(model: AccimModel) -> None:
     """Add the schedules of the VRF systems (except the setpoint schedules)."""
     for name, until in _VRF_SCHEDULES.items():
@@ -165,9 +156,13 @@ def add_vrf_objects(
 ) -> None:
     """Add the outdoor unit, indoor unit, thermostat, sizing and node objects of the VRF system of each zone.
 
-    The objects of these types that the model had are removed.
+    The objects of these types that the model had are removed, and so are its ZoneHVAC:IdealLoadsAirSystem
+    objects, which no zone equipment list refers to once the VRF systems replace them.
     """
     idf = model.idf
+    for system in list(idf.idfobjects['ZoneHVAC:IdealLoadsAirSystem']):
+        idf.removeidfobject(system)
+        model.log(f'{system.Name} ZoneHVAC:IdealLoadsAirSystem Object has been removed')
     params = dict(eer=eer, cop=cop, vrf_schedule=vrf_schedule,
                   supply_air_temp_input_method=SUPPLY_AIR_TEMP_INPUT_METHODS[supply_air_temp_input_method])
 
@@ -297,7 +292,6 @@ def add_vrf_system(
     else:
         add_operative_temperature_thermostats(model)
     add_base_schedules(model)
-    set_ideal_loads_availability_on(model)
     add_vrf_schedules(model)
     add_curves(model)
     add_vrf_objects(model, supply_air_temp_input_method, eer=eer, cop=cop, vrf_schedule=vrf_schedule)
