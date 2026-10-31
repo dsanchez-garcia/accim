@@ -868,6 +868,11 @@ class Table:
         #Step: scanning occupied zones
         block_list = []
 
+        if idf_path is None:
+            raise ValueError(
+                "Table needs idf_path, the path of one of the IDFs of the simulations, to find the zones of the "
+                "building: Table(..., idf_path='path/to/model.idf')."
+            )
         building = get_building(idf_path)
         # building = get_building('OSM_SmallOffice_exHVAC.idf')
 

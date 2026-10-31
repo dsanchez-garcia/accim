@@ -312,3 +312,11 @@ def test_excluded_zone_whose_name_is_part_of_the_name_of_another_zone(tmp_path, 
     assert _values(table, 'Building_Total_Cooling Energy Demand (Wh) (summed)') == ZONE_VALUES[1]['cooling']
     assert _values(table, 'Block1_Total_Comfortable Hours_No Applicability (h) (summed)') == \
         ZONE_VALUES[1]['comfortable']
+
+
+def test_table_without_idf_path_explains_that_it_needs_it(tmp_path, monkeypatch):
+    # Before, get_building(None) failed with "AttributeError: 'dict' object has no attribute 'idfobjects'"
+    model = _model_without_spaces(['Block1:Zone1', 'Block1:Zone2'])
+
+    with pytest.raises(ValueError, match='Table needs idf_path'):
+        _table(tmp_path, monkeypatch, model, idf_path=None)

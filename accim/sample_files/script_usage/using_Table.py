@@ -1,42 +1,50 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# # Using the class Table() for data analysis
+# # Using the class ``Table()`` for data analysis
 
-# Say we have previously renamed the EPW files with rename_epw_files(), and the EPWs we currently have are:
-# 
+# Say we have previously renamed the EPW files with ``rename_epw_files()``, and the EPWs we currently have are:
+#
 # - United-Kingdom_Aberdeen_Present
-# 
+#
 # - United-Kingdom_London_Present
-# 
-# We also have transformed the IDF file TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220.idf, and the IDFs we currently have are:
-# 
-# - TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_1[CM_0[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X.idf
-# 
-# - TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_1[CM_3[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X.idf
-# 
-# - TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_2[CM_0[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X.idf
-# 
-# - TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_2[CM_3[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X.idf
-# 
-# - TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_3[CM_0[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X.idf
-# 
-# - TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_3[CM_3[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X.idf
-# 
-# Next, we simulate these files with run_ep(), so the CSVs we get are:
+#
+# We also have applied adaptive setpoint temperatures with ``AddAccis()`` to the IDF file TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220.idf (an earlier version of the model in this folder, for EnergyPlus 22.2), and the IDFs we currently have are:
+#
+# - TestModel[CS_INT EN16798[CA_1[CM_0[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X.idf
+#
+# - TestModel[CS_INT EN16798[CA_1[CM_3[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X.idf
+#
+# - TestModel[CS_INT EN16798[CA_2[CM_0[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X.idf
+#
+# - TestModel[CS_INT EN16798[CA_2[CM_3[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X.idf
+#
+# - TestModel[CS_INT EN16798[CA_3[CM_0[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X.idf
+#
+# - TestModel[CS_INT EN16798[CA_3[CM_3[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X.idf
+#
+# Next, we simulate these files with ``run_ep()``. This folder contains the CSV files we got, so this notebook does not need EnergyPlus. It also contains TestModel.idf, the input IDF (for EnergyPlus 25.1), which ``Table`` reads to identify the zones (argument ``idf_path``). The CSV files are:
 
-# In[1]:
+# In[ ]:
 
 
 import os
-print(*[i for i in os.listdir() if i.endswith('.csv') and 'TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220' in i], sep='\n')
+print(*[i for i in os.listdir() if i.endswith('.csv') and 'TestModel' in i], sep='\n')
+
+
+# Let's see which are our initial files to not to delete them later.
+
+# In[ ]:
+
+
+previous_files = [i for i in os.listdir()]
 
 
 # So now, let's use the class Table() to analyse the data.
 
 # ## 1. Getting the full dataset of simulation results
 
-# In[2]:
+# In[ ]:
 
 
 from accim.data.postprocessing.main import Table
@@ -44,26 +52,25 @@ dataset_hourly = Table(
     #datasets=list #Since we are not specifying any list, it will use all available CSVs in the folder
     source_frequency='hourly', # This lets accim know which is the frequency of the input CSVs. Input CSVs with multiple frequencies are also allowed. It can be 'hourly', 'daily', 'monthly' and 'runperiod'. It can also be 'timestep' but might generate errors.
     frequency='hourly', # If 'daily', accim will aggregate the rows in days. It can be 'hourly', 'daily', 'monthly' and 'runperiod'. It can also be 'timestep' but might generate errors.
-    frequency_agg_func='sum', #this makes the sum or average when aggregating in days, months or runperiod; since the original CSV frequency is in hour, it won't make any aeffect
+    frequency_agg_func='sum', #sum or mean when the rows are aggregated in days, months or runperiod; since the CSVs are hourly and frequency is 'hourly', there is no aggregation here
     standard_outputs=True, 
     level=['building'], # A list containing the strings 'block' and/or 'building'. For instance, if ['block', 'building'], accim will generate new columns to sum up or average in blocks and building level.
     level_agg_func=['sum', 'mean'], # A list containing the strings 'sum' and/or 'mean'. For instance, if ['sum', 'mean'], accim will generate the new columns explained in the level argument by summing and averaging.
     level_excluded_zones=[],
-    #match_cities=bool #Only used when EPW file has NOT been previously renamed
-    #manage_epw_names=bool #Only used when EPW file has NOT been previously renamed
     split_epw_names=True, #to split EPW names based on the pattern Country_City_RCPscenario-Year
+    idf_path='TestModel.idf', # the IDF of the simulated building (the input IDF or any of the output IDFs, since all have the same zones); used to identify the zones in the CSVs
 )
 
-##
+
 # A Table object has been created, which includes a number of accessible variables. The most important is the Pandas Dataframe created from the CSVs, which can be accessed with .df (in this case, dataset_hourly.df)
 
-# In[3]:
+# In[ ]:
 
 
 dataset_hourly.df
 
 
-# In[4]:
+# In[ ]:
 
 
 dataset_hourly.df.shape
@@ -71,27 +78,27 @@ dataset_hourly.df.shape
 
 # Also, you can see the block list that has been extracted from the zones in the CSV columns, as well as the zones with heating or cooling energy consumption, and the occupied zones:
 
-# In[5]:
+# In[ ]:
 
 
 dataset_hourly.block_list
 
 
-# In[6]:
+# In[ ]:
 
 
 dataset_hourly.hvac_zone_list
 
 
-# In[7]:
+# In[ ]:
 
 
 dataset_hourly.occupied_zone_list
 
-##
-# In case of lots of CSVs, using the Table class would mean gathering the CSVs to make the Dataframe each time, and it might be very time-consuming. Therefore, the CSVs can be concatenated into a single CSV and store in the same folder with the argument concatenated_csv_name. Afterwards, that concatenated CSV can be read using the argument source_concatenated_csv_filepath each time a Table class object is created.
 
-# In[8]:
+# In case of lots of CSVs, using the Table class would mean gathering the CSVs to make the Dataframe each time, and it might be very time-consuming. Therefore, the CSVs can be concatenated into a single CSV and stored in the same folder with the argument concatenated_csv_name. Afterwards, that concatenated CSV can be read using the argument source_concatenated_csv_filepath each time a Table class object is created.
+
+# In[ ]:
 
 
 concatenated_csvname = 'notebook_example'
@@ -99,17 +106,17 @@ dataset_hourly_indirect = Table(
     #datasets=list #Since we are not specifying any list, it will use all available CSVs in the folder
     source_frequency='hourly', # This lets accim know which is the frequency of the input CSVs. Input CSVs with multiple frequencies are also allowed. It can be 'hourly', 'daily', 'monthly' and 'runperiod'. It can also be 'timestep' but might generate errors.
     frequency='hourly', # If 'daily', accim will aggregate the rows in days. It can be 'hourly', 'daily', 'monthly' and 'runperiod'. It can also be 'timestep' but might generate errors.
-    frequency_agg_func='sum', #this makes the sum or average when aggregating in days, months or runperiod; since the original CSV frequency is in hour, it won't make any aeffect
+    frequency_agg_func='sum', #sum or mean when the rows are aggregated in days, months or runperiod; since the CSVs are hourly and frequency is 'hourly', there is no aggregation here
     standard_outputs=True, 
     concatenated_csv_name=concatenated_csvname #Useful when working with large datasets. It saves the output dataset to a CSV file, so you don't need to re-do some work. Afterwards, it can be imported with source_concatenated_csv_filepath argument.
     # All other arguments won't have any effect on the output. This is only to store the csv at early stage. Datawrangling will be performed later.
-    
+
 )
 
 
-# We just generated a CSV, whose name begins with 'notebook example', specifies the input data and ends with 'CSVconcatenated'. If there is some row with NaN, it will be generated another CSV reporting this, but ending with 'Rows_with_NaNs'. We should be able to see it below:
+# We just generated a CSV, whose name begins with 'notebook_example', specifies the input data and ends with 'CSVconcatenated'. If some rows had NaN values, another CSV ending with 'Rows_with_NaNs' would report them. We should be able to see it below:
 
-# In[9]:
+# In[ ]:
 
 
 import os
@@ -118,7 +125,7 @@ os.listdir()
 
 # Now, let's continue working with the CSVconcatenated we have generated:
 
-# In[10]:
+# In[ ]:
 
 
 dataset_hourly_indirect = Table(
@@ -130,42 +137,43 @@ dataset_hourly_indirect = Table(
     # standard_outputs=True,
     level=['building'],
     level_agg_func=['sum', 'mean'],
+    level_excluded_zones=[],
     split_epw_names=True, #to split EPW names based on the format Country_City_RCPscenario-YEar
-    
+    idf_path='TestModel.idf', # the IDF of the simulated building (the input IDF or any of the output IDFs, since all have the same zones); used to identify the zones in the CSVs
 )
 
 
-# In[11]:
+# In[ ]:
 
 
 dataset_hourly_indirect.df.shape
 
-##
+
 # You can see we have obtained the same full dataset. Now, let's delete the concatenated CSV file to save some space.
 
-# In[12]:
+# In[ ]:
 
 
-for i in os.listdir():
-    if concatenated_csvname in i:
-        os.remove(i)
+new_files = [i for i in os.listdir() if i not in previous_files]
+for i in new_files:
+    os.remove(i)
 
-##
+
 # ## 2. Filtering results
 
 # We have used any of the 2 methods to obtain the full dataset of simulation results.
 
-# At this point, we should have decided what table or graph we intend to make, and therefore we should know what data we are going to show in it. In this case, we want to make a figure with different subplots, showing the different ComfMod values on the rows and the different EPW_City_or_subcountry values on the columns, and in each subplot, a scatter plot with the indoor operative temperature and adaptive heating and cooling setpoints on the y main axis (left spine), and on the secondary y axis, 2 different spines, one of them to show the heating and cooling energy demand, and the other one the air changes. However, let's say we just want to see the subplots for Category CA_3.
+# At this point, we should have decided what table or graph we intend to make, and therefore we should know what data we are going to show in it. In this case, we want to make a figure with the heating and cooling energy demand on the main y-axis (left spine) and, on the secondary y-axis, 2 different spines: one of them to show the air changes, and the other one to show the indoor operative temperature and the adaptive heating and cooling setpoints. The x-axis will show the running mean outdoor temperature. Therefore, we will need to filter these columns. Let's take a look first at all the columns of the dataframe:
 
-# In[13]:
+# In[ ]:
 
 
 print(*dataset_hourly.df.columns, sep='\n')
 
 
-# Now, let's extract the data we are really interested in. For this, we can use the method called format_table():
+# Now, let's extract the data we are really interested in. For this, we can use the method called ``format_table()``:
 
-# In[13]:
+# In[ ]:
 
 
 dataset_hourly.format_table(
@@ -174,7 +182,7 @@ dataset_hourly.format_table(
         'Adaptive Cooling Setpoint Temperature_No Tolerance (°C)',
         'Adaptive Heating Setpoint Temperature_No Tolerance (°C)',
         'Building_Total_Zone Operative Temperature (°C) (mean)',
-        'BLOCK1:ZONE2_EN16798-1 Running mean outdoor temperature (°C)',
+        'Block1:Zone2_EN16798-1 Running mean outdoor temperature (°C)',
         'Building_Total_Cooling Energy Demand (kWh/m2) (summed)',
         'Building_Total_Heating Energy Demand (kWh/m2) (summed)',
         'Building_Total_AFN Zone Infiltration Air Change Rate (ach) (summed)'
@@ -184,7 +192,7 @@ dataset_hourly.format_table(
 
 # So, we have already filtered the columns we wanted. Let's look at the result:
 
-# In[14]:
+# In[ ]:
 
 
 dataset_hourly.df
@@ -194,31 +202,41 @@ dataset_hourly.df
 
 # ## 3. Making graphs
 
-# We will make the figure with scatter_plot(), however it needs some input data we will previously generate with generate_fig_data().
+# At this point, you might be confused about what you can analyse and plot. The way to identify the IDFs individually is combining or gathering the categorical variables that make them different. In this case, for the IDFs, these are CAT and ComfMod (the only arguments for which we requested more than one value in ``addAccis()``). In case of the EPW files, the columns related to these are:
+
+# In[ ]:
+
+
+[i for i in dataset_hourly.df if 'EPW' in i]
+
+
+# Therefore, ``EPW_City_or_subcountry`` should be enough to identify them, since it's the only categorical variables with multiple values (i.e. ``Country`` is always "United-Kingdom", and ``EPW_Scenario-Year``, ``EPW_Scenario`` and ``EPW_Year`` are "Present" in all cases).
+#
+# To get a clearer view, you can use the method ``gather_vars_query``, which will provide a list of the categorical variables extracted from the csv filename that change, and therefore, can be used in the analysis, and the values these contain. Let's try it:
+
+# In[ ]:
+
+
+dataset_hourly.gather_vars_query()
+
 
 # ### 3.1 Scatter plot:
 
-# As said above, we first need to generate the dataset lists with generate_fig_data():
+# Therefore, based on the output of ``gather_vars_query()``, a possible interesting graph would be a ``seaborn.FacetGrid``-like plot (a graph with subplots), with the combinations of ``ComfMod`` and ``CAT`` in the rows (only category III, selected with ``detailed_rows``) and the cities in the columns.
+#
+# Before plotting, accim lists the rows and the columns of subplots, and asks whether you want to rename them, since these names are used as labels. Here, the rows are renamed with the argument ``rows_renaming_dict``, so accim only asks about the columns, and we answer **n**. With the argument ``cols_renaming_dict``, it would not ask at all. Let's plot it:
 
-# In[15]:
-print(*dataset_hourly.df.columns, sep='\n')
-##
-dataset_hourly.generate_fig_data(
-    vars_to_gather_rows=['ComfMod', 'Category'], # variables to gather in rows of subplots
+# In[ ]:
+
+
+dataset_hourly.scatter_plot(
+    vars_to_gather_rows=['ComfMod', 'CAT'], # variables to gather in rows of subplots
     vars_to_gather_cols=['EPW_City_or_subcountry'],# variables to gather in columns of subplots
     detailed_rows=['CM_0[CA_3', 'CM_3[CA_3'], #we only want to see those combinations
-    data_on_x_axis='BLOCK1:ZONE2_EN16798-1 Running mean outdoor temperature (°C)', #column name (string) for the data on x axis
-    data_on_y_main_axis=[ #list which includes the name of the axis on the first place, and then in the second place, a list which includes the column names you want to plot
-        [
-            'Indoor Operative Temperature (°C)',
-            [
-                'Adaptive Cooling Setpoint Temperature_No Tolerance (°C)',
-                'Adaptive Heating Setpoint Temperature_No Tolerance (°C)',
-                'Building_Total_Zone Operative Temperature (°C) (mean)',
-            ]
-        ],
-    ],
-    data_on_y_sec_axis=[ # similarly to above, a list including the name of the secondary y-axis and the column names you want to plot in it
+    rows_renaming_dict={'CM_0[CA_3': 'Static setpoints', 'CM_3[CA_3': 'Adaptive setpoints'}, #new names for the rows
+    data_on_x_axis='Block1:Zone2_EN16798-1 Running mean outdoor temperature (°C)', #column name (string) for the data on x axis
+
+    data_on_y_main_axis=[ # similarly to above, a list including the name of the secondary y-axis and the column names you want to plot in it
         [
             'Energy (kWh/m2)',
             [
@@ -226,24 +244,25 @@ dataset_hourly.generate_fig_data(
                 'Building_Total_Heating Energy Demand (kWh/m2) (summed)',
             ]
         ],
+    ],
+    data_on_y_sec_axis=[ #list which includes the name of the axis on the first place, and then in the second place, a list which includes the column names you want to plot
         [
             'Air renovation (ach)',
             [
                 'Building_Total_AFN Zone Infiltration Air Change Rate (ach) (summed)'
             ]
-        ]
-    ],
-    colorlist_y_main_axis=[
+        ],
         [
-            'Indoor Operative Temperature (°C)',
+            'Operative Temperature (°C)',
             [
-                'b',
-                'r',
-                'g',
+                'Adaptive Cooling Setpoint Temperature_No Tolerance (°C)',
+                'Adaptive Heating Setpoint Temperature_No Tolerance (°C)',
+                'Building_Total_Zone Operative Temperature (°C) (mean)',
             ]
         ],
     ],
-    colorlist_y_sec_axis=[
+
+    colorlist_y_main_axis=[
         [
             'Energy (kWh/m2)',
             [
@@ -251,22 +270,25 @@ dataset_hourly.generate_fig_data(
                 'orange',
             ]
         ],
+
+    ],
+    colorlist_y_sec_axis=[
         [
             'Air renovation (ach)',
             [
                 'yellow'
             ]
-        ]
-    ]
-)
-##
+        ],
+        [
+            'Operative Temperature (°C)',
+            [
+                'b',
+                'r',
+                'g',
+            ]
+        ],
+    ],
 
-# And finally we can plot the figure:
-
-# In[16]:
-
-
-dataset_hourly.scatter_plot(
     supxlabel='Running Mean Outdoor Temperature (°C)', # data label on x axis
     figname=f'WIP_scatterplot_RMOT',
     figsize=6,
@@ -277,14 +299,14 @@ dataset_hourly.scatter_plot(
 
 # ### 3.2 Adaptive vs Static data scatter plot:
 
-# A very specific type of scatter plot can be done to show the relationship between data related to adaptive and static setpoint temperatures. In this case, you would need to use the following arguments in generate_fig_data: data_on_y_axis_baseline_plot, baseline and colorlist_baseline_plot_data; finally, you would need to use the scatter_plot_adap_vs_stat() function.
+# A very specific type of scatter plot can be done to show the relationship between data related to adaptive and static setpoint temperatures. In this case, you would need to use the ``scatter_plot_with_baseline()`` method. Each subplot compares the baseline (on the x-axis) with another combination of ``ComfMod`` and ``CAT`` (on the y-axis). Since we do not pass ``rows_renaming_dict`` or ``cols_renaming_dict``, accim asks whether to rename the rows and the columns; we answer **n** to both.
 
-# In[17]:
+# In[ ]:
 
 
-dataset_hourly.generate_fig_data(
+dataset_hourly.scatter_plot_with_baseline(
     vars_to_gather_rows=['EPW_City_or_subcountry'], #you can enter multiple variables, for example: ['EPW_City_or_subcountry', 'EPW_Scenario-Year']
-    vars_to_gather_cols=['ComfMod', 'Category'], #you can enter multiple variables
+    vars_to_gather_cols=['ComfMod', 'CAT'], #you can enter multiple variables
     data_on_y_axis_baseline_plot=[ # in this case, you only need to specify a list which includes the data columns you want to plot
         'Building_Total_Cooling Energy Demand (kWh/m2) (summed)',
         'Building_Total_Heating Energy Demand (kWh/m2) (summed)',
@@ -293,10 +315,8 @@ dataset_hourly.generate_fig_data(
     colorlist_baseline_plot_data=[
         'b',
         'r',
-    ]
-)
+    ],
 
-dataset_hourly.scatter_plot_adap_vs_stat(
     supxlabel='Static Energy Demand (kWh/m2)',
     supylabel='Adaptive Energy Demand (kWh/m2)',
     figname='WIP_scatterplot_adap_vs_stat',
@@ -310,9 +330,9 @@ dataset_hourly.scatter_plot_adap_vs_stat(
 # In[ ]:
 
 
-for i in os.listdir():
-    if i.endswith('.png'):
-        os.remove(i)
+new_files = [i for i in os.listdir() if i not in previous_files]
+for i in new_files:
+    os.remove(i)
 
 
 # ## 4. Making tables
@@ -322,18 +342,18 @@ for i in os.listdir():
 # In[ ]:
 
 
-from accim.data.data_postprocessing import Table
+from accim.data.postprocessing.main import Table
 dataset_monthly = Table(
     #datasets=list Since we are not specifying any list, it will use all available CSVs in the folder
     source_frequency='hourly',
     frequency='monthly',
-    frequency_agg_func='sum', #this makes the sum or average when aggregating in days, months or runperiod; since the original CSV frequency is in hour, it won't make any aeffect
+    frequency_agg_func='sum', #the hourly values of each month are summed
     standard_outputs=True,
     level=['building'],
     level_agg_func=['sum'],
-    #match_cities=bool Only used when EPW file has NOT been previously renamed with the function rename_epw_files
-    #manage_epw_names=bool Only used when EPW file has NOT been previously renamed with the function rename_epw_files
+    level_excluded_zones=[],
     split_epw_names=True, #to split EPW names based on the format Country_City_RCPscenario-YEar
+    idf_path='TestModel.idf', # the IDF of the simulated building (the input IDF or any of the output IDFs, since all have the same zones); used to identify the zones in the CSVs
 )
 
 dataset_monthly.format_table(
@@ -345,16 +365,17 @@ dataset_monthly.format_table(
 )
 
 
-# Now, let's make the table we are looking for. You can choose 'unstack' or 'pivot' as a reshaping method (remember that we are actually working with Pandas Dataframes). Let's go with unstack, and we are going to compare the baseline shown below with all gathered variables
+# Now, let's make the table we are looking for. You can choose 'multiindex', 'unstack' or 'pivot' as a reshaping method (remember that we are actually working with Pandas Dataframes). Let's go with unstack, and we are going to compare the baseline shown below with all gathered variables
 
 # In[ ]:
 
 
 dataset_monthly.wrangled_table(
     reshaping='unstack', #can be 'unstack' or 'pivot'
-    vars_to_gather=['ComfMod', 'Category'],
+    vars_to_gather=['ComfMod', 'CAT'],
+    vars_to_keep=['EPW_City_or_subcountry', 'Month'],
     baseline='CM_0[CA_1',
-    comparison_mode='baseline compared to others', #can be 'baseline compared to others' or 'others compared to baseline'
+    comparison_mode=['baseline compared to others'], #can be 'baseline compared to others' or 'others compared to baseline'
     comparison_cols=['relative', 'absolute'] #'relative' to show the difference as a percentage, 'absolute' to show the difference by subtracting
 )
 
@@ -370,18 +391,18 @@ dataset_monthly.wrangled_df_unstacked
 # In[ ]:
 
 
-from accim.data.data_postprocessing import Table
+from accim.data.postprocessing.main import Table
 dataset_runperiod = Table(
     #datasets=list Since we are not specifying any list, it will use all available CSVs in the folder
     source_frequency='hourly',
     frequency='runperiod',
-    frequency_agg_func='sum', #this makes the sum or average when aggregating in days, months or runperiod; since the original CSV frequency is in hour, it won't make any aeffect
+    frequency_agg_func='sum', #the hourly values of the whole run period are summed
     standard_outputs=True,
     level=['building'],
     level_agg_func=['sum'],
-    #match_cities=bool Only used when EPW file has NOT been previously renamed
-    #manage_epw_names=bool Only used when EPW file has NOT been previously renamed
+    level_excluded_zones=[],
     split_epw_names=True, #to split EPW names based on the format Country_City_RCPscenario-YEar
+    idf_path='TestModel.idf', # the IDF of the simulated building (the input IDF or any of the output IDFs, since all have the same zones); used to identify the zones in the CSVs
 )
 
 dataset_runperiod.format_table(
@@ -400,9 +421,9 @@ dataset_runperiod.format_table(
 
 dataset_runperiod.wrangled_table(
     reshaping='pivot',
-    vars_to_gather=['ComfMod', 'Category'],
+    vars_to_gather=['ComfMod', 'CAT'],
     baseline='CM_0[CA_1',
-    comparison_mode='baseline compared to others',
+    comparison_mode=['baseline compared to others'],
     comparison_cols=['relative', 'absolute']
 )
 
@@ -419,7 +440,7 @@ dataset_runperiod.wrangled_df_pivoted
 
 
 dataset_runperiod.df = dataset_runperiod.df[
-    dataset_runperiod.df['Category'].isin(['CA_3'])
+    dataset_runperiod.df['CAT'].isin(['CA_3'])
 ]
 
 
@@ -438,7 +459,7 @@ dataset_runperiod.wrangled_table(
     reshaping='pivot',
     vars_to_gather=['ComfMod'],
     baseline='CM_0',
-    comparison_mode='baseline compared to others',
+    comparison_mode=['baseline compared to others'],
     comparison_cols=['relative', 'absolute']
 )
 
@@ -449,13 +470,13 @@ dataset_runperiod.wrangled_table(
 dataset_runperiod.wrangled_df_pivoted
 
 
-# Another method to achieve this is generating a different Table object, only reading the CSV files with CA_3 in it name:
+# Another method to achieve this is generating a different Table object, only reading the CSV files with CA_3 in their names:
 
 # In[ ]:
 
 
 import os
-from accim.data.data_postprocessing import Table
+from accim.data.postprocessing.main import Table
 
 dataset = [i for i in os.listdir() if i.endswith('.csv') and 'CA_3' in i]
 
@@ -463,14 +484,13 @@ dataset_runperiod_simplified_1 = Table(
     datasets=dataset,
     source_frequency='hourly',
     frequency='runperiod',
-    frequency_agg_func='sum',
-    # this makes the sum or average when aggregating in days, months or runperiod; since the original CSV frequency is in hour, it won't make any aeffect
+    frequency_agg_func='sum', #the hourly values of the whole run period are summed
     standard_outputs=True,
     level=['building'],
     level_agg_func=['sum'],
-    # match_cities=bool Only used when EPW file has NOT been previously renamed
-    # manage_epw_names=bool Only used when EPW file has NOT been previously renamed
+    level_excluded_zones=[],
     split_epw_names=True,  # to split EPW names based on the format Country_City_RCPscenario-YEar
+    idf_path='TestModel.idf', # the IDF of the simulated building (the input IDF or any of the output IDFs, since all have the same zones); used to identify the zones in the CSVs
 )
 
 dataset_runperiod_simplified_1.format_table(
@@ -485,7 +505,7 @@ dataset_runperiod_simplified_1.wrangled_table(
     reshaping='pivot',
     vars_to_gather=['ComfMod'],
     baseline='CM_0',
-    comparison_mode='baseline compared to others',
+    comparison_mode=['baseline compared to others'],
     comparison_cols=['relative', 'absolute']
 )
 
@@ -513,13 +533,7 @@ dataset_runperiod_simplified_1.wrangled_df_pivoted.to_excel('building_energy_dem
 # In[ ]:
 
 
-for i in os.listdir():
-    if i.endswith('.xlsx'):
-        os.remove(i)
-
-
-# In[ ]:
-
-
-
+new_files = [i for i in os.listdir() if i not in previous_files]
+for i in new_files:
+    os.remove(i)
 

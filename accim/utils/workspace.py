@@ -34,7 +34,8 @@ class WorkspaceArtifactCleaner:
             '.git', '__pycache__', '.ipynb_checkpoints', '.idea', '.pytest_cache',
             '.mypy_cache', '.venv', 'venv'
         ])
-        self._baseline_files: set[str] = set()
+        # None until capture_initial_state(): an empty workspace is a valid initial state
+        self._baseline_files: Optional[set] = None
         self.generated_files: List[str] = []
         self.files_planned_for_deletion: List[str] = []
         self.files_deleted: List[str] = []
@@ -61,7 +62,7 @@ class WorkspaceArtifactCleaner:
         return sorted(set(self._iter_relative_files()))
 
     def get_generated_files(self) -> List[str]:
-        if not self._baseline_files:
+        if self._baseline_files is None:
             raise RuntimeError("Initial state not captured. Call capture_initial_state() first.")
         current = set(self._iter_relative_files())
         self.generated_files = sorted(current - self._baseline_files)
