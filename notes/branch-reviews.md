@@ -29,8 +29,12 @@ and `openpyxl` (PR 2); the tests of sim-v1 adapted to `tests/core`, with the rep
 `Table.wrangled_table(reshaping='pivot')` (PR 3); and the golden master of the output IDFs in
 `tests/core/golden_master`, with `tools/compare_backends.py` (PR 4). The orphan ideal loads systems with VRF are
 removed (section 3), and the setpoints of CS6 with `ComfMod` 2 stay as in 0.x until a later check (a TODO item).
-The integrity block of `review/refactor-sim-v1-20261024` and the comfort objective have a recommendation in
-[[questions.md]]. No ref has been deleted yet: `refactor/sim-v1` waits for the confirmation of the author.
+The author then chose the two recommendations of [[questions.md]]: of the integrity block of
+`review/refactor-sim-v1-20261024` (section 1.3), only the Pareto status with constraints and the identity of the
+parametric checkpoints were adapted; and the comfort objective independent of the control comes from the adaptive
+comfort status of EnergyPlus (two reducers of `objectives.py`), not from the EMS module of the comfort-metrics tag
+(section 2). No ref has been deleted yet: `refactor/sim-v1`, `review/refactor-sim-v1-20261024` and the two tags
+wait for the confirmation of the author.
 
 ## 1. Branch `refactor/sim-v1`
 

@@ -11,6 +11,47 @@ Durable architectural/process decisions for this repository and its Obsidian
 vault. Newest first. Use [[templates/decision-record.md|the decision-record
 template]] to add a new entry.
 
+## 2026-10-31 — Two parts of the integrity block of `review/refactor-sim-v1-20261024` are adapted, the rest dropped
+
+- **Status**: accepted (the recommendation of [[questions.md]], chosen by the author on 2026-10-31)
+- **Context**: That branch holds a block of versioned checkpoints with the identity of each evaluation, owned run
+  folders and locks, the cleanup of owned paths only and a Pareto status with constraints, written against 0.8.2
+  ([[branch-reviews.md]], section 1.3). Rebuilding it on the `main.py` of `v1.0.0` would rewrite a large part of
+  it and reject the existing checkpoints. Two of its problems were real in `v1.0.0`: the Pareto status (and the
+  cleanup of `keep_sim_files='non-dominated'`) ignored the constraints, and a resumed parametric run identified
+  its simulations by the names of the IDF and the EPW and the parameters only.
+- **Decision**: adapt those two parts, without changing how the module is used: a constraint-first dominance, as
+  platypus (`accim/parametric_and_optimisation/_pareto.py`), in `_annotate_pareto_status` and in the cleanup of
+  the workers; and the content of the IDF (its objects) and of the EPW, and the names of the outputs, in the
+  signatures of the parametric tasks (`_content_digest`, `_build_parametric_task_signature`). Drop the rest
+  (versioned checkpoint files, owned folders and locks, the patches, the benchmarks, the documentation page):
+  `WorkspaceArtifactCleaner` already deletes only what appears after its snapshot.
+- **Consequences**: the Pareto front of the optimisations with constraints changes (the evaluations that do not
+  meet them no longer dominate those that do), and the evaluations without finite values are not pareto-optimal.
+  A resumed run simulates again the tasks whose files or outputs changed, and those of the checkpoints written
+  before (0.x included), without any migration. The branch can be deleted when the author confirms.
+
+## 2026-10-31 — The comfort objective independent of the control comes from the adaptive comfort status of EnergyPlus
+
+- **Status**: accepted (the recommendation of [[questions.md]], chosen by the author on 2026-10-31)
+- **Context**: The tag `archive/feat-comfort-metrics-experiment-api` computes comfort metrics with EMS programs,
+  independent of the control ([[branch-reviews.md]], section 2). The comfort hours of accim follow the comfort
+  model that accim controls, so an optimisation that changes it (the custom model of WF4, the aPMV setpoints of
+  WF5) measures each evaluation against a different model; WF4 and WF5 minimise the mean operative temperature
+  instead. EnergyPlus already computes, for each `People` object of the models of accim (which always get the
+  adaptive models of ASHRAE 55 and CEN 15251), whether the zone is within their ranges: 1, 0, or -1 when it is
+  empty or the running mean is out of range (`ThermalComfort.cc`).
+- **Decision**: no EMS module. Two reducers in `objectives.py`: `hours_outside_comfort` (the occupied hours outside
+  the range, from hourly values) and `fraction_outside_comfort` (their fraction of the occupied time, from hourly
+  or timestep values), with an example in the overview page of the parametric module. The PMV indicators of
+  `compute_hourly_indicators` wait for a study that needs them (they need the Fanger model in the `People`
+  objects, which accim only adds with `temp_ctrl='pmv'`).
+- **Consequences**: an optimisation can minimise the hours outside CEN 15251 or ASHRAE 55, a fixed reference,
+  with no new EMS programs, outputs in the IDFs or work for the Python API backend. The objective is per zone
+  (`People` object), and the hours of the design days count when the model simulates its sizing periods, as
+  with the other readers. WF4 and WF5 keep their objectives. The tag can be deleted when the author confirms
+  (`checked_sum_results` and `openpyxl` are already in `v1.0.0`).
+
 ## 2026-10-31 — The fixes and tests of the branch reviews go to `v1.0.0`, before the release
 
 - **Status**: accepted (option (a), chosen by the author on 2026-10-31)

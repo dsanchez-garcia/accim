@@ -214,6 +214,41 @@ Two different things are set here:
   written hourly (``output_freqs=['hourly']``) and the files of the simulations must be kept
   (step 6).
 
+**Comfort objectives independent of the control.** The comfort hours that accim counts
+(``Comfortable Hours_*``, for instance) follow the comfort model that accim controls, so a study that
+changes that model (the coefficients of the custom model, or the aPMV setpoints) measures each
+evaluation against a different model. EnergyPlus also reports, for each ``People`` object of the
+models of accim, whether its zone is within the adaptive comfort range of CEN 15251
+(``Zone Thermal Comfort CEN 15251 Adaptive Model Category II Status``, or categories I and III) and of
+ASHRAE 55 (``Zone Thermal Comfort ASHRAE 55 Adaptive Model 80% Acceptability Status``, or 90 %),
+which do not depend on the control: 1 inside, 0 outside, and -1 when the zone is empty or the running
+mean outdoor temperature is out of the range of the model. ``hours_outside_comfort`` turns its hourly
+values into the occupied hours outside the range, and ``fraction_outside_comfort`` into their fraction
+of the occupied time. The models do not request these variables, so add them before choosing the
+outputs:
+
+.. code-block:: python
+
+    from accim.parametric_and_optimisation.objectives import hours_outside_comfort, sum_results
+
+    status = 'Zone Thermal Comfort CEN 15251 Adaptive Model Category II Status'
+    sim.set_output_variables_to_idf(output_variables=[status], validate=False)
+    sim.discover_available_outputs(refresh=True)
+    selection = sim.select_outputs(meters=['Electricity:HVAC'], variables=[status], on_missing='raise')
+    sim.apply_outputs_preflight(df_meters_sel=selection['meters'], df_vars_sel=selection['variables'],
+                                clean_mode='all')
+
+    readers_meters = selection['meters'].copy()
+    readers_meters['func'] = [sum_results] * len(readers_meters)
+    readers_comfort = selection['variables'].copy()      # one row for each People object
+    readers_comfort['func'] = [hours_outside_comfort] * len(readers_comfort)
+    readers_comfort['name'] = 'Hours outside CEN 15251 II ' + readers_comfort['key_value']
+    sim.set_output_readers(df_output_meter=readers_meters, df_output_variable=readers_comfort)
+
+Each row is a zone (its ``People`` object), so an optimisation gets an objective for each one: keep the
+rows of the zones that matter. As with the other readers, the hours of the design days count too when
+the model simulates its sizing periods.
+
 :doc:`jupyter_notebooks/parametric_and_optimisation_examples/04_outputs_preflight_and_output_control`
 shows the other methods for output objects, for example to find and remove duplicates.
 
@@ -327,7 +362,10 @@ reported:
                 for name in ['Heating:Electricity', 'Cooling:Electricity']]
     optim.set_problem(minimize_outputs=[True, True], add_outputs=reported)
 
-``constraints`` and ``constraint_bounds`` are passed to the besos ``EPProblem``.
+``constraints`` and ``constraint_bounds`` are passed to the besos ``EPProblem``. An evaluation that
+meets the constraints dominates any that does not (as the algorithms of platypus compare them), so
+the ``pareto-optimal`` column of the results and ``keep_sim_files='non-dominated'`` only keep, among
+the evaluations with the smallest violation, those that are not dominated in the objectives.
 
 6. Run the simulations
 ----------------------
@@ -383,7 +421,10 @@ again, with hourly outputs, only the cases you want to examine, by passing their
 
 **Long runs.** ``batch_size``, ``checkpoint_every_batch`` and ``resume_from_checkpoint`` (parametric)
 or ``checkpoint_every_case`` and ``resume_from_checkpoint`` (optimisation) save the progress and
-continue an interrupted run. ``preflight_report_parametric`` and ``preflight_report_optimisation``
+continue an interrupted run. A resumed parametric run reuses the simulations of the checkpoint
+whose model (its objects, after the setup of accim), weather file, parameters and output names
+are the same, and simulates the others again: changing the model or the outputs between the two
+runs is safe. ``preflight_report_parametric`` and ``preflight_report_optimisation``
 check the plan and estimate the number of simulations before running. On Windows, keep ``out_dir``
 short: EnergyPlus fails when a path reaches 260 characters, and accim warns when ``out_dir`` is too
 long.

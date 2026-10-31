@@ -97,7 +97,7 @@ Lo que ya está en otros documentos no se repite aquí:
 | — | `accim/_deprecation.py`: el mecanismo de los nombres antiguos (sección 7) |
 | `run/run.py` (`runEp`) | `run/run.py`: `run_ep`, con `backend='ems'` o `'api'`, y `simulation_name` |
 | `accim.data` | Igual, con `gen_csv_concatenated`, `preview_table_cols` y `name_export_rows_with_nan` (los nombres antiguos funcionan) |
-| `accim.parametric_and_optimisation` | Igual; cambian sus llamadas internas a `accim.sim` (y algunas correcciones, sección 10) |
+| `accim.parametric_and_optimisation` | Igual; cambian sus llamadas internas a `accim.sim` (y algunas correcciones, sección 10). Nuevo `_pareto.py` (la dominancia con restricciones) y, en `objectives.py`, `checked_sum_results`, `hours_outside_comfort` y `fraction_outside_comfort` |
 
 ## 3. De los métodos de 0.8.2 a las funciones de 1.0.0
 
@@ -292,6 +292,15 @@ Están en la sección 9.3 de la guía de migración y en `CHANGELOG.md`. En resu
   su IDF o se detiene con un error claro (`_floor_areas_of_rows`), solo convierte las columnas en J,
   sigue el calendario de EnergyPlus (`_interval_reference_times`, `_AutoYearStartDate`) y explica qué
   archivos de simulación faltan.
+- Del bloque de integridad de `review/refactor-sim-v1-20261024`, dos partes, también sin cambiar el uso: el
+  estado de Pareto y la limpieza de `keep_sim_files='non-dominated'` tienen en cuenta las restricciones, como
+  platypus (`_pareto.py`: una evaluación que las cumple domina a cualquiera que no); y la firma de cada
+  simulación de los checkpoints paramétricos incluye el contenido del IDF (sus objetos) y del EPW y los
+  nombres de las salidas (`_content_digest`), así que al reanudar se repiten las que cambiaron.
+- Objetivos de confort independientes del control (`objectives.hours_outside_comfort` y
+  `fraction_outside_comfort`): leen el estado de confort adaptativo que EnergyPlus calcula para cada objeto
+  `People` (ASHRAE 55 y CEN 15251, que accim activa en todos sus modelos), en lugar de las métricas EMS de la
+  etiqueta `archive/feat-comfort-metrics-experiment-api`.
 
 ## 11. Pruebas
 

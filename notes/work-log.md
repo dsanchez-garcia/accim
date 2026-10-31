@@ -15,6 +15,14 @@ This log is a lightweight, session-scoped complement to the repository's
 existing tracking files — it does not replace them (see
 [[decisions.md#2026-09-13 — `notes/work-log.md` complements, not replaces, existing tracking files|the related decision]]).
 
+## 2026-10-31 — The last two recommendations: Pareto with constraints, checkpoints, comfort objectives
+
+- **Objective**: Apply the recommendations that the author chose for the last two questions of [[questions.md]].
+- **Affected files**: `accim/parametric_and_optimisation/_pareto.py` (new), `main.py`, `patches.py`, `objectives.py`; their tests; `docs/source/parametric_and_optimisation.rst`, `docs/source/9_migration_guide.md`; [[../CHANGELOG.md]], [[../DEVLOG.md]], [[../TODO.md]], [[decisions.md]], [[questions.md]], [[branch-reviews.md]].
+- **Finding or decision**: Two decision records (see [[decisions.md]]). The Pareto status and the cleanup of the workers compare the evaluations as platypus does, with the constraints; the parametric checkpoints identify each simulation by the content of its IDF and EPW and its output names too; and two reducers turn the adaptive comfort status of EnergyPlus into a comfort objective with a fixed reference. `select_outputs` only finds the variables that the model already requests, so the status variable must be added first (the overview page shows how).
+- **Validation**: the reducers agree with the timestep counts of a real simulation; 457 tests of the parametric module and the numbered tests 03 and 04 pass; details in [[../DEVLOG.md]].
+- **Next step**: the author confirms the deletion of the refs reviewed in [[branch-reviews.md]].
+
 ## 2026-10-31 — Answers of the author on the branch reviews
 
 - **Objective**: Apply the answers of the author to the questions of [[questions.md]]: everything to `v1.0.0` (1), the setpoints of CS6 with `ComfMod` 2 kept until checked (4), the orphan ideal loads systems removed (5); recommend for (2) and (3).

@@ -163,6 +163,15 @@ of each class of `accim.parametric_and_optimisation` and their results):
   `'NSGAIII'` without `divisions_outer` or with maximised objectives, with `'SPEA2'` and a `population_size`
   below 3, with `'OMOPSO'`, `'SMPSO'` and `'CMAES'` and categorical parameters, and with the single-objective
   algorithms and several objectives. Before, these settings failed once the first case had started.
+- With constraints, the `pareto-optimal` column of `run_optimisation()` and `keep_sim_files='non-dominated'`
+  compare the evaluations as platypus does: an evaluation that meets the constraints dominates any that does not.
+  In accim 0.x they only compared the objectives, so an evaluation that did not meet the constraints could be
+  marked pareto-optimal, and could make the folder of the best one that met them be removed. Without constraints,
+  the front is the same, except that the evaluations whose objectives are not finite numbers are no longer
+  pareto-optimal.
+- A parametric run resumed from a checkpoint (`resume_from_checkpoint`) reuses the simulations whose model (its
+  objects), weather file and outputs are the same, besides their names and parameters, so the simulations of a
+  checkpoint written by accim 0.x are run again.
 - The post-processing of `accim.parametric_and_optimisation` follows the calendar of EnergyPlus, which labels
   each hourly or timestep value with the end of its interval: the daily and monthly tables add the value of
   24:00 to its own day and month (before, to the next ones, so a 3-day run gave 4 daily rows). Without
