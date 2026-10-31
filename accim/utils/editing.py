@@ -5,9 +5,6 @@
 """Functions that edit EnergyPlus models (IDF objects of eppy or besos, or IDF files)."""
 
 import warnings
-from os import fdopen, remove
-from shutil import copymode, move
-from tempfile import mkstemp
 from typing import Any, Dict, List, Literal
 
 from unidecode import unidecode
@@ -177,25 +174,20 @@ def amend_idf_version_from_dsb(file_path: str):
     """
     Amends the idf version of the Designbuilder-sourced idf file, for Designbuilder v7.X.
     Replaces the string 'Version, 9.4.0.002' with 'Version, 9.4'.
+    The rest of the file (its encoding and line endings) does not change.
 
     :param idf_path: the path to the idf
     :type idf_path: str
     """
-    pattern = 'Version, 9.4.0.002'
-    subst = 'Version, 9.4'
+    pattern = b'Version, 9.4.0.002'
+    subst = b'Version, 9.4'
 
-    # Create temp file
-    fh, abs_path = mkstemp()
-    with fdopen(fh, 'w') as new_file:
-        with open(file_path) as old_file:
-            for line in old_file:
-                new_file.write(line.replace(pattern, subst))
-    # Copy the file permissions from the old file to the new file
-    copymode(file_path, abs_path)
-    # Remove original file
-    remove(file_path)
-    # Move new file
-    move(abs_path, file_path)
+    # As bytes, since the encoding of the file is not known
+    with open(file_path, 'rb') as file:
+        data = file.read()
+    if pattern in data:
+        with open(file_path, 'wb') as file:
+            file.write(data.replace(pattern, subst))
 
 
 def transform_ddmm_to_int(string_date: str) -> int:
@@ -276,7 +268,11 @@ def get_available_fields(
     # --- CASE 2: Extract from IDF (Existing Instance) ---
     elif source == 'idf':
         # Check if there are any created objects of this type
-        objects = idf_instance.idfobjects[obj_upper]
+        try:
+            objects = idf_instance.idfobjects[obj_upper]
+        except KeyError:
+            warnings.warn(f"Object type '{object_name}' not found in the loaded IDD.")
+            return []
 
         if len(objects) > 0:
             # Take the first object to extract its fields

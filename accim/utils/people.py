@@ -404,7 +404,7 @@ def get_idf_hierarchy(idf: IDF) -> Dict[str, Any]:
         }
 
     # --- 2. Process SPACES (Child Objects) ---
-    spaces = idf.idfobjects['SPACE']
+    spaces = _get_objects_if_in_idd(idf, 'SPACE')
 
     # Note: If 'spaces' is empty, it might be a legacy IDF (pre-v9.6) or a simplified model.
     for space in spaces:
@@ -435,7 +435,7 @@ def get_idf_hierarchy(idf: IDF) -> Dict[str, Any]:
         hierarchy["groups"]["zone_lists"][z_list.Name] = members
 
     # Process SpaceList
-    for s_list in idf.idfobjects['SPACELIST']:
+    for s_list in _get_objects_if_in_idd(idf, 'SPACELIST'):
         # Same logic applied to SpaceLists
         members: List[str] = [m for m in s_list.obj[2:]]
         hierarchy["groups"]["space_lists"][s_list.Name] = members
@@ -567,8 +567,8 @@ def get_spaces_from_spacelist(idf: IDF, spacelist_name: str) -> List[str]:
     # Normalize the target name to uppercase for case-insensitive comparison
     target_name_upper = spacelist_name.upper()
 
-    # Iterate through all SPACELIST objects in the IDF
-    for s_list in idf.idfobjects['SPACELIST']:
+    # Iterate through all SPACELIST objects in the IDF (none with the IDDs before EnergyPlus 9.6)
+    for s_list in _get_objects_if_in_idd(idf, 'SPACELIST'):
 
         # Check if this is the list we are looking for
         if s_list.Name.upper() == target_name_upper:

@@ -74,7 +74,12 @@ def get_accim_args(idf_object: IDF) -> dict:
     programs = {}
     try:
         for p in ['SetInputData', 'SetVOFinputData']:
-            data = [i for i in idf_object.idfobjects['EnergyManagementSystem:Program'] if i.Name.lower() == p.lower()][0].obj
+            matches = [i for i in idf_object.idfobjects['EnergyManagementSystem:Program']
+                       if i.Name.lower() == p.lower()]
+            if p == 'SetVOFinputData' and not matches:
+                # Only the models with natural ventilation (mixed mode) have SetVOFinputData
+                continue
+            data = matches[0].obj
             programs.update({p: program_to_dict(data)})
 
         setast = [i for i in idf_object.idfobjects['EnergyManagementSystem:Program'] if i.Name.lower() == 'setast'.lower()][0].obj[:3]

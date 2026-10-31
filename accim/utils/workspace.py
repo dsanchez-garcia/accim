@@ -41,13 +41,14 @@ class WorkspaceArtifactCleaner:
         self.files_deleted: List[str] = []
         self.generated_files_not_selected_for_deletion: List[str] = []
 
+    def _is_walked(self, dirname: str) -> bool:
+        """Whether the cleaner walks a folder: not the excluded folders, nor the hidden ones unless include_hidden."""
+        return dirname not in self.exclude_dirs and (self.include_hidden or not dirname.startswith('.'))
+
     def _iter_relative_files(self):
         for root, dirs, files in os.walk(self.workspace_root):
             root_path = Path(root)
-            dirs[:] = [
-                d for d in dirs
-                if d not in self.exclude_dirs and (self.include_hidden or not d.startswith('.'))
-            ]
+            dirs[:] = [d for d in dirs if self._is_walked(d)]
             for name in files:
                 if not self.include_hidden and name.startswith('.'):
                     continue
@@ -136,15 +137,17 @@ class WorkspaceArtifactCleaner:
         self.files_deleted = deleted
 
         if remove_empty_dirs:
-            for root, dirs, _ in os.walk(self.workspace_root, topdown=False):
-                root_path = Path(root)
-                for d in dirs:
-                    if d in self.exclude_dirs:
-                        continue
-                    try:
-                        (root_path / d).rmdir()
-                    except OSError:
-                        pass
+            # Only the folders that the cleaner walks (never those inside an excluded or hidden folder, such as
+            # .git), the deepest first
+            folders: List[Path] = []
+            for root, dirs, _ in os.walk(self.workspace_root):
+                dirs[:] = [d for d in dirs if self._is_walked(d)]
+                folders.extend(Path(root) / d for d in dirs)
+            for folder in reversed(folders):
+                try:
+                    folder.rmdir()
+                except OSError:
+                    pass
 
         print(f"Deleted files: {len(deleted)}")
         return deleted
