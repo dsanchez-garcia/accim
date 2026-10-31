@@ -39,7 +39,7 @@ from accim.sim.arguments import (
     to_day_of_year,
 )
 from accim.sim.build import add_accis_objects, add_outputs
-from accim.sim.ems.setast import master_program_lines, subprograms
+from accim.sim.ems.setast import MODULAR_COMFORT_MODES, depends_on_comfort_mode, master_program_lines, subprograms
 from accim.sim.generation import GenerationArguments, IdfWriter, OutputIdfs, combinations, output_name
 from accim.sim.idf_tools import add_program, copy_idf, idf_text, replace_program_lines, set_program_lines
 from accim.sim.model import AccimModel
@@ -524,7 +524,9 @@ def add_accis_to_idf(
 
     The arguments of the ACCIS (comfort standard, category, HVAC mode...) are those of :func:`modify_accis`
     (by default, ComfStand 1, CAT 1, ComfMod 2, HVACmode 2 and VentCtrl 0), which can change them later.
-    The arguments are those of :class:`AddAccis`.
+    The arguments are those of :class:`AddAccis`. With the VRF systems (``script_type`` 'vrf_ac' and 'vrf_mm'),
+    which are autosized, the zone, system and plant sizing calculations of the model are enabled, as
+    :class:`AddAccis` does; with the existing HVAC systems, the sizing calculations do not change.
 
     :param idf: The IDF object.
     :param energyplus_version: The EnergyPlus version of the model; None or 'auto' to take that of its IDD.
@@ -549,6 +551,10 @@ def add_accis_to_idf(
     add_accis_objects(model, supply_air_temp_input_method, vrf_schedule=vrf_schedule, eer=eer, cop=cop,
                       make_averages=make_averages, debugging=debugging)
     add_outputs(model, output_type, output_freqs, output_keep_existing, output_take_dataframe)
+    if script_type.startswith('vrf'):
+        # EnergyPlus cannot run the VRF systems without sizing them (they are autosized). The existing HVAC systems
+        # are the user's, so their sizing does not change (in accim 0.x, this function did not change it either)
+        enable_sizing_calculations(model)
     if verbose_mode:
         print(_END_MODEL)
     return model
@@ -608,7 +614,9 @@ def modify_accis(
 
     The comfort standard, category, comfort mode, HVAC mode and ventilation control that are None keep
     their values. The setpoints are set in each timestep by the subprograms of the comfort standard
-    (SetAST_Master), so these arguments can also be changed later in SetInputData.
+    (SetAST_Master), so these arguments can also be changed later in SetInputData. The models of earlier
+    versions of accim get the subprograms of this version where they behave differently (those of ESP CTE
+    and INT ISO7730 set the setpoints whatever the comfort mode is).
 
     :param ast_tol: The tolerance of the setpoints.
     :raises ValueError: If the model has no ACCIS or setpoint_acc is negative.
@@ -642,6 +650,12 @@ def modify_accis(
         for name, lines in subprograms().items():
             if name not in programs:
                 add_program(idf, name, lines)
+    else:
+        # The models of accim before 1.0 only set the setpoints of ESP CTE and INT ISO7730 if ComfMod is 0
+        static = [cs for cs in MODULAR_COMFORT_MODES if not depends_on_comfort_mode(cs)]
+        for name, lines in subprograms(static).items():
+            if name in programs:
+                replace_program_lines(programs[name], lines)
     if 'SetVOFinputData' in programs:
         set_program_lines(programs['SetVOFinputData'], [
             f'set MaxTempDiffVOF = {max_temp_diff_vof}', f'set MinTempDiffVOF = {min_temp_diff_vof}',

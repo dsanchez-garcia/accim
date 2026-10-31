@@ -94,10 +94,11 @@ def enable_sizing(building):
     Activa los cálculos de dimensionado y, si el modelo no tiene periodos de dimensionado, añade dos periodos de
     días del EPW.
 
-    Los IDF de test no tienen periodos de dimensionado y tienen desactivado el dimensionado de zonas, así que
-    EnergyPlus no puede dimensionar los sistemas VRF (autosize) que añade accim y se detiene ("For autosizing of
-    ZoneHVAC:TerminalUnit:VariableRefrigerantFlow ..., a zone sizing run must be done"). Los periodos de
-    dimensionado no se simulan, para que los resultados sean solo los del periodo de simulación.
+    Los IDF de test no tienen periodos de dimensionado y tienen desactivado el dimensionado de zonas. accim activa
+    los cálculos de dimensionado de los sistemas VRF (autosize) que añade, pero no añade periodos de dimensionado,
+    sin los que EnergyPlus se detiene ("Sizing for Zones has been requested but there are no design environments
+    specified"). Los periodos de dimensionado no se simulan, para que los resultados sean solo los del periodo de
+    simulación.
     """
     control = building.idfobjects['SimulationControl'][0]
     control.Do_Zone_Sizing_Calculation = 'Yes'

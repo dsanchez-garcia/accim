@@ -16,7 +16,8 @@ import pytest
 
 from accim.parametric_and_optimisation.funcs_for_besos import param_accis
 from accim.sim import accis, accis_single_idf, accis_single_idf_funcs
-from accim.sim.ems.setast import get_setpoint_lines
+from accim.sim.ems.setast import get_setpoint_lines, subprograms
+from accim.sim.idf_tools import replace_program_lines
 
 REPO = Path(__file__).resolve().parents[2]
 SAMPLE_IDF = (REPO / 'accim' / 'sample_files' / 'jupyter_notebooks' / 'parametric_and_optimisation_examples'
@@ -95,6 +96,24 @@ def test_modify_accis_sets_the_input_data_and_none_keeps_it(building):
 def test_modify_accis_needs_the_accis(building):
     with pytest.raises(ValueError, match='Add the ACCIS first'):
         accis.modify_accis(building, comf_stand=1)
+
+
+def test_modify_accis_updates_the_subprograms_of_esp_cte_and_int_iso7730(building):
+    # In the models of accim 0.x, these subprograms only set the setpoints if ComfMod is 0, so the parametric
+    # models (ComfMod 3) with ComfStand 0 or 22 stopped EnergyPlus
+    accis.add_accis_to_idf(building, **ADD_ACCIS_ARGS)
+    programs = {p.Name: p for p in building.idfobjects['EnergyManagementSystem:Program']}
+    for name, comf_stand in [('SetAST_CS0_0', 0), ('SetAST_CS22_0', 22)]:
+        replace_program_lines(programs[name], [f'! {name}', 'if (ComfMod == 0)',
+                                               *get_setpoint_lines(comf_stand, 0), 'endif'])
+    others = {name: _program_lines(building, name) for name in ['SetAST_Master', 'SetAST_CS1_0', 'SetAST_CS13_0']}
+
+    accis.modify_accis(building, comf_stand=0, comf_mod=3)
+
+    for name, lines in subprograms([0, 22]).items():
+        assert _program_lines(building, name) == lines
+        assert not any('ComfMod ==' in line for line in lines)
+    assert {name: _program_lines(building, name) for name in others} == others
 
 
 def test_add_accis_to_idf_controls_the_scheduled_ventilation(building):

@@ -6,17 +6,20 @@
 
 SetAST runs SetAST_Master, which calculates CoolingSeason and runs the subprograms of the comfort
 standard of SetInputData (``SetAST_CS<ComfStand>_<chunk>``). Each subprogram holds the lines of up
-to 3 comfort modes, so that no program exceeds the limit of program lines of EnergyPlus. Each output
-IDF also appends to SetAST the lines of its comfort standard and comfort mode.
+to 3 comfort modes, so that no program exceeds the limit of program lines of EnergyPlus; the
+subprograms of the comfort standards whose setpoints do not depend on the comfort mode (ESP CTE and
+INT ISO7730) set them whatever ComfMod is. Each output IDF also appends to SetAST the lines of its
+comfort standard and comfort mode.
 """
 
 import re
-from typing import Dict, List, Sequence, Tuple, Union
+from typing import Dict, Iterable, List, Optional, Sequence, Tuple, Union
 
 from accim.sim.ems.setpoint_lines import ROUNDING, SETPOINT_LINES
 
 __all__ = [
     'MODULAR_COMFORT_MODES',
+    'depends_on_comfort_mode',
     'get_setpoint_lines',
     'has_setpoints',
     'master_program_lines',
@@ -107,6 +110,15 @@ def master_program_lines() -> List[str]:
 
 def _subprogram_lines(comf_stand: int, chunk: int, comf_mods: Sequence[Number]) -> List[str]:
     name = f'SetAST_CS{comf_stand}_{chunk}'
+    if not depends_on_comfort_mode(comf_stand):
+        # The static standards (ESP CTE, INT ISO7730) set the same setpoints whatever ComfMod is, so they also work
+        # with the ComfMod of SetInputData when it is not 0, as in the models of the parametric module
+        return [
+            f'! {name}',
+            f'! SetAST subprogram for ComfStand == {comf_stand}, Chunk {chunk}',
+            '! The setpoints of this ComfStand do not depend on ComfMod',
+            *get_setpoint_lines(comf_stand, comf_mods[0]),
+        ]
     lines = [
         f'! {name}',
         f'! SetAST subprogram for ComfStand == {comf_stand}, Chunk {chunk}',
@@ -122,10 +134,18 @@ def _subprogram_lines(comf_stand: int, chunk: int, comf_mods: Sequence[Number]) 
     return lines
 
 
-def subprograms() -> Dict[str, List[str]]:
-    """Name and lines of each subprogram ``SetAST_CS<ComfStand>_<chunk>``."""
+def depends_on_comfort_mode(comf_stand: int) -> bool:
+    """False for the comfort standards whose setpoints are the same in every comfort mode (ESP CTE, INT ISO7730)."""
+    return [mode for stand, mode in SETPOINT_LINES if stand == comf_stand] != [None]
+
+
+def subprograms(comf_stands: Optional[Iterable[int]] = None) -> Dict[str, List[str]]:
+    """Name and lines of each subprogram ``SetAST_CS<ComfStand>_<chunk>`` (of all the comfort standards, by default)."""
+    selected = MODULAR_COMFORT_MODES if comf_stands is None else set(comf_stands)
     programs = {}
     for comf_stand, comf_mods in MODULAR_COMFORT_MODES.items():
+        if comf_stand not in selected:
+            continue
         for chunk, chunk_mods in enumerate(_chunks(comf_mods)):
             programs[f'SetAST_CS{comf_stand}_{chunk}'] = _subprogram_lines(comf_stand, chunk, chunk_mods)
     return programs

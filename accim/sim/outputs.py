@@ -4,6 +4,7 @@
 
 """Outputs of the models (Output:Variable and Output:Meter objects) and output control objects."""
 
+import os
 import warnings
 from typing import Iterable, Optional
 
@@ -55,6 +56,7 @@ _SITE_OUTPUTS = ('Site Outdoor Air Drybulb Temperature', 'Site Wind Speed', 'Sit
 _VRF_OUTPUTS = ('VRF Heat Pump Cooling Electricity Energy', 'VRF Heat Pump Heating Electricity Energy')
 _METERS = ('EnergyTransfer:HVAC', 'Electricity:HVAC', 'DistrictHeating:Facility', 'DistrictCooling:Facility',
            'Heating:EnergyTransfer', 'Cooling:EnergyTransfer', 'Heating:Electricity', 'Cooling:Electricity')
+_SIZING_PERIODS = ('SizingPeriod:DesignDay', 'SizingPeriod:WeatherFileDays', 'SizingPeriod:WeatherFileConditionType')
 
 
 def _new_output(model: AccimModel, key: str, variable: str, frequency: str) -> None:
@@ -243,17 +245,43 @@ def add_ems_debug_output(model: AccimModel) -> None:
 
 
 def enable_sizing_calculations(model: AccimModel) -> None:
-    """Enable the zone, system and plant sizing calculations (the VRF systems are autosized)."""
-    controls = list(model.idf.idfobjects['SimulationControl'])
+    """Enable the zone, system and plant sizing calculations (the VRF systems are autosized).
+
+    EnergyPlus also needs sizing periods to size the systems: if the model has Sizing:Zone, Sizing:System or
+    Sizing:Plant objects (the VRF systems of accim add Sizing:Zone objects) but no SizingPeriod objects, it stops
+    ('Sizing for Zones has been requested but there are no design environments specified' and the like,
+    ``CheckEnvironmentSpecifications``), so a warning tells how to add them.
+    """
+    idf = model.idf
+    controls = list(idf.idfobjects['SimulationControl'])
     if not controls:
-        model.idf.newidfobject('SimulationControl', Do_Zone_Sizing_Calculation='Yes',
-                               Do_System_Sizing_Calculation='Yes', Do_Plant_Sizing_Calculation='Yes',
-                               Run_Simulation_for_Sizing_Periods='Yes',
-                               Run_Simulation_for_Weather_File_Run_Periods='Yes')
+        idf.newidfobject('SimulationControl', Do_Zone_Sizing_Calculation='Yes',
+                         Do_System_Sizing_Calculation='Yes', Do_Plant_Sizing_Calculation='Yes',
+                         Run_Simulation_for_Sizing_Periods='Yes',
+                         Run_Simulation_for_Weather_File_Run_Periods='Yes')
         model.log('Added - SimulationControl object with Sizing parameters enabled')
-        return
-    control = controls[0]
-    control.Do_Zone_Sizing_Calculation = 'Yes'
-    control.Do_System_Sizing_Calculation = 'Yes'
-    control.Do_Plant_Sizing_Calculation = 'Yes'
-    model.log('Modified - SimulationControl object: enabled Zone, System, and Plant Sizing Calculations')
+    else:
+        control = controls[0]
+        control.Do_Zone_Sizing_Calculation = 'Yes'
+        control.Do_System_Sizing_Calculation = 'Yes'
+        control.Do_Plant_Sizing_Calculation = 'Yes'
+        model.log('Modified - SimulationControl object: enabled Zone, System, and Plant Sizing Calculations')
+    sized = any(idf.idfobjects[kind] for kind in ('Sizing:Zone', 'Sizing:System', 'Sizing:Plant'))
+    has_sizing_periods = any(idf.idfobjects[kind] for kind in _SIZING_PERIODS)
+    if sized and not has_sizing_periods:
+        warnings.warn(
+            f'The model {_model_label(model)} has no sizing periods (SizingPeriod:DesignDay, '
+            f'SizingPeriod:WeatherFileDays or SizingPeriod:WeatherFileConditionType objects), so EnergyPlus cannot '
+            f'size its HVAC systems and will stop ("Sizing for ... has been requested but there are no design '
+            f'environments specified"). Add the design days of its location (for instance, from the .ddy file of '
+            f'the EPW) or SizingPeriod:WeatherFileDays objects.',
+            stacklevel=2,
+        )
+
+
+def _model_label(model: AccimModel) -> str:
+    """The name of the IDF file of a model (an IDF object read from text has none), or the name of the model."""
+    idfname = getattr(model.idf, 'idfname', None)
+    if isinstance(idfname, (str, os.PathLike)):
+        return os.path.splitext(os.path.basename(os.fspath(idfname)))[0]
+    return model.name

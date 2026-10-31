@@ -1000,7 +1000,8 @@ def add_vrf_system(
 ):
     """
     Adds a Variable Refrigerant Flow (VRF) system to each occupied zone of the model, controlled by
-    thermal comfort (Fanger) thermostats, on which apply_apmv_setpoints can then act.
+    thermal comfort (Fanger) thermostats, on which apply_apmv_setpoints can then act. The VRF systems are
+    autosized, so the zone, system and plant sizing calculations of the model are enabled, as AddAccis does.
 
     :param building: The BESOS/eppy IDF object.
     :param supply_air_temp_input_method: Method for supply air temperature ('supply air temperature' or
@@ -1013,12 +1014,14 @@ def add_vrf_system(
     """
     from accim.sim.hvac import vrf
     from accim.sim.model import AccimModel
+    from accim.sim.outputs import enable_sizing_calculations
     from accim.sim.people import set_comfort_models
 
     model = AccimModel(building, 'vrf_ac', 'pmv', verbose_mode=verbose_mode)
     set_comfort_models(model)
     vrf.add_vrf_system(model, supply_air_temp_input_method, eer=eer, cop=cop, vrf_schedule=vrf_schedule)
     vrf.add_setpoint_schedules(model)
+    enable_sizing_calculations(model)
 
 
 def change_adaptive_coeff(building: IDF, df_arguments: pd.DataFrame):
