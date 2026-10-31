@@ -191,69 +191,71 @@ def drop_invalid_param_combinations(samples_df):
 
     samples_df['valid'] = True
     for i in samples_df.index:
+        # Each rule is checked if the plan has its columns: a missing column (or a ComfStand that is not in
+        # valid_params, such as 99) only skips that rule
         try:
             if samples_df.loc[i, 'CAT'] not in valid_params[samples_df.loc[i, 'ComfStand']][0]:
                 samples_df.loc[i, 'valid'] = False
         except KeyError:
-            continue
+            pass
 
         try:
             if samples_df.loc[i, 'ComfMod'] not in valid_params[samples_df.loc[i, 'ComfStand']][1]:
                 samples_df.loc[i, 'valid'] = False
         except KeyError:
-            continue
+            pass
 
         try:
             if samples_df.loc[i, 'VentCtrl'] != 0 and samples_df.loc[i, 'HVACmode'] == 0:
                 samples_df.loc[i, 'valid'] = False
         except KeyError:
-            continue
+            pass
 
         try:
             if samples_df.loc[i, 'VSToffset'] != 0 and samples_df.loc[i, 'HVACmode'] == 0:
                 samples_df.loc[i, 'valid'] = False
         except KeyError:
-            continue
+            pass
 
         try:
             if samples_df.loc[i, 'MinOToffset'] != 0 and samples_df.loc[i, 'HVACmode'] == 0:
                 samples_df.loc[i, 'valid'] = False
         except KeyError:
-            continue
+            pass
 
         try:
             if samples_df.loc[i, 'MaxWindSpeed'] != 0 and samples_df.loc[i, 'HVACmode'] == 0:
                 samples_df.loc[i, 'valid'] = False
         except KeyError:
-            continue
+            pass
 
         try:
             if samples_df.loc[i, 'SetpointAcc'] < 0:
                 samples_df.loc[i, 'valid'] = False
         except KeyError:
-            continue
+            pass
         try:
             if samples_df.loc[i, 'MaxTempDiffVOF'] <= 0:
                 samples_df.loc[i, 'valid'] = False
         except KeyError:
-            continue
+            pass
 
         try:
             if samples_df.loc[i, 'MinTempDiffVOF'] <= 0:
                 samples_df.loc[i, 'valid'] = False
         except KeyError:
-            continue
+            pass
         try:
             if samples_df.loc[i, 'MinTempDiffVOF'] >= samples_df.loc[i, 'MaxTempDiffVOF']:
                 samples_df.loc[i, 'valid'] = False
         except KeyError:
-            continue
+            pass
 
         try:
             if samples_df.loc[i, 'MultiplierVOF'] < 0 or samples_df.loc[i, 'MultiplierVOF'] > 1:
                 samples_df.loc[i, 'valid'] = False
         except KeyError:
-            continue
+            pass
 
 
     samples_cleaned = samples_df[samples_df['valid'] == True].drop(columns=['valid'])

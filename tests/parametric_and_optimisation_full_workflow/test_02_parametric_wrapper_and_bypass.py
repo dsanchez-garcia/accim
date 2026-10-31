@@ -68,10 +68,12 @@ wrapper_sim = AccimPredefModelsParamSim(
     ScriptType='vrf_mm',
 )
 
-# Meters del IDF (el wrapper ya aplicó addAccis), sin la simulación de prueba que los valida: el modelo base del
-# wrapper (modelo custom, ComfStand 99, sin coeficientes) tiene la consigna de calefacción por encima de la de
-# refrigeración, y EnergyPlus se detiene
-wrapper_sim.set_output_meters_to_idf(output_meters=['Heating:Electricity', 'Cooling:Electricity'], validate=False)
+# Meters del IDF (el wrapper ya aplicó addAccis), validados con las salidas disponibles (.rdd/.mdd) de una
+# simulación de prueba del modelo base del wrapper (el modelo custom, ComfStand 99, con los coeficientes por
+# defecto de 'accim custom model'). Con output_type='simplified' el modelo no informa todavía de estos meters, así
+# que la validación usa los .rdd/.mdd y no los resultados de la simulación de prueba
+wrapper_sim.discover_available_outputs(prefer='rdd_mdd')
+wrapper_sim.set_output_meters_to_idf(output_meters=['Heating:Electricity', 'Cooling:Electricity'], on_missing='raise')
 df_meters_problem = pd.DataFrame({
     'key_name': ['Heating:Electricity', 'Cooling:Electricity'],
     'frequency': ['Hourly', 'Hourly'],
@@ -80,7 +82,7 @@ wrapper_sim.set_output_readers(df_output_meter=df_meters_problem)
 
 # Parámetros
 # EN16798 cat. I + ASHRAE55 80 % (ComfMod 3 del wrapper); el plan descarta cada norma con la categoría de la otra.
-# ESP CTE (ComfStand 0) solo tiene consignas con ComfMod 0.
+# ESP CTE (ComfStand 0) no entraría: sampling_full_set la descarta cuando el plan tiene CAT (no depende de ella).
 wrapper_sim.set_parameters(accis_params_dict={'ComfStand': [1, 2], 'CAT': [1, 80]})
 wrapper_sim.sampling_full_set()
 wrapper_sim.set_problem()
@@ -163,7 +165,7 @@ df_meters_bp = df_meters_bp[
 ].drop_duplicates(subset=['key_name'])
 bypass_sim.set_output_readers(df_output_meter=df_meters_bp)
 
-# Categorías de EN16798 (la norma por defecto del modelo); ESP CTE (ComfStand 0) solo tiene consignas con ComfMod 0
+# Categorías de EN16798 (la norma por defecto del modelo)
 bypass_sim.set_parameters(accis_params_dict={'CAT': [1, 2]})
 bypass_sim.sampling_full_set()
 bypass_sim.set_problem()

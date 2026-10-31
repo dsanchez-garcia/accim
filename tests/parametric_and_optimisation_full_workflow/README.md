@@ -75,11 +75,12 @@ procesos importan el `__main__` de pytest, que no se vuelve a ejecutar.
 
 ## Preparación de los modelos
 
-Los IDFs `SF_Detached_*` no tienen periodos de dimensionado y tienen desactivado el dimensionado de zonas,
-que necesitan los sistemas VRF (autosize) que añade accim. Los scripts llaman a `enable_sizing()` de
-`tests/test_setup.py`, que activa el dimensionado y añade unos días del EPW como periodos de dimensionado
-(que no se simulan). eppy lee todos los modelos de un proceso con el IDD del primero, así que todos los
-modelos de un script deben ser de la misma versión de EnergyPlus (9.6).
+Los IDFs `SF_Detached_*` no tienen periodos de dimensionado y tienen desactivado el dimensionado de zonas.
+accim activa el dimensionado de los sistemas VRF (autosize) que añade, pero EnergyPlus también necesita
+periodos de dimensionado. Los scripts llaman a `enable_sizing()` de `tests/test_setup.py`, que activa el
+dimensionado y añade unos días del EPW como periodos de dimensionado (que no se simulan). eppy lee todos los
+modelos de un proceso con el IDD del primero, así que todos los modelos de un script deben ser de la misma
+versión de EnergyPlus (9.6).
 
 ## Periodo de simulación
 

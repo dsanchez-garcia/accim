@@ -26,6 +26,66 @@ import seaborn as sns
 from typing import Any, Dict, Literal, Optional, Union
 from accim.parametric_and_optimisation.utils import apply_data_filter, resolve_subplot_orders
 
+
+def _floor_areas_of_rows(idf_labels: Optional[pd.Series], area_attr: Any, table_name: str):
+    """Floor area (m2) of the IDF of each row of a table, to convert its energy to kWh/m2.
+
+    Parameters
+    ----------
+    idf_labels : pandas.Series or None
+        IDF of each row (the 'idf' column of the table), or None when the table has none.
+    area_attr : float or dict
+        building_floor_area: one area, or {IDF name: area}.
+    table_name : str
+        Name of the table, for the error messages.
+
+    Returns
+    -------
+    float or pandas.Series
+        The floor area, for every row or row by row (aligned with ``idf_labels``).
+
+    Raises
+    ------
+    ValueError
+        If an IDF of the table has no floor area, or if the table has no 'idf' column and
+        the IDFs have different floor areas.
+    """
+    if not isinstance(area_attr, dict):
+        return float(area_attr)
+    available = sorted(str(key) for key in area_attr)
+    if idf_labels is None:
+        distinct_areas = set(area_attr.values())
+        if len(distinct_areas) == 1:
+            return float(distinct_areas.pop())
+        raise ValueError(
+            f"{table_name} has no 'idf' column, so the floor areas of the {len(area_attr)} IDFs of "
+            f"building_floor_area {available} cannot be applied to its rows. Build the table with its "
+            "'idf' column (for example get_hourly_df(..., include_summary_columns=True)), or use a "
+            "single floor area: set_building_floor_area(mode='custom', custom_area=<area in m2>)."
+        )
+    # IDF labels and keys are compared without folders, '.idf' extension and backup affixes.
+    normalise_name = AnalysisMixin._normalise_floor_area_idf_name
+    normalised_areas = {}
+    for (key, area) in area_attr.items():
+        normalised_areas.setdefault(normalise_name(key), area)
+    lookup = {}
+    for label in pd.unique(idf_labels):
+        if label in area_attr:
+            lookup[label] = area_attr[label]
+        else:
+            lookup[label] = normalised_areas.get(normalise_name(label))
+    areas = idf_labels.map(lookup)
+    missing = sorted({str(label) for label in idf_labels[areas.isna()]})
+    if missing:
+        raise ValueError(
+            f"building_floor_area has no floor area for the IDF(s) {missing} of {table_name} "
+            f"(IDFs with a floor area: {available}). Call set_building_floor_area() with every IDF "
+            "of these results loaded in the session (or available in idf_backup_path), or give the "
+            "area of each IDF: set_building_floor_area(mode='custom', custom_area={idf: area in m2})."
+        )
+    return areas.astype(float)
+
+
 class AnalysisMixin:
 
     """Mixin with post-processing helpers for parametric and optimisation runs.
@@ -1563,6 +1623,23 @@ class AnalysisMixin:
             'optimisation_runperiod': 'outputs_optimisation_runperiod',
         }
 
+    def _stored_split_groups(self, df_key: str) -> dict:
+        """Groups that ``split_by`` stored for the table ``df_key`` ({group: DataFrame}, or {}).
+
+        get_hourly_df(split_by=...) stores the groups of the hourly table in
+        ``outputs_*_hourly_by_category``, and get_output_df(split_by=...) those of the daily,
+        monthly and runperiod tables in ``outputs_*_aggregated_by_category[frequency]``.
+        """
+        (source, _, frequency) = str(df_key).partition('_')
+        if not frequency:
+            return {}
+        prefix = 'outputs_param_simulation' if source == 'parametric' else 'outputs_optimisation'
+        if frequency == 'hourly':
+            groups = getattr(self, f'{prefix}_hourly_by_category', None)
+        else:
+            groups = (getattr(self, f'{prefix}_aggregated_by_category', None) or {}).get(frequency)
+        return groups if isinstance(groups, dict) else {}
+
     def _get_normalized_output_df_types(self) -> set:
         """Return/create the internal tracker of normalized dataframe types."""
         normalized_df_types = getattr(self, '_normalized_output_df_types', None)
@@ -1598,12 +1675,89 @@ class AnalysisMixin:
             (df_key in normalized_df_types) for df_key in loaded_df_types
         )
 
+    @staticmethod
+    def _is_energy_column(column: Any, energy_keywords: list) -> bool:
+        """Whether normalize_outputs() converts ``column`` from J to kWh/m2.
+
+        A column with a unit in square brackets (an EnergyPlus output such as
+        'Heating:Electricity [J](Hourly)') is energy only when its unit is J, never [C], [W],
+        [%], etc. A column without unit (a meter or an objective such as 'Heating:Electricity',
+        in J) is energy when its name contains one of ``energy_keywords``. Columns already in
+        kWh/m2 are never converted again.
+        """
+        name = str(column)
+        if name.endswith('_kWh/m2'):
+            return False
+        unit = re.search(r'\[([^\]]*)\]', name)
+        if unit is not None:
+            return unit.group(1) == 'J'
+        return any(keyword in name for keyword in energy_keywords)
+
+    def _floor_area_divisors(self, idf_labels: Optional[pd.Series], area_attr: Any, table_name: str):
+        """Divisor(s) that convert the energy of each row from J to kWh/m2.
+
+        3.6e6 times the floor area of the IDF of each row (see ``_floor_areas_of_rows``, which
+        explains the arguments and raises a ValueError when the areas cannot be applied).
+        """
+        return 3600000.0 * _floor_areas_of_rows(idf_labels, area_attr, table_name)
+
+    def _energy_normalisation_plan(self, df: pd.DataFrame, area_attr: Any, table_name: str):
+        """Energy columns of ``df`` and the divisors that convert them to kWh/m2 (None if it has none).
+
+        The ValueError of ``_floor_areas_of_rows`` is raised here, before anything is converted.
+        """
+        energy_keywords = ['Heating', 'Cooling', 'Energy', 'Electricity', 'Gas', 'Facility']
+        energy_cols = [
+            col for col in df.columns
+            if self._is_energy_column(col, energy_keywords) and pd.api.types.is_numeric_dtype(df[col])
+        ]
+        if not energy_cols:
+            return None
+        divisors = self._floor_area_divisors(df['idf'] if 'idf' in df.columns else None, area_attr, table_name)
+        return (energy_cols, divisors)
+
+    @staticmethod
+    def _convert_energy_columns(df: pd.DataFrame, energy_cols: list, divisors) -> None:
+        """Divide the energy columns of ``df`` in place by ``divisors`` and rename them to kWh/m2."""
+        # divisors is either a pd.Series (per-row, when area is a dict) or a float (uniform)
+        if isinstance(divisors, float):
+            for col in energy_cols:
+                df[col] = df[col] / divisors
+        else:
+            for col in energy_cols:
+                def safe_divide(val, div):
+                    if isinstance(val, list):
+                        return [v / div for v in val]
+                    return val / div
+                df[col] = [safe_divide(val, div) for val, div in zip(df[col], divisors)]
+
+        new_columns = {}
+        for col in energy_cols:
+            new_col = col
+            if '[J]' in new_col:
+                new_col = new_col.replace('[J]', '[kWh/m2]')
+            elif ' [J]' in new_col:
+                new_col = new_col.replace(' [J]', ' [kWh/m2]')
+            else:
+                new_col = new_col + '_kWh/m2'
+            new_columns[col] = new_col
+        df.rename(columns=new_columns, inplace=True)
+
     def normalize_outputs(self, df_types: list=None):
         """
         Normalizes energy-related columns in the specified dataframes by dividing them
         by the building floor area (and converting from Joules to kWh).
         The results are saved in-place, and the legacy `self.outputs_normalized`
         flag is refreshed from per-dataframe normalization tracking.
+
+        Energy columns are those in J (EnergyPlus outputs such as
+        'Heating:Electricity [J](Hourly)') and those without unit whose name refers
+        to energy (meters and objectives such as 'Heating:Electricity'); columns with
+        another unit ([C], [W], [%], ...) are left as they are. With one floor area
+        per IDF, each row is divided by the area of the IDF in its 'idf' column.
+        The groups that ``split_by`` stored for these dataframes
+        (``outputs_*_hourly_by_category`` and ``outputs_*_aggregated_by_category``)
+        are normalized with them.
         
         :param df_types: A list of strings specifying which dataframes to normalize.
             Options include: 'parametric', 'parametric_hourly', 'parametric_daily',
@@ -1611,6 +1765,10 @@ class AnalysisMixin:
             'optimisation', 'optimisation_hourly', 'optimisation_daily',
             'optimisation_monthly', 'optimisation_runperiod'.
             If None, all available dataframes will be normalized.
+        :raises ValueError: if an IDF of a table (or of one of its groups) has no floor
+            area in building_floor_area, or if a table has no 'idf' column and the IDFs
+            have different floor areas. That table and its groups are then left unchanged
+            and are not marked as normalized.
 
         Usage::
 
@@ -1622,7 +1780,6 @@ class AnalysisMixin:
             sim.set_building_floor_area(mode='all')
             sim.normalize_outputs(df_types=['parametric', 'optimisation'])
         """
-        import pandas as pd
         area_attr = getattr(self, 'building_floor_area', None)
         if not area_attr:
             raise ValueError('building_floor_area is not set. Please call set_building_floor_area() first.')
@@ -1634,8 +1791,6 @@ class AnalysisMixin:
             df_types = list(df_mapping.keys())
         else:
             df_types = [str(df_key) for df_key in df_types]
-        
-        energy_keywords = ['Heating', 'Cooling', 'Energy', 'Electricity', 'Gas', 'Facility']
         
         for df_key in df_types:
             df_attr = df_mapping.get(df_key)
@@ -1649,53 +1804,28 @@ class AnalysisMixin:
             df = getattr(self, df_attr, None)
             if df is None or df.empty:
                 continue
-                
-            # Find energy columns
-            energy_cols = []
-            for col in df.columns:
-                if any(kw in col for kw in energy_keywords) and pd.api.types.is_numeric_dtype(df[col]):
-                    energy_cols.append(col)
-                    
-            if not energy_cols:
+
+            # The divisors of the table and of its split_by groups are all computed before
+            # converting any of them, so a ValueError leaves them all unchanged.
+            groups = self._stored_split_groups(df_key)
+            try:
+                plan = self._energy_normalisation_plan(df, area_attr, df_attr)
+                group_plans = [] if plan is None else [
+                    (group, self._energy_normalisation_plan(group, area_attr, f'the group {name!r} of {df_attr}'))
+                    for (name, group) in groups.items()
+                ]
+            except ValueError:
+                self._refresh_outputs_normalized_flag()
+                raise
+            if plan is None:
                 continue
-                
-            # Calculate divisors per row
-            if isinstance(area_attr, dict) and 'idf' in df.columns:
-                areas = df['idf'].map(area_attr)
-                # Fill missing areas with 1 to avoid NaN if idf not found (though it shouldn't happen)
-                areas = areas.fillna(1.0)
-                divisors = 3600000.0 * areas
-            else:
-                area_val = area_attr if not isinstance(area_attr, dict) else list(area_attr.values())[0]
-                divisors = 3600000.0 * area_val
-                
-            # Apply normalisation
-            # divisors is either a pd.Series (per-row, when area is a dict) or a float (uniform)
-            if isinstance(divisors, float):
-                for col in energy_cols:
-                    df[col] = df[col] / divisors
-            else:
-                for col in energy_cols:
-                    def safe_divide(val, div):
-                        if isinstance(val, list):
-                            return [v / div for v in val]
-                        return val / div
-                    df[col] = [safe_divide(val, div) for val, div in zip(df[col], divisors)]
-                
-            # Rename columns
-            new_columns = {}
-            for col in energy_cols:
-                new_col = col
-                if '[J]' in new_col:
-                    new_col = new_col.replace('[J]', '[kWh/m2]')
-                elif ' [J]' in new_col:
-                    new_col = new_col.replace(' [J]', ' [kWh/m2]')
-                else:
-                    new_col = new_col + '_kWh/m2'
-                new_columns[col] = new_col
-                
-            df.rename(columns=new_columns, inplace=True)
-            print(f'  [info] Normalized {len(energy_cols)} energy columns in {df_attr}.')
+
+            self._convert_energy_columns(df, *plan)
+            for (group, group_plan) in group_plans:
+                if group_plan is not None:
+                    self._convert_energy_columns(group, *group_plan)
+            in_groups = f' and in its {len(groups)} split_by groups' if groups else ''
+            print(f'  [info] Normalized {len(plan[0])} energy columns in {df_attr}{in_groups}.')
             normalized_df_types.add(df_key)
             
         self._refresh_outputs_normalized_flag()
@@ -2410,12 +2540,12 @@ class AnalysisMixin:
         cooling_col = next((c for c in robustness_df.columns if 'Cooling:Electricity' in c), None)
         if heating_col and cooling_col:
             if normalize_per_m2:
-                if isinstance(area_attr, dict) and 'idf' in robustness_df.columns:
-                    areas = robustness_df['idf'].map(area_attr).fillna(1.0)
-                    divisors = 3600000.0 * areas
+                if 'idf' in robustness_df.columns:
+                    idf_labels = robustness_df['idf']
                 else:
-                    area_val = area_attr if not isinstance(area_attr, dict) else list(area_attr.values())[0]
-                    divisors = 3600000.0 * area_val
+                    # set_evaluator() simulates every solution with self.building.
+                    idf_labels = pd.Series(self._get_floor_area_idf_name(self.building, 0), index=robustness_df.index)
+                divisors = self._floor_area_divisors(idf_labels, area_attr, 'the robustness results')
             else:
                 divisors = 3600000.0
                 

@@ -16,11 +16,11 @@ must be given explicitly (see below):
 - `01_test_simulation_base.py`: Tests for SimulationBase class initialization, outputs, evaluators, and backup functionality.
 - `02_test_parametric_sampling.py`: Tests for parametric sampling methods (LHS, Sobol, Morris, Full Set, Full Factorial, Custom).
 - `03_test_parametric_run.py`: Tests for parametric simulation runs (Basic, Multi-EPW, Multi-IDF, Output types, APMV, Custom).
-- `04_test_optimization.py`: Tests for optimization algorithms (16 algorithms), Multi-EPW, keep_sim_files, estimates.
+- `04_test_optimization.py`: Tests for optimization algorithms (15 algorithms with the settings each one needs, and ParticleSwarm, which cannot run), Multi-EPW, keep_sim_files, estimates.
 - `05_test_analysis_mixin.py`: Tests for AnalysisMixin (Floor area, Hourly/Monthly DF, SA Morris, SA Sobol).
 - `06_test_data_loading.py`: Tests for data loading (CSV, Pickle, JSON recover).
 - `07_test_plotting_mixin.py`: Tests for PlottingMixin (Pareto front, MCDM best solutions).
-- `08_test_accim_predef_model.py`: Tests for accim predefined model (Init, Parametric).
+- `08_test_accim_predef_model.py`: Tests for accim predefined model (Init, Parametric, ComfStand 0 and 22 with the ComfMod of the baseline, the baseline with validated meters and a plan without ComfStand).
 - `09_test_integration_complete.py`: Tests for end-to-end workflow integration.
 - `10_test_outputs_preflight.py`: Tests for the discovery, selection and preflight of the outputs.
 - `11_test_compare_simulation_instances.py`: Tests for the comparison of simulation instances.
@@ -36,10 +36,11 @@ The `../test_data/` directory (relative to this folder) contains the necessary f
 - `seville_2025.epw`: Secondary weather file for multi-EPW tests
 - `madrid_2024.epw`, `madrid_2025.epw`: Additional weather files for comprehensive tests
 
-The IDFs have no sizing periods and zone sizing off, so `prepare_buildings` enables the sizing calculations
-and adds a few days of the EPW as sizing periods (`enable_sizing`): the VRF systems that accim adds are
-autosized. It also reduces the run period to two weeks between June and July (hourly results of two
-months) with 2 timesteps per hour.
+The IDFs have no sizing periods and zone sizing off. accim enables the sizing calculations of the VRF
+systems it adds (they are autosized), but EnergyPlus also needs sizing periods, so `prepare_buildings`
+adds a few days of the EPW as sizing periods, which are not simulated (`enable_sizing`, which also enables
+the sizing calculations). It also reduces the run period to two weeks between June and July (hourly
+results of two months) with 2 timesteps per hour.
 
 ## Running Tests
 
@@ -75,6 +76,7 @@ Tests require:
 - Some tests may be skipped if required dependencies (e.g., SALib) are not installed.
 - Tests use small simulation sizes to keep execution time reasonable.
 - Test files are designed to be independent and can be run in any order.
-- `04_test_optimization.py::test_optimization_all_algorithms` only logs the result of each algorithm: some
-  need options (`epsilons`, `divisions_outer`), real-valued parameters or larger populations, and PAES and
-  ParticleSwarm do not work with `run_optimisation()` (see `TODO.md`).
+- `04_test_optimization.py::test_optimization_all_algorithms` runs each algorithm with the settings it needs
+  (`epsilons`, `divisions_outer`, a population of 3 for SPEA2, numeric ranges for OMOPSO, SMPSO and CMAES, and
+  for IBEA, which stops when all the solutions of a generation have the same objectives) and enough evaluations
+  to iterate, and `test_optimization_particle_swarm` checks that ParticleSwarm stops with a clear error.

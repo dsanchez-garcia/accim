@@ -24,6 +24,7 @@ from matplotlib.colors import Normalize
 from matplotlib.lines import Line2D
 import seaborn as sns
 from accim.parametric_and_optimisation.utils import apply_data_filter, resolve_subplot_orders
+from accim.parametric_and_optimisation.analysis import _floor_areas_of_rows
 from accim.parametric_and_optimisation.hourly_plotting import HourlyPlottingMixin
 
 class PlottingMixin(HourlyPlottingMixin):
@@ -306,7 +307,12 @@ class PlottingMixin(HourlyPlottingMixin):
 
     @staticmethod
     def _is_energy_like_column(column_name: str) -> bool:
-        """Heuristically identify energy-related columns by name.
+        """Identify energy columns: by their unit, or by their name when they have none.
+
+        A column with a unit in square brackets (an EnergyPlus output) is energy only when its
+        unit is J, or kWh/m2 once normalised, never [C], [W], [%], etc.; a column without unit
+        (a meter or an objective such as 'Heating:Electricity') is energy when its name refers
+        to energy, as in ``AnalysisMixin.normalize_outputs``.
 
         Parameters
         ----------
@@ -326,9 +332,23 @@ class PlottingMixin(HourlyPlottingMixin):
         --------
         ok = PlottingMixin._is_energy_like_column('Heating:Electricity [J](Annual)')
         """
+        unit = re.search(r'\[([^\]]*)\]', str(column_name))
+        if unit is not None:
+            return unit.group(1) in ('J', 'kWh/m2')
         keywords = ('heating', 'cooling', 'energy', 'electricity', 'gas', 'facility')
         lowered = str(column_name).lower()
         return any(k in lowered for k in keywords)
+
+    @staticmethod
+    def _per_m2_divisors(df: pd.DataFrame, area_attr, base_divisor: float, table_name: str):
+        """``base_divisor`` times the floor area of the IDF of each row of ``df``.
+
+        A ValueError explains when the floor areas cannot be applied (an IDF without area, or
+        several areas and no 'idf' column); before, those rows were divided by 1 m2 or by the
+        area of the first IDF.
+        """
+        idf_labels = df['idf'] if 'idf' in df.columns else None
+        return base_divisor * _floor_areas_of_rows(idf_labels, area_attr, table_name)
 
     def _get_plot_source_df(self, df_source: str = 'parametric') -> pd.DataFrame:
         """Select and copy the dataframe identified by a source alias.
@@ -563,11 +583,7 @@ class PlottingMixin(HourlyPlottingMixin):
                 continue
 
             if normalize_per_m2:
-                if isinstance(area_attr, dict) and 'idf' in df.columns:
-                    divisors = df['idf'].map(area_attr).fillna(1.0) * base_divisor
-                else:
-                    area_val = area_attr if not isinstance(area_attr, dict) else list(area_attr.values())[0]
-                    divisors = base_divisor * area_val
+                divisors = self._per_m2_divisors(df, area_attr, base_divisor, 'the plotted results')
             else:
                 divisors = base_divisor
 
@@ -1626,10 +1642,7 @@ class PlottingMixin(HourlyPlottingMixin):
 
         def _compute_divisors(df_local: pd.DataFrame):
             if normalize_per_m2:
-                if isinstance(area_attr, dict) and 'idf' in df_local.columns:
-                    return df_local['idf'].map(area_attr).fillna(1.0) * base_divisor
-                area_val = area_attr if not isinstance(area_attr, dict) else (list(area_attr.values())[0] if area_attr else 1.0)
-                return base_divisor * area_val
+                return self._per_m2_divisors(df_local, area_attr, base_divisor, 'the optimisation results')
             return base_divisor
 
         def _first_divisor(df_local: pd.DataFrame) -> float:
@@ -1890,17 +1903,9 @@ class PlottingMixin(HourlyPlottingMixin):
             pareto_epw = df_epw[df_epw['pareto-optimal']].copy()
             dominated_epw = df_epw[~df_epw['pareto-optimal']].copy()
             if normalize_per_m2:
-                if isinstance(area_attr, dict) and 'idf' in df_epw.columns:
-                    areas = df_epw['idf'].map(area_attr).fillna(1.0)
-                    divs = base_divisor * areas
-                    
-                    dom_divs = dominated_epw['idf'].map(area_attr).fillna(1.0) * base_divisor
-                    par_divs = pareto_epw['idf'].map(area_attr).fillna(1.0) * base_divisor
-                else:
-                    area_val = area_attr if not isinstance(area_attr, dict) else list(area_attr.values())[0]
-                    divs = base_divisor * area_val
-                    dom_divs = divs
-                    par_divs = divs
+                divs = self._per_m2_divisors(df_epw, area_attr, base_divisor, 'the optimisation results')
+                dom_divs = self._per_m2_divisors(dominated_epw, area_attr, base_divisor, 'the optimisation results')
+                par_divs = self._per_m2_divisors(pareto_epw, area_attr, base_divisor, 'the optimisation results')
             else:
                 divs = base_divisor
                 dom_divs = base_divisor
@@ -1924,8 +1929,8 @@ class PlottingMixin(HourlyPlottingMixin):
                 sc = ax.scatter(pareto_epw[heating_col] / par_divs, pareto_epw[cooling_col] / par_divs, c='#e63946', s=sizes, alpha=0.85, edgecolors='k', linewidths=0.4, zorder=3)
             pf_epw = pareto_epw.sort_values(heating_col)
             
-            if normalize_per_m2 and isinstance(area_attr, dict) and 'idf' in pf_epw.columns:
-                pf_divs = pf_epw['idf'].map(area_attr).fillna(1.0) * base_divisor
+            if normalize_per_m2:
+                pf_divs = self._per_m2_divisors(pf_epw, area_attr, base_divisor, 'the optimisation results')
             else:
                 pf_divs = divs
                 
@@ -2342,11 +2347,7 @@ class PlottingMixin(HourlyPlottingMixin):
         cooling_col = next((c for c in df.columns if 'Cooling:Electricity' in c), None)
         if heating_col and cooling_col:
             if normalize_per_m2:
-                if isinstance(area_attr, dict) and 'idf' in df.columns:
-                    divs = df['idf'].map(area_attr).fillna(1.0) * base_divisor
-                else:
-                    area_val = area_attr if not isinstance(area_attr, dict) else list(area_attr.values())[0]
-                    divs = base_divisor * area_val
+                divs = self._per_m2_divisors(df, area_attr, base_divisor, 'the optimisation results')
             else:
                 divs = base_divisor
             df['Total_Energy'] = (df[heating_col] + df[cooling_col]) / divs
@@ -2562,11 +2563,7 @@ class PlottingMixin(HourlyPlottingMixin):
         # Apply Normalization
         for y_var in y_vars:
             if normalize_per_m2:
-                if isinstance(area_attr, dict) and 'idf' in df.columns:
-                    divs = df['idf'].map(area_attr).fillna(1.0) * base_divisor
-                else:
-                    area_val = area_attr if not isinstance(area_attr, dict) else list(area_attr.values())[0]
-                    divs = base_divisor * area_val
+                divs = self._per_m2_divisors(df, area_attr, base_divisor, f'the {df_source} results')
                 df[y_var] = df[y_var] / divs
             else:
                 df[y_var] = df[y_var] / base_divisor

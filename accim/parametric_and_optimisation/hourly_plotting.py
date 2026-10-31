@@ -672,7 +672,12 @@ class HourlyPlottingMixin:
         return data
 
     def _hp_floor_area(self, data: pd.DataFrame, floor_area=None):
-        """Floor area (float or Series aligned with ``data``) for per-m² values, or None."""
+        """Floor area (float or Series aligned with ``data``) for per-m² values, or None.
+
+        With one area per IDF, each row takes the area of its IDF. A ValueError explains when the
+        areas cannot be applied: an IDF without area, or several areas and no 'idf' column (before,
+        the values of those IDFs were left out of the plot, or divided by the first area).
+        """
         area = floor_area if floor_area is not None else getattr(self, 'building_floor_area', None)
         if area is None:
             return None
@@ -681,8 +686,19 @@ class HourlyPlottingMixin:
                 mapped = data['idf'].map(lambda v: _match_label(v, area))
                 if mapped.isna().any() and len(area) == 1:
                     mapped = mapped.fillna(list(area.values())[0])
-                return pd.to_numeric(mapped, errors='coerce')
-            return float(list(area.values())[0])
+                mapped = pd.to_numeric(mapped, errors='coerce')
+                missing = sorted({str(v) for v in data.loc[mapped.isna(), 'idf']})
+                if missing:
+                    raise ValueError(f'No floor area for the IDF(s) {missing} (IDFs with a floor area: '
+                                     f'{sorted(str(k) for k in area)}). Give the area of each IDF with '
+                                     'floor_area={idf: area} or set_building_floor_area().')
+                return mapped
+            distinct_areas = set(area.values())
+            if len(distinct_areas) == 1:
+                return float(distinct_areas.pop())
+            raise ValueError(f"The data have no 'idf' column, so the floor areas of the {len(area)} IDFs "
+                             f"{sorted(str(k) for k in area)} cannot be applied to their rows. Keep the 'idf' "
+                             'column, or give a single area with floor_area=<area in m2>.')
         return float(area)
 
     @staticmethod

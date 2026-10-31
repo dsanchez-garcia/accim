@@ -77,10 +77,35 @@ import ast
 from datetime import datetime, timedelta
 
 
+class _AutoYearStartDate(str):
+    """Hourly start date whose year is chosen from the length of the series.
+
+    EnergyPlus output files have no year. The default start_date of the hourly methods and
+    the start dates read from the simulation files are instances of this class, and
+    expand_to_hourly_dataframe() replaces their year with _hourly_series_year(), so that a
+    standard 8760-hour year has no 29 February. Any other start_date keeps its year.
+    """
+
+
+#: Default start_date of the hourly methods: 1 January at 01:00 (the end of the first hour).
+#: It is equal to '2024-01-01 01', but its year is chosen from the length of the series.
+_DEFAULT_HOURLY_START_DATE = _AutoYearStartDate('2024-01-01 01')
+
+
+def _hourly_series_year(n_steps: int) -> int:
+    """Year used to label an hourly series without year: a leap year only for 8784 values."""
+    return 2024 if int(n_steps) == 8784 else 2023
+
+
+def _auto_year_start_date(month: int, day: int, hour: int) -> str:
+    """Start date read from a simulation file, whose year is chosen by expand_to_hourly_dataframe()."""
+    return _AutoYearStartDate(f'2024-{int(month):02d}-{int(day):02d} {int(hour):02d}')
+
+
 def expand_to_hourly_dataframe(
         df: pd.DataFrame,
         parameter_columns: list,
-        start_date: str = '2024-01-01 01',
+        start_date: str = _DEFAULT_HOURLY_START_DATE,
         hourly_columns: list = None,
 ):
     """Expands a dataframe with hourly data columns into an hourly dataframe.
@@ -88,7 +113,11 @@ def expand_to_hourly_dataframe(
     Parameters:
     df (pd.DataFrame): The input dataframe containing parameters and hourly data columns.
     parameter_columns (list): The list of column names that contain input parameters.
-    start_date (str): The start date and time in the format 'YYYY-MM-DD HH'.
+    start_date (str): The start date and time in the format 'YYYY-MM-DD HH'. EnergyPlus labels
+        each hourly value with the end of its hour, so the first value of a run starting on
+        1 January is labelled '01'. With the default start_date, the year is a leap year only
+        when the series has 8784 hourly values (2024), otherwise 2023; an explicit start_date
+        keeps its year.
     
     Returns:
     pd.DataFrame: The expanded dataframe with an additional datetime column.
@@ -112,9 +141,10 @@ def expand_to_hourly_dataframe(
         hourly_columns = identify_hourly_columns(df)
     if len(hourly_columns) == 0:
         raise ValueError(
-            'No hourly columns were detected to expand. '
-            'If you are using optimisation file outputs, check file_output_columns names '
-            'or use include_file_outputs=True with file_output_columns=None.'
+            'No hourly columns were detected to expand. If the hourly values are read from the '
+            'simulation output files, check the output_columns names (see get_hourly_df_columns()) '
+            'and that the files were kept (keep_dirs / keep_sim_files / sim_files_extensions / '
+            'sim_files_policy).'
         )
 
     # print(f"Hourly columns identified: {hourly_columns}")
@@ -160,6 +190,12 @@ def expand_to_hourly_dataframe(
     for i in range(n_rows):
         lengths_i = [len(row_series[col][i]) for col in hourly_columns if len(row_series[col][i]) > 0]
         row_lengths.append(max(lengths_i) if lengths_i else 0)
+
+    if isinstance(start_date, _AutoYearStartDate):
+        year = _hourly_series_year(max(row_lengths, default=0))
+        if (start_datetime.month, start_datetime.day) == (2, 29):
+            year = 2024
+        start_datetime = start_datetime.replace(year=year)
 
     # FAST PATH (vectorised): triggers for the common case where every row
     # reports the same number of hourly steps (e.g. 8760 for a full-year run)
@@ -220,8 +256,12 @@ def expand_to_hourly_dataframe(
 
         return pd.DataFrame(expanded_rows)
 
-    # Apply the function to each row and concatenate the results
-    expanded_df = pd.concat(df_subset.apply(expand_hourly_data, axis=1).to_list(), ignore_index=True)
+    # Apply the function to each row and concatenate the results. The empty frames of the rows
+    # without values are left out: with pandas >= 3 they would turn 'datetime' into an object column.
+    expanded_frames = [frame for frame in df_subset.apply(expand_hourly_data, axis=1).to_list() if not frame.empty]
+    if not expanded_frames:
+        return pd.DataFrame(columns=parameter_columns + ['hour', 'datetime'] + hourly_columns)
+    expanded_df = pd.concat(expanded_frames, ignore_index=True)
 
     return expanded_df
 
@@ -257,9 +297,10 @@ def identify_hourly_columns(df):
 
 
     if not hourly_columns:
+        # str(x) instead of astype(str): with pandas >= 3, astype(str) keeps missing values as NaN.
         hourly_columns = [
             col for col in df.columns if
-            df[col].astype(str).apply(lambda x: x.strip().startswith('[') and x.strip().endswith(']')).all()
+            df[col].map(lambda x: str(x).strip().startswith('[') and str(x).strip().endswith(']')).all()
         ]
 
     return hourly_columns

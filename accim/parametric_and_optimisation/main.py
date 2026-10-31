@@ -37,7 +37,12 @@ from besos.problem import EPProblem
 from besos.objectives import VariableReader, MeterReader
 from besos import IDF_class
 from accim.utils import print_available_outputs_mod, modify_timesteps, set_occupancy_to_always, remove_accents_in_idf, reduce_runtime, read_eso_using_readvarseso
-from accim.parametric_and_optimisation.utils import expand_to_hourly_dataframe, identify_hourly_columns
+from accim.parametric_and_optimisation.utils import (
+    expand_to_hourly_dataframe,
+    identify_hourly_columns,
+    _DEFAULT_HOURLY_START_DATE,
+    _auto_year_start_date,
+)
 import accim.sim.accis as accis
 import accim.sim.apmv as apmv
 import accim.parametric_and_optimisation.funcs_for_besos.param_accis as bf_accim
@@ -50,6 +55,76 @@ from accim.parametric_and_optimisation.mn_filter import MNFilter, MNFilterMappin
 from accim.parametric_and_optimisation.file_cleanup import normalize_sim_file_cleanup_options, sim_file_policy_will_remove_extension, prune_simulation_output_files
 import accim.parametric_and_optimisation.params_dicts as params_dicts
 allowed_output_freqs = Literal['timestep', 'hourly', 'daily', 'monthly', 'runperiod']
+
+# Default coefficients of the custom comfort model (ComfStand 99), those of ASHRAE 55 with 80 % acceptability: the
+# baseline of 'accim custom model' takes those that the parameters do not set, and AccimPredefModelsParamSim all.
+_CUSTOM_MODEL_DEFAULTS = {'m': 0.31, 'n': 17.8, 'ACSToffset': 3.5, 'AHSToffset': -3.5, 'ACSTaul': 33.5,
+                          'ACSTall': 10, 'AHSTaul': 33.5, 'AHSTall': 10}
+
+# The algorithms of platypus that run_optimisation runs (through besos.optimizer)
+_OPTIMISATION_ALGORITHMS = ['GeneticAlgorithm', 'EvolutionaryStrategy', 'NSGAII', 'EpsMOEA', 'GDE3', 'SPEA2', 'MOEAD',
+                            'NSGAIII', 'OMOPSO', 'SMPSO', 'CMAES', 'IBEA', 'PAES', 'PESA2', 'EpsNSGAII']
+# Options of algorithm_options without a default in platypus
+_REQUIRED_ALGORITHM_OPTIONS = {'EpsMOEA': 'epsilons', 'OMOPSO': 'epsilons', 'EpsNSGAII': 'epsilons',
+                               'NSGAIII': 'divisions_outer'}
+# Options with the number of solutions that these algorithms evaluate in each generation (100 by default), which
+# platypus takes instead of population_size (it ignores population_size for the swarms and CMA-ES)
+_GENERATION_SIZE_OPTIONS = {'GeneticAlgorithm': 'offspring_size', 'EvolutionaryStrategy': 'offspring_size',
+                            'OMOPSO': 'swarm_size', 'SMPSO': 'swarm_size', 'CMAES': 'offspring_size'}
+# Algorithms that only work with numeric ranges: they move the parameters, which categorical ones cannot do
+_NUMERIC_ONLY_ALGORITHMS = ('OMOPSO', 'SMPSO', 'CMAES')
+# Algorithms that evolve each solution from one parent, so their variator is a mutation (besos gives every algorithm
+# a crossover, which takes two)
+_MUTATION_ALGORITHMS = ('EvolutionaryStrategy', 'PAES')
+
+
+def _strip_idf_extension(file_name: str) -> str:
+    """Return ``file_name`` without its '.idf' extension, whatever its case ('model.IDF' -> 'model')."""
+    return file_name[:-len('.idf')] if file_name.lower().endswith('.idf') else file_name
+
+
+def _check_optimisation_algorithm(algorithm: str, algorithm_options: dict, population_size: int, problem=None) -> None:
+    """Raise a clear error, before the optimisation starts, if platypus cannot run the algorithm with these settings.
+
+    :param problem: the besos problem, to check the number of objectives and the types of the parameters.
+    :raises KeyError: if the algorithm is not available.
+    :raises ValueError: if it needs other settings.
+    """
+    if algorithm == 'ParticleSwarm':
+        raise ValueError("ParticleSwarm is the abstract base class of the particle swarm algorithms of platypus, without "
+                         "a fitness function, so it cannot run: use OMOPSO (with algorithm_options={'epsilons': [...]}) "
+                         "or SMPSO.")
+    if algorithm not in _OPTIMISATION_ALGORITHMS:
+        raise KeyError(f'Input algorithm {algorithm} not found. Available algorithms are: {_OPTIMISATION_ALGORITHMS}')
+    option = _REQUIRED_ALGORITHM_OPTIONS.get(algorithm)
+    if option is not None and option not in algorithm_options:
+        example = '[0.01, 0.01] (one value per objective)' if option == 'epsilons' else '4'
+        raise ValueError(f"{algorithm} needs the option {option} of platypus: for instance, "
+                         f"algorithm_options={{'{option}': {example}}}.")
+    if algorithm == 'SPEA2':
+        k = algorithm_options.get('k', 1)
+        if population_size < k + 2:
+            raise ValueError(f'SPEA2 needs a population_size of at least {k + 2} (k + 2, where k is the nearest '
+                             f'neighbour of its density estimate, {k}).')
+    try:
+        platypus_problem = problem.to_platypus()
+        n_objectives, types = platypus_problem.nobjs, list(platypus_problem.types)
+        directions = list(platypus_problem.directions)
+    except Exception:
+        return
+    if algorithm in ('GeneticAlgorithm', 'EvolutionaryStrategy') and n_objectives != 1:
+        raise ValueError(f'{algorithm} is a single-objective algorithm, and the problem has {n_objectives} objectives.')
+    if algorithm in _NUMERIC_ONLY_ALGORITHMS and not all(hasattr(t, 'min_value') and hasattr(t, 'max_value')
+                                                         for t in types):
+        raise ValueError(f'{algorithm} only works with numeric ranges (tuples), and some parameters are categorical '
+                         f'(lists).')
+    if algorithm == 'NSGAIII':
+        import platypus
+        minimize = getattr(platypus, 'Direction', platypus.Problem).MINIMIZE
+        if any(getattr(d, 'value', d) != getattr(minimize, 'value', minimize) for d in directions):
+            raise ValueError('NSGAIII only minimises: set minimize_outputs to True for every objective in '
+                             'set_problem().')
+
 
 def get_rdd_file_as_df(out_dir: str = 'available_outputs'):
     """Returns the .rdd file from the test simulation as a pandas DataFrame
@@ -2990,6 +3065,8 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         self.output_freqs = list(output_freqs) if isinstance(output_freqs, (list, tuple)) else output_freqs
         self.parameters_type = parameters_type
         self.remove_output_tables = remove_output_tables
+        # The output readers of the problem (set_output_readers); set_problem() also works without them
+        self.sim_outputs = None
         self.outputs_inventory_initial_ = self.scan_output_objects(idf_scope='all') if len(self.buildings) > 0 else {}
         self.outputs_duplicates_initial_ = self.autocorrect_output_duplicates(idf_scope='all', warn=True) if len(self.buildings) > 0 else {}
             
@@ -3352,7 +3429,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         suffix = f'_{label}' if label else ''
         self.idf_backup_path = []
         for i, b in enumerate(self.buildings):
-            idf_basename = os.path.basename(b.idfname).replace('.idf', '') if hasattr(b, 'idfname') and b.idfname else f'unknown_idf_{i}'
+            idf_basename = _strip_idf_extension(os.path.basename(b.idfname)) if hasattr(b, 'idfname') and b.idfname else f'unknown_idf_{i}'
             filename = f'accim_idf_backup_{idf_basename}{suffix}_{timestamp}.idf'
             backup_path = os.path.join(backup_dir, filename)
             b.savecopy(backup_path)
@@ -3424,7 +3501,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         idf_name = self._get_idf_identifier(building, index=0)
         """
         if hasattr(building, 'idfname') and building.idfname:
-            return os.path.basename(building.idfname).replace('.idf', '')
+            return _strip_idf_extension(os.path.basename(building.idfname))
         if index is not None:
             return f'unknown_idf_{index}'
         return 'unknown_idf'
@@ -3815,7 +3892,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                     return value
             except (TypeError, ValueError):
                 pass
-        return os.path.basename(str(value).strip().replace('\\', '/')).replace('.idf', '')
+        return _strip_idf_extension(os.path.basename(str(value).strip().replace('\\', '/')))
 
     def _get_buildings_by_idf(self) -> dict:
         """Map IDF identifiers to loaded building objects.
@@ -6299,7 +6376,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                     parameters_to_be_defined.append(p)
             if len(parameters_to_be_defined) > 0:
                 print(f'The following parameters are not included in the parameters to be set, and have not been defined yet (i.e. the value is 0): {parameters_to_be_defined}')
-                dflt_values = {'m': 0.31, 'n': 17.8, 'ACSToffset': 3.5, 'AHSToffset': -3.5, 'ACSTaul': 33.5, 'ACSTall': 10, 'AHSTaul': 33.5, 'AHSTall': 10}
+                dflt_values = dict(_CUSTOM_MODEL_DEFAULTS)
 
                 def _emit_defaults_applied_warning(selected_params):
                     if len(selected_params) == 0:
@@ -9946,6 +10023,9 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             self.outputs_param_simulation_hourly = pd.read_pickle(hourly_pickle_path)
         elif hourly_csv_path:
             self.outputs_param_simulation_hourly = pd.read_csv(hourly_csv_path)
+        if hourly_pickle_path or hourly_csv_path:
+            # The groups that split_by stored for the replaced hourly table do not describe the new one.
+            self.outputs_param_simulation_hourly_by_category = None
         # The loaded tables replace the previous ones, which may have been normalised.
         self._invalidate_normalized_df_types(
             df_types=['parametric', 'parametric_hourly'] if (hourly_pickle_path or hourly_csv_path) else ['parametric']
@@ -10087,8 +10167,25 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             Use :meth:`estimate_optimisation_sims` to preview the count before running.
         :param population_size: number of individuals in each generation; each individual
             corresponds to one EnergyPlus simulation (with an odd ``population_size``,
-            NSGA-II evaluates one more offspring in each generation after the first)
-        :param algorithm: the optimisation algorithm to use; default is 'NSGAII'
+            NSGA-II evaluates one more offspring in each generation after the first). It is also the
+            swarm of OMOPSO and SMPSO and the offspring of CMAES, GeneticAlgorithm and
+            EvolutionaryStrategy (unless ``algorithm_options`` gives ``swarm_size`` or
+            ``offspring_size``); NSGAIII takes its population from ``divisions_outer`` (the number of
+            reference points, rounded up to a multiple of 4), and PAES evaluates one solution in each
+            iteration.
+        :param algorithm: the optimisation algorithm of platypus; default is 'NSGAII'. 'NSGAII', 'GDE3', 'MOEAD',
+            'IBEA' and 'PESA2' need no other settings (IBEA stops, with "objective with empty range", when all the
+            solutions of a generation have the same objectives, which is likely with small populations and few
+            categorical options). 'EpsMOEA', 'EpsNSGAII' and 'OMOPSO' need
+            ``algorithm_options={'epsilons': [...]}`` (one value per objective), and 'NSGAIII'
+            ``algorithm_options={'divisions_outer': ...}`` and objectives that are all minimised. 'SPEA2' needs a
+            ``population_size`` of at least 3 (k + 2, with its option k, 1 by default). 'OMOPSO', 'SMPSO' and
+            'CMAES' only work with numeric ranges (tuples), not with categorical parameters (lists).
+            'GeneticAlgorithm' and 'EvolutionaryStrategy' are single-objective. 'PAES' evolves one solution, so
+            ``population_size`` does not apply to it. The variator of 'PAES' and 'EvolutionaryStrategy', which
+            evolve each solution from one parent, is a mutation (unless ``algorithm_options`` gives one).
+            'ParticleSwarm', the abstract base class of the particle swarms of platypus, cannot run: use 'OMOPSO'
+            or 'SMPSO'. These requirements are checked before the optimisation starts.
         :param processes: number of CPU cores to use for parallel evaluation of individuals
             within each generation.  Uses ``platypus.ProcessPoolEvaluator`` internally.
             Default is 1 (sequential).  Values > 1 are useful when ``population_size`` is
@@ -10110,7 +10207,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             'all' (keeps dominated and non-dominated) or 'non-dominated'.
         :param algorithm_options: optional dictionary with BESOS/Platypus algorithm-specific
             keyword arguments. For example, use ``{'variator': my_variator}`` for algorithms
-            that accept a custom variator.
+            that accept a custom variator, or ``{'epsilons': [0.01, 0.01]}`` for the epsilon algorithms.
         :param pareto_separate_by_epw: when True, Pareto optimality is computed independently
             inside each EPW subset. When False, EPW is ignored in Pareto grouping.
         :param pareto_separate_by_idf: when True, Pareto optimality is computed independently
@@ -10163,6 +10260,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             raise ValueError("No EPWs provided and no default EPWs found in class instance.")
         if not getattr(self, 'buildings', None):
             raise ValueError('No buildings were configured in this simulation instance.')
+        _check_optimisation_algorithm(algorithm, algorithm_options, population_size, getattr(self, 'problem', None))
         self.epws = epws
 
         (sim_files_extensions_normalized, sim_files_policy_normalized) = normalize_sim_file_cleanup_options(
@@ -10246,7 +10344,6 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                     UserWarning,
                 )
 
-        available_algorithms = ['GeneticAlgorithm', 'EvolutionaryStrategy', 'NSGAII', 'EpsMOEA', 'GDE3', 'SPEA2', 'MOEAD', 'NSGAIII', 'ParticleSwarm', 'OMOPSO', 'SMPSO', 'CMAES', 'IBEA', 'PAES', 'PESA2', 'EpsNSGAII']
         outputs_dict = {}
         full_outputs_dict = {}
         evaluators = {}
@@ -10372,40 +10469,16 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                             pass
                     if processes > 1 and hasattr(evaluator, '_building') and hasattr(evaluator._building, 'idfobjects'):
                         evaluator._building.idfobjects = GlobalAllCapsDict(evaluator._building.idfobjects)
-                    if algorithm == 'GeneticAlgorithm':
-                        outputs_optimisation = optimizer.GeneticAlgorithm(evaluator, evaluations=evaluations, population_size=population_size, **algorithm_options)
-                    elif algorithm == 'EvolutionaryStrategy':
-                        outputs_optimisation = optimizer.EvolutionaryStrategy(evaluator, evaluations=evaluations, population_size=population_size, **algorithm_options)
-                    elif algorithm == 'NSGAII':
-                        outputs_optimisation = optimizer.NSGAII(evaluator, evaluations=evaluations, population_size=population_size, **algorithm_options)
-                    elif algorithm == 'EpsMOEA':
-                        outputs_optimisation = optimizer.EpsMOEA(evaluator, evaluations=evaluations, population_size=population_size, **algorithm_options)
-                    elif algorithm == 'GDE3':
-                        outputs_optimisation = optimizer.GDE3(evaluator, evaluations=evaluations, population_size=population_size, **algorithm_options)
-                    elif algorithm == 'SPEA2':
-                        outputs_optimisation = optimizer.SPEA2(evaluator, evaluations=evaluations, population_size=population_size, **algorithm_options)
-                    elif algorithm == 'MOEAD':
-                        outputs_optimisation = optimizer.MOEAD(evaluator, evaluations=evaluations, population_size=population_size, **algorithm_options)
-                    elif algorithm == 'NSGAIII':
-                        outputs_optimisation = optimizer.NSGAIII(evaluator, evaluations=evaluations, population_size=population_size, **algorithm_options)
-                    elif algorithm == 'ParticleSwarm':
-                        outputs_optimisation = optimizer.ParticleSwarm(evaluator, evaluations=evaluations, population_size=population_size, **algorithm_options)
-                    elif algorithm == 'OMOPSO':
-                        outputs_optimisation = optimizer.OMOPSO(evaluator, evaluations=evaluations, population_size=population_size, **algorithm_options)
-                    elif algorithm == 'SMPSO':
-                        outputs_optimisation = optimizer.SMPSO(evaluator, evaluations=evaluations, population_size=population_size, **algorithm_options)
-                    elif algorithm == 'CMAES':
-                        outputs_optimisation = optimizer.CMAES(evaluator, evaluations=evaluations, population_size=population_size, **algorithm_options)
-                    elif algorithm == 'IBEA':
-                        outputs_optimisation = optimizer.IBEA(evaluator, evaluations=evaluations, population_size=population_size, **algorithm_options)
-                    elif algorithm == 'PAES':
-                        outputs_optimisation = optimizer.PAES(evaluator, evaluations=evaluations, population_size=population_size, **algorithm_options)
-                    elif algorithm == 'PESA2':
-                        outputs_optimisation = optimizer.PESA2(evaluator, evaluations=evaluations, population_size=population_size, **algorithm_options)
-                    elif algorithm == 'EpsNSGAII':
-                        outputs_optimisation = optimizer.EpsNSGAII(evaluator, evaluations=evaluations, population_size=population_size, **algorithm_options)
-                    else:
-                        raise KeyError(f'Input algorithm {algorithm} not found. Available algorithms are: {available_algorithms}')
+                    options = {}
+                    if algorithm != 'PAES':
+                        # PAES evolves one solution, so it has no population size
+                        options['population_size'] = population_size
+                        if algorithm in _GENERATION_SIZE_OPTIONS:
+                            options[_GENERATION_SIZE_OPTIONS[algorithm]] = population_size
+                    if algorithm in _MUTATION_ALGORITHMS:
+                        options['variator'] = optimizer.get_operator(evaluator.to_platypus(), mutation=True)
+                    options.update(algorithm_options)
+                    outputs_optimisation = getattr(optimizer, algorithm)(evaluator, evaluations=evaluations, **options)
                     if mn_filter_mapping is not None:
                         outputs_optimisation = mn_filter_mapping.map_dataframe(outputs_optimisation)
                     outputs_optimisation['epw'] = epwname
@@ -10913,6 +10986,8 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             self.outputs_optimisation_hourly = pd.read_csv(hourly_csv_path)
         if hourly_pickle_path or hourly_csv_path:
             self._invalidate_normalized_df_types(df_types=['optimisation_hourly'])
+            # The groups that split_by stored for the replaced hourly table do not describe the new one.
+            self.outputs_optimisation_hourly_by_category = None
         parameters_names = parameters_names or outputs_optimisation.attrs.get('parameters_names')
         outputs_names = outputs_names or outputs_optimisation.attrs.get('outputs_names')
         minimize_outputs = minimize_outputs or outputs_optimisation.attrs.get('minimize_outputs')
@@ -11451,6 +11526,24 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             )
         return aliases[token]
 
+    @staticmethod
+    def _interval_reference_times(datetimes: pd.Series) -> pd.Series:
+        """Times used to assign hourly or timestep values to their day and month.
+
+        EnergyPlus labels each hourly or timestep value with the end of its interval (01:00 to
+        24:00, or 00:15 to 24:00), so the value labelled 00:00 belongs to the previous day. These
+        labels are moved back one second before grouping. Series whose first label is at midnight
+        (labels at the start of each interval) or whose step is longer than one hour (daily or
+        monthly values) are grouped as they are.
+        """
+        unique_times = pd.Series(pd.unique(datetimes.dropna())).sort_values()
+        if unique_times.empty or unique_times.iloc[0] == unique_times.iloc[0].normalize():
+            return datetimes
+        steps = unique_times.diff().dropna()
+        if not steps.empty and steps.min() > pd.Timedelta(hours=1):
+            return datetimes
+        return datetimes - pd.Timedelta(seconds=1)
+
     def _aggregate_hourly_dataframe(
         self,
         df_hourly: pd.DataFrame,
@@ -11476,15 +11569,31 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         groupby_cols = list(identifier_columns)
 
         if freq_token == 'daily':
-            df_work['day'] = df_work['datetime'].dt.to_period('D')
+            df_work['day'] = self._interval_reference_times(df_work['datetime']).dt.to_period('D')
             groupby_cols.append('day')
         elif freq_token == 'monthly':
-            df_work['month'] = df_work['datetime'].dt.to_period('M')
+            df_work['month'] = self._interval_reference_times(df_work['datetime']).dt.to_period('M')
             groupby_cols.append('month')
 
+        # A sum without any value is left empty, not 0: the outputs that a simulation does not
+        # report (zones or meters of another model) stay empty, as in the hourly table.
+        sum_columns = [col for (col, func) in aggregation_map.items() if func == 'sum']
         if len(groupby_cols) == 0:
-            return pd.DataFrame([df_work.agg(aggregation_map)])
-        return df_work.groupby(groupby_cols).agg(aggregation_map).reset_index()
+            aggregated = pd.DataFrame([df_work.agg(aggregation_map)])
+            empty_sums = [col for col in sum_columns if df_work[col].count() == 0]
+            if empty_sums:
+                aggregated[empty_sums] = np.nan
+            return aggregated
+        # dropna=False keeps the simulations with a missing identifier, such as a category that no rule matches.
+        grouped = df_work.groupby(groupby_cols, dropna=False)
+        aggregated = grouped.agg(aggregation_map)
+        # Lists of functions in agg_funcs give two levels of columns, which are left as they are.
+        if sum_columns and aggregated.columns.nlevels == 1:
+            has_values = grouped[sum_columns].count() > 0
+            empty_sums = [col for col in sum_columns if not has_values[col].all()]
+            if empty_sums:
+                aggregated[empty_sums] = aggregated[empty_sums].where(has_values[empty_sums])
+        return aggregated.reset_index()
 
 
     def get_hourly_df_parametric(
@@ -11527,7 +11636,10 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         only_run_period : Any
             Argument used by `SimulationBase.get_hourly_df_parametric`.
         start_date : Any
-            Argument used by `SimulationBase.get_hourly_df_parametric`.
+            Start of the hourly index ('YYYY-MM-DD HH', the end of the first hour). When
+            None, it is read from the first simulation CSV file; then, and with the default
+            '2024-01-01 01', the year is a leap year only when the series has 8784 hourly
+            values. An explicit date keeps its year.
         skip_confirmation : Any
             Argument used by `SimulationBase.get_hourly_df_parametric`.
         normalize_per_m2 : Any
@@ -11625,11 +11737,11 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                             _hour = int(_time.split(':')[0])
                             if _hour == 24:
                                 _hour = 0
-                            start_date = f'2024-{int(_month):02d}-{int(_day):02d} {_hour:02d}'
+                            start_date = _auto_year_start_date(int(_month), int(_day), _hour)
             except Exception:
                 pass
             if start_date is None:
-                start_date = '2024-01-01 01'
+                start_date = _DEFAULT_HOURLY_START_DATE
         sample = expanded_source_df[hourly_cols[0]].iloc[0]
         n_steps = 8760
         if isinstance(sample, (list, tuple, np.ndarray)):
@@ -11690,7 +11802,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
 
     def get_hourly_df(
             self,
-            start_date: Optional[str] = '2024-01-01 01',
+            start_date: Optional[str] = _DEFAULT_HOURLY_START_DATE,
             normalize_per_m2: bool = False,
             split_by: Optional[str] = None,
             drop_all_empty_output_columns: bool = True,
@@ -11710,7 +11822,9 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         Parameters
         ----------
         start_date : Any
-            Argument used by `SimulationBase.get_hourly_df`.
+            Start of the hourly index ('YYYY-MM-DD HH', the end of the first hour). With the
+            default '2024-01-01 01' the year is a leap year only when the series has 8784
+            hourly values; an explicit date keeps its year.
         normalize_per_m2 : Any
             Boolean or mode flag controlling behaviour.
         split_by : Any
@@ -11744,7 +11858,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
     def get_output_df(
             self,
             agg_funcs: dict = None,
-            start_date: Optional[str] = '2024-01-01 01',
+            start_date: Optional[str] = _DEFAULT_HOURLY_START_DATE,
             normalize_per_m2: bool = False,
             frequency: Literal['daily', 'monthly', 'runperiod'] = 'monthly',
             split_by: Optional[str] = None,
@@ -11799,6 +11913,10 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             self.outputs_param_simulation_daily = aggregated_df
         else:
             self.outputs_param_simulation_runperiod = aggregated_df
+        if self._is_df_type_normalized('parametric_hourly'):
+            # Aggregated from an hourly table already in kWh/m2: it must not be normalised again.
+            self._get_normalized_output_df_types().add(target_df_type)
+        self._refresh_outputs_normalized_flag()
 
         grouped = None
         if split_by is not None:
@@ -11843,7 +11961,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
     def get_monthly_df(
             self,
             agg_funcs: dict = None,
-            start_date: Optional[str] = '2024-01-01 01',
+            start_date: Optional[str] = _DEFAULT_HOURLY_START_DATE,
             normalize_per_m2: bool = False,
             split_by: Optional[str] = None,
             drop_all_empty_output_columns: bool = True,
@@ -11880,7 +11998,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
     def get_daily_df(
             self,
             agg_funcs: dict = None,
-            start_date: Optional[str] = '2024-01-01 01',
+            start_date: Optional[str] = _DEFAULT_HOURLY_START_DATE,
             normalize_per_m2: bool = False,
             split_by: Optional[str] = None,
             drop_all_empty_output_columns: bool = True,
@@ -11914,7 +12032,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
     def get_runperiod_df(
             self,
             agg_funcs: dict = None,
-            start_date: Optional[str] = '2024-01-01 01',
+            start_date: Optional[str] = _DEFAULT_HOURLY_START_DATE,
             normalize_per_m2: bool = False,
             split_by: Optional[str] = None,
             drop_all_empty_output_columns: bool = True,
@@ -12113,8 +12231,35 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             )
         return {c: flattened_map[c] for c in file_output_columns if c in flattened_map}
 
+    #: Storage options that remove, or do not keep, the simulation files read by the hourly methods.
+    _SIMULATION_FILES_STORAGE_HINT = (
+        'The files may not have been kept by the storage options of the run: keep_dirs '
+        '(run_parametric_simulation), keep_sim_files (run_optimisation), and sim_files_extensions/'
+        "sim_files_policy, which must keep the '.csv' files ('.eso' with file_source='eso'). Re-run "
+        'the simulations keeping these files to analyse their hourly values.'
+    )
+
+    @staticmethod
+    def _describe_simulation_file_failures(failures: list, max_items: int = 5) -> str:
+        """Readable list of ``(row index, error message)`` pairs, the rows with the same error together."""
+        rows_by_message = {}
+        for (idx, message) in failures:
+            rows_by_message.setdefault(message, []).append(idx)
+        groups = list(rows_by_message.items())
+        lines = []
+        for (message, rows) in groups[:max_items]:
+            shown = ', '.join(str(row) for row in rows[:10]) + (', ...' if len(rows) > 10 else '')
+            lines.append(f"  - {'row' if len(rows) == 1 else 'rows'} {shown}: {message}")
+        if len(groups) > max_items:
+            remaining = sum(len(rows) for (_, rows) in groups[max_items:])
+            lines.append(f'  - ... and {remaining} more simulations')
+        return '\n'.join(lines)
+
     def _attach_hourly_outputs_from_simulation_files(self, df: pd.DataFrame, file_source: Literal['csv', 'eso'], file_output_columns: Optional[List[str]]=None, eplus_install_dir: Optional[str]=None, only_run_period: bool=True) -> pd.DataFrame:
         """Attach per-row hourly output lists extracted from simulation files.
+
+        Rows whose file cannot be found or read are left without hourly values, with a warning
+        that names them; if no row has a readable file, a ValueError explains why.
 
         Parameters
         ----------
@@ -12147,13 +12292,28 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         # A dict keeps the order of the files (a set follows string hashing, which changes
         # with every Python process).
         all_output_cols = {}
-        for (_, row) in df_augmented.iterrows():
+        failures = []
+        for (idx, row) in df_augmented.iterrows():
             try:
                 row_outputs = self._extract_hourly_outputs_from_file(row=row, file_source=file_source, file_output_columns=file_output_columns, eplus_install_dir=eplus_install_dir, only_run_period=only_run_period)
             except (ValueError, FileNotFoundError) as e:
+                failures.append((idx, str(e)))
                 row_outputs = {}
             per_row_outputs.append(row_outputs)
             all_output_cols.update(dict.fromkeys(row_outputs))
+        if failures:
+            details = self._describe_simulation_file_failures(failures)
+            if len(failures) == len(df_augmented):
+                raise ValueError(
+                    f'The {file_source.upper()} files of the selected simulations cannot be read, so there are '
+                    f'no hourly values to expand:\n{details}\n{self._SIMULATION_FILES_STORAGE_HINT}'
+                )
+            warnings.warn(
+                f'Simulations left out of the hourly table because their {file_source.upper()} file cannot '
+                f'be read ({len(failures)} of {len(df_augmented)}):\n{details}\n'
+                f'{self._SIMULATION_FILES_STORAGE_HINT}',
+                UserWarning,
+            )
         for col in all_output_cols:
             target_col = col
             if target_col in df_augmented.columns:
@@ -12225,7 +12385,8 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             data (True by default).
         :param start_date: start date and time for the hourly index in
             ``'YYYY-MM-DD HH'`` format. When None (default), the date is inferred
-            automatically from the first simulation CSV file.
+            automatically from the first simulation CSV file, in a leap year only
+            when the series has 8784 hourly values.
         :param skip_confirmation: if True, skips the interactive size-confirmation
             prompt that is shown when ``epw_filter`` and ``output_columns`` are both
             left at their defaults. Useful for running in non-interactive environments
@@ -12274,11 +12435,11 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                         (_month_day, _time) = _dt_clean.split()
                         (_month, _day) = _month_day.split('/')
                         _hour = int(_time.split(':')[0])
-                        start_date = f'2024-{int(_month):02d}-{int(_day):02d} {_hour:02d}'
+                        start_date = _auto_year_start_date(int(_month), int(_day), _hour)
             except Exception:
                 pass
             if start_date is None:
-                start_date = '2024-01-01 01'
+                start_date = _DEFAULT_HOURLY_START_DATE
         if include_summary_columns:
             if hasattr(self, 'parameters_list'):
                 param_cols = [i.name for i in self.parameters_list if i.name in source_df.columns]
@@ -12371,7 +12532,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                 only_run_period=only_run_period,
                 start_date=start_date,
                 skip_confirmation=skip_confirmation,
-                normalize_per_m2=normalize_per_m2,
+                normalize_per_m2=False,
             )
             
         if getattr(self, 'outputs_optimisation_hourly', None) is None:
@@ -12401,6 +12562,10 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             self.outputs_optimisation_daily = aggregated_df
         else:
             self.outputs_optimisation_runperiod = aggregated_df
+        if self._is_df_type_normalized('optimisation_hourly'):
+            # Aggregated from an hourly table already in kWh/m2: it must not be normalised again.
+            self._get_normalized_output_df_types().add(target_df_type)
+        self._refresh_outputs_normalized_flag()
 
         grouped = None
         if split_by is not None:
@@ -12570,38 +12735,44 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         if getattr(self, 'last_run_type', None) == 'optimisation':
             if getattr(self, 'outputs_optimisation', None) is None or self.outputs_optimisation.empty:
                 raise ValueError('Optimisation outputs not found. Run or load optimisation first.')
-            for (_, row) in self.outputs_optimisation.iterrows():
-                try:
-                    path = self._resolve_simulation_file_path(row=row, file_source='csv')
-                    if os.path.exists(path):
-                        df_file = pd.read_csv(path, nrows=5)
-                        excluded_columns = {'Date/Time', 'date/time'}
-                        numeric_cols = [c for c in df_file.columns if c not in excluded_columns and pd.api.types.is_numeric_dtype(df_file[c])]
-                        self.outputs_hourly_columns = numeric_cols
-                        return self.outputs_hourly_columns
-                except Exception:
-                    continue
-            raise FileNotFoundError('Could not find any valid simulation output CSV files to infer hourly columns.')
+            self.outputs_hourly_columns = self._hourly_columns_from_first_readable_csv(self.outputs_optimisation, label='')
+            return self.outputs_hourly_columns
         elif getattr(self, 'last_run_type', None) == 'parametric':
             if getattr(self, 'outputs_param_simulation', None) is None or self.outputs_param_simulation.empty:
                 raise ValueError('Parametric outputs not found. Run or load parametric simulation first.')
             self.outputs_hourly_columns = identify_hourly_columns(self.outputs_param_simulation)
             if len(self.outputs_hourly_columns) > 0:
                 return self.outputs_hourly_columns
-            for (_, row) in self.outputs_param_simulation.iterrows():
-                try:
-                    path = self._resolve_simulation_file_path(row=row, file_source='csv')
-                    if os.path.exists(path):
-                        df_file = pd.read_csv(path, nrows=5)
-                        excluded_columns = {'Date/Time', 'date/time'}
-                        numeric_cols = [c for c in df_file.columns if c not in excluded_columns and pd.api.types.is_numeric_dtype(df_file[c])]
-                        self.outputs_hourly_columns = numeric_cols
-                        return self.outputs_hourly_columns
-                except Exception:
-                    continue
-            raise FileNotFoundError('Could not find any valid parametric simulation output CSV files to infer hourly columns.')
+            self.outputs_hourly_columns = self._hourly_columns_from_first_readable_csv(
+                self.outputs_param_simulation, label='parametric ',
+            )
+            return self.outputs_hourly_columns
         else:
             raise ValueError('No previous simulation run type detected. Please run parametric or optimisation first.')
+
+    def _hourly_columns_from_first_readable_csv(self, df: pd.DataFrame, label: str) -> list:
+        """Numeric columns of the first readable simulation CSV of ``df``.
+
+        Raises a FileNotFoundError that lists the CSV files checked (or why their paths are
+        unknown) and the storage options of the run when no file can be read.
+        """
+        failures = []
+        for (idx, row) in df.iterrows():
+            path = None
+            try:
+                path = self._resolve_simulation_file_path(row=row, file_source='csv')
+                if not os.path.exists(path):
+                    failures.append((idx, f'Simulation output file not found: {path}'))
+                    continue
+                df_file = pd.read_csv(path, nrows=5)
+                excluded_columns = {'Date/Time', 'date/time'}
+                return [c for c in df_file.columns if c not in excluded_columns and pd.api.types.is_numeric_dtype(df_file[c])]
+            except Exception as exc:
+                failures.append((idx, str(exc) if path is None else f'Could not read {path}: {exc}'))
+        raise FileNotFoundError(
+            f'Could not find any valid {label}simulation output CSV files to infer hourly columns:\n'
+            f'{self._describe_simulation_file_failures(failures)}\n{self._SIMULATION_FILES_STORAGE_HINT}'
+        )
 
     # ------------------------------------------------------------------
     # Filtered copies of per-simulation EnergyPlus CSV outputs
@@ -13569,6 +13740,9 @@ class AccimPredefModelsParamSim(ParametricSimulation):
 
     This class keeps the historical constructor style while delegating to
     `ParametricSimulation` with `parameters_type='accim predefined model'`.
+    The baseline of each IDF is the custom comfort model (ComfStand 99, CAT 80,
+    ComfMod 3) with the default coefficients of 'accim custom model' (those of
+    ASHRAE 55 with 80 % acceptability), which the parameters of the plan change.
 
     Usage
     -----
@@ -13651,6 +13825,16 @@ class AccimPredefModelsParamSim(ParametricSimulation):
             accim_results_root=accim_results_root,
             remove_output_tables=remove_output_tables,
         )
+        # The baseline is the custom model with the default coefficients of 'accim custom model'. Without them, its
+        # heating setpoint was above the cooling one, so EnergyPlus stopped in the test simulations of the outputs
+        # and in the plans that do not set ComfStand
+        coefficients = _CUSTOM_MODEL_DEFAULTS
         for b in self.buildings:
-            accis.modify_accis(b, comf_stand=99, comf_mod=3, cat=80, hvac_mode=2, vent_ctrl=0)
+            accis.modify_accis(
+                b, comf_stand=99, comf_mod=3, cat=80, hvac_mode=2, vent_ctrl=0,
+                cust_ast_m=coefficients['m'], cust_ast_n=coefficients['n'],
+                cust_ast_acst_offset=coefficients['ACSToffset'], cust_ast_ahst_offset=coefficients['AHSToffset'],
+                cust_ast_acst_aul=coefficients['ACSTaul'], cust_ast_acst_all=coefficients['ACSTall'],
+                cust_ast_ahst_aul=coefficients['AHSTaul'], cust_ast_ahst_all=coefficients['AHSTall'],
+            )
 

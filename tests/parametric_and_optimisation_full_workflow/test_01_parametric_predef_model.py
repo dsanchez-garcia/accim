@@ -129,7 +129,7 @@ print(f"  Parámetros disponibles ({len(available)}): {available}")
 parametric.set_parameters(
     accis_params_dict={
         # EN16798 cat. I + ASHRAE55 80 % (ComfMod 3); el plan descarta cada norma con la categoría de la otra.
-        # ESP CTE (ComfStand 0) solo tiene consignas con ComfMod 0, que el plan no admite para ComfStand 0.
+        # ESP CTE (ComfStand 0) no entraría: sampling_full_set la descarta cuando el plan tiene CAT o ComfMod.
         'ComfStand': [1, 2],
         'CAT': [1, 80],
         'ComfMod': [3],
