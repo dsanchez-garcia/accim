@@ -25,10 +25,10 @@ Active short-term tasks.
   - Definition of done: the author reviews the branch and merges it; `CHANGELOG.md` gets the date; accim and accim-samples 1.0.0 are published as in `packaging/README.md`.
   - References: `CHANGELOG.md` (Unreleased), `DEVLOG.md` (2026-10-30).
 
-- [ ] [P1][blocked] Close the windows of the sample model in the air-conditioned parametric notebooks
-  - Context: WF1 and WF4 (`ScriptType="vrf_ac"`) and 03, WF3 and WF5 (aPMV setpoints) leave open all year the `ZoneVentilation` objects of the sample model (schedule `Always On`), which accim only controls in mixed mode, so their "fully air-conditioned" results include open windows (also with 0.8.2). Found on 2026-10-31, when the 16 notebooks were run again with 1.0.0 and their texts checked (see `DEVLOG.md`). Blocked on the author: the options are in `notes/questions.md`.
-  - Definition of done: the five notebooks run with the windows closed (or the choice documented in their texts), exported with `docs/prepare_parametric_notebooks.py`, and their texts checked against the new results.
-  - References: `notes/questions.md` (2026-10-31), `accim/sim/model.py` (`_scan_windows`, only for mixed mode).
+- [ ] [P2][todo] Describe `keep_input` correctly in the parametric notebooks
+  - Context: Nine parametric notebooks (00, 01, 02, 03, 05, 06, WF1, WF2, WF3) describe the argument `keep_input` of `run_parametric_simulation()` as "whether generated input files are preserved", but it keeps the input parameters (the columns of the plan) in the results table (see its docstring in `accim/parametric_and_optimisation/main.py`). Found by the review of the notebook texts of 2026-10-31.
+  - Definition of done: the line corrected in the source notebooks and in their executed copies (the same edit), and the pages exported again with `docs/prepare_parametric_notebooks.py export` (no new run needed).
+  - References: `docs/README.md` (§7.3), the key-argument lists of the cells that call `run_parametric_simulation()`.
 
 - [ ] [P2][todo] `sampling_full_set()` drops ESP CTE (`ComfStand` 0) when the plan has `CAT` or `ComfMod`
   - Context: `drop_invalid_param_combinations()` takes `CAT` and `ComfMod` as 'n/a' for `ComfStand` 0 (its setpoints depend on neither), so with the predefined models a full set such as `{'ComfStand': [0, 1], 'CAT': [1, 2]}` simulates no row of `ComfStand` 0, without a warning; likewise, INT ISO7730 (22) is only kept with `ComfMod` 0. As in 0.8.2. Since 1.0.0, both work with any `CAT` and `ComfMod` in the simulation (see `DEVLOG.md`, 2026-10-31), so the rows are only repeated simulations.

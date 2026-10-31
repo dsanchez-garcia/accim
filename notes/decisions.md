@@ -11,6 +11,30 @@ Durable architectural/process decisions for this repository and its Obsidian
 vault. Newest first. Use [[templates/decision-record.md|the decision-record
 template]] to add a new entry.
 
+## 2026-10-31 — The air-conditioned parametric notebooks close the windows of the sample model
+
+- **Status**: accepted (option (a), chosen by the author on 2026-10-31)
+- **Context**: The sample model of the parametric notebooks (`OSM_TestResidentialUnit_v01_onlygeometry_SchNatVent_v2520*.idf`)
+  has two `ZoneVentilation:WindandStackOpenArea` objects (2 m2 per zone) with the schedule `Always On Discrete
+  hvac_library`, without temperature limits. accim only controls them with the mixed-mode script types (`vrf_mm`,
+  as `AddAccis` since 0.7.8). WF1 and WF4 used `ScriptType="vrf_ac"` with `HVACmode` 0, and 03, WF3 and WF5 apply
+  aPMV setpoints, which only control the HVAC system, so these "fully air-conditioned" examples heated and cooled
+  with the windows open all year (also with 0.8.2): heating 4-53 kWh/m2 (WF1), 2-51 (WF4), 52-71 (03), against
+  0-1 in WF2 in air conditioning, with the windows closed. Found by the review of the texts of the notebooks run
+  again with 1.0.0. The options were: (a) WF1 and WF4 with `ScriptType="vrf_mm"` and `HVACmode` 0, so that accim
+  closes the windows, and the aPMV notebooks closing the ventilation objects; (b) a variant of the sample model
+  without natural ventilation; (c) keep them and explain it in their texts.
+- **Decision**: (a). WF1 and WF4 add the VRF system with `ScriptType="vrf_mm"`, and `modify_HVACmode(building, 0)`
+  keeps the windows closed (with `HVACmode` 0, `SetWindowOperation_<window>` sets their opening factor to 0). 03,
+  WF3 and WF5 set the `Opening_Area_Fraction_Schedule_Name` of the `ZoneVentilation:WindandStackOpenArea` objects to
+  the `Always Off Discrete` schedule of the model. accim itself does not change: with `vrf_ac` and `ex_ac` it
+  leaves the natural ventilation of the model as it is, as `AddAccis` always has; Detailed use and the overview
+  page of the parametric module now say so, with these two ways of closing the windows.
+- **Consequences**: The five notebooks describe fully air-conditioned buildings with their windows closed, as their
+  texts said. Their results change: for instance, the HVAC electricity of WF3 goes from 171-228 to 67-87 kWh/m2 and
+  the heating of 03 from 52-71 to 3-13 kWh/m2, close to WF2 in air conditioning. They were run again and their
+  texts checked against the new results (see [[../DEVLOG.md]]).
+
 ## 2026-10-31 — The hourly tables of the parametric module follow the calendar of EnergyPlus
 
 - **Status**: accepted (to be confirmed by the author: it changes the daily and monthly tables, and the year of

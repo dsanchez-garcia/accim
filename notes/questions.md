@@ -24,23 +24,6 @@ it here as answered).
 
 ## Open
 
-## 2026-10-31 — How should the air-conditioned parametric notebooks close the windows of the sample model?
-- Context: The sample model of the parametric notebooks (`OSM_TestResidentialUnit_v01_onlygeometry_SchNatVent_v2520*.idf`)
-  has two `ZoneVentilation:WindandStackOpenArea` objects (2 m2 per zone) with the schedule `Always On Discrete
-  hvac_library`, without temperature limits. accim controls them only in mixed mode (`vrf_mm`, as `AddAccis` since
-  0.7.8). WF1 and WF4 use `ScriptType="vrf_ac"` with `modify_HVACmode(building, 0)`, and 03, WF3 and WF5 apply
-  aPMV setpoints, which do not touch the windows, so these "fully air-conditioned" runs heat and cool with the
-  windows open all year (also with 0.8.2): heating 4-53 kWh/m2 (WF1), 2-51 (WF4), 52-71 (03), and HVAC electricity
-  up to 231 (WF1), 270 (WF4) and 228 (WF3) kWh/m2, while WF2 in air conditioning with the windows closed gives
-  heating 0-1 and HVAC 74-101 kWh/m2 (Seville). Found by the review of the notebook texts of 2026-10-31.
-- Why it matters: the examples follow those of the accim paper; their results describe a building with open windows.
-- Options considered: (a) WF1/WF4 with `ScriptType="vrf_mm"` and `modify_HVACmode(building, 0)`, so that accim
-  closes the windows, and the aPMV notebooks closing the ventilation objects (for example, an `Always Off`
-  schedule) before running; (b) a variant of the sample model without natural ventilation for those notebooks;
-  (c) keep them and explain it in their texts. Any option needs running them again (about 30 minutes).
-- Owner: author.
-- Status: open.
-
 ## 2026-10-31 — Where should the fixes of the branch reviews go: `v1.0.0` or `master`?
 - Context: [[branch-reviews.md]] marks six small fixes of `refactor/sim-v1` as `port`. The five of PR 1 (the
   `parent_folder_path` of `morph_epws`, the empty baseline of `WorkspaceArtifactCleaner`, `set_problem()` without

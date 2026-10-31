@@ -243,6 +243,10 @@ python docs/prepare_parametric_notebooks.py export --executed-dir D:\runs_param 
 - Sin `--only`, todos: los tutoriales `00` a `10` en orden y después `wf1` a `wf5`. `--only` admite
   el principio del nombre (`05`, `wf1`). `run` copia los notebooks y los IDF y EPW de muestra a la
   carpeta de trabajo; `export` hace la misma limpieza que en §7.2.
+- Usa una carpeta de trabajo nueva en cada ejecución: `run` no borra los resultados que dejó una
+  ejecución anterior, y algunos notebooks imprimen el tamaño de sus carpetas de resultados (`wf1`,
+  `wf4`) o los archivos de la carpeta de trabajo (el 03, «Baseline file count»), que entonces los
+  incluirían. Para refrescar 09 y 10, copia solo las carpetas que leen (punto siguiente).
 - Los tutoriales 09 y 10 leen los resultados de 02 y 07: ejecuta antes esos dos. Para refrescar 09
   sin cambiar 02 y 07, copia `nb02_parametric_predefined_results` y
   `nb07_basic_optimization_results` de la carpeta de la ejecución anterior a la nueva, y exporta

@@ -161,6 +161,10 @@ system with mixed-mode operation) or ``'ex_ac'`` (the existing HVAC system of th
 air-conditioned). Mixed-mode operation needs a model with natural ventilation: calculated
 (AirflowNetwork), or given by ``ZoneVentilation:WindandStackOpenArea`` or
 ``ZoneVentilation:DesignFlowRate`` objects, whose opening accim controls; see :doc:`4_detailed use`.
+With ``'vrf_ac'`` and ``'ex_ac'``, accim does not change the natural ventilation of the model, so
+the windows that are open in it stay open: to simulate such a model fully air-conditioned with its
+windows closed, use ``'vrf_mm'`` and ``HVACmode`` 0 (as WF1 and WF4 do), or close them in the model
+(as the aPMV examples do).
 
 Several models can be simulated in the same study (``buildings=[building_a, building_b]``): each one
 is identified by its file name, and the plan gets an ``idf`` column.

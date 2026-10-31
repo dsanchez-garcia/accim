@@ -15,6 +15,14 @@ This log is a lightweight, session-scoped complement to the repository's
 existing tracking files — it does not replace them (see
 [[decisions.md#2026-09-13 — `notes/work-log.md` complements, not replaces, existing tracking files|the related decision]]).
 
+## 2026-10-31 — The air-conditioned parametric notebooks close the windows of the sample model
+
+- **Objective**: Apply the answer of the author (option (a)) to the open windows of the "fully air-conditioned" parametric notebooks.
+- **Affected files**: the notebooks `03`, `wf1`, `wf3`, `wf4`, `wf5` and their pages; `docs/source/4_detailed use.md`, `docs/source/parametric_and_optimisation.rst`, `docs/README.md`; [[../CHANGELOG.md]], [[../DEVLOG.md]], [[../TODO.md]], [[decisions.md]], [[questions.md]].
+- **Finding or decision**: See [[decisions.md#2026-10-31 — The air-conditioned parametric notebooks close the windows of the sample model|the decision]]: WF1 and WF4 use `vrf_mm` with `HVACmode` 0, and the aPMV notebooks set the `ZoneVentilation` objects to `Always Off Discrete`; accim does not change, and its docs now warn that `vrf_ac` and `ex_ac` keep the natural ventilation of the model. The working folder of the first run kept the results of the morning, which inflated the folder sizes printed by WF1 and WF4: the notebooks were run again in a new folder, and `docs/README.md` now asks for one.
+- **Validation**: the five notebooks run without errors and were exported; the HVAC electricity of WF3 drops from 171-228 to 67-87 kWh/m2; a subagent checked the texts against the new outputs and two claims by simulation. Details in [[../DEVLOG.md]].
+- **Next step**: the other open questions of [[questions.md]].
+
 ## 2026-10-31 — Texts of the parametric notebooks checked against their results with 1.0.0
 
 - **Objective**: Make the markdown of the 16 parametric notebooks, re-run with 1.0.0, agree with their new results.
