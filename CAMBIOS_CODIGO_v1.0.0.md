@@ -109,7 +109,7 @@ llamaba en orden; en 1.0.0 son funciones que reciben el `AccimModel`.
 | `accimJob.__init__`, `utils.scan_zones` | `AccimModel.__init__` (`model.py`) y `targets.resolve_targets` |
 | `setComfFieldsPeople` | `people.set_comfort_models` |
 | `setPMVsetpoint` | `hvac.vrf.set_pmv_setpoints` |
-| `addOpTempTherm`, `addBaseSchedules`, `setAvailSchOn`, `addVRFsystemSch`, `addCurveObj`, `addDetHVACobj` | `hvac.vrf.add_operative_temperature_thermostats`, `add_base_schedules`, `set_ideal_loads_availability_on`, `add_vrf_schedules`, `add_curves` y `add_vrf_objects`, que llama `hvac.vrf.add_vrf_system` |
+| `addOpTempTherm`, `addBaseSchedules`, `setAvailSchOn`, `addVRFsystemSch`, `addCurveObj`, `addDetHVACobj` | `hvac.vrf.add_operative_temperature_thermostats`, `add_base_schedules`, `add_vrf_schedules`, `add_curves` y `add_vrf_objects`, que llama `hvac.vrf.add_vrf_system`. `setAvailSchOn` (la disponibilidad de los `ZoneHVAC:IdealLoadsAirSystem`) ya no existe: `add_vrf_objects` elimina esos objetos, que el VRF dejaba sin conectar |
 | `addForscriptSchVRFsystem`, `checkVentIsOn`, `addEMSSensorsVRFsystem` | `hvac.vrf.add_setpoint_schedules`, `check_ventilation` y `add_coil_sensors` |
 | `addForscriptSchExistHVAC`, `addEMSSensorsExisHVAC`, `addEMSInitExisHVAC` | `hvac.existing.add_setpoint_schedules`, `add_coil_sensors` y `add_coil_initialisation` |
 | `resolve_hvac_zone_map` (`accim_ExistingHVAC_resolver`) | `hvac.resolver` (las mismas estrategias) |
@@ -277,6 +277,8 @@ Están en la sección 9.3 de la guía de migración y en `CHANGELOG.md`. En resu
   gestores de llamada de más, `make_averages`, las tolerancias, las combinaciones sin consignas...
 - `add_accis_to_idf`, y por tanto el módulo paramétrico, controla la ventilación natural de los objetos
   `ZoneVentilation` y activa el dimensionado de los sistemas VRF, como `AddAccis`.
+- Con los sistemas VRF, `add_vrf_objects` elimina los `ZoneHVAC:IdealLoadsAirSystem` del modelo, que quedaban
+  sin conectar y daban un error grave en cada simulación (los resultados no cambian).
 - Los IDF de salida son deterministas: las zonas, y los objetos de cada zona, siempre en el mismo orden.
 - `run_ep` nombra las simulaciones con el nombre completo del EPW.
 - Correcciones del módulo paramétrico encontradas al poner en marcha sus tests (el registro de las
@@ -295,16 +297,21 @@ Están en la sección 9.3 de la guía de migración y en `CHANGELOG.md`. En resu
 
 | Carpeta | Qué prueba | Cómo se ejecuta |
 | --- | --- | --- |
-| `tests/core` | `accim.sim`, el intérprete de Erl (`test_erl.py`), el backend de la API (`test_energyplus_api.py`, con simulaciones con los dos backends), la generación (`test_generation.py`), los nombres antiguos (`test_deprecation.py`), `accim.utils` (`test_utils_package.py`), el dimensionado (`test_sizing.py`)... | `python -m pytest tests/core tests/parametric_and_optimisation -q -p no:cacheprovider`. Cada test que necesita una versión de EnergyPlus se salta si no está instalada |
+| `tests/core` | `accim.sim`, el intérprete de Erl (`test_erl.py`), el backend de la API (`test_energyplus_api.py`, con simulaciones con los dos backends), la generación (`test_generation.py`), el *golden master* de los IDF de salida (`test_golden_master.py`), los nombres antiguos (`test_deprecation.py`), `accim.utils` (`test_utils_package.py`), el dimensionado (`test_sizing.py`)... | `python -m pytest tests/core tests/parametric_and_optimisation -q -p no:cacheprovider`. Cada test que necesita una versión de EnergyPlus se salta si no está instalada; `--update-golden` vuelve a escribir los archivos golden tras un cambio buscado |
 | `tests/parametric_and_optimisation` (`test_*.py`) | El módulo paramétrico, sin EnergyPlus o con simulaciones cortas | Con la orden anterior |
 | `tests/parametric_and_optimisation` (`NN_test_*.py`) | Simulaciones reales con EnergyPlus 9.6 (87 tests) | Dándolos explícitamente, desde una carpeta de trabajo (ver su `README.md`) |
 | `tests/parametric_and_optimisation_full_workflow` | Flujos completos (5 scripts) | `python -m pytest <script> -s` desde su carpeta; si el script llega al final, pytest dice «no tests ran» |
 
-Durante la refactorización también se usaron dos herramientas que no están en el repositorio: un
-*golden master* (genera los IDF de 29 configuraciones con 0.8.2 y con 1.0.0 y los compara objeto a
-objeto) y una comparación de los dos backends (simula cada modelo con el EMS y con la API y compara los
-CSV). Para repetir esas comprobaciones en el futuro convendría traerlas al repositorio (por ejemplo, a
-`tools/`).
+Durante la refactorización se usaron dos herramientas que ahora están en el repositorio:
+
+- El *golden master* (`tests/core/golden_master`, con su `README.md`): genera los IDF de 29
+  configuraciones y los compara objeto a objeto, en su orden, con los de 1.0.0 guardados en
+  `golden/` (0,4 MB, comprimidos con xz). Se ejecuta con los tests de `tests/core`, cada configuración
+  en su propio proceso (eppy solo usa un IDD por proceso). Su `runner.py` también ejecuta las
+  configuraciones con otra versión de accim (con `--legacy`, la API de 0.x) y compara dos resultados:
+  así se repite la comparación con 0.8.2.
+- La comparación de los dos backends (`tools/compare_backends.py`): simula un modelo con el EMS y con
+  la API y compara los CSV.
 
 ## 12. Dónde tocar para...
 
@@ -318,3 +325,4 @@ CSV). Para repetir esas comprobaciones en el futuro convendría traerlas al repo
 | Renombrar un argumento | El argumento en las funciones, y el nombre antiguo en `arguments.LEGACY_ARGUMENT_NAMES` |
 | Añadir una función de Erl al backend de la API | `ems/erl.py`: `_FUNCTIONS`, la versión rápida en `_FAST_NAMESPACE` y la exacta en `_ExactEvaluator.function`, con un test en `tests/core/test_erl.py` |
 | Cambiar lo que pregunta `AddAccis` | `prompts.py`, y las transcripciones de `docs/source/4_detailed use.md` (ver `docs/README.md`, §5) |
+| Cambiar a propósito los IDF de salida | Después del cambio, `python tests/core/golden_master/runner.py write CARPETA` y `compare CARPETA` para ver qué cambia, y `python -m pytest tests/core/test_golden_master.py --update-golden` para guardar los nuevos golden (ver `tests/core/golden_master/README.md`) |

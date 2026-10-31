@@ -104,7 +104,8 @@ The prompts of `AddAccis` still show the old names (for instance, "Enter the Scr
 The output IDFs of accim 1.0.0 have the same objects as those of accim 0.x, except for the corrections below.
 The new version was checked against accim 0.x with the output IDFs of 29 configurations (all script types,
 temperature and PMV control, all the comfort standards, aPMV setpoints, `add_accis_to_idf` and `modify_accis`),
-which are identical apart from these corrections, and with short parametric and optimisation studies (the IDFs
+which are identical apart from these corrections (the golden master of the repository, `tests/core/golden_master`,
+repeats this comparison), and with short parametric and optimisation studies (the IDFs
 of each class of `accim.parametric_and_optimisation` and their results):
 
 - The output IDFs are the same in every run: the zones, and the objects of each zone, are always in the same
@@ -127,6 +128,11 @@ of each class of `accim.parametric_and_optimisation` and their results):
   not change. EnergyPlus also needs sizing periods: when a model has none, accim now warns (with `AddAccis` too)
   that EnergyPlus will stop, and recommends adding the design days of the location or
   `SizingPeriod:WeatherFileDays` objects.
+- With the VRF systems, accim removes the `ZoneHVAC:IdealLoadsAirSystem` objects of the input model (`AddAccis`,
+  `add_accis_to_idf`, and so `accim.parametric_and_optimisation`, and `accim.sim.apmv.add_vrf_system`). The VRF
+  systems replace the zone equipment lists and connections of the model, so in accim 0.x these objects were left
+  unconnected (with their availability schedules set to 'On'), and EnergyPlus reported a severe error for each of
+  them ("Orphaned ZoneHVAC object found"). The results do not change.
 - The subprograms of ESP CTE and INT ISO7730 (`SetAST_CS0_0` and `SetAST_CS22_0`), whose setpoints do not depend
   on the comfort mode, set them whatever `ComfMod` is. In accim 0.x they only did so with `ComfMod` 0, which the
   output IDFs of `AddAccis` have, but not the models of `accim.parametric_and_optimisation`, whose baseline has

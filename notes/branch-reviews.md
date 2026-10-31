@@ -23,6 +23,15 @@ Review part of three P2 items of [[../TODO.md#Backlog|the backlog]]: the branch 
 - **How to use**: read the summary line of each section; the last section orders the PRs and the deletion of the
   refs, and lists the decisions that need the author.
 
+**State (2026-10-31, after the answers of the author)**: the author chose to bring everything to `v1.0.0` before the
+release ([[decisions.md]]), and PRs 1 to 4 below were done that day: the five fixes of PR 1; `checked_sum_results`
+and `openpyxl` (PR 2); the tests of sim-v1 adapted to `tests/core`, with the repair of
+`Table.wrangled_table(reshaping='pivot')` (PR 3); and the golden master of the output IDFs in
+`tests/core/golden_master`, with `tools/compare_backends.py` (PR 4). The orphan ideal loads systems with VRF are
+removed (section 3), and the setpoints of CS6 with `ComfMod` 2 stay as in 0.x until a later check (a TODO item).
+The integrity block of `review/refactor-sim-v1-20261024` and the comfort objective have a recommendation in
+[[questions.md]]. No ref has been deleted yet: `refactor/sim-v1` waits for the confirmation of the author.
+
 ## 1. Branch `refactor/sim-v1`
 
 `refactor/sim-v1` = `origin/refactor/sim-v1` = `ef1ec593`: 36 commits since `c03250f`, 118 files (+8419/-5960).

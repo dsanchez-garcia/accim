@@ -15,6 +15,14 @@ This log is a lightweight, session-scoped complement to the repository's
 existing tracking files — it does not replace them (see
 [[decisions.md#2026-09-13 — `notes/work-log.md` complements, not replaces, existing tracking files|the related decision]]).
 
+## 2026-10-31 — Answers of the author on the branch reviews
+
+- **Objective**: Apply the answers of the author to the questions of [[questions.md]]: everything to `v1.0.0` (1), the setpoints of CS6 with `ComfMod` 2 kept until checked (4), the orphan ideal loads systems removed (5); recommend for (2) and (3).
+- **Affected files**: `accim/sim/hvac/vrf.py`, `accim/parametric_and_optimisation/objectives.py`, `accim/data/postprocessing/`, `accim/utils/`, `setup.py`; `tests/core/golden_master/`, `tests/core/test_golden_master.py` and the tests of PR 3; `tools/`; the How-to page of `Table`; [[../CHANGELOG.md]], [[../DEVLOG.md]], [[../TODO.md]], [[decisions.md]], [[questions.md]], [[branch-reviews.md]].
+- **Finding or decision**: Three decision records (see [[decisions.md]]). PRs 2 to 4 of [[branch-reviews.md]] are in `v1.0.0`; the tests of PR 3 found 11 bugs, all fixed. The golden master runs each configuration in its own process: eppy keeps the IDD of the first model of a Python session (with `'auto'`, besos only warns), a finding added to [[../TODO.md]]. The heating setpoint of CS6 with `ComfMod` 2 equals the cooling one within its limits, which the TODO item records for the check.
+- **Validation**: identical results without the ideal loads systems (whole year, both the ACCIS and the aPMV setpoints); the goldens equal the outputs checked against 0.8.2 except those objects, and `--legacy` repeats the comparison with 0.8.2; 87 numbered tests passed; details in [[../DEVLOG.md]].
+- **Next step**: the author confirms the deletion of `refactor/sim-v1` and answers (2) and (3) of [[questions.md]].
+
 ## 2026-10-31 — The air-conditioned parametric notebooks close the windows of the sample model
 
 - **Objective**: Apply the answer of the author (option (a)) to the open windows of the "fully air-conditioned" parametric notebooks.

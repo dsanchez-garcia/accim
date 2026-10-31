@@ -11,6 +11,52 @@ Durable architectural/process decisions for this repository and its Obsidian
 vault. Newest first. Use [[templates/decision-record.md|the decision-record
 template]] to add a new entry.
 
+## 2026-10-31 — The fixes and tests of the branch reviews go to `v1.0.0`, before the release
+
+- **Status**: accepted (option (a), chosen by the author on 2026-10-31)
+- **Context**: [[branch-reviews.md]] marked as `port` or `adapt` six fixes and five groups of tests of
+  `refactor/sim-v1`, and the strict reducer and the `openpyxl` dependency of the tag
+  `archive/feat-comfort-metrics-experiment-api`, in four PRs; PR 1 (five small fixes) was already in the working
+  tree of `v1.0.0`. The options were: (a) everything on `v1.0.0` before the release; (b) PR 1 on `v1.0.0`, the rest
+  on `master` after the merge.
+- **Decision**: (a). On 2026-10-31, `v1.0.0` got PR 2 (`objectives.checked_sum_results` and `openpyxl` in
+  `install_requires`), PR 3 (the tests of sim-v1 adapted to `tests/core`, with the repair of
+  `Table.wrangled_table(reshaping='pivot')`) and PR 4 (the golden master of the output IDFs in
+  `tests/core/golden_master`, which also repeats the comparison with 0.8.2, and `tools/compare_backends.py`).
+- **Consequences**: `v1.0.0` holds everything that the reviews proposed to keep from `refactor/sim-v1` and the
+  comfort-metrics tag, so `refactor/sim-v1` can be deleted (locally and on `origin`) when the author confirms. The
+  tag and `review/refactor-sim-v1-20261024` wait for their own questions ([[questions.md]]).
+
+## 2026-10-31 — accim removes the ideal loads systems of the input model when it adds its VRF systems
+
+- **Status**: accepted (chosen by the author on 2026-10-31)
+- **Context**: `hvac/vrf.add_vrf_objects` replaces the zone equipment lists and connections of the model with
+  those of the VRF systems, but kept its `ZoneHVAC:IdealLoadsAirSystem` objects (with their availability set to
+  'On' by `set_ideal_loads_availability_on`), so they were left unconnected and EnergyPlus reported one severe
+  error for each of them in every run ("Orphaned ZoneHVAC object found"), as in 0.x ([[branch-reviews.md]],
+  section 3). The options were: remove them; keep the behaviour of 0.x.
+- **Decision**: remove them. `add_vrf_objects` removes all the `ZoneHVAC:IdealLoadsAirSystem` objects of the model,
+  with `AddAccis`, `add_accis_to_idf` (and so `accim.parametric_and_optimisation`) and
+  `accim.sim.apmv.add_vrf_system`; `set_ideal_loads_availability_on` (new in 1.0.0, with no alias) was removed. The
+  existing HVAC systems (`ex_ac`, `ex_mm`) keep them.
+- **Consequences**: the output IDFs with the VRF systems lose these objects (17 of the 29 configurations of the
+  golden master; nothing else changes), and their results do not change: with the sample model, Seville and a whole
+  year, the hourly CSV files of `AddAccis` (`vrf_ac`) and of the aPMV setpoints are identical, without the 2 severe
+  errors.
+
+## 2026-10-31 — The setpoints of comfort standard 6 with `ComfMod` 2 stay as in 0.x until they are checked
+
+- **Status**: accepted (by the author on 2026-10-31, as a provisional decision; the check is a TODO item)
+- **Context**: In `accim/sim/ems/setpoint_lines.py`, key `(6, 2)` (CHN Yang), the heating setpoint uses, within the
+  applicability limits, the formula of the cooling setpoint (`PMOT*0.30+25.9` with `CAT` 80, `+23.6` with 90), as
+  in 0.x (question of the review of 2026-10-24, [[branch-reviews.md]], section 1.4). With `ComfMod` 3, the heating
+  setpoint is `PMOT*0.32+14.88` (`CAT` 80) or `PMOT*0.31+17.14` (`CAT` 90). The applicability limits of this
+  standard are -7 to 30 °C and its category offsets are 0, so both setpoints are almost always equal: for
+  instance, 30.4 °C for a PMOT of 15 °C with `CAT` 80, against a heating setpoint of 19.7 °C with `ComfMod` 3.
+- **Decision**: keep them as they are for now, and check them later against the source of the standard.
+- **Consequences**: the output IDFs and results of this combination do not change. If the check finds an error,
+  its fix changes them (in the golden master, the configuration `b01`), with a CHANGELOG entry.
+
 ## 2026-10-31 — The air-conditioned parametric notebooks close the windows of the sample model
 
 - **Status**: accepted (option (a), chosen by the author on 2026-10-31)

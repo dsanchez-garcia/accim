@@ -206,7 +206,9 @@ Two different things are set here:
 
 - Without the ``func`` and ``name`` columns, the readers sum the hourly values and the columns take
   the names of the outputs. ``return_time_series`` keeps the whole series in each row instead of a
-  single value.
+  single value. ``sum_results`` skips missing values; ``checked_sum_results`` stops with an error
+  instead when a series is empty or has missing or infinite values, so that a failed simulation does
+  not give a valid objective.
 - Meters are read in J; step 7 converts them to kWh/m².
 - To analyse hourly values afterwards (comfort screening, hourly plots), the variables must be
   written hourly (``output_freqs=['hourly']``) and the files of the simulations must be kept
