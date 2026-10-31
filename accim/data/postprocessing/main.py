@@ -208,6 +208,16 @@ def _rename_and_merge_columns(df, renamed: dict):
     return df
 
 
+def _varies(column) -> bool:
+    """
+    Whether a variable of Table (a column such as ComfMod or EPW_City_or_subcountry) changes in the rows: it has more
+    than one value, and not only one value and the value accim gives the arguments that do not apply ('VC_X'), as
+    wrangled_table considers with reshaping='unstack'.
+    """
+    values = [str(value) for value in column.unique()]
+    return len(values) > 2 or (len(values) == 2 and not any('_X' in value for value in values))
+
+
 class Table:
     """Generates a table or dataframe using the EnergyPlus simulation
     results CSV files available in the current folder.
@@ -903,7 +913,8 @@ class Table:
             # columns of Block1:Zone10)
             column_zones = {_longest_name_in(col, allzones) for col in df.columns}
             occupied_zone_list = [zone for zone in allzones if zone in column_zones]
-        occupied_zone_list = list(set(occupied_zone_list))
+        # In a fixed order (that of the zones above), not that of a set, which changes from one Python session to another
+        occupied_zone_list = list(dict.fromkeys(occupied_zone_list))
 
         hierarchy_dict = {}
         if not(all(len(i.split(':')) == 2 for i in occupied_zone_list)):
@@ -983,7 +994,7 @@ class Table:
         hvac_zone_list = list(dict.fromkeys(hvac_zone_list))
 
         # Step: scanning blocks for block_list
-        block_list = list(set([i.split(':')[0] for i in occupied_zone_list]))
+        block_list = list(dict.fromkeys([i.split(':')[0] for i in occupied_zone_list]))
 
         # Step: renaming all columns containing BlockX_ZoneY patterns to BlockX:ZoneY.
         renamezonesdict = {}
@@ -1875,12 +1886,18 @@ class Table:
         Creates a table based on the arguments.
 
         :param reshaping: A string.
-            Can be 'pivot', 'unstack' or 'multiindex', to perform these actions.
+            Can be 'pivot', 'unstack', 'stack' or 'multiindex', to perform these actions.
+            With 'pivot' (stored in ``wrangled_df_pivoted``), the columns are the combinations of the values of
+            vars_to_gather (joined by '['), and the rows the combinations of the other variables that change, such
+            as the cities (one row per value column if none changes); the values of the rows that fall in the same
+            cell are summed. With monthly, daily, hourly or timestep frequencies, the months are in the columns too
+            ('CM_3_01_Month'), with their sum ('CM_3_Runperiod_Total'), and the comparisons are made for each of
+            them.
         :type reshaping: str
         :param vars_to_gather: A list of the variables to be transposed from rows to columns.
         :type vars_to_gather: list
         :param baseline: The already transposed column you want to use as a baseline for comparisons.
-            If omitted, you will be asked which one to use.
+            If it is not one of them and comparison_cols is entered, you will be asked which one to use.
         :type baseline: str
         :param comparison_mode: A list of strings.
             Can be 'others compared to baseline' and/or 'baseline compared to others'.
@@ -1892,7 +1909,8 @@ class Table:
         :param check_index_and_cols: A boolean. True to check index and cols, False to skip.
         :type check_index_and_cols: bool
         :param vars_to_keep: A list of strings.
-            To remove all variables from the multiindex except those to be kept.
+            To remove all variables from the multiindex except those to be kept
+            (with 'pivot', the values of the variables removed are summed).
         :type vars_to_keep: list
         :param excel_filename: A string.
             If entered, the wrangled_df will be exported to excel with that string as name.
@@ -1910,7 +1928,6 @@ class Table:
         if vars_to_keep is None:
             vars_to_keep = []
 
-        import numpy as np
         import pandas as pd
 
         # todo what if no variable is entered in vars_to_gather? accim should show the variables that change, and therefore could be analysed
@@ -1921,182 +1938,138 @@ class Table:
 
 
         if reshaping == 'pivot' or reshaping == 'unstack':
-            self.enter_vars_to_gather(vars_to_gather)
+            vars_to_gather = self.enter_vars_to_gather(vars_to_gather)
 
         checkpoint = 0
 
         wrangled_df = self.df.copy()
 
         if reshaping == 'pivot':
-
-            self.df['col_to_pivot'] = 'temp'
-            self.indexcols.append('col_to_pivot')
-
-            wrangled_df_pivoted = wrangled_df.copy()
+            # The columns are the combinations of the values of vars_to_gather (with the months, if the table has
+            # them), and the rows the combinations of the other variables that change, chosen as with
+            # reshaping='unstack'; the values of the rows that fall in the same cell are summed. The index and the
+            # values are local: self.df and self.indexcols do not change.
+            wrangled_df_pivoted = wrangled_df
             del wrangled_df
 
-            if 'Month' in wrangled_df_pivoted.columns:
-                wrangled_df_pivoted['col_to_pivot'] = (wrangled_df_pivoted[vars_to_gather].agg('['.join, axis=1) + '_' +
-                                                       wrangled_df_pivoted['Month'].astype(str) +
-                                                       '[Month')
+            if len(vars_to_gather) == 0:
+                raise ValueError("reshaping='pivot' needs vars_to_gather, the variables whose values become the "
+                                 "columns of the table.")
+            if not getattr(self, 'val_cols', None):
+                raise ValueError("reshaping='pivot' needs the value columns of the table: call format_table first, "
+                                 "with a type_of_table other than 'all'.")
+
+            val_cols = list(dict.fromkeys(self.val_cols))
+            gathered = wrangled_df_pivoted[vars_to_gather].astype(str).agg('['.join, axis=1)
+            # In the order of the values (that of custom_order, if it was used)
+            var_to_gather_values = (wrangled_df_pivoted[vars_to_gather].drop_duplicates().sort_values(vars_to_gather)
+                                    .astype(str).agg('['.join, axis=1).tolist())
+
+            # With monthly or shorter frequencies, each month gets its columns, and their sum is the run period
+            months_in_columns = ('Month' in self.indexcols and 'Month' in wrangled_df_pivoted.columns
+                                 and 'Month' not in vars_to_gather)
+            if months_in_columns:
+                month = wrangled_df_pivoted['Month'].astype(str)
+                suffixes = [f'_{m}_Month' for m in sorted(set(month))]
+                wrangled_df_pivoted['col_to_pivot'] = gathered + '_' + month + '_Month'
             else:
-                wrangled_df_pivoted['col_to_pivot'] = wrangled_df_pivoted[vars_to_gather].agg('['.join, axis=1)
+                suffixes = ['']
+                wrangled_df_pivoted['col_to_pivot'] = gathered
 
-            self.df['col_to_pivot'] = wrangled_df_pivoted['col_to_pivot']
+            # The rows: as with reshaping='unstack', without Source and the EPW columns that the split EPW columns
+            # repeat, nor the variables that do not change, nor the dates when the months are in the columns (or
+            # the date, which has the month, the day and the hour, when one of them is in the columns)
+            not_in_index = {'Source', 'col_to_pivot', *vars_to_gather}
+            if self.split_epw_names:
+                not_in_index.update(['EPW', 'EPW_Scenario-Year'])
+            date_parts = ['Month', 'Day', 'Hour', 'Minute']
+            if months_in_columns:
+                not_in_index.update(['Date/time', *date_parts])
+            elif any(i in vars_to_gather for i in date_parts):
+                not_in_index.add('Date/time')
+            index_cols = [i for i in dict.fromkeys(self.indexcols)
+                          if i not in not_in_index and i in wrangled_df_pivoted.columns
+                          and _varies(wrangled_df_pivoted[i])]
 
-            checkpoint += 1
+            if len(vars_to_keep) == 0 and check_index_and_cols:
+                print('The multiindex should contain only the variables you want to compare. '
+                      'The variables and values you are going to use for the multiindex, except those already '
+                      'specified in vars_to_gather argument, are:')
+                for i in index_cols:
+                    print(f'{i}: {list(dict.fromkeys(wrangled_df_pivoted[i]))}')
+                proceed = input('If some variable is not relevant for the comparison, it should be removed. '
+                                'Do you want to remove any? [y/n]: ')
+                if 'y' in proceed:
+                    vars_to_keep = list(str(num) for num in input(
+                        "Enter the variables you want to keep separated by semicolon: ").split(';'))
+            if len(vars_to_keep) > 0:
+                index_cols = [i for i in index_cols if i in vars_to_keep]
 
-            #todo testing from here
-
-            # todo when it is pivotted, variables not specified in vars_to_gather are summed
-            # wrangled_df_pivoted = wrangled_df_pivoted.drop(['Source'], axis=1)
-            # try:
-            #     self.indexcols.remove('Source')
-            # except ValueError:
-            #     print('Since this is not the first time you run wrangled_table, '
-            #           '"Source" is trying to be removed from indexcols, but has been previously removed.')
-            # if self.split_epw_names:
-            #     wrangled_df_pivoted = wrangled_df_pivoted.drop(['EPW', 'EPW_Scenario-Year'], axis=1)
-            #     try:
-            #         self.indexcols.remove('EPW')
-            #         self.indexcols.remove('EPW_Scenario-Year')
-            #     except ValueError:
-            #         print('Since this is not the first time you run wrangled_table, '
-            #               '"EPW" and "EPW_Scenario-Year" are trying to be removed from indexcols, but has been previously removed.')
-            #
-            #
-            # cols_to_clean = []
-            # cols_for_multiindex = []
-            # for i in self.indexcols:
-            #     try:
-            #         if (wrangled_df_pivoted[i][0] == wrangled_df_pivoted[i]).all():
-            #             cols_to_clean.append(i)
-            #         else:
-            #             cols_for_multiindex.append(i)
-            #     except KeyError:
-            #         wrangled_df_pivoted = wrangled_df_pivoted.set_index([pd.RangeIndex(len(wrangled_df_pivoted))])
-            #         if (wrangled_df_pivoted[i][0] == wrangled_df_pivoted[i]).all():
-            #             cols_to_clean.append(i)
-            #         else:
-            #             cols_for_multiindex.append(i)
-            #
-            # checkpoint += 1
-            #
-            # if check_index_and_cols:
-            #     print('The multiindex should contain only the variables you want to compare. '
-            #           'The variables and values you are going to use for the multiindex, except those already specified in vars_to_gather argument, are:')
-            #     for i in cols_for_multiindex:
-            #         if all([i not in j for j in vars_to_gather]):
-            #             print(f'{i}: {list(dict.fromkeys(wrangled_df_pivoted[i]))}')
-            #     proceed = input('If some variable is not relevant for the comparison, it should be removed. '
-            #                     'Do you want to remove any? [y/n]: ')
-            #     if 'y' in proceed:
-            #         if len(vars_to_keep) > 0:
-            #             print('The variables to keep you specified in the arguments will be overriden.')
-            #         vars_to_keep = list(str(num) for num in input("Enter the variables you want to keep separated by semicolon: ").split(';'))
-            #
-            # if len(vars_to_keep) > 0:
-            #     add_vars_to_remove = list(set(cols_for_multiindex) - set(vars_to_gather) - set(vars_to_keep))
-            #     for i in add_vars_to_remove:
-            #         cols_to_clean.append(i)
-            #         cols_for_multiindex.remove(i)
-            #
-            # wrangled_df_pivoted = wrangled_df_pivoted.drop(cols_to_clean, axis=1)
-            #
-            # cols_for_values = list(set(wrangled_df_pivoted.columns) - set(cols_for_multiindex))
-            #
-            # checkpoint += 1
-            #
-            # wrangled_df_pivoted = wrangled_df_pivoted.pivot_table(
-            #     index=cols_for_multiindex,
-            #     columns='col_to_pivot',
-            #     values=self.val_cols,
-            #     aggfunc=np.sum,
-            #     fill_value=0
-            # )
-            #
-            # checkpoint += 1
-            
-            
-
-            #todo testing until here
-
-
-            wrangled_df_pivoted = wrangled_df_pivoted.pivot_table(
-                index=self.indexcols.remove('col_to_pivot'),
+            table = wrangled_df_pivoted.pivot_table(
+                index=index_cols,
                 columns='col_to_pivot',
-                values=self.val_cols,
-                # if aggfunc is omitted, performs the average
-                aggfunc=np.sum,
-                fill_value=0)
+                values=val_cols,
+                aggfunc='sum',
+                fill_value=0,
+                observed=True,
+            )
 
-            checkpoint += 1
-
-            var_to_gather_values = list(dict.fromkeys(self.df['col_to_pivot']))
-
-            if baseline not in var_to_gather_values:
-                print(f'"{baseline}" is not in list of categories you want to compare. The list is:')
-                print(var_to_gather_values)
-                baseline = input('Please choose one from the list above (it is case-sensitive) for baseline:')
-
-            other_than_baseline = list(set(var_to_gather_values) - set([baseline]))
-
-            self.df = self.df.drop('col_to_pivot', axis=1)
-
-            checkpoint += 1
-
-            # summing monthly values to make runperiod
-
-            if 'Month' in self.df.columns:
-                for i in var_to_gather_values:
-                    wrangled_df_pivoted[f'{i}_Runperiod_Total'] = wrangled_df_pivoted[
-                        [j for j in wrangled_df_pivoted.columns
-                         if i in j]
-                    ].sum(axis=1)
-
-                for j in other_than_baseline:
-                    for i in list(dict.fromkeys(self.df['Month'])):
-                        if any('relative' in k for k in comparison_cols):
-                            wrangled_df_pivoted[f'1-({j}/{baseline})_{i}_Month'] = (
-                                    1 -
-                                    (wrangled_df_pivoted[j + f'_{i}_Month'] / wrangled_df_pivoted[baseline + f'_{i}_Month'])
-                            )
-                        if any('absolute' in k for k in comparison_cols):
-                            wrangled_df_pivoted[f'{baseline}-{j}_{i}_Month'] = (
-                                    wrangled_df_pivoted[baseline + f'_{i}_Month'] - wrangled_df_pivoted[j + f'_{i}_Month']
-                            )
-                    if any('relative' in k for k in comparison_cols):
-                        wrangled_df_pivoted[f'1-({j}/{baseline})_Runperiod_Total'] = (
-                                1 -
-                                (wrangled_df_pivoted[j + '_Runperiod_Total'] / wrangled_df_pivoted[baseline + '_Runperiod_Total'])
-                        )
-                    if any('absolute' in k for k in comparison_cols):
-                        wrangled_df_pivoted[f'{baseline} - {j}_Runperiod_Total'] = (
-                                wrangled_df_pivoted[baseline + '_Runperiod_Total'] - wrangled_df_pivoted[j + '_Runperiod_Total']
-                        )
+            # One row per combination of the variables of the rows, with the columns of each value column; or, if
+            # there are none, one row per value column. Every combination gets its column, with 0 if it has no rows.
+            labels = [f'{i}{s}' for i in var_to_gather_values for s in suffixes]
+            if index_cols:
+                groups = val_cols
+                table = table.reindex(columns=pd.MultiIndex.from_tuples(
+                    [(group, label) for group in val_cols for label in labels]), fill_value=0)
             else:
+                groups = [None]
+                table = table.reindex(index=val_cols, columns=labels, fill_value=0)
+
+            def column(group, label):
+                return label if group is None else (group, label)
+
+            relative = any('relative' in k for k in comparison_cols)
+            absolute = any('absolute' in k for k in comparison_cols)
+            if relative or absolute:
+                while baseline not in var_to_gather_values:
+                    print(f'"{baseline}" is not in list of categories you want to compare. The list is:')
+                    print(var_to_gather_values)
+                    baseline = input('Please choose one from the list above (it is case-sensitive) for baseline:')
+            other_than_baseline = [i for i in var_to_gather_values if i != baseline]
+            comparison_suffixes = suffixes + ['_Runperiod_Total'] if months_in_columns else suffixes
+
+            pivoted_columns = {}
+            for group in groups:
+                for label in labels:
+                    pivoted_columns[column(group, label)] = table[column(group, label)]
+                if months_in_columns:
+                    # summing monthly values to make runperiod
+                    for i in var_to_gather_values:
+                        pivoted_columns[column(group, f'{i}_Runperiod_Total')] = table[
+                            [column(group, f'{i}{s}') for s in suffixes]].sum(axis=1)
+                if not (relative or absolute):
+                    continue
                 for j in other_than_baseline:
-                    # if comparison_mode == 'others compared to baseline':
-                    if any(['others compared to baseline' in i for i in comparison_mode]):
-                        if any('relative' in k for k in comparison_cols):
-                            wrangled_df_pivoted[f'1-({j}/{baseline})'] = (
-                                    1 -
-                                    (wrangled_df_pivoted[j] / wrangled_df_pivoted[baseline])
-                            )
-                        if any('absolute' in k for k in comparison_cols):
-                            wrangled_df_pivoted[f'{baseline} - {j}'] = (
-                                    wrangled_df_pivoted[baseline] - wrangled_df_pivoted[j]
-                            )
-                    if any(['baseline compared to others' in i for i in comparison_mode]):
-                        if any('relative' in k for k in comparison_cols):
-                            wrangled_df_pivoted[f'1-({baseline}/{j})'] = (
-                                    1 -
-                                    (wrangled_df_pivoted[baseline] / wrangled_df_pivoted[j])
-                            )
-                        if any('absolute' in k for k in comparison_cols):
-                            wrangled_df_pivoted[f'{j} - {baseline}'] = (
-                                    wrangled_df_pivoted[j] - wrangled_df_pivoted[baseline]
-                            )
+                    for s in comparison_suffixes:
+                        other = pivoted_columns[column(group, f'{j}{s}')]
+                        base = pivoted_columns[column(group, f'{baseline}{s}')]
+                        if any(['others compared to baseline' in i for i in comparison_mode]):
+                            if relative:
+                                pivoted_columns[column(group, f'1-({j}/{baseline}){s}')] = 1 - (other / base)
+                            if absolute:
+                                pivoted_columns[column(group, f'{baseline} - {j}{s}')] = base - other
+                        if any(['baseline compared to others' in i for i in comparison_mode]):
+                            if relative:
+                                pivoted_columns[column(group, f'1-({baseline}/{j}){s}')] = 1 - (base / other)
+                            if absolute:
+                                pivoted_columns[column(group, f'{j} - {baseline}{s}')] = other - base
+
+            wrangled_df_pivoted = pd.DataFrame(pivoted_columns, index=table.index)
+            if index_cols:
+                wrangled_df_pivoted.columns = pd.MultiIndex.from_tuples(wrangled_df_pivoted.columns,
+                                                                        names=[None, 'col_to_pivot'])
+            else:
+                wrangled_df_pivoted.columns.name = 'col_to_pivot'
 
             wrangled_df_pivoted = wrangled_df_pivoted.round(decimals=2)
 
@@ -2116,8 +2089,6 @@ class Table:
                 wrangled_df_pivoted.to_excel(f'{excel_filename}.xlsx')
 
             self.wrangled_df_pivoted = wrangled_df_pivoted
-
-            checkpoint += 1
 
         elif reshaping == 'unstack' or reshaping == 'stack' or reshaping == 'multiindex':
 
@@ -2170,7 +2141,8 @@ class Table:
 
             wrangled_df_unstacked_or_stacked = wrangled_df_unstacked_or_stacked.drop(cols_to_clean, axis=1)
 
-            cols_for_values = list(set(wrangled_df_unstacked_or_stacked.columns) - set(cols_for_multiindex))
+            # In the order of the columns, so that the comparison columns are always in the same order
+            cols_for_values = [i for i in wrangled_df_unstacked_or_stacked.columns if i not in set(cols_for_multiindex)]
 
 
             # todo re-review the use of check_index_and_cols and vars_to_gather to avoid repeated rows when stacking
@@ -4171,7 +4143,7 @@ class Table:
                         else:
                             ax.set_ylabel(self.rows[i], rotation=90, size='large')
                     for j in range(len(self.cols)):
-                        if self.rename_rows == 'y':
+                        if self.rename_cols == 'y':
                             ax.set_title(self.cols_new_names[j])
                         else:
                             ax.set_title(self.cols[j])
@@ -4184,7 +4156,7 @@ class Table:
                         else:
                             ax[i].set_ylabel(self.rows[i], rotation=90, size='large')
                     for j in range(len(self.cols)):
-                        if self.rename_rows == 'y':
+                        if self.rename_cols == 'y':
                             ax[0].set_title(self.cols_new_names[j])
                         else:
                             ax[0].set_title(self.cols[j])
@@ -4195,7 +4167,7 @@ class Table:
                         else:
                             ax[i, 0].set_ylabel(self.rows[i], rotation=90, size='large')
                     for j in range(len(self.cols)):
-                        if self.rename_rows == 'y':
+                        if self.rename_cols == 'y':
                             ax[0, j].set_title(self.cols_new_names[j])
                         else:
                             ax[0, j].set_title(self.cols[j])

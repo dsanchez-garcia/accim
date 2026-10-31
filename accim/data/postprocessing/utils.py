@@ -145,18 +145,21 @@ def gen_csv_concatenated(
         del z
         gc.collect()
 
-    datasetlist_to_merge = [
+    # In the order of the parts, which is that of the datasets
+    datasetlist_to_merge = sorted(
         i for i in os.listdir() if
         i.endswith('.csv')
         and f'{concatenated_csv_name}_Part' in i
         and '[Rows_with_NaNs' not in i
         and '[Rows_not_corr_agg' not in i
         and frequency in i
-    ]
+    )
 
     merged_datasets = []
     for i in datasetlist_to_merge:
-        tempdf = pd.read_csv(i)
+        # The first column is the index that Table wrote: read as a column, it would be written again next to the
+        # new index, and Table would read it as one more output
+        tempdf = pd.read_csv(i, index_col=0)
         merged_datasets.append(tempdf)
 
     concatenated_df = pd.concat(merged_datasets)
