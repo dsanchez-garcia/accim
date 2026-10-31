@@ -53,6 +53,7 @@ from accim.parametric_and_optimisation.plotting import PlottingMixin
 from accim.parametric_and_optimisation.patches import GlobalAllCapsDict, _patched_eval_func, _patched_to_platypus, _ensure_run_energyplus_copies_in_idf
 from accim.parametric_and_optimisation.mn_filter import MNFilter, MNFilterMapping
 from accim.parametric_and_optimisation.file_cleanup import normalize_sim_file_cleanup_options, sim_file_policy_will_remove_extension, prune_simulation_output_files
+from accim.parametric_and_optimisation._pareto import non_dominated_mask
 import accim.parametric_and_optimisation.params_dicts as params_dicts
 allowed_output_freqs = Literal['timestep', 'hourly', 'daily', 'monthly', 'runperiod']
 
@@ -8212,29 +8213,58 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         return value
 
     @staticmethod
+    def _content_digest(path: Any, idf: bool = False) -> Optional[str]:
+        """The SHA-256 of the content of a file, or None if it is not a file.
+
+        With ``idf=True``, of the objects of the IDF only (without its comments and spaces), so that the same model
+        saved again (the IDF backup of each run, for instance) gives the same digest.
+        """
+        try:
+            if path is None or not os.path.isfile(path):
+                return None
+            with open(path, 'rb') as file:
+                data = file.read()
+        except (OSError, TypeError, ValueError):
+            return None
+        if idf:
+            text = data.decode('latin-1').replace('\r\n', '\n')
+            text = '\n'.join(line.split('!', 1)[0] for line in text.split('\n'))
+            objects = []
+            for block in text.split(';'):
+                fields = [field.strip() for field in block.split(',')]
+                if any(fields):
+                    objects.append(','.join(fields))
+            data = ';'.join(objects).encode('latin-1')
+        return hashlib.sha256(data).hexdigest()
+
+    @staticmethod
     def _build_parametric_task_signature(
         idf_basename: str,
         epw: str,
         problem_names_inputs: list,
         row_dict: dict,
+        content: Optional[dict] = None,
     ) -> str:
         """Build a deterministic signature for a parametric task row.
-        
+
+        A resumed run skips the tasks whose signatures are in its checkpoint, so the signatures of
+        ``run_parametric_simulation`` also have the ``content`` of the task: the digests of the IDF and the EPW
+        (see ``_content_digest``) and the names of the outputs. Without it, a resumed run would reuse the results
+        of a model, an EPW or outputs that changed under the same names.
+
         Parameters
         ----------
-        idf_basename : Any
-            Argument used by `SimulationBase._build_parametric_task_signature`.
-        epw : Any
-            Argument used by `SimulationBase._build_parametric_task_signature`.
-        problem_names_inputs : Any
-            Argument used by `SimulationBase._build_parametric_task_signature`.
-        row_dict : Any
-            Argument used by `SimulationBase._build_parametric_task_signature`.
-        
-        Usage
-        -----
-        Use `SimulationBase._build_parametric_task_signature` within ACCIM parametric and optimisation workflows.
-        
+        idf_basename : str
+            The name of the IDF of the task.
+        epw : str
+            The EPW of the task.
+        problem_names_inputs : list
+            The names of the parameters of the problem.
+        row_dict : dict
+            The values of the parameters of the task.
+        content : dict, optional
+            What else identifies the task (for instance, ``{'idf': digest, 'epw': digest, 'outputs': [...]}``).
+
         Examples
         --------
         result = self._build_parametric_task_signature(idf_basename=..., epw=..., problem_names_inputs=..., ...)
@@ -8248,6 +8278,8 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             'epw': str(epw),
             'inputs': payload_inputs,
         }
+        if content is not None:
+            payload['content'] = SimulationBase._normalize_signature_value(content)
         serialized = json.dumps(payload, sort_keys=True, ensure_ascii=True, default=str)
         return hashlib.sha1(serialized.encode('utf-8')).hexdigest()
 
@@ -8828,6 +8860,16 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         if hasattr(self, 'idf_backup_path') and self.idf_backup_path:
             backup_paths = self.idf_backup_path if isinstance(self.idf_backup_path, list) else [self.idf_backup_path]
 
+        # What identifies the tasks besides their parameters, for the checkpoints: the contents of the IDF and the
+        # EPW (computed once for each file) and the names of the outputs
+        digests = {}
+        output_names = list(problem_names_outputs or []) + list(add_output_names or [])
+
+        def _digest(path, idf=False):
+            if (path, idf) not in digests:
+                digests[(path, idf)] = self._content_digest(path, idf=idf)
+            return digests[(path, idf)]
+
         for (idf_basename, df_for_idf) in grouped_dfs.items():
             idf_backup_file = None
             for path in backup_paths:
@@ -8848,6 +8890,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                     evaluator_input_df = df_for_idf[problem_names_inputs]
 
                 evaluator_df = evaluator_input_df.reset_index(drop=True).copy()
+                content = {'idf': _digest(idf_backup_file, idf=True), 'epw': _digest(epw), 'outputs': output_names}
                 for (_, row) in evaluator_df.iterrows():
                     row_dict = row.to_dict()
                     task_signature = self._build_parametric_task_signature(
@@ -8855,6 +8898,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                         epw=epw,
                         problem_names_inputs=problem_names_inputs,
                         row_dict=row_dict,
+                        content=content,
                     )
                     yield {
                         'signature': task_signature,
@@ -9400,6 +9444,9 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             batch at ``<out_dir>/outputs_param_simulation_checkpoint_latest.pkl``.
         :param resume_from_checkpoint: False (default) runs from scratch. Use True to
             resume from the default checkpoint path, or provide a checkpoint pickle path.
+            The tasks of the checkpoint are reused when they have the same IDF name, EPW and
+            parameters, the same content of the IDF (its objects, after the setup of accim)
+            and of the EPW, and the same output names; the others are simulated again.
         :param resume_plan_source: controls what happens when ``resume_from_checkpoint``
             finds a checkpoint whose stored sampling plan does not match the ``df``
             passed to this call (this typically happens when a non-deterministic
@@ -9662,9 +9709,17 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         # Repeated rows of the plan (same IDF, EPW and parameter values) are simulated once.
         total_tasks = len(task_signatures)
 
+        stored_signatures_count = len(checkpoint_completed_signatures)
         checkpoint_completed_signatures = checkpoint_completed_signatures.intersection(task_signatures)
         pending_tasks_count = len(task_signatures - checkpoint_completed_signatures)
 
+        not_reused = stored_signatures_count - len(checkpoint_completed_signatures)
+        if resume_requested and not_reused > 0:
+            print(
+                f'[run_parametric_simulation] {not_reused} of the {stored_signatures_count} tasks of the checkpoint '
+                'are not tasks of this run: another plan, or another content of the IDF, the EPW or the outputs '
+                '(or a checkpoint of an earlier version of accim). Their results are not reused.'
+            )
         if resume_requested and len(checkpoint_completed_signatures) > 0:
             print(
                 '[run_parametric_simulation] Resuming from checkpoint: '
@@ -10746,27 +10801,33 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         outputs_optimisation: pd.DataFrame,
         group_by: Optional[list[str]] = None,
     ) -> pd.DataFrame:
-        """Recomputes the Pareto front from scratch using the objective values
-        directly on the full evaluation history, grouped per EPW.
-        
+        """Recomputes the Pareto front from scratch on the full evaluation history, grouped per EPW (or by
+        ``group_by``), with the constraints of the problem.
+
         This approach is more reliable than matching against the final NSGA-II
         population (which only contains the last generation), avoiding both
         false negatives caused by points evaluated in earlier generations that
         are genuinely non-dominated, and floating-point matching issues.
-        
+
+        The evaluations are compared as Platypus does (see ``_pareto.non_dominated_mask``): an evaluation that
+        meets the constraints dominates any that does not (a smaller total violation dominates a larger one), and
+        the objectives decide between evaluations with the same violation. The evaluations whose objectives or
+        constraints are not finite numbers are not pareto-optimal.
+
         Parameters
         ----------
-        outputs_optimisation_full : Any
-            Argument used by `SimulationBase._annotate_pareto_status`.
-        outputs_optimisation : Any
-            Argument used by `SimulationBase._annotate_pareto_status`.
-        group_by : Any
-            Argument used by `SimulationBase._annotate_pareto_status`.
-        
-        Usage
-        -----
-        Use `SimulationBase._annotate_pareto_status` within ACCIM parametric and optimisation workflows.
-        
+        outputs_optimisation_full : pd.DataFrame
+            All the evaluations, with a column for each objective and each constraint.
+        outputs_optimisation : pd.DataFrame
+            The non-dominated evaluations of the algorithm (not used: the front is computed again).
+        group_by : list of str, optional
+            The columns whose values make the groups with a front each ('epw' by default, if present).
+
+        Returns
+        -------
+        pd.DataFrame
+            ``outputs_optimisation_full`` with the column 'pareto-optimal'.
+
         Examples
         --------
         result = self._annotate_pareto_status(outputs_optimisation_full=..., outputs_optimisation=..., group_by=...)
@@ -10774,49 +10835,24 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         if outputs_optimisation_full.empty:
             outputs_optimisation_full['pareto-optimal'] = pd.Series(dtype=bool)
             return outputs_optimisation_full
-        output_names = self.problem.names('outputs')
-        minimize_outputs = getattr(self.problem, 'minimize_outputs', None)
-        if minimize_outputs is None:
-            minimize_flags = [True] * len(output_names)
-        else:
-            minimize_flags = [m if m is not None else True for m in minimize_outputs]
-
-        def _is_pareto_optimal(costs: np.ndarray) -> np.ndarray:
-            """
-            Return a boolean mask of length n where True means the row is
-            Pareto-non-dominated (all objectives already in minimisation space).
-
-            Solution i is dominated iff there exists j such that:
-              j <= i on ALL objectives  AND  j < i on AT LEAST ONE objective.
-            """
-            n = costs.shape[0]
-            is_pareto = np.ones(n, dtype=bool)
-            for i in range(n):
-                if not is_pareto[i]:
-                    continue
-                others_mask = np.arange(n) != i
-                dominated_i = np.all(costs[others_mask] <= costs[i], axis=1) & np.any(costs[others_mask] < costs[i], axis=1)
-                if np.any(dominated_i):
-                    is_pareto[i] = False
-            return is_pareto
-
-        def _pareto_mask_for_group(group: pd.DataFrame) -> pd.Series:
-            """Compute Pareto mask for a single EPW group."""
-            objective_data = group[output_names].values.astype(float)
-            for (j, minimise) in enumerate(minimize_flags):
-                if not minimise:
-                    objective_data[:, j] = -objective_data[:, j]
-            mask = _is_pareto_optimal(objective_data)
-            return pd.Series(mask, index=group.index)
+        output_names = list(self.problem.names('outputs'))
+        constraint_names = list(self.problem.names('constraints'))
+        missing = [name for name in constraint_names if name not in outputs_optimisation_full.columns]
+        if missing:
+            warnings.warn(f'The Pareto status ignores the constraints {missing}, which are not in the results.',
+                          UserWarning)
+            constraint_names = []
         if group_by is None:
             group_by = ['epw'] if 'epw' in outputs_optimisation_full.columns and outputs_optimisation_full['epw'].notna().any() else []
         group_by = [col for col in group_by if col in outputs_optimisation_full.columns]
-        pareto_mask = pd.Series(False, index=outputs_optimisation_full.index)
-        if len(group_by) == 0:
-            pareto_mask = _pareto_mask_for_group(outputs_optimisation_full)
-        else:
-            for (_, group) in outputs_optimisation_full.groupby(group_by, sort=False, dropna=False):
-                pareto_mask.loc[group.index] = _pareto_mask_for_group(group)
+        # By position, not by label: the index of the results may repeat labels
+        working = outputs_optimisation_full.reset_index(drop=True)
+        groups = working.groupby(group_by, sort=False, dropna=False) if group_by else [(None, working)]
+        pareto_mask = np.zeros(len(working), dtype=bool)
+        for (_, group) in groups:
+            constraints = group[constraint_names].to_numpy() if constraint_names else None
+            pareto_mask[group.index.to_numpy()] = non_dominated_mask(
+                self.problem, group[output_names].to_numpy(), constraints)
         outputs_optimisation_full['pareto-optimal'] = pareto_mask
         return outputs_optimisation_full
 

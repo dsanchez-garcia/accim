@@ -307,37 +307,28 @@ def _patched_eval_func(evaluator, all_outputs):
         if len(records) > 0 and len(records) % getattr(evaluator, '_keep_sim_files_batch_size', 50) == 0:
             import shutil
             import numpy as np
-            minimize_flags = getattr(evaluator.problem, 'minimize_outputs', None)
-            output_names = evaluator.problem.names('outputs')
-            n_outputs = len(output_names)
-            if minimize_flags is None:
-                minimize_flags = [True] * n_outputs
-            else:
-                minimize_flags = [m if m is not None else True for m in minimize_flags]
-            costs = np.zeros((len(records), n_outputs))
-            for (i, rec) in enumerate(records):
-                costs[i, :] = rec['results'][:n_outputs]
-            for (j, minimize) in enumerate(minimize_flags):
-                if not minimize:
-                    costs[:, j] = -costs[:, j]
-            n = costs.shape[0]
-            is_pareto = np.ones(n, dtype=bool)
-            for i in range(n):
-                if not is_pareto[i]:
-                    continue
-                others_mask = np.arange(n) != i
-                dominated_i = np.all(costs[others_mask] <= costs[i], axis=1) & np.any(costs[others_mask] < costs[i], axis=1)
-                if np.any(dominated_i):
-                    is_pareto[i] = False
-            for i in range(n):
-                if not is_pareto[i]:
-                    sim_dir = records[i].get('sim_dir')
-                    if sim_dir is not None and os.path.exists(sim_dir):
-                        try:
-                            shutil.rmtree(sim_dir)
-                        except Exception:
-                            pass
-                        records[i]['sim_dir'] = None
+            from accim.parametric_and_optimisation._pareto import non_dominated_mask, valid_rows
+            n_outputs = len(evaluator.problem.names('outputs'))
+            n_constraints = len(evaluator.problem.names('constraints'))
+            objectives = [rec['results'][:n_outputs] for rec in records]
+            constraints = ([rec['results'][n_outputs:n_outputs + n_constraints] for rec in records]
+                           if n_constraints else None)
+            try:
+                # With the constraints, as the Pareto status of the results: an evaluation that does not meet
+                # them must not remove the folder of one that does
+                is_pareto = non_dominated_mask(evaluator.problem, objectives, constraints)
+                # The folders of the evaluations without finite values are kept, to see what happened
+                removable = valid_rows(objectives, constraints) & ~is_pareto
+            except (TypeError, ValueError):
+                removable = []
+            for i in np.flatnonzero(removable):
+                sim_dir = records[i].get('sim_dir')
+                if sim_dir is not None and os.path.exists(sim_dir):
+                    try:
+                        shutil.rmtree(sim_dir)
+                    except Exception:
+                        pass
+                    records[i]['sim_dir'] = None
     return evaluator.package_for_platypus(results)
 
 

@@ -118,11 +118,13 @@ def test_parametric_resume_from_checkpoint_skips_completed_tasks(tmp_path, monke
     precomputed_rows = []
     for x_val in [1, 2]:
         row_dict = {'x': x_val}
+        # As run_parametric_simulation builds them: the IDF and the EPW of this test are not files
         signature = sim._build_parametric_task_signature(
             idf_basename='unknown_idf_0',
             epw='Test.epw',
             problem_names_inputs=['x'],
             row_dict=row_dict,
+            content={'idf': None, 'epw': None, 'outputs': ['energy']},
         )
         precomputed_rows.append(
             {
