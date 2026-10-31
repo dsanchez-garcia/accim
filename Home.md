@@ -29,6 +29,7 @@ the main README for the short version.
 - [[DEVLOG.md|DEVLOG]] — internal technical log ([[DEVLOG.md#Entries|entries]]).
 - [[TODO.md|TODO]] — active short-term tasks ([[TODO.md#Backlog|backlog]]).
 - [[ROADMAP.md|ROADMAP]] — medium/long-term initiatives ([[ROADMAP.md#Initiatives|initiatives]]).
+- [[CAMBIOS_CODIGO_v1.0.0.md|Code changes of accim 1.0.0]] — guide to how the code was reorganised in 1.0.0 (in Spanish, for the maintainer).
 - [[AGENTS_v2.md|AGENTS.md (v2)]] — guidelines for LLM-based agents working on this repo ([[AGENTS_v2.md#1. Objetivo|goals, in Spanish]]).
 - [[tests/README.md|Tests README]] — how to run the test suite ([[tests/README.md#Running Tests|running tests]]).
 - [[LICENSE|LICENSE]]
@@ -60,6 +61,7 @@ from `docs/source/`:
 - [[notes/decisions.md|Decisions]] — durable architectural/process decisions.
 - [[notes/questions.md|Open questions]] — pending questions and blockers.
 - [[notes/references.md|References]] — sources, datasets and external resources.
+- [[notes/branch-reviews.md|Branch reviews]] — what to port from `refactor/sim-v1` and the archived tags.
 - [[notes/templates/daily-note.md|Template: daily note]]
 - [[notes/templates/decision-record.md|Template: decision record]]
 - `notes/attachments/` — folder for pasted/dragged files (images, PDFs, etc.).

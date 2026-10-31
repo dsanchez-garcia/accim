@@ -76,6 +76,9 @@ memory: the IDF file is never modified.
   simulated as additional environments, and the annual results read after each simulation include
   them (8,928 hours instead of 8,760 in the sample models). With ``'No'``, the design days are
   still used to size the HVAC system.
+- The VRF systems that accim adds are autosized, so the model needs sizing periods (design days, or
+  ``SizingPeriod:WeatherFileDays`` objects). accim enables the sizing calculations of the model, and
+  warns if it has no sizing periods, since EnergyPlus would stop.
 
 **aPMV setpoints.** For the aPMV setpoints, add an HVAC system with thermal comfort thermostats and
 the aPMV control to the model before creating the simulation object, and check the inputs of the
@@ -83,8 +86,8 @@ People objects that the PMV depends on:
 
 .. code-block:: python
 
-    from accim.sim.apmv_setpoints import (add_vrf_system, apply_apmv_setpoints,
-                                          set_pmv_input_parameters)
+    from accim.sim.apmv import (add_vrf_system, apply_apmv_setpoints,
+                                set_pmv_input_parameters)
 
     add_vrf_system(building)
     apply_apmv_setpoints(
@@ -130,9 +133,10 @@ the object does to each model when it is created:
      - When the object is created
      - Parameters that can be varied
    * - ``'accim predefined model'``
-     - Adds accim to each model (``addAccis``)
+     - Adds accim to each model (:func:`~accim.sim.accis.add_accis_to_idf`)
      - ``ComfStand``, ``CAT``, ``ComfMod``, ``HVACmode``, ``VentCtrl``, ``ASTtol`` and the other
-       arguments of ``addAccis`` (see :doc:`4_detailed use`)
+       arguments of the output IDFs of ``AddAccis``, with their names of accim 0.x (see
+       :doc:`4_detailed use`)
    * - ``'accim custom model'``
      - Adds accim to each model, with the custom adaptive model
      - ``CustAST_m`` (slope of the comfort temperature), ``CustAST_n`` (intercept),
@@ -151,10 +155,12 @@ the object does to each model when it is created:
 with explicit values, as in step 1, and pass ``bypass_addAccis=True``: the parameters of the study
 then replace only the values they vary, and the object does not apply the setpoints again.
 
-The other arguments are passed to ``addAccis``. ``ScriptType`` is ``'vrf_ac'`` (VRF system, fully
-air-conditioned), ``'vrf_mm'`` (VRF system with mixed-mode operation) or ``'ex_ac'`` (the existing
-HVAC system of the model, fully air-conditioned). Mixed-mode operation needs a model with
-calculated natural ventilation (AirflowNetwork); see :doc:`4_detailed use`.
+The other arguments are passed to :func:`~accim.sim.accis.add_accis_to_idf`, with their names of
+accim 0.x. ``ScriptType`` is ``'vrf_ac'`` (VRF system, fully air-conditioned), ``'vrf_mm'`` (VRF
+system with mixed-mode operation) or ``'ex_ac'`` (the existing HVAC system of the model, fully
+air-conditioned). Mixed-mode operation needs a model with natural ventilation: calculated
+(AirflowNetwork), or given by ``ZoneVentilation:WindandStackOpenArea`` or
+``ZoneVentilation:DesignFlowRate`` objects, whose opening accim controls; see :doc:`4_detailed use`.
 
 Several models can be simulated in the same study (``buildings=[building_a, building_b]``): each one
 is identified by its file name, and the plan gets an ``idf`` column.
@@ -354,7 +360,7 @@ session, so the results can be analysed without simulating again.
 ``evaluations`` stops it, but NSGA-II completes the current generation first, so it can simulate
 more cases; ``estimate_optimisation_sims`` gives the number before running. The results include
 all the evaluations (``keep_df='all'``), with a ``pareto-optimal`` column that marks the
-non-dominated solutions of each weather file. The notebooks call ``random.seed(...)`` before the
+non-dominated solutions of each weather file. WF4 and WF5 call ``random.seed(...)`` before the
 run to repeat the same optimisation.
 
 **Disk space.** Each simulation writes its own folder, and hourly CSV files are what make it heavy:

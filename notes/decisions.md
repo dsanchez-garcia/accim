@@ -11,6 +11,104 @@ Durable architectural/process decisions for this repository and its Obsidian
 vault. Newest first. Use [[templates/decision-record.md|the decision-record
 template]] to add a new entry.
 
+## 2026-10-31 — The hourly tables of the parametric module follow the calendar of EnergyPlus
+
+- **Status**: accepted (to be confirmed by the author: it changes the daily and monthly tables, and the year of
+  the hourly tables without `start_date`)
+- **Context**: EnergyPlus labels each hourly or timestep value with the end of its interval (01:00 to 24:00) and
+  writes no year. The hourly methods labelled the values from `'2024-01-01 01'` (the default `start_date`, and
+  the year of the dates read from the CSV files), a leap year, and grouped them by the day of their label. So the
+  value of 24:00 went to the next day and month (a 3-day run gave 4 daily rows), and a standard year of 8760
+  hours got a 29 February, with every value from 1 March labelled one day early. Found by the regression tests
+  of the post-processing (TODO P1). The options for the year were: keep 2024 and skip 29 February (labels
+  that are not evenly spaced), a year chosen from the length of the series, or keep it and document it.
+- **Decision**: Without `start_date` (or with the date read from the CSV files), the year is 2024 only for 8784
+  hourly values, and 2023 otherwise; an explicit `start_date` keeps its year. The default of the argument is
+  still `'2024-01-01 01'` (a `str` subclass, `_AutoYearStartDate`, marks it as automatic), so the signatures do
+  not change. The daily and monthly aggregation moves the labels back one second before grouping when the step
+  is one hour or less and the first label is not at midnight (labels at the start of each interval, and daily
+  or monthly values, are grouped as they are).
+- **Consequences**: Each day of the daily tables has its 24 values, and each month its hours. The hourly tables
+  without `start_date` are labelled in 2023 for a standard year, so the scripts that select dates of 2024 in them
+  must pass `start_date` (the tests and notebooks of the repository already do). Tests:
+  `tests/parametric_and_optimisation/test_normalised_units_aggregation.py`.
+
+## 2026-10-31 — `population_size` is the size of every generation, and the settings of the algorithms are checked first
+
+- **Status**: accepted (to be confirmed by the author: it changes the results of 5 algorithms)
+- **Context**: `run_optimisation()` documents `population_size` as the number of individuals (EnergyPlus
+  simulations) of each generation, but platypus 1.4 takes the size of the generations of some algorithms from
+  other options, 100 by default: `swarm_size` (OMOPSO, SMPSO) and `offspring_size` (CMAES, GeneticAlgorithm,
+  EvolutionaryStrategy). It ignored `population_size` for the swarms and CMA-ES (its `Algorithm` swallows unknown
+  keyword arguments) and took it only as the initial population of the other two, so these optimisations ran 100
+  simulations per generation. Also, PAES (one solution, one parent) could not run, `ParticleSwarm` is abstract,
+  and several algorithms need options or kinds of parameters that `run_optimisation()` did not check, so they
+  failed with the errors of platypus after the first case had started (the 16-algorithm smoke test hid some
+  failures: with `evaluations=2` most algorithms stopped after the initial population, so OMOPSO and
+    EvolutionaryStrategy never reached their first iteration, which failed).
+- **Decision**: `population_size` is also passed as `swarm_size` or `offspring_size` (`algorithm_options` can
+  still give them); PAES gets no `population_size`, and PAES and EvolutionaryStrategy (one parent for each
+  solution) get a mutation as their variator, instead of the crossover that besos gives every algorithm (with it,
+  EvolutionaryStrategy stopped after the initial population); `_check_optimisation_algorithm()`
+  raises clear errors before anything is written (`ParticleSwarm`; `epsilons` and `divisions_outer`; SPEA2 with
+  fewer than k + 2 solutions; categorical parameters with OMOPSO, SMPSO and CMAES; NSGAIII with maximised
+  objectives; single-objective algorithms with several objectives). The list of accepted names keeps all the
+  algorithms that can run; `ParticleSwarm` gets its own error instead of disappearing silently.
+- **Consequences**: The optimisations with OMOPSO, SMPSO, CMAES, GeneticAlgorithm and EvolutionaryStrategy run the
+  planned number of simulations, and their results change (CHANGELOG, migration guide 9.3). The requirements are
+  in the docstring of `run_optimisation()`. Tests: `test_optimisation_algorithms.py` (fast) and
+  `04_test_optimization.py` (each algorithm iterates at least once with EnergyPlus).
+
+## 2026-10-31 — The subprograms of ESP CTE and INT ISO7730 set their setpoints whatever `ComfMod` is
+
+- **Status**: accepted (to be confirmed by the author, who was given the two options in `TODO.md`)
+- **Context**: The setpoints of ESP CTE (`ComfStand` 0) and INT ISO7730 (22) do not depend on the comfort mode,
+  but their subprograms (`SetAST_CS0_0`, `SetAST_CS22_0`) only set them in the branch `ComfMod == 0`. The
+  output IDFs of `AddAccis` set `ComfMod` 0 for them, but the models of `accim.parametric_and_optimisation`
+  keep the `ComfMod` of their baseline (3), so their plans with `ComfStand` 0 or 22 stopped EnergyPlus
+  ("Variable = 'ACST' used in expression has not been initialized!" in `SetASTnoTol`), also in 0.8.2. The
+  options were: (1) these subprograms set the setpoints whatever `ComfMod` is; (2) the setter of `ComfStand`
+  of the parametric module sets `ComfMod` 0 for them.
+- **Decision**: (1). `ems/setast.py` writes the lines of the comfort standards whose only key in
+  `SETPOINT_LINES` is `(ComfStand, None)` (`depends_on_comfort_mode()`) without the branches of `ComfMod`
+  (13 and 14 also have that key, as a fallback, so they keep them). The fix lives in the EMS programs, where the
+  bug is: it works with any `ComfMod` of `SetInputData`, with the plans of every sampling method, with
+  `modify_accis` and with the edits by hand, while (2) only covered the parametric setter. `modify_accis`
+  rewrites these two subprograms in the models of earlier versions (those of `bypass_addAccis=True`), as it
+  already adds `SetAST_Master` to the models of accim before 0.8.
+- **Consequences**: The text of the two subprograms changes in every output IDF, not the results (golden
+  master: the 426 output IDFs with ACCIS differ only in these two programs). The parametric plans with
+  `ComfStand` 0 or 22 run. The plan filter of the predefined models still drops `ComfStand` 0 when the plan
+  has `CAT` or `ComfMod` (see `TODO.md`). Tests: `tests/core/test_setast_static_standards.py`,
+  `tests/core/test_modifyaccis_setast.py`, `08_test_accim_predef_model.py`.
+
+## 2026-10-31 — `add_accis_to_idf` and `add_vrf_system` enable the sizing calculations of the VRF systems
+
+- **Status**: accepted (option (b), chosen by the author)
+- **Context**: The VRF systems that accim adds are autosized, and EnergyPlus cannot run them without a zone
+  sizing run ("For autosizing of ZoneHVAC:TerminalUnit:VariableRefrigerantFlow ..., a zone sizing run must be
+  done"). `AddAccis` (IDF files) enabled the zone, system and plant sizing calculations for every script type
+  (since 0.7.8), but `add_accis_to_idf` (IDF objects, used by `accim.parametric_and_optimisation`) and
+  `apmv.add_vrf_system` did not, also in 0.8.2, so the parametric module could not run the models whose zone
+  sizing was off. Checked with EnergyPlus 9.6 (`SF_Detached_B`, `vrf_mm`): with the zone sizing on and a sizing
+  period, the model runs; without sizing periods, EnergyPlus stops ("Sizing for Zones has been requested but
+  there are no design environments specified", `CheckEnvironmentSpecifications`, only when the model has
+  `Sizing:Zone`, `Sizing:System` or `Sizing:Plant` objects); the system and plant sizing only add a warning when
+  there are no plant loops. The options were: (a) keep 0.8.2; (b) enable them in `add_accis_to_idf` only with
+  the VRF script types; (c) enable them with every script type, as `AddAccis`.
+- **Decision**: (b). `add_accis_to_idf` (with `vrf_ac` and `vrf_mm`) and `apmv.add_vrf_system` call the same
+  `enable_sizing_calculations()` as `AddAccis`, so both paths build the same VRF models. With `ex_ac` and
+  `ex_mm`, `add_accis_to_idf` keeps the user's sizing settings: accim adds no autosized equipment to them, and
+  enabling the sizing of a model with sizing objects but no sizing periods would stop EnergyPlus. Accim does not
+  add sizing periods (design conditions are a modelling choice, and weather-file days would size the systems
+  differently for each EPW of a study); `enable_sizing_calculations()` warns when a model has sizing objects
+  but no sizing periods.
+- **Consequences**: The VRF models whose zone sizing was off now run if they have sizing periods; the models
+  that already ran keep their results (golden master: only `SimulationControl` changes in the 7 in-memory VRF
+  and aPMV configurations; the 20 `AddAccis` configurations and the 2 `ex_*` ones are identical). `AddAccis`
+  still enables the sizing of the `ex_*` models, which may stop those without sizing periods (now with the
+  warning); revisit if it is reported. Tests: `tests/core/test_sizing.py`.
+
 ## 2026-10-30 — `add_accis_to_idf` builds the same model as `AddAccis`, including the scheduled natural ventilation
 
 - **Status**: accepted (to be confirmed by the author, since it changes results of the parametric module)
@@ -25,8 +123,7 @@ template]] to add a new entry.
   setpoints are identical, and those of `vrf_mm` differ only in the objects of the scheduled ventilation.
 - **Decision**: Keep one sequence: `add_accis_to_idf` applies the scheduled natural ventilation, as `AddAccis`
   does, and the change is documented as a fix (`CHANGELOG.md`, migration guide 9.3). The sizing calculations
-  are not part of it: `AddAccis` enables them and `add_accis_to_idf` does not, as in 0.8.2, which is an open
-  question ([[questions.md]]).
+  were decided later ([[#2026-10-31 — `add_accis_to_idf` and `add_vrf_system` enable the sizing calculations of the VRF systems|the decision of 2026-10-31]]).
 - **Consequences**: The parametric and optimisation studies of mixed-mode models with `ZoneVentilation`
   objects give different results than with 0.8.2, including those of the parametric example notebooks, whose
   published pages were computed with 0.8.2 ([[../TODO.md]]). Reverting would need an option of `AccimModel`

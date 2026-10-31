@@ -24,9 +24,69 @@ it here as answered).
 
 ## Open
 
-## 2026-10-30 — Should `add_accis_to_idf` enable the sizing calculations, as `AddAccis` does?
-- Context: `AddAccis` (IDF files) enables the zone, system and plant sizing calculations of `SimulationControl` in every output IDF, because the VRF systems that accim adds are autosized (in 0.8.2, `setSimulationControlSizing`, called only by `addAccis`). `add_accis_to_idf` (IDF objects), which `accim.parametric_and_optimisation` uses, does not, as `accis_single_idf_funcs.addAccis` did not in 0.8.2 (`setSimulationControlSizing` was imported by `accim_Main_single_idf` since commit `ff21dade`, but never called). Branch `v1.0.0` keeps that behaviour. With an input IDF whose zone sizing is off, the VRF models built by `add_accis_to_idf` stop EnergyPlus: "For autosizing of ZoneHVAC:TerminalUnit:VariableRefrigerantFlow ..., a zone sizing run must be done". This is why the numbered tests and the scripts of `tests/parametric_and_optimisation_full_workflow` (IDFs `SF_Detached_*`, with zone sizing off and no sizing periods) failed, on `master` too; they now enable it themselves (`enable_sizing()` of `tests/test_setup.py`).
-- Why it matters: the parametric module (predefined and custom models, `vrf_mm` by default) cannot run models whose zone sizing is off, unless the user enables it before (and adds sizing periods if the model has none).
-- Options considered: (a) keep the behaviour of 0.8.2; (b) enable the sizing calculations in `add_accis_to_idf` only for the VRF script types: it cannot break a model that runs now, since such a model stops without zone sizing; (c) enable them for every script type, as `AddAccis`: the same models from both functions, but the models of `ex_ac` and `ex_mm` whose sizing is off would run the sizing calculations, which need sizing periods.
+## 2026-10-31 — How should the air-conditioned parametric notebooks close the windows of the sample model?
+- Context: The sample model of the parametric notebooks (`OSM_TestResidentialUnit_v01_onlygeometry_SchNatVent_v2520*.idf`)
+  has two `ZoneVentilation:WindandStackOpenArea` objects (2 m2 per zone) with the schedule `Always On Discrete
+  hvac_library`, without temperature limits. accim controls them only in mixed mode (`vrf_mm`, as `AddAccis` since
+  0.7.8). WF1 and WF4 use `ScriptType="vrf_ac"` with `modify_HVACmode(building, 0)`, and 03, WF3 and WF5 apply
+  aPMV setpoints, which do not touch the windows, so these "fully air-conditioned" runs heat and cool with the
+  windows open all year (also with 0.8.2): heating 4-53 kWh/m2 (WF1), 2-51 (WF4), 52-71 (03), and HVAC electricity
+  up to 231 (WF1), 270 (WF4) and 228 (WF3) kWh/m2, while WF2 in air conditioning with the windows closed gives
+  heating 0-1 and HVAC 74-101 kWh/m2 (Seville). Found by the review of the notebook texts of 2026-10-31.
+- Why it matters: the examples follow those of the accim paper; their results describe a building with open windows.
+- Options considered: (a) WF1/WF4 with `ScriptType="vrf_mm"` and `modify_HVACmode(building, 0)`, so that accim
+  closes the windows, and the aPMV notebooks closing the ventilation objects (for example, an `Always Off`
+  schedule) before running; (b) a variant of the sample model without natural ventilation for those notebooks;
+  (c) keep them and explain it in their texts. Any option needs running them again (about 30 minutes).
+- Owner: author.
+- Status: open.
+
+## 2026-10-31 — Where should the fixes of the branch reviews go: `v1.0.0` or `master`?
+- Context: [[branch-reviews.md]] marks six small fixes of `refactor/sim-v1` as `port`. The five of PR 1 (the
+  `parent_folder_path` of `morph_epws`, the empty baseline of `WorkspaceArtifactCleaner`, `set_problem()` without
+  outputs, the error of `Table` without `idf_path`, the stale names of `using_Table.py`) were brought into the
+  working tree of `v1.0.0` on 2026-10-31, with their tests, as the other fixes of the day.
+- Why it matters: the other PRs of the note (objectives and `openpyxl`, the tests of sim-v1, the golden master in
+  the repository) and the deletion of the refs depend on it.
+- Options considered: (a) everything on `v1.0.0` before the release; (b) PR 1 on `v1.0.0`, the rest on `master`
+  after the merge.
+- Owner: author.
+- Status: open.
+
+## 2026-10-31 — Keep or drop the parametric integrity block of `review/refactor-sim-v1-20261024`?
+- Context: That branch (local and on `origin`, not in `v1.0.0`) holds an earlier review of sim-v1, three of the
+  fixes above and a block of checkpoints, owned folders and Pareto status with constraints for the parametric
+  module ([[branch-reviews.md]], section 1.3). It rejects the checkpoints of the current version.
+- Why it matters: the branch can only be deleted after this decision.
+- Options considered: adapt the block to `v1.0.0` (with a migration of the old checkpoints), or drop it.
+- Owner: author.
+- Status: open.
+
+## 2026-10-31 — Is a comfort objective independent of the control wanted in the optimisations?
+- Context: The tag `archive/feat-comfort-metrics-experiment-api` adds comfort metrics computed with EMS variables,
+  independent of the control. `compute_hourly_indicators` already gives the occupied hours and the same band of
+  EN 16798-1 category II; only the PMV metric is missing ([[branch-reviews.md]], section 2.1).
+- Why it matters: if not wanted, the whole module is dropped and the tag can be deleted after porting
+  `checked_sum_results`.
+- Options considered: drop the module; add the PMV indicators as an option of `compute_hourly_indicators`; port
+  the EMS metrics as an objective.
+- Owner: author.
+- Status: open.
+
+## 2026-10-31 — Are the setpoints of comfort standard 6 with `ComfMod` 2 right?
+- Context: In `accim/sim/ems/setpoint_lines.py`, key `(6, 2)`, the heating and cooling setpoints use the same centre
+  (`PMOT*0.30+25.9` with `CAT` 80, `+23.6` with 90), as in 0.x (question of the review of 2026-10-24,
+  [[branch-reviews.md]], section 1.4).
+- Why it matters: it may be a transcription error of the standard, which changes the results of that standard.
+- Options considered: check against the source of the standard; keep as in 0.x.
+- Owner: author.
+- Status: open.
+
+## 2026-10-31 — Should `add_vrf_objects` remove the ideal loads systems of the input model?
+- Context: When accim adds its VRF system, `hvac/vrf.add_vrf_objects` replaces the equipment lists and connections
+  but keeps the `ZoneHVAC:IdealLoadsAirSystem` objects of the model (and sets their availability on), so they are
+  left unconnected and EnergyPlus reports one Severe error per run, as in 0.x ([[branch-reviews.md]], section 3).
+- Why it matters: the error is harmless but confusing; removing them changes the output IDFs.
+- Options considered: remove them; keep the behaviour of 0.x.
 - Owner: author.
 - Status: open.

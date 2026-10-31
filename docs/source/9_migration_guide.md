@@ -12,7 +12,13 @@ The old names will be removed in a future version, so it is recommended to use t
 
 The usage of `accim.parametric_and_optimisation` (`ParametricSimulation`, `OptimisationSimulation`, the
 predefined models...) does not change at all. Its results only change for the models whose natural ventilation
-is given by `ZoneVentilation` objects, which accim 0.x did not control in this module (see section 9.3).
+is given by `ZoneVentilation` objects, which accim 0.x did not control in this module, for the optimisations
+with OMOPSO, SMPSO, CMAES, GeneticAlgorithm and EvolutionaryStrategy (whose generations now have
+`population_size` solutions), and in the post-processing (the daily and monthly tables, and the year of the
+hourly tables without `start_date`), and the full-set plans of the predefined models no longer keep some
+invalid combinations (see section 9.3). Some settings that always failed now run (`ComfStand` 0 and 22 with any
+`ComfMod`, the baseline of `AccimPredefModelsParamSim`, PAES), and others stop with a clear error before the
+optimisation starts, or instead of giving wrong values per m2 (see 9.3).
 
 ## 9.1 Classes, functions and modules
 
@@ -113,6 +119,61 @@ of each class of `accim.parametric_and_optimisation` and their results):
   added no programs for them, so the ventilation controls and the arguments of the opening factor
   (`MaxTempDiffVOF`, `MinTempDiffVOF`, `MultiplierVOF`), `VSToffset`, `MinOToffset` and `MaxWindSpeed` had no
   effect on these models, and their parametric and optimisation studies give different results now.
+- With the VRF systems (`script_type` 'vrf_ac' and 'vrf_mm'), `add_accis_to_idf`, and so
+  `accim.parametric_and_optimisation`, enables the zone, system and plant sizing calculations of the model, as
+  `AddAccis` does, and so does `accim.sim.apmv.add_vrf_system`. The VRF systems of accim are autosized, so
+  EnergyPlus stopped with the models whose zone sizing calculation was off ("a zone sizing run must be done"); the
+  models that already ran do not change their results. With the existing HVAC systems, the sizing calculations do
+  not change. EnergyPlus also needs sizing periods: when a model has none, accim now warns (with `AddAccis` too)
+  that EnergyPlus will stop, and recommends adding the design days of the location or
+  `SizingPeriod:WeatherFileDays` objects.
+- The subprograms of ESP CTE and INT ISO7730 (`SetAST_CS0_0` and `SetAST_CS22_0`), whose setpoints do not depend
+  on the comfort mode, set them whatever `ComfMod` is. In accim 0.x they only did so with `ComfMod` 0, which the
+  output IDFs of `AddAccis` have, but not the models of `accim.parametric_and_optimisation`, whose baseline has
+  `ComfMod` 3, so a plan with `ComfStand` 0 or 22 stopped EnergyPlus ("Variable = 'ACST' used in expression has
+  not been initialized!") unless it also set `ComfMod` 0. The text of these two subprograms changes in all the
+  output IDFs, not their results, and `modify_accis` updates them in the models of earlier versions of accim.
+- The plans of `sampling_full_set` with the predefined models (`drop_invalid_param_combinations`) are checked rule
+  by rule: before, a column missing from the plan (`CAT`, for instance) or a comfort standard without a table of
+  valid categories and comfort modes (99) skipped all the remaining rules of the row, so these plans could keep
+  invalid comfort modes, or `VentCtrl`, `VSToffset`, `MinOToffset` and `MaxWindSpeed` with `HVACmode` 0. As
+  before, the rows of `ComfStand` 0 are dropped when the plan has `CAT` or `ComfMod`.
+- The baseline of `AccimPredefModelsParamSim` (the custom comfort model: `ComfStand` 99, `CAT` 80, `ComfMod` 3)
+  has the default coefficients that `ParametricSimulation(parameters_type='accim custom model')` applies (those
+  of ASHRAE 55 with 80 % acceptability: `m` 0.31, `n` 17.8, offsets ±3.5, applicability limits 10 and 33.5). In
+  accim 0.x it had no coefficients, so its heating setpoint was above the cooling one and EnergyPlus stopped in
+  the test simulations of `discover_available_outputs()` and `set_output_*_to_idf(validate=True)`, and in the
+  plans without `ComfStand`; the rows of the plans with another `ComfStand` do not change.
+- `run_optimisation()` runs PAES, which evolves one solution, without `population_size` (platypus rejected it),
+  and PAES and EvolutionaryStrategy, which evolve each solution from one parent, with a mutation as their variator
+  (with the crossover that besos gives every algorithm, EvolutionaryStrategy stopped after the initial
+  population). With OMOPSO, SMPSO, CMAES, GeneticAlgorithm and EvolutionaryStrategy,
+  `population_size` is also the size of each generation (`swarm_size` or `offspring_size`, unless
+  `algorithm_options` gives them): platypus ignored it for them, or took it only as the initial population, so
+  they evaluated 100 solutions in each generation, and their results change. `run_optimisation()` checks the
+  settings of the algorithm before it starts, and stops with a clear error with `'ParticleSwarm'` (the abstract
+  base class of the particle swarms of platypus, which never ran: use `'OMOPSO'` or `'SMPSO'`), with the epsilon
+  algorithms (`'EpsMOEA'`, `'OMOPSO'`, `'EpsNSGAII'`) without `algorithm_options={'epsilons': [...]}`, with
+  `'NSGAIII'` without `divisions_outer` or with maximised objectives, with `'SPEA2'` and a `population_size`
+  below 3, with `'OMOPSO'`, `'SMPSO'` and `'CMAES'` and categorical parameters, and with the single-objective
+  algorithms and several objectives. Before, these settings failed once the first case had started.
+- The post-processing of `accim.parametric_and_optimisation` follows the calendar of EnergyPlus, which labels
+  each hourly or timestep value with the end of its interval: the daily and monthly tables add the value of
+  24:00 to its own day and month (before, to the next ones, so a 3-day run gave 4 daily rows). Without
+  `start_date`, the hourly tables are labelled in 2023, or in 2024 only when they have 8784 hourly values (before,
+  always in 2024, so a standard year got a 29 February and every value from 1 March was labelled one day early);
+  an explicit `start_date` keeps its year.
+- The values per m2 (`normalize_outputs()`, `normalize_per_m2=True`, also in the plots) convert only the columns
+  in J and the meters and objectives without unit (before, every column whose name contained Heating, Cooling,
+  Energy..., such as the adaptive setpoint temperatures, in °C), are divided once (the daily, monthly and
+  run-period tables of an hourly table already in kWh/m2 were divided again), and stop with a `ValueError` when
+  an IDF of the results has no floor area or a table without `idf` column has several (before, their rows were
+  divided by 1 m2 or by the area of the first IDF). The IDF files with an upper-case `.IDF` extension get their
+  area. The hourly methods explain which simulation files are missing and which storage options removed them,
+  and warn when they leave some simulations out. In the daily, monthly and run-period tables, the sums of the
+  outputs that a simulation does not report (the zones or meters of another IDF) are empty instead of 0, and the
+  simulations without category (with `apply_category_mapping()`) are kept; the groups of `split_by` are
+  normalised with their table.
 - The combinations of comfort standard and comfort mode that have no setpoints (comfort standards 4, 5 and 99
   with the comfort modes 0, 1 and 2; 6 with 0 and 1; 11 with 0) are skipped with a warning. Before, accim wrote
   output IDFs for them, which stopped EnergyPlus (a setpoint used before it is set).

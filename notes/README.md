@@ -18,6 +18,7 @@ elsewhere in the repository (see [[../Home.md|Home]] for links to those).
 - [[decisions.md]] — durable architectural/process decisions (lightweight ADR log).
 - [[questions.md]] — open questions and blockers that need a human answer.
 - [[references.md]] — external sources, datasets and resources (no content duplication, links only).
+- [[branch-reviews.md]] — review of `refactor/sim-v1` and of the archived tags against `v1.0.0` (port, adapt or drop).
 - [[templates/daily-note.md]] — template used to start a new work-log entry.
 - [[templates/decision-record.md]] — template used to record a new decision.
 - `attachments/` — local folder for images, PDFs and other files dropped into notes.
