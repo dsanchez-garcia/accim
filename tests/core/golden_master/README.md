@@ -7,7 +7,7 @@ migration guide, section 9.3, lists the differences).
 
 | File | What it holds |
 | --- | --- |
-| `configs.py` | The configurations: 20 of `AddAccis` (`b01` to `b20`: all the script types, every comfort standard, category and comfort mode, PMV control, the existing HVAC systems, OpenStudio models, EnergyPlus 25.1 and 26.2, `People:Instance`, `output_take_dataframe`, tolerance ranges...) and 9 of the in-memory functions (`s01` to `s09`: `add_accis_to_idf`, `modify_accis`, `gen_outputs_df` and the aPMV setpoints). `b10` gives no output IDF on purpose. |
+| `configs.py` | The configurations: 20 of `AddAccis` (`b01` to `b20`: all the script types, every comfort standard, category and comfort mode, PMV control, the existing HVAC systems, OpenStudio models, EnergyPlus 25.1 and 26.2, `People:Instance`, `output_take_dataframe`, tolerance ranges...) and 9 of the in-memory functions (`s01` to `s09`: `add_accis_to_idf`, `modify_accis`, `gen_outputs_df` and the aPMV setpoints). With accim 0.8.2, `b10` gives no output IDF (its HVAC system has two kinds of heating coils). |
 | `runner.py` | Runs a configuration and writes the canonical text of its outputs; also a command-line tool (below). |
 | `inputs/` | The input models, compressed (`.idf.xz`): sample IDFs of `accim/sample_files/sample IDFs/input_IDFs`, updated to EnergyPlus 25.1 or 26.2 with `accim.utils.update_idf_version` (see `configs.INPUT_MODELS`); `vrf2zones262inst` has a `People:Definition` and a `People:Instance` object instead of each `People` object. |
 | `golden/` | The canonical outputs of accim 1.0.0, one `.txt.xz` file for each configuration (about 0.4 MB in all). |

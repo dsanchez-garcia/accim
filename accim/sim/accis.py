@@ -13,6 +13,7 @@ The ACCIS is an EnergyManagementSystem script that applies adaptive setpoint tem
 """
 
 import os
+import warnings
 from io import StringIO
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple, Union
@@ -225,6 +226,19 @@ def _to_confirmation(value: Any) -> bool:
     return bool(value)
 
 
+def _warn_hvac_zone_map(hvac_zone_map: Optional[Dict[str, str]]) -> None:
+    """hvac_zone_map is no longer used: 'ex_mm' does not look for the HVAC equipment of each zone."""
+    if hvac_zone_map is not None:
+        warnings.warn(
+            "hvac_zone_map is deprecated since accim 1.0.0 and has no effect: in mixed mode with the existing HVAC "
+            "systems (script type 'ex_mm'), accim reads whether the HVAC system of each zone is on from the load "
+            'that its thermostat asks for, whatever its equipment, so it no longer needs the zone of each HVAC '
+            'object.',
+            DeprecationWarning,
+            stacklevel=3,
+        )
+
+
 # ----------------------------------------------------------------------------------------------------------
 # AddAccis: files
 # ----------------------------------------------------------------------------------------------------------
@@ -303,8 +317,9 @@ class AddAccis:
     :param cop: The coefficient of performance of the VRF systems.
     :param make_averages: True to add the building averages of the hours of each zone and of some outputs.
     :param debugging: True to make EnergyPlus write the EDD file of the EMS.
-    :param hvac_zone_map: The zone of each existing HVAC object, {'HVAC object name': 'Zone name'}, for the
-        objects whose zone accim cannot find (script types 'ex_ac' and 'ex_mm').
+    :param hvac_zone_map: Deprecated since accim 1.0.0, without effect: 'ex_mm' reads whether the HVAC system of
+        each zone is on from the load that its thermostat asks for, so it no longer needs the zone of each existing
+        HVAC object.
     :param zone_arguments: The arguments of some zones, which are the same in all the output IDFs:
         ``{zone: {argument: value}}``, for instance ``{'Block1:Zone1': {'comf_stand': 2, 'cat': 80,
         'comf_mod': 3}}``. The zones are the occupied zones, given by their names (or '<space> <people>', as in
@@ -379,6 +394,7 @@ class AddAccis:
     ):
         files = _input_files(idfs)
         print(BANNER)
+        _warn_hvac_zone_map(hvac_zone_map)
         self.verbose_mode = verbose_mode
         checked_zone_arguments = check_zone_arguments(zone_arguments)
 
@@ -599,6 +615,7 @@ def add_accis_to_idf(
     """
     if verbose_mode:
         print(BANNER)
+    _warn_hvac_zone_map(hvac_zone_map)
     if energyplus_version is None or str(energyplus_version).lower() == 'auto':
         energyplus_version = _idf_version(idf)
     output_type, output_freqs, temp_ctrl = _check_model_arguments(

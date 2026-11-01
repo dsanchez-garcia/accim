@@ -56,8 +56,7 @@ def add_accis_objects(
     if model.script_type.startswith('vrf'):
         vrf.add_coil_sensors(model)
     elif model.script_type == 'ex_mm':
-        existing.add_coil_sensors(model)
-        existing.add_coil_initialisation(model)
+        existing.add_load_sensors(model)
     add_program_calling_managers(model)
     if make_averages:
         ems_objects.add_building_averages(model)

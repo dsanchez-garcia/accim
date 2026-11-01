@@ -12,7 +12,7 @@ from accim.sim.idf_tools import try_objects
 from accim.sim.targets import Target, resolve_targets
 from accim.utils.people import get_people_objects
 
-__all__ = ['AccimModel', 'ExistingHvacGroup', 'ThermostatGroup']
+__all__ = ['AccimModel', 'ThermostatGroup']
 
 #: Thermostat setpoint objects of the existing HVAC systems that accim controls
 #: (ThermostatSetpoint:SingleHeatingOrCooling is not supported).
@@ -39,39 +39,19 @@ class ThermostatGroup:
     setpoint_names: List[str] = field(default_factory=list)
 
 
-@dataclass
-class ExistingHvacGroup:
-    """The objects of one type of existing HVAC equipment and the zones they serve.
-
-    An object that serves several zones appears once per zone.
-
-    :ivar hvac_type: The type of the objects (e.g. 'Coil:Cooling:DX:SingleSpeed').
-    :ivar object_names: The names of the objects.
-    :ivar zones_orig: The names of their zones, in upper case.
-    :ivar zones: The names of their zones in the EMS objects.
-    :ivar windows: The windows and doors of their zones.
-    """
-
-    hvac_type: str
-    object_names: List[str] = field(default_factory=list)
-    zones_orig: List[str] = field(default_factory=list)
-    zones: List[str] = field(default_factory=list)
-    windows: List[str] = field(default_factory=list)
-
-
 class AccimModel:
     """An EnergyPlus model (eppy or besos IDF object) to which accim adds the ACCIS.
 
     Scanning the model finds its occupied zones and, depending on the script type, the windows and
     doors that open for natural ventilation (which, without an AirflowNetwork, are the ventilation
-    objects of the zones, controlled through new schedules) and the existing HVAC systems.
+    objects of the zones, controlled through new schedules) and the thermostats of the existing HVAC systems.
 
     :param idf: The eppy or besos IDF object. It is modified in place.
     :param script_type: 'vrf_ac', 'vrf_mm', 'ex_ac' or 'ex_mm'.
     :param temp_ctrl: 'temperature' or 'pmv'.
     :param verbose_mode: True to print the process.
-    :param hvac_zone_map: Optional zone of each existing HVAC object, {'HVAC object name': 'Zone name'},
-        for the objects whose zone cannot be found automatically (ScriptType 'ex_mm').
+    :param hvac_zone_map: Not used (deprecated since accim 1.0.0): 'ex_mm' no longer needs the zone of each existing
+        HVAC object.
     :param name: The name of the model in the messages.
     :raises ValueError: If the model has no People or People:Instance objects.
     :ivar targets: The targets of the EMS (one per occupied zone).
@@ -83,7 +63,7 @@ class AccimModel:
     :ivar window_zones: The zone of each window or door.
     :ivar zones_orig: The names of the zones that accim controls.
     :ivar zones: The same names, as in the names of the EMS objects.
-    :ivar not_working: True if accim cannot work with the model (an existing HVAC object of an unknown zone).
+    :ivar not_working: True if accim cannot work with the model, so that AddAccis writes no output IDFs from it.
     """
 
     def __init__(
@@ -110,8 +90,6 @@ class AccimModel:
         self.natural_ventilation_type: Optional[str] = None
         self.scheduled_ventilation: Dict[str, str] = {}
         self.thermostat_groups: List[ThermostatGroup] = []
-        self.existing_hvac: List[ExistingHvacGroup] = []
-        self.coil_sensor_names: List[str] = []
 
         self._scan_zones()
         self.log(f'The occupied zones in the model {self.name} are:', *self.occupied_zones_orig)
@@ -124,9 +102,6 @@ class AccimModel:
             self.log(f'The zones in the model {self.name} are:', *self.zones)
         else:
             self._scan_thermostats()
-            if script_type == 'ex_mm':
-                from accim.sim.hvac.existing import scan_existing_hvac
-                scan_existing_hvac(self)
 
     def log(self, *lines) -> None:
         """Print the lines if verbose_mode is True."""

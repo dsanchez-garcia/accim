@@ -25,8 +25,10 @@ __all__ = [
     'SET_GEO_VAR',
     'SET_VST',
     'APPLY_AST_MIXED_MODE',
+    'APPLY_AST_MIXED_MODE_EXISTING_HVAC',
     'SET_MY_VOF',
     'SET_WINDOW_OPERATION',
+    'SET_WINDOW_OPERATION_EXISTING_HVAC',
     'APPLY_AST_AIR_CONDITIONED',
     'format_lines',
 ]
@@ -34,6 +36,11 @@ __all__ = [
 
 def _lines(text: str) -> Tuple[str, ...]:
     return tuple(text.strip('\n').split('\n'))
+
+
+def _join(*texts: str) -> Tuple[str, ...]:
+    """The lines of several texts, one after the other."""
+    return _lines('\n'.join(text.strip('\n') for text in texts))
 
 
 def format_lines(lines: Tuple[str, ...], zone: str = None, window: str = None) -> list:
@@ -573,10 +580,11 @@ set VST = roundedAHST+VSToffset
 endif
 """)
 
-#: Setpoints and ventilation of a zone in mixed mode.
-APPLY_AST_MIXED_MODE = _lines("""
-if {zone}_CoolCoil==0
-if {zone}_HeatCoil==0
+#: Whether the HVAC system of a zone (or of the zone of a window) neither heats nor cools: with the VRF systems of
+#: accim, from its coils, which were off in the previous timestep.
+_HVAC_OFF_FROM_COILS = """
+if {name}_CoolCoil==0
+if {name}_HeatCoil==0
 set NoH_NoC_reqs = 1
 else
 set NoH_NoC_reqs = 0
@@ -584,6 +592,21 @@ endif
 else
 set NoH_NoC_reqs = 0
 endif
+"""
+#: The same with the existing HVAC systems (ScriptType 'ex_mm'), whatever their equipment: from the load to the
+#: setpoints that the thermostat of the zone asked the HVAC system for in the previous timestep (the EnergyPlus
+#: output 'Zone Predicted Sensible Load to Setpoint Heat Transfer Rate'), which is 0 when the temperature of the zone
+#: is between its heating and cooling setpoints, and so when the HVAC system is off.
+_HVAC_OFF_FROM_LOAD = """
+if {name}_LoadToSetpoint == 0
+set NoH_NoC_reqs = 1
+else
+set NoH_NoC_reqs = 0
+endif
+"""
+
+#: Setpoints and ventilation of a zone in mixed mode (after the lines that set NoH_NoC_reqs).
+_APPLY_AST_MIXED_MODE_BODY = """
 if {zone}_OpT<roundedACST
 if {zone}_WindSpeed <= MaxWindSpeed
 if {zone}_OutT>MinOutTemp
@@ -679,7 +702,11 @@ set AHST_Act_{zone} = roundedAHST
 endif
 endif
 endif
-""")
+"""
+#: Setpoints and ventilation of a zone in mixed mode, with the VRF systems of accim.
+APPLY_AST_MIXED_MODE = _join(_HVAC_OFF_FROM_COILS.replace('{name}', '{zone}'), _APPLY_AST_MIXED_MODE_BODY)
+#: The same with the existing HVAC systems (ScriptType 'ex_mm').
+APPLY_AST_MIXED_MODE_EXISTING_HVAC = _join(_HVAC_OFF_FROM_LOAD.replace('{name}', '{zone}'), _APPLY_AST_MIXED_MODE_BODY)
 
 #: Venting opening factor of a window or door.
 SET_MY_VOF = _lines("""
@@ -702,17 +729,8 @@ endif
 endif
 """)
 
-#: Opening of a window or door in mixed mode.
-SET_WINDOW_OPERATION = _lines("""
-if {window}_CoolCoil==0
-if {window}_HeatCoil==0
-set NoH_NoC_reqs = 1
-else
-set NoH_NoC_reqs = 0
-endif
-else
-set NoH_NoC_reqs = 0
-endif
+#: Opening of a window or door in mixed mode (after the lines that set NoH_NoC_reqs).
+_SET_WINDOW_OPERATION_BODY = """
 if {window}_OpT<roundedACST
 if {window}_WindSpeed <= MaxWindSpeed
 if {window}_OutT>MinOutTemp
@@ -799,7 +817,12 @@ else
 set {window}_VentOpenFact = 0
 endif
 endif
-""")
+"""
+#: Opening of a window or door in mixed mode, with the VRF systems of accim.
+SET_WINDOW_OPERATION = _join(_HVAC_OFF_FROM_COILS.replace('{name}', '{window}'), _SET_WINDOW_OPERATION_BODY)
+#: The same with the existing HVAC systems (ScriptType 'ex_mm').
+SET_WINDOW_OPERATION_EXISTING_HVAC = _join(_HVAC_OFF_FROM_LOAD.replace('{name}', '{window}'),
+                                           _SET_WINDOW_OPERATION_BODY)
 
 #: Setpoints of a zone with full air-conditioning.
 APPLY_AST_AIR_CONDITIONED = _lines("""

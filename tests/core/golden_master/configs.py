@@ -6,7 +6,8 @@ configuration reads one input model and calls the in-memory functions on it (``a
 their names in accim 0.x, to run the same configurations with it (``runner.py write --legacy``).
 
 These are the 29 configurations with which accim 1.0.0 was checked against accim 0.8.2 (see the migration guide,
-section 9.3); b10 gives no output IDF on purpose (its existing HVAC system has two kinds of heating coils).
+section 9.3); with accim 0.8.2, b10 gives no output IDF (its existing HVAC system has two kinds of heating coils,
+which 'ex_mm' rejected until it read the loads of the thermostats instead of the coils).
 """
 
 ALL_CS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 99]
@@ -72,7 +73,7 @@ BATCH = {
         BASE, script_type='ex_mm', comf_stand=[1], cat=[2], comf_mod=[3], hvac_mode=[2], vent_ctrl=[1])),
     'b09_ex_mm_beams': dict(models=['exbeams'], kwargs=dict(
         BASE, script_type='ex_mm', comf_stand=[14], cat=[90], comf_mod=[1.3, 2], hvac_mode=[2], vent_ctrl=[3])),
-    # no output IDF: AddAccis rejects the model, whose existing HVAC system has two kinds of heating coils
+    # an existing HVAC system with two kinds of heating coils (accim 0.8.2 rejected the model)
     'b10_ex_mm_osm_office': dict(models=['osmofficeex'], kwargs=dict(
         BASE, script_type='ex_mm', comf_stand=[2], cat=[90], comf_mod=[3], hvac_mode=[0, 2], vent_ctrl=[0],
         output_type='detailed')),

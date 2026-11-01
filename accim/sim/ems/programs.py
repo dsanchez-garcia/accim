@@ -117,11 +117,16 @@ def accis_programs(model: AccimModel) -> List[Tuple[str, List[str]]]:
     programs += [(f'{INPUT_PROGRAM_PREFIX}{z}', input_lines(mixed_mode=mixed_mode)) for z in zones]
     windows: Dict[Optional[str], List[str]] = {}
     if mixed_mode:
+        # The existing HVAC systems (ex_mm) are off when the thermostat of the zone asks for no load; the VRF
+        # systems of accim (vrf_mm), when their coils are off
+        existing_hvac = getattr(model, 'script_type', None) == 'ex_mm'
+        apply_ast = pl.APPLY_AST_MIXED_MODE_EXISTING_HVAC if existing_hvac else pl.APPLY_AST_MIXED_MODE
+        window_operation = pl.SET_WINDOW_OPERATION_EXISTING_HVAC if existing_hvac else pl.SET_WINDOW_OPERATION
         programs += [('SetVST', list(pl.SET_VST))]
-        programs += [(f'ApplyAST_{z}', pl.format_lines(pl.APPLY_AST_MIXED_MODE, zone=z)) for z in zones]
+        programs += [(f'ApplyAST_{z}', pl.format_lines(apply_ast, zone=z)) for z in zones]
         for w in model.windows:
             programs += [(f'SetMyVOF_{w}', pl.format_lines(pl.SET_MY_VOF, window=w)),
-                         (f'SetWindowOperation_{w}', pl.format_lines(pl.SET_WINDOW_OPERATION, window=w))]
+                         (f'SetWindowOperation_{w}', pl.format_lines(window_operation, window=w))]
         windows = windows_by_zone(model)
     else:
         programs += [(f'ApplyAST_{z}', pl.format_lines(pl.APPLY_AST_AIR_CONDITIONED, zone=z)) for z in zones]
