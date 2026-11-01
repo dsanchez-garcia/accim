@@ -26,6 +26,7 @@ from accim.sim.ems.erl import (
     parse_expression,
     variables_in_programs,
 )
+from accim.sim.ems.inputs import input_lines, input_values
 from accim.sim.ems.programs import accis_programs
 
 
@@ -339,20 +340,19 @@ def test_the_programs_of_accis_give_the_setpoints_of_en16798():
     # All the programs that accim writes compile, and the comfort model INT EN16798-1, category II, adaptive
     # (ComfStand 1, CAT 2, ComfMod 3), gives Tcomf = 0.33*RMOT + 18.8, and setpoints Tcomf + 3 and Tcomf - 4
     # (with the tolerance of 0.1 towards the comfort temperature)
-    model = SimpleNamespace(ems_names=['Zone1', 'Zone2'], is_mixed_mode=True, windows=['Zone1_Win'])
+    model = SimpleNamespace(ems_names=['Zone1', 'Zone2'], ems_zones=['Zone1', 'Zone2'], is_mixed_mode=True,
+                            windows=['Zone1_Win'], window_zones=['Zone1'])
     programs = dict(accis_programs(model))
-    programs['SetInputData'] = [
-        'set ComfStand = 1', 'set CAT = 2', 'set ComfMod = 3', 'set HVACmode = 2', 'set VentCtrl = 0',
-        'set VSToffset = 0', 'set MinOToffset = 50', 'set MaxWindSpeed = 50', 'set ACSTtol = -0.1',
-        'set AHSTtol = 0.1', 'set CoolSeasonStart = 121', 'set CoolSeasonEnd = 274']
+    programs['SetInputData_Zone1'] = input_lines(input_values(dict(
+        comf_stand=1, cat=2, comf_mod=3, hvac_mode=2, vent_ctrl=0, vst_offset=0, min_ot_offset=50, max_wind_speed=50,
+        ast_tol=0.1, cool_season_start=121, cool_season_end=274)), mixed_mode=True)
     names = set().union(*variables_in_programs(programs).values())
     erl = ErlProgramSet(programs, global_variables=names)
     for name, value in dict(RMOT=20.0, PMOT=20.0, DayOfYear=180.0, CurrentTime=12.0).items():
         erl.set(name, value)
     erl.initialise_set_variables()
 
-    for name in ['SetInputData', 'SetVOFinputData', 'SetAppLimits', 'ApplyCAT', 'SetComfTemp', 'SetAST',
-                 'SetASTnoTol']:
+    for name in ['SetInputData_Zone1', 'SetAppLimits', 'ApplyCAT', 'SetComfTemp', 'SetAST', 'SetASTnoTol']:
         erl.run(name)
 
     assert erl.get('ComfTemp') == pytest.approx(25.4)

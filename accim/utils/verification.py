@@ -750,7 +750,8 @@ class AccimSimulationVerifier:
     idf_path : str
         Path to the corresponding IDF model. Used to auto-discover EMS sensor names,
         window names, zone names, and control parameters (HVACmode, MaxWindSpeed,
-        ACSTtol, AHSTtol) from the ``SetInputData`` EMS program.
+        ACSTtol, AHSTtol) from the ``SetInputData_<zone>`` EMS programs (``SetInputData`` in the
+        models of earlier versions of accim; with several zones, the values of the last one).
     eplus_install_dir : Optional[str], default None
         EnergyPlus installation directory, required by ``ReadVarsESO`` when falling back
         to ``.eso`` parsing.
@@ -864,7 +865,7 @@ class AccimSimulationVerifier:
         can cause excessive infiltration rates, draughts, or structural concerns.
         EnergyPlus column: ``Site Wind Speed``.
         Condition: WindSpeed <= MaxWindSpeed, where MaxWindSpeed is a static scalar extracted
-        from the ``SetInputData`` EMS program in the IDF.
+        from the ``SetInputData_<zone>`` EMS programs in the IDF (``SetInputData`` in earlier versions).
 
     Notes
     -----
@@ -1045,9 +1046,10 @@ class AccimSimulationVerifier:
         ahst_tol_val = float(chosen_df[_ahst_tol_col].iat[0]) if _ahst_tol_col else None
 
         if acst_tol_val is None or ahst_tol_val is None:
-            # Fallback securely to the SetInputData Program embedded in the IDF model
+            # Fallback securely to the SetInputData Program embedded in the IDF model (that of the first zone,
+            # SetInputData_<zone>, since accim 1.0.0)
             for prog in building.idfobjects['EnergyManagementSystem:Program']:
-                if prog.Name.upper() == 'SETINPUTDATA':
+                if prog.Name.upper() == 'SETINPUTDATA' or prog.Name.upper().startswith('SETINPUTDATA_'):
                     for i in range(1, 40):
                         field = f"Program_Line_{i}"
                         if hasattr(prog, field):

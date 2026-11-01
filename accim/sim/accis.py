@@ -39,11 +39,28 @@ from accim.sim.arguments import (
     to_day_of_year,
 )
 from accim.sim.build import add_accis_objects, add_outputs
+from accim.sim.ems.inputs import (
+    check_zone_arguments,
+    input_programs,
+    input_values,
+    resolve_zone_arguments,
+    set_inputs,
+    zone_names,
+)
 from accim.sim.ems.setast import MODULAR_COMFORT_MODES, depends_on_comfort_mode, master_program_lines, subprograms
-from accim.sim.generation import GenerationArguments, IdfWriter, OutputIdfs, combinations, output_name
+from accim.sim.generation import (
+    GenerationArguments,
+    IdfWriter,
+    OutputIdfs,
+    combinations,
+    output_name,
+    zone_arguments_errors,
+    zone_input_arguments,
+)
 from accim.sim.idf_tools import add_program, copy_idf, idf_text, replace_program_lines, set_program_lines
 from accim.sim.model import AccimModel
 from accim.sim.outputs import OUTPUT_DATAFRAME_COLUMNS, enable_sizing_calculations, output_variables_dataframe
+from accim.sim.targets import resolve_targets
 
 __all__ = ['AddAccis', 'add_accis_to_idf', 'addAccis', 'gen_outputs_df', 'load_idf', 'modify_accis']
 
@@ -288,12 +305,23 @@ class AddAccis:
     :param debugging: True to make EnergyPlus write the EDD file of the EMS.
     :param hvac_zone_map: The zone of each existing HVAC object, {'HVAC object name': 'Zone name'}, for the
         objects whose zone accim cannot find (script types 'ex_ac' and 'ex_mm').
+    :param zone_arguments: The arguments of some zones, which are the same in all the output IDFs:
+        ``{zone: {argument: value}}``, for instance ``{'Block1:Zone1': {'comf_stand': 2, 'cat': 80,
+        'comf_mod': 3}}``. The zones are the occupied zones, given by their names (or '<space> <people>', as in
+        the dictionaries of :func:`accim.sim.apmv.apply_apmv_setpoints`); the arguments are those of
+        :func:`modify_accis`, with one value each (the tolerance of the setpoints is ``ast_tol``). The other
+        arguments of these zones, and the arguments of the other zones, are those of each output IDF, whose name
+        does not change. Each zone needs a valid combination of comfort standard, category and comfort mode, and
+        the HVAC mode and ventilation control of mixed mode only with 'vrf_mm' and 'ex_mm'. Only with temperature
+        control (``temp_ctrl`` 'temperature').
     :ivar arguments: The arguments, after asking the missing ones.
     :ivar input_idfs: The input IDFs, {'input IDF name': IDF object}.
     :ivar occupied_zones: The occupied zones of each input IDF, as in the EMS objects.
     :ivar occupied_zones_original_name: The occupied zones of each input IDF.
     :ivar windows_and_doors: The windows and doors that open in each input IDF, as in the EMS objects (mixed mode).
     :ivar windows_and_doors_original_name: The windows and doors that open in each input IDF (mixed mode).
+    :ivar zone_arguments: The arguments of the zones of ``zone_arguments`` in each input IDF, by the names of the
+        zones in the EMS objects: ``{input IDF name: {zone: {argument: value}}}``.
     :ivar output_idfs: The output IDFs, {'output IDF file name': IDF object} (each one is read when it is used;
         ``output_idfs.paths`` has their paths).
     :ivar df_outputs: The DataFrame of Output:Variable objects (argument ``output_gen_dataframe``).
@@ -347,10 +375,12 @@ class AddAccis:
         make_averages: bool = False,
         debugging: bool = False,
         hvac_zone_map: Optional[Dict[str, str]] = None,
+        zone_arguments: Optional[Dict[str, Dict[str, Any]]] = None,
     ):
         files = _input_files(idfs)
         print(BANNER)
         self.verbose_mode = verbose_mode
+        checked_zone_arguments = check_zone_arguments(zone_arguments)
 
         if (script_type is None or output_type is None or output_freqs is None or output_keep_existing is None
                 or temp_ctrl is None
@@ -367,6 +397,9 @@ class AddAccis:
         energyplus_version = normalise_energyplus_version(energyplus_version)
         output_type, output_freqs, temp_ctrl = _check_model_arguments(
             script_type, supply_air_temp_input_method, output_type, output_freqs, temp_ctrl)
+        if checked_zone_arguments and temp_ctrl == 'pmv':
+            raise ValueError("zone_arguments needs temp_ctrl 'temperature': with 'pmv', the Fanger thermostats "
+                             "control the zones and the arguments of the ACCIS are not used.")
         if verbose_mode:
             _print_model_arguments(script_type, supply_air_temp_input_method, output_type, output_freqs,
                                    energyplus_version, temp_ctrl)
@@ -390,11 +423,13 @@ class AddAccis:
         self.occupied_zones_original_name: Dict[str, List[str]] = {}
         self.windows_and_doors: Dict[str, List[str]] = {}
         self.windows_and_doors_original_name: Dict[str, List[str]] = {}
+        self.zone_arguments: Dict[str, Dict[str, Dict[str, Any]]] = {}
 
         models = []
         not_working = []
         dataframes = []
         idf_class = None
+        found_zones = set()
         for file in files:
             stem = file[:-len('.idf')]
             self._log(_START_MODEL, 'Starting with file:', stem)
@@ -414,6 +449,13 @@ class AddAccis:
             if model.is_mixed_mode:
                 self.windows_and_doors[stem] = model.windows
                 self.windows_and_doors_original_name[stem] = model.windows_orig
+            names = zone_names(model.targets)
+            aliases = {str(alias).upper() for zone_aliases in names.values() for alias in zone_aliases}
+            found_zones.update(key for key in checked_zone_arguments if str(key).upper() in aliases)
+            self.zone_arguments[stem] = resolve_zone_arguments(checked_zone_arguments, names, strict=False)
+            if self.zone_arguments[stem]:
+                self._log('The zones with their own arguments are:',
+                          *(f'{zone}: {arguments}' for zone, arguments in self.zone_arguments[stem].items()))
             if model.not_working:
                 not_working.append(stem)
                 continue
@@ -427,6 +469,10 @@ class AddAccis:
             models.append((stem, idf_text(idf)))
             self._log('Ending with file:', stem, _END_MODEL)
 
+        missing_zones = [key for key in checked_zone_arguments if key not in found_zones]
+        if missing_zones:
+            raise ValueError(f'The zones {missing_zones} of zone_arguments are not occupied zones of the input IDFs. '
+                             f'Their occupied zones are {self.occupied_zones_original_name}.')
         if output_gen_dataframe:
             self.df_outputs = (pd.concat(dataframes) if dataframes
                                else pd.DataFrame(columns=['file'] + OUTPUT_DATAFRAME_COLUMNS))
@@ -447,9 +493,10 @@ class AddAccis:
             ast_tol_start=ast_tol_start, ast_tol_end_input=ast_tol_end_input, ast_tol_steps=ast_tol_steps,
             name_suffix=name_suffix)
         self.arguments.update({k: v for k, v in vars(generation).items()})
-        self.arguments.update(verbose_mode=verbose_mode, confirm_gen=confirm_gen)
+        self.arguments.update(verbose_mode=verbose_mode, confirm_gen=confirm_gen, zone_arguments=zone_arguments)
 
-        paths = self._write_output_idfs(models, generation, temp_ctrl, confirm_gen, idf_class)
+        paths = self._write_output_idfs(models, generation, temp_ctrl, confirm_gen, idf_class,
+                                        is_mixed_mode(script_type))
         self.output_idfs = OutputIdfs(paths, idf_class)
         self._log(_END_OUTPUTS)
 
@@ -468,9 +515,25 @@ class AddAccis:
             return GenerationArguments.air_conditioned(**kwargs, name_suffix=name_suffix)
         return GenerationArguments(**kwargs, name_suffix=name_suffix)
 
+    def _check_zone_arguments(self, models, generation: GenerationArguments, combos, mixed_mode: bool) -> None:
+        """Check that the zones of zone_arguments have setpoints in all the output IDFs."""
+        errors = []
+        for stem, _ in models:
+            for zone, arguments in self.zone_arguments.get(stem, {}).items():
+                for combination in combos:
+                    reasons = zone_arguments_errors(zone_input_arguments(generation, combination, arguments),
+                                                    mixed_mode)
+                    if reasons:
+                        errors.append(f'zone {zone} of {stem}, in {output_name(stem, combination)}: '
+                                      f'{"; ".join(reasons)}')
+        if errors:
+            raise ValueError('The arguments of some zones of zone_arguments are not valid (give the comfort '
+                             'standard, category and comfort mode of each of these zones):\n' + '\n'.join(errors))
+
     def _write_output_idfs(self, models, generation: GenerationArguments, temp_ctrl: str, confirm_gen,
-                           idf_class) -> Dict[str, str]:
+                           idf_class, mixed_mode: bool) -> Dict[str, str]:
         combos = list(combinations(generation, temp_ctrl))
+        self._check_zone_arguments(models, generation, combos, mixed_mode)
         names = [output_name(stem, c, generation.name_suffix) for stem, _ in models for c in combos]
         self._log('The list of output IDFs is going to be:', *names,
                   f'And the total number of output IDFs is going to be {len(names)}')
@@ -480,7 +543,7 @@ class AddAccis:
             return paths
         self._log('Generating the following output IDF files:')
         for stem, text in models:
-            writer = IdfWriter(idf_class(StringIO(text)), generation, temp_ctrl)
+            writer = IdfWriter(idf_class(StringIO(text)), generation, temp_ctrl, self.zone_arguments.get(stem))
             for combination in combos:
                 path = output_name(stem, combination, generation.name_suffix)
                 self._log(path)
@@ -523,10 +586,11 @@ def add_accis_to_idf(
     """Add the ACCIS to an IDF object of eppy or besos (in place).
 
     The arguments of the ACCIS (comfort standard, category, HVAC mode...) are those of :func:`modify_accis`
-    (by default, ComfStand 1, CAT 1, ComfMod 2, HVACmode 2 and VentCtrl 0), which can change them later.
-    The arguments are those of :class:`AddAccis`. With the VRF systems (``script_type`` 'vrf_ac' and 'vrf_mm'),
-    which are autosized, the zone, system and plant sizing calculations of the model are enabled, as
-    :class:`AddAccis` does; with the existing HVAC systems, the sizing calculations do not change.
+    (by default, ComfStand 1, CAT 1, ComfMod 2, HVACmode 2 and VentCtrl 0, in all the zones), which can change
+    them later, also for each zone. The arguments are those of :class:`AddAccis`. With the VRF systems
+    (``script_type`` 'vrf_ac' and 'vrf_mm'), which are autosized, the zone, system and plant sizing calculations of
+    the model are enabled, as :class:`AddAccis` does; with the existing HVAC systems, the sizing calculations do not
+    change.
 
     :param idf: The IDF object.
     :param energyplus_version: The EnergyPlus version of the model; None or 'auto' to take that of its IDD.
@@ -609,19 +673,68 @@ def modify_accis(
     min_ot_offset: Number = 50,
     max_wind_speed: Number = 50,
     ast_tol: Number = 0.1,
+    zone_arguments: Optional[Dict[str, Dict[str, Any]]] = None,
 ) -> None:
-    """Set the arguments of the ACCIS of an IDF object (one value of each argument of :class:`AddAccis`).
+    """Set the arguments of the ACCIS of an IDF object (one value of each argument of :class:`AddAccis`), in all
+    its occupied zones or, with ``zone_arguments``, in some of them.
 
-    The comfort standard, category, comfort mode, HVAC mode and ventilation control that are None keep
-    their values. The setpoints are set in each timestep by the subprograms of the comfort standard
-    (SetAST_Master), so these arguments can also be changed later in SetInputData. The models of earlier
-    versions of accim get the subprograms of this version where they behave differently (those of ESP CTE
-    and INT ISO7730 set the setpoints whatever the comfort mode is).
+    Each zone has its arguments in the EMS program SetInputData_<zone>. The comfort standard, category, comfort
+    mode, HVAC mode and ventilation control that are None keep their values. The setpoints are set in each timestep
+    by the subprograms of the comfort standard (SetAST_Master), so these arguments can also be changed later in
+    the programs SetInputData_<zone>.
+
+    The models of earlier versions of accim, which have one program SetInputData for all the zones, can only have
+    the same arguments in all the zones, and they get the subprograms of this version where they behave
+    differently (those of ESP CTE and INT ISO7730 set the setpoints whatever the comfort mode is).
 
     :param ast_tol: The tolerance of the setpoints.
-    :raises ValueError: If the model has no ACCIS or setpoint_acc is negative.
+    :param zone_arguments: The arguments of some zones, which replace those of the call in these zones:
+        ``{zone: {argument: value}}``, for instance ``{'Block1:Zone1': {'comf_stand': 2, 'cat': 80, 'comf_mod': 3}}``
+        (see :class:`AddAccis`). An argument that is None in the call and is not given for a zone keeps its value
+        in the zone.
+    :raises ValueError: If the model has no ACCIS, setpoint_acc is negative, or zone_arguments is not valid (or is
+        given for a model of an earlier version of accim).
     """
+    arguments = dict(
+        comf_stand=comf_stand, cat=cat, cat_cool_offset=cat_cool_offset, cat_heat_offset=cat_heat_offset,
+        comf_mod=comf_mod, setpoint_acc=setpoint_acc, cust_ast_acst_aul=cust_ast_acst_aul,
+        cust_ast_acst_all=cust_ast_acst_all, cust_ast_ahst_aul=cust_ast_ahst_aul, cust_ast_ahst_all=cust_ast_ahst_all,
+        cust_ast_m=cust_ast_m, cust_ast_n=cust_ast_n, cust_ast_acst_offset=cust_ast_acst_offset,
+        cust_ast_ahst_offset=cust_ast_ahst_offset, cool_season_start=cool_season_start,
+        cool_season_end=cool_season_end, hvac_mode=hvac_mode, vent_ctrl=vent_ctrl,
+        max_temp_diff_vof=max_temp_diff_vof, min_temp_diff_vof=min_temp_diff_vof, multiplier_vof=multiplier_vof,
+        vst_offset=vst_offset, min_ot_offset=min_ot_offset, max_wind_speed=max_wind_speed, ast_tol=ast_tol,
+    )
     programs = _programs(idf)
+    zone_programs = input_programs(idf)
+    if not zone_programs:
+        if zone_arguments and 'SetInputData' in programs:
+            raise ValueError('The model has the ACCIS of an earlier version of accim, whose arguments are the same in '
+                             'all the zones (program SetInputData). To give the arguments of each zone, add the ACCIS '
+                             'with this version of accim to the model without it.')
+        _modify_accis_of_earlier_versions(idf, programs, **arguments)
+        return
+    missing = [n for n in ('SetAST', 'ApplyCAT', 'SetComfTemp', 'SetAppLimits') if n not in programs]
+    if missing:
+        raise ValueError(f'The model has no EMS programs {missing}. Add the ACCIS first with add_accis_to_idf().')
+    if setpoint_acc < 0:
+        raise ValueError('The value for setpoint_acc cannot be less than 0.')
+    zones = check_zone_arguments(zone_arguments)
+    resolved: Dict[str, Dict[str, Any]] = {}
+    if zones:
+        resolved = resolve_zone_arguments(zones, zone_names(resolve_targets(idf), list(zone_programs)))
+    for zone, program in zone_programs.items():
+        set_inputs(program, input_values(dict(arguments, **resolved.get(zone, {}))))
+
+
+def _modify_accis_of_earlier_versions(
+    idf, programs: Dict[str, Any], comf_stand, cat, cat_cool_offset, cat_heat_offset, comf_mod, setpoint_acc,
+    cust_ast_acst_aul, cust_ast_acst_all, cust_ast_ahst_aul, cust_ast_ahst_all, cust_ast_m, cust_ast_n,
+    cust_ast_acst_offset, cust_ast_ahst_offset, cool_season_start, cool_season_end, hvac_mode, vent_ctrl,
+    max_temp_diff_vof, min_temp_diff_vof, multiplier_vof, vst_offset, min_ot_offset, max_wind_speed, ast_tol,
+) -> None:
+    """:func:`modify_accis` for the models of earlier versions of accim, which have one program SetInputData for all
+    the zones, and the other arguments in SetAST, ApplyCAT, SetAppLimits and SetVOFinputData."""
     missing = [n for n in ('SetInputData', 'SetAST', 'ApplyCAT', 'SetComfTemp', 'SetAppLimits') if n not in programs]
     if missing:
         raise ValueError(f'The model has no EMS programs {missing}. Add the ACCIS first with add_accis_to_idf().')

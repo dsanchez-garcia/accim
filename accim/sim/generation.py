@@ -4,9 +4,10 @@
 
 """Output IDFs of :class:`accim.sim.accis.AddAccis`: one for each combination of the arguments.
 
-All the output IDFs of an input IDF share every object but a few EMS programs (SetInputData, SetAST,
-ApplyCAT, SetAppLimits and SetVOFinputData). The text of the other objects is written once, and only
-those programs are written for each output IDF, which gives the files that eppy would save, faster.
+All the output IDFs of an input IDF share every object but the EMS programs SetInputData_<zone>, with the arguments
+of each zone (those of the combination, or those of ``zone_arguments`` for some zones). The text of the other objects
+is written once, and only those programs are written for each output IDF, which gives the files that eppy would
+save, faster.
 """
 
 import math
@@ -15,22 +16,23 @@ import platform
 import warnings
 from collections.abc import Mapping
 from dataclasses import dataclass, field
-from typing import Dict, Iterator, List, Optional, Union
+from typing import Any, Dict, Iterator, List, Optional, Union
 
 import numpy as np
 
 from accim.sim.arguments import as_list, to_day_of_year
-from accim.sim.ems.setast import get_setpoint_lines, has_setpoints
-from accim.sim.idf_tools import replace_program_lines, set_program_lines
+from accim.sim.ems.inputs import input_lines, input_programs, input_values
+from accim.sim.ems.setast import has_setpoints
+from accim.sim.idf_tools import replace_program_lines
 from accim.sim.standards import COMFORT_STANDARDS
 
-__all__ = ['Combination', 'GenerationArguments', 'IdfWriter', 'OutputIdfs', 'combinations', 'output_name']
+__all__ = ['Combination', 'GenerationArguments', 'IdfWriter', 'OutputIdfs', 'combinations', 'output_name',
+           'zone_arguments_errors']
 
 Number = Union[int, float]
 _STATIC_MODES = (0.1, 0.2, 0.3, 0.4, 0.5, 1.1, 1.2, 1.3, 1.4, 1.5)
-#: Lines 5 to 8 of SetInputData in the output IDFs with HVACmode 0, where ventilation is not used
-_NO_VENTILATION_LINES = ('set VentCtrl = 0', 'set VSToffset = 0', 'set MinOToffset = 7', 'set MaxWindSpeed = 6')
-_MUTABLE_PROGRAMS = ('SetInputData', 'SetAST', 'ApplyCAT', 'SetAppLimits', 'SetVOFinputData')
+#: The ventilation arguments of the zones with HVACmode 0 in the output IDFs, where ventilation is not used
+_NO_VENTILATION = {'vent_ctrl': 0, 'vst_offset': 0, 'min_ot_offset': 7, 'max_wind_speed': 6}
 
 
 @dataclass
@@ -210,21 +212,83 @@ def _save_text(text: str) -> bytes:
     return os.linesep.join(text.splitlines()).encode('latin-1')
 
 
+def zone_input_arguments(args: GenerationArguments, combination: Combination,
+                         zone_arguments: Optional[Mapping[str, Any]] = None) -> Dict[str, Any]:
+    """The arguments of a zone in the output IDF of a combination, as those of
+    :func:`accim.sim.accis.modify_accis`.
+
+    The arguments of the combination, or those of the zone in ``zone_arguments``. With ESP CTE (ComfStand 0), the
+    category is 1 and the comfort mode 0; with HVACmode 0, the ventilation arguments are those of no ventilation.
+    The ventilation arguments that the combination does not have (HVACmode 0) and the zone needs (HVACmode 1 or 2
+    in ``zone_arguments``) are the first values of those of AddAccis.
+    """
+    a = args
+    c = combination
+    arguments = dict(
+        comf_stand=c.comf_stand, cat=c.cat, comf_mod=c.comf_mod, hvac_mode=c.hvac_mode, vent_ctrl=c.vent_ctrl,
+        vst_offset=c.vst_offset, min_ot_offset=c.min_ot_offset, max_wind_speed=c.max_wind_speed, ast_tol=c.ast_tol,
+        cool_season_start=a.cool_season_start, cool_season_end=a.cool_season_end, cat_cool_offset=a.cat_cool_offset,
+        cat_heat_offset=a.cat_heat_offset, setpoint_acc=a.setpoint_acc, cust_ast_m=a.cust_ast_m,
+        cust_ast_n=a.cust_ast_n, cust_ast_acst_offset=a.cust_ast_acst_offset,
+        cust_ast_ahst_offset=a.cust_ast_ahst_offset, cust_ast_acst_aul=a.cust_ast_acst_aul,
+        cust_ast_acst_all=a.cust_ast_acst_all, cust_ast_ahst_aul=a.cust_ast_ahst_aul,
+        cust_ast_ahst_all=a.cust_ast_ahst_all, max_temp_diff_vof=a.max_temp_diff_vof,
+        min_temp_diff_vof=a.min_temp_diff_vof, multiplier_vof=a.multiplier_vof,
+    )
+    arguments.update(zone_arguments or {})
+    if arguments['comf_stand'] == 0:
+        arguments.update(cat=1, comf_mod=0)
+    if arguments['hvac_mode'] == 0:
+        arguments.update(_NO_VENTILATION)
+    else:
+        for name in _NO_VENTILATION:
+            if arguments[name] is None:
+                arguments[name] = getattr(args, name)[0]
+    return arguments
+
+
+def zone_arguments_errors(arguments: Mapping[str, Any], mixed_mode: bool) -> List[str]:
+    """The reasons why the arguments of a zone (see :func:`zone_input_arguments`) give no setpoints (empty if they
+    are valid)."""
+    errors = []
+    comf_stand, cat, comf_mod = arguments['comf_stand'], arguments['cat'], arguments['comf_mod']
+    if comf_stand not in COMFORT_STANDARDS:
+        errors.append(f'comf_stand {comf_stand!r} is not a comfort standard (valid: {list(COMFORT_STANDARDS)})')
+    elif comf_stand != 0:
+        categories = COMFORT_STANDARDS[comf_stand].categories
+        if categories and cat not in categories:
+            errors.append(f'cat {cat!r} is not a category of comf_stand {comf_stand} (valid: {list(categories)})')
+        if not has_setpoints(comf_stand, comf_mod):
+            errors.append(f'comf_stand {comf_stand} has no setpoints with comf_mod {comf_mod!r}')
+    hvac_mode = arguments['hvac_mode']
+    if hvac_mode not in (0, 1, 2) or (hvac_mode != 0 and not mixed_mode):
+        valid = [0, 1, 2] if mixed_mode else [0]
+        errors.append(f'hvac_mode {hvac_mode!r} is not valid with this script type (valid: {valid})')
+    elif arguments['vent_ctrl'] not in ((0, 1) if hvac_mode == 1 else (0, 1, 2, 3)):
+        errors.append(f"vent_ctrl {arguments['vent_ctrl']!r} is not valid with hvac_mode {hvac_mode}")
+    return errors
+
+
 class IdfWriter:
-    """Writes the output IDFs of a model, with the programs of each combination.
+    """Writes the output IDFs of a model, with the programs SetInputData_<zone> of each combination.
 
     :param idf: The model, with the EMS programs of ACCIS.
     :param args: The arguments of the output IDFs.
     :param temp_ctrl: 'temperature' or 'pmv'.
+    :param zone_arguments: The arguments of some zones, which are the same in all the output IDFs,
+        ``{zone name in the EMS objects: {argument: value}}`` (see :func:`zone_input_arguments`).
     """
 
-    def __init__(self, idf, args: GenerationArguments, temp_ctrl: str = 'temperature'):
+    def __init__(self, idf, args: GenerationArguments, temp_ctrl: str = 'temperature',
+                 zone_arguments: Optional[Mapping[str, Mapping[str, Any]]] = None):
         self.idf = idf
         self.args = args
         self.temp_ctrl = temp_ctrl
-        programs = {p.Name: p for p in idf.idfobjects['EnergyManagementSystem:Program']}
-        self.programs = {name: programs.get(name) for name in _MUTABLE_PROGRAMS}
-        mutable = {id(p) for p in self.programs.values() if p is not None}
+        self.zone_arguments = dict(zone_arguments or {})
+        self.programs = input_programs(idf)
+        # The models in mixed mode have the program SetVST and the inputs of the venting opening factor
+        self.mixed_mode = any(p.Name.upper() == 'SETVST' for p in idf.idfobjects['EnergyManagementSystem:Program'])
+        mutable = {id(p) for p in self.programs.values()}
         self._parts: List[Union[str, object]] = []
         static: List[str] = []
         for object_type in idf.model.dtls:
@@ -236,54 +300,19 @@ class IdfWriter:
                 else:
                     static.append(obj.__repr__())
         self._parts.append(''.join(static))
-        self._set_constant_lines()
-
-    def _set_constant_lines(self) -> None:
-        """Set the lines that are the same in all the output IDFs: the venting opening factor and, with
-        temperature control, the custom model and the CAT offsets."""
-        a = self.args
-        p = self.programs
-        if p['SetVOFinputData'] is not None:
-            set_program_lines(p['SetVOFinputData'], [f'set MaxTempDiffVOF = {a.max_temp_diff_vof}',
-                                                     f'set MinTempDiffVOF = {a.min_temp_diff_vof}',
-                                                     f'set MultiplierVOF = {a.multiplier_vof}'])
-        if self.temp_ctrl == 'pmv':
-            return
-        if p['SetAppLimits'] is not None:
-            set_program_lines(p['SetAppLimits'], [f'set ACSTaul = {a.cust_ast_acst_aul}', f'set ACSTall = {a.cust_ast_acst_all}',
-                                                  f'set AHSTaul = {a.cust_ast_ahst_aul}', f'set AHSTall = {a.cust_ast_ahst_all}'],
-                              first=2)
-        if p['ApplyCAT'] is not None:
-            set_program_lines(p['ApplyCAT'], [f'set CATcoolOffset = {a.cat_cool_offset}',
-                                              f'set CATheatOffset = {a.cat_heat_offset}'])
-            set_program_lines(p['ApplyCAT'], [f'set ACSToffset = {a.cust_ast_acst_offset} + {a.cat_cool_offset}',
-                                              f'set AHSToffset = {a.cust_ast_ahst_offset} + {a.cat_heat_offset}'],
-                              first=4)
 
     def _set_lines(self, combination: Combination) -> None:
         a = self.args
-        p = self.programs
         if combination.is_pmv:
-            # The Fanger thermostats control the zones: SetInputData and SetAST keep their base lines
-            p['SetInputData'].Program_Line_4 = 'set HVACmode = 0'
+            # The Fanger thermostats control the zones: the inputs keep their default values, except HVACmode
+            values = input_values(dict(hvac_mode=0, max_temp_diff_vof=a.max_temp_diff_vof,
+                                       min_temp_diff_vof=a.min_temp_diff_vof, multiplier_vof=a.multiplier_vof))
+            for program in self.programs.values():
+                replace_program_lines(program, input_lines(values, self.mixed_mode))
             return
-        c = combination
-        cat = 1 if c.comf_stand == 0 else c.cat
-        comf_mod = 0 if c.comf_stand == 0 else c.comf_mod
-        if c.hvac_mode == 0:
-            ventilation = list(_NO_VENTILATION_LINES)
-        else:
-            ventilation = [f'set VentCtrl = {c.vent_ctrl}', f'set VSToffset = {c.vst_offset}',
-                           f'set MinOToffset = {c.min_ot_offset}', f'set MaxWindSpeed = {c.max_wind_speed}']
-        set_program_lines(p['SetInputData'], [
-            f'set ComfStand = {c.comf_stand}', f'set CAT = {cat}', f'set ComfMod = {comf_mod}',
-            f'set HVACmode = {c.hvac_mode}', *ventilation, f'set ACSTtol = {-c.ast_tol}',
-            f'set AHSTtol = {c.ast_tol}', f'set CoolSeasonStart = {a.cool_season_start}',
-            f'set CoolSeasonEnd = {a.cool_season_end}'])
-        # SetAST: the setpoint accuracy, the custom model, 'run SetAST_Master' and the lines of the comfort model
-        replace_program_lines(p['SetAST'], [f'set SetpointAcc = {a.setpoint_acc}', f'set m = {a.cust_ast_m}',
-                                            f'set n = {a.cust_ast_n}', 'run SetAST_Master',
-                                            *get_setpoint_lines(c.comf_stand, comf_mod)])
+        for zone, program in self.programs.items():
+            arguments = zone_input_arguments(a, combination, self.zone_arguments.get(zone))
+            replace_program_lines(program, input_lines(input_values(arguments), self.mixed_mode))
 
     def text(self, combination: Combination) -> str:
         """The text of the output IDF of a combination (as eppy's IDF.idfstr)."""

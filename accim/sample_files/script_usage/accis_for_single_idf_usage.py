@@ -37,7 +37,7 @@ model = accis.add_accis_to_idf(
 )
 model.occupied_zones
 
-# Setting its arguments
+# Setting its arguments, in all the zones
 
 accis.modify_accis(
     idf,
@@ -54,10 +54,24 @@ accis.modify_accis(
     # max_wind_speed=50
 )
 
+# Each zone can have its own arguments: here, the zone Block1:Zone2 has the ASHRAE 55 model and no natural
+# ventilation, and the other zones keep those above. The arguments of each zone are in its EMS program
+# SetInputData_<zone>.
+
+accis.modify_accis(
+    idf,
+    comf_stand=1,
+    cat=3,
+    comf_mod=3,
+    hvac_mode=2,
+    vent_ctrl=0,
+    zone_arguments={'Block1:Zone2': {'comf_stand': 2, 'cat': 80, 'hvac_mode': 0}},
+)
+
 programs = {program.Name: program for program in idf.idfobjects['EnergyManagementSystem:Program']}
-programs['SetInputData']
-programs['SetVOFinputData']
-programs['SetAST']
+programs['SetInputData_Block1_Zone1']
+programs['SetInputData_Block1_Zone2']
+programs['RunACCIS_Block1_Zone1']
 
 # idf.savecopy('z_modified_to_adaptive_3.idf')
 

@@ -38,12 +38,14 @@ def _program_lines(building):
 
 
 def _setpoints(building, pmot):
-    """ComfTemp, ACST and AHST of the EMS programs of the model in their first run, as in EnergyPlus."""
+    """ComfTemp, ACST and AHST of the EMS programs of the first zone of the model in their first run, as in
+    EnergyPlus."""
     programs = _program_lines(building)
+    first_zone_inputs = next(name for name in programs if name.startswith('SetInputData_'))
     erl = ErlProgramSet(programs, global_variables=set().union(*variables_in_programs(programs).values()))
     for name, value in dict(RMOT=pmot, PMOT=pmot, DayOfYear=180.0, CurrentTime=12.0).items():
         erl.set(name, value)
-    for name in ['SetInputData', 'SetAppLimits', 'ApplyCAT', 'SetComfTemp', 'SetAST', 'SetASTnoTol']:
+    for name in [first_zone_inputs, 'SetAppLimits', 'ApplyCAT', 'SetComfTemp', 'SetAST', 'SetASTnoTol']:
         erl.run(name)
     return erl.get('ComfTemp'), erl.get('ACST'), erl.get('AHST')
 
@@ -54,9 +56,12 @@ def test_the_baseline_is_a_valid_comfort_model(building, pmot, comf_temp):
                               ScriptType='vrf_mm')
 
     programs = _program_lines(building)
-    assert programs['SetInputData'][:5] == ['set ComfStand = 99', 'set CAT = 80', 'set ComfMod = 3',
-                                            'set HVACmode = 2', 'set VentCtrl = 0']
-    assert programs['SetAST'][:3] == ['set SetpointAcc = 10000', 'set m = 0.31', 'set n = 17.8']
+    inputs = [lines for name, lines in programs.items() if name.startswith('SetInputData_')]
+    assert inputs
+    for lines in inputs:
+        assert lines[:5] == ['set ComfStand = 99', 'set CAT = 80', 'set ComfMod = 3', 'set HVACmode = 2',
+                             'set VentCtrl = 0']
+        assert {'set SetpointAcc = 10000', 'set m = 0.31', 'set n = 17.8'} <= set(lines)
     # Below the lower applicability limit (10 C), the setpoints of the custom model keep those of the limit
     _, acst, ahst = _setpoints(building, pmot)
     assert acst == pytest.approx(comf_temp + 3.5 - 0.1)

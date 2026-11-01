@@ -17,7 +17,9 @@
 """ACCIS parameter-modifier helpers used by BESOS problem definitions.
 
 This module provides:
-- low-level IDF EMS line modifiers (``modify_*``), and
+
+- IDF EMS line modifiers (``modify_*``), which set an argument of the ACCIS in all the zones of a model (in the
+  programs ``SetInputData_<zone>``, or in the programs of the models of earlier versions of accim), and
 - utilities to validate/drop invalid combinations for ACCIS parameters.
 
 Usage
@@ -30,6 +32,91 @@ result = <module>()
 """
 
 import besos.IDF_class
+
+from accim.sim.ems.inputs import input_programs, read_inputs, set_inputs
+
+#: The program, line and variable of each input of the ACCIS in the models of earlier versions of accim, which have
+#: one program SetInputData for all the zones and other inputs in SetAST, ApplyCAT, SetAppLimits and
+#: SetVOFinputData: {EMS variable of SetInputData_<zone>: (program, line number, variable of the line)}.
+_EARLIER_VERSION_LINES = {
+    'ComfStand': ('SetInputData', 1, 'ComfStand'),
+    'CAT': ('SetInputData', 2, 'CAT'),
+    'ComfMod': ('SetInputData', 3, 'ComfMod'),
+    'HVACmode': ('SetInputData', 4, 'HVACmode'),
+    'VentCtrl': ('SetInputData', 5, 'VentCtrl'),
+    'VSToffset': ('SetInputData', 6, 'VSToffset'),
+    'MinOToffset': ('SetInputData', 7, 'MinOToffset'),
+    'MaxWindSpeed': ('SetInputData', 8, 'MaxWindSpeed'),
+    'ACSTtol': ('SetInputData', 9, 'ACSTtol'),
+    'AHSTtol': ('SetInputData', 10, 'AHSTtol'),
+    'CoolSeasonStart': ('SetInputData', 11, 'CoolSeasonStart'),
+    'CoolSeasonEnd': ('SetInputData', 12, 'CoolSeasonEnd'),
+    'SetpointAcc': ('SetAST', 1, 'SetpointAcc'),
+    'm': ('SetAST', 2, 'm'),
+    'n': ('SetAST', 3, 'n'),
+    'CATcoolOffset': ('ApplyCAT', 1, 'CATcoolOffset'),
+    'CATheatOffset': ('ApplyCAT', 2, 'CATheatOffset'),
+    'CustAST_ACSToffset': ('ApplyCAT', 4, 'ACSToffset'),
+    'CustAST_AHSToffset': ('ApplyCAT', 5, 'AHSToffset'),
+    'CustAST_ACSTaul': ('SetAppLimits', 2, 'ACSTaul'),
+    'CustAST_ACSTall': ('SetAppLimits', 3, 'ACSTall'),
+    'CustAST_AHSTaul': ('SetAppLimits', 4, 'AHSTaul'),
+    'CustAST_AHSTall': ('SetAppLimits', 5, 'AHSTall'),
+    'MaxTempDiffVOF': ('SetVOFinputData', 1, 'MaxTempDiffVOF'),
+    'MinTempDiffVOF': ('SetVOFinputData', 2, 'MinTempDiffVOF'),
+    'MultiplierVOF': ('SetVOFinputData', 3, 'MultiplierVOF'),
+}
+#: The coefficients of the custom comfort model, by their names in the parametric module, and their EMS variables
+CUSTOM_MODEL_VARIABLES = {
+    'm': 'm',
+    'n': 'n',
+    'ACSToffset': 'CustAST_ACSToffset',
+    'AHSToffset': 'CustAST_AHSToffset',
+    'ACSTaul': 'CustAST_ACSTaul',
+    'ACSTall': 'CustAST_ACSTall',
+    'AHSTaul': 'CustAST_AHSTaul',
+    'AHSTall': 'CustAST_AHSTall',
+}
+
+
+def _set_inputs(idf, values: dict) -> None:
+    """Set some inputs of the ACCIS ({EMS variable: value}) in all the zones of a model: in its programs
+    SetInputData_<zone> or, in the models of earlier versions of accim, in the lines where they are.
+
+    :raises ValueError: If the model does not have one of these inputs (those of the venting opening factor without
+        natural ventilation, for instance).
+    """
+    zone_programs = input_programs(idf)
+    if zone_programs:
+        missing = set(values)
+        for program in zone_programs.values():
+            missing &= set(set_inputs(program, values))
+        if missing:
+            raise ValueError(f'The ACCIS of the model has no inputs {sorted(missing)} (the models without natural '
+                             f'ventilation have no inputs of the venting opening factor).')
+        return
+    programs = {p.Name: p for p in idf.idfobjects['EnergyManagementSystem:Program']}
+    for variable, value in values.items():
+        name, line, written = _EARLIER_VERSION_LINES[variable]
+        if name not in programs:
+            raise ValueError(f'The model has no EMS program {name}, which sets {variable} in the models of earlier '
+                             f'versions of accim.')
+        setattr(programs[name], f'Program_Line_{line}', f'set {written} = {value}')
+
+
+def get_custom_model_arguments(idf) -> dict:
+    """The coefficients of the custom comfort model (ComfStand 99) of a model, by their names in the parametric
+    module (``{'m': 0.31, 'n': 17.8, 'ACSToffset': 3.5...}``): those of its first zone, or those of the programs of
+    the models of earlier versions of accim."""
+    zone_programs = input_programs(idf)
+    if zone_programs:
+        values = read_inputs(next(iter(zone_programs.values())))
+        return {name: values.get(variable, 0) for name, variable in CUSTOM_MODEL_VARIABLES.items()}
+    from accim.utils import get_accim_args
+    arguments = get_accim_args(idf).get('CustAST')
+    if not isinstance(arguments, dict):
+        return {name: 0 for name in CUSTOM_MODEL_VARIABLES}
+    return {name: arguments.get(name, 0) for name in CUSTOM_MODEL_VARIABLES}
 
 # def modify_VSToffset(building, value):
 #     import accim.sim.accis_single_idf_funcs as accis
@@ -278,11 +365,8 @@ def modify_ComfStand(idf: besos.IDF_class, value: int):
     --------
     result = modify_ComfStand(idf=..., value=...)
     """
-    SetInputData = ([program for program in idf.idfobjects['EnergyManagementSystem:Program'] if
-                     program.Name == 'SetInputData'][0])
-    SetInputData.Program_Line_1 = f'set ComfStand = {value}'
+    _set_inputs(idf, {'ComfStand': value})
 
-    return
 
 def modify_CustAST_ACSTaul(idf: besos.IDF_class, value: float):
     """Modifies the CustAST_ACSTaul argument to match the entered value.
@@ -299,11 +383,8 @@ def modify_CustAST_ACSTaul(idf: besos.IDF_class, value: float):
     --------
     result = modify_CustAST_ACSTaul(idf=..., value=...)
     """
-    SetAppLimits = ([program for program in idf.idfobjects['EnergyManagementSystem:Program'] if
-                          program.Name == 'SetAppLimits'][0])
-    SetAppLimits.Program_Line_2 = f'set ACSTaul = {value}'
+    _set_inputs(idf, {'CustAST_ACSTaul': value})
 
-    return
 
 def modify_CustAST_ACSTall(idf: besos.IDF_class, value: float):
     """Modifies the CustAST_ACSTall argument to match the entered value.
@@ -320,11 +401,8 @@ def modify_CustAST_ACSTall(idf: besos.IDF_class, value: float):
     --------
     result = modify_CustAST_ACSTall(idf=..., value=...)
     """
-    SetAppLimits = ([program for program in idf.idfobjects['EnergyManagementSystem:Program'] if
-                          program.Name == 'SetAppLimits'][0])
-    SetAppLimits.Program_Line_3 = f'set ACSTall = {value}'
+    _set_inputs(idf, {'CustAST_ACSTall': value})
 
-    return
 
 def modify_CustAST_AHSTaul(idf: besos.IDF_class, value: float):
     """Modifies the CustAST_AHSTaul argument to match the entered value.
@@ -341,11 +419,8 @@ def modify_CustAST_AHSTaul(idf: besos.IDF_class, value: float):
     --------
     result = modify_CustAST_AHSTaul(idf=..., value=...)
     """
-    SetAppLimits = ([program for program in idf.idfobjects['EnergyManagementSystem:Program'] if
-                          program.Name == 'SetAppLimits'][0])
-    SetAppLimits.Program_Line_4 = f'set AHSTaul = {value}'
+    _set_inputs(idf, {'CustAST_AHSTaul': value})
 
-    return
 
 def modify_CustAST_AHSTall(idf: besos.IDF_class, value: float):
     """Modifies the CustAST_AHSTall argument to match the entered value.
@@ -362,11 +437,8 @@ def modify_CustAST_AHSTall(idf: besos.IDF_class, value: float):
     --------
     result = modify_CustAST_AHSTall(idf=..., value=...)
     """
-    SetAppLimits = ([program for program in idf.idfobjects['EnergyManagementSystem:Program'] if
-                          program.Name == 'SetAppLimits'][0])
-    SetAppLimits.Program_Line_5 = f'set AHSTall = {value}'
+    _set_inputs(idf, {'CustAST_AHSTall': value})
 
-    return
 
 def modify_CustAST_ASTall(idf: besos.IDF_class, value: float):
     """Modifies the CustAST_ACSTall and CustAST_AHSTall arguments to match the entered value.
@@ -383,12 +455,8 @@ def modify_CustAST_ASTall(idf: besos.IDF_class, value: float):
     --------
     result = modify_CustAST_ASTall(idf=..., value=...)
     """
-    SetAppLimits = ([program for program in idf.idfobjects['EnergyManagementSystem:Program'] if
-                          program.Name == 'SetAppLimits'][0])
-    SetAppLimits.Program_Line_3 = f'set ACSTall = {value}'
-    SetAppLimits.Program_Line_5 = f'set AHSTall = {value}'
+    _set_inputs(idf, {'CustAST_ACSTall': value, 'CustAST_AHSTall': value})
 
-    return
 
 def modify_CustAST_ASTaul(idf: besos.IDF_class, value: float):
     """Modifies the CustAST_ACSTaul and CustAST_AHSTaul arguments to match the entered value.
@@ -405,12 +473,8 @@ def modify_CustAST_ASTaul(idf: besos.IDF_class, value: float):
     --------
     result = modify_CustAST_ASTaul(idf=..., value=...)
     """
-    SetAppLimits = ([program for program in idf.idfobjects['EnergyManagementSystem:Program'] if
-                          program.Name == 'SetAppLimits'][0])
-    SetAppLimits.Program_Line_2 = f'set ACSTaul = {value}'
-    SetAppLimits.Program_Line_4 = f'set AHSTaul = {value}'
+    _set_inputs(idf, {'CustAST_ACSTaul': value, 'CustAST_AHSTaul': value})
 
-    return
 
 def modify_CustAST_m(idf: besos.IDF_class, value: float):
     """Modifies the CustAST_m argument to match the entered value.
@@ -427,11 +491,7 @@ def modify_CustAST_m(idf: besos.IDF_class, value: float):
     --------
     result = modify_CustAST_m(idf=..., value=...)
     """
-    SetAST = ([program for program in idf.idfobjects['EnergyManagementSystem:Program'] if
-               program.Name == 'SetAST'][0])
-    SetAST.Program_Line_2 = f'set m = {value}'
-
-    return
+    _set_inputs(idf, {'m': value})
 
 
 def modify_CustAST_n(idf: besos.IDF_class, value: float):
@@ -449,11 +509,8 @@ def modify_CustAST_n(idf: besos.IDF_class, value: float):
     --------
     result = modify_CustAST_n(idf=..., value=...)
     """
-    SetAST = ([program for program in idf.idfobjects['EnergyManagementSystem:Program'] if
-               program.Name == 'SetAST'][0])
-    SetAST.Program_Line_3 = f'set n = {value}'
+    _set_inputs(idf, {'n': value})
 
-    return
 
 def modify_CustAST_ACSToffset(idf: besos.IDF_class, value: float):
     """Modifies the ACSToffset argument to match the entered value.
@@ -470,11 +527,7 @@ def modify_CustAST_ACSToffset(idf: besos.IDF_class, value: float):
     --------
     result = modify_CustAST_ACSToffset(idf=..., value=...)
     """
-    ApplyCAT = ([program for program in idf.idfobjects['EnergyManagementSystem:Program'] if
-                 program.Name == 'ApplyCAT'][0])
-    ApplyCAT.Program_Line_4 = f'set ACSToffset = {value}'
-
-    return
+    _set_inputs(idf, {'CustAST_ACSToffset': value})
 
 
 def modify_CustAST_AHSToffset(idf: besos.IDF_class, value: float):
@@ -492,11 +545,8 @@ def modify_CustAST_AHSToffset(idf: besos.IDF_class, value: float):
     --------
     result = modify_CustAST_AHSToffset(idf=..., value=...)
     """
-    ApplyCAT = ([program for program in idf.idfobjects['EnergyManagementSystem:Program'] if
-                 program.Name == 'ApplyCAT'][0])
-    ApplyCAT.Program_Line_5 = f'set AHSToffset = {value}'
+    _set_inputs(idf, {'CustAST_AHSToffset': value})
 
-    return
 
 def modify_CustAST_ASToffset(idf: besos.IDF_class, value: float):
     """Modifies the ACSToffset and AHSToffset arguments symmetrically to match the entered value.
@@ -513,12 +563,7 @@ def modify_CustAST_ASToffset(idf: besos.IDF_class, value: float):
     --------
     result = modify_CustAST_ASToffset(idf=..., value=...)
     """
-    ApplyCAT = ([program for program in idf.idfobjects['EnergyManagementSystem:Program'] if
-                 program.Name == 'ApplyCAT'][0])
-    ApplyCAT.Program_Line_4 = f'set ACSToffset = {value}'
-    ApplyCAT.Program_Line_5 = f'set AHSToffset = {-value}'
-
-    return
+    _set_inputs(idf, {'CustAST_ACSToffset': value, 'CustAST_AHSToffset': -value})
 
 
 def modify_CAT(idf: besos.IDF_class, value: int):
@@ -536,11 +581,8 @@ def modify_CAT(idf: besos.IDF_class, value: int):
     --------
     result = modify_CAT(idf=..., value=...)
     """
-    SetInputData = ([program for program in idf.idfobjects['EnergyManagementSystem:Program'] if
-                     program.Name == 'SetInputData'][0])
-    SetInputData.Program_Line_2 = f'set CAT = {value}'
+    _set_inputs(idf, {'CAT': value})
 
-    return
 
 def modify_CATcoolOffset(idf: besos.IDF_class, value: float):
     """Modifies the CATcoolOffset argument to match the entered value.
@@ -557,11 +599,8 @@ def modify_CATcoolOffset(idf: besos.IDF_class, value: float):
     --------
     result = modify_CATcoolOffset(idf=..., value=...)
     """
-    ApplyCAT = ([program for program in idf.idfobjects['EnergyManagementSystem:Program'] if
-                 program.Name == 'ApplyCAT'][0])
-    ApplyCAT.Program_Line_1 = f'set CATcoolOffset = {value}'
+    _set_inputs(idf, {'CATcoolOffset': value})
 
-    return
 
 def modify_CATheatOffset(idf: besos.IDF_class, value: float):
     """Modifies the CATheatOffset argument to match the entered value.
@@ -578,11 +617,8 @@ def modify_CATheatOffset(idf: besos.IDF_class, value: float):
     --------
     result = modify_CATheatOffset(idf=..., value=...)
     """
-    ApplyCAT = ([program for program in idf.idfobjects['EnergyManagementSystem:Program'] if
-                 program.Name == 'ApplyCAT'][0])
-    ApplyCAT.Program_Line_2 = f'set CATheatOffset = {value}'
+    _set_inputs(idf, {'CATheatOffset': value})
 
-    return
 
 def modify_ComfMod(idf: besos.IDF_class, value: float):
     """Modifies the ComfMod argument to match the entered value.
@@ -599,11 +635,8 @@ def modify_ComfMod(idf: besos.IDF_class, value: float):
     --------
     result = modify_ComfMod(idf=..., value=...)
     """
-    SetInputData = ([program for program in idf.idfobjects['EnergyManagementSystem:Program'] if
-                     program.Name == 'SetInputData'][0])
-    SetInputData.Program_Line_3 = f'set ComfMod = {value}'
+    _set_inputs(idf, {'ComfMod': value})
 
-    return
 
 def modify_HVACmode(idf: besos.IDF_class, value: int):
     """Modifies the HVACmode argument to match the entered value.
@@ -620,10 +653,8 @@ def modify_HVACmode(idf: besos.IDF_class, value: int):
     --------
     result = modify_HVACmode(idf=..., value=...)
     """
-    SetInputData = ([program for program in idf.idfobjects['EnergyManagementSystem:Program'] if
-                     program.Name == 'SetInputData'][0])
-    SetInputData.Program_Line_4 = f'set HVACmode = {value}'
-    return
+    _set_inputs(idf, {'HVACmode': value})
+
 
 def modify_VentCtrl(idf: besos.IDF_class, value: int):
     """Modifies the VentCtrl argument to match the entered value.
@@ -640,10 +671,8 @@ def modify_VentCtrl(idf: besos.IDF_class, value: int):
     --------
     result = modify_VentCtrl(idf=..., value=...)
     """
-    SetInputData = ([program for program in idf.idfobjects['EnergyManagementSystem:Program'] if
-                     program.Name == 'SetInputData'][0])
-    SetInputData.Program_Line_5 = f'set VentCtrl = {value}'
-    return
+    _set_inputs(idf, {'VentCtrl': value})
+
 
 def modify_VSToffset(idf: besos.IDF_class, value: float):
     """Modifies the VSToffset argument to match the entered value.
@@ -660,10 +689,8 @@ def modify_VSToffset(idf: besos.IDF_class, value: float):
     --------
     result = modify_VSToffset(idf=..., value=...)
     """
-    SetInputData = ([program for program in idf.idfobjects['EnergyManagementSystem:Program'] if
-                     program.Name == 'SetInputData'][0])
-    SetInputData.Program_Line_6 = f'set VSToffset = {value}'
-    return
+    _set_inputs(idf, {'VSToffset': value})
+
 
 def modify_MinOToffset(idf: besos.IDF_class, value: float):
     """Modifies the MinOToffset argument to match the entered value.
@@ -680,10 +707,8 @@ def modify_MinOToffset(idf: besos.IDF_class, value: float):
     --------
     result = modify_MinOToffset(idf=..., value=...)
     """
-    SetInputData = ([program for program in idf.idfobjects['EnergyManagementSystem:Program'] if
-                     program.Name == 'SetInputData'][0])
-    SetInputData.Program_Line_7 = f'set MinOToffset = {value}'
-    return
+    _set_inputs(idf, {'MinOToffset': value})
+
 
 def modify_MaxWindSpeed(idf: besos.IDF_class, value: float):
     """Modifies the MaxWindSpeed argument to match the entered value.
@@ -700,10 +725,8 @@ def modify_MaxWindSpeed(idf: besos.IDF_class, value: float):
     --------
     result = modify_MaxWindSpeed(idf=..., value=...)
     """
-    SetInputData = ([program for program in idf.idfobjects['EnergyManagementSystem:Program'] if
-                     program.Name == 'SetInputData'][0])
-    SetInputData.Program_Line_8 = f'set MaxWindSpeed = {value}'
-    return
+    _set_inputs(idf, {'MaxWindSpeed': value})
+
 
 def modify_ASTtol(idf: besos.IDF_class, value: float):
     """Modifies the ACSTtol and AHSTtol arguments symmetrically to match the entered value.
@@ -720,11 +743,8 @@ def modify_ASTtol(idf: besos.IDF_class, value: float):
     --------
     result = modify_ASTtol(idf=..., value=...)
     """
-    SetInputData = ([program for program in idf.idfobjects['EnergyManagementSystem:Program'] if
-                     program.Name == 'SetInputData'][0])
-    SetInputData.Program_Line_9 = f'set ACSTtol = {-value}'
-    SetInputData.Program_Line_10 = f'set AHSTtol = {value}'
-    return
+    _set_inputs(idf, {'ACSTtol': -value, 'AHSTtol': value})
+
 
 def modify_CoolSeasonStart(idf: besos.IDF_class, value: any):
     """Modifies the CoolSeasonStart argument to match the entered value.
@@ -742,14 +762,11 @@ def modify_CoolSeasonStart(idf: besos.IDF_class, value: any):
     --------
     result = modify_CoolSeasonStart(idf=..., value=...)
     """
-    SetInputData = ([program for program in idf.idfobjects['EnergyManagementSystem:Program'] if
-                     program.Name == 'SetInputData'][0])
     if type(value) is str:
         from accim.utils import transform_ddmm_to_int
         value = transform_ddmm_to_int(value)
+    _set_inputs(idf, {'CoolSeasonStart': value})
 
-    SetInputData.Program_Line_11 = f'set CoolSeasonStart = {value}'
-    return
 
 def modify_CoolSeasonEnd(idf: besos.IDF_class, value: any):
     """Modifies the CoolSeasonEnd argument to match the entered value.
@@ -767,14 +784,11 @@ def modify_CoolSeasonEnd(idf: besos.IDF_class, value: any):
     --------
     result = modify_CoolSeasonEnd(idf=..., value=...)
     """
-    SetInputData = ([program for program in idf.idfobjects['EnergyManagementSystem:Program'] if
-                     program.Name == 'SetInputData'][0])
     if type(value) is str:
         from accim.utils import transform_ddmm_to_int
         value = transform_ddmm_to_int(value)
+    _set_inputs(idf, {'CoolSeasonEnd': value})
 
-    SetInputData.Program_Line_12 = f'set CoolSeasonEnd = {value}'
-    return
 
 def modify_SetpointAcc(idf: besos.IDF_class, value: float):
     """Modifies the SetpointAcc argument to match the entered value.
@@ -791,10 +805,8 @@ def modify_SetpointAcc(idf: besos.IDF_class, value: float):
     --------
     result = modify_SetpointAcc(idf=..., value=...)
     """
-    SetAST = ([program for program in idf.idfobjects['EnergyManagementSystem:Program'] if
-               program.Name == 'SetAST'][0])
-    SetAST.Program_Line_1 = f'set SetpointAcc = {value}'
-    return
+    _set_inputs(idf, {'SetpointAcc': value})
+
 
 def modify_MaxTempDiffVOF(idf: besos.IDF_class, value: float):
     """Modifies the MaxTempDiffVOF argument to match the entered value.
@@ -811,10 +823,8 @@ def modify_MaxTempDiffVOF(idf: besos.IDF_class, value: float):
     --------
     result = modify_MaxTempDiffVOF(idf=..., value=...)
     """
-    SetVOFinputData = ([program for program in idf.idfobjects['EnergyManagementSystem:Program'] if
-                        program.Name == 'SetVOFinputData'][0])
-    SetVOFinputData.Program_Line_1 = f'set MaxTempDiffVOF = {value}'
-    return
+    _set_inputs(idf, {'MaxTempDiffVOF': value})
+
 
 def modify_MinTempDiffVOF(idf: besos.IDF_class, value: float):
     """Modifies the MinTempDiffVOF argument to match the entered value.
@@ -831,10 +841,8 @@ def modify_MinTempDiffVOF(idf: besos.IDF_class, value: float):
     --------
     result = modify_MinTempDiffVOF(idf=..., value=...)
     """
-    SetVOFinputData = ([program for program in idf.idfobjects['EnergyManagementSystem:Program'] if
-                        program.Name == 'SetVOFinputData'][0])
-    SetVOFinputData.Program_Line_2 = f'set MinTempDiffVOF = {value}'
-    return
+    _set_inputs(idf, {'MinTempDiffVOF': value})
+
 
 def modify_MultiplierVOF(idf: besos.IDF_class, value: int):
     """Modifies the MultiplierVOF argument to match the entered value.
@@ -851,9 +859,5 @@ def modify_MultiplierVOF(idf: besos.IDF_class, value: int):
     --------
     result = modify_MultiplierVOF(idf=..., value=...)
     """
-    SetVOFinputData = ([program for program in idf.idfobjects['EnergyManagementSystem:Program'] if
-                        program.Name == 'SetVOFinputData'][0])
-    SetVOFinputData.Program_Line_3 = f'set MultiplierVOF = {value}'
-    return
-
+    _set_inputs(idf, {'MultiplierVOF': value})
 

@@ -4,11 +4,13 @@
 
 """EMS variables, sensors, actuators and output variables of ACCIS."""
 
+from accim.sim.ems.programs import zone_variables
 from accim.sim.idf_tools import remove_objects, try_objects
 from accim.sim.model import AccimModel
 
 __all__ = [
     'ZONE_OUTPUT_VARIABLES',
+    'ZONE_SETPOINT_OUTPUT_VARIABLES',
     'add_actuators',
     'add_building_averages',
     'add_global_variables',
@@ -61,21 +63,40 @@ ZONE_OUTPUT_VARIABLES = {
     'Zone Air Volume': ('ZoneAirVolume', 'm3', 'Averaged'),
     'People Occupant Count': ('Occ_count', '', 'Summed'),
 }
+#: The setpoints of each zone, which can have its own arguments: name prefix -> (EMS variable prefix, units). The
+#: outputs of the whole model with the same names (without '_<zone>') have the values of the last zone, the same as
+#: those of every zone if all the zones have the same arguments.
+ZONE_SETPOINT_OUTPUT_VARIABLES = {
+    'Comfort Temperature': ('ComfTemp', 'C'),
+    'Adaptive Cooling Setpoint Temperature': ('roundedACST', 'C'),
+    'Adaptive Heating Setpoint Temperature': ('roundedAHST', 'C'),
+    'Adaptive Cooling Setpoint Temperature_No Tolerance': ('ACSTnoTol', 'C'),
+    'Adaptive Heating Setpoint Temperature_No Tolerance': ('AHSTnoTol', 'C'),
+}
+_ZONE_SETPOINT_OUTPUT_VARIABLES_MIXED_MODE = {
+    'Ventilation Setpoint Temperature': ('VST', 'C'),
+    'Minimum Outdoor Temperature for ventilation': ('MinOutTemp', 'C'),
+}
 _GLOBAL_VARIABLES = (
     'ACST', 'AHST', 'ACSTnoTol', 'AHSTnoTol', 'ComfStand', 'ACSTaul', 'ACSTall', 'AHSTaul', 'AHSTall', 'CAT',
     'ACSToffset', 'AHSToffset', 'ComfMod', 'ComfTemp', 'ACSTtol', 'AHSTtol', 'SetpointAcc', 'roundedACST',
     'roundedAHST', 'CoolSeasonStart', 'CoolSeasonEnd', 'm', 'n',
     # Set by SetAST_Master and read by the subprograms it runs
     'CoolingSeason',
+    # Inputs of each zone (SetInputData_<zone>) read by ApplyCAT and SetAppLimits
+    'CATcoolOffset', 'CATheatOffset', 'CustAST_ACSToffset', 'CustAST_AHSToffset', 'CustAST_ACSTaul', 'CustAST_ACSTall',
+    'CustAST_AHSTaul', 'CustAST_AHSTall',
 )
 _ZONE_GLOBAL_VARIABLES = (
     'ComfHours', 'DiscomfAppHotHours', 'DiscomfAppColdHours', 'DiscomfNonAppHotHours', 'DiscomfNonAppColdHours',
     'ComfHoursNoApp', 'ZoneFloorArea', 'ZoneAirVolume', 'OccHours', 'OccComfHoursNoApp', 'OccDiscomfHoursNoApp',
-)
+) + zone_variables(mixed_mode=False)
 _GLOBAL_VARIABLES_MIXED_MODE = (
     'VST', 'VSToffset', 'MaxWindSpeed', 'VentCtrl', 'HVACmode', 'MinOutTemp', 'MinOToffset', 'MaxTempDiffVOF',
     'MinTempDiffVOF', 'MultiplierVOF',
 )
+#: Variables of each zone in mixed mode only
+_ZONE_GLOBAL_VARIABLES_MIXED_MODE = ('VentHours',) + zone_variables(mixed_mode=True)[len(zone_variables(False)):]
 #: Variables of each zone whose building averages make_averages adds
 _HOURS_TO_AVERAGE = ('ComfHours', 'DiscomfAppHotHours', 'DiscomfAppColdHours', 'DiscomfNonAppHotHours',
                      'DiscomfNonAppColdHours', 'ComfHoursNoApp', 'OccHours', 'OccComfHoursNoApp',
@@ -112,6 +133,12 @@ def add_output_variables(model: AccimModel) -> None:
     if model.is_mixed_mode:
         for zone in model.ems_names:
             _new_output_variable(model, existing, f'Ventilation Hours_{zone}', f'VentHours_{zone}', 'Summed', 'H')
+    setpoints = dict(ZONE_SETPOINT_OUTPUT_VARIABLES)
+    if model.is_mixed_mode:
+        setpoints.update(_ZONE_SETPOINT_OUTPUT_VARIABLES_MIXED_MODE)
+    for name, (variable, units) in setpoints.items():
+        for zone in model.ems_names:
+            _new_output_variable(model, existing, f'{name}_{zone}', f'{variable}_{zone}', 'Averaged', units)
 
 
 def _new_global_variables(model: AccimModel, names) -> None:
@@ -128,7 +155,7 @@ def add_global_variables(model: AccimModel) -> None:
     if model.is_mixed_mode:
         _new_global_variables(model, _GLOBAL_VARIABLES_MIXED_MODE)
         for zone in model.ems_names:
-            _new_global_variables(model, [f'VentHours_{zone}'])
+            _new_global_variables(model, [f'{name}_{zone}' for name in _ZONE_GLOBAL_VARIABLES_MIXED_MODE])
         for window in model.windows:
             _new_global_variables(model, [f'{window}_MyVOF'])
     model.log('Global variables objects have been added')

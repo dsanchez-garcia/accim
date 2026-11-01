@@ -12,8 +12,7 @@ import pandas as pd
 from accim._deprecation import warn_deprecated
 from accim.sim import accis as _accis
 from accim.sim.arguments import LEGACY_ARGUMENT_NAMES
-from accim.sim.ems.setast import get_setpoint_lines
-from accim.sim.idf_tools import replace_program_lines
+from accim.sim.ems.inputs import input_programs
 from accim.sim.outputs import output_variables_dataframe
 
 __all__ = ['addAccis']
@@ -30,8 +29,10 @@ class addAccis:  # noqa: N801 (the name of accim 0.x)
     :ivar windows_and_doors: The windows and doors that open, as in the EMS objects (mixed mode).
     :ivar windows_and_doors_original_name: The windows and doors that open (mixed mode).
     :ivar df_outputs: The DataFrame of Output:Variable objects (argument ``Output_gen_dataframe``).
-    :ivar SetInputData: The EMS program SetInputData (and likewise ``SetVOFinputData``, ``SetAST``, ``ApplyCAT``,
-        ``SetComfTemp`` and ``SetAppLimits``; None if the model does not have it).
+    :ivar SetAST: The EMS program SetAST (and likewise ``ApplyCAT``, ``SetComfTemp`` and ``SetAppLimits``; None if
+        the model does not have it). ``SetInputData`` and ``SetVOFinputData`` are None: since accim 1.0.0, the
+        arguments of each zone are in its program SetInputData_<zone>.
+    :ivar zone_input_programs: The programs SetInputData_<zone>, by the name of their zone in the EMS objects.
     """
 
     _PROGRAMS = ('SetInputData', 'SetVOFinputData', 'SetAST', 'ApplyCAT', 'SetComfTemp', 'SetAppLimits')
@@ -102,6 +103,7 @@ class addAccis:  # noqa: N801 (the name of accim 0.x)
         programs = {p.Name: p for p in self.idf.idfobjects['EnergyManagementSystem:Program']}
         for name in self._PROGRAMS:
             setattr(self, name, programs.get(name))
+        self.zone_input_programs = input_programs(self.idf)
 
     def modifyAccis(  # noqa: N802 (the name of accim 0.x)
         self,
@@ -131,14 +133,14 @@ class addAccis:  # noqa: N801 (the name of accim 0.x)
         MaxWindSpeed: float = 50,  # noqa: N803
         ASTtol: float = 0.1,  # noqa: N803
     ):
-        """Set the arguments of the ACCIS, as :func:`accim.sim.accis.modify_accis`.
+        """Set the arguments of the ACCIS in all the zones, as :func:`accim.sim.accis.modify_accis`.
 
-        As in accim 0.x, SetAST also gets the lines of the comfort standard and comfort mode given, after its
-        4 base lines (as the output IDFs of :class:`accim.sim.accis.AddAccis`).
+        In accim 0.x, SetAST also got the lines of the comfort standard and comfort mode given; since accim 1.0.0,
+        each zone runs SetAST with its own arguments, so SetAST only runs SetAST_Master, which has the lines of all
+        of them.
         """
         arguments = dict(locals())
         del arguments['self']
         self.arguments_accis = arguments
         _accis.modify_accis(self.idf, **{LEGACY_ARGUMENT_NAMES[name]: value for name, value in arguments.items()})
         self._find_programs()
-        replace_program_lines(self.SetAST, get_setpoint_lines(ComfStand, ComfMod), keep=4)

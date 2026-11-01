@@ -25,7 +25,6 @@ from typing import Literal, List, Union, Optional, Any, Sequence
 import warnings
 import functools
 import difflib
-import accim
 import numpy as np
 import pandas as pd
 import besos
@@ -6339,19 +6338,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                 bf_accim.modify_CustAST_ASToffset(building, 0)
                 bf_accim.modify_CustAST_ASTaul(building, 0)
                 bf_accim.modify_CustAST_ASTall(building, 0)
-            args = accim.utils.get_accim_args(self.building)
-            custast_args = args.get('CustAST') if isinstance(args, dict) else None
-            if not isinstance(custast_args, dict):
-                custast_args = {
-                    'm': 0,
-                    'n': 0,
-                    'ACSToffset': 0,
-                    'AHSToffset': 0,
-                    'ACSTaul': 0,
-                    'AHSTaul': 0,
-                    'ACSTall': 0,
-                    'AHSTall': 0,
-                }
+            custast_args = bf_accim.get_custom_model_arguments(self.building)
             parameters_to_check = [k for (k, v) in custast_args.items() if 'CustAST_' + k not in parameters and v == 0]
             if 'CustAST_ASToffset' in parameters:
                 try:

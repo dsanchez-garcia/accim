@@ -5,9 +5,9 @@ Ported from the round trip of the branch refactor/sim-v1 (tests/utils/test_utils
 the arguments of accim 1.0.0: the EMS programs keep the names of accim 0.x (ComfStand, CAT...), which are the
 keys of accim.sim.arguments.LEGACY_ARGUMENT_NAMES.
 
-The models without natural ventilation ('vrf_ac' and 'ex_ac') have no program SetVOFinputData, and
-get_accim_args stopped when it did not find it: it returned SetInputData only, without SetAST (SetpointAcc) and
-the arguments of the custom comfort model (CustAST). Now SetVOFinputData is read only when the model has it.
+Since accim 1.0.0, each zone has all its arguments in a program SetInputData_<zone>, so get_accim_args returns one
+dictionary for each of these programs (before, 'SetInputData', 'SetVOFinputData', 'SetAST' and 'CustAST', and
+the models without natural ventilation, 'vrf_ac' and 'ex_ac', have no inputs of the venting opening factor).
 """
 import shutil
 from pathlib import Path
@@ -54,15 +54,16 @@ def test_get_accim_args_reads_back_the_arguments_of_modify_accis(building, scrip
     args = get_accim_args(building)
     flattened = get_accim_args_flattened(building)
 
-    expected = dict(ARGUMENTS, **(VOF_DEFAULTS if script_type == 'vrf_mm' else {}))
-    assert {LEGACY_ARGUMENT_NAMES[k]: v for k, v in flattened.items() if k in LEGACY_ARGUMENT_NAMES} == expected
-    assert (args['SetInputData']['ACSTtol'], args['SetInputData']['AHSTtol']) == (-0.25, 0.25)
-    assert ('SetVOFinputData' in args) is (script_type == 'vrf_mm')
-    assert args['SetAST'] == {'SetpointAcc': 1000}
-    # modify_accis writes the offsets of the comfort model as sums with the offsets of the category
-    assert args['CustAST'] == {'ACSToffset': 3.5, 'AHSToffset': 0, 'm': 0.31, 'n': 17.8, 'ACSTaul': 33.5,
-                               'ACSTall': 10, 'AHSTaul': 32.5, 'AHSTall': 11}
-    assert flattened == {k: v for program in args.values() for k, v in program.items()}
+    assert sorted(args) == ['SetInputData_Block1_Zone1', 'SetInputData_Block1_Zone2']
+    expected = dict(ARGUMENTS, cat_cool_offset=1, cat_heat_offset=0, cust_ast_acst_offset=2.5, cust_ast_ahst_offset=0,
+                    cust_ast_acst_aul=33.5, cust_ast_acst_all=10, cust_ast_ahst_aul=32.5, cust_ast_ahst_all=11,
+                    **(VOF_DEFAULTS if script_type == 'vrf_mm' else {}))
+    for program in args.values():
+        assert {LEGACY_ARGUMENT_NAMES[k]: v for k, v in program.items() if k in LEGACY_ARGUMENT_NAMES} == expected
+        assert (program['ACSTtol'], program['AHSTtol'], program['m'], program['n']) == (-0.25, 0.25, 0.31, 17.8)
+        assert ('MaxTempDiffVOF' in program) is (script_type == 'vrf_mm')
+    # With several zones, the values of the last one
+    assert flattened == args['SetInputData_Block1_Zone1']
 
 
 def test_get_accim_args_of_the_apmv_setpoints(building):

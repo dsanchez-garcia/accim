@@ -331,20 +331,21 @@ class _FakeEMSModel:
 
 def test_pcm_of_the_initialisation_program_runs_at_begin_new_environment():
     # Since EnergyPlus 26.1, a variable read before it is set in the first timestep of an environment
-    # stops the simulation. SetComfTemp (custom model) reads m and n before SetAST sets them, so
-    # InitASTvariables sets them at BeginNewEnvironment.
-    idf = _FakeEMSModel(['SetComfTemp', 'SetAST_Master', 'SetAST', 'SetASTnoTol', 'InitASTvariables', 'SetInputData'])
-    model = SimpleNamespace(idf=idf, ems_names=[], windows=[], is_mixed_mode=False, log=lambda *lines: None)
+    # stops the simulation. The variables that each zone keeps from one timestep to the next are read
+    # before they are set, so InitASTvariables sets them at BeginNewEnvironment. The other programs of
+    # ACCIS are run by RunACCIS_<zone>, without their own calling managers.
+    idf = _FakeEMSModel(['SetComfTemp', 'SetAST_Master', 'SetAST', 'SetASTnoTol', 'InitASTvariables', 'SetInputData_Z1',
+                         'SetGeoVarZ1', 'RunACCIS_Z1', 'SetInputData_Z2', 'SetGeoVarZ2', 'RunACCIS_Z2'])
+    model = SimpleNamespace(idf=idf, ems_names=['Z1', 'Z2'], windows=[], is_mixed_mode=False,
+                            log=lambda *lines: None)
 
     add_program_calling_managers(model)
 
     points = {pcm.Name: pcm.EnergyPlus_Model_Calling_Point
               for pcm in idf.idfobjects['EnergyManagementSystem:ProgramCallingManager']}
     assert points.pop('InitASTvariables') == 'BeginNewEnvironment'
-    assert 'SetAST_Master' not in points
+    assert list(points) == ['SetGeoVarZ1', 'SetGeoVarZ2', 'RunACCIS_Z1', 'RunACCIS_Z2']
     assert set(points.values()) == {'BeginTimestepBeforePredictor'}
-    order = list(points)
-    assert order.index('SetInputData') < order.index('SetComfTemp') < order.index('SetAST')
 
 
 class _ReachedReadVarsESO(Exception):
@@ -440,13 +441,18 @@ def test_addaccis_on_an_idf_updated_to_26_2(idf_26_2, tmp_path):
     text = output_idfs[0].read_text(encoding='utf-8', errors='ignore')
     assert re.search(r'^\s*Version\s*,\s*26\.2\s*;', text, re.IGNORECASE | re.MULTILINE)
     programs = {fields[0]: fields[1:] for fields in _ems_objects(text, 'EnergyManagementSystem:Program')}
-    for name in ['SetComfTemp', 'SetAppLimits', 'ApplyCAT', 'SetAST', 'SetVOFinputData']:
+    for name in ['SetComfTemp', 'SetAppLimits', 'ApplyCAT', 'SetAST', 'SetInputData_Block1_Zone1',
+                 'RunACCIS_Block1_Zone1']:
         assert name in programs, name
+    assert 'SetInputData' not in programs and 'SetVOFinputData' not in programs
     assert any(p.startswith('ApplyAST_') for p in programs)
     assert any(p.startswith('SetWindowOperation_') for p in programs)
-    assert programs['InitASTvariables'] == ['set m = 0', 'set n = 0', 'set ACSTnoTol = 0', 'set AHSTnoTol = 0']
+    assert programs['InitASTvariables'][:6] == [
+        'set ACST_Block1_Zone2 = Null', 'set AHST_Block1_Zone2 = Null', 'set ACSTnoTol_Block1_Zone2 = 0',
+        'set AHSTnoTol_Block1_Zone2 = 0', 'set ComfTemp_Block1_Zone2 = Null', 'set CoolingSeason_Block1_Zone2 = 0']
     pcms = {fields[0]: fields[1] for fields in _ems_objects(text, 'EnergyManagementSystem:ProgramCallingManager')}
     assert pcms['InitASTvariables'] == 'BeginNewEnvironment'
+    assert pcms['RunACCIS_Block1_Zone1'] == 'BeginTimestepBeforePredictor'
 
 
 # The custom model (ComfStand 99), simulated for 1 day with EnergyPlus 26.2. Before, SetComfTemp read

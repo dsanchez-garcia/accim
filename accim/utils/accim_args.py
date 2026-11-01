@@ -20,6 +20,11 @@ def get_accim_args(idf_object: IDF) -> dict:
     Collects all the EnergyManagementSystem:Program Program lines used to
     set the values for the arguments of ACCIS, and saves them in a dictionary.
 
+    The models of accim 1.0.0 have the arguments of each occupied zone in a program SetInputData_<zone>: the
+    dictionary has one item for each of these programs, ``{program name: {EMS variable: value}}``. The models of
+    earlier versions have the items 'SetInputData', 'SetVOFinputData' (mixed mode only), 'SetAST' and 'CustAST',
+    and those with aPMV setpoints one item for each program set_zone_input_data_<target>.
+
     :param idf_object: the IDF instance
     :return: a dictionary
     """
@@ -72,6 +77,12 @@ def get_accim_args(idf_object: IDF) -> dict:
         return parameters
 
     programs = {}
+    from accim.sim.ems.inputs import input_programs
+    zone_programs = input_programs(idf_object)
+    if zone_programs:
+        for program in zone_programs.values():
+            programs.update({program.Name: program_to_dict(program.obj)})
+        return programs
     try:
         for p in ['SetInputData', 'SetVOFinputData']:
             matches = [i for i in idf_object.idfobjects['EnergyManagementSystem:Program']
@@ -111,6 +122,7 @@ def get_accim_args(idf_object: IDF) -> dict:
 
 
 def get_accim_args_flattened(idf_object):
+    """The arguments of :func:`get_accim_args` in one dictionary (with several zones, the values of the last one)."""
     from accim.utils import get_accim_args
     accim_args = get_accim_args(idf_object=idf_object)
     def flatten_dict(d):

@@ -13,6 +13,7 @@ from types import SimpleNamespace
 import pytest
 
 from accim.sim.ems.erl import ErlProgramSet, variables_in_programs
+from accim.sim.ems.inputs import input_lines, input_values
 from accim.sim.ems.programs import accis_programs
 from accim.sim.ems.setast import MODULAR_COMFORT_MODES, depends_on_comfort_mode, get_setpoint_lines, subprograms
 
@@ -21,15 +22,14 @@ def _setpoints(comf_stand, cat, comf_mod, current_time=12.0, day_of_year=180.0):
     """ACST and AHST of the programs of ACCIS in their first run, as in EnergyPlus (without initialised variables)."""
     model = SimpleNamespace(ems_names=['Zone1'], is_mixed_mode=False, windows=[])
     programs = dict(accis_programs(model))
-    programs['SetInputData'] = [
-        f'set ComfStand = {comf_stand}', f'set CAT = {cat}', f'set ComfMod = {comf_mod}', 'set HVACmode = 0',
-        'set VentCtrl = 0', 'set VSToffset = 0', 'set MinOToffset = 50', 'set MaxWindSpeed = 50',
-        'set ACSTtol = -0.1', 'set AHSTtol = 0.1', 'set CoolSeasonStart = 121', 'set CoolSeasonEnd = 274']
+    programs['SetInputData_Zone1'] = input_lines(input_values(dict(
+        comf_stand=comf_stand, cat=cat, comf_mod=comf_mod, hvac_mode=0, vent_ctrl=0, vst_offset=0, min_ot_offset=50,
+        max_wind_speed=50, ast_tol=0.1, cool_season_start=121, cool_season_end=274)), mixed_mode=False)
     names = set().union(*variables_in_programs(programs).values())
     erl = ErlProgramSet(programs, global_variables=names)
     for name, value in dict(RMOT=20.0, PMOT=20.0, DayOfYear=day_of_year, CurrentTime=current_time).items():
         erl.set(name, value)
-    for name in ['SetInputData', 'SetAppLimits', 'ApplyCAT', 'SetComfTemp', 'SetAST', 'SetASTnoTol']:
+    for name in ['SetInputData_Zone1', 'SetAppLimits', 'ApplyCAT', 'SetComfTemp', 'SetAST', 'SetASTnoTol']:
         erl.run(name)
     return erl.get('ACST'), erl.get('AHST')
 

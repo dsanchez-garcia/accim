@@ -1,8 +1,8 @@
 """Tests for accim.sim.generation: the combinations of arguments of AddAccis and its output IDFs.
 
 AddAccis writes one output IDF for each combination of comfort standard, category, comfort mode, HVAC mode,
-ventilation control... Only a few EMS programs change between them, so IdfWriter renders the other objects
-once and writes the files that eppy would save, byte for byte.
+ventilation control... Only the programs SetInputData_<zone> change between them, so IdfWriter renders the other
+objects once and writes the files that eppy would save, byte for byte.
 """
 import os
 import shutil
@@ -163,9 +163,11 @@ def test_idf_writer_writes_the_files_of_eppy(tmp_path):
         assert (tmp_path / f'writer_{n}.idf').read_bytes() == (tmp_path / f'eppy_{n}.idf').read_bytes()
 
     programs = {p.Name: p for p in idf.idfobjects['EnergyManagementSystem:Program']}
-    assert programs['SetInputData'].Program_Line_1 == 'set ComfStand = 99'
-    assert programs['SetAST'].Program_Line_2 == 'set m = 0.31'
-    assert programs['ApplyCAT'].Program_Line_1 == 'set CATcoolOffset = 0'
+    for zone in ['Block1_Zone1', 'Block1_Zone2']:
+        lines = list(programs[f'SetInputData_{zone}'].obj[2:])
+        assert lines[0] == 'set ComfStand = 99'
+        assert {'set m = 0.31', 'set CATcoolOffset = 0', 'set MultiplierVOF = 0.25'} <= set(lines)
+    assert list(programs['SetAST'].obj[2:]) == ['run SetAST_Master']
 
 
 @pytest.mark.skipif(not (IDD_25_1.exists() and SAMPLE_IDF.exists()),

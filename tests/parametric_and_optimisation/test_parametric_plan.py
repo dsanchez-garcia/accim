@@ -11,7 +11,6 @@ import concurrent.futures
 import pandas as pd
 import pytest
 
-import accim.utils
 import accim.parametric_and_optimisation.main as main_module
 from accim.parametric_and_optimisation.main import ParametricSimulation
 
@@ -216,9 +215,9 @@ def test_custom_model_baseline_is_written_in_every_building(monkeypatch):
     for setter_name in CUSTAST_SETTERS:
         monkeypatch.setattr(main_module.bf_accim, setter_name, _recorder(setter_name))
     monkeypatch.setattr(
-        accim.utils,
-        'get_accim_args',
-        lambda building: {'CustAST': {k: 0 for k in ['m', 'n', 'ACSToffset', 'AHSToffset', 'ACSTaul', 'AHSTaul', 'ACSTall', 'AHSTall']}},
+        main_module.bf_accim,
+        'get_custom_model_arguments',
+        lambda building: {k: 0 for k in ['m', 'n', 'ACSToffset', 'AHSToffset', 'ACSTaul', 'AHSTaul', 'ACSTall', 'AHSTall']},
     )
 
     sim = _make_lightweight_parametric()

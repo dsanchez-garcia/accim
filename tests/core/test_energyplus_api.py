@@ -407,7 +407,12 @@ def _energyplus_with_api(version):
 
 @pytest.mark.skipif(not (_energyplus_with_api('25.1') and SAMPLE_IDF.exists() and SAMPLE_EPW.exists()),
                     reason='needs EnergyPlus 25.1 (with its Python API) and the sample files of the repository')
-def test_the_ems_and_api_backends_give_the_same_results(tmp_path, monkeypatch):
+@pytest.mark.parametrize('zone_arguments', [
+    None,
+    # Each zone with its own arguments: INT ASHRAE 55 and natural ventilation in the zone 2
+    {'Block1:Zone2': {'comf_stand': 2, 'cat': 80, 'comf_mod': 3, 'hvac_mode': 1, 'vent_ctrl': 1}},
+])
+def test_the_ems_and_api_backends_give_the_same_results(tmp_path, monkeypatch, zone_arguments):
     from accim.sim.accis import AddAccis
 
     shutil.copy(SAMPLE_IDF, tmp_path / 'TestModel.idf')
@@ -415,7 +420,7 @@ def test_the_ems_and_api_backends_give_the_same_results(tmp_path, monkeypatch):
     AddAccis(script_type='vrf_mm', supply_air_temp_input_method='temperature difference', output_type='standard',
              output_freqs=['hourly'], output_keep_existing=False, energyplus_version='auto', temp_ctrl='temperature',
              comf_stand=[1], cat=[3], comf_mod=[3], hvac_mode=[2], vent_ctrl=[0], confirm_gen=True,
-             verbose_mode=False)
+             verbose_mode=False, zone_arguments=zone_arguments)
     output_idf = sorted(tmp_path.glob('TestModel[[]*.idf'))[0]
     # Three days of July, after the sizing of the design days
     objects = parse_idf(output_idf.read_bytes().decode('latin-1'))
@@ -439,6 +444,10 @@ def test_the_ems_and_api_backends_give_the_same_results(tmp_path, monkeypatch):
     assert len(ems_results) == 3 * 24
     assert any('Adaptive Cooling Setpoint Temperature' in column for column in ems_results.columns)
     pd.testing.assert_frame_equal(api_results, ems_results, check_exact=True)
+    # The setpoints of each zone: the same in both zones, unless they have their own arguments
+    zone1, zone2 = (ems_results[f'EMS:Adaptive Cooling Setpoint Temperature_Block1_{zone} [C](Hourly)']
+                    for zone in ('Zone1', 'Zone2'))
+    assert zone1.equals(zone2) is (zone_arguments is None)
 
 
 def _shading_example():

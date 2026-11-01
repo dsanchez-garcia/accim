@@ -2,10 +2,13 @@
 # Copyright (C) 2021-2026 Daniel Sánchez-García
 # Distributed under the GNU General Public License v3 or later.
 
-"""Erl lines of the EMS programs of ACCIS (those of accim 0.x, unchanged).
+"""Erl lines of the EMS programs of ACCIS (those of accim 0.x, except that the inputs of the zones are in the programs
+SetInputData_<zone>, see :mod:`accim.sim.ems.inputs`).
 
 The lines of the programs of each zone and window contain ``{zone}`` and ``{window}``, which
-:func:`format_lines` replaces with the names of the zone or window in the EMS objects.
+:func:`format_lines` replaces with the names of the zone or window in the EMS objects. The programs without them
+(SetComfTemp, SetAppLimits, ApplyCAT, SetAST, SetASTnoTol and SetVST) are run by the program RunACCIS_<zone> of each
+zone, after its inputs.
 """
 
 from typing import Tuple
@@ -17,11 +20,8 @@ __all__ = [
     'APPLY_CAT',
     'SET_AST',
     'SET_AST_NO_TOL',
-    'INIT_AST_VARIABLES',
     'COUNT_HOURS_NO_APP',
     'SET_GEO_VAR',
-    'SET_INPUT_DATA',
-    'SET_VOF_INPUT_DATA',
     'SET_VST',
     'APPLY_AST_MIXED_MODE',
     'SET_MY_VOF',
@@ -187,13 +187,13 @@ endif
 endif
 """)
 
-#: Applicability limits of each comfort standard (lines 2 to 5: the custom model).
+#: Applicability limits of each comfort standard (those of the custom model are inputs of the zone).
 SET_APP_LIMITS = _lines("""
 if ComfStand == 99
-set ACSTaul = 33.5
-set ACSTall = 10
-set AHSTaul = 33.5
-set AHSTall = 10
+set ACSTaul = CustAST_ACSTaul
+set ACSTall = CustAST_ACSTall
+set AHSTaul = CustAST_AHSTaul
+set AHSTall = CustAST_AHSTall
 elseif ComfStand == 1
 set ACSTaul = 30
 set ACSTall = 10
@@ -327,13 +327,12 @@ set AHSTall = 50
 endif
 """)
 
-#: Offsets of the setpoints from the comfort temperature for each category (lines 1, 2, 4 and 5 are set for each output IDF).
+#: Offsets of the setpoints from the comfort temperature for each category (those of the custom model, and the offsets
+#: CATcoolOffset and CATheatOffset added to them, are inputs of the zone).
 APPLY_CAT = _lines("""
-set CATcoolOffset = 0
-set CATheatOffset = 0
 if ComfStand == 99
-set ACSToffset = 3.5+CATcoolOffset
-set AHSToffset = -3.5+CATheatOffset
+set ACSToffset = CustAST_ACSToffset+CATcoolOffset
+set AHSToffset = CustAST_AHSToffset+CATheatOffset
 elseif (ComfStand == 1 )
 if (CAT == 1)
 set ACSToffset = 2+CATcoolOffset
@@ -491,11 +490,9 @@ endif
 endif
 """)
 
-#: Base lines of SetAST (lines 1 to 3 are set for each output IDF, which also gets the lines of its comfort model).
+#: SetAST: the setpoints of the comfort standard and comfort mode of the zone (SetpointAcc, m and n are inputs of the
+#: zone).
 SET_AST = _lines("""
-set SetpointAcc = 10000
-set m = 0.31
-set n = 17.8
 run SetAST_Master
 """)
 
@@ -503,14 +500,6 @@ run SetAST_Master
 SET_AST_NO_TOL = _lines("""
 set ACSTnoTol = ACST-ACSTtol
 set AHSTnoTol = AHST-AHSTtol
-""")
-
-#: Variables read before they are set in each timestep, initialised at each new environment.
-INIT_AST_VARIABLES = _lines("""
-set m = 0
-set n = 0
-set ACSTnoTol = 0
-set AHSTnoTol = 0
 """)
 
 #: Comfortable, discomfortable and occupied hours of a zone, regardless of the applicability limits.
@@ -549,29 +538,6 @@ endif
 SET_GEO_VAR = _lines("""
 set ZoneFloorArea_{zone} = ZFA_{zone}/2
 set ZoneAirVolume_{zone} = ZAV_{zone}/2
-""")
-
-#: Arguments of the output IDF (set for each output IDF).
-SET_INPUT_DATA = _lines("""
-set ComfStand = 1
-set CAT = 1
-set ComfMod = 2
-set HVACmode = 2
-set VentCtrl = 0
-set VSToffset = 0
-set MinOToffset = 7
-set MaxWindSpeed = 6
-set ACSTtol = -0.25
-set AHSTtol = 0.25
-set CoolSeasonStart = 121
-set CoolSeasonEnd = 274
-""")
-
-#: Arguments of the venting opening factor (set for each output IDF).
-SET_VOF_INPUT_DATA = _lines("""
-set MaxTempDiffVOF = 6
-set MinTempDiffVOF = 1
-set MultiplierVOF = 0.25
 """)
 
 #: Ventilation setpoint temperature.

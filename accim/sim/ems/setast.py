@@ -5,11 +5,10 @@
 """EMS programs that set the adaptive setpoint temperatures (SetAST).
 
 SetAST runs SetAST_Master, which calculates CoolingSeason and runs the subprograms of the comfort
-standard of SetInputData (``SetAST_CS<ComfStand>_<chunk>``). Each subprogram holds the lines of up
-to 3 comfort modes, so that no program exceeds the limit of program lines of EnergyPlus; the
-subprograms of the comfort standards whose setpoints do not depend on the comfort mode (ESP CTE and
-INT ISO7730) set them whatever ComfMod is. Each output IDF also appends to SetAST the lines of its
-comfort standard and comfort mode.
+standard of the zone being run (its program SetInputData_<zone>, ``SetAST_CS<ComfStand>_<chunk>``). Each
+subprogram holds the lines of up to 3 comfort modes, so that no program exceeds the limit of program lines of
+EnergyPlus; the subprograms of the comfort standards whose setpoints do not depend on the comfort mode (ESP CTE
+and INT ISO7730) set them whatever ComfMod is.
 """
 
 import re
@@ -112,7 +111,7 @@ def _subprogram_lines(comf_stand: int, chunk: int, comf_mods: Sequence[Number]) 
     name = f'SetAST_CS{comf_stand}_{chunk}'
     if not depends_on_comfort_mode(comf_stand):
         # The static standards (ESP CTE, INT ISO7730) set the same setpoints whatever ComfMod is, so they also work
-        # with the ComfMod of SetInputData when it is not 0, as in the models of the parametric module
+        # with the ComfMod of the zone when it is not 0, as in the models of the parametric module
         return [
             f'! {name}',
             f'! SetAST subprogram for ComfStand == {comf_stand}, Chunk {chunk}',
