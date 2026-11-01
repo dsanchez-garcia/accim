@@ -218,6 +218,25 @@ def _varies(column) -> bool:
     return len(values) > 2 or (len(values) == 2 and not any('_X' in value for value in values))
 
 
+# The hour counters of the ACCIS whose names contain the name of another one, and the suffix of the building averages
+# of make_averages, which are not outputs of a zone
+_LONGER_OUTPUTS = ('Occupied Comfortable Hours_No Applicability', 'Occupied Discomfortable Hours_No Applicability')
+_BUILDING_AVERAGE = '_BUILDING_AVERAGE'
+
+
+def _of_output(column: str, output: str) -> bool:
+    """
+    Whether Table adds a column up in the block and building totals of an output: the column contains the name of
+    the output, but not as part of the name of a longer output ('Occupied Comfortable Hours_No Applicability' is not
+    'Comfortable Hours_No Applicability'), and it is not a building average of make_averages.
+    """
+    column, output = column.upper(), output.upper()
+    if output not in column or _BUILDING_AVERAGE in column:
+        return False
+    longer = [name.upper() for name in _LONGER_OUTPUTS if output in name.upper() and name.upper() != output]
+    return not any(name in column for name in longer)
+
+
 class Table:
     """Generates a table or dataframe using the EnergyPlus simulation
     results CSV files available in the current folder.
@@ -1127,35 +1146,35 @@ class Table:
                     for block in block_list:
                         df[f'{block}' + '_Total_' + outputdict_normalisation[output] + ' (summed)_pymod'] = df[
                             [i for i in df.columns if
-                             in_block(i, block) and output.upper() in i.upper() and '_pymod' not in i.lower() and not excluded(i)]
+                             in_block(i, block) and _of_output(i, output) and '_pymod' not in i.lower() and not excluded(i)]
                         ].sum(axis=1)
                 if any('building' in i for i in level):
                     df['Building_Total_' + outputdict_normalisation[output] + ' (summed)_pymod'] = df[
-                        [i for i in df.columns if output.upper() in i.upper() and '_pymod' not in i.lower() and not excluded(i)]
+                        [i for i in df.columns if _of_output(i, output) and '_pymod' not in i.lower() and not excluded(i)]
                     ].sum(axis=1)
 
         if any('block' in i for i in level):
             for block in block_list:
                 for output in outputdict:
-                    if any([output.lower() in i.lower() for i in df.columns]):
+                    if any(_of_output(i, output) for i in df.columns):
                         if any('sum' in j for j in level_agg_func):
                             df[f'{block}' + '_Total_' + outputdict[output] + ' (summed)_pymod'] = df[
-                                [i for i in df.columns if in_block(i, block) and output.upper() in i.upper() and '_pymod' not in i.lower() and not excluded(i)]
+                                [i for i in df.columns if in_block(i, block) and _of_output(i, output) and '_pymod' not in i.lower() and not excluded(i)]
                             ].sum(axis=1)
                         if any('mean' in j for j in level_agg_func):
                             df[f'{block}' + '_Total_' + outputdict[output] + ' (mean)_pymod'] = df[
                                 [i for i in df.columns
-                                 if in_block(i, block) and output.upper() in i.upper() and '_pymod' not in i.lower()]
+                                 if in_block(i, block) and _of_output(i, output) and '_pymod' not in i.lower()]
                             ].mean(axis=1)
         if any('building' in i for i in level):
             for output in outputdict:
-                if any([output.lower() in i.lower() for i in df.columns]):
+                if any(_of_output(i, output) for i in df.columns):
                     if any('sum' in j for j in level_agg_func):
                         df['Building_Total_' + outputdict[output] + ' (summed)_pymod'] = df[
-                            [i for i in df.columns if output.upper() in i.upper() and '_pymod' not in i.lower() and not excluded(i)]].sum(axis=1)
+                            [i for i in df.columns if _of_output(i, output) and '_pymod' not in i.lower() and not excluded(i)]].sum(axis=1)
                     if any('mean' in j for j in level_agg_func):
                         df['Building_Total_' + outputdict[output] + ' (mean)_pymod'] = df[
-                            [i for i in df.columns if output.upper() in i.upper() and '_pymod' not in i.lower() and not excluded(i)]].mean(axis=1)
+                            [i for i in df.columns if _of_output(i, output) and '_pymod' not in i.lower() and not excluded(i)]].mean(axis=1)
 
         # df.to_excel('checkpoint_02.xlsx')
 

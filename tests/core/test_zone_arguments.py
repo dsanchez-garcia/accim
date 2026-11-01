@@ -3,9 +3,9 @@
 Since accim 1.0.0, each occupied zone has the arguments of the ACCIS in its EMS program SetInputData_<zone>, and
 its program RunACCIS_<zone> runs it and then the programs that calculate and apply the setpoints (SetAppLimits,
 ApplyCAT, SetComfTemp, SetAST...), which are shared by all the zones. Some variables of these programs keep their
-value from one timestep to the next (the setpoints of ESP CTE at the end of the day, the setpoints without tolerance
-that CountHours_<zone> reads), so each zone restores and stores its own values (ACST_<zone>...); otherwise a zone
-would take those of the zone that ran before it.
+value from one timestep to the next (the setpoints of ESP CTE at the end of the day, for instance), so each zone
+restores and stores its own values (ACST_<zone>...); otherwise a zone would take those of the zone that ran before
+it.
 """
 import shutil
 import warnings

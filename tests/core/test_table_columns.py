@@ -153,9 +153,10 @@ def _outputs(building, ems_suffixes):
     return columns
 
 
-def _table(tmp_path, monkeypatch, model, **kwargs):
-    """Run Table on a CSV file with the outputs of the model."""
+def _table(tmp_path, monkeypatch, model, extra_columns=None, **kwargs):
+    """Run Table on a CSV file with the outputs of the model (and extra_columns)."""
     columns = _outputs(model['building'], model['ems_suffixes'])
+    columns.update(extra_columns or {})
     lines = [','.join(['Date/Time', *columns])]
     for hour in range(2):
         lines.append(','.join([f' 01/01  0{hour + 1}:00:00', *(str(v[hour]) for v in columns.values())]))
@@ -312,6 +313,25 @@ def test_excluded_zone_whose_name_is_part_of_the_name_of_another_zone(tmp_path, 
     assert _values(table, 'Building_Total_Cooling Energy Demand (Wh) (summed)') == ZONE_VALUES[1]['cooling']
     assert _values(table, 'Block1_Total_Comfortable Hours_No Applicability (h) (summed)') == \
         ZONE_VALUES[1]['comfortable']
+
+
+def test_totals_of_the_hours_add_up_only_the_comfortable_hours_of_the_zones(tmp_path, monkeypatch):
+    # Found on 2026-11-01: the block and building totals of 'Comfortable Hours_No Applicability' also added up the
+    # occupied comfortable hours of the zones ('Occupied Comfortable Hours_No Applicability_<zone>', whose name
+    # contains it), and the totals of the outputs that make_averages averages also added up their building averages
+    extra = {}
+    for suffix in DESIGNBUILDER['ems_suffixes']:
+        extra[f'EMS:Occupied Comfortable Hours_No Applicability_{suffix} [H](Hourly)'] = [1.0, 1.0]
+        extra[f'EMS:Occupied Hours_{suffix} [H](Hourly)'] = [1.0, 1.0]
+    extra['EMS:Comfortable Hours_No Applicability_Building_Average [H](Hourly)'] = [1.0, 0.5]
+    extra['EMS:Zone Operative Temperature_Building_Average [C](Hourly)'] = [100.0, 100.0]
+
+    table = _table(tmp_path, monkeypatch, DESIGNBUILDER, extra_columns=extra)
+
+    assert _values(table, 'Block1_Total_Comfortable Hours_No Applicability (h) (summed)') == [2.0, 1.0]
+    assert _values(table, 'Building_Total_Comfortable Hours_No Applicability (h) (summed)') == [2.0, 1.0]
+    assert _values(table, 'Building_Total_Comfortable Hours_No Applicability (h) (mean)') == [1.0, 0.5]
+    assert _values(table, 'Building_Total_Zone Operative Temperature (°C) (mean)') == [26.0, 27.0]
 
 
 def test_table_without_idf_path_explains_that_it_needs_it(tmp_path, monkeypatch):

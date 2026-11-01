@@ -6,16 +6,18 @@
 
 Each occupied zone has a program SetInputData_<zone> with its arguments (see :mod:`accim.sim.ems.inputs`) and a
 program RunACCIS_<zone>, which runs in each timestep: SetInputData_<zone>; SetAppLimits, ApplyCAT and SetComfTemp
-(the applicability limits, the offsets of the category and the comfort temperature); CountHours_<zone>; SetAST
-(which runs SetAST_Master and the subprograms of the comfort standard) and SetASTnoTol; CountHoursNoApp_<zone>; in
-mixed mode, SetVST; ApplyAST_<zone>; and, in mixed mode, the programs of the windows of the zone. This is the order
-in which the programs of accim 0.x ran for all the zones at once.
+(the applicability limits, the offsets of the category and the comfort temperature); SetAST (which runs
+SetAST_Master and the subprograms of the comfort standard) and SetASTnoTol; CountHours_<zone> and
+CountHoursNoApp_<zone> (the hour counters, with the setpoints of the timestep); in mixed mode, SetVST;
+ApplyAST_<zone>; and, in mixed mode, the programs of the windows of the zone. This is the order in which the programs
+of accim 0.x ran for all the zones at once, except that CountHours ran before SetAST, with the setpoints of the
+previous timestep.
 
 The programs that do not belong to a zone (SetAppLimits, ApplyCAT, SetComfTemp, SetAST, SetASTnoTol and SetVST) use
 the variables of the zone that is running (ComfStand, ACST...). Some of these variables keep their value from one
 timestep to the next, so RunACCIS_<zone> restores those of the zone before running these programs and stores them
 after (``ACST_<zone>``...), together with the setpoints of the zone (``roundedACST_<zone>``...), which are its
-outputs. A model whose zones have the same arguments gives the same results as with the programs of accim 0.x.
+outputs. A model whose zones have the same arguments gives the same setpoints as with the programs of accim 0.x.
 """
 
 from typing import Dict, List, Optional, Tuple
@@ -36,17 +38,17 @@ __all__ = [
     'zone_variables',
 ]
 
-#: Variables of the programs that do not belong to a zone that keep their value from one timestep to the next:
-#: CountHours_<zone> reads the setpoints without tolerance of the previous timestep, the static setpoints of some
-#: comfort standards keep their value at the end of the day, SetComfTemp does not set the comfort temperature of
-#: some comfort standards, and SetAST_Master does not set the cooling season if it starts and ends on the same day.
-#: Their values at the beginning of each environment: the setpoints are Null, so that a comfort standard without
-#: setpoints for the comfort mode of the zone stops EnergyPlus (as when they were not set), instead of using those
-#: of another zone; Null is reported as 0, as the variables that are not set.
-ZONE_STATE_VARIABLES = {'ACST': 'Null', 'AHST': 'Null', 'ACSTnoTol': '0', 'AHSTnoTol': '0', 'ComfTemp': 'Null',
-                        'CoolingSeason': '0'}
+#: Variables of the programs that do not belong to a zone that keep their value from one timestep to the next: the
+#: static setpoints of some comfort standards keep their value at the end of the day, SetComfTemp does not set the
+#: comfort temperature of some comfort standards, and SetAST_Master does not set the cooling season if it starts and
+#: ends on the same day. Their values at the beginning of each environment: the setpoints are Null, so that a comfort
+#: standard without setpoints for the comfort mode of the zone stops EnergyPlus (as when they were not set), instead
+#: of using those of another zone; Null is reported as 0, as the variables that are not set.
+ZONE_STATE_VARIABLES = {'ACST': 'Null', 'AHST': 'Null', 'ComfTemp': 'Null', 'CoolingSeason': '0'}
 #: The other variables that each zone keeps, for its outputs (VST and MinOutTemp, in mixed mode only).
-ZONE_RESULT_VARIABLES = ('roundedACST', 'roundedAHST', 'VST', 'MinOutTemp')
+ZONE_RESULT_VARIABLES = ('ACSTnoTol', 'AHSTnoTol', 'roundedACST', 'roundedAHST', 'VST', 'MinOutTemp')
+#: The number of ZONE_RESULT_VARIABLES of the models with full air-conditioning.
+_AIR_CONDITIONED_RESULTS = 4
 #: The programs of ACCIS with a calling manager at BeginTimestepBeforePredictor, in their order (as prefixes); the
 #: other programs are run by RunACCIS_<zone>.
 _CALLED_PREFIXES = ('SetGeoVar', RUN_PROGRAM_PREFIX)
@@ -57,7 +59,7 @@ _WINDOW_PROGRAM_PREFIXES = ('SetMyVOF_', 'SetWindowOperation_')
 
 def zone_variables(mixed_mode: bool) -> Tuple[str, ...]:
     """The variables that each zone keeps as ``<variable>_<zone>`` (global variables of the EMS)."""
-    results = ZONE_RESULT_VARIABLES if mixed_mode else ZONE_RESULT_VARIABLES[:2]
+    results = ZONE_RESULT_VARIABLES if mixed_mode else ZONE_RESULT_VARIABLES[:_AIR_CONDITIONED_RESULTS]
     return tuple(ZONE_STATE_VARIABLES) + results
 
 
@@ -78,8 +80,8 @@ def _run_program_lines(zone: str, windows: List[str], mixed_mode: bool) -> List[
     """Lines of RunACCIS_<zone>, which runs the ACCIS of a zone."""
     lines = [f'run {INPUT_PROGRAM_PREFIX}{zone}']
     lines += [f'set {variable} = {variable}_{zone}' for variable in ZONE_STATE_VARIABLES]
-    lines += ['run SetAppLimits', 'run ApplyCAT', 'run SetComfTemp', f'run CountHours_{zone}', 'run SetAST',
-              'run SetASTnoTol', f'run CountHoursNoApp_{zone}']
+    lines += ['run SetAppLimits', 'run ApplyCAT', 'run SetComfTemp', 'run SetAST', 'run SetASTnoTol',
+              f'run CountHours_{zone}', f'run CountHoursNoApp_{zone}']
     if mixed_mode:
         lines.append('run SetVST')
     lines.append(f'run ApplyAST_{zone}')

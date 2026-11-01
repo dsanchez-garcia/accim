@@ -447,9 +447,9 @@ def test_addaccis_on_an_idf_updated_to_26_2(idf_26_2, tmp_path):
     assert 'SetInputData' not in programs and 'SetVOFinputData' not in programs
     assert any(p.startswith('ApplyAST_') for p in programs)
     assert any(p.startswith('SetWindowOperation_') for p in programs)
-    assert programs['InitASTvariables'][:6] == [
-        'set ACST_Block1_Zone2 = Null', 'set AHST_Block1_Zone2 = Null', 'set ACSTnoTol_Block1_Zone2 = 0',
-        'set AHSTnoTol_Block1_Zone2 = 0', 'set ComfTemp_Block1_Zone2 = Null', 'set CoolingSeason_Block1_Zone2 = 0']
+    assert programs['InitASTvariables'][:4] == [
+        'set ACST_Block1_Zone2 = Null', 'set AHST_Block1_Zone2 = Null', 'set ComfTemp_Block1_Zone2 = Null',
+        'set CoolingSeason_Block1_Zone2 = 0']
     pcms = {fields[0]: fields[1] for fields in _ems_objects(text, 'EnergyManagementSystem:ProgramCallingManager')}
     assert pcms['InitASTvariables'] == 'BeginNewEnvironment'
     assert pcms['RunACCIS_Block1_Zone1'] == 'BeginTimestepBeforePredictor'

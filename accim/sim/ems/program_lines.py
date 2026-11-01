@@ -3,7 +3,8 @@
 # Distributed under the GNU General Public License v3 or later.
 
 """Erl lines of the EMS programs of ACCIS (those of accim 0.x, except that the inputs of the zones are in the programs
-SetInputData_<zone>, see :mod:`accim.sim.ems.inputs`).
+SetInputData_<zone>, see :mod:`accim.sim.ems.inputs`, and that the hour counters of CountHours_<zone> and
+CountHoursNoApp_<zone> and the ventilation hours of ApplyAST_<zone> are set in every timestep).
 
 The lines of the programs of each zone and window contain ``{zone}`` and ``{window}``, which
 :func:`format_lines` replaces with the names of the zone or window in the EMS objects. The programs without them
@@ -110,19 +111,13 @@ set ComfTemp = PMOT*0.678+13.51
 endif
 """)
 
-#: Comfortable and discomfortable hours of a zone, within the applicability limits.
+#: Comfortable and discomfortable hours of a zone, within the applicability limits: in each timestep, one of the five
+#: counters is the length of the timestep and the others are 0. The operative temperature is compared with the
+#: setpoints without tolerance of the timestep (RunACCIS_<zone> runs it after SetASTnoTol).
 COUNT_HOURS = _lines("""
 if (ComfStand == 1) || (ComfStand == 10)
 if (RMOT >= AHSTall) && (RMOT <= ACSTaul)
-if ({zone}_OpT <= ACSTnoTol)
-if ({zone}_OpT >= AHSTnoTol)
-set ComfHours_{zone} = 1*ZoneTimeStep
-set DiscomfAppHotHours_{zone} = 0
-set DiscomfAppColdHours_{zone} = 0
-set DiscomfNonAppHotHours_{zone} = 0
-set DiscomfNonAppColdHours_{zone} = 0
-endif
-elseif ({zone}_OpT > ACSTnoTol)
+if ({zone}_OpT > ACSTnoTol)
 set ComfHours_{zone} = 0
 set DiscomfAppHotHours_{zone} = 1*ZoneTimeStep
 set DiscomfAppColdHours_{zone} = 0
@@ -132,6 +127,12 @@ elseif ({zone}_OpT < AHSTnoTol)
 set ComfHours_{zone} = 0
 set DiscomfAppHotHours_{zone} = 0
 set DiscomfAppColdHours_{zone} = 1*ZoneTimeStep
+set DiscomfNonAppHotHours_{zone} = 0
+set DiscomfNonAppColdHours_{zone} = 0
+else
+set ComfHours_{zone} = 1*ZoneTimeStep
+set DiscomfAppHotHours_{zone} = 0
+set DiscomfAppColdHours_{zone} = 0
 set DiscomfNonAppHotHours_{zone} = 0
 set DiscomfNonAppColdHours_{zone} = 0
 endif
@@ -150,15 +151,7 @@ set DiscomfNonAppColdHours_{zone} = 1*ZoneTimeStep
 endif
 else
 if (PMOT >= AHSTall) && (PMOT <= ACSTaul)
-if ({zone}_OpT <= ACSTnoTol)
-if ({zone}_OpT >= AHSTnoTol)
-set ComfHours_{zone} = 1*ZoneTimeStep
-set DiscomfAppHotHours_{zone} = 0
-set DiscomfAppColdHours_{zone} = 0
-set DiscomfNonAppHotHours_{zone} = 0
-set DiscomfNonAppColdHours_{zone} = 0
-endif
-elseif ({zone}_OpT > ACSTnoTol)
+if ({zone}_OpT > ACSTnoTol)
 set ComfHours_{zone} = 0
 set DiscomfAppHotHours_{zone} = 1*ZoneTimeStep
 set DiscomfAppColdHours_{zone} = 0
@@ -168,6 +161,12 @@ elseif ({zone}_OpT < AHSTnoTol)
 set ComfHours_{zone} = 0
 set DiscomfAppHotHours_{zone} = 0
 set DiscomfAppColdHours_{zone} = 1*ZoneTimeStep
+set DiscomfNonAppHotHours_{zone} = 0
+set DiscomfNonAppColdHours_{zone} = 0
+else
+set ComfHours_{zone} = 1*ZoneTimeStep
+set DiscomfAppHotHours_{zone} = 0
+set DiscomfAppColdHours_{zone} = 0
 set DiscomfNonAppHotHours_{zone} = 0
 set DiscomfNonAppColdHours_{zone} = 0
 endif
@@ -502,30 +501,26 @@ set ACSTnoTol = ACST-ACSTtol
 set AHSTnoTol = AHST-AHSTtol
 """)
 
-#: Comfortable, discomfortable and occupied hours of a zone, regardless of the applicability limits.
+#: Comfortable, discomfortable and occupied hours of a zone, regardless of the applicability limits. In each occupied
+#: timestep, either the occupied comfortable or the occupied discomfortable hours are the length of the timestep, so
+#: that they add up to the occupied hours.
 COUNT_HOURS_NO_APP = _lines("""
-if ({zone}_OpT <= ACSTnoTol)
-if ({zone}_OpT >= AHSTnoTol)
+if ({zone}_OpT <= ACSTnoTol) && ({zone}_OpT >= AHSTnoTol)
 set ComfHoursNoApp_{zone} = 1*ZoneTimeStep
-if Occ_count_{zone}
+set OccDiscomfHoursNoApp_{zone} = 0
+if Occ_count_{zone} > 0
 set OccComfHoursNoApp_{zone} = 1*ZoneTimeStep
 else
 set OccComfHoursNoApp_{zone} = 0
 endif
 else
 set ComfHoursNoApp_{zone} = 0
-endif
-else
-set ComfHoursNoApp_{zone} = 0
-endif
-if {zone}_OpT > ACSTnoTol || {zone}_OpT < AHSTnoTol
-if Occ_count_{zone}
+set OccComfHoursNoApp_{zone} = 0
+if Occ_count_{zone} > 0
 set OccDiscomfHoursNoApp_{zone} = 1*ZoneTimeStep
 else
 set OccDiscomfHoursNoApp_{zone} = 0
 endif
-else
-set OccDiscomfHoursNoApp_{zone} = 0
 endif
 if Occ_count_{zone} > 0
 set OccHours_{zone} = 1*ZoneTimeStep
@@ -653,6 +648,7 @@ set Ventilates_HVACmode1_{zone} = 0
 endif
 endif
 if HVACmode == 0
+set VentHours_{zone} = 0
 if Occ_count_{zone} == 0
 Set ACST_Act_{zone} = 100
 Set AHST_Act_{zone} = -100
