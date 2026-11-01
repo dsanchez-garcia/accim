@@ -21,14 +21,9 @@ Active short-term tasks.
 ## Backlog
 
 - [ ] [P1][in progress] Release accim 1.0.0
-  - Context: Branch `v1.0.0` (refactoring to PEP 8, Python API backend), merged into the local `master` by fast-forward on 2026-11-01 (to `a4a3e164`). `master` is not pushed yet: `packaging/README.md` (§4.8) pushes it after PyPI, because Read the Docs then builds `latest` from it. Later on 2026-11-01, `v1.0.0` got the arguments of each zone (`zone_arguments`), the corrected hour counters with the percentage of the occupied hours within the setpoints (`accim.data.postprocessing.setpoint_hours`) and `ex_mm` for any existing HVAC system, so `master` must be fast-forwarded again; and the author asked for a review of the names of the arguments, whose suggestions wait for his answer in `notes/questions.md` (renaming them before the release costs users nothing).
+  - Context: Branch `v1.0.0` (refactoring to PEP 8, Python API backend), merged into the local `master` by fast-forward on 2026-11-01 (to `a4a3e164`). `master` is not pushed yet: `packaging/README.md` (§4.8) pushes it after PyPI, because Read the Docs then builds `latest` from it. Later on 2026-11-01, `v1.0.0` got the arguments of each zone (`zone_arguments`), the corrected hour counters with the percentage of the occupied hours within the setpoints (`accim.data.postprocessing.setpoint_hours`), `ex_mm` for any existing HVAC system and a GUI in English (`accim-gui`), so `master` must be fast-forwarded again; and the author asked for a review of the names of the arguments, whose suggestions wait for his answer in `notes/questions.md` (renaming them before the release costs users nothing), as does the scope of the GUI.
   - Definition of done: the author reviews the branch and merges it; `CHANGELOG.md` gets the date; accim and accim-samples 1.0.0 are published as in `packaging/README.md`.
   - References: `CHANGELOG.md` (Unreleased), `DEVLOG.md` (2026-10-30, 2026-11-01).
-
-- [ ] [P1][todo] Graphical user interface (GUI) in English
-  - Context: Asked by the author on 2026-11-01. accim is used from Python scripts, notebooks and the prompts of `AddAccis`; a GUI in English would let users without Python add the ACCIS to their models, run the simulations and look at the results.
-  - Definition of done: the author decides the scope (which steps: `AddAccis`, `run_ep`, `Table`, the parametric module) and the technology; then a first version, in English, documented and tested.
-  - References: `accim/sim/prompts.py` (the questions of the prompts), `docs/source/4_detailed use.md`.
 
 - [ ] [P2][todo] The block means of `Table` include the excluded zones
   - Context: Found on 2026-11-01 while correcting the totals of the hours of `Table`: the block totals with `level_agg_func` 'mean' add up the columns of the zones of `level_excluded_zones`, which the block sums and the building sums and means leave out (the condition `not excluded(i)` is missing in the comprehension of the block means). As in 0.x; not changed, so that the change of the hours stays focused.

@@ -24,6 +24,14 @@ it here as answered).
 
 ## Open
 
+## 2026-11-01 — Is the scope and the technology of the first GUI right?
+
+- Context: The author asked on 2026-11-01 for a graphical user interface in English, and the item of [[../TODO.md]] said that he would choose its scope (which steps) and technology; he could not answer, so the first version was made with the options below (see [[decisions.md#2026-11-01 — The first GUI uses tkinter and covers AddAccis, run_ep and the hours within the setpoints|the decision]]): tkinter, and three tabs (`AddAccis`, `run_ep` and the hours within the setpoints).
+- Why it matters: other steps (`Table` and its figures, `rename_epw_files`, the arguments of each zone, the aPMV setpoints, the parametric module) or another technology (a web interface with Streamlit or similar, which would add a dependency) change how much the GUI covers and what users must install.
+- Options considered: keep tkinter and add tabs for more steps; a web interface as an optional extra (`pip install "accim[gui]"`); leave the rest in Python.
+- Owner: the author.
+- Status: open.
+
 ## 2026-11-01 — Which names should the arguments of accim 1.0.0 have? (review asked by the author)
 
 - Context: The author asked on 2026-11-01 for a review of the names of the arguments, with a suggestion for each one ("`ComfMod` no me gusta; debería ser `ComfMode`, o similar"). The names of 1.0.0 are a mechanical translation of those of 0.x to snake case (decision of 2026-10-30), so they keep the abbreviations of 0.x (`comf_mod`, `cat`, `vst_offset`...). 1.0.0 is not released, so renaming them now costs users nothing: the aliases of 0.x (`LEGACY_ARGUMENT_NAMES`) would point to the new names.

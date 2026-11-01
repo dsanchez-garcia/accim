@@ -8,6 +8,7 @@ Subpackages
    :maxdepth: 4
 
    accim.data
+   accim.gui
    accim.parametric_and_optimisation
    accim.run
    accim.sim

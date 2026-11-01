@@ -15,6 +15,14 @@ This log is a lightweight, session-scoped complement to the repository's
 existing tracking files — it does not replace them (see
 [[decisions.md#2026-09-13 — `notes/work-log.md` complements, not replaces, existing tracking files|the related decision]]).
 
+## 2026-11-01 — A GUI in English (`accim-gui`)
+
+- **Objective**: The third priority task of [[../TODO.md]]: a graphical user interface in English.
+- **Affected files**: `accim/gui/` (new), `accim/__init__.py`, `setup.py`, `tests/core/test_gui.py` (new); [[../docs/source/4_detailed use.md]] (4.10), [[../docs/source/index.rst]], [[../README.md]], [[../CHANGELOG.md]], [[../DEVLOG.md]], [[../TODO.md]], [[../CAMBIOS_CODIGO_v1.0.0.md]], [[decisions.md]], [[questions.md]].
+- **Finding or decision**: See [[decisions.md#2026-11-01 — The first GUI uses tkinter and covers AddAccis, run_ep and the hours within the setpoints|the decision]]: tkinter, three tabs (add the ACCIS, run the simulations, hours within the setpoints), forms checked without tkinter, tasks in a thread with a log and no prompts. The scope was the author's to choose: open question in [[questions.md]].
+- **Validation**: 25 tests; the whole workflow through the window with its threads (AddAccis, `run_ep` with processes, the hours table); `python -m accim.gui` opens; screenshots reviewed.
+- **Next step**: the answers of the author (names of the arguments, scope of the GUI); then the release.
+
 ## 2026-11-01 — `ex_mm` for any existing HVAC system
 
 - **Objective**: The second priority task of [[../TODO.md]]: develop `ex_mm`, which was "UNDER DEVELOPMENT" (it had to identify all the HVAC equipment of each zone to open the windows when the air conditioning is off).

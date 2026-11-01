@@ -786,3 +786,21 @@ result = run_simulation('TestModel[CS_INT EN16798[CA_3[CM_3[HM_2[VC_0[VO_0.0[MT_
 
 The variables are those of the EMS programs (`controller.get(name, program)` reads the local variables of a program). The actuators are set as the EMS sets them: the integer ones (for instance, the status of a window shading control) to the number rounded down, and the logical ones to true only for 1, while the Python API itself would round the integers and take as true the numbers within 1e-5 of 1. The messages of `@WarnEP`, `@SevereWarnEP` and `@FatalHaltEP` go to the error file of EnergyPlus, and `@FatalHaltEP` stops the simulation. The API backend supports the EMS objects that accim writes, and most of those of other models; it does not support `EnergyManagementSystem:TrendVariable`, `EnergyManagementSystem:CurveOrTableIndexVariable`, `EnergyManagementSystem:ConstructionIndexVariable`, the external interface, Python plugins, the calling point `UserDefinedComponentModel` and the psychrometric and curve functions of the EMS, and it raises an error for them: run those models with the EMS backend.
 
+
+
+(graphical-user-interface)=
+## 4.10 Graphical user interface
+
+Since accim 1.0.0, a graphical user interface (GUI), in English, does the main steps without writing Python: add the ACCIS to the IDF files of a folder, run their simulations and measure the occupied hours within the setpoints of the results. Open it with the command `accim-gui`, which is installed with accim, or with:
+
+```
+python -m accim.gui
+```
+
+It uses tkinter, which comes with Python on Windows and macOS (on Linux, it may need a package of the distribution, such as `python3-tk`). The three tabs share a working folder:
+
+1. **Add the ACCIS**: the input IDFs of the folder (all, or those selected), and the arguments of `AddAccis()` (sections 4.2 and 4.4): the script type, the temperature control, the outputs, the comfort standards (with the categories and comfort modes of each one), the arguments of mixed mode, those of the custom model (comfort standard 99) and the tolerances. The fields that do not apply to the script type or to the comfort standards are disabled. *Preview* shows the number of output IDFs and the arguments of `AddAccis()` in the log; *Add the ACCIS* writes the output IDFs in the folder, after a confirmation.
+2. **Run the simulations**: `run_ep()` (section 4.6) with the IDFs and EPWs of the folder, with the EMS or the Python API backend (section 4.9), and `remove_files()`.
+3. **Hours within the setpoints**: the percentage of the occupied hours within the setpoints of each simulation, in each zone and in the building, from the CSV files of the folder (section 4.7.1), the simulations that reach a minimum percentage, and a CSV file with the table.
+
+Each task runs in the background, one at a time, and what accim prints appears in the log at the bottom of the window (EnergyPlus writes its own messages in the console). The GUI does not ask anything in the prompt, so it gives all the arguments, and it checks them before running (for instance, that the lists of numbers are numbers). It does not cover the arguments of each zone (`zone_arguments`), the `custom` output type, `Table` and the parametric module: use Python for them.

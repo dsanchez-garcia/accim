@@ -39,6 +39,9 @@ extensions = [
 templates_path = ['_templates']
 exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store', 'accim/sample_files', '**/.ipynb_checkpoints']
 
+# accim.gui.app uses tkinter, which the Python of the build may not have (it is not installed with pip)
+autodoc_mock_imports = ['tkinter']
+
 # The notebooks are shown with the outputs stored in them: they need EnergyPlus, so they are run
 # beforehand (see docs/prepare_parametric_notebooks.py), never while building the documentation.
 nbsphinx_execute = 'never'

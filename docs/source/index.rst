@@ -31,7 +31,9 @@ With accim you can:
 - rename the weather files, run the simulations (with the Energy Management System of EnergyPlus, or
   through its Python API) and make tables and figures of the results (How-to Guides);
 - run parametric studies, sensitivity analyses and multi-objective optimisations of these controls
-  (:doc:`parametric_and_optimisation`).
+  (:doc:`parametric_and_optimisation`);
+- do the main steps without writing Python, with a graphical user interface (the command ``accim-gui``,
+  :ref:`graphical-user-interface`).
 
 If you are new to accim, start with :doc:`1_requirements`, :doc:`2_installation` and
 :doc:`3_quick tutorial`. If you used accim 0.x, see :doc:`9_migration_guide`: since accim 1.0.0,

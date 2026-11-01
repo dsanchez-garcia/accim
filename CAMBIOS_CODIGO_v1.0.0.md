@@ -60,6 +60,8 @@ Lo que ya está en otros documentos no se repite aquí:
   platypus y les aplicaba parches.
 - Hay un backend nuevo que ejecuta los programas EMS en Python, a través de la API de Python de
   EnergyPlus, con los mismos resultados que el EMS.
+- Hay una interfaz gráfica en inglés (`accim-gui`, `accim/gui/`) para añadir el ACCIS, simular y medir
+  las horas ocupadas dentro de las consignas sin escribir Python.
 
 **Tamaño** (líneas de Python, sin los archivos de ejemplo):
 
@@ -98,6 +100,7 @@ Lo que ya está en otros documentos no se repite aquí:
 | — | `accim/energyplus.py`: las instalaciones de EnergyPlus (`find_energyplus`, `idd_path`, `read_idf_version` y la variable de entorno `ACCIM_ENERGYPLUS_DIR`) |
 | Constantes repartidas | `accim/constants.py` (`SUPPORTED_ENERGYPLUS_VERSIONS`...); `accim/lists.py` se mantiene por compatibilidad |
 | — | `accim/_deprecation.py`: el mecanismo de los nombres antiguos (sección 7) |
+| — | `accim/gui/`: la interfaz gráfica en inglés (orden `accim-gui`, con tkinter): `forms.py` (los campos, sus valores por defecto y los argumentos de `AddAccis` y `run_ep` que dan, comprobados, sin tkinter) y `app.py` (la ventana: tres pestañas con una carpeta de trabajo común; cada tarea en un hilo, con lo que imprime en el registro y sin preguntas en el prompt) |
 | `run/run.py` (`runEp`) | `run/run.py`: `run_ep`, con `backend='ems'` o `'api'`, y `simulation_name` |
 | `accim.data` | Igual, con `gen_csv_concatenated`, `preview_table_cols` y `name_export_rows_with_nan` (los nombres antiguos funcionan) |
 | `accim.parametric_and_optimisation` | Igual; cambian sus llamadas internas a `accim.sim` (y algunas correcciones, sección 10). Nuevo `_pareto.py` (la dominancia con restricciones) y, en `objectives.py`, `checked_sum_results`, `hours_outside_comfort` y `fraction_outside_comfort` |

@@ -11,6 +11,25 @@ Durable architectural/process decisions for this repository and its Obsidian
 vault. Newest first. Use [[templates/decision-record.md|the decision-record
 template]] to add a new entry.
 
+## 2026-11-01 — The first GUI uses tkinter and covers AddAccis, run_ep and the hours within the setpoints
+
+- **Status**: accepted for the first version (priority task asked by the author on 2026-11-01; its item said that
+  he would choose the scope and the technology, and he could not answer: open question in [[questions.md]])
+- **Context**: A GUI in English, so that users without Python can add the ACCIS, run the simulations and look at the
+  results. accim is used on Windows with EnergyPlus; its steps print a lot, ask in the prompt when an argument is
+  missing, run long and use processes (`run_ep`).
+- **Decision**: tkinter (with Python on Windows and macOS: no new dependency) in a package `accim.gui`, with the
+  command `accim-gui` (`console_scripts`, so that EnergyPlus keeps a console) and `python -m accim.gui`. Three tabs
+  with a common working folder: `AddAccis` (all the arguments of its prompts, except `custom` outputs and the
+  arguments of each zone), `run_ep` (both backends) and the hours within the setpoints
+  ([[../DEVLOG.md]], 2026-11-01). The logic of the forms (`forms.py`: choices, defaults, checks, the arguments of
+  accim, the preview of the number of output IDFs) does not import tkinter, so it is tested without a display. Each
+  task runs in a thread, in the folder, with its output in a log and `input()` raising an error (the GUI gives all
+  the arguments, so a prompt is a bug).
+- **Consequences**: no `Table`, figures, aPMV setpoints or parametric module in the GUI yet; Linux users may need
+  `python3-tk`; the documentation mocks tkinter (`autodoc_mock_imports`). The tests of the window are skipped where
+  tkinter cannot open one.
+
 ## 2026-11-01 — `ex_mm` reads whether the HVAC system is off from the load that the thermostat asks for
 
 - **Status**: accepted (priority task asked by the author on 2026-11-01; the design was chosen while he could not

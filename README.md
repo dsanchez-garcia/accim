@@ -220,6 +220,14 @@ You can apply aPMV setpoints to a building using the following function:
         verbose_mode=bool # verbose_mode: True to print detailed progress messages (added objects) and warnings to the console. Default is True.
     )
 
+### 2.2.7 Graphical user interface
+
+Since accim 1.0.0, a graphical user interface, in English, adds the ACCIS to the IDF files of a folder, runs their simulations and measures the occupied hours within the setpoints of the results, without writing Python. Open it with the command:
+
+    accim-gui
+
+or with `python -m accim.gui` (it uses tkinter, which comes with Python on Windows and macOS). See section 4.10 of the detailed use in the documentation.
+
 
 # 3. Documentation
 
