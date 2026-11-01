@@ -153,6 +153,10 @@ setuptools.setup(
     extras_require={
         'samples': [f'{SAMPLES_DIST_NAME}=={accim.__version__}'],
         },
+    # The graphical user interface (accim.gui, with tkinter)
+    entry_points={
+        'console_scripts': ['accim-gui = accim.gui:main'],
+        },
     # scripts=['bin/addAccis.py'],
     keywords=[
         'adaptive thermal comfort',

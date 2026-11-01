@@ -12,13 +12,15 @@ https://accim.readthedocs.io/.
 - :mod:`accim.run`: runs the simulations, with the EMS of EnergyPlus or with its Python API.
 - :mod:`accim.data`: analyses the results.
 - :mod:`accim.parametric_and_optimisation`: parametric simulations and optimisations with besos.
+- :mod:`accim.gui`: a graphical user interface for the first three (command ``accim-gui``).
 """
 
 __version__ = '1.0.0'
 
 #: The subpackages and modules that ``import accim`` makes available as attributes (``accim.utils``...), which are
 #: imported when they are first used, so that importing accim is fast and has no side effects
-_SUBMODULES = ('constants', 'data', 'energyplus', 'lists', 'parametric_and_optimisation', 'run', 'sim', 'utils')
+_SUBMODULES = ('constants', 'data', 'energyplus', 'gui', 'lists', 'parametric_and_optimisation', 'run', 'sim',
+               'utils')
 
 
 def __getattr__(name):
