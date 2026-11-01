@@ -118,21 +118,40 @@ of each class of `accim.parametric_and_optimisation` and their results):
   and `SetAST` (`SetpointAcc`, `m` and `n`); `SetInputData` and `SetVOFinputData` no longer exist, and `SetAST`
   only runs `SetAST_Master` (the output IDFs of `AddAccis` no longer append the lines of their comfort model to
   it). A program `RunACCIS_<zone>` runs, for each zone, its `SetInputData_<zone>` and then the programs that
-  calculate and apply its setpoints, in the order in which they ran in accim 0.x for all the zones at once; only
+  calculate and apply its setpoints, in the order in which they ran in accim 0.x for all the zones at once
+  (except `CountHours_<zone>`, which now runs after the setpoints, see the next item); only
   `RunACCIS_<zone>`, `SetGeoVar<zone>` and `InitASTvariables` have calling managers. Each zone keeps its own
-  setpoints from one timestep to the next (`ACST_<zone>`, `ACSTnoTol_<zone>`...), and they are also new outputs
+  setpoints from one timestep to the next (`ACST_<zone>`...), and they are also new outputs
   of each zone (`Comfort Temperature_<zone>`, `Adaptive Cooling Setpoint Temperature_<zone>`...); the outputs of
   the whole model with the same names (`Comfort Temperature`...) keep their names and have the values of the
   last zone, the same as every zone when all the zones have the same arguments. With the same arguments in all
   the zones, the results do not change: the simulations of up to four output IDFs of each of the 29
   configurations (three short run periods and the sizing periods) give the same values as before in all their
-  outputs.
+  outputs (except the hour counters, corrected as the next item explains).
   `accim.utils.get_accim_args()` returns the arguments of each program `SetInputData_<zone>` (before, the items
   `SetInputData`, `SetVOFinputData`, `SetAST` and `CustAST`), and the attributes `SetInputData` and
   `SetVOFinputData` of the deprecated class `accim.sim.accis_single_idf.addAccis` are `None` (the programs of the
   zones are in its attribute `zone_input_programs`). `modify_accis` and the functions of
   `accim.parametric_and_optimisation` still set the arguments of the models of earlier versions of accim, in all
   their zones.
+- **The hour counters of the zones are corrected.** In accim 0.x, `Occupied Comfortable Hours_No
+  Applicability_<zone>` kept the value of the previous timestep when the operative temperature was out of the
+  setpoints, so after an occupied timestep within them, the following timesteps out of them (occupied or not) also
+  counted as occupied and comfortable: it could exceed `Occupied Hours_<zone>` (107 % of them in a week of the
+  sample model with natural ventilation), and with EnergyPlus 26.2, `make_averages=True` stopped EnergyPlus when
+  the first timestep was out of the setpoints. Below the heating setpoint within the applicability limits,
+  `CountHours_<zone>` set no counter, so `Discomfortable Applicable Cold Hours_<zone>` was never counted and
+  `Comfortable Hours_Applicability_<zone>` and the other counters kept the values of the previous timestep; and it
+  compared the operative temperature with the setpoints of the previous timestep (0 in the first timestep of
+  each environment). It now runs after `SetASTnoTol`, as `CountHoursNoApp_<zone>`. In each timestep, one of the
+  five counters with applicability (`Comfortable Hours_Applicability`, `Discomfortable Applicable Hot Hours`,
+  `Discomfortable Applicable Cold Hours`, `Discomfortable Non Applicable Hot Hours` and `Discomfortable Non
+  Applicable Cold Hours`) is the length of the timestep, and the occupied comfortable and discomfortable hours
+  add up to the occupied hours. In mixed mode with `HVACmode` 0, the ventilation hours are 0: before, they were
+  not set, and `make_averages=True` stopped EnergyPlus. The setpoints and the other results do not change. The
+  models of earlier versions of accim keep their counters (`modify_accis` does not change them): add the ACCIS
+  to the input models again. Section 4.7.1 explains how to get the percentage of the occupied hours within the
+  setpoints.
 - The output IDFs are the same in every run: the zones, and the objects of each zone, are always in the same
   order. Before, the order of the zones could change from one run to another. Since EnergyPlus adds up some
   results (the meters, for instance) in the order of the objects, the results of a model whose objects are in a
@@ -242,3 +261,7 @@ of each class of `accim.parametric_and_optimisation` and their results):
 - Importing accim no longer imports besos, dask and platypus or changes them; the patches that besos needs are
   applied by `accim.parametric_and_optimisation`. `accim.sim` does not import besos either, so it is imported
   much faster.
+- The block and building totals of `Table` add up only the outputs of the zones: before, those of `Comfortable
+  Hours_No Applicability` also added up the occupied comfortable and discomfortable hours of the zones (whose
+  names contain it), and those of the outputs that `make_averages` averages (the operative temperature, the
+  hours...) also added up their building averages.

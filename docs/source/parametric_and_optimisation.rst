@@ -216,6 +216,39 @@ Two different things are set here:
   written hourly (``output_freqs=['hourly']``) and the files of the simulations must be kept
   (step 6).
 
+**Hours within the setpoints.** The percentage of the occupied hours in which each zone is within
+its setpoints (without tolerance) shows whether the HVAC system or the natural ventilation keeps the
+setpoints of each simulation, so that the simulations in which it does not can be left out
+(:ref:`hours-within-setpoints`). Read the sums of the two hour counters of the zones, named after the
+outputs, and compute the percentages after the run with
+:func:`~accim.data.postprocessing.setpoint_hours.hours_within_setpoints`:
+
+.. code-block:: python
+
+    import pandas as pd
+
+    hours = sim.select_outputs(variables=['Occupied Hours_', 'Occupied Comfortable Hours_No Applicability_'],
+                               match='contains', on_missing='raise')['variables']
+    # with the other outputs: apply_outputs_preflight(..., df_vars_sel=pd.concat([selection['variables'], hours]))
+    readers_hours = hours.copy()
+    readers_hours['func'] = [sum_results] * len(readers_hours)
+    readers_hours['name'] = readers_hours['variable_name']      # Occupied Hours_<zone>...
+    sim.set_output_readers(df_output_meter=readers_meters,
+                           df_output_variable=pd.concat([readers_temp, readers_hours], ignore_index=True))
+
+    # after run_parametric_simulation (step 6)
+    from accim.data.postprocessing.setpoint_hours import filter_by_hours_within_setpoints, hours_within_setpoints
+
+    sim.outputs_param_simulation = hours_within_setpoints(sim.outputs_param_simulation)
+    kept = filter_by_hours_within_setpoints(sim.outputs_param_simulation, min_percentage=90)
+
+The table gets the columns ``Occupied Hours Within Setpoints_<zone> [%]`` and
+``Occupied Hours Within Setpoints_Building [%]``, which the plots of step 7 can also filter, with
+``data_filter={'include': {'Occupied Hours Within Setpoints_Building [%]': {'ge': 90}}}``. In an
+optimisation, the sum of ``Occupied Discomfortable Hours_No Applicability_<zone>`` can be a
+constraint: the occupied hours of a model and weather file are the same in every evaluation, so a
+maximum of hours out of the setpoints is a minimum percentage within them.
+
 **Comfort objectives independent of the control.** The comfort hours that accim counts
 (``Comfortable Hours_*``, for instance) follow the comfort model that accim controls, so a study that
 changes that model (the coefficients of the custom model, or the aPMV setpoints) measures each

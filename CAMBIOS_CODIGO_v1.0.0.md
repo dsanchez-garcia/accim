@@ -208,12 +208,18 @@ línea de siempre: `_EARLIER_VERSION_LINES`).
   llamada (`add_program_calling_managers`), sin añadir gestores a los programas que el modelo ya tenía.
   Solo tienen gestor `SetGeoVar<zona>`, `RunACCIS_<zona>` e `InitASTvariables`: `RunACCIS_<zona>` ejecuta
   (`run`) `SetInputData_<zona>` y después los programas de las consignas, en el orden en que se ejecutaban en
-  0.x para todas las zonas a la vez. Los programas que no son de una zona (`SetAppLimits`, `ApplyCAT`,
+  0.x para todas las zonas a la vez (salvo `CountHours_<zona>`, que ahora va después de `SetASTnoTol`, con las
+  consignas del paso de tiempo). Los programas que no son de una zona (`SetAppLimits`, `ApplyCAT`,
   `SetComfTemp`, `SetAST`, `SetASTnoTol`, `SetVST`) usan las variables de la zona que se está ejecutando;
-  las que conservan su valor de un paso de tiempo al siguiente (`ZONE_STATE_VARIABLES`: las consignas, las
-  consignas sin tolerancia que lee `CountHours_<zona>`, la temperatura de confort y la temporada) se
-  restauran al principio de `RunACCIS_<zona>` y se guardan al final (`ACST_<zona>`...), con las consignas de
-  la zona, que son salidas suyas; `InitASTvariables` las inicializa al principio de cada entorno.
+  las que conservan su valor de un paso de tiempo al siguiente (`ZONE_STATE_VARIABLES`: las consignas, la
+  temperatura de confort y la temporada) se restauran al principio de `RunACCIS_<zona>` y se guardan al final
+  (`ACST_<zona>`...), con las consignas de la zona y sus valores sin tolerancia, que son salidas suyas
+  (`ZONE_RESULT_VARIABLES`); `InitASTvariables` las inicializa al principio de cada entorno.
+- Los contadores de horas (`CountHours_<zona>`, `CountHoursNoApp_<zona>` y las horas de ventilación de
+  `ApplyAST_<zona>`) fijan todas sus variables en cada paso de tiempo: uno de los cinco contadores con
+  aplicabilidad vale la duración del paso, y las horas ocupadas confortables y no confortables suman las horas
+  ocupadas. `accim/data/postprocessing/setpoint_hours.py` calcula con ellos el porcentaje de horas ocupadas
+  dentro de las consignas de cada zona y del edificio, y filtra las simulaciones por él.
 - `ems/setpoint_lines.py`: una tabla con las líneas que calculan `ACST` y `AHST` para cada norma de
   confort (`ComfStand`) y modo (`ComfMod`), y las del redondeo (`ROUNDING`).
 - `ems/setast.py`: `SetAST` ejecuta `SetAST_Master`, que calcula la temporada de refrigeración y ejecuta
@@ -327,6 +333,13 @@ Están en la sección 9.3 de la guía de migración y en `CHANGELOG.md`. En resu
   `SetInputData_<zona>` y `RunACCIS_<zona>` (sección 6) y las salidas de las consignas de cada zona. Con los
   mismos argumentos en todas las zonas, las simulaciones de las configuraciones del *golden master* dan los
   mismos resultados que antes en todas sus salidas; `get_accim_args` devuelve los argumentos de cada zona.
+- Horas dentro de las consignas (01/11/2026): los contadores de horas de las zonas corregidos (las horas
+  ocupadas confortables conservaban el valor del paso anterior fuera de las consignas y podían superar a las
+  horas ocupadas; las horas frías con aplicabilidad no se contaban nunca; `CountHours_<zona>` usaba las
+  consignas del paso anterior), `make_averages` ya no detiene EnergyPlus con `HVACmode` 0 ni con EnergyPlus
+  26.2, los totales de `Table` solo suman las salidas de las zonas, y el módulo
+  `accim.data.postprocessing.setpoint_hours` da el porcentaje de horas ocupadas dentro de las consignas y
+  filtra las simulaciones por él.
 
 ## 11. Pruebas
 
@@ -353,7 +366,7 @@ Durante la refactorización se usaron dos herramientas que ahora están en el re
 | Para... | Toca... |
 | --- | --- |
 | Añadir una norma de confort | `standards.py` (número, nombre, categorías y modos), `ems/setpoint_lines.py` (las líneas de cada modo), `ems/setast.py` (`MODULAR_COMFORT_MODES`) y `param_accis.drop_invalid_param_combinations` (combinaciones válidas del módulo paramétrico); si hace falta, `ems/program_lines.py` (`SetAppLimits`, `ApplyCAT`...). Las preguntas toman la lista de `standards.py` |
-| Cambiar un programa EMS | `ems/program_lines.py` (o `ems/setpoint_lines.py`). Si lee una variable antes de fijarla en el paso de tiempo, añadirla a `ZONE_STATE_VARIABLES` (`ems/programs.py`) para que cada zona conserve la suya |
+| Cambiar un programa EMS | `ems/program_lines.py` (o `ems/setpoint_lines.py`). Si lee una variable antes de fijarla en el paso de tiempo, añadirla a `ZONE_STATE_VARIABLES` (`ems/programs.py`) para que cada zona conserve la suya; si es una salida de cada zona, a `ZONE_RESULT_VARIABLES` |
 | Añadir un argumento del ACCIS | `ems/inputs.INPUT_VARIABLES` (variable, argumento y valor por defecto), el argumento en `modify_accis`, `AddAccis` y `GenerationArguments` (y en `generation.zone_input_arguments`), su variable global en `ems/objects.py` y, para el módulo paramétrico, una función en `param_accis.py` |
 | Cambiar o añadir salidas | `outputs.py` |
 | Cambiar el sistema VRF | `hvac/vrf.py` y `hvac/vrf_data.py` |

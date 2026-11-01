@@ -11,6 +11,32 @@ Durable architectural/process decisions for this repository and its Obsidian
 vault. Newest first. Use [[templates/decision-record.md|the decision-record
 template]] to add a new entry.
 
+## 2026-11-01 — The hour counters are corrected, and the percentage within the setpoints is computed from them in Python
+
+- **Status**: accepted (priority task asked by the author on 2026-11-01; the design was chosen while he could not
+  answer, so he may revise it)
+- **Context**: The author asked that the hours within the setpoints (the EMS output of the comfortable hours, or
+  similar) be easy to measure, to filter out the simulations below a percentage. The ACCIS had the counters
+  (`Occupied Comfortable Hours_No Applicability_<zone>`, `Occupied Hours_<zone>`...), but they were wrong (see
+  [[../DEVLOG.md]], 2026-11-01): the occupied comfortable hours kept their value out of the setpoints and could
+  exceed the occupied hours, `CountHours_<zone>` set nothing below the heating setpoint and used the setpoints of
+  the previous timestep. A percentage is a ratio of two sums, which one EnergyPlus output cannot give at every
+  reporting frequency, and a reader of besos reads one output.
+- **Decision**: correct the counters (all set in every timestep; `CountHours_<zone>` after `SetASTnoTol`, so
+  `ACSTnoTol`/`AHSTnoTol` are results of each zone, not state) and compute the percentages in Python from the
+  sums of the two existing counters, in `accim.data.postprocessing.setpoint_hours` (`hours_within_setpoints`,
+  `filter_by_hours_within_setpoints`), for the CSV files of `run_ep` and for any table with one row per
+  simulation (the results of the parametric module with readers of the counters, named after them). The building
+  is the ratio of the sums over its zones. No new EMS output: a per-timestep status (1, 0, -1 as the comfort
+  status of EnergyPlus) would work as one reader, but its hourly averages mix the occupied and unoccupied
+  timesteps of an hour. For an optimisation, the sum of `Occupied Discomfortable Hours_No Applicability_<zone>`
+  is the constraint (the occupied hours of a model and weather file do not change between evaluations).
+- **Consequences**: the counters of the output IDFs change (the golden master was written again), not the setpoints
+  or the other results; the models of earlier versions keep their counters. `make_averages` no longer stops
+  EnergyPlus (`b02`, `b17`). The block and building totals of `Table` only add up the outputs of the zones. The
+  aPMV setpoints (`accim.sim.apmv`) have their own counters, without occupied comfortable hours, which the module
+  does not read.
+
 ## 2026-11-01 — Each zone has its arguments in `SetInputData_<zone>`, run by `RunACCIS_<zone>` with the shared programs
 
 - **Status**: accepted (asked by the author on 2026-11-01, who chose the options of the API, the outputs and the
@@ -40,7 +66,8 @@ template]] to add a new entry.
   runs the shared programs once per zone. `get_accim_args` returns one dictionary per zone. Not done: per-zone
   parameters in `accim.parametric_and_optimisation` (its parameters set all the zones) and per-zone setpoints in
   `Table`. The program order of 0.x is kept, including its quirks (`CountHours_<zone>` reads the setpoints of the
-  previous timestep; see [[../TODO.md]]).
+  previous timestep; see [[../TODO.md]]); later the same day, the decision above moved `CountHours_<zone>` after
+  `SetASTnoTol`, so `ACSTnoTol` and `AHSTnoTol` are no longer restored.
 
 ## 2026-10-31 — Two parts of the integrity block of `review/refactor-sim-v1-20261024` are adapted, the rest dropped
 

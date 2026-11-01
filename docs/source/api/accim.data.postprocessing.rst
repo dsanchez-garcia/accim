@@ -12,6 +12,14 @@ accim.data.postprocessing.main module
    :show-inheritance:
    :undoc-members:
 
+accim.data.postprocessing.setpoint\_hours module
+------------------------------------------------
+
+.. automodule:: accim.data.postprocessing.setpoint_hours
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
 accim.data.postprocessing.utils module
 --------------------------------------
 

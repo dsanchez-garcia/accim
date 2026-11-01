@@ -15,6 +15,14 @@ This log is a lightweight, session-scoped complement to the repository's
 existing tracking files — it does not replace them (see
 [[decisions.md#2026-09-13 — `notes/work-log.md` complements, not replaces, existing tracking files|the related decision]]).
 
+## 2026-11-01 — The hours within the setpoints, easy to measure and to filter by
+
+- **Objective**: The first priority task of [[../TODO.md]] asked by the author: the hours within the setpoints easy to measure, to filter out the simulations below a percentage (working autonomously: the author could not answer).
+- **Affected files**: `accim/sim/ems/program_lines.py`, `accim/sim/ems/programs.py`, `accim/data/postprocessing/setpoint_hours.py` (new), `accim/data/postprocessing/main.py` (`Table`), `tests/core/test_hour_counters.py` and `test_setpoint_hours.py` (new), the golden master; [[../docs/source/4_detailed use.md]] (4.7.1), [[../docs/source/parametric_and_optimisation.rst]], [[../docs/source/9_migration_guide.md]], [[../CHANGELOG.md]], [[../DEVLOG.md]], [[../TODO.md]], [[../CAMBIOS_CODIGO_v1.0.0.md]], [[decisions.md]].
+- **Finding or decision**: The counters were wrong, so the percentage could not be measured: the occupied comfortable hours kept their value out of the setpoints (up to 107 % of the occupied hours), and `CountHours_<zone>` never counted the cold hours and used the setpoints of the previous timestep. All corrected, which also fixed the P2 task of `make_averages`. See [[decisions.md#2026-11-01 — The hour counters are corrected, and the percentage within the setpoints is computed from them in Python|the decision]]: percentages in Python from the two counters, for CSV files and for tables of results. Found, not changed (P2 in [[../TODO.md]]): the block means of `Table` include the excluded zones.
+- **Validation**: simulations of the sample model before and after (only the counters change; the occupied counters now add up); `b02` and `b17` with `make_averages` simulate; the example of the parametric documentation run end to end; 1012 tests passed; details in [[../DEVLOG.md]].
+- **Next step**: the priority task of `ex_mm`, then the GUI in English.
+
 ## 2026-11-01 — The arguments of each zone, in one EMS program per zone
 
 - **Objective**: The three changes asked by the author on `v1.0.0`: the arguments of the ACCIS for each zone or space, all the inputs of the EMS in one program per zone, and a review of the names of the arguments with suggestions; later, three tasks for the TODO (hours within the setpoints as a filter, `ex_mm`, a GUI in English) and a commit and push when finished.

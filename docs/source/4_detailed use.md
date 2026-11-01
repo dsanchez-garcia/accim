@@ -679,6 +679,49 @@ You can see a Jupyter Notebook in the How-to Guides section of this documentatio
 
 To run it on your computer, copy the folder `jupyter_notebooks/Table` of the sample files to a working folder (see {ref}`running-example-notebooks`).
 
+(hours-within-setpoints)=
+### 4.7.1 Hours within the setpoints
+
+The ACCIS reports EMS outputs that count hours in each occupied zone: in each timestep, their value is the length of the timestep (in hours) or 0, so their sums are hours. With `make_averages=True`, the outputs `<output>_Building_Average` are their averages over the zones.
+
+| Output | Counts the timesteps... |
+| --- | --- |
+| `Comfortable Hours_No Applicability_<zone>` | with the operative temperature within the setpoints without tolerance (the comfort limits of the comfort model) |
+| `Occupied Comfortable Hours_No Applicability_<zone>` | the same, while the zone is occupied |
+| `Occupied Discomfortable Hours_No Applicability_<zone>` | out of the setpoints without tolerance, while the zone is occupied |
+| `Occupied Hours_<zone>` | while the zone is occupied |
+| `Comfortable Hours_Applicability_<zone>` | within the setpoints without tolerance, with the running mean outdoor temperature within the applicability limits of the comfort model |
+| `Discomfortable Applicable Hot Hours_<zone>`, `Discomfortable Applicable Cold Hours_<zone>` | above the cooling setpoint or below the heating setpoint without tolerance, within the applicability limits |
+| `Discomfortable Non Applicable Hot Hours_<zone>`, `Discomfortable Non Applicable Cold Hours_<zone>` | with the running mean outdoor temperature above or below the applicability limits |
+| `Ventilation Hours_<zone>` (mixed mode) | in which accim ventilates the zone while it is occupied |
+
+In each timestep, one of the five counters with applicability is the length of the timestep, and the occupied comfortable and discomfortable hours add up to the occupied hours (since accim 1.0.0, which corrected these counters; see section 9.3).
+
+The percentage of the occupied hours within the setpoints shows whether the HVAC system or the natural ventilation keeps the setpoints, so that the simulations in which it does not (an undersized system, natural ventilation alone in a hot week...) can be left out of the analysis. The module `accim.data.postprocessing.setpoint_hours` computes it for each zone (the ratio of the sums of `Occupied Comfortable Hours_No Applicability_<zone>` and `Occupied Hours_<zone>`) and for the building (the ratio of their sums over all the zones), and filters the simulations by it:
+
+```python
+from accim.data.postprocessing.setpoint_hours import filter_by_hours_within_setpoints, hours_within_setpoints
+
+# The CSV files of the simulations of run_ep in the working folder (or a CSV file, or a list of them)
+summary = hours_within_setpoints('.')
+print(summary[['Source', 'Occupied Hours Within Setpoints_Building [%]']])
+
+# The simulations with at least 90 % of the occupied hours of the building within the setpoints
+kept = filter_by_hours_within_setpoints(summary, min_percentage=90)
+# ... of each zone: zones='all'; or of some zones: zones=['Block1_Zone1']
+
+# Table with these simulations only (see the notebook of Table for its arguments)
+from accim.data.postprocessing.main import Table
+table = Table(datasets=list(kept['Source']), source_frequency='hourly', frequency='runperiod',
+              frequency_agg_func='sum', standard_outputs=True, level=['building'], level_agg_func=['sum'],
+              level_excluded_zones=[], idf_path='TestModel.idf')
+```
+
+- `hours_within_setpoints` returns one row for each CSV file: `Source` (the file), the sums of the two outputs of each zone, and the percentages, in the columns `Occupied Hours Within Setpoints_<zone> [%]` and `Occupied Hours Within Setpoints_Building [%]`. A zone without occupied hours has no percentage.
+- The CSV files need these outputs (`output_type` 'standard', 'detailed' or 'custom' of `AddAccis`), at any frequency: their sums are the same. If the model simulates its sizing periods, their hours count too.
+- It also takes a table with one row for each simulation and the sums of these outputs, such as the results of the parametric module (see {doc}`parametric_and_optimisation`, step 3), or the table of `Table` (`Table.df`, whose percentages are those of each row: a month, a day...), and returns it with the percentages.
+- `filter_by_hours_within_setpoints` takes the same results, or the table of `hours_within_setpoints`, and keeps the rows that reach `min_percentage` in the building (`zones='building'`, the default), in every occupied zone (`zones='all'`) or in the zones of a list.
+
 ## 4.8 Setpoints based on the adaptive predicted mean vote (aPMV)
 
 Besides adaptive setpoint temperatures, accim can apply setpoints based on the adaptive predicted mean vote (aPMV), which corrects the PMV for the adaptation of the occupants: aPMV = PMV / (1 + λ·PMV), where λ is the adaptive coefficient, with one value for the cooling season and another for the heating season. The thermostats keep the aPMV of each zone between the heating and cooling setpoints, instead of keeping the operative temperature between two temperatures.
