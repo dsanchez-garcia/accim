@@ -101,13 +101,38 @@ The prompts of `AddAccis` still show the old names (for instance, "Enter the Scr
 
 ## 9.3 Changes in the output IDFs and in the behaviour
 
-The output IDFs of accim 1.0.0 have the same objects as those of accim 0.x, except for the corrections below.
+The output IDFs of accim 1.0.0 have the same objects as those of accim 0.x, except for the EMS programs that hold
+the arguments of the zones (the first item below) and the corrections below.
 The new version was checked against accim 0.x with the output IDFs of 29 configurations (all script types,
 temperature and PMV control, all the comfort standards, aPMV setpoints, `add_accis_to_idf` and `modify_accis`),
 which are identical apart from these corrections (the golden master of the repository, `tests/core/golden_master`,
 repeats this comparison), and with short parametric and optimisation studies (the IDFs
 of each class of `accim.parametric_and_optimisation` and their results):
 
+- **Each occupied zone can have its own arguments** (comfort standard, category, comfort mode, HVAC mode,
+  ventilation control, tolerance, custom model...), with the new argument `zone_arguments` of `AddAccis` and
+  `modify_accis` (see section 4.2). In the EMS, each zone has all its arguments in a program
+  `SetInputData_<zone>`: those that were in `SetInputData` and also those that were in `SetVOFinputData`,
+  `ApplyCAT` (`CATcoolOffset`, `CATheatOffset` and the offsets of the custom model, now `CustAST_ACSToffset` and
+  `CustAST_AHSToffset`), `SetAppLimits` (the applicability limits of the custom model, now `CustAST_ACSTaul`...)
+  and `SetAST` (`SetpointAcc`, `m` and `n`); `SetInputData` and `SetVOFinputData` no longer exist, and `SetAST`
+  only runs `SetAST_Master` (the output IDFs of `AddAccis` no longer append the lines of their comfort model to
+  it). A program `RunACCIS_<zone>` runs, for each zone, its `SetInputData_<zone>` and then the programs that
+  calculate and apply its setpoints, in the order in which they ran in accim 0.x for all the zones at once; only
+  `RunACCIS_<zone>`, `SetGeoVar<zone>` and `InitASTvariables` have calling managers. Each zone keeps its own
+  setpoints from one timestep to the next (`ACST_<zone>`, `ACSTnoTol_<zone>`...), and they are also new outputs
+  of each zone (`Comfort Temperature_<zone>`, `Adaptive Cooling Setpoint Temperature_<zone>`...); the outputs of
+  the whole model with the same names (`Comfort Temperature`...) keep their names and have the values of the
+  last zone, the same as every zone when all the zones have the same arguments. With the same arguments in all
+  the zones, the results do not change: the simulations of up to four output IDFs of each of the 29
+  configurations (three short run periods and the sizing periods) give the same values as before in all their
+  outputs.
+  `accim.utils.get_accim_args()` returns the arguments of each program `SetInputData_<zone>` (before, the items
+  `SetInputData`, `SetVOFinputData`, `SetAST` and `CustAST`), and the attributes `SetInputData` and
+  `SetVOFinputData` of the deprecated class `accim.sim.accis_single_idf.addAccis` are `None` (the programs of the
+  zones are in its attribute `zone_input_programs`). `modify_accis` and the functions of
+  `accim.parametric_and_optimisation` still set the arguments of the models of earlier versions of accim, in all
+  their zones.
 - The output IDFs are the same in every run: the zones, and the objects of each zone, are always in the same
   order. Before, the order of the zones could change from one run to another. Since EnergyPlus adds up some
   results (the meters, for instance) in the order of the objects, the results of a model whose objects are in a
@@ -207,8 +232,8 @@ of each class of `accim.parametric_and_optimisation` and their results):
   names differ only in upper and lower case, which EnergyPlus took as duplicates.
 - accim no longer adds program calling managers to the EMS programs that the input model already had.
 - The repeated `Output:Variable` objects are removed.
-- `modify_accis` keeps the current values of the arguments that are `None`, and works with the models without
-  `SetVOFinputData` (fully air-conditioned).
+- `modify_accis` keeps the current values of the arguments that are `None` (in each zone), and works with the
+  models without inputs of the venting opening factor (fully air-conditioned).
 - The prompts of the second stage keep `name_suffix`, `verbose_mode` and `confirm_gen` of the call.
 - `output_idfs` maps the name of each output IDF to its own IDF object (read when it is used).
 - `run_ep` names the output files after the whole name of the EPW: before, it cut the name at its first dot

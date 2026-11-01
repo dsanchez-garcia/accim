@@ -20,10 +20,30 @@ Active short-term tasks.
 
 ## Backlog
 
-- [ ] [P1][todo] Release accim 1.0.0
-  - Context: Branch `v1.0.0` (refactoring to PEP 8, Python API backend), pushed to `origin/v1.0.0`, not merged.
+- [ ] [P1][in progress] Release accim 1.0.0
+  - Context: Branch `v1.0.0` (refactoring to PEP 8, Python API backend), merged into the local `master` by fast-forward on 2026-11-01 (to `a4a3e164`). `master` is not pushed yet: `packaging/README.md` (§4.8) pushes it after PyPI, because Read the Docs then builds `latest` from it. Later on 2026-11-01, `v1.0.0` got the arguments of each zone (`zone_arguments`), so `master` must be fast-forwarded again; and the author asked for a review of the names of the arguments, whose suggestions wait for his answer in `notes/questions.md` (renaming them before the release costs users nothing).
   - Definition of done: the author reviews the branch and merges it; `CHANGELOG.md` gets the date; accim and accim-samples 1.0.0 are published as in `packaging/README.md`.
-  - References: `CHANGELOG.md` (Unreleased), `DEVLOG.md` (2026-10-30).
+  - References: `CHANGELOG.md` (Unreleased), `DEVLOG.md` (2026-10-30, 2026-11-01).
+
+- [ ] [P1][todo] Make the hours within the setpoints easy to measure, to filter the simulations by a percentage
+  - Context: Asked by the author on 2026-11-01. The ACCIS already reports hour counters for each zone (`Comfortable Hours_No Applicability_<zone>`, `Occupied Comfortable Hours_No Applicability_<zone>`, `Occupied Hours_<zone>`... in `accim/sim/ems/objects.py`, `ZONE_OUTPUT_VARIABLES`; building averages with `make_averages`), but getting the percentage of (occupied) hours within the setpoints of a simulation, and keeping only the simulations above a threshold, takes manual work in `Table` or in the parametric module. Found on 2026-11-01 while splitting the programs by zone: `CountHours_<zone>` (the counters "_Applicability") compares with the setpoints without tolerance of the previous timestep, and when the operative temperature is below the heating setpoint it sets nothing (its third branch cannot be reached), so `Discomfortable Applicable Cold Hours` is never counted and the counters keep the values of the previous timestep; both as in 0.x, and kept by the change of 2026-11-01.
+  - Definition of done: one documented way (an EMS output or a function of the post-processing and of the parametric module) that gives the percentage of the occupied hours within the setpoints of each zone and of the building, and a filter of the simulations by a minimum percentage; the counters of `CountHours_<zone>` checked (the two problems above fixed, or documented as intended); with tests.
+  - References: `accim/sim/ems/program_lines.py` (`COUNT_HOURS`, `COUNT_HOURS_NO_APP`), `accim/sim/ems/objects.py`, `accim/parametric_and_optimisation/objectives.py`, `accim/data/postprocessing/main.py` (`Table`).
+
+- [ ] [P1][todo] Develop the script type `ex_mm` (existing HVAC systems in mixed mode)
+  - Context: Asked by the author on 2026-11-01. `ex_mm` is "UNDER DEVELOPMENT" in the documentation (section 4.1 of the detailed use): to open the windows when the air conditioning is off and close them when it is on, accim must identify all the HVAC equipment that heats or cools each zone and read whether it is working, and today it only reads one heating and one cooling object per zone (`<zone>_HeatCoil`, `<zone>_CoolCoil`), so models with several kinds of coils are rejected (golden master `b10`) and others stop EnergyPlus. The windows of these systems are matched to their zones by substring (see the item of the findings of the branch reviews).
+  - Definition of done: `ex_mm` identifies the heating and cooling equipment of each zone of the usual HVAC systems (zone equipment, air loops, plant loops, baseboards, radiant systems...) and opens and closes the windows with its state; checked with simulations of models of each kind; the warning removed from the documentation; with tests.
+  - References: `accim/sim/hvac/existing.py`, `accim/sim/model.py` (`AccimModel`), `docs/source/4_detailed use.md` (section 4.1), `tests/core/golden_master/configs.py` (`b07` to `b11`, `s04`).
+
+- [ ] [P1][todo] Graphical user interface (GUI) in English
+  - Context: Asked by the author on 2026-11-01. accim is used from Python scripts, notebooks and the prompts of `AddAccis`; a GUI in English would let users without Python add the ACCIS to their models, run the simulations and look at the results.
+  - Definition of done: the author decides the scope (which steps: `AddAccis`, `run_ep`, `Table`, the parametric module) and the technology; then a first version, in English, documented and tested.
+  - References: `accim/sim/prompts.py` (the questions of the prompts), `docs/source/4_detailed use.md`.
+
+- [ ] [P2][todo] `make_averages=True` stops EnergyPlus in two cases
+  - Context: Found on 2026-11-01 by simulating the output IDFs of the golden master (the same with and without the arguments of each zone): in mixed mode with `HVACmode` 0, `MakeVentHoursBuildAvg` reads `VentHours_<zone>`, which `ApplyAST_<zone>` only sets with `HVACmode` 1 and 2 (configuration `b02`, with EnergyPlus 25.1); and with EnergyPlus 26.2, `MakeOccComfHoursNoAppBuildAvg` reads `OccComfHoursNoApp_<zone>` before `CountHoursNoApp_<zone>` sets it in the first timestep (`b17`), as the variables of the custom model did before `InitASTvariables`. EnergyPlus stops with "used in expression has not been initialized".
+  - Definition of done: the variables that the averages read are set in every timestep (or initialised at each new environment), checked with simulations of `b02` and `b17`, and a test.
+  - References: `accim/sim/ems/objects.py` (`add_building_averages`), `accim/sim/ems/program_lines.py` (`APPLY_AST_MIXED_MODE`, `COUNT_HOURS_NO_APP`), `accim/sim/ems/programs.py` (`InitASTvariables`), `tests/core/golden_master/configs.py`.
 
 - [ ] [P2][todo] Describe `keep_input` correctly in the parametric notebooks
   - Context: Nine parametric notebooks (00, 01, 02, 03, 05, 06, WF1, WF2, WF3) describe the argument `keep_input` of `run_parametric_simulation()` as "whether generated input files are preserved", but it keeps the input parameters (the columns of the plan) in the results table (see its docstring in `accim/parametric_and_optimisation/main.py`). Found by the review of the notebook texts of 2026-10-31.

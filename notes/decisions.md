@@ -11,6 +11,37 @@ Durable architectural/process decisions for this repository and its Obsidian
 vault. Newest first. Use [[templates/decision-record.md|the decision-record
 template]] to add a new entry.
 
+## 2026-11-01 — Each zone has its arguments in `SetInputData_<zone>`, run by `RunACCIS_<zone>` with the shared programs
+
+- **Status**: accepted (asked by the author on 2026-11-01, who chose the options of the API, the outputs and the
+  models of earlier versions)
+- **Context**: The author asked that the user can give the arguments of the ACCIS (comfort standard, category,
+  comfort mode, HVAC mode...) for each zone or space, and that all the inputs be in one program (`SetInputData`)
+  per zone. The ACCIS had one value of each argument for the whole model, in five programs (`SetInputData`,
+  `SetVOFinputData`, `ApplyCAT`, `SetAppLimits`, `SetAST`), and all its programs calculated one set of setpoints
+  with global variables; the subprograms of the setpoints have about 3000 lines.
+- **Decision**: each occupied zone (each target of `resolve_targets`) has all its inputs in
+  `SetInputData_<zone>` (`accim/sim/ems/inputs.py`, `INPUT_VARIABLES`, with the names of 0.x for the EMS
+  variables until the review of the names), and a program `RunACCIS_<zone>`, the only one with a calling manager
+  besides `SetGeoVar<zone>` and `InitASTvariables`, runs it and then the shared programs, in the order in which
+  they ran for all the zones (so the subprograms are not repeated for each zone). The variables that the shared
+  programs read before setting them in a timestep (`ACST`, `AHST`, `ACSTnoTol`, `AHSTnoTol`, `ComfTemp`,
+  `CoolingSeason`) are restored and stored for each zone, and initialised at each new environment (the setpoints
+  as Null, so that a zone without setpoints still stops EnergyPlus). The user gives `zone_arguments={zone:
+  {argument: value}}` to `AddAccis` (the same in all the output IDFs, checked before writing them) and to
+  `modify_accis` (`None` keeps the values of each zone); the zones by name, key of the aPMV setpoints or EMS name.
+  The setpoints of each zone are new outputs, and those of the whole model keep their names (the values of the
+  last zone). The models of earlier versions keep their programs, which `modify_accis` and the parametric module
+  still set, without arguments per zone.
+- **Consequences**: the EMS objects of the output IDFs change (the golden master was written again); with the
+  same arguments in all the zones, the results do not change (simulations of up to four output IDFs of each
+  configuration of the golden master, compared output by output, and the two backends); with different
+  arguments, the setpoints of each zone equal those of a model whose zones all have its arguments. The EMS
+  runs the shared programs once per zone. `get_accim_args` returns one dictionary per zone. Not done: per-zone
+  parameters in `accim.parametric_and_optimisation` (its parameters set all the zones) and per-zone setpoints in
+  `Table`. The program order of 0.x is kept, including its quirks (`CountHours_<zone>` reads the setpoints of the
+  previous timestep; see [[../TODO.md]]).
+
 ## 2026-10-31 — Two parts of the integrity block of `review/refactor-sim-v1-20261024` are adapted, the rest dropped
 
 - **Status**: accepted (the recommendation of [[questions.md]], chosen by the author on 2026-10-31)

@@ -141,6 +141,7 @@ If you have run `accis.AddAccis()`, you will be asked in the prompt to enter a f
 | `vrf_schedule` | `VRFschedule` | name of the availability schedule of the VRF systems | `'On 24/7'` |
 | `eer`, `cop` | `eer`, `cop` | energy efficiency ratio and coefficient of performance of the VRF systems | 2, 2.1 |
 | `hvac_zone_map` | `hvac_zone_map` | dictionary `{'HVAC object name': 'Zone name'}` (only used by `ex_ac` and `ex_mm`) | `None` |
+| `zone_arguments` | (new in 1.0.0) | dictionary `{zone: {argument: value}}` with the arguments of some zones (see section 4.2.1) | `None` |
 | `make_averages` | `make_averages` | `True` to make averages of the hour-counting variables | `False` |
 | `debugging` | `debugging` | `True` to generate the EDD file of the Energy Management System | `False` |
 | `verbose_mode` | `verboseMode` | `True` or `False` | `True` |
@@ -244,6 +245,7 @@ Each argument is explained below:
 -   output_gen_dataframe and output_take_dataframe (Output_gen_dataframe and Output_take_dataframe): with `output_gen_dataframe=True`, accim stores a pandas DataFrame with all the Output:Variable objects in the attribute `df_outputs` of the returned object; you can filter it and enter it in `output_take_dataframe` to keep only those outputs (see {doc}`jupyter_notebooks/addAccis/using_addAccis`).
 -   vrf_schedule (VRFschedule), eer and cop: the availability schedule (‘On 24/7’ by default), the energy efficiency ratio (2) and the coefficient of performance (2.1) of the VRF systems added by the scripts ‘vrf_ac’ and ‘vrf_mm’.
 -   hvac_zone_map: only used by the scripts ‘ex_ac’ and ‘ex_mm’; a dictionary with the zone served by the HVAC objects that accim cannot assign to a zone automatically (see section 4.1).
+-   zone_arguments: the arguments of some occupied zones, which are the same in all the output IDFs; the other zones have those of each output IDF (see section 4.2.1).
 -   make_averages: True to make averages of the hour-counting variables. Default is False.
 -   debugging: True to add an Output:EnergyManagementSystem object, so that EnergyPlus writes the EDD file with the details of the Energy Management System programs. Default is False.
 
@@ -268,6 +270,54 @@ where:
 The numbers of the name keep the format in which they were entered: when they are entered in the prompt, they are read as decimal numbers, so the name contains, for instance, ‘CM_3.0’; with `comf_mod=[3]` in the function call, it contains ‘CM_3’.
 
 If some inputs are not used or don’t make sense, you’ll be able to se an ‘X’ in the output IDF file. For example, if you use CTE as Comfort Standard, then the inputs for Category and Comfort Mode (which are only for EN16798-1 and ASHRAE 55) are not used in the process, and the output IDF would contain in its name ‘CS_ESP CTE[CA_X[CM_X’. Another similar case occurs if you use Full air-conditioning HVAC Mode (i.e. enter ‘0’ for HVAC Mode), or if you use the ‘ex_ac’ script type, where the output IDF would contain in its name ‘[HM_0[VC_X[VO_X[MT_X[MW_X’.
+
+(zone-arguments)=
+### 4.2.1 Different arguments for each zone
+
+By default, all the occupied zones of a model have the same arguments. Since accim 1.0.0, each zone can have its own: for instance, the offices with the adaptive model of EN 16798-1 and air conditioning, and the meeting rooms with that of ASHRAE 55 and natural ventilation. The argument `zone_arguments` of `AddAccis` and of `modify_accis` gives the arguments of some zones, as a dictionary `{zone: {argument: value}}`:
+
+```python
+from accim.sim import accis
+
+accis.AddAccis(
+    script_type='vrf_mm',
+    supply_air_temp_input_method='temperature difference',
+    output_type='standard',
+    output_freqs=['hourly'],
+    output_keep_existing=False,
+    temp_ctrl='temperature',
+    comf_stand=[1, 2],                  # The other zones: EN 16798-1 and ASHRAE 55, in two output IDFs
+    cat=[3, 80],
+    comf_mod=[3],
+    hvac_mode=[2],
+    vent_ctrl=[0],
+    zone_arguments={
+        'Block1:Zone2': {'comf_stand': 99, 'cat': 80, 'comf_mod': 3, 'hvac_mode': 0,
+                         'cust_ast_m': 0.3, 'cust_ast_n': 18, 'cust_ast_acst_offset': 3, 'cust_ast_ahst_offset': -3,
+                         'cust_ast_acst_aul': 30, 'cust_ast_acst_all': 10, 'cust_ast_ahst_aul': 30,
+                         'cust_ast_ahst_all': 10},
+    },
+    confirm_gen=True,
+)
+```
+
+-   The zones are the occupied zones of the models, given by their names (in upper or lower case), or by the keys of the dictionaries of the aPMV setpoints (‘<space> <people>’, see section 4.8, and `accim.sim.apmv.get_available_target_names()`). With several input IDFs, each zone is applied to the models that have it, and accim stops if a zone is in none of them.
+-   The arguments are those of `modify_accis`, with one value each: `comf_stand`, `cat`, `comf_mod`, `cat_cool_offset`, `cat_heat_offset`, `setpoint_acc`, the arguments of the custom model (`cust_ast_...`), `cool_season_start`, `cool_season_end`, `hvac_mode`, `vent_ctrl`, `vst_offset`, `min_ot_offset`, `max_wind_speed`, `max_temp_diff_vof`, `min_temp_diff_vof`, `multiplier_vof` and `ast_tol` (the tolerance of the setpoints). The arguments that a zone does not give are those of each output IDF; when the output IDF has no natural ventilation (HVAC mode 0) and the zone has it, its ventilation arguments are the first values of `vent_ctrl`, `vst_offset`, `min_ot_offset` and `max_wind_speed`.
+-   With `AddAccis`, the zones of `zone_arguments` have the same arguments in all the output IDFs, whose names give the arguments of the other zones (use `name_suffix` to tell them apart). Each of these zones needs a comfort standard with setpoints for its category and comfort mode, and HVAC modes 1 and 2 only with ‘vrf_mm’ and ‘ex_mm’: accim checks it before writing any output IDF. `zone_arguments` needs `temp_ctrl='temperature'`. The attribute `zone_arguments` of the returned object gives the zones found in each input IDF.
+
+With an IDF object, `add_accis_to_idf` adds the ACCIS with the same arguments in all the zones, and `modify_accis` sets them for all the zones or, with `zone_arguments`, for some of them:
+
+```python
+accis.add_accis_to_idf(idf, script_type='vrf_mm', supply_air_temp_input_method='temperature difference',
+                       output_type='standard', output_freqs=['hourly'], output_keep_existing=False,
+                       temp_ctrl='temperature')
+accis.modify_accis(idf, comf_stand=1, cat=3, comf_mod=3, hvac_mode=2, vent_ctrl=0,
+                   zone_arguments={'Block1:Zone2': {'comf_stand': 2, 'cat': 80, 'hvac_mode': 0}})
+```
+
+The arguments of `modify_accis` that are `None` (`comf_stand`, `cat`, `comf_mod`, `hvac_mode` and `vent_ctrl`, by default) keep the values of each zone. The models of earlier versions of accim, whose zones share the program `SetInputData`, can only have the same arguments in all the zones.
+
+In the output IDFs, each zone has all its arguments in the Energy Management System program `SetInputData_<zone>`, and its program `RunACCIS_<zone>` runs it, and then the programs that calculate and apply the setpoints of the zone (`SetAppLimits`, `ApplyCAT`, `SetComfTemp`, `SetAST`...). You can edit the arguments of a zone in its program `SetInputData_<zone>`. Besides the outputs of the whole model (`Comfort Temperature`, `Adaptive Cooling Setpoint Temperature`...), which have the values of the last zone (those of every zone if all the zones have the same arguments), the setpoints of each zone are reported as `Comfort Temperature_<zone>`, `Adaptive Cooling Setpoint Temperature_<zone>`, `Adaptive Heating Setpoint Temperature_<zone>`, their values without tolerance and, in mixed mode, `Ventilation Setpoint Temperature_<zone>` and `Minimum Outdoor Temperature for ventilation_<zone>`.
 
 ## 4.3 Full list of setpoint temperatures
 

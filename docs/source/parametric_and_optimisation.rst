@@ -151,7 +151,9 @@ the object does to each model when it is created:
        ``'PMV cooling setpoint'``, ``'PMV heating setpoint'``, and ``'Adaptive coefficient'`` and
        ``'PMV setpoint'`` to vary both seasons, or both setpoints (-s and +s), together
 
-``sim.get_available_parameters()`` lists the names. For the aPMV setpoints, apply them yourself
+``sim.get_available_parameters()`` lists the names. The parameters of the accim models set the
+arguments of all the occupied zones (each zone has them in its EMS program ``SetInputData_<zone>``).
+For the aPMV setpoints, apply them yourself
 with explicit values, as in step 1, and pass ``bypass_addAccis=True``: the parameters of the study
 then replace only the values they vary, and the object does not apply the setpoints again.
 

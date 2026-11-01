@@ -37,10 +37,13 @@ Lo que ya está en otros documentos no se repite aquí:
   `DeprecationWarning` que da el nuevo.
 - Las preguntas de `AddAccis()` (siguen mostrando `ScriptType`, `ComfStand`...) y el uso de
   `accim.parametric_and_optimisation`, cuyos parámetros conservan los nombres de 0.x.
-- Las líneas Erl de los programas EMS.
+- Las líneas Erl de los programas EMS, salvo que los argumentos de cada zona están en su programa
+  `SetInputData_<zona>` (sección 6).
 - Los IDF de salida: se generaron con 0.8.2 y con 1.0.0 en 29 configuraciones (todos los tipos de
   script, todas las normas de confort, control por PMV, consignas aPMV, modelos de OpenStudio y
-  DesignBuilder, EnergyPlus 25.1 a 26.2...) y son idénticos, salvo las correcciones de la sección 10.
+  DesignBuilder, EnergyPlus 25.1 a 26.2...) y son idénticos, salvo las correcciones de la sección 10 y
+  los programas EMS de los argumentos de cada zona (desde el 01/11/2026), con los que las simulaciones dan
+  los mismos resultados.
 
 **Lo que cambia**
 
@@ -76,7 +79,7 @@ Lo que ya está en otros documentos no se repite aquí:
 | `accim_Main.py` (clase `accimJob`) | Leía el modelo (zonas ocupadas, ventanas, termostatos) y heredaba los métodos de los demás módulos | `model.py` (`AccimModel`), `targets.py` (zonas ocupadas y sus ocupantes) y `build.py` (la secuencia de pasos) |
 | `accim_Main_single_idf.py` | La copia de `accim_Main` para objetos IDF | Desaparece: `add_accis_to_idf` usa `AccimModel` y `build.py` |
 | `accim_Base.py` | Modelos de confort de los People, consignas PMV, objetos de control de salida, dimensionado, guardar el IDF | `people.py`, `hvac/vrf.py` y `outputs.py` |
-| `accim_Base_EMS.py` | Programas, gestores de llamada, variables, sensores, actuadores y variables de salida del EMS, y las Output:Variable | `ems/programs.py`, `ems/objects.py`, `ems/program_lines.py` (las líneas Erl) y `outputs.py` |
+| `accim_Base_EMS.py` | Programas, gestores de llamada, variables, sensores, actuadores y variables de salida del EMS, y las Output:Variable | `ems/programs.py`, `ems/objects.py`, `ems/program_lines.py` (las líneas Erl), `ems/inputs.py` (los argumentos de cada zona, `SetInputData_<zona>`) y `outputs.py` |
 | `setAST_models.py` | Las líneas de las consignas de cada norma de confort y los subprogramas de `SetAST` | `ems/setpoint_lines.py` (una tabla `(ComfStand, ComfMod)` → líneas) y `ems/setast.py` (`SetAST_Master` y los subprogramas) |
 | `accim_VRFsystem.py`, `accim_VRFsystem_EMS.py` | Los objetos del sistema VRF y sus sensores | `hvac/vrf.py` (la lógica) y `hvac/vrf_data.py` (los valores de los objetos, los de 0.x) |
 | `accim_ExistingHVAC.py`, `accim_ExistingHVAC_EMS.py`, `accim_ExistingHVAC_resolver.py` | Los sistemas existentes (`ex_ac`, `ex_mm`) | `hvac/existing.py` y `hvac/resolver.py` |
@@ -150,10 +153,14 @@ llamaba en orden; en 1.0.0 son funciones que reciben el `AccimModel`.
    - Guarda el texto del modelo (no el objeto, que ocupa mucha más memoria).
 4. **Segunda etapa de argumentos** (normas de confort, categorías, modos, ventilación, tolerancias...):
    `_generation_arguments` los pregunta si faltan (`prompts.ask_generation_arguments`) y los guarda en
-   un `GenerationArguments` (`generation.py`).
+   un `GenerationArguments` (`generation.py`). Los argumentos de algunas zonas (`zone_arguments`) se
+   comprueban (`ems/inputs.check_zone_arguments`) y se asignan a las zonas de cada modelo
+   (`resolve_zone_arguments`) en el paso 3.
 5. **Generación de los IDF de salida** (`_write_output_idfs`): `generation.combinations` da las
    combinaciones válidas (salta, con un aviso, las que no tienen consignas, y los controles de
-   ventilación 2 y 3 con ventilación natural sola); `output_name` da el nombre de cada archivo
+   ventilación 2 y 3 con ventilación natural sola); antes de escribir nada, `_check_zone_arguments`
+   comprueba que cada zona de `zone_arguments` tiene consignas en todas las combinaciones
+   (`generation.zone_arguments_errors`); `output_name` da el nombre de cada archivo
    (`modelo[CS_...[CA_...[...].idf`); y, tras la confirmación, un `IdfWriter` por modelo escribe todos
    sus IDF de salida.
 6. `output_idfs` (un `OutputIdfs`) da la ruta de cada IDF de salida, y lee el objeto IDF solo cuando se
@@ -161,41 +168,56 @@ llamaba en orden; en 1.0.0 son funciones que reciben el `AccimModel`.
 
 **Por qué es más rápido.** En 0.8.2, `genIDF` abría con eppy el `*_pymod.idf` para cada IDF de salida,
 cambiaba unos programas y lo guardaba con eppy, que es lento. Todos los IDF de salida de un modelo
-comparten todos los objetos salvo cinco programas EMS (`SetInputData`, `SetAST`, `ApplyCAT`,
-`SetAppLimits` y `SetVOFinputData`), así que `IdfWriter` escribe una vez el texto de los demás objetos
-y, para cada combinación, solo esos programas, con el formato de eppy: los archivos son idénticos byte a
-byte a los que guardaría eppy (lo comprueba `tests/core/test_generation.py`). Además, `accim.sim` no
-importa besos al cargarse.
+comparten todos los objetos salvo los programas `SetInputData_<zona>` (con los argumentos de cada zona en
+esa combinación, `generation.zone_input_arguments`), así que `IdfWriter` escribe una vez el texto de los
+demás objetos y, para cada combinación, solo esos programas, con el formato de eppy: los archivos son
+idénticos byte a byte a los que guardaría eppy (lo comprueba `tests/core/test_generation.py`). Además,
+`accim.sim` no importa besos al cargarse.
 
 ## 5. `add_accis_to_idf` y `modify_accis`
 
 `add_accis_to_idf(idf, ...)` hace los pasos 2 y 3 sobre un objeto IDF en memoria (sin copiarlo ni
-escribir archivos), con los argumentos por defecto de `SetInputData` (ComfStand 1, CAT 1, ComfMod 2,
-HVACmode 2, VentCtrl 0). Con los sistemas VRF también activa el dimensionado, como `AddAccis`; con los
-sistemas existentes no lo toca. Devuelve el `AccimModel`.
+escribir archivos), con los argumentos por defecto de `SetInputData_<zona>` en todas las zonas
+(ComfStand 1, CAT 1, ComfMod 2, HVACmode 2, VentCtrl 0). Con los sistemas VRF también activa el
+dimensionado, como `AddAccis`; con los sistemas existentes no lo toca. Devuelve el `AccimModel`.
 
-`modify_accis(idf, ...)` cambia los argumentos de un modelo que ya tiene el ACCIS: reescribe
-`SetInputData`, `SetAST` (deja sus 4 primeras líneas, que ejecutan `SetAST_Master`), `ApplyCAT`,
-`SetAppLimits` y `SetVOFinputData`. Los argumentos que son `None` conservan su valor. A los modelos de
-versiones anteriores les añade `SetAST_Master` y sus subprogramas (antes de 0.8) o les pone los
-subprogramas actuales de ESP CTE e INT ISO7730 (antes de 1.0).
+`modify_accis(idf, ...)` cambia los argumentos de un modelo que ya tiene el ACCIS: reescribe las líneas
+de los programas `SetInputData_<zona>` de todas las zonas o, con `zone_arguments`, las de cada zona con
+sus argumentos (`ems/inputs.set_inputs`, por el nombre de la variable). Los argumentos que son `None`
+conservan su valor en cada zona. Los modelos de versiones anteriores, con un único `SetInputData`, siguen
+el camino de antes (`_modify_accis_of_earlier_versions`: reescribe `SetInputData`, `SetAST`, `ApplyCAT`,
+`SetAppLimits` y `SetVOFinputData`, y les añade `SetAST_Master` y sus subprogramas, antes de 0.8, o les pone
+los subprogramas actuales de ESP CTE e INT ISO7730, antes de 1.0), sin argumentos por zona.
 
 El módulo paramétrico usa `add_accis_to_idf` al crear la simulación, `modify_accis` para el modelo base
 de `AccimPredefModelsParamSim` (el modelo custom con los coeficientes por defecto de 'accim custom
 model', los de ASHRAE 55 con un 80 % de aceptabilidad), y las funciones de
-`parametric_and_optimisation/funcs_for_besos/param_accis.py`, que cambian líneas concretas de esos
-programas en cada simulación.
+`parametric_and_optimisation/funcs_for_besos/param_accis.py`, que cambian una variable en los
+`SetInputData_<zona>` de todas las zonas en cada simulación (o, en los modelos de versiones anteriores, la
+línea de siempre: `_EARLIER_VERSION_LINES`).
 
 ## 6. Los programas EMS
 
+- `ems/inputs.py`: los argumentos de cada zona. `INPUT_VARIABLES` da, en orden, las variables de
+  `SetInputData_<zona>` (las 12 de `SetInputData` de 0.x y las que estaban en `SetAST`, `ApplyCAT`,
+  `SetAppLimits` y `SetVOFinputData`), el argumento de `modify_accis` de cada una y su valor por defecto;
+  también las funciones que leen, escriben y comprueban esos argumentos.
 - `ems/program_lines.py`: las líneas Erl de los programas del ACCIS (`SetComfTemp`, `SetAST`,
-  `CountHours_<zona>`, `SetWindowOperation_<ventana>`...), las de 0.8.2. `ems/programs.py` los añade al
-  modelo (`add_programs`) y crea sus gestores de llamada (`add_program_calling_managers`), sin añadir
-  gestores a los programas que el modelo ya tenía.
+  `CountHours_<zona>`, `SetWindowOperation_<ventana>`...), las de 0.8.2 sin los argumentos, que pasaron a
+  `SetInputData_<zona>`. `ems/programs.py` los añade al modelo (`add_programs`) y crea sus gestores de
+  llamada (`add_program_calling_managers`), sin añadir gestores a los programas que el modelo ya tenía.
+  Solo tienen gestor `SetGeoVar<zona>`, `RunACCIS_<zona>` e `InitASTvariables`: `RunACCIS_<zona>` ejecuta
+  (`run`) `SetInputData_<zona>` y después los programas de las consignas, en el orden en que se ejecutaban en
+  0.x para todas las zonas a la vez. Los programas que no son de una zona (`SetAppLimits`, `ApplyCAT`,
+  `SetComfTemp`, `SetAST`, `SetASTnoTol`, `SetVST`) usan las variables de la zona que se está ejecutando;
+  las que conservan su valor de un paso de tiempo al siguiente (`ZONE_STATE_VARIABLES`: las consignas, las
+  consignas sin tolerancia que lee `CountHours_<zona>`, la temperatura de confort y la temporada) se
+  restauran al principio de `RunACCIS_<zona>` y se guardan al final (`ACST_<zona>`...), con las consignas de
+  la zona, que son salidas suyas; `InitASTvariables` las inicializa al principio de cada entorno.
 - `ems/setpoint_lines.py`: una tabla con las líneas que calculan `ACST` y `AHST` para cada norma de
   confort (`ComfStand`) y modo (`ComfMod`), y las del redondeo (`ROUNDING`).
 - `ems/setast.py`: `SetAST` ejecuta `SetAST_Master`, que calcula la temporada de refrigeración y ejecuta
-  los subprogramas de la norma de `SetInputData` (`SetAST_CS<n>_<trozo>`). Cada subprograma tiene las
+  los subprogramas de la norma de la zona (`SetAST_CS<n>_<trozo>`). Cada subprograma tiene las
   líneas de hasta 3 modos de confort, para no pasar del límite de líneas de un programa de EnergyPlus; los
   de ESP CTE y INT ISO7730 (0 y 22), cuyas consignas no dependen del modo, las fijan sea cual sea `ComfMod`
   (`depends_on_comfort_mode`). `MODULAR_COMFORT_MODES` dice qué modos tiene cada norma; debe coincidir con
@@ -301,6 +323,10 @@ Están en la sección 9.3 de la guía de migración y en `CHANGELOG.md`. En resu
   `fraction_outside_comfort`): leen el estado de confort adaptativo que EnergyPlus calcula para cada objeto
   `People` (ASHRAE 55 y CEN 15251, que accim activa en todos sus modelos), en lugar de las métricas EMS de la
   etiqueta `archive/feat-comfort-metrics-experiment-api`.
+- Argumentos de cada zona (01/11/2026): `zone_arguments` en `AddAccis` y `modify_accis`, con los programas
+  `SetInputData_<zona>` y `RunACCIS_<zona>` (sección 6) y las salidas de las consignas de cada zona. Con los
+  mismos argumentos en todas las zonas, las simulaciones de las configuraciones del *golden master* dan los
+  mismos resultados que antes en todas sus salidas; `get_accim_args` devuelve los argumentos de cada zona.
 
 ## 11. Pruebas
 
@@ -327,7 +353,8 @@ Durante la refactorización se usaron dos herramientas que ahora están en el re
 | Para... | Toca... |
 | --- | --- |
 | Añadir una norma de confort | `standards.py` (número, nombre, categorías y modos), `ems/setpoint_lines.py` (las líneas de cada modo), `ems/setast.py` (`MODULAR_COMFORT_MODES`) y `param_accis.drop_invalid_param_combinations` (combinaciones válidas del módulo paramétrico); si hace falta, `ems/program_lines.py` (`SetAppLimits`, `ApplyCAT`...). Las preguntas toman la lista de `standards.py` |
-| Cambiar un programa EMS | `ems/program_lines.py` (o `ems/setpoint_lines.py`). Si es uno de los cinco programas que cambian en cada IDF de salida, también `generation.IdfWriter` y `modify_accis` |
+| Cambiar un programa EMS | `ems/program_lines.py` (o `ems/setpoint_lines.py`). Si lee una variable antes de fijarla en el paso de tiempo, añadirla a `ZONE_STATE_VARIABLES` (`ems/programs.py`) para que cada zona conserve la suya |
+| Añadir un argumento del ACCIS | `ems/inputs.INPUT_VARIABLES` (variable, argumento y valor por defecto), el argumento en `modify_accis`, `AddAccis` y `GenerationArguments` (y en `generation.zone_input_arguments`), su variable global en `ems/objects.py` y, para el módulo paramétrico, una función en `param_accis.py` |
 | Cambiar o añadir salidas | `outputs.py` |
 | Cambiar el sistema VRF | `hvac/vrf.py` y `hvac/vrf_data.py` |
 | Admitir una versión de EnergyPlus | `constants.SUPPORTED_ENERGYPLUS_VERSIONS` (y `ENERGYPLUS_VERSIONS_WITH_SPACES`); revisar `energyplus.py` y `tests/core/test_energyplus_versions.py` |

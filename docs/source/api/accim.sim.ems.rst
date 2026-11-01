@@ -12,6 +12,14 @@ accim.sim.ems.erl module
    :show-inheritance:
    :undoc-members:
 
+accim.sim.ems.inputs module
+---------------------------
+
+.. automodule:: accim.sim.ems.inputs
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
 accim.sim.ems.objects module
 ----------------------------
 

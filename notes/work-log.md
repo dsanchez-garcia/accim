@@ -15,6 +15,22 @@ This log is a lightweight, session-scoped complement to the repository's
 existing tracking files — it does not replace them (see
 [[decisions.md#2026-09-13 — `notes/work-log.md` complements, not replaces, existing tracking files|the related decision]]).
 
+## 2026-11-01 — The arguments of each zone, in one EMS program per zone
+
+- **Objective**: The three changes asked by the author on `v1.0.0`: the arguments of the ACCIS for each zone or space, all the inputs of the EMS in one program per zone, and a review of the names of the arguments with suggestions; later, three tasks for the TODO (hours within the setpoints as a filter, `ex_mm`, a GUI in English) and a commit and push when finished.
+- **Affected files**: `accim/sim/ems/inputs.py` (new), `programs.py`, `program_lines.py`, `objects.py`, `accim/sim/generation.py`, `accis.py`, `accis_single_idf.py`, `accim/utils/accim_args.py`, `verification.py`, `param_accis.py`, `main.py` of the parametric module; their tests and the golden master; [[../docs/source/4_detailed use.md]], [[../docs/source/9_migration_guide.md]], [[../CAMBIOS_CODIGO_v1.0.0.md]], [[../CHANGELOG.md]], [[../DEVLOG.md]], [[../TODO.md]], [[decisions.md]], [[questions.md]].
+- **Finding or decision**: See [[decisions.md#2026-11-01 — Each zone has its arguments in `SetInputData_<zone>`, run by `RunACCIS_<zone>` with the shared programs|the decision]]: `SetInputData_<zone>` with all the inputs, and `RunACCIS_<zone>`, which runs it and the shared programs and keeps for each zone the variables they read before setting them (without that, a zone took the setpoints of the zone that ran before it, as at the end of the day with ESP CTE). The names of the EMS variables do not change until the author answers the review of the names (open question in [[questions.md]], with a suggestion for each argument). Found, not changed (in [[../TODO.md]]): `CountHours_<zone>` reads the setpoints of the previous timestep and never counts the cold discomfort, and `make_averages` stops EnergyPlus in two cases; both as before.
+- **Validation**: simulations of up to four output IDFs of each configuration of the golden master with the commit before and after: all their common outputs identical; with different arguments per zone, the setpoints of each zone equal those of a model whose zones all have its arguments, and both backends give identical files; 987 tests and the 87 numbered tests of the parametric module passed; details in [[../DEVLOG.md]].
+- **Next step**: the answer of the author on the names; then the release (`master` must be fast-forwarded again to `v1.0.0`).
+
+## 2026-11-01 — `v1.0.0` merged into `master`
+
+- **Objective**: Move the changes of `v1.0.0` to `master`, as the author asked: the first step of the 1.0.0 release ([[../packaging/README.md]], §4.1).
+- **Affected files**: none in the tree: the local `master` moved from `1a2f5947` to `a4a3e164`, the commit of `v1.0.0`; [[../TODO.md]] (the release item), [[questions.md]].
+- **Finding or decision**: `master` was an ancestor of `v1.0.0` (29 commits behind), so it was fast-forwarded, as the branches merged into `master` on 2026-10-19 whenever possible; no merge commit. `master` is not pushed: §4.8 of the release guide pushes it after PyPI, because Read the Docs then builds `latest` from it. The local branch `claude/admiring-cori-fe6c57` (2 commits on the old `master`) is not in `v1.0.0`; what to do with it is a new question in [[questions.md]].
+- **Validation**: `master` and `v1.0.0` point to `a4a3e164` and `git diff v1.0.0 master` is empty; `master` is 29 commits ahead of `origin/master`; `python -m pytest tests/core tests/parametric_and_optimisation -q -p no:cacheprovider` on `master`: 953 passed in 8 min 45 s, with no file left in the working tree.
+- **Next step**: the question on `claude/admiring-cori-fe6c57`; then the release steps of [[../packaging/README.md]] (§4.1 to §4.11), with the push of `master` and of the tag at §4.8.
+
 ## 2026-10-31 — The refs of the branch reviews deleted
 
 - **Objective**: Delete the refs reviewed in [[branch-reviews.md]], as the author confirmed.
