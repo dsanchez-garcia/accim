@@ -82,7 +82,7 @@ Lo que ya está en otros documentos no se repite aquí:
 | `accim_Base_EMS.py` | Programas, gestores de llamada, variables, sensores, actuadores y variables de salida del EMS, y las Output:Variable | `ems/programs.py`, `ems/objects.py`, `ems/program_lines.py` (las líneas Erl), `ems/inputs.py` (los argumentos de cada zona, `SetInputData_<zona>`) y `outputs.py` |
 | `setAST_models.py` | Las líneas de las consignas de cada norma de confort y los subprogramas de `SetAST` | `ems/setpoint_lines.py` (una tabla `(ComfStand, ComfMod)` → líneas) y `ems/setast.py` (`SetAST_Master` y los subprogramas) |
 | `accim_VRFsystem.py`, `accim_VRFsystem_EMS.py` | Los objetos del sistema VRF y sus sensores | `hvac/vrf.py` (la lógica) y `hvac/vrf_data.py` (los valores de los objetos, los de 0.x) |
-| `accim_ExistingHVAC.py`, `accim_ExistingHVAC_EMS.py`, `accim_ExistingHVAC_resolver.py` | Los sistemas existentes (`ex_ac`, `ex_mm`) | `hvac/existing.py` y `hvac/resolver.py` |
+| `accim_ExistingHVAC.py`, `accim_ExistingHVAC_EMS.py`, `accim_ExistingHVAC_resolver.py` | Los sistemas existentes (`ex_ac`, `ex_mm`) | `hvac/existing.py`. El resolvedor de las zonas de los equipos desapareció: `ex_mm` lee la carga que pide el termostato de cada zona (sección 6) |
 | `accim_IDFgeneration.py` (`genIDF`) | Escribía cada IDF de salida a partir de los `*_pymod.idf` | `generation.py`: `combinations`, `output_name`, `IdfWriter` y `OutputIdfs` |
 | `dicts.py`, `lists.py`, `utils.py` | Datos de las normas y `scan_zones` | `standards.py` (catálogo de normas de confort), `arguments.py` (valores válidos), `targets.py` y `model.py` |
 | `accis_single_idf.py`, `accis_single_idf_funcs.py` | La versión en memoria (614 y 779 líneas) | Módulos obsoletos (145 y 51 líneas) que llaman a `add_accis_to_idf` y `modify_accis` con los nombres antiguos |
@@ -114,8 +114,8 @@ llamaba en orden; en 1.0.0 son funciones que reciben el `AccimModel`.
 | `setPMVsetpoint` | `hvac.vrf.set_pmv_setpoints` |
 | `addOpTempTherm`, `addBaseSchedules`, `setAvailSchOn`, `addVRFsystemSch`, `addCurveObj`, `addDetHVACobj` | `hvac.vrf.add_operative_temperature_thermostats`, `add_base_schedules`, `add_vrf_schedules`, `add_curves` y `add_vrf_objects`, que llama `hvac.vrf.add_vrf_system`. `setAvailSchOn` (la disponibilidad de los `ZoneHVAC:IdealLoadsAirSystem`) ya no existe: `add_vrf_objects` elimina esos objetos, que el VRF dejaba sin conectar |
 | `addForscriptSchVRFsystem`, `checkVentIsOn`, `addEMSSensorsVRFsystem` | `hvac.vrf.add_setpoint_schedules`, `check_ventilation` y `add_coil_sensors` |
-| `addForscriptSchExistHVAC`, `addEMSSensorsExisHVAC`, `addEMSInitExisHVAC` | `hvac.existing.add_setpoint_schedules`, `add_coil_sensors` y `add_coil_initialisation` |
-| `resolve_hvac_zone_map` (`accim_ExistingHVAC_resolver`) | `hvac.resolver` (las mismas estrategias) |
+| `addForscriptSchExistHVAC`, `addEMSSensorsExisHVAC`, `addEMSInitExisHVAC` | `hvac.existing.add_setpoint_schedules` y `add_load_sensors` (los sensores de la carga al termostato de cada zona y ventana, en lugar de los de las baterías; sin programa de inicialización) |
+| `resolve_hvac_zone_map` (`accim_ExistingHVAC_resolver`) | Desaparece: `ex_mm` ya no busca los equipos de cada zona, y `hvac_zone_map` no tiene efecto (obsoleto) |
 | `addEMSProgramsBase`, `addEMSPCMBase` | `ems.programs.add_programs` y `add_program_calling_managers` |
 | `addEMSOutputVariableBase`, `addGlobVarList`, `addIntVarList`, `addEMSSensorsBase`, `addEMSActuatorsBase`, `makeAverages` | `ems.objects.add_output_variables`, `add_global_variables`, `add_internal_variables`, `add_sensors`, `add_actuators` y `add_building_averages` |
 | `addOutputVariablesSimplified`, `addOutputVariablesStandard`, `addOutputVariablesDetailed`, `outputsSpecified`, `removeExistingOutputVariables`, `removeDuplicatedOutputVariables`, `genOutputDataframe`, `takeOutputDataFrame` | `outputs.add_simplified_outputs`, `add_standard_outputs`, `add_detailed_outputs`, `select_custom_outputs`, `remove_existing_outputs`, `remove_duplicated_outputs`, `output_variables_dataframe` y `take_output_dataframe` |
@@ -141,8 +141,7 @@ llamaba en orden; en 1.0.0 son funciones que reciben el `AccimModel`.
      una (`targets.resolve_targets`, que tiene en cuenta los `Space`, `SpaceList`, `ZoneList` y los
      `People:Instance` de EnergyPlus 26.2), las ventanas (aberturas de AirflowNetwork o, sin
      AirflowNetwork, los objetos `ZoneVentilation`, cada uno con un horario `Vent_Sch_<zona>`), y los
-     termostatos y sistemas existentes (con `ex_*`). Las zonas quedan en el orden del IDF, siempre el
-     mismo.
+     termostatos (con `ex_*`). Las zonas quedan en el orden del IDF, siempre el mismo.
    - `build.add_accis_objects(model, ...)` añade los objetos: los modelos de confort de los People, el
      sistema VRF o los horarios de los sistemas existentes, los programas EMS, sus variables, sensores
      y actuadores, los gestores de llamada y los objetos de control de salida.
@@ -220,6 +219,13 @@ línea de siempre: `_EARLIER_VERSION_LINES`).
   aplicabilidad vale la duración del paso, y las horas ocupadas confortables y no confortables suman las horas
   ocupadas. `accim/data/postprocessing/setpoint_hours.py` calcula con ellos el porcentaje de horas ocupadas
   dentro de las consignas de cada zona y del edificio, y filtra las simulaciones por él.
+- En modo mixto, `ApplyAST_<zona>` y `SetWindowOperation_<ventana>` empiezan por saber si el HVAC de la zona
+  está apagado (`NoH_NoC_reqs`): con los sistemas VRF de accim (`vrf_mm`), por sus baterías
+  (`<zona>_CoolCoil`, `<zona>_HeatCoil`); con los sistemas existentes (`ex_mm`), por la carga que pide el
+  termostato de la zona (`<zona>_LoadToSetpoint`, la salida `Zone Predicted Sensible Load to Setpoint Heat
+  Transfer Rate`, que es 0 entre las consignas), sea cual sea el equipo (`hvac/existing.add_load_sensors`).
+  Las dos variantes de cada programa (`APPLY_AST_MIXED_MODE` y `..._EXISTING_HVAC`, `SET_WINDOW_OPERATION`
+  y `..._EXISTING_HVAC`) solo difieren en esas primeras líneas.
 - `ems/setpoint_lines.py`: una tabla con las líneas que calculan `ACST` y `AHST` para cada norma de
   confort (`ComfStand`) y modo (`ComfMod`), y las del redondeo (`ROUNDING`).
 - `ems/setast.py`: `SetAST` ejecuta `SetAST_Master`, que calcula la temporada de refrigeración y ejecuta
@@ -340,6 +346,10 @@ Están en la sección 9.3 de la guía de migración y en `CHANGELOG.md`. En resu
   26.2, los totales de `Table` solo suman las salidas de las zonas, y el módulo
   `accim.data.postprocessing.setpoint_hours` da el porcentaje de horas ocupadas dentro de las consignas y
   filtra las simulaciones por él.
+- `ex_mm` con cualquier sistema existente (01/11/2026): lee la carga que pide el termostato de cada zona en
+  lugar de las baterías de un equipo de calor y otro de frío por zona, así que ya no rechaza los modelos con
+  varios tipos de baterías ni detiene EnergyPlus con zonas sin equipo de frío; `hvac_zone_map` queda obsoleto
+  y sin efecto, y desaparece `hvac/resolver.py`. Con el modelo de ejemplo con PTAC los resultados no cambian.
 
 ## 11. Pruebas
 

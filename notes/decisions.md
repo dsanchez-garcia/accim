@@ -11,6 +11,28 @@ Durable architectural/process decisions for this repository and its Obsidian
 vault. Newest first. Use [[templates/decision-record.md|the decision-record
 template]] to add a new entry.
 
+## 2026-11-01 — `ex_mm` reads whether the HVAC system is off from the load that the thermostat asks for
+
+- **Status**: accepted (priority task asked by the author on 2026-11-01; the design was chosen while he could not
+  answer, so he may revise it)
+- **Context**: In mixed mode, the windows of a zone open only when its HVAC system is off. `ex_mm` found one heating
+  and one cooling object of each zone and read their coils, which failed with several kinds of coils, with zones
+  without cooling (or heating) equipment and with central systems, and needed `hvac_zone_map` when it could not find
+  the zone of an object. The task asked to identify all the equipment of each zone (zone equipment, air loops, plant
+  loops, baseboards, radiant systems...). The zone outputs of the air system (`Zone Air System Sensible
+  Heating/Cooling Rate`) are not a state: a DOAS keeps them above 0, and they leave out the heat of the
+  baseboards.
+- **Decision**: read, for each zone (and the zone of each window), the load to the setpoints that its thermostat asks
+  the HVAC system for (`Zone Predicted Sensible Load to Setpoint Heat Transfer Rate`, previous timestep): the HVAC
+  system is off when it is 0, whatever the equipment. `vrf_mm` keeps its coils (its results do not change). No
+  topology: the resolver of the zones of the HVAC objects is removed, and `hvac_zone_map` is deprecated without
+  effect.
+- **Consequences**: the four sample models simulate, the PTACs give the same results as with their coils, and the
+  windows no longer stay open while the beams cool. Each occupied zone needs a thermostat (as with `ex_ac`). A zone
+  whose thermostat has a cooling setpoint but no equipment that cools keeps its windows closed while the thermostat
+  asks for cooling (HVAC mode 2 opens them only below the cooling setpoint anyway: no such timestep in the sample
+  model with radiators). An HVAC system that is not available when the thermostat asks for a load counts as on.
+
 ## 2026-11-01 — The hour counters are corrected, and the percentage within the setpoints is computed from them in Python
 
 - **Status**: accepted (priority task asked by the author on 2026-11-01; the design was chosen while he could not

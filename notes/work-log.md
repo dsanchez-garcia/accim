@@ -15,6 +15,14 @@ This log is a lightweight, session-scoped complement to the repository's
 existing tracking files — it does not replace them (see
 [[decisions.md#2026-09-13 — `notes/work-log.md` complements, not replaces, existing tracking files|the related decision]]).
 
+## 2026-11-01 — `ex_mm` for any existing HVAC system
+
+- **Objective**: The second priority task of [[../TODO.md]]: develop `ex_mm`, which was "UNDER DEVELOPMENT" (it had to identify all the HVAC equipment of each zone to open the windows when the air conditioning is off).
+- **Affected files**: `accim/sim/ems/program_lines.py`, `programs.py`, `accim/sim/hvac/existing.py` (rewritten), `hvac/resolver.py` (removed), `accim/sim/model.py`, `build.py`, `accis.py`, `tests/core/test_existing_hvac_mixed_mode.py` (new), the golden master; [[../docs/source/4_detailed use.md]] (4.1), [[../docs/source/9_migration_guide.md]], [[../CHANGELOG.md]], [[../DEVLOG.md]], [[../TODO.md]], [[../CAMBIOS_CODIGO_v1.0.0.md]], [[decisions.md]].
+- **Finding or decision**: See [[decisions.md#2026-11-01 — `ex_mm` reads whether the HVAC system is off from the load that the thermostat asks for|the decision]]: instead of finding the equipment, the load that the thermostat of each zone asks for (0 when the HVAC system is off), for any equipment; `hvac_zone_map` is deprecated. The baseline showed two of the four sample models failing and, with the beams, windows open while cooling.
+- **Validation**: the four sample models and the `ex_mm` configurations of the golden master simulate; PTACs identical to before; windows open with a load only in the first timestep of the load; both backends identical; details in [[../DEVLOG.md]].
+- **Next step**: the GUI in English.
+
 ## 2026-11-01 — The hours within the setpoints, easy to measure and to filter by
 
 - **Objective**: The first priority task of [[../TODO.md]] asked by the author: the hours within the setpoints easy to measure, to filter out the simulations below a percentage (working autonomously: the author could not answer).

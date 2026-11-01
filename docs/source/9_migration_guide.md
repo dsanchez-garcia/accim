@@ -99,6 +99,10 @@ Other arguments:
 
 The prompts of `AddAccis` still show the old names (for instance, "Enter the ScriptType").
 
+The argument `hvac_zone_map` of `AddAccis` and `add_accis_to_idf` (and of the classes of
+`accim.parametric_and_optimisation`) is deprecated and has no effect: it gave the zones of the HVAC objects that `ex_mm`
+could not find, and `ex_mm` no longer needs them (see 9.3). Giving it raises a `DeprecationWarning`.
+
 ## 9.3 Changes in the output IDFs and in the behaviour
 
 The output IDFs of accim 1.0.0 have the same objects as those of accim 0.x, except for the EMS programs that hold
@@ -152,6 +156,18 @@ of each class of `accim.parametric_and_optimisation` and their results):
   models of earlier versions of accim keep their counters (`modify_accis` does not change them): add the ACCIS
   to the input models again. Section 4.7.1 explains how to get the percentage of the occupied hours within the
   setpoints.
+- **`ex_mm` works with any existing HVAC system.** In accim 0.x, it looked for one heating and one cooling object of
+  each zone (through the zone equipment, the air loops or the names of the objects, or `hvac_zone_map`) and read
+  their coils, so `AddAccis` rejected the models with several kinds of coils (the sample OSM office), and the
+  models with zones without cooling or heating equipment (the sample model with electric radiators) and some others
+  (the in-memory functions with the OSM office) stopped EnergyPlus ("used in expression has not been
+  initialized"). Now it reads, for each zone and window, the load to the setpoints that the thermostat of the zone
+  asks for (sensors `<zone>_LoadToSetpoint` and `<window>_LoadToSetpoint` of the output `Zone Predicted Sensible
+  Load to Setpoint Heat Transfer Rate`, instead of `<zone>_CoolCoil` and `<zone>_HeatCoil`, and without the program
+  `InitExisHVACCoils`): the HVAC system is off when it is 0. With the sample model with PTACs, the results are the
+    same; with the cooled beams, whose coils were read before, the windows open fewer times while the thermostat asks
+    for cooling (only in the timestep in which it starts asking, as with the coils of the other systems); and the
+    models with radiators and the OSM office now simulate. `vrf_mm` does not change.
 - The output IDFs are the same in every run: the zones, and the objects of each zone, are always in the same
   order. Before, the order of the zones could change from one run to another. Since EnergyPlus adds up some
   results (the meters, for instance) in the order of the objects, the results of a model whose objects are in a

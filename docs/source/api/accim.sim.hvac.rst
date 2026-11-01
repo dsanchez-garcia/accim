@@ -12,14 +12,6 @@ accim.sim.hvac.existing module
    :show-inheritance:
    :undoc-members:
 
-accim.sim.hvac.resolver module
-------------------------------
-
-.. automodule:: accim.sim.hvac.resolver
-   :members:
-   :show-inheritance:
-   :undoc-members:
-
 accim.sim.hvac.vrf module
 -------------------------
 
