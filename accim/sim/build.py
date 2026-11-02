@@ -27,6 +27,10 @@ def add_accis_objects(
     vrf_cop: float = 2.1,
     add_building_averages: bool = False,
     debug_ems: bool = False,
+    existing_hvac_operative_temperature_control: bool = True,
+    existing_hvac_availability_schedule: Optional[str] = None,
+    existing_hvac_widen_outdoor_temperature_limits: bool = False,
+    existing_hvac_ideal_loads_backup: bool = False,
 ) -> None:
     """Add the HVAC systems (VRF) or adapt the existing ones, and add the EMS objects of the ACCIS.
 
@@ -37,6 +41,20 @@ def add_accis_objects(
     :param vrf_cop: The coefficient of performance of the VRF systems.
     :param add_building_averages: True to add the building averages of the hours of each zone and some outputs.
     :param debug_ems: True to make EnergyPlus write the EDD file of the EMS.
+    :param existing_hvac_operative_temperature_control: With the existing HVAC systems and temperature setpoints,
+        True to make the thermostat of each occupied zone control the operative temperature between the setpoints of
+        the zone at all times (:func:`accim.sim.hvac.existing.set_operative_temperature_thermostats`); False to keep
+        the thermostats of the model, which control the air temperature, as in accim 0.x.
+    :param existing_hvac_availability_schedule: With the existing HVAC systems, the name of the schedule that makes
+        them available (:func:`accim.sim.hvac.existing.make_available`), or None to keep their availability (with a
+        warning if it can switch them off).
+    :param existing_hvac_widen_outdoor_temperature_limits: With the existing HVAC systems, True to widen their outdoor
+        temperature limits to those of the VRF systems of accim
+        (:func:`accim.sim.hvac.existing.widen_outdoor_temperature_limits`); False to keep them (with a warning if
+        they are narrower).
+    :param existing_hvac_ideal_loads_backup: With the existing HVAC systems, True to add to each occupied zone a
+        backup ideal loads air system that supplies the load that they do not meet
+        (:func:`accim.sim.hvac.existing.add_ideal_loads_backups`).
     """
     set_comfort_models(model)
     if model.script_type.startswith('vrf'):
@@ -46,7 +64,21 @@ def add_accis_objects(
             vrf.check_ventilation(model)
         vrf.add_setpoint_schedules(model)
     else:
-        existing.add_setpoint_schedules(model)
+        if existing_hvac_operative_temperature_control and model.setpoint_type == 'temperature':
+            existing.set_operative_temperature_thermostats(model)
+        else:
+            existing.add_setpoint_schedules(model)
+        existing.warn_own_setpoints(model)
+        if existing_hvac_availability_schedule is None:
+            existing.warn_availability(model)
+        else:
+            existing.make_available(model, existing_hvac_availability_schedule)
+        if existing_hvac_widen_outdoor_temperature_limits:
+            existing.widen_outdoor_temperature_limits(model)
+        else:
+            existing.warn_outdoor_temperature_limits(model)
+        if existing_hvac_ideal_loads_backup:
+            existing.add_ideal_loads_backups(model)
 
     add_programs(model)
     ems_objects.add_output_variables(model)

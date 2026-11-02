@@ -7,7 +7,9 @@ their names in accim 0.x, to run the same configurations with it (``runner.py wr
 
 These are the 29 configurations with which accim 1.0.0 was checked against accim 0.8.2 (see the migration guide,
 section 9.3); with accim 0.8.2, b10 gives no output IDF (its existing HVAC system has two kinds of heating coils,
-which 'ex_mm' rejected until it read the loads of the thermostats instead of the coils).
+which 'ex_mm' rejected until it read the loads of the thermostats instead of the coils). b21 and b22 were added later
+with the arguments of the existing HVAC systems (``existing_hvac_*``), which accim 0.x does not have (``runner.py
+write --legacy`` leaves them out: b21 is then b11).
 """
 
 ALL_CS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 99]
@@ -105,6 +107,17 @@ BATCH = {
     'b20_tolerance_range': dict(models=['vrf2zones'], kwargs=dict(
         BASE, script_type='vrf_ac', comfort_standard=[0, 2], category=[80], comfort_mode=[3], hvac_mode=[0],
         setpoint_tolerance_start=0, setpoint_tolerance_end=1, setpoint_tolerance_step=0.25)),
+    # b11 with the thermostats of the model, which control the air temperature (as accim 0.x and as b11 before the
+    # operative temperature control of the existing HVAC systems)
+    'b21_ex_ac_osm_office_air_temperature': dict(models=['osmofficeex'], kwargs=dict(
+        BASE, script_type='ex_ac', comfort_standard=[1], category=[1], comfort_mode=[0, 3], hvac_mode=[0],
+        keep_existing_outputs=True, existing_hvac_operative_temperature_control=False)),
+    # b10 with the existing HVAC systems always available, with the outdoor temperature limits of the VRF systems and
+    # with backup ideal loads air systems
+    'b22_ex_mm_osm_office_existing_hvac_options': dict(models=['osmofficeex'], kwargs=dict(
+        BASE, script_type='ex_mm', comfort_standard=[2], category=[90], comfort_mode=[3], hvac_mode=[2],
+        ventilation_control=[0], output_type='detailed', existing_hvac_availability_schedule='On 24/7',
+        existing_hvac_widen_outdoor_temperature_limits=True, existing_hvac_ideal_loads_backup=True)),
 }
 
 _ADD = dict(supply_air_temp_input_method='temperature difference', output_type='standard', output_frequencies=['hourly'],
@@ -159,6 +172,11 @@ SINGLE = {
 }
 
 NAMES = list(BATCH) + list(SINGLE)
+
+# The arguments that accim 0.x does not have, which runner.py write --legacy leaves out (their values in the
+# configurations b21 and b22; accim 0.x controlled the air temperature, as b21)
+NEW_ARGUMENTS = ('existing_hvac_operative_temperature_control', 'existing_hvac_availability_schedule',
+                 'existing_hvac_widen_outdoor_temperature_limits', 'existing_hvac_ideal_loads_backup')
 
 # The names of the arguments in accim 0.x (accim.sim.arguments.LEGACY_ARGUMENT_NAMES, reversed)
 LEGACY_NAMES = {

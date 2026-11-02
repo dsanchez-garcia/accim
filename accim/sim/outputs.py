@@ -54,6 +54,10 @@ _DETAILED_OUTPUTS = ('AFN Surface Venting Window or Door Opening Factor',
                      'Zone Ventilation Standard Density Air Change Rate')
 _SITE_OUTPUTS = ('Site Outdoor Air Drybulb Temperature', 'Site Wind Speed', 'Site Outdoor Air Relative Humidity')
 _VRF_OUTPUTS = ('VRF Heat Pump Cooling Electricity Energy', 'VRF Heat Pump Heating Electricity Energy')
+#: The outputs of the backup ideal loads air systems (``existing_hvac_ideal_loads_backup``): the loads to the
+#: setpoints that the existing HVAC systems do not meet.
+_IDEAL_LOADS_BACKUP_OUTPUTS = ('Zone Ideal Loads Zone Sensible Heating Rate',
+                               'Zone Ideal Loads Zone Sensible Cooling Rate')
 _METERS = ('EnergyTransfer:HVAC', 'Electricity:HVAC', 'DistrictHeating:Facility', 'DistrictCooling:Facility',
            'Heating:EnergyTransfer', 'Cooling:EnergyTransfer', 'Heating:Electricity', 'Cooling:Electricity')
 _SIZING_PERIODS = ('SizingPeriod:DesignDay', 'SizingPeriod:WeatherFileDays', 'SizingPeriod:WeatherFileConditionType')
@@ -80,6 +84,13 @@ def _add_scheduled_ventilation_outputs(model: AccimModel, frequency: str) -> Non
             _new_output(model, schedule, 'Schedule Value', frequency)
 
 
+def _add_ideal_loads_backup_outputs(model: AccimModel, frequency: str) -> None:
+    """The heating and cooling of the backup ideal loads air systems of the existing HVAC systems."""
+    for backup in getattr(model, 'ideal_loads_backups', ()):
+        for variable in _IDEAL_LOADS_BACKUP_OUTPUTS:
+            _new_output(model, backup, variable, frequency)
+
+
 def remove_existing_outputs(model: AccimModel) -> None:
     """Remove the Output:Variable, Output:Meter and Output:EnvironmentalImpactFactors objects."""
     for object_type in ('Output:EnvironmentalImpactFactors', 'Output:Meter', 'Output:Variable'):
@@ -87,11 +98,13 @@ def remove_existing_outputs(model: AccimModel) -> None:
 
 
 def add_simplified_outputs(model: AccimModel, frequencies: Iterable[str]) -> None:
-    """Add the operative temperature and the coil rates (and PMV and PPD with 'pmv' control)."""
+    """Add the operative temperature and the coil rates (and PMV and PPD with 'pmv' control, and the heating and
+    cooling of the backup ideal loads air systems)."""
     outputs = _SIMPLIFIED_OUTPUTS + (_PMV_OUTPUTS if model.setpoint_type == 'pmv' else ())
     for frequency in frequencies:
         for variable in outputs:
             _new_output(model, '*', variable, frequency.capitalize())
+        _add_ideal_loads_backup_outputs(model, frequency.capitalize())
 
 
 def add_standard_outputs(model: AccimModel, frequencies: Iterable[str]) -> None:
@@ -120,6 +133,7 @@ def add_standard_outputs(model: AccimModel, frequencies: Iterable[str]) -> None:
             _new_output(model, f'AHST_Sch_{zone}', 'Schedule Value', frequency)
             _new_output(model, f'ACST_Sch_{zone}', 'Schedule Value', frequency)
         _add_scheduled_ventilation_outputs(model, frequency)
+        _add_ideal_loads_backup_outputs(model, frequency)
         if model.script_type.startswith('vrf'):
             for variable in _VRF_OUTPUTS:
                 _new_output(model, '*', variable, frequency)

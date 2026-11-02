@@ -63,6 +63,8 @@ class AccimModel:
     :ivar window_zones: The zone of each window or door.
     :ivar zones_orig: The names of the zones that accim controls.
     :ivar zones: The same names, as in the names of the EMS objects.
+    :ivar ideal_loads_backups: The names of the backup ideal loads air systems that accim adds to the occupied zones
+        (``existing_hvac_ideal_loads_backup``), whose outputs it adds.
     :ivar not_working: True if accim cannot work with the model, so that AddAccis writes no output IDFs from it.
     """
 
@@ -90,6 +92,7 @@ class AccimModel:
         self.natural_ventilation_type: Optional[str] = None
         self.scheduled_ventilation: Dict[str, str] = {}
         self.thermostat_groups: List[ThermostatGroup] = []
+        self.ideal_loads_backups: List[str] = []
 
         self._scan_zones()
         self.log(f'The occupied zones in the model {self.name} are:', *self.occupied_zones_orig)

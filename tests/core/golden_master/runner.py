@@ -41,8 +41,11 @@ def copy_input_model(model, folder):
 
 
 def _arguments(kwargs, legacy, names=None):
+    """The arguments of a call: with --legacy, with the names of accim 0.x and without those it does not have."""
     names = configs.LEGACY_NAMES if names is None else names
-    return {names.get(k, k): v for k, v in kwargs.items()} if legacy else dict(kwargs)
+    if not legacy:
+        return dict(kwargs)
+    return {names.get(k, k): v for k, v in kwargs.items() if k not in configs.NEW_ARGUMENTS}
 
 
 def _add_accis(kwargs, legacy):

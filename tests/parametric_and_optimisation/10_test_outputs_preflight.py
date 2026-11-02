@@ -130,7 +130,8 @@ def test_simulationbase_init_forwards_addaccis_defaults(monkeypatch):
 
     # The arguments of SimulationBase have the names of those of add_accis_to_idf (since accim 1.0.0)
     replicated = ['outputs_dataframe', 'energyplus_version', 'vrf_availability_schedule', 'vrf_eer', 'vrf_cop',
-                  'hvac_zone_map']
+                  'hvac_zone_map', 'existing_hvac_operative_temperature_control', 'existing_hvac_availability_schedule',
+                  'existing_hvac_widen_outdoor_temperature_limits', 'existing_hvac_ideal_loads_backup']
 
     buildings = ts.prepare_buildings(ts.TEST_CATEGORIES['fast']['idfs'])
     ts.ParametricSimulation(
@@ -157,6 +158,10 @@ def test_simulationbase_addaccis_default_sync_contract():
         ('vrf_eer', 'vrf_eer'),
         ('vrf_cop', 'vrf_cop'),
         ('hvac_zone_map', 'hvac_zone_map'),
+        ('existing_hvac_operative_temperature_control', 'existing_hvac_operative_temperature_control'),
+        ('existing_hvac_availability_schedule', 'existing_hvac_availability_schedule'),
+        ('existing_hvac_widen_outdoor_temperature_limits', 'existing_hvac_widen_outdoor_temperature_limits'),
+        ('existing_hvac_ideal_loads_backup', 'existing_hvac_ideal_loads_backup'),
     ]
     base_sig = inspect.signature(main_module.SimulationBase.__init__)
     addaccis_sig = inspect.signature(main_module.accis.add_accis_to_idf)
@@ -824,6 +829,10 @@ def test_addaccis_passthrough_params_are_exposed_in_all_constructors():
         'vrf_eer',
         'vrf_cop',
         'hvac_zone_map',
+        'existing_hvac_operative_temperature_control',
+        'existing_hvac_availability_schedule',
+        'existing_hvac_widen_outdoor_temperature_limits',
+        'existing_hvac_ideal_loads_backup',
     ]
     classes_to_check = [
         main_module.SimulationBase,

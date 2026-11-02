@@ -3057,6 +3057,10 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             building: Any = None,
             accim_results_root: Optional[str] = None,
             remove_output_tables: bool = True,
+            existing_hvac_operative_temperature_control: bool = True,
+            existing_hvac_availability_schedule: Optional[str] = None,
+            existing_hvac_widen_outdoor_temperature_limits: bool = False,
+            existing_hvac_ideal_loads_backup: bool = False,
     ):
         """Initialize the simulation base instance.
         
@@ -3083,6 +3087,11 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             out_dir paths for simulation outputs.
         :param remove_output_tables: when True, removes Output:Table:Monthly and
             Output:Table:Annual objects from each IDF during initialization.
+        :param existing_hvac_operative_temperature_control: forwarded to ``accim.sim.accis.add_accis_to_idf``
+            (script type 'ex_ac').
+        :param existing_hvac_availability_schedule: forwarded to ``accim.sim.accis.add_accis_to_idf``.
+        :param existing_hvac_widen_outdoor_temperature_limits: forwarded to ``accim.sim.accis.add_accis_to_idf``.
+        :param existing_hvac_ideal_loads_backup: forwarded to ``accim.sim.accis.add_accis_to_idf``.
         
         Usage
         -----
@@ -3167,6 +3176,10 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                         add_building_averages=add_building_averages,
                         debug_ems=debug_ems,
                         hvac_zone_map=hvac_zone_map,
+                        existing_hvac_operative_temperature_control=existing_hvac_operative_temperature_control,
+                        existing_hvac_availability_schedule=existing_hvac_availability_schedule,
+                        existing_hvac_widen_outdoor_temperature_limits=existing_hvac_widen_outdoor_temperature_limits,
+                        existing_hvac_ideal_loads_backup=existing_hvac_ideal_loads_backup,
                     )
         elif is_apmv_setpoints:
             if not bypass_add_accis:
@@ -13411,6 +13424,10 @@ class ParametricSimulation(SimulationBase):
             building: Any = None,
             accim_results_root: Optional[str] = None,
             remove_output_tables: bool = True,
+            existing_hvac_operative_temperature_control: bool = True,
+            existing_hvac_availability_schedule: Optional[str] = None,
+            existing_hvac_widen_outdoor_temperature_limits: bool = False,
+            existing_hvac_ideal_loads_backup: bool = False,
     ):
         """Initialize a parametric simulation.
         
@@ -13438,6 +13455,10 @@ class ParametricSimulation(SimulationBase):
             relative output directories.
         :param remove_output_tables: when True, removes Output:Table:Monthly and
             Output:Table:Annual objects from each IDF during initialization.
+        :param existing_hvac_operative_temperature_control: forwarded to ``accim.sim.accis.add_accis_to_idf``.
+        :param existing_hvac_availability_schedule: forwarded to ``accim.sim.accis.add_accis_to_idf``.
+        :param existing_hvac_widen_outdoor_temperature_limits: forwarded to ``accim.sim.accis.add_accis_to_idf``.
+        :param existing_hvac_ideal_loads_backup: forwarded to ``accim.sim.accis.add_accis_to_idf``.
         
         Usage
         -----
@@ -13469,6 +13490,10 @@ class ParametricSimulation(SimulationBase):
             building=building,
             accim_results_root=accim_results_root,
             remove_output_tables=remove_output_tables,
+            existing_hvac_operative_temperature_control=existing_hvac_operative_temperature_control,
+            existing_hvac_availability_schedule=existing_hvac_availability_schedule,
+            existing_hvac_widen_outdoor_temperature_limits=existing_hvac_widen_outdoor_temperature_limits,
+            existing_hvac_ideal_loads_backup=existing_hvac_ideal_loads_backup,
         )
         # Parametric-specific attributes
         self.outputs_param_simulation = None
@@ -13578,6 +13603,10 @@ class OptimisationSimulation(SimulationBase):
             building: Any = None,
             accim_results_root: Optional[str] = None,
             remove_output_tables: bool = True,
+            existing_hvac_operative_temperature_control: bool = True,
+            existing_hvac_availability_schedule: Optional[str] = None,
+            existing_hvac_widen_outdoor_temperature_limits: bool = False,
+            existing_hvac_ideal_loads_backup: bool = False,
     ):
         """Initialize an optimisation simulation.
         
@@ -13605,6 +13634,10 @@ class OptimisationSimulation(SimulationBase):
             relative output directories.
         :param remove_output_tables: when True, removes Output:Table:Monthly and
             Output:Table:Annual objects from each IDF during initialization.
+        :param existing_hvac_operative_temperature_control: forwarded to ``accim.sim.accis.add_accis_to_idf``.
+        :param existing_hvac_availability_schedule: forwarded to ``accim.sim.accis.add_accis_to_idf``.
+        :param existing_hvac_widen_outdoor_temperature_limits: forwarded to ``accim.sim.accis.add_accis_to_idf``.
+        :param existing_hvac_ideal_loads_backup: forwarded to ``accim.sim.accis.add_accis_to_idf``.
         
         Usage
         -----
@@ -13636,6 +13669,10 @@ class OptimisationSimulation(SimulationBase):
             building=building,
             accim_results_root=accim_results_root,
             remove_output_tables=remove_output_tables,
+            existing_hvac_operative_temperature_control=existing_hvac_operative_temperature_control,
+            existing_hvac_availability_schedule=existing_hvac_availability_schedule,
+            existing_hvac_widen_outdoor_temperature_limits=existing_hvac_widen_outdoor_temperature_limits,
+            existing_hvac_ideal_loads_backup=existing_hvac_ideal_loads_backup,
         )
         # Optimization-specific attributes
         self.outputs_optimisation = None
@@ -13873,6 +13910,10 @@ class AccimPredefModelsParamSim(ParametricSimulation):
             building: Any = None,
             accim_results_root: Optional[str] = None,
             remove_output_tables: bool = True,
+            existing_hvac_operative_temperature_control: bool = True,
+            existing_hvac_availability_schedule: Optional[str] = None,
+            existing_hvac_widen_outdoor_temperature_limits: bool = False,
+            existing_hvac_ideal_loads_backup: bool = False,
     ):
         """Initialize the predefined-model parametric wrapper.
         
@@ -13895,6 +13936,10 @@ class AccimPredefModelsParamSim(ParametricSimulation):
             relative output directories.
         :param remove_output_tables: when True, removes Output:Table:Monthly and
             Output:Table:Annual objects from each IDF during initialization.
+        :param existing_hvac_operative_temperature_control: forwarded to ``accim.sim.accis.add_accis_to_idf``.
+        :param existing_hvac_availability_schedule: forwarded to ``accim.sim.accis.add_accis_to_idf``.
+        :param existing_hvac_widen_outdoor_temperature_limits: forwarded to ``accim.sim.accis.add_accis_to_idf``.
+        :param existing_hvac_ideal_loads_backup: forwarded to ``accim.sim.accis.add_accis_to_idf``.
         
         Usage
         -----
@@ -13924,6 +13969,10 @@ class AccimPredefModelsParamSim(ParametricSimulation):
             hvac_zone_map=hvac_zone_map,
             accim_results_root=accim_results_root,
             remove_output_tables=remove_output_tables,
+            existing_hvac_operative_temperature_control=existing_hvac_operative_temperature_control,
+            existing_hvac_availability_schedule=existing_hvac_availability_schedule,
+            existing_hvac_widen_outdoor_temperature_limits=existing_hvac_widen_outdoor_temperature_limits,
+            existing_hvac_ideal_loads_backup=existing_hvac_ideal_loads_backup,
         )
         # The baseline is the custom model with the default coefficients of 'accim custom model'. Without them, its
         # heating setpoint was above the cooling one, so EnergyPlus stopped in the test simulations of the outputs

@@ -8,6 +8,13 @@ from typing import Mapping
 
 from accim.sim.arguments import SUPPLY_AIR_TEMP_INPUT_METHODS
 from accim.sim.hvac import vrf_data
+from accim.sim.hvac.schedules import (
+    ALWAYS_ON_SCHEDULE,
+    DUAL_SETPOINT_CONTROL_SCHEDULE,
+    RADIATIVE_FRACTION_SCHEDULE,
+    add_compact_schedule,
+    add_radiative_fraction_schedule,
+)
 from accim.sim.idf_tools import remove_objects
 from accim.sim.model import AccimModel
 
@@ -25,8 +32,8 @@ __all__ = [
 ]
 
 _VRF_SCHEDULES = {
-    'On 24/7': 'Until: 24:00,1',
-    'Control type schedule: Always 4': 'Until: 24:00,4',
+    ALWAYS_ON_SCHEDULE: 'Until: 24:00,1',
+    DUAL_SETPOINT_CONTROL_SCHEDULE: 'Until: 24:00,4',
     'Relative humidity setpoint schedule: Always 50.00': 'Until: 24:00,50',
     'Heating Fanger comfort setpoint: Always -0.5': 'Until: 24:00,-0.5',
     'Cooling Fanger comfort setpoint: Always  0.1': 'Until: 24:00, 0.1',
@@ -55,15 +62,6 @@ def _fields(template: Mapping, zone: str = '', **params) -> dict:
     return fields
 
 
-def _add_compact_schedule(model: AccimModel, name: str, *fields: str, type_limits: str = 'Any Number') -> None:
-    if name in [s.Name for s in model.idf.idfobjects['Schedule:Compact']]:
-        model.log(f'{name} Schedule already was in the model')
-        return
-    numbered = {f'Field_{n}': value for n, value in enumerate(fields, start=1)}
-    model.idf.newidfobject('Schedule:Compact', Name=name, Schedule_Type_Limits_Name=type_limits, **numbered)
-    model.log(f'{name} Schedule has been added')
-
-
 def add_operative_temperature_thermostats(model: AccimModel) -> None:
     """Add a ZoneControl:Thermostat:OperativeTemperature object to each zone."""
     for zone in model.zones_orig:
@@ -73,7 +71,7 @@ def add_operative_temperature_thermostats(model: AccimModel) -> None:
             continue
         model.idf.newidfobject('ZoneControl:Thermostat:OperativeTemperature', Thermostat_Name=name,
                                Radiative_Fraction_Input_Mode='Scheduled', Fixed_Radiative_Fraction='',
-                               Radiative_Fraction_Schedule_Name='TypOperativeTempControlSch')
+                               Radiative_Fraction_Schedule_Name=RADIATIVE_FRACTION_SCHEDULE)
         model.log(f'{name} has been added')
 
 
@@ -120,20 +118,18 @@ def set_pmv_setpoints(model: AccimModel) -> None:
 
 def add_base_schedules(model: AccimModel) -> None:
     """Add the schedules 'On' and 'TypOperativeTempControlSch' if they are not in the model."""
-    _add_compact_schedule(model, 'On', 'Through: 12/31', 'For: AllDays', 'Until: 24:00,1')
-    _add_compact_schedule(model, 'TypOperativeTempControlSch', 'Through: 12/31',
-                          'For: SummerDesignDay WinterDesignDay', 'Until: 24:00,0', 'For: AllOtherDays',
-                          'Until: 24:00, 0.5', type_limits='Temperature')
+    add_compact_schedule(model, 'On', 'Through: 12/31', 'For: AllDays', 'Until: 24:00,1')
+    add_radiative_fraction_schedule(model)
 
 
 def add_vrf_schedules(model: AccimModel) -> None:
     """Add the schedules of the VRF systems (except the setpoint schedules)."""
     for name, until in _VRF_SCHEDULES.items():
-        _add_compact_schedule(model, name, 'Through: 12/31', 'For: AllDays', until)
-    _add_compact_schedule(model, 'VRF Heating Cooling (Northern Hemisphere)',
-                          'Through: 31 Mar', 'For: AllDays', 'Until: 24:00, 0',
-                          'Through: 30 Sep', 'For: AllDays', 'Until: 24:00, 1',
-                          'Through: 31 Dec', 'For: AllDays', 'Until: 24:00, 0')
+        add_compact_schedule(model, name, 'Through: 12/31', 'For: AllDays', until)
+    add_compact_schedule(model, 'VRF Heating Cooling (Northern Hemisphere)',
+                         'Through: 31 Mar', 'For: AllDays', 'Until: 24:00, 0',
+                         'Through: 30 Sep', 'For: AllDays', 'Until: 24:00, 1',
+                         'Through: 31 Dec', 'For: AllDays', 'Until: 24:00, 0')
 
 
 def add_curves(model: AccimModel) -> None:
@@ -221,8 +217,8 @@ def add_setpoint_schedules(model: AccimModel) -> None:
     and the ThermostatSetpoint:DualSetpoint objects that use them (instead of those of the model)."""
     idf = model.idf
     for ems_name in model.ems_names:
-        _add_compact_schedule(model, f'AHST_Sch_{ems_name}', 'Through: 12/31', 'For: AllDays', 'Until: 24:00,20')
-        _add_compact_schedule(model, f'ACST_Sch_{ems_name}', 'Through: 12/31', 'For: AllDays', 'Until: 24:00,24')
+        add_compact_schedule(model, f'AHST_Sch_{ems_name}', 'Through: 12/31', 'For: AllDays', 'Until: 24:00,20')
+        add_compact_schedule(model, f'ACST_Sch_{ems_name}', 'Through: 12/31', 'For: AllDays', 'Until: 24:00,24')
     remove_objects(idf, 'ThermostatSetpoint:DualSetpoint')
     for zone, ems_name in zip(model.ems_zones, model.ems_names):
         idf.newidfobject('ThermostatSetpoint:DualSetpoint', Name=f'{zone} Dual SP',
@@ -233,7 +229,7 @@ def add_setpoint_schedules(model: AccimModel) -> None:
 def check_ventilation(model: AccimModel) -> None:
     """Make the AirflowNetwork windows ('_Win') and doors ('_Door') open with the EMS (mixed mode)."""
     idf = model.idf
-    _add_compact_schedule(model, 'Vent_SP_temp', 'Through: 12/31', 'For: AllDays', 'Until: 24:00,24')
+    add_compact_schedule(model, 'Vent_SP_temp', 'Through: 12/31', 'For: AllDays', 'Until: 24:00,24')
     openings = idf.idfobjects['AirflowNetwork:MultiZone:Component:DetailedOpening']
     surfaces = idf.idfobjects['AirflowNetwork:MultiZone:Surface']
     for window in [w for w in openings if w.Name.endswith('_Win')]:
