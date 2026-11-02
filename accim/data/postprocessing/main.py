@@ -2615,6 +2615,10 @@ class Table:
                 )
 
         df_for_graph = df_for_graph.unstack('col_to_unstack')
+        if df_for_graph.ndim == 1:
+            # The tables of the run period have no dates, so unstack gives a Series: one row with a column for each
+            # output and simulation, with the types of the outputs
+            df_for_graph = df_for_graph.to_frame().T.infer_objects()
 
         df_for_graph.columns = df_for_graph.columns.map('['.join)
 

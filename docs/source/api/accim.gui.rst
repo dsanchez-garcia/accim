@@ -20,6 +20,14 @@ accim.gui.forms module
    :show-inheritance:
    :undoc-members:
 
+accim.gui.tasks module
+----------------------
+
+.. automodule:: accim.gui.tasks
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
 Module contents
 ---------------
 
