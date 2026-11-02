@@ -15,6 +15,14 @@ This log is a lightweight, session-scoped complement to the repository's
 existing tracking files — it does not replace them (see
 [[decisions.md#2026-09-13 — `notes/work-log.md` complements, not replaces, existing tracking files|the related decision]]).
 
+## 2026-11-02 — The existing HVAC systems keep the operative temperature between the setpoints
+
+- **Objective**: The question of the author: with existing HVAC systems the operative temperature exceeded the setpoints in some models (he used the VRF systems instead); can the existing equipment keep it between them (`ex_mm`)? Then: investigate the HVAC systems themselves (capacity, outdoor temperature limits), for any IDF, with arguments that simulate the model as it is when they are off.
+- **Affected files**: `accim/sim/hvac/existing.py`, `accim/sim/hvac/schedules.py` (new), `vrf.py`, `build.py`, `accis.py`, `outputs.py`, `model.py`, `accim/parametric_and_optimisation/main.py`; `tests/core/test_existing_hvac.py` (new), the golden master (`b10`, `b11`, `s04`, new `b21`, `b22`); [[../docs/source/4_detailed use.md]] (4.1.1), [[../docs/source/9_migration_guide.md]], [[../CHANGELOG.md]], [[../DEVLOG.md]], [[../TODO.md]], [[../CAMBIOS_CODIGO_v1.0.0.md]], [[decisions.md]].
+- **Finding or decision**: See [[decisions.md#2026-11-02 — The existing HVAC systems keep the operative temperature between the setpoints with arguments `existing_hvac_*`|the decision]]: the main cause was air temperature control (the VRF systems control the operative temperature); also the thermostats with several controls (EnergyPlus examples: setpoints not applied, EnergyPlus stopped), the availability, the outdoor temperature limits and the HVAC system itself (capacity, controls, no cooling equipment), which only a backup ideal loads system covers for any system.
+- **Validation**: year simulations in Seville of the four sample models and `5ZoneAirCooled` (OSM office: 53–77 % → 86–93 % → 100 %); 21 new tests; all the tests of `tests/core` and `tests/parametric_and_optimisation` passed; golden master: only the OSM office changes, `b21` (`False`) equals the former `b11`; details in [[../DEVLOG.md]].
+- **Next step**: the review of the author; the radiant systems and the GUI ([[../TODO.md]]).
+
 ## 2026-11-02 — The findings of the branch reviews, fixed
 
 - **Objective**: Continue, without answers of the author, with the P2 items of [[../TODO.md]] that need no decision: the findings of the branch reviews ([[branch-reviews.md]], 1.4), the block means of `Table` and `keep_input` in the parametric notebooks.

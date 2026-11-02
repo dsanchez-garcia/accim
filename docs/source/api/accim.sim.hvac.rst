@@ -12,6 +12,14 @@ accim.sim.hvac.existing module
    :show-inheritance:
    :undoc-members:
 
+accim.sim.hvac.schedules module
+-------------------------------
+
+.. automodule:: accim.sim.hvac.schedules
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
 accim.sim.hvac.vrf module
 -------------------------
 

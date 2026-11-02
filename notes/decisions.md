@@ -11,6 +11,36 @@ Durable architectural/process decisions for this repository and its Obsidian
 vault. Newest first. Use [[templates/decision-record.md|the decision-record
 template]] to add a new entry.
 
+## 2026-11-02 — The existing HVAC systems keep the operative temperature between the setpoints with arguments `existing_hvac_*`
+
+- **Status**: accepted (asked by the author on 2026-11-02, who chose the default of the operative temperature control,
+  the availability as an option with a warning, and the names; the rest was done while he asked to work
+  autonomously, "if they are False, it is simulated as it is", so he may revise it)
+- **Context**: With `ex_ac` and `ex_mm`, the operative temperature could be out of the adaptive setpoints in many
+  hours (the author used the VRF systems of accim instead). The causes (simulations in
+  [[../DEVLOG.md]], 2026-11-02): the existing thermostats controlled the air temperature, while the VRF systems of
+  accim control the operative temperature; accim only gave the setpoints to the first control of each thermostat
+  (the thermostats of the example files of EnergyPlus kept the setpoints of the model, and EnergyPlus stopped); the
+  HVAC systems may be unavailable while the zones are occupied, may lock out their compressors or heaters with some
+  outdoor temperatures, or may lack capacity, controls or equipment that heats or cools; and the radiant systems,
+  ventilated slabs and cooling panels follow setpoint schedules of their own.
+- **Decision**: four arguments of `AddAccis`, `add_accis_to_idf` and the classes of the parametric module, in
+  `accim/sim/hvac/existing.py`: `existing_hvac_operative_temperature_control` (`True`: the thermostat of each
+  occupied zone uses only a dual setpoint object of its own with the schedules of the zone, always, and controls the
+  operative temperature as those of the VRF systems; `False`: the thermostats as in accim 0.x);
+  `existing_hvac_availability_schedule` (`None`, with a warning; a schedule for the HVAC objects that heat or cool,
+  the operation schemes with one scheme and the availability managers of the air and plant loops);
+  `existing_hvac_widen_outdoor_temperature_limits` (`False`, with a warning; the limits of the VRF systems, -20 and
+  80 °C, within the IDD); and `existing_hvac_ideal_loads_backup` (`False`; an ideal loads air system as the last
+  equipment of each occupied zone, for the load that the existing system does not meet, whatever it is). Only
+  warnings for the objects with setpoints of their own.
+- **Consequences**: the output IDFs of the models without operative temperature thermostats change by default (the
+  OSM office of the golden master: `b10`, `b11`, `s04`); those of DesignBuilder and of the VRF systems do not. The
+  models with the thermostats of the example files of EnergyPlus simulate. With all the options, the sample models
+  have 99.7 to 100 % of the occupied hours between the setpoints in a year in Seville; the energy of a backup is
+  reported apart (district heating and cooling), as the loads that the existing system does not meet. Pending
+  ([[../TODO.md]]): the radiant systems following the setpoints, and the arguments in the GUI.
+
 ## 2026-11-02 — The arguments and parameters have descriptive names, the same in the whole package
 
 - **Status**: accepted (the author's answer of 2026-11-02 to the open question of the names: option (a), and the

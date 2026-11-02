@@ -164,7 +164,10 @@ The other arguments are passed to :func:`~accim.sim.accis.add_accis_to_idf`, whi
 names (those of accim 0.x, such as ``ScriptType`` or ``output_freqs``, still work, with a
 ``DeprecationWarning``). ``script_type`` is ``'vrf_ac'`` (VRF system, fully air-conditioned), ``'vrf_mm'`` (VRF
 system with mixed-mode operation) or ``'ex_ac'`` (the existing HVAC system of the model, fully
-air-conditioned). Mixed-mode operation needs a model with natural ventilation: calculated
+air-conditioned). With ``'ex_ac'``, the arguments ``existing_hvac_operative_temperature_control``,
+``existing_hvac_availability_schedule``, ``existing_hvac_widen_outdoor_temperature_limits`` and
+``existing_hvac_ideal_loads_backup`` adapt the existing HVAC system so that it keeps the operative temperature between
+the setpoints (section 4.1.1 of :doc:`4_detailed use`). Mixed-mode operation needs a model with natural ventilation: calculated
 (AirflowNetwork), or given by ``ZoneVentilation:WindandStackOpenArea`` or
 ``ZoneVentilation:DesignFlowRate`` objects, whose opening accim controls; see :doc:`4_detailed use`.
 With ``'vrf_ac'`` and ``'ex_ac'``, accim does not change the natural ventilation of the model, so

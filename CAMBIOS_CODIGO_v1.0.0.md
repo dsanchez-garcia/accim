@@ -370,6 +370,27 @@ Están en la sección 9.3 de la guía de migración y en `CHANGELOG.md`. En resu
   lugar de las baterías de un equipo de calor y otro de frío por zona, así que ya no rechaza los modelos con
   varios tipos de baterías ni detiene EnergyPlus con zonas sin equipo de frío; `hvac_zone_map` queda obsoleto
   y sin efecto, y desaparece `hvac/resolver.py`. Con el modelo de ejemplo con PTAC los resultados no cambian.
+- Sistemas existentes que mantienen la temperatura operativa entre las consignas (02/11/2026): con `ex_ac` y
+  `ex_mm` y consignas de temperatura, el termostato de cada zona ocupada controla por defecto la temperatura
+  operativa, como los del VRF (`existing_hvac_operative_temperature_control=True`,
+  `hvac/existing.set_operative_temperature_thermostats`): un `ThermostatSetpoint:DualSetpoint` propio con los
+  horarios de la zona, el horario de tipo de control `Control type schedule: Always 4` y un
+  `ZoneControl:Thermostat:OperativeTemperature` con `TypOperativeTempControlSch` si no lo tiene. Antes los
+  termostatos controlaban la temperatura del aire y solo el objeto del primer control recibía las consignas
+  (con los termostatos de los ejemplos de EnergyPlus, tres controles compartidos por todas las zonas, las zonas
+  seguían las consignas del modelo y EnergyPlus se detenía); con `False` siguen como en 0.x
+  (`add_setpoint_schedules`). Tres argumentos más, que por defecto no cambian el modelo y avisan:
+  `existing_hvac_availability_schedule` (`make_available`: el horario de disponibilidad de los equipos que
+  calientan o enfrían y un `AvailabilityManager:Scheduled` en los bucles de aire y de planta),
+  `existing_hvac_widen_outdoor_temperature_limits` (`widen_outdoor_temperature_limits`: los límites de
+  temperatura exterior, -20 y 80 °C como el VRF, dentro de los del IDD) y `existing_hvac_ideal_loads_backup`
+  (`add_ideal_loads_backups`: un `ZoneHVAC:IdealLoadsAirSystem` de respaldo, el último equipo de cada zona
+  ocupada, que suministra la carga que el sistema existente no cubre, con sus salidas en `outputs.py`). La
+  disponibilidad incluye los esquemas de operación de planta con un solo esquema, y accim avisa de los equipos que
+  siguen horarios de consigna propios en lugar del termostato (sistemas radiantes, forjados ventilados, paneles
+  refrigerantes: `warn_own_setpoints`).
+  `hvac/schedules.py` (nuevo) reúne los horarios que comparten el VRF y los sistemas existentes y lee los
+  valores de los horarios de un modelo (`schedule_values`, `is_always_on`), para los avisos de disponibilidad.
 - Hallazgos de las revisiones de las ramas (02/11/2026), cada uno con su test: `rename_epw_files` solo borra
   los EPW originales que ha copiado con su nombre nuevo (borraba también los excluidos); las peticiones a
   Nominatim identifican a accim (`NOMINATIM_USER_AGENT`), tienen un tiempo límite y aceptan coordenadas sin
@@ -396,7 +417,7 @@ Están en la sección 9.3 de la guía de migración y en `CHANGELOG.md`. En resu
 
 Durante la refactorización se usaron dos herramientas que ahora están en el repositorio:
 
-- El *golden master* (`tests/core/golden_master`, con su `README.md`): genera los IDF de 29
+- El *golden master* (`tests/core/golden_master`, con su `README.md`): genera los IDF de 31
   configuraciones y los compara objeto a objeto, en su orden, con los de 1.0.0 guardados en
   `golden/` (0,4 MB, comprimidos con xz). Se ejecuta con los tests de `tests/core`, cada configuración
   en su propio proceso (eppy solo usa un IDD por proceso). Su `runner.py` también ejecuta las
@@ -414,6 +435,7 @@ Durante la refactorización se usaron dos herramientas que ahora están en el re
 | Añadir un argumento del ACCIS | `ems/inputs.INPUT_VARIABLES` (variable, argumento y valor por defecto), el argumento en `modify_accis`, `AddAccis` y `GenerationArguments` (y en `generation.zone_input_arguments`), su variable global en `ems/objects.py` y, para el módulo paramétrico, una función en `param_accis.py` |
 | Cambiar o añadir salidas | `outputs.py` |
 | Cambiar el sistema VRF | `hvac/vrf.py` y `hvac/vrf_data.py` |
+| Cambiar cómo se adaptan los sistemas existentes (termostatos, disponibilidad, límites, respaldo) | `hvac/existing.py`, los horarios compartidos en `hvac/schedules.py`, y los argumentos `existing_hvac_*` en `build.add_accis_objects`, `AddAccis`, `add_accis_to_idf` y las clases del módulo paramétrico (`SimulationBase` y sus subclases) |
 | Admitir una versión de EnergyPlus | `constants.SUPPORTED_ENERGYPLUS_VERSIONS` (y `ENERGYPLUS_VERSIONS_WITH_SPACES`); revisar `energyplus.py` y `tests/core/test_energyplus_versions.py` |
 | Renombrar un argumento | El argumento en las funciones, y el nombre antiguo en `arguments.LEGACY_ARGUMENT_NAMES` (o en la correspondencia de su módulo, sección 7); en el módulo paramétrico, también el parámetro (`params_dicts`) |
 | Añadir una función de Erl al backend de la API | `ems/erl.py`: `_FUNCTIONS`, la versión rápida en `_FAST_NAMESPACE` y la exacta en `_ExactEvaluator.function`, con un test en `tests/core/test_erl.py` |

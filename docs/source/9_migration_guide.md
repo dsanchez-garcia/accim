@@ -176,6 +176,14 @@ The argument `hvac_zone_map` of `AddAccis` and `add_accis_to_idf` (and of the cl
 `accim.parametric_and_optimisation`) is deprecated and has no effect: it gave the zones of the HVAC objects that `ex_mm`
 could not find, and `ex_mm` no longer needs them (see 9.3). Giving it raises a `DeprecationWarning`.
 
+Four new arguments of `AddAccis` and `add_accis_to_idf` (and of the classes of `accim.parametric_and_optimisation`)
+adapt the existing HVAC systems (`ex_ac`, `ex_mm`) so that they keep the operative temperature between the setpoints
+(see section 4.1.1): `existing_hvac_operative_temperature_control` (`True` by default: the thermostats of the occupied
+zones control the operative temperature; `False` keeps the thermostats as accim 0.x did, see 9.3),
+`existing_hvac_availability_schedule` (`None` by default), `existing_hvac_widen_outdoor_temperature_limits` and
+`existing_hvac_ideal_loads_backup` (`False` by default). With their values other than the default, accim 0.x had no
+equivalent.
+
 ## 9.3 Changes in the output IDFs and in the behaviour
 
 The output IDFs of accim 1.0.0 have the same objects as those of accim 0.x, except for the EMS programs that hold
@@ -242,6 +250,24 @@ of each class of `accim.parametric_and_optimisation` and their results):
     same; with the cooled beams, whose coils were read before, the windows open fewer times while the thermostat asks
     for cooling (only in the timestep in which it starts asking, as with the coils of the other systems); and the
     models with radiators and the OSM office now simulate. `vrf_mm` does not change.
+- **The thermostats of the existing HVAC systems control the operative temperature.** In accim 0.x, with `ex_ac`
+  and `ex_mm`, the thermostats of the model kept controlling the air temperature, while the adaptive setpoints are
+  setpoints of the operative temperature (the VRF systems of accim always controlled it), and only the setpoint object
+  of the first control of each thermostat got the setpoints of accim. So the operative temperature could be out of
+  the setpoints in many hours (in a year in Seville, 23 to 47 % of the occupied hours of the sample OSM office), and
+  with the thermostats of the example files of EnergyPlus (a single cooling, a single heating and a dual setpoint
+  object shared by all the zones, with a control type schedule), the zones kept the setpoints of the model in most of
+  the year and EnergyPlus stopped (the heating setpoint schedules that the EMS actuates were missing). Now, with
+  temperature setpoints, the thermostat of each occupied zone has a dual setpoint object of its own with the setpoint
+  schedules of the zone, a control type schedule that always selects it, and a
+  `ZoneControl:Thermostat:OperativeTemperature` object, as those of the VRF systems (section 4.1.1). The output IDFs
+  of the models whose thermostats already worked so (those of DesignBuilder, as the sample models with PTACs,
+  radiators and cooled beams) do not change; those of the others do, and the operative temperature stays between
+  the setpoints in more hours (86 to 93 % of the occupied hours of the OSM office, the rest because its HVAC system
+  is off while it is occupied, which the new argument `existing_hvac_availability_schedule` changes).
+  `existing_hvac_operative_temperature_control=False` keeps the thermostats as accim 0.x did. With the existing HVAC
+  systems, accim also warns if their availability or their outdoor temperature limits can switch them off (see
+  section 4.1.1).
 - The output IDFs are the same in every run: the zones, and the objects of each zone, are always in the same
   order. Before, the order of the zones could change from one run to another. Since EnergyPlus adds up some
   results (the meters, for instance) in the order of the objects, the results of a model whose objects are in a
