@@ -31,7 +31,7 @@ And then, you just need to call the class `AddAccis`:
 
 ```{note}
 In accim 1.0.0, `addAccis` became `AddAccis`, and its arguments follow the naming conventions of Python
-(PEP 8): `script_type` instead of `ScriptType`, `comf_stand` instead of `ComfStand`, and so on. The old
+(PEP 8): `script_type` instead of `ScriptType`, `comfort_standard` instead of `ComfStand`, and so on. The old
 names still work, with a `DeprecationWarning` that gives the new name, so the scripts written for previous
 versions run without changes. The prompts still show the old names. See {doc}`9_migration_guide`.
 ```
@@ -95,12 +95,12 @@ where:
 
 *   script_type (ScriptType in the prompts) can be ‘vrf_mm’, ‘vrf_ac’, ‘ex_mm’ or ‘ex_ac’, and it refers to the type of functions as explained above
 *   supply_air_temp_input_method (SupplyAirTempInputMethod) can be ‘supply air temperature’ or ‘temperature difference’, and it is the supply air temperature input method for the VRF systems.
-*   Existing outputs in the IDF can be kept if entered ‘true’. Otherwise, if entered ‘false’, it will be removed for clarity purposes at results stage.
+*   keep_existing_outputs (Do you want to keep the existing outputs): existing outputs in the IDF can be kept if entered ‘true’. Otherwise, if entered ‘false’, they will be removed for clarity purposes at results stage.
 *   output_type (Output type) can be ‘standard’, ‘detailed’, ‘simplified’ or ‘custom’ and it refers to the simulation results: ‘standard’ means that results will contain the full selection relevant to accim;‘detailed’ is mainly used for testing the software tool; ‘simplified’ means that results are just going to be the hourly operative temperature and VRF consumption of each zone, mainly used when you need the results not to be heavy files, because you are going to run a lot of simulations and capacity is limited; and finally, ‘custom’ allows the user to specify the outputs to be kept or removed by entering them in the python console.
-*   output_freqs (Output frequencies) can be timestep, hourly, daily, monthly and/or runperiod, and these must be entered separated by space. It will add the specified output type (standard or simplified) in all entered frequencies.
-*   Also, a pandas DataFrame instance can be created containing all Output:Variable objects. This allows the user to filter the DataFrame as needed, so that it only contains the needed Output:Variable objects, and then it can be entered in the argument `output_take_dataframe`
+*   output_frequencies (Output frequencies) can be timestep, hourly, daily, monthly and/or runperiod, and these must be entered separated by space. It will add the specified output type (standard or simplified) in all entered frequencies.
+*   make_outputs_dataframe (Do you want to generate a dataframe): a pandas DataFrame instance can be created containing all Output:Variable objects. This allows the user to filter the DataFrame as needed, so that it only contains the needed Output:Variable objects, and then it can be entered in the argument `outputs_dataframe`
 *   energyplus_version (EnergyPlus version) can be ‘auto’ or a version from ‘9.1’ to ‘26.2’. With ‘auto’ (the default when the arguments are given in the function call), accim reads the version of each IDF and uses the IDD file of that version of EnergyPlus, which must be installed in its default path (for instance, “C:\EnergyPlusV26-2-0” for an IDF of EnergyPlus 26.2). If you enter a version, for instance ‘9.1’, accim will look for the E+9.1.0 IDD file in path “C:\EnergyPlusV9-1-0”, or in the folder given by the environment variable `ACCIM_ENERGYPLUS_DIR` if it has that version.
-*   temp_ctrl (Temperature Control method) can be ‘temperature’ or ‘temp’, or ‘pmv’. If ‘temp’ is used, the setpoint will be the operative temperature, otherwise if ‘pmv’ is used, the setpoint will be the PMV index.
+*   setpoint_type (Temperature Control method) can be ‘temperature’ or ‘temp’, or ‘pmv’. If ‘temp’ is used, the setpoint will be the operative temperature, otherwise if ‘pmv’ is used, the setpoint will be the PMV index.
 
 accis will show on the prompt command dialog all the objects it adds, and those that doesn’t need to be added because were already in the IDF, and finally ask you to enter some values to set up the IDFs as you desire. Please refer to the section titled ‘Setting up the target IDFs’.
 
@@ -116,72 +116,73 @@ If you have run `accis.AddAccis()`, you will be asked in the prompt to enter a f
 | `idfs` | `idfs` | list of IDF files | all the IDFs of the working folder |
 | `script_type` | `ScriptType` | `'vrf_ac'`, `'vrf_mm'`, `'ex_ac'` or `'ex_mm'` | asked |
 | `supply_air_temp_input_method` | `SupplyAirTempInputMethod` | `'supply air temperature'` or `'temperature difference'` (only used by the VRF systems) | asked with `vrf_ac` and `vrf_mm` |
-| `output_keep_existing` | `Output_keep_existing` | `True` or `False` | asked |
+| `keep_existing_outputs` | `Output_keep_existing` | `True` or `False` | asked |
 | `output_type` | `Output_type` | `'standard'`, `'simplified'`, `'detailed'` or `'custom'` | asked |
-| `output_freqs` | `Output_freqs` | list of `'timestep'`, `'hourly'`, `'daily'`, `'monthly'` and `'runperiod'` | asked |
-| `output_gen_dataframe` | `Output_gen_dataframe` | `True` or `False` | asked with the prompts; otherwise, no DataFrame |
-| `output_take_dataframe` | `Output_take_dataframe` | pandas DataFrame | `None` |
+| `output_frequencies` | `Output_freqs` | list of `'timestep'`, `'hourly'`, `'daily'`, `'monthly'` and `'runperiod'` | asked |
+| `make_outputs_dataframe` | `Output_gen_dataframe` | `True` or `False` | asked with the prompts; otherwise, no DataFrame |
+| `outputs_dataframe` | `Output_take_dataframe` | pandas DataFrame | `None` |
 | `energyplus_version` | `EnergyPlus_version` | `'auto'`, or from `'9.1'` to `'26.2'` | `'auto'` |
-| `temp_ctrl` | `TempCtrl` | `'temperature'` (or `'temp'`) or `'pmv'` | asked |
-| `comf_stand` | `ComfStand` | list of numbers from 0 to 22, or 99 (custom model) | asked |
-| `cust_ast_m`, `cust_ast_n`, `cust_ast_acst_offset`, `cust_ast_ahst_offset`, `cust_ast_acst_aul`, `cust_ast_acst_all`, `cust_ast_ahst_aul`, `cust_ast_ahst_all` | `CustAST_m`, `CustAST_n`, `CustAST_ACSToffset`, `CustAST_AHSToffset`, `CustAST_ACSTaul`, `CustAST_ACSTall`, `CustAST_AHSTaul`, `CustAST_AHSTall` | numbers (only used with `comf_stand=[99]`) | 0 |
-| `cat` | `CAT` | list of 1, 2, 3, 80, 85 and 90 | asked |
-| `cat_cool_offset`, `cat_heat_offset` | `CATcoolOffset`, `CATheatOffset` | numbers (K) | 0 |
-| `comf_mod` | `ComfMod` | list of 0, 0.X, 1, 1.X, 2 and 3 | asked |
-| `setpoint_acc` | `SetpointAcc` | number greater than 0 | 10000 |
-| `cool_season_start`, `cool_season_end` | `CoolSeasonStart`, `CoolSeasonEnd` | date `'dd/mm'` or day of the year | 121 (1 May), 274 (1 October) |
+| `setpoint_type` | `TempCtrl` | `'temperature'` (or `'temp'`) or `'pmv'` | asked |
+| `comfort_standard` | `ComfStand` | list of numbers from 0 to 22, or 99 (custom model) | asked |
+| `custom_slope`, `custom_intercept`, `custom_cooling_offset`, `custom_heating_offset`, `custom_cooling_upper_limit`, `custom_cooling_lower_limit`, `custom_heating_upper_limit`, `custom_heating_lower_limit` | `CustAST_m`, `CustAST_n`, `CustAST_ACSToffset`, `CustAST_AHSToffset`, `CustAST_ACSTaul`, `CustAST_ACSTall`, `CustAST_AHSTaul`, `CustAST_AHSTall` | numbers (only used with `comfort_standard=[99]`) | 0 |
+| `category` | `CAT` | list of 1, 2, 3, 80, 85 and 90 | asked |
+| `category_cooling_offset`, `category_heating_offset` | `CATcoolOffset`, `CATheatOffset` | numbers (K) | 0 |
+| `comfort_mode` | `ComfMod` | list of 0, 0.X, 1, 1.X, 2 and 3 | asked |
+| `setpoint_accuracy` | `SetpointAcc` | number greater than 0 | 10000 |
+| `cooling_season_start`, `cooling_season_end` | `CoolSeasonStart`, `CoolSeasonEnd` | date `'dd/mm'` or day of the year | 121 (1 May), 274 (1 October) |
 | `hvac_mode` | `HVACmode` | list of 0, 1 and 2 | asked with `vrf_mm` and `ex_mm` |
-| `vent_ctrl` | `VentCtrl` | list of 0, 1, 2 and 3 | asked with `vrf_mm` and `ex_mm` |
-| `max_temp_diff_vof`, `min_temp_diff_vof`, `multiplier_vof` | `MaxTempDiffVOF`, `MinTempDiffVOF`, `MultiplierVOF` | numbers | 6, 1, 0.25 |
-| `vst_offset` | `VSToffset` | list of numbers | `[0]` |
-| `min_ot_offset` | `MinOToffset` | list of positive numbers | `[50]` |
+| `ventilation_control` | `VentCtrl` | list of 0, 1, 2 and 3 | asked with `vrf_mm` and `ex_mm` |
+| `opening_factor_max_temp_diff`, `opening_factor_min_temp_diff`, `min_opening_factor` | `MaxTempDiffVOF`, `MinTempDiffVOF`, `MultiplierVOF` | numbers | 6, 1, 0.25 |
+| `ventilation_setpoint_offset` | `VSToffset` | list of numbers | `[0]` |
+| `min_outdoor_temp_offset` | `MinOToffset` | list of positive numbers | `[50]` |
 | `max_wind_speed` | `MaxWindSpeed` | list of positive numbers | `[50]` |
-| `ast_tol_start`, `ast_tol_end_input`, `ast_tol_steps` | `ASTtol_start`, `ASTtol_end_input`, `ASTtol_steps` | numbers (`ast_tol_steps` greater than 0) | 0.1, 0.1, 0.1 |
+| `setpoint_tolerance_start`, `setpoint_tolerance_end`, `setpoint_tolerance_step` | `ASTtol_start`, `ASTtol_end_input`, `ASTtol_steps` | numbers (`setpoint_tolerance_step` greater than 0) | 0.1, 0.1, 0.1 |
 | `name_suffix` | `NameSuffix` | text | `''` |
-| `vrf_schedule` | `VRFschedule` | name of the availability schedule of the VRF systems | `'On 24/7'` |
-| `eer`, `cop` | `eer`, `cop` | energy efficiency ratio and coefficient of performance of the VRF systems | 2, 2.1 |
+| `vrf_availability_schedule` | `VRFschedule` | name of the availability schedule of the VRF systems | `'On 24/7'` |
+| `vrf_eer`, `vrf_cop` | `eer`, `cop` | energy efficiency ratio and coefficient of performance of the VRF systems | 2, 2.1 |
 | `hvac_zone_map` | `hvac_zone_map` | deprecated since 1.0.0, without effect (`ex_mm` no longer needs the zone of each HVAC object) | `None` |
 | `zone_arguments` | (new in 1.0.0) | dictionary `{zone: {argument: value}}` with the arguments of some zones (see section 4.2.1) | `None` |
-| `make_averages` | `make_averages` | `True` to make averages of the hour-counting variables | `False` |
-| `debugging` | `debugging` | `True` to generate the EDD file of the Energy Management System | `False` |
-| `verbose_mode` | `verboseMode` | `True` or `False` | `True` |
-| `confirm_gen` | `confirmGen` | `True` to generate the IDFs without asking for confirmation | asked |
+| `add_building_averages` | `make_averages` | `True` to add the building averages of the hour-counting variables and some outputs | `False` |
+| `debug_ems` | `debugging` | `True` to generate the EDD file of the Energy Management System | `False` |
+| `verbose` | `verboseMode` | `True` or `False` | `True` |
+| `confirm` | `confirmGen` | `True` to generate the IDFs without asking for confirmation | asked |
 
-The prompts work in two stages. If any of `script_type`, `output_keep_existing`, `output_type`, `output_freqs` or `temp_ctrl` (and, with `vrf_ac` and `vrf_mm`, `supply_air_temp_input_method`) is missing, accim asks for all the values of the first stage (those of section 4.1), and these values are used instead of those specified in the function call. Likewise, if any of `comf_stand`, `cat` or `comf_mod` (and, with `vrf_mm` and `ex_mm`, `hvac_mode` or `vent_ctrl`) is missing, accim asks for all the values of the second stage, from `comf_stand` to `ast_tol_steps` (see section 4.4); `name_suffix`, `verbose_mode` and `confirm_gen` keep the values of the call.
+The prompts work in two stages. If any of `script_type`, `keep_existing_outputs`, `output_type`, `output_frequencies` or `setpoint_type` (and, with `vrf_ac` and `vrf_mm`, `supply_air_temp_input_method`) is missing, accim asks for all the values of the first stage (those of section 4.1), and these values are used instead of those specified in the function call. Likewise, if any of `comfort_standard`, `category` or `comfort_mode` (and, with `vrf_mm` and `ex_mm`, `hvac_mode` or `ventilation_control`) is missing, accim asks for all the values of the second stage, from `comfort_standard` to `setpoint_tolerance_step` (see section 4.4); `name_suffix`, `verbose` and `confirm` keep the values of the call.
 
 Some example of the usage could be:
 
 ```python
 from accim.sim import accis
 job = accis.AddAccis(
-    script_type='vrf_mm',                             # 'vrf_mm', 'vrf_ac', 'ex_mm' or 'ex_ac'
+    script_type='vrf_mm',                     # 'vrf_mm', 'vrf_ac', 'ex_mm' or 'ex_ac'
     supply_air_temp_input_method='supply air temperature',
-    output_keep_existing=False,
-    output_type='standard',                           # 'standard', 'simplified', 'detailed' or 'custom'
-    output_freqs=['hourly', 'runperiod'],
-    output_gen_dataframe=False,
-    # we just omit output_take_dataframe
-    energyplus_version='auto',                        # the EnergyPlus version of each IDF
-    temp_ctrl='temp',                                 # 'temperature' or 'temp', or 'pmv'
-    comf_stand=[0, 1, 2, 3],                          # Comfort Standards
-    cat=[1, 2, 3, 80, 90],                            # Categories
-    comf_mod=[0, 1, 2, 3],                            # Comfort Modes
-    setpoint_acc=10,                                  # setpoints will be rounded to the first decimal
-    # we just omit cool_season_start, since the default date is May 1st
-    # we just omit cool_season_end, since the default date is October 1st
-    hvac_mode=[0, 1, 2],                              # HVAC modes
-    vent_ctrl=[0, 1],                                 # Ventilation Controls
-    max_temp_diff_vof=20,                             # above a difference of 20°C between operative and outdoor temperature, windows open the fraction multiplier_vof
-    min_temp_diff_vof=1,                              # below a difference of 1°C, windows open fully; in between, linearly
-    multiplier_vof=0.2,                               # fraction of window opened above max_temp_diff_vof
-    vst_offset=[0, 1, 2],                             # Ventilation Setpoint Temperature offsets
-    min_ot_offset=[0, 1, 2],                          # Minimum Outdoor Temperature offsets
-    max_wind_speed=[10, 20, 30],                      # Maximum Wind Speeds
-    ast_tol_start=0,                                  # start of the tolerance sequence
-    ast_tol_end_input=2,                              # end of the tolerance sequence
-    ast_tol_steps=0.25,                               # steps of the tolerance sequence
-    name_suffix='standard',                           # for example, just in case you want to clarify the outputs
-    confirm_gen=True,                                 # generate the IDFs without asking
+    keep_existing_outputs=False,
+    output_type='standard',                   # 'standard', 'simplified', 'detailed' or 'custom'
+    output_frequencies=['hourly', 'runperiod'],
+    make_outputs_dataframe=False,
+    # we just omit outputs_dataframe
+    energyplus_version='auto',                # the EnergyPlus version of each IDF
+    setpoint_type='temperature',              # 'temperature' (or 'temp') or 'pmv'
+    comfort_standard=[0, 1, 2, 3],            # Comfort Standards
+    category=[1, 2, 3, 80, 90],               # Categories
+    comfort_mode=[0, 1, 2, 3],                # Comfort Modes
+    setpoint_accuracy=10,                     # setpoints will be rounded to the first decimal
+    # we just omit cooling_season_start, since the default date is May 1st
+    # we just omit cooling_season_end, since the default date is October 1st
+    hvac_mode=[0, 1, 2],                      # HVAC modes
+    ventilation_control=[0, 1],               # Ventilation Controls
+    opening_factor_max_temp_diff=20,          # above a difference of 20°C between operative and outdoor temperature,
+                                              # windows open the fraction min_opening_factor
+    opening_factor_min_temp_diff=1,           # below a difference of 1°C, windows open fully; in between, linearly
+    min_opening_factor=0.2,                   # fraction of window opened above opening_factor_max_temp_diff
+    ventilation_setpoint_offset=[0, 1, 2],    # Ventilation Setpoint Temperature offsets
+    min_outdoor_temp_offset=[0, 1, 2],        # Minimum Outdoor Temperature offsets
+    max_wind_speed=[10, 20, 30],              # Maximum Wind Speeds
+    setpoint_tolerance_start=0,               # start of the tolerance sequence
+    setpoint_tolerance_end=2,                 # end of the tolerance sequence
+    setpoint_tolerance_step=0.25,             # steps of the tolerance sequence
+    name_suffix='standard',                   # for example, just in case you want to clarify the outputs
+    confirm=True,                             # generate the IDFs without asking
 )
 job.output_idfs.paths                                 # {'output IDF name': path of the file}
 ```
@@ -190,9 +191,9 @@ The returned object keeps the arguments (`job.arguments`), the occupied zones an
 
 Each argument is explained below:
 
--   comf_stand (ComfStand): refers to the thermal comfort standard or model to be applied. Enter any number from 0 to 22 or 99 to select the comfort standard or model to be used; you can see which model is each number in the table below. For example, if you enter ‘0 1 2 3’, you’ll get IDFs for CTE, EN16798-1, ASHRAE 55 and the local model developed by Rijal et al for Japanese dwellings. If you enter 99, that means you want to use some custom adaptive model. Therefore, you'll be asked to enter the slope, y-intercept among other parameters; in the function call, these are the arguments `cust_ast_m` (slope of the neutral temperature against the running mean outdoor temperature), `cust_ast_n` (y-intercept), `cust_ast_acst_offset` and `cust_ast_ahst_offset` (offsets of the cooling and heating setpoints from the neutral temperature, positive and negative respectively), and `cust_ast_acst_aul`, `cust_ast_acst_all`, `cust_ast_ahst_aul` and `cust_ast_ahst_all` (upper and lower limits of the running mean outdoor temperature in which the adaptive cooling and heating setpoints are applicable). If you don’t enter any number, it’ll ask you to enter the numbers again.
+-   comfort_standard (ComfStand): refers to the thermal comfort standard or model to be applied. Enter any number from 0 to 22 or 99 to select the comfort standard or model to be used; you can see which model is each number in the table below. For example, if you enter ‘0 1 2 3’, you’ll get IDFs for CTE, EN16798-1, ASHRAE 55 and the local model developed by Rijal et al for Japanese dwellings. If you enter 99, that means you want to use some custom adaptive model. Therefore, you'll be asked to enter the slope, y-intercept among other parameters; in the function call, these are the arguments `custom_slope` (slope of the neutral temperature against the running mean outdoor temperature), `custom_intercept` (y-intercept), `custom_cooling_offset` and `custom_heating_offset` (offsets of the cooling and heating setpoints from the neutral temperature, positive and negative respectively), and `custom_cooling_upper_limit`, `custom_cooling_lower_limit`, `custom_heating_upper_limit` and `custom_heating_lower_limit` (upper and lower limits of the running mean outdoor temperature in which the adaptive cooling and heating setpoints are applicable). If you don’t enter any number, it’ll ask you to enter the numbers again.
 
-| ComfStand No. | ComfStand Name | Area | Reference |
+| comfort_standard | Name | Area | Reference |
 | :--- | :--- | :--- | :--- |
 | 0 | ESP CTE | Spain | The Government of Spain. Royal Decree 314/2006. Approving the Spanish Technical Building Code CTE-DB-HE-1 2013:1–43. https://www.boe.es/eli/es/rd/2006/03/17/314 (accessed August 6, 2021). |
 | 1 | INT EN16798 | Europe | European committee for standardization. EN 16798-1:2019 Energy performance of buildings. Ventilation for buildings. Indoor environmental input parameters for design and assessment of energy performance of buildings addressing indoor air quality, thermal environment, lighting and acoustics. 2019. https://en.tienda.aenor.com/norma-bsi-bs-en-16798-1-2019-000000000030297474 (accessed August 6, 2021). |
@@ -217,37 +218,37 @@ Each argument is explained below:
 | 20 | MEX Oropeza HumTropic | Mexico | I. Oropeza-Perez, A.H. Petzold-Rodriguez, C. Bonilla-Lopez, Adaptive thermal comfort in the main Mexican climate conditions with and without passive cooling, Energy and Buildings. 145 (2017) 251–258. https://doi.org/10.1016/j.enbuild.2017.04.031. |
 | 21 | CHL Perez-Fargallo | Chile | A. Pérez-Fargallo, J.A. Pulido-Arcas, C. Rubio-Bellido, M. Trebilcock, B. Piderit, S. Attia, Development of a new adaptive comfort model for low income housing in the central-south of chile, Energy Build. 178 (2018) 94–106. https://doi.org/10.1016/j.enbuild.2018.08.030. |
 | 22 | INT ISO7730 | Worldwide | ISO, 2005. ISO 7730: Ergonomics of the thermal environment Analytical determination and interpretation of thermal comfort using calculation of the PMV and PPD indices and local thermal comfort criteria. Management 3, 605–615. https://doi.org/10.1016/j.soildyn.2004.11.005 |
-| 99 | CUSTOM | - | Custom adaptive model, defined by the arguments `cust_ast_*` |
+| 99 | CUSTOM | - | Custom adaptive model, defined by the arguments `custom_*` (`custom_slope`, `custom_intercept`...) |
 
--   cat (CAT): refers to the category of the thermal comfort model applied. Most of the Comfort Standards work with 80 and 90% acceptability levels, except the European EN 16798-1 (works with Categories 1, 2 and 3), the Chinese GB/T 50785 (works with categories 1 and 2), and the India Model for Adaptive Comfort - Commercial (which works with 80, 85 and 90% acceptability levels). So, for example, if you are going to use the EN16798-1 (ComfStand = 1), you can enter ‘1 2 3’ to generate setpoint temperatures for Categories 1, 2 and 3. Or, if you are going to use the IMAC Commercial in naturally ventilated mode (ComfStand = 7), you can enter ‘80 85 90’ to generate setpoint temperatures for these acceptability levels. All categories are referenced in the [full list of setpoint temperatures](https://htmlpreview.github.io/?https://github.com/dsanchez-garcia/accim/blob/master/docs/source/html_files/full_setpoint_table.html) at the end of this section. Please note that the Category values must be consistent with the Comfort Standard values previously entered. If, for instance, you enter ‘1’ in the Comfort Standard value (means you’re asking for EN16798 model), but then enter ‘80’ or ‘90’ in the Category value (which are categories used in ASHRAE55), you won’t get the results you want.
--   cat_cool_offset (CATcoolOffset): it is an offset in celsius degrees summed to the upper comfort limit. For instance, ASHRAE 55 80% acceptability is +-3.5K; if 1 was entered in CATcoolOffset, then the upper comfort limit would be raised to 4.5K
--   cat_heat_offset (CATheatOffset): it is an offset in celsius degrees summed to the lower comfort limit. For instance, ASHRAE 55 80% acceptability is +-3.5K; if -1 was entered in CATheatOffset, then the lower comfort limit would be lowered to 4.5K
--   comf_mod (ComfMod): is the Comfort Mode, and refers to the setpoint behaviour. It controls if the setpoints are static (when ComfMod = 0 or 0.X) or adaptive (when ComfMod = 1 or 1.X, 2 or 3). When they are adaptive, it also controls the comfort model applied when the adaptive model is not applicable (that is, when the running mean outdoor temperature limits are exceeded), in which case a PMV-based model is applied. Each ComfMod for each ComfStand and CAT is referenced at the [full list of setpoint temperatures](https://htmlpreview.github.io/?https://github.com/dsanchez-garcia/accim/blob/master/docs/source/html_files/full_setpoint_table.html). Please refer to the research article https://www.mdpi.com/1996-1073/12/8/1498 for more information. Figure below shows the variation of setpoint temperatures when ComfMod 0 (upper left), 1 (upper right), 2 (lower left) and 3 (lower right), when ComfStand is 1 (EN 16798-1, although figure shows the superseded standard, but the setpoint behaviour is similar)
+-   category (CAT): refers to the category of the thermal comfort model applied. Most of the Comfort Standards work with 80 and 90% acceptability levels, except the European EN 16798-1 (works with Categories 1, 2 and 3), the Chinese GB/T 50785 (works with categories 1 and 2), and the India Model for Adaptive Comfort - Commercial (which works with 80, 85 and 90% acceptability levels). So, for example, if you are going to use the EN16798-1 (comfort_standard = 1), you can enter ‘1 2 3’ to generate setpoint temperatures for Categories 1, 2 and 3. Or, if you are going to use the IMAC Commercial in naturally ventilated mode (comfort_standard = 7), you can enter ‘80 85 90’ to generate setpoint temperatures for these acceptability levels. All categories are referenced in the [full list of setpoint temperatures](https://htmlpreview.github.io/?https://github.com/dsanchez-garcia/accim/blob/master/docs/source/html_files/full_setpoint_table.html) at the end of this section. Please note that the Category values must be consistent with the Comfort Standard values previously entered. If, for instance, you enter ‘1’ in the Comfort Standard value (means you’re asking for EN16798 model), but then enter ‘80’ or ‘90’ in the Category value (which are categories used in ASHRAE55), you won’t get the results you want.
+-   category_cooling_offset (CATcoolOffset): it is an offset in celsius degrees summed to the upper comfort limit. For instance, ASHRAE 55 80% acceptability is +-3.5K; if 1 was entered in category_cooling_offset, then the upper comfort limit would be raised to 4.5K
+-   category_heating_offset (CATheatOffset): it is an offset in celsius degrees summed to the lower comfort limit. For instance, ASHRAE 55 80% acceptability is +-3.5K; if -1 was entered in category_heating_offset, then the lower comfort limit would be lowered to 4.5K
+-   comfort_mode (ComfMod): is the Comfort Mode, and refers to the setpoint behaviour. It controls if the setpoints are static (when comfort_mode = 0 or 0.X) or adaptive (when comfort_mode = 1 or 1.X, 2 or 3). When they are adaptive, it also controls the comfort model applied when the adaptive model is not applicable (that is, when the running mean outdoor temperature limits are exceeded), in which case a PMV-based model is applied. Each comfort mode for each comfort standard and category is referenced at the [full list of setpoint temperatures](https://htmlpreview.github.io/?https://github.com/dsanchez-garcia/accim/blob/master/docs/source/html_files/full_setpoint_table.html). Please refer to the research article https://www.mdpi.com/1996-1073/12/8/1498 for more information. Figure below shows the variation of setpoint temperatures when comfort_mode is 0 (upper left), 1 (upper right), 2 (lower left) and 3 (lower right), when comfort_standard is 1 (EN 16798-1, although figure shows the superseded standard, but the setpoint behaviour is similar)
 
 ![ComfMod](https://www.mdpi.com/energies/energies-12-01498/article_deploy/html/images/energies-12-01498-g002.png)
 
--   setpoint_acc (SetpointAcc): refers to the accuracy of the setpoint temperatures. Any number, integer or float, can be entered in this argument. For instance, if 1 was entered, the cooling setpoint would be rounded to the nearest integer below adaptive upper comfort limit minus tolerance (ASTtol), and the heating setpoint would be rounded to the nearest integer above adaptive lower comfort limit plus tolerance. If 27.46 and 20.46 were the upper and lower comfort limits and its tolerances were respectively -0.1 and +0.1, then the nearest integers to 27.36 and 20.56 would be 27 and 21, and therefore, these would be the cooling and heating setpoint temperatures. If 2 was used instead, then the rounding would be done to the nearest half. If 10 were used, the rounding would be done to the first decimal. If 0.5 or 0.1 were used, the rounding would be done respectively every 2 or 10 celsius degrees.
--   cool_season_start (CoolSeasonStart): it is the start of the cooling season, only used when EN16798-1, ASHRAE 55 or ISO7730 are entered in ComfStand (respectively, ComfStand = 1, 2 and 22) and setpoint behaviour is set to static (i.e. ComfMod = 0). This argument can take the number of the day in the year (i.e. an integer) or a string containing a date in format dd/mm (for instance, “01/05”). Values of CoolSeasonStart greater than CoolSeasonEnd can be used, therefore denoting the location of the EPW file should be in the south hemisphere. The default value is 121 (May 1st).
--   cool_season_end (CoolSeasonEnd): Similar to cool_season_start, but it is the end of the cooling season. Again, only used when EN16798-1, ASHRAE 55 or ISO7730 are entered in ComfStand (respectively, ComfStand = 1, 2 and 22) and setpoint behaviour is set to static (i.e. ComfMod = 0). Again, this argument can take the number of the day in the year (i.e. an integer) or a string containing a date in format dd/mm (for instance, “01/05”). Values of CoolSeasonEnd smaller than CoolSeasonStart can be used, therefore denoting the location of the EPW file should be in the south hemisphere. The default value is 274 (October 1st).
+-   setpoint_accuracy (SetpointAcc): refers to the accuracy of the setpoint temperatures. Any number, integer or float, can be entered in this argument. For instance, if 1 was entered, the cooling setpoint would be rounded to the nearest integer below adaptive upper comfort limit minus tolerance (setpoint_tolerance), and the heating setpoint would be rounded to the nearest integer above adaptive lower comfort limit plus tolerance. If 27.46 and 20.46 were the upper and lower comfort limits and its tolerances were respectively -0.1 and +0.1, then the nearest integers to 27.36 and 20.56 would be 27 and 21, and therefore, these would be the cooling and heating setpoint temperatures. If 2 was used instead, then the rounding would be done to the nearest half. If 10 were used, the rounding would be done to the first decimal. If 0.5 or 0.1 were used, the rounding would be done respectively every 2 or 10 celsius degrees.
+-   cooling_season_start (CoolSeasonStart): it is the start of the cooling season, only used when EN16798-1, ASHRAE 55 or ISO7730 are entered in comfort_standard (respectively, comfort_standard = 1, 2 and 22) and setpoint behaviour is set to static (i.e. comfort_mode = 0). This argument can take the number of the day in the year (i.e. an integer) or a string containing a date in format dd/mm (for instance, “01/05”). Values of cooling_season_start greater than cooling_season_end can be used, therefore denoting the location of the EPW file should be in the south hemisphere. The default value is 121 (May 1st).
+-   cooling_season_end (CoolSeasonEnd): Similar to cooling_season_start, but it is the end of the cooling season. Again, only used when EN16798-1, ASHRAE 55 or ISO7730 are entered in comfort_standard (respectively, comfort_standard = 1, 2 and 22) and setpoint behaviour is set to static (i.e. comfort_mode = 0). Again, this argument can take the number of the day in the year (i.e. an integer) or a string containing a date in format dd/mm (for instance, “01/05”). Values of cooling_season_end smaller than cooling_season_start can be used, therefore denoting the location of the EPW file should be in the south hemisphere. The default value is 274 (October 1st).
 -   hvac_mode (HVACmode): refers to the HVAC mode applied. Enter 0 for Fully Air-conditioned (AC), 1 for Naturally ventilated (NV) and/or 2 for Mixed Mode (MM). Please note that Calculated natural ventilation must be enabled so that Mixed Mode works. So, for example, if you enter ‘0 1 2’ you’ll be getting all HVAC modes, or if you just enter ‘0 1’ you’ll be getting just Fully Air-conditioned and Naturally ventilated.
--   vent_ctrl (VentCtrl): refers to the ventilation control, only used in for NV and MM. When using NV, If you enter ‘0’, ventilation will be allowed if operative temperature exceeds neutral temperature (also known as comfort temperature); if you enter ‘1’, ventilation will be allowed if operative temperature exceeds the upper comfort limit. In other words, sets the value of the neutral temperature or the upper comfort limit to the Ventilation Setpoint Temperature (VST). When using MM, 0 = Ventilates above neutral temperature and fully opens doors and windows; 1 = Ventilates above lower comfort limit and fully opens doors and windows; 2 = Ventilates above neutral temperature and opens doors and windows based on the customised venting opening factor; and 3 = Ventilates above lower comfort limit and opens doors and windows based on the customised venting opening factor. Either way, if you enter ‘0 1’ you’ll be getting both ventilation control modes.
--   max_temp_diff_vof (MaxTempDiffVOF): Maximum Temperature Difference for Venting Opening Factor. Maximum temperature difference between indoor operative and outdoor temperatures, which when exceeded, windows and doors are opened only the fraction specified in the MultiplierVOF argument. If temperature difference oscillates between maximum and minimum, the windows and doors are opened based on the linear equation. Follows the same operation as explained in [Designbuilder help website](https://designbuilder.co.uk/helpv7.0/Content/CalculatedNatVent.htm). The default value is 6.
--   min_temp_diff_vof (MinTempDiffVOF): Minimum Temperature Difference for Venting Opening Factor. Minimum temperature difference between indoor operative and outdoor temperatures, which when smaller, windows and doors are fully opened. If temperature difference oscillates between maximum and minimum, the windows and doors are opened based on the linear equation. Follows the same operation as explained in [Designbuilder help website](https://designbuilder.co.uk/helpv7.0/Content/CalculatedNatVent.htm). The default value is 1.
--   multiplier_vof (MultiplierVOF): Multiplier for modulating the Venting Opening Factor. The fraction of the windows that will be opened when temperature difference exceeds MaxTempDiffVOF, between 0 and 1. Follows the same operation as explained in [Designbuilder help website](https://designbuilder.co.uk/helpv7.0/Content/CalculatedNatVent.htm). The default value is 0.25. ![Venting Opening Factor](images/VentingOpeningFactor.png)
--   vst_offset (VSToffset): stands for Ventilation Setpoint Temperature (VST) offset, again only used in Mixed Mode (HVAC Mode ‘2’). Applies the entered values as an offset to the VST, in Celsius degrees. Values entered can be positive or negative float or integers, and must be space-separated. For example, if you enter ‘-2 -1 0 1 2’ you’ll be getting offsets of -2°C, -1°C, 0°C, 1°C and 2°C to the VST. If you don’t enter any number, it’ll be used ‘0’ as the default value.
--   min_ot_offset (MinOToffset): stands for Minimum Outdoor Temperature offset, again only used in Mixed Mode (HVAC Mode ‘2’). Sets the minimum outdoor temperature an offset to the heating setpoint temperature. For example, if you enter ‘1’ (please, note that the numbers must be positive), ventilation won’t be allowed if outdoor temperature falls below 1°C below the heating setpoint, in order to prevent from entering excessive cold. Therefore, below said limit, windows are closed and, if needed, air conditioning starts to work. Entered values can be float or integers, but always positive numbers, and must be space-separated. For example, if you enter ‘0 1 2’ you’ll be getting offsets of 0°C, 1°C and 2°C to the heating setpoint temperature. If you don’t enter any number, it’ll be used ‘50’ as the default value (that is 50°C below heating setpoint temperature, and therefore no limit is applied).
+-   ventilation_control (VentCtrl): refers to the ventilation control, only used in for NV and MM. When using NV, If you enter ‘0’, ventilation will be allowed if operative temperature exceeds neutral temperature (also known as comfort temperature); if you enter ‘1’, ventilation will be allowed if operative temperature exceeds the upper comfort limit. In other words, sets the value of the neutral temperature or the upper comfort limit to the Ventilation Setpoint Temperature (VST). When using MM, 0 = Ventilates above neutral temperature and fully opens doors and windows; 1 = Ventilates above lower comfort limit and fully opens doors and windows; 2 = Ventilates above neutral temperature and opens doors and windows based on the customised venting opening factor; and 3 = Ventilates above lower comfort limit and opens doors and windows based on the customised venting opening factor. Either way, if you enter ‘0 1’ you’ll be getting both ventilation control modes.
+-   opening_factor_max_temp_diff (MaxTempDiffVOF): Maximum Temperature Difference for Venting Opening Factor. Maximum temperature difference between indoor operative and outdoor temperatures, which when exceeded, windows and doors are opened only the fraction specified in the min_opening_factor argument. If temperature difference oscillates between maximum and minimum, the windows and doors are opened based on the linear equation. Follows the same operation as explained in [Designbuilder help website](https://designbuilder.co.uk/helpv7.0/Content/CalculatedNatVent.htm). The default value is 6.
+-   opening_factor_min_temp_diff (MinTempDiffVOF): Minimum Temperature Difference for Venting Opening Factor. Minimum temperature difference between indoor operative and outdoor temperatures, which when smaller, windows and doors are fully opened. If temperature difference oscillates between maximum and minimum, the windows and doors are opened based on the linear equation. Follows the same operation as explained in [Designbuilder help website](https://designbuilder.co.uk/helpv7.0/Content/CalculatedNatVent.htm). The default value is 1.
+-   min_opening_factor (MultiplierVOF): the minimum Venting Opening Factor, that is, the fraction of the windows that will be opened when temperature difference exceeds opening_factor_max_temp_diff, between 0 and 1 (between the minimum and the maximum temperature differences, the fraction goes linearly from 1 to this value). Follows the same operation as explained in [Designbuilder help website](https://designbuilder.co.uk/helpv7.0/Content/CalculatedNatVent.htm). The default value is 0.25. ![Venting Opening Factor](images/VentingOpeningFactor.png)
+-   ventilation_setpoint_offset (VSToffset): stands for Ventilation Setpoint Temperature (VST) offset, again only used in Mixed Mode (HVAC Mode ‘2’). Applies the entered values as an offset to the VST, in Celsius degrees. Values entered can be positive or negative float or integers, and must be space-separated. For example, if you enter ‘-2 -1 0 1 2’ you’ll be getting offsets of -2°C, -1°C, 0°C, 1°C and 2°C to the VST. If you don’t enter any number, it’ll be used ‘0’ as the default value.
+-   min_outdoor_temp_offset (MinOToffset): stands for Minimum Outdoor Temperature offset, again only used in Mixed Mode (HVAC Mode ‘2’). Sets the minimum outdoor temperature an offset to the heating setpoint temperature. For example, if you enter ‘1’ (please, note that the numbers must be positive), ventilation won’t be allowed if outdoor temperature falls below 1°C below the heating setpoint, in order to prevent from entering excessive cold. Therefore, below said limit, windows are closed and, if needed, air conditioning starts to work. Entered values can be float or integers, but always positive numbers, and must be space-separated. For example, if you enter ‘0 1 2’ you’ll be getting offsets of 0°C, 1°C and 2°C to the heating setpoint temperature. If you don’t enter any number, it’ll be used ‘50’ as the default value (that is 50°C below heating setpoint temperature, and therefore no limit is applied).
 -   max_wind_speed (MaxWindSpeed): stands for maximum wind speed, again only used in Mixed Mode (HVAC Mode ‘2’). Sets the maximum wind speed in which ventilation is allowed, in m/s. Therefore, if you enter ‘20’, ventilation won’t be allowed if wind speed is greater than 20 m/s. Entered values can be float or integers, but always positive numbers, and must be space-separated. For example, if you enter ‘5 10 15 20’ you’ll be getting different IDFs with maximum wind speeds of 5 m/s, 10 m/s, 15 m/s and 20 m/s. If you don’t enter any number, it’ll be used ‘50’ as the default value (that is 50 m/s, and therefore no limit is applied).
--   ast_tol_start, ast_tol_end_input and ast_tol_steps (ASTtol): stand for Adaptive Setpoint Temperature tolerance. It applies the number that you enter as a tolerance for the adaptive heating and cooling setpoint temperatures. The original problem was that, if we assigned the adaptive setpoint straight to the comfort limit (i.e. you enter ‘0’ for ASTtol), there were a few hours that fell outside the comfort zone because of the error in some decimals in the simulation of the operative temperature. Therefore, the original purpose of this feature is to control that all hours are comfortable hours (i.e. operative temperature falls within the comfort zone), and we can make that sure by considering a little tolerance of 0.10 °C. For example, say that adaptive cooling and heating setpoints are originally 29.5 and 21.5°C at some day; if you enter ‘1’ for ASTtol, then the setpoints would be modified to 28.5 and 22.5°C (1°C below original cooling setpoint, and 1°C above original heating setpoint). The function will create a sequence of numbers based on the entered values. So, numbers must be entered in 3 stages: first, the start of the sequence; second, the end of the sequence, and third, the steps. So for example, if you enter ‘0’ for the start, ‘1’ for the end, and ‘0.25’ for the steps, you would be getting ASTtol values of 0°C, 0.25°C, 0.5°C, 0.75°C and 1°C. If you don’t enter any number, it’ll be used ‘0.1’ as the default value (as previously said, to make sure all hours are comfortable hours), and you would be getting only one variation of 0.1°C.
+-   setpoint_tolerance_start, setpoint_tolerance_end and setpoint_tolerance_step (ASTtol): stand for Adaptive Setpoint Temperature tolerance. It applies the number that you enter as a tolerance for the adaptive heating and cooling setpoint temperatures. The original problem was that, if we assigned the adaptive setpoint straight to the comfort limit (i.e. you enter ‘0’ for the tolerance), there were a few hours that fell outside the comfort zone because of the error in some decimals in the simulation of the operative temperature. Therefore, the original purpose of this feature is to control that all hours are comfortable hours (i.e. operative temperature falls within the comfort zone), and we can make that sure by considering a little tolerance of 0.10 °C. For example, say that adaptive cooling and heating setpoints are originally 29.5 and 21.5°C at some day; if you enter ‘1’ for the tolerance, then the setpoints would be modified to 28.5 and 22.5°C (1°C below original cooling setpoint, and 1°C above original heating setpoint). The function will create a sequence of numbers based on the entered values. So, numbers must be entered in 3 stages: first, the start of the sequence; second, the end of the sequence, and third, the steps. So for example, if you enter ‘0’ for the start, ‘1’ for the end, and ‘0.25’ for the steps, you would be getting tolerances of 0°C, 0.25°C, 0.5°C, 0.75°C and 1°C. If you don’t enter any number, it’ll be used ‘0.1’ as the default value (as previously said, to make sure all hours are comfortable hours), and you would be getting only one variation of 0.1°C.
 -   name_suffix (NameSuffix): the text you would like to add at the end of the file name.
--   verbose_mode (verboseMode): True to print all process in screen, False to not to print it. Default is True.
--   confirm_gen (confirmGen): if omitted, accim lists the output IDFs and asks you to confirm in command prompt before generating them. True to confirm automatically the generation of IDFs, and False to stop before generating them (for instance, to get only the DataFrame of `output_gen_dataframe`). So, if you are going to set it True, be sure about the number of IDFs you are going to generate, because these might be thousands.
+-   verbose (verboseMode): True to print all process in screen, False to not to print it. Default is True.
+-   confirm (confirmGen): if omitted, accim lists the output IDFs and asks you to confirm in command prompt before generating them. True to confirm automatically the generation of IDFs, and False to stop before generating them (for instance, to get only the DataFrame of `make_outputs_dataframe`). So, if you are going to set it True, be sure about the number of IDFs you are going to generate, because these might be thousands.
 -   idfs: a list of the IDF files to use as input, instead of all the IDF files of the working folder.
--   output_gen_dataframe and output_take_dataframe (Output_gen_dataframe and Output_take_dataframe): with `output_gen_dataframe=True`, accim stores a pandas DataFrame with all the Output:Variable objects in the attribute `df_outputs` of the returned object; you can filter it and enter it in `output_take_dataframe` to keep only those outputs (see {doc}`jupyter_notebooks/addAccis/using_addAccis`).
--   vrf_schedule (VRFschedule), eer and cop: the availability schedule (‘On 24/7’ by default), the energy efficiency ratio (2) and the coefficient of performance (2.1) of the VRF systems added by the scripts ‘vrf_ac’ and ‘vrf_mm’.
+-   make_outputs_dataframe and outputs_dataframe (Output_gen_dataframe and Output_take_dataframe): with `make_outputs_dataframe=True`, accim stores a pandas DataFrame with all the Output:Variable objects in the attribute `df_outputs` of the returned object; you can filter it and enter it in `outputs_dataframe` to keep only those outputs (see {doc}`jupyter_notebooks/addAccis/using_addAccis`).
+-   vrf_availability_schedule (VRFschedule), vrf_eer and vrf_cop: the availability schedule (‘On 24/7’ by default), the energy efficiency ratio (2) and the coefficient of performance (2.1) of the VRF systems added by the scripts ‘vrf_ac’ and ‘vrf_mm’.
 -   hvac_zone_map: deprecated since accim 1.0.0, without effect (with a `DeprecationWarning`): it gave the zone served by the HVAC objects that `ex_mm` could not assign to a zone, and `ex_mm` now reads the loads of the thermostats instead (see section 4.1).
 -   zone_arguments: the arguments of some occupied zones, which are the same in all the output IDFs; the other zones have those of each output IDF (see section 4.2.1).
--   make_averages: True to make averages of the hour-counting variables. Default is False.
--   debugging: True to add an Output:EnergyManagementSystem object, so that EnergyPlus writes the EDD file with the details of the Energy Management System programs. Default is False.
+-   add_building_averages: True to make averages of the hour-counting variables. Default is False.
+-   debug_ems: True to add an Output:EnergyManagementSystem object, so that EnergyPlus writes the EDD file with the details of the Energy Management System programs. Default is False.
 
 So, below you can see a sample name of an IDF created by using accim’s VRFsystem functions. The package takes the original IDF file as a reference, saves a copy, run all the functions so that setpoint temperatures are transformed from static to adaptive, an changes its name based on the values previously entered:
 
@@ -264,10 +265,10 @@ where:
 -   VO refers to the Ventilation setpoint temperature offset, which could be any number, float or integer, positive or negative.
 -   MT refers to the Minimum Outdoor Temperature offset, which could be any number, float or integer, but always positive number.
 -   MW refers to the Maximum Wind Speed, which could be any number, float or integer, but always positive number.
--   AT refers to the Adaptive Setpoint Temperature tolerance (ASTtol), which could be any number, float or integer, but always positive number. Please remember this number comes from a 3-stage process (refer to the explanation above).
+-   AT refers to the Adaptive Setpoint Temperature tolerance (setpoint_tolerance), which could be any number, float or integer, but always positive number. Please remember this number comes from a 3-stage process (refer to the explanation above).
 -   NS refers to the Name Suffix, here ‘standard’, which can be whatever you want; it is ‘X’ if no suffix is given. For example, this allows you to make a for loop with ‘standard’, ‘simplified’ and ‘timestep’ and run the simulations with all type of outputs.
 
-The numbers of the name keep the format in which they were entered: when they are entered in the prompt, they are read as decimal numbers, so the name contains, for instance, ‘CM_3.0’; with `comf_mod=[3]` in the function call, it contains ‘CM_3’.
+The numbers of the name keep the format in which they were entered: when they are entered in the prompt, they are read as decimal numbers, so the name contains, for instance, ‘CM_3.0’; with `comfort_mode=[3]` in the function call, it contains ‘CM_3’.
 
 If some inputs are not used or don’t make sense, you’ll be able to se an ‘X’ in the output IDF file. For example, if you use CTE as Comfort Standard, then the inputs for Category and Comfort Mode (which are only for EN16798-1 and ASHRAE 55) are not used in the process, and the output IDF would contain in its name ‘CS_ESP CTE[CA_X[CM_X’. Another similar case occurs if you use Full air-conditioning HVAC Mode (i.e. enter ‘0’ for HVAC Mode), or if you use the ‘ex_ac’ script type, where the output IDF would contain in its name ‘[HM_0[VC_X[VO_X[MT_X[MW_X’.
 
@@ -283,45 +284,46 @@ accis.AddAccis(
     script_type='vrf_mm',
     supply_air_temp_input_method='temperature difference',
     output_type='standard',
-    output_freqs=['hourly'],
-    output_keep_existing=False,
-    temp_ctrl='temperature',
-    comf_stand=[1, 2],                  # The other zones: EN 16798-1 and ASHRAE 55, in two output IDFs
-    cat=[3, 80],
-    comf_mod=[3],
+    output_frequencies=['hourly'],
+    keep_existing_outputs=False,
+    setpoint_type='temperature',
+    comfort_standard=[1, 2],      # The other zones: EN 16798-1 and ASHRAE 55, in two output IDFs
+    category=[3, 80],
+    comfort_mode=[3],
     hvac_mode=[2],
-    vent_ctrl=[0],
+    ventilation_control=[0],
     zone_arguments={
-        'Block1:Zone2': {'comf_stand': 99, 'cat': 80, 'comf_mod': 3, 'hvac_mode': 0,
-                         'cust_ast_m': 0.3, 'cust_ast_n': 18, 'cust_ast_acst_offset': 3, 'cust_ast_ahst_offset': -3,
-                         'cust_ast_acst_aul': 30, 'cust_ast_acst_all': 10, 'cust_ast_ahst_aul': 30,
-                         'cust_ast_ahst_all': 10},
+        'Block1:Zone2': {'comfort_standard': 99, 'category': 80, 'comfort_mode': 3, 'hvac_mode': 0,
+                         'custom_slope': 0.3, 'custom_intercept': 18, 'custom_cooling_offset': 3,
+                         'custom_heating_offset': -3, 'custom_cooling_upper_limit': 30,
+                         'custom_cooling_lower_limit': 10, 'custom_heating_upper_limit': 30,
+                         'custom_heating_lower_limit': 10},
     },
-    confirm_gen=True,
+    confirm=True,
 )
 ```
 
 -   The zones are the occupied zones of the models, given by their names (in upper or lower case), or by the keys of the dictionaries of the aPMV setpoints (‘<space> <people>’, see section 4.8, and `accim.sim.apmv.get_available_target_names()`). With several input IDFs, each zone is applied to the models that have it, and accim stops if a zone is in none of them.
--   The arguments are those of `modify_accis`, with one value each: `comf_stand`, `cat`, `comf_mod`, `cat_cool_offset`, `cat_heat_offset`, `setpoint_acc`, the arguments of the custom model (`cust_ast_...`), `cool_season_start`, `cool_season_end`, `hvac_mode`, `vent_ctrl`, `vst_offset`, `min_ot_offset`, `max_wind_speed`, `max_temp_diff_vof`, `min_temp_diff_vof`, `multiplier_vof` and `ast_tol` (the tolerance of the setpoints). The arguments that a zone does not give are those of each output IDF; when the output IDF has no natural ventilation (HVAC mode 0) and the zone has it, its ventilation arguments are the first values of `vent_ctrl`, `vst_offset`, `min_ot_offset` and `max_wind_speed`.
--   With `AddAccis`, the zones of `zone_arguments` have the same arguments in all the output IDFs, whose names give the arguments of the other zones (use `name_suffix` to tell them apart). Each of these zones needs a comfort standard with setpoints for its category and comfort mode, and HVAC modes 1 and 2 only with ‘vrf_mm’ and ‘ex_mm’: accim checks it before writing any output IDF. `zone_arguments` needs `temp_ctrl='temperature'`. The attribute `zone_arguments` of the returned object gives the zones found in each input IDF.
+-   The arguments are those of `modify_accis`, with one value each: `comfort_standard`, `category`, `comfort_mode`, `category_cooling_offset`, `category_heating_offset`, `setpoint_accuracy`, the arguments of the custom model (`custom_slope`, `custom_intercept`...), `cooling_season_start`, `cooling_season_end`, `hvac_mode`, `ventilation_control`, `ventilation_setpoint_offset`, `min_outdoor_temp_offset`, `max_wind_speed`, `opening_factor_max_temp_diff`, `opening_factor_min_temp_diff`, `min_opening_factor` and `setpoint_tolerance` (the tolerance of the setpoints). The arguments that a zone does not give are those of each output IDF; when the output IDF has no natural ventilation (HVAC mode 0) and the zone has it, its ventilation arguments are the first values of `ventilation_control`, `ventilation_setpoint_offset`, `min_outdoor_temp_offset` and `max_wind_speed`.
+-   With `AddAccis`, the zones of `zone_arguments` have the same arguments in all the output IDFs, whose names give the arguments of the other zones (use `name_suffix` to tell them apart). Each of these zones needs a comfort standard with setpoints for its category and comfort mode, and HVAC modes 1 and 2 only with ‘vrf_mm’ and ‘ex_mm’: accim checks it before writing any output IDF. `zone_arguments` needs `setpoint_type='temperature'`. The attribute `zone_arguments` of the returned object gives the zones found in each input IDF.
 
 With an IDF object, `add_accis_to_idf` adds the ACCIS with the same arguments in all the zones, and `modify_accis` sets them for all the zones or, with `zone_arguments`, for some of them:
 
 ```python
 accis.add_accis_to_idf(idf, script_type='vrf_mm', supply_air_temp_input_method='temperature difference',
-                       output_type='standard', output_freqs=['hourly'], output_keep_existing=False,
-                       temp_ctrl='temperature')
-accis.modify_accis(idf, comf_stand=1, cat=3, comf_mod=3, hvac_mode=2, vent_ctrl=0,
-                   zone_arguments={'Block1:Zone2': {'comf_stand': 2, 'cat': 80, 'hvac_mode': 0}})
+                       output_type='standard', output_frequencies=['hourly'], keep_existing_outputs=False,
+                       setpoint_type='temperature')
+accis.modify_accis(idf, comfort_standard=1, category=3, comfort_mode=3, hvac_mode=2, ventilation_control=0,
+                   zone_arguments={'Block1:Zone2': {'comfort_standard': 2, 'category': 80, 'hvac_mode': 0}})
 ```
 
-The arguments of `modify_accis` that are `None` (`comf_stand`, `cat`, `comf_mod`, `hvac_mode` and `vent_ctrl`, by default) keep the values of each zone. The models of earlier versions of accim, whose zones share the program `SetInputData`, can only have the same arguments in all the zones.
+The arguments of `modify_accis` that are `None` (`comfort_standard`, `category`, `comfort_mode`, `hvac_mode` and `ventilation_control`, by default) keep the values of each zone. The models of earlier versions of accim, whose zones share the program `SetInputData`, can only have the same arguments in all the zones.
 
 In the output IDFs, each zone has all its arguments in the Energy Management System program `SetInputData_<zone>`, and its program `RunACCIS_<zone>` runs it, and then the programs that calculate and apply the setpoints of the zone (`SetAppLimits`, `ApplyCAT`, `SetComfTemp`, `SetAST`...). You can edit the arguments of a zone in its program `SetInputData_<zone>`. Besides the outputs of the whole model (`Comfort Temperature`, `Adaptive Cooling Setpoint Temperature`...), which have the values of the last zone (those of every zone if all the zones have the same arguments), the setpoints of each zone are reported as `Comfort Temperature_<zone>`, `Adaptive Cooling Setpoint Temperature_<zone>`, `Adaptive Heating Setpoint Temperature_<zone>`, their values without tolerance and, in mixed mode, `Ventilation Setpoint Temperature_<zone>` and `Minimum Outdoor Temperature for ventilation_<zone>`.
 
 ## 4.3 Full list of setpoint temperatures
 
-Depending on the arguments ComfStand, CAT and ComfMod, cooling and heating setpoint temperatures will be the following:
+Depending on the arguments comfort_standard, category and comfort_mode, cooling and heating setpoint temperatures will be the following:
 
 (If it is too small, you can look at it also at the [Github repository](https://htmlpreview.github.io/?https://github.com/dsanchez-garcia/accim/blob/master/docs/source/html_files/full_setpoint_table.html))
 
@@ -340,7 +342,7 @@ So, say you have an IDF in some folder, called ‘TestModel.idf’. So, you can 
 >>> accis.AddAccis()
 ```
 
-When we hit enter, we’ll be asked to enter some information regarding the ScriptType, the Outputs and the EnergyPlus version (the values after the colons are the answers of this example):
+When we hit enter, we’ll be asked to enter some information regarding the script type, the outputs and the EnergyPlus version (the values after the colons are the answers of this example):
 
 ```
 
@@ -600,7 +602,7 @@ And the total number of output IDFs is going to be 20
 Do you still want to run ACCIS? [y/n]: y
 ```
 
-If we entered `n`, the whole process would shut down. Otherwise, if we entered ‘y’, the generation of output IDF files would start, and ACCIS would print on screen each output IDF name as it generates it. As you can see, we are going to use the EN16798-1, ASHRAE 55 and IMAC Commercial for naturally ventilated buildings, categories 2 and 3 for EN16798, 90% acceptability levels for ASHRAE 55, 85 and 90% acceptability levels for IMAC C NV, all with ComfMod 0 (with static setpoint temperatures) and 3 (with adaptive setpoint temperatures when the model is applicable, otherwise horizontally extending the adaptive setpoint temperatures), Mixed Mode, and we just went ahead with the remaining default values.
+If we entered `n`, the whole process would shut down. Otherwise, if we entered ‘y’, the generation of output IDF files would start, and ACCIS would print on screen each output IDF name as it generates it. As you can see, we are going to use the EN16798-1, ASHRAE 55 and IMAC Commercial for naturally ventilated buildings, categories 2 and 3 for EN16798, 90% acceptability levels for ASHRAE 55, 85 and 90% acceptability levels for IMAC C NV, all with comfort_mode 0 (with static setpoint temperatures) and 3 (with adaptive setpoint temperatures when the model is applicable, otherwise horizontally extending the adaptive setpoint temperatures), Mixed Mode, and we just went ahead with the remaining default values.
 
 ```
 Generating the following output IDF files:
@@ -655,15 +657,15 @@ So, how to use it? Say you have already run `AddAccis()`, and therefore you have
 ```python
 from accim.run import run
 run.run_ep(
-    run_only_accim=True,        # True to run only the IDFs generated by accim (with '[' in the name), False to run all IDFs
-    confirm_run=True,           # True to run without asking for confirmation
-    num_cpus=2,                 # number of simulations run at the same time
+    only_accim_idfs=True,       # True to run only the IDFs generated by accim (with '[' in the name), False to run all
+    confirm=True,               # True to run without asking for confirmation
+    processes=2,                # number of simulations run at the same time
     energyplus_version='auto',  # EnergyPlus version of the IDFs, or 'auto' to read it from them
     backend='ems',              # 'ems' (the EMS of EnergyPlus) or 'api' (the Python API of EnergyPlus, section 4.9)
 )
 ```
 
-If you omit `run_only_accim`, `confirm_run` or `energyplus_version`, `run_ep()` asks for them in the prompt. Before running, it lists the IDFs, the EPWs and the simulations, and their number, and asks for your confirmation (unless `confirm_run=True`), because you might start thousands of simulations by mistake. `energyplus_version` is the version of the IDFs, from ‘9.1’ to ‘26.2’, or ‘auto’ to read it from the IDFs, which must then be of the same version; `num_cpus` is 2 by default.
+If you omit `only_accim_idfs`, `confirm` or `energyplus_version`, `run_ep()` asks for them in the prompt. Before running, it lists the IDFs, the EPWs and the simulations, and their number, and asks for your confirmation (unless `confirm=True`), because you might start thousands of simulations by mistake. `energyplus_version` is the version of the IDFs, from ‘9.1’ to ‘26.2’, or ‘auto’ to read it from the IDFs, which must then be of the same version; `processes` is 2 by default.
 
 Afterwards, you’ll see the calculations progress, and you’ll get the usual simulation files of each simulation: `.audit`, `.eio`, `.err`, `.eso`, `.csv`, `Table.csv`, `Table.htm` and so on, all of them named `IDF name[EPW name`. You might need to keep these in order to debug some error, or any other reason, but if you only need the CSV files with the hourly results, you can run the `remove_files()` function (`removefiles()` in accim 0.x):
 
@@ -682,7 +684,7 @@ To run it on your computer, copy the folder `jupyter_notebooks/Table` of the sam
 (hours-within-setpoints)=
 ### 4.7.1 Hours within the setpoints
 
-The ACCIS reports EMS outputs that count hours in each occupied zone: in each timestep, their value is the length of the timestep (in hours) or 0, so their sums are hours. With `make_averages=True`, the outputs `<output>_Building_Average` are their averages over the zones.
+The ACCIS reports EMS outputs that count hours in each occupied zone: in each timestep, their value is the length of the timestep (in hours) or 0, so their sums are hours. With `add_building_averages=True`, the outputs `<output>_Building_Average` are their averages over the zones.
 
 | Output | Counts the timesteps... |
 | --- | --- |
@@ -726,7 +728,7 @@ table = Table(datasets=list(kept['Source']), source_frequency='hourly', frequenc
 
 Besides adaptive setpoint temperatures, accim can apply setpoints based on the adaptive predicted mean vote (aPMV), which corrects the PMV for the adaptation of the occupants: aPMV = PMV / (1 + λ·PMV), where λ is the adaptive coefficient, with one value for the cooling season and another for the heating season. The thermostats keep the aPMV of each zone between the heating and cooling setpoints, instead of keeping the operative temperature between two temperatures.
 
-The function `apply_apmv_setpoints()` of the module `accim.sim.apmv` (`accim.sim.apmv_setpoints` in accim 0.x) adds this control, with Energy Management System programs, to a besos or eppy IDF object. Each zone needs an HVAC system; `apply_apmv_setpoints()` adds the thermal comfort thermostats that control it, and `add_vrf_system()` adds a VRF system to the zones if the model has none:
+The function `apply_apmv_setpoints()` of the module `accim.sim.apmv` (`accim.sim.apmv_setpoints` in accim 0.x, whose argument names, such as `adap_coeff_cooling` or `pmv_cooling_sp`, still work; see {doc}`9_migration_guide`) adds this control, with Energy Management System programs, to a besos or eppy IDF object. Each zone needs an HVAC system; `apply_apmv_setpoints()` adds the thermal comfort thermostats that control it, and `add_vrf_system()` adds a VRF system to the zones if the model has none:
 
 ```python
 from besos import eppy_funcs as ef
@@ -736,12 +738,12 @@ building = ef.get_building('TestModel.idf')
 add_vrf_system(building)
 apply_apmv_setpoints(
     building,
-    outputs_freq=['hourly'],
-    adap_coeff_cooling=0.293,       # λ of the cooling season
-    adap_coeff_heating=-0.293,      # λ of the heating season
-    pmv_cooling_sp=0.5,             # aPMV setpoint for cooling
-    pmv_heating_sp=-0.5,            # aPMV setpoint for heating
-    cooling_season_start='01/05',   # dd/mm, or the day of the year
+    output_frequencies=['hourly'],
+    adaptive_coefficient_cooling=0.293,     # λ of the cooling season
+    adaptive_coefficient_heating=-0.293,    # λ of the heating season
+    pmv_cooling_setpoint=0.5,               # aPMV setpoint for cooling
+    pmv_heating_setpoint=-0.5,              # aPMV setpoint for heating
+    cooling_season_start='01/05',           # dd/mm, or the day of the year
     cooling_season_end='01/10',
 )
 set_pmv_input_parameters(building, air_velocity=0.1, work_efficiency=0.0)
@@ -766,7 +768,7 @@ To run the simulations of a folder with the API, use the argument `backend` of `
 
 ```python
 from accim.run import run
-results = run.run_ep(run_only_accim=True, confirm_run=True, num_cpus=4, backend='api')
+results = run.run_ep(only_accim_idfs=True, confirm=True, processes=4, backend='api')
 [r.success for r in results]
 ```
 
@@ -791,16 +793,20 @@ The variables are those of the EMS programs (`controller.get(name, program)` rea
 (graphical-user-interface)=
 ## 4.10 Graphical user interface
 
-Since accim 1.0.0, a graphical user interface (GUI), in English, does the main steps without writing Python: add the ACCIS to the IDF files of a folder, run their simulations and measure the occupied hours within the setpoints of the results. Open it with the command `accim-gui`, which is installed with accim, or with:
+Since accim 1.0.0, a graphical user interface (GUI), in English, does the main steps without writing Python: add the ACCIS or the aPMV setpoints to the IDF files of a folder, rename the EPW files, run the simulations, measure the occupied hours within the setpoints, make tables and figures of the results, and run a basic parametric study. Open it with the command `accim-gui`, which is installed with accim, or with:
 
 ```
 python -m accim.gui
 ```
 
-It uses tkinter, which comes with Python on Windows and macOS (on Linux, it may need a package of the distribution, such as `python3-tk`). The three tabs share a working folder:
+It uses tkinter, which comes with Python on Windows and macOS (on Linux, it may need a package of the distribution, such as `python3-tk`). The seven tabs share a working folder:
 
-1. **Add the ACCIS**: the input IDFs of the folder (all, or those selected), and the arguments of `AddAccis()` (sections 4.2 and 4.4): the script type, the temperature control, the outputs, the comfort standards (with the categories and comfort modes of each one), the arguments of mixed mode, those of the custom model (comfort standard 99) and the tolerances. The fields that do not apply to the script type or to the comfort standards are disabled. *Preview* shows the number of output IDFs and the arguments of `AddAccis()` in the log; *Add the ACCIS* writes the output IDFs in the folder, after a confirmation.
-2. **Run the simulations**: `run_ep()` (section 4.6) with the IDFs and EPWs of the folder, with the EMS or the Python API backend (section 4.9), and `remove_files()`.
-3. **Hours within the setpoints**: the percentage of the occupied hours within the setpoints of each simulation, in each zone and in the building, from the CSV files of the folder (section 4.7.1), the simulations that reach a minimum percentage, and a CSV file with the table.
+1. **Add the ACCIS**: the input IDFs of the folder (all, or those selected), and the arguments of `AddAccis()` (sections 4.2 and 4.4): the script type, the setpoint type, the outputs, the comfort standards (with the categories and comfort modes of each one), the arguments of mixed mode, those of the custom model (comfort standard 99), the tolerances, and the arguments of some zones (`zone_arguments`, {ref}`zone-arguments`): *Find the occupied zones* lists the zones of the first selected IDF, and each zone of the table gets pairs `name=value`, such as `comfort_standard=2, category=80`; the other zones take the arguments of the form. The fields that do not apply to the script type, the setpoint type or the comfort standards are disabled. *Preview* shows the number of output IDFs and the arguments of `AddAccis()` in the log; *Add the ACCIS* writes the output IDFs in the folder, after a confirmation.
+2. **aPMV setpoints**: `apply_apmv_setpoints()` (section 4.8) on an input IDF of the folder, with the same setpoints in all the zones, optionally with a VRF system in each zone, the occupants always present and other inputs of the PMV of the occupants; the new IDF is saved in the folder as `<input>_aPMV.idf`, or with another name.
+3. **Rename the EPWs**: `rename_epw_files()` (section 4.5) on the selected EPWs of the folder; the cities and countries that OpenStreetMap does not give can be entered in the form.
+4. **Run the simulations**: `run_ep()` (section 4.6) with the IDFs and EPWs of the folder, with the EMS or the Python API backend (section 4.9), and `remove_files()`.
+5. **Hours within the setpoints**: the percentage of the occupied hours within the setpoints of each simulation, in each zone and in the building, from the CSV files of the folder ({ref}`hours-within-setpoints`), the simulations that reach a minimum percentage, and a CSV file with the table.
+6. **Table and figures**: `Table` (section 4.7) of the CSV files of the simulations of the folder, with its frequency, the totals of the blocks and of the building and the columns of the table, which can be exported to a CSV file; and its scatter plots and time plots, whose subplots group the simulations by the variables whose values differ between them (the comfort standard, the category, the EPW...), saved as PNG files in the folder.
+7. **Parametric study**: a basic `ParametricSimulation` ({doc}`parametric_and_optimisation`) of the predefined or the custom model of accim, on an input IDF of the folder and the selected EPWs: the full set of the options of the parameters, or a Latin hypercube sample of their ranges (custom model); the results are the sums of some meters over the run period of each simulation.
 
-Each task runs in the background, one at a time, and what accim prints appears in the log at the bottom of the window (EnergyPlus writes its own messages in the console). The GUI does not ask anything in the prompt, so it gives all the arguments, and it checks them before running (for instance, that the lists of numbers are numbers). It does not cover the arguments of each zone (`zone_arguments`), the `custom` output type, `Table` and the parametric module: use Python for them.
+Each task runs in the background, one at a time, and what accim prints appears in the log at the bottom of the window (EnergyPlus writes its own messages in the console). The GUI does not ask anything in the prompt, so it gives all the arguments, and it checks them before running (for instance, that the lists of numbers are numbers); it only answers the questions of `rename_epw_files()` about amending or excluding EPWs (none), and those of the figures about renaming the rows and columns of the subplots (no). It does not cover the `custom` output type, different aPMV setpoints for each zone, the other figures of `Table` and the reshaping of its tables, nor the outputs, objectives, optimisations and plots of the parametric module: use Python for them. accim reads the IDFs with eppy, which keeps the IDD of the first EnergyPlus version that it reads in a session: to work with IDFs of another version, close the GUI and open it again.

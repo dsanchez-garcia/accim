@@ -91,7 +91,7 @@ Example
                                selections={'Knee point': knee}, threshold=0.05)
 
     # parameters against the hourly outcome
-    sim.plot_results_scatter_matrix(['CustAST_m', 'CustAST_n', 'CustAST_ASToffset', 'E_HVAC', 'share_outside_II'],
+    sim.plot_results_scatter_matrix(['custom_slope', 'custom_intercept', 'custom_offset', 'E_HVAC', 'share_outside_II'],
                                     df=ind, hue='comfort_outcome', upper='scatter', color_by='T_mean',
                                     diag='stacked', percent_columns=['share_outside_II'])
 
@@ -99,8 +99,8 @@ Example
     sim.get_hourly_df_optimisation(epw_filter='Present', output_columns=['Operative', 'Electricity:HVAC',
                                                                           'Running Average'])
     sim.plot_hourly_heatmaps(['Zone Operative Temperature', 'Electricity:HVAC'], df_source='optimisation_hourly',
-                             case=['CustAST_m', 'CustAST_ASToffset'],
-                             data_filter={'include': {'CustAST_ASToffset': {'gt': 4.5}}})
+                             case=['custom_slope', 'custom_offset'],
+                             data_filter={'include': {'custom_offset': {'gt': 4.5}}})
 
 Methods
 -------

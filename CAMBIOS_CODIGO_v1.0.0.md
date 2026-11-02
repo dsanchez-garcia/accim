@@ -33,10 +33,13 @@ Lo que ya está en otros documentos no se repite aquí:
 
 - El uso. `AddAccis`, `add_accis_to_idf`, `modify_accis` y `run_ep` hacen lo mismo que `addAccis`, el
   `addAccis` de `accis_single_idf_funcs`, `modifyAccis` y `runEp`; cambian los nombres, que siguen PEP 8
-  (`script_type` en vez de `ScriptType`...). Los nombres de 0.x siguen funcionando, con un
+  y dicen qué es cada argumento, sin abreviaturas (`script_type` en vez de `ScriptType`, `comfort_mode`
+  en vez de `ComfMod`...), los mismos en todo el paquete, también en los argumentos y los parámetros de
+  `accim.parametric_and_optimisation`. Los nombres de 0.x siguen funcionando, con un
   `DeprecationWarning` que da el nuevo.
-- Las preguntas de `AddAccis()` (siguen mostrando `ScriptType`, `ComfStand`...) y el uso de
-  `accim.parametric_and_optimisation`, cuyos parámetros conservan los nombres de 0.x.
+- Las preguntas de `AddAccis()` (siguen mostrando `ScriptType`, `ComfStand`...), las variables de los
+  programas EMS (`ComfStand`, `CAT`, `ComfMod`...), las etiquetas de los nombres de los IDF de salida
+  (`[CS_`, `[CA_`, `[CM_`...) y las columnas de `Table`.
 - Las líneas Erl de los programas EMS, salvo que los argumentos de cada zona están en su programa
   `SetInputData_<zona>` (sección 6).
 - Los IDF de salida: se generaron con 0.8.2 y con 1.0.0 en 29 configuraciones (todos los tipos de
@@ -60,8 +63,10 @@ Lo que ya está en otros documentos no se repite aquí:
   platypus y les aplicaba parches.
 - Hay un backend nuevo que ejecuta los programas EMS en Python, a través de la API de Python de
   EnergyPlus, con los mismos resultados que el EMS.
-- Hay una interfaz gráfica en inglés (`accim-gui`, `accim/gui/`) para añadir el ACCIS, simular y medir
-  las horas ocupadas dentro de las consignas sin escribir Python.
+- Hay una interfaz gráfica en inglés (`accim-gui`, `accim/gui/`) para añadir el ACCIS (con argumentos
+  distintos en algunas zonas) o las consignas aPMV, renombrar los EPW, simular, medir las horas ocupadas
+  dentro de las consignas, hacer tablas y figuras de los resultados y un estudio paramétrico básico sin
+  escribir Python.
 
 **Tamaño** (líneas de Python, sin los archivos de ejemplo):
 
@@ -100,10 +105,10 @@ Lo que ya está en otros documentos no se repite aquí:
 | — | `accim/energyplus.py`: las instalaciones de EnergyPlus (`find_energyplus`, `idd_path`, `read_idf_version` y la variable de entorno `ACCIM_ENERGYPLUS_DIR`) |
 | Constantes repartidas | `accim/constants.py` (`SUPPORTED_ENERGYPLUS_VERSIONS`...); `accim/lists.py` se mantiene por compatibilidad |
 | — | `accim/_deprecation.py`: el mecanismo de los nombres antiguos (sección 7) |
-| — | `accim/gui/`: la interfaz gráfica en inglés (orden `accim-gui`, con tkinter): `forms.py` (los campos, sus valores por defecto y los argumentos de `AddAccis` y `run_ep` que dan, comprobados, sin tkinter) y `app.py` (la ventana: tres pestañas con una carpeta de trabajo común; cada tarea en un hilo, con lo que imprime en el registro y sin preguntas en el prompt) |
+| — | `accim/gui/`: la interfaz gráfica en inglés (orden `accim-gui`, con tkinter): `forms.py` (los campos de cada pestaña, sus valores por defecto y los argumentos de accim que dan, comprobados, sin tkinter), `tasks.py` (las tareas que llaman a accim con esos argumentos: las zonas ocupadas, las consignas aPMV, `rename_epw_files`, `Table` y sus figuras y el estudio paramétrico) y `app.py` (la ventana: siete pestañas con una carpeta de trabajo común; cada tarea en un hilo, con lo que imprime en el registro y sin preguntas en el prompt, salvo las que la tarea sabe responder) |
 | `run/run.py` (`runEp`) | `run/run.py`: `run_ep`, con `backend='ems'` o `'api'`, y `simulation_name` |
 | `accim.data` | Igual, con `gen_csv_concatenated`, `preview_table_cols` y `name_export_rows_with_nan` (los nombres antiguos funcionan) |
-| `accim.parametric_and_optimisation` | Igual; cambian sus llamadas internas a `accim.sim` (y algunas correcciones, sección 10). Nuevo `_pareto.py` (la dominancia con restricciones) y, en `objectives.py`, `checked_sum_results`, `hours_outside_comfort` y `fraction_outside_comfort` |
+| `accim.parametric_and_optimisation` | Igual, con los nombres de los argumentos, atributos y parámetros de `accim.sim` (sección 7); cambian sus llamadas internas a `accim.sim` (y algunas correcciones, sección 10). Nuevo `_pareto.py` (la dominancia con restricciones) y, en `objectives.py`, `checked_sum_results`, `hours_outside_comfort` y `fraction_outside_comfort` |
 
 ## 3. De los métodos de 0.8.2 a las funciones de 1.0.0
 
@@ -140,7 +145,7 @@ llamaba en orden; en 1.0.0 son funciones que reciben el `AccimModel`.
 3. **Para cada IDF de entrada:**
    - `load_idf` lo lee con besos (versión `'auto'`) o con eppy y el IDD de la versión indicada
      (`accim.energyplus.idd_path`); se trabaja sobre una copia (`idf_tools.copy_idf`).
-   - `AccimModel(idf, script_type, temp_ctrl)` lo analiza: las zonas ocupadas y los ocupantes de cada
+   - `AccimModel(idf, script_type, setpoint_type)` lo analiza: las zonas ocupadas y los ocupantes de cada
      una (`targets.resolve_targets`, que tiene en cuenta los `Space`, `SpaceList`, `ZoneList` y los
      `People:Instance` de EnergyPlus 26.2), las ventanas (aberturas de AirflowNetwork o, sin
      AirflowNetwork, los objetos `ZoneVentilation`, cada uno con un horario `Vent_Sch_<zona>`), y los
@@ -149,7 +154,7 @@ llamaba en orden; en 1.0.0 son funciones que reciben el `AccimModel`.
      sistema VRF o los horarios de los sistemas existentes, los programas EMS, sus variables, sensores
      y actuadores, los gestores de llamada y los objetos de control de salida.
    - `build.add_outputs(model, ...)` añade las Output:Variable del tipo de salida, o las de
-     `output_take_dataframe`.
+     `outputs_dataframe`.
    - `outputs.enable_sizing_calculations(model)` activa el dimensionado, y avisa si el modelo no tiene
      periodos de dimensionado.
    - Guarda el texto del modelo (no el objeto, que ocupa mucha más memoria).
@@ -238,7 +243,7 @@ línea de siempre: `_EARLIER_VERSION_LINES`).
   (`depends_on_comfort_mode`). `MODULAR_COMFORT_MODES` dice qué modos tiene cada norma; debe coincidir con
   las combinaciones válidas del módulo paramétrico (`param_accis.drop_invalid_param_combinations`).
 - `ems/objects.py`: las variables globales, variables internas, sensores, actuadores y variables de
-  salida del EMS, y las medias del edificio (`make_averages`).
+  salida del EMS, y las medias del edificio (`add_building_averages`).
 - `ems/erl.py`: el intérprete de Erl (sección 8). También lo usan los tests para comprobar los
   programas que escribe accim.
 
@@ -253,15 +258,27 @@ Todo pasa por `accim/_deprecation.py`:
   `removefiles`, `genCSVconcatenated`...) y las funciones que aceptan los argumentos antiguos.
 
 La correspondencia de los argumentos de `AddAccis` está en `arguments.LEGACY_ARGUMENT_NAMES`
-(`ScriptType` → `script_type`, `ComfStand` → `comf_stand`...). `addAccis` es una subclase de `AddAccis`
+(`ScriptType` → `script_type`, `ComfStand` → `comfort_standard`...). `addAccis` es una subclase de `AddAccis`
 que renombra los argumentos, y `AddAccis.arguments` (un `_Arguments`) responde también a las claves
 antiguas. Los módulos obsoletos (`accis_single_idf`, `accis_single_idf_funcs`, `apmv_setpoints`)
 llaman a las funciones nuevas; `accis_single_idf.addAccis` conserva incluso los argumentos posicionales
 y los atributos de 0.x. `tests/core/test_deprecation.py` comprueba que los scripts de 0.x siguen
 funcionando.
 
+Los demás nombres antiguos están junto a su código: `apmv._LEGACY_ARGUMENTS` (los argumentos de
+`apply_apmv_setpoints` y de las demás funciones de `accim.sim.apmv`, como `adap_coeff_cooling` u
+`outputs_freq`), los `legacy_kwargs` de `run_ep` y, en el módulo paramétrico, `main._LEGACY_ARGUMENTS`
+y `main._LEGACY_ATTRIBUTES` (los argumentos y los atributos de sus clases; los atributos antiguos son
+propiedades obsoletas) y `params_dicts.LEGACY_PARAMETER_NAMES` (los nombres de los parámetros,
+`'ComfStand'`, `'CustAST_m'`...): `params_dicts.resolve_parameter_name` los traduce en
+`set_parameters`, `accis_parameter` y los planes, y `rename_legacy_parameter_columns` en las columnas de
+los resultados guardados con 0.x. `accepts_legacy_kwargs` solo usa las entradas cuyo nombre nuevo es un
+argumento de la función, así que varias funciones comparten una correspondencia.
+`tests/parametric_and_optimisation/test_legacy_names.py` comprueba los nombres antiguos del módulo
+paramétrico.
+
 Para retirar los nombres antiguos en una versión futura (`ROADMAP.md`, R-03) basta con borrar los
-módulos obsoletos, los alias y `LEGACY_ARGUMENT_NAMES`.
+módulos obsoletos, los alias, `LEGACY_ARGUMENT_NAMES` y las demás correspondencias.
 
 ## 8. El backend de la API de Python
 
@@ -302,7 +319,7 @@ EMS.
   la API.
 - `accim.run`: `run_ep` con los dos backends, y `remove_files` (antes `removefiles`).
 - `accim.data`: la misma estructura, con nombres nuevos y alias.
-- `accim.parametric_and_optimisation`: su uso no cambia. Llama a `accis.add_accis_to_idf`,
+- `accim.parametric_and_optimisation`: su uso no cambia, salvo los nombres (los de `accim.sim`). Llama a `accis.add_accis_to_idf`,
   `accis.modify_accis` y `accim.sim.apmv` en vez de a los módulos de 0.x, y aplica los parches de besos
   (`_besos_compat`) al importarse.
 
@@ -384,7 +401,7 @@ Durante la refactorización se usaron dos herramientas que ahora están en el re
 | Cambiar o añadir salidas | `outputs.py` |
 | Cambiar el sistema VRF | `hvac/vrf.py` y `hvac/vrf_data.py` |
 | Admitir una versión de EnergyPlus | `constants.SUPPORTED_ENERGYPLUS_VERSIONS` (y `ENERGYPLUS_VERSIONS_WITH_SPACES`); revisar `energyplus.py` y `tests/core/test_energyplus_versions.py` |
-| Renombrar un argumento | El argumento en las funciones, y el nombre antiguo en `arguments.LEGACY_ARGUMENT_NAMES` |
+| Renombrar un argumento | El argumento en las funciones, y el nombre antiguo en `arguments.LEGACY_ARGUMENT_NAMES` (o en la correspondencia de su módulo, sección 7); en el módulo paramétrico, también el parámetro (`params_dicts`) |
 | Añadir una función de Erl al backend de la API | `ems/erl.py`: `_FUNCTIONS`, la versión rápida en `_FAST_NAMESPACE` y la exacta en `_ExactEvaluator.function`, con un test en `tests/core/test_erl.py` |
 | Cambiar lo que pregunta `AddAccis` | `prompts.py`, y las transcripciones de `docs/source/4_detailed use.md` (ver `docs/README.md`, §5) |
 | Cambiar a propósito los IDF de salida | Después del cambio, `python tests/core/golden_master/runner.py write CARPETA` y `compare CARPETA` para ver qué cambia, y `python -m pytest tests/core/test_golden_master.py --update-golden` para guardar los nuevos golden (ver `tests/core/golden_master/README.md`) |

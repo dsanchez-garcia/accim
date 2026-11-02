@@ -11,6 +11,54 @@ Durable architectural/process decisions for this repository and its Obsidian
 vault. Newest first. Use [[templates/decision-record.md|the decision-record
 template]] to add a new entry.
 
+## 2026-11-02 — The arguments and parameters have descriptive names, the same in the whole package
+
+- **Status**: accepted (the author's answer of 2026-11-02 to the open question of the names: option (a), and the
+  parametric module too)
+- **Context**: The names of 1.0.0 were a mechanical translation of those of 0.x to snake case
+  ([[#2026-10-30 — PEP 8 names with deprecated aliases for accim 0.x|decision of 2026-10-30]]), with their
+  abbreviations (`comf_mod`, `cat`, `vst_offset`...). The author asked for a review ("`ComfMod` no me gusta"), chose
+  the suggested names, and asked that the arguments and parameters of `accim.parametric_and_optimisation` take the
+  names of `accim.sim` ("el módulo debe ser consistente con el resto"), although the decision of 2026-10-30 had kept
+  them.
+- **Decision**: The arguments of `AddAccis`, `add_accis_to_idf`, `modify_accis` and `zone_arguments`, of
+  `apply_apmv_setpoints` and the other functions of `accim.sim.apmv`, of `run_ep`, and the arguments, attributes and
+  parameters of the parametric module have descriptive names, the same everywhere: `comfort_standard`, `category`,
+  `comfort_mode`, `setpoint_type`, `output_frequencies`, `ventilation_control`, `min_opening_factor`,
+  `setpoint_tolerance`, `custom_slope`..., `adaptive_coefficient_cooling`, `pmv_cooling_setpoint`,
+  `only_accim_idfs`, `processes`, `use_default_values`... (the full list is in §9.2 of
+  [[../docs/source/9_migration_guide.md]]). The names of 0.x stay as deprecated aliases with `DeprecationWarning`:
+  arguments (`accepts_legacy_kwargs`), attributes of the parametric classes, names of parameters (`'ComfStand'`,
+  `'CustAST_m'`... in `set_parameters`, `accis_parameter`, the samples and the plans) and columns of the results
+  saved with 0.x, renamed when they are loaded. The snake-case names of the earlier commits of `v1.0.0` were never
+  released, so they get no alias. The EMS variables (`ComfStand`, `CAT`...), the tags of the names of the output
+  IDFs (`[CS_`, `[CA_`, `[CM_`...), the columns of `Table`, the texts of the prompts, the `modify_*` functions of
+  `param_accis` and the class names of the wrappers of `parameters.py` keep their names: they are read by the EMS
+  programs, by `Table` or by the results of earlier versions.
+- **Consequences**: The output IDFs do not change (golden master). The scripts, notebooks and saved results of 0.x
+  keep working with warnings; the documentation and the example notebooks use the new names. The aliases are removed
+  with the others in a future major version ([[../ROADMAP.md]], R-03).
+
+## 2026-11-02 — The GUI keeps tkinter and gets tabs for more steps
+
+- **Status**: accepted (the author's answer of 2026-11-02 to the open question of the GUI: the first option)
+- **Context**: [[#2026-11-01 — The first GUI uses tkinter and covers AddAccis, run_ep and the hours within the setpoints|The first GUI]]
+  had three tabs; the open question offered more tabs with tkinter, a web interface as an optional extra, or leaving
+  the rest in Python.
+- **Decision**: tkinter, with seven tabs that share the working folder: *Add the ACCIS* (now with a table of the
+  arguments of some zones, `zone_arguments`, and the occupied zones of the IDF), *aPMV setpoints*
+  (`apply_apmv_setpoints`, the same setpoints in all the zones), *Rename the EPWs* (`rename_epw_files`), *Run the
+  simulations*, *Hours within the setpoints*, *Table and figures* (`Table`, its scatter and time plots saved as PNG
+  files) and *Parametric study* (a basic `ParametricSimulation`: full set or Latin hypercube, sums of meters). The
+  forms stay in `forms.py` and the tasks that call accim are in `tasks.py`, both without tkinter, so they are tested
+  without a display. A task can get fixed answers for the questions of the prompt that the GUI knows (those of
+    `rename_epw_files` about amending or excluding EPWs, and those of the figures of `Table` about renaming the rows and
+    columns of the subplots); any other question stops it with an error.
+- **Consequences**: No new dependency. Still in Python only: the `custom` output type, different aPMV setpoints for
+  each zone, the other figures and the reshaping of `Table`, and the outputs, objectives, optimisations and plots of
+  the parametric module. eppy keeps one IDD per process, so IDFs of different EnergyPlus versions need a new session
+  of the GUI.
+
 ## 2026-11-02 — The check of `claude/admiring-cori-fe6c57` is ported to `v1.0.0`, and the branch is deleted
 
 - **Status**: accepted (the author asked on 2026-11-02 for the recommended option)
@@ -30,8 +78,9 @@ template]] to add a new entry.
 
 ## 2026-11-01 — The first GUI uses tkinter and covers AddAccis, run_ep and the hours within the setpoints
 
-- **Status**: accepted for the first version (priority task asked by the author on 2026-11-01; its item said that
-  he would choose the scope and the technology, and he could not answer: open question in [[questions.md]])
+- **Status**: superseded in its scope by [[#2026-11-02 — The GUI keeps tkinter and gets tabs for more steps]]
+  (accepted for the first version: priority task asked by the author on 2026-11-01; its item said that he would
+  choose the scope and the technology, which he did on 2026-11-02)
 - **Context**: A GUI in English, so that users without Python can add the ACCIS, run the simulations and look at the
   results. accim is used on Windows with EnergyPlus; its steps print a lot, ask in the prompt when an argument is
   missing, run long and use processes (`run_ep`).
@@ -358,7 +407,8 @@ template]] to add a new entry.
 
 ## 2026-10-30 — PEP 8 names with deprecated aliases for accim 0.x
 
-- **Status**: accepted
+- **Status**: accepted; the mechanical translation of the names and the parametric module keeping its names are
+  superseded by [[#2026-11-02 — The arguments and parameters have descriptive names, the same in the whole package]]
 - **Context**: The author asked to refactor accim to the conventions of Python, keeping the usage similar, and
   allowed renaming the classes and arguments that break the rules; later, the usage of
   `accim.parametric_and_optimisation` had to stay the same. Many scripts, notebooks and papers use the names

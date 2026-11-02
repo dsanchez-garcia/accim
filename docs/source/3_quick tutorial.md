@@ -22,19 +22,19 @@ You can also enter the information as arguments, so that accim does not ask for 
 ```python
 from accim.sim import accis
 accis.AddAccis(
-    script_type='vrf_mm',                                 # VRF system with mixed-mode operation
+    script_type='vrf_mm',                           # VRF system with mixed-mode operation
     supply_air_temp_input_method='temperature difference',
-    output_keep_existing=False,                           # remove the outputs of the input IDF
+    keep_existing_outputs=False,                    # remove the outputs of the input IDF
     output_type='standard',
-    output_freqs=['hourly', 'runperiod'],
-    energyplus_version='auto',                            # the EnergyPlus version of each IDF
-    temp_ctrl='temperature',                              # setpoints on the operative temperature
-    comf_stand=[1, 2],                                    # EN 16798-1 and ASHRAE 55
-    cat=[1, 2, 3, 80, 90],                                # categories I-III, 80 % and 90 % acceptability
-    comf_mod=[0, 3],                                      # static, and adaptive setpoints
-    hvac_mode=[2],                                        # mixed mode
-    vent_ctrl=[0],                                        # ventilate above the neutral temperature
-    confirm_gen=True,                                     # generate the IDFs without asking for confirmation
+    output_frequencies=['hourly', 'runperiod'],
+    energyplus_version='auto',                      # the EnergyPlus version of each IDF
+    setpoint_type='temperature',                    # setpoints on the operative temperature
+    comfort_standard=[1, 2],                        # EN 16798-1 and ASHRAE 55
+    category=[1, 2, 3, 80, 90],                     # categories I-III, 80 % and 90 % acceptability
+    comfort_mode=[0, 3],                            # static, and adaptive setpoints
+    hvac_mode=[2],                                  # mixed mode
+    ventilation_control=[0],                        # ventilate above the neutral temperature
+    confirm=True,                                   # generate the IDFs without asking for confirmation
 )
 ```
 

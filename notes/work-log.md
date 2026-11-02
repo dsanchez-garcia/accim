@@ -15,6 +15,22 @@ This log is a lightweight, session-scoped complement to the repository's
 existing tracking files — it does not replace them (see
 [[decisions.md#2026-09-13 — `notes/work-log.md` complements, not replaces, existing tracking files|the related decision]]).
 
+## 2026-11-02 — Seven tabs in the GUI
+
+- **Objective**: The answer of the author on the GUI: keep tkinter and add tabs for more steps.
+- **Affected files**: `accim/gui/` (`forms.py`, `tasks.py` (new), `app.py`, `__init__.py`), `accim/data/postprocessing/main.py` (`Table.generate_fig_data`), `tests/core/test_gui.py`, `tests/core/test_table_figures.py` (new); [[../docs/source/4_detailed use.md]] (4.10), [[../README.md]], [[../CHANGELOG.md]], [[../DEVLOG.md]], [[../TODO.md]], [[../CAMBIOS_CODIGO_v1.0.0.md]], [[decisions.md]].
+- **Finding or decision**: See [[decisions.md#2026-11-02 — The GUI keeps tkinter and gets tabs for more steps|the decision]]: the arguments of some zones, the aPMV setpoints, the renaming of the EPWs, `Table` and its figures, and a basic parametric study. Running the tabs with real simulations found that the figures of `Table` failed with run period tables (fixed in `Table`), needed colours and asked whether to rename the rows and columns (the GUI answers no); the test with a fake `Table` had missed them.
+- **Validation**: 72 GUI tests and 5 figure tests with real `Table`s; the whole workflow through the window with real simulations (all seven tabs, no error); details in [[../DEVLOG.md]].
+- **Next step**: the release of 1.0.0 ([[../TODO.md]]).
+
+## 2026-11-02 — Descriptive names of the arguments in the whole package
+
+- **Objective**: The answer of the author on the review of the names: the suggested names (option a), also for the arguments and parameters of the parametric module.
+- **Affected files**: `accim/sim/`, `accim/run/run.py`, `accim/parametric_and_optimisation/`, `accim/_deprecation.py`, the sample scripts and notebooks, the tests (new `tests/parametric_and_optimisation/test_legacy_names.py`); [[../docs/source/9_migration_guide.md]], [[../docs/source/4_detailed use.md]], [[../docs/source/parametric_and_optimisation.rst]], the executed notebooks, [[../README.md]], [[../CHANGELOG.md]], [[../DEVLOG.md]], [[../CAMBIOS_CODIGO_v1.0.0.md]], [[decisions.md]], [[questions.md]].
+- **Finding or decision**: See [[decisions.md#2026-11-02 — The arguments and parameters have descriptive names, the same in the whole package|the decision]]: only the names of 0.x stay as deprecated aliases (arguments, attributes, parameters and saved results); the EMS variables, the tags of the output IDFs and the columns of `Table` keep their names.
+- **Validation**: 1115 tests passed; the golden master is unchanged; 21 example notebooks run again without errors or deprecation warnings of accim.
+- **Next step**: the GUI tabs (entry above).
+
 ## 2026-11-02 — The branch `claude/admiring-cori-fe6c57`: its check ported, the branch deleted
 
 - **Objective**: The open question on that branch, for which the author asked for the recommended option.

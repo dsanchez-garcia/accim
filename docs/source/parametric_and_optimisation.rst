@@ -92,11 +92,11 @@ People objects that the PMV depends on:
     add_vrf_system(building)
     apply_apmv_setpoints(
         building,
-        outputs_freq=['hourly'],
-        adap_coeff_cooling=0.293,
-        adap_coeff_heating=-0.293,
-        pmv_cooling_sp=0.5,
-        pmv_heating_sp=-0.5,
+        output_frequencies=['hourly'],
+        adaptive_coefficient_cooling=0.293,
+        adaptive_coefficient_heating=-0.293,
+        pmv_cooling_setpoint=0.5,
+        pmv_heating_setpoint=-0.5,
         cooling_season_start='01/04',   # dd/mm, northern hemisphere
         cooling_season_end='01/10',
     )
@@ -117,8 +117,8 @@ explains each of these settings.
         buildings=[building],
         epws=['Seville.epw', 'Sydney.epw'],
         parameters_type='accim custom model',
-        output_freqs=['hourly'],
-        ScriptType='vrf_ac',
+        output_frequencies=['hourly'],
+        script_type='vrf_ac',
     )
 
 For an optimisation, use :class:`~accim.parametric_and_optimisation.main.OptimisationSimulation`
@@ -134,38 +134,42 @@ the object does to each model when it is created:
      - Parameters that can be varied
    * - ``'accim predefined model'``
      - Adds accim to each model (:func:`~accim.sim.accis.add_accis_to_idf`)
-     - ``ComfStand``, ``CAT``, ``ComfMod``, ``HVACmode``, ``VentCtrl``, ``ASTtol`` and the other
-       arguments of the output IDFs of ``AddAccis``, with their names of accim 0.x (see
-       :doc:`4_detailed use`)
+     - ``comfort_standard``, ``category``, ``comfort_mode``, ``hvac_mode``, ``ventilation_control``,
+       ``setpoint_tolerance`` and the other arguments of :func:`~accim.sim.accis.modify_accis`, with
+       their names (see :doc:`4_detailed use`)
    * - ``'accim custom model'``
      - Adds accim to each model, with the custom adaptive model
-     - ``CustAST_m`` (slope of the comfort temperature), ``CustAST_n`` (intercept),
-       ``CustAST_ASToffset`` (offset of the setpoints from the comfort temperature) and
-       ``CustAST_ASTall``/``CustAST_ASTaul`` (applicability limits of the running mean outdoor
-       temperature); the offsets and limits can also be set separately for cooling and heating
-       (``CustAST_ACSToffset``, ``CustAST_AHSToffset``, ``CustAST_ACSTall``...)
+     - ``custom_slope`` (slope of the comfort temperature), ``custom_intercept`` (intercept),
+       ``custom_offset`` (offset of the setpoints from the comfort temperature) and
+       ``custom_lower_limit``/``custom_upper_limit`` (applicability limits of the running mean
+       outdoor temperature); the offsets and limits can also be set separately for cooling and
+       heating (``custom_cooling_offset``, ``custom_heating_offset``, ``custom_cooling_lower_limit``...)
    * - ``'apmv setpoints'``
      - Applies the aPMV setpoints with the default values of ``apply_apmv_setpoints``, unless
-       ``bypass_addAccis=True``
-     - ``'Adaptive cooling coefficient'``, ``'Adaptive heating coefficient'``,
-       ``'PMV cooling setpoint'``, ``'PMV heating setpoint'``, and ``'Adaptive coefficient'`` and
-       ``'PMV setpoint'`` to vary both seasons, or both setpoints (-s and +s), together
+       ``bypass_add_accis=True``
+     - ``adaptive_coefficient_cooling``, ``adaptive_coefficient_heating``,
+       ``pmv_cooling_setpoint``, ``pmv_heating_setpoint``, and ``adaptive_coefficient`` and
+       ``pmv_setpoint`` to vary both seasons, or both setpoints (-s and +s), together
 
-``sim.get_available_parameters()`` lists the names. The parameters of the accim models set the
+``sim.get_available_parameters()`` lists the names. The parameters have the names of the arguments
+of :mod:`accim.sim` since accim 1.0.0; their names of accim 0.x (``ComfStand``, ``CustAST_m``,
+``'PMV setpoint'``...) still work, with a ``DeprecationWarning``, and the results of accim 0.x get
+the new names when they are loaded (see :doc:`9_migration_guide`). The parameters of the accim models set the
 arguments of all the occupied zones (each zone has them in its EMS program ``SetInputData_<zone>``).
 For the aPMV setpoints, apply them yourself
-with explicit values, as in step 1, and pass ``bypass_addAccis=True``: the parameters of the study
+with explicit values, as in step 1, and pass ``bypass_add_accis=True``: the parameters of the study
 then replace only the values they vary, and the object does not apply the setpoints again.
 
-The other arguments are passed to :func:`~accim.sim.accis.add_accis_to_idf`, with their names of
-accim 0.x. ``ScriptType`` is ``'vrf_ac'`` (VRF system, fully air-conditioned), ``'vrf_mm'`` (VRF
+The other arguments are passed to :func:`~accim.sim.accis.add_accis_to_idf`, which has the same
+names (those of accim 0.x, such as ``ScriptType`` or ``output_freqs``, still work, with a
+``DeprecationWarning``). ``script_type`` is ``'vrf_ac'`` (VRF system, fully air-conditioned), ``'vrf_mm'`` (VRF
 system with mixed-mode operation) or ``'ex_ac'`` (the existing HVAC system of the model, fully
 air-conditioned). Mixed-mode operation needs a model with natural ventilation: calculated
 (AirflowNetwork), or given by ``ZoneVentilation:WindandStackOpenArea`` or
 ``ZoneVentilation:DesignFlowRate`` objects, whose opening accim controls; see :doc:`4_detailed use`.
 With ``'vrf_ac'`` and ``'ex_ac'``, accim does not change the natural ventilation of the model, so
 the windows that are open in it stay open: to simulate such a model fully air-conditioned with its
-windows closed, use ``'vrf_mm'`` and ``HVACmode`` 0 (as WF1 and WF4 do), or close them in the model
+windows closed, use ``'vrf_mm'`` and ``hvac_mode`` 0 (as WF1 and WF4 do), or close them in the model
 (as the aPMV examples do).
 
 Several models can be simulated in the same study (``buildings=[building_a, building_b]``): each one
@@ -213,7 +217,7 @@ Two different things are set here:
   not give a valid objective.
 - Meters are read in J; step 7 converts them to kWh/m².
 - To analyse hourly values afterwards (comfort screening, hourly plots), the variables must be
-  written hourly (``output_freqs=['hourly']``) and the files of the simulations must be kept
+  written hourly (``output_frequencies=['hourly']``) and the files of the simulations must be kept
   (step 6).
 
 **Hours within the setpoints.** The percentage of the occupied hours in which each zone is within
@@ -294,19 +298,19 @@ shows the other methods for output objects, for example to find and remove dupli
 
     sim.set_parameters(
         accis_params_dict={
-            'CustAST_m': (0.0, 0.7),          # tuple: range (min, max)
-            'CustAST_n': (5.0, 22.5),
-            'CustAST_ASToffset': (1.0, 5.0),
-            'CustAST_ASTaul': (22.0, 40.0),
+            'custom_slope': (0.0, 0.7),         # tuple: range (min, max)
+            'custom_intercept': (5.0, 22.5),
+            'custom_offset': (1.0, 5.0),
+            'custom_upper_limit': (22.0, 40.0),
         },
-        use_dflt_values=True,   # the parameters that are not varied take the defaults of accim
+        use_default_values=True,   # the parameters that are not varied take the defaults of accim
     )
     sim.set_problem()
 
-- A **list** gives the options of a parameter (``'ComfStand': [1, 2]``), and a **tuple** gives its
-  range (``'CustAST_m': (0.0, 0.7)``). Which one to use depends on the plan (step 5): options for
+- A **list** gives the options of a parameter (``'comfort_standard': [1, 2]``), and a **tuple** gives
+  its range (``'custom_slope': (0.0, 0.7)``). Which one to use depends on the plan (step 5): options for
   all the combinations, ranges for sampling and optimisation.
-- With ``use_dflt_values=True``, the parameters of the custom model that are not varied take the
+- With ``use_default_values=True``, the parameters of the custom model that are not varied take the
   values of the ASHRAE 55 adaptive model with 80 % acceptability (m = 0.31, n = 17.8 °C, offsets
   of ±3.5 K, applicability limits of 10 and 33.5 °C), and accim prints them.
 - ``additional_params`` adds besos parameters that change any other field of the model, for
@@ -316,8 +320,8 @@ shows the other methods for output objects, for example to find and remove dupli
   parameters and the readers as the inputs and outputs of the problem. In an optimisation, it also
   sets the objectives (step 5).
 
-**The m-n filter (custom model).** Independent ranges of the slope ``CustAST_m`` and the intercept
-``CustAST_n`` include many pairs that no published adaptive model has, such as a high slope with a
+**The m-n filter (custom model).** Independent ranges of the slope ``custom_slope`` and the
+intercept ``custom_intercept`` include many pairs that no published adaptive model has, such as a high slope with a
 high intercept.
 :meth:`~accim.parametric_and_optimisation.main.SimulationBase.set_mn_filter` restricts them to the
 band of the 56 linear adaptive models collected by Yao et al. (2022): the slope of the models is
