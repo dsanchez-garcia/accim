@@ -78,10 +78,3 @@ it here as answered).
 - Owner: author.
 - Status: open.
 
-## 2026-11-01 — Bring `claude/admiring-cori-fe6c57` into `master` before the 1.0.0 release?
-
-- Context: That branch (local only, with its worktree in `.claude/worktrees/`, from 2026-10-19) has 2 commits on the old `master` (`1a2f5947`) that are not in `v1.0.0`: `ce90e213` keeps the `tests` package out of the wheel of accim (an exclusion in `setup.py` and a check in `packaging/release.py`), and `6d23a851` removes §7 of [[../packaging/README.md]], whose only item was that problem. `setup.py` of `master` (now `v1.0.0`) already excludes `tests`; the check of `release.py` and the update of the guide are only in that branch.
-- Why it matters: §7 of the release guide still lists as pending a problem already fixed in `master`, and `release.py check` does not catch a top-level package other than `accim` in the wheel.
-- Options considered: merge the branch into `master` (`git merge-tree` finds conflicts in `CHANGELOG.md`, `notes/work-log.md` and `setup.py`); port only the check of `release.py` and the update of the guide; or drop both commits and delete the branch and its worktree.
-- Owner: author.
-- Status: open.

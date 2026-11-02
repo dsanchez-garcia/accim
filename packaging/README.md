@@ -120,9 +120,10 @@ Ejecuta `dist_build_package.bat` (doble clic, o desde cmd). Sus cinco pasos:
    `packaging/accim-samples`, `LICENSE` y un archivo `VERSION` a `build\samples_stage`, la
    construye ahí y avisa si pasa de 100 MB, el límite de PyPI por archivo;
 5. comprueba `dist\` (`py packaging\release.py check`): que están las dos wheels y el sdist de la
-   versión, que la wheel de accim no lleva `sample_files` y su extra pide `accim-samples==X.Y.Z`,
-   que la de accim-samples solo lleva `accim/sample_files` y pide `accim==X.Y.Z`, y pasa
-   `twine check --strict`. Los archivos de otras versiones que haya en `dist\` se ignoran.
+   versión, que la wheel de accim no lleva `sample_files` ni más paquetes de primer nivel que
+   `accim` y su extra pide `accim-samples==X.Y.Z`, que la de accim-samples solo lleva
+   `accim/sample_files` y pide `accim==X.Y.Z`, y pasa `twine check --strict`. Los archivos de
+   otras versiones que haya en `dist\` se ignoran.
 
 Tamaños con la 0.8.2: la wheel de accim, 0,6 MB; su sdist, 0,5 MB; la wheel de accim-samples,
 21,4 MB, con 133 archivos de muestra.
@@ -269,10 +270,3 @@ comprobaciones y siguiente paso) y en `notes/work-log.md`, y haz el commit
   de `try`/`except`, como ya hace con besos.
 - **Una versión nueva de una dependencia rompe accim** (PuLP 4 con la 0.8.0). Acótala en
   `install_requires` de `setup.py`, con un comentario que explique por qué, y publica un arreglo.
-
-## 7. Pendiente (19/10/2026)
-
-- La wheel de accim instala también el paquete `tests` (61 archivos) en site-packages, porque
-  `setuptools.find_packages()` de `setup.py` encuentra `tests/__init__.py`. Se arreglaría
-  excluyéndolo (`exclude=SAMPLES_PACKAGES + ['tests', 'tests.*']`) en la próxima versión, y
-  `release.py check` podría comprobarlo.

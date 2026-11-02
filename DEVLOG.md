@@ -35,6 +35,14 @@ Recommended flow: track active work in `TODO.md`, move completed outcomes to `DE
 
 ## Entries
 
+### 2026-11-02
+#### [done] The check of the branch `claude/admiring-cori-fe6c57` ported, and the branch deleted
+- Context: The author asked (2026-11-02) for the recommended option of the question on that branch (`notes/questions.md`): 2 commits of 2026-10-19 on the old `master` that kept the `tests` package out of the wheel (already done by `setup.py` of `v1.0.0`), added a check to `packaging/release.py` and updated the release guide.
+- Changes: `check_files` of `packaging/release.py` reports any top-level entry of the wheel of accim other than `accim` and its `.dist-info`; `packaging/README.md`: step 5 of §4.3 lists it, and §7 (whose only pending item was that problem) is removed; CHANGELOG (Unreleased, Fixed). The branch was saved in `llm_project_files/branch_review_reports/claude-admiring-cori-fe6c57.bundle` (git-ignored, verified), and its worktree and the branch were removed (the empty `modules` folder of its gitdir blocked `git worktree remove`).
+- Files: `packaging/release.py`, `packaging/README.md`, `CHANGELOG.md`, `notes/decisions.md`, `notes/questions.md`, `notes/work-log.md`.
+- Verification: a wheel of `v1.0.0` built in a temporary folder has only `accim` and `accim-1.0.0.dist-info`, and `check_files` finds no problem in it; a copy with `tests/__init__.py` is reported. `git worktree list` and `git branch -a` no longer list the branch.
+- Next step: none.
+
 ### 2026-11-01
 #### [done] A graphical user interface (GUI) in English: `accim-gui`
 - Context: The third priority task asked by the author (2026-11-01). Its item said that the author would choose the scope and the technology; he could not answer, so the first version was made with the options of the decision (`notes/decisions.md`) and the question stays open (`notes/questions.md`).

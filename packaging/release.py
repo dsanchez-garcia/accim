@@ -191,6 +191,11 @@ def check_files(version, found):
             problems.append(f'{filename} does not contain accim/__init__.py')
         if any(name.startswith('accim/sample_files/') for name in names):
             problems.append(f'{filename} contains accim/sample_files, which belong in {SAMPLES}')
+        top_level = {name.split('/', 1)[0] for name in names}
+        others = sorted(top for top in top_level if top != CORE and not top.endswith('.dist-info'))
+        if others:
+            problems.append(f'{filename} contains top-level packages other than {CORE}: '
+                            f'{", ".join(others)} (exclude them from find_packages in setup.py)')
         if not any(req.startswith(f'{SAMPLES}=={pinned};') and 'extra=="samples"' in req
                    for req in _requirements(headers)):
             problems.append(f'the extra "samples" of {filename} does not require {SAMPLES}=={version}')

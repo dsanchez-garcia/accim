@@ -15,6 +15,14 @@ This log is a lightweight, session-scoped complement to the repository's
 existing tracking files — it does not replace them (see
 [[decisions.md#2026-09-13 — `notes/work-log.md` complements, not replaces, existing tracking files|the related decision]]).
 
+## 2026-11-02 — The branch `claude/admiring-cori-fe6c57`: its check ported, the branch deleted
+
+- **Objective**: The open question on that branch, for which the author asked for the recommended option.
+- **Affected files**: `packaging/release.py`, [[../packaging/README.md]], [[../CHANGELOG.md]], [[../DEVLOG.md]], [[decisions.md]], [[questions.md]].
+- **Finding or decision**: See [[decisions.md#2026-11-02 — The check of `claude/admiring-cori-fe6c57` is ported to `v1.0.0`, and the branch is deleted|the decision]]: only the check of `release.py`, the guide and the CHANGELOG entry were missing in `v1.0.0`; the branch is kept in a git bundle and was deleted with its worktree.
+- **Validation**: a wheel of `v1.0.0` passes the check, and a copy with a `tests` package fails it.
+- **Next step**: the other two answers of the author (the names of the arguments, the scope of the GUI).
+
 ## 2026-11-01 — A GUI in English (`accim-gui`)
 
 - **Objective**: The third priority task of [[../TODO.md]]: a graphical user interface in English.

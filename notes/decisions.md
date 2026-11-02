@@ -11,6 +11,23 @@ Durable architectural/process decisions for this repository and its Obsidian
 vault. Newest first. Use [[templates/decision-record.md|the decision-record
 template]] to add a new entry.
 
+## 2026-11-02 — The check of `claude/admiring-cori-fe6c57` is ported to `v1.0.0`, and the branch is deleted
+
+- **Status**: accepted (the author asked on 2026-11-02 for the recommended option)
+- **Context**: The local branch `claude/admiring-cori-fe6c57` (2 commits of 2026-10-19 on the old `master`, with a
+  worktree in `.claude/worktrees/`) kept the `tests` package out of the wheel of accim, which `setup.py` of `v1.0.0`
+  already does, and added a check to `packaging/release.py check` and the update of [[../packaging/README.md]]
+  (its §7 still listed the problem as pending). Merging it conflicts in `CHANGELOG.md`, `notes/work-log.md` and
+  `setup.py`.
+- **Decision**: port only what `v1.0.0` lacked: the check of `release.py` (no top-level entry in the wheel of accim
+  other than `accim` and its `.dist-info`), step 5 of §4.3 of the guide without its §7, and the CHANGELOG entry (the
+  0.8.2 wheel installed `tests`). The branch was saved in a git bundle in the git-ignored
+  `llm_project_files/branch_review_reports/`, and its worktree and the branch were removed (git refused to remove the
+  worktree while its gitdir had an empty `modules` folder, which was deleted first).
+- **Consequences**: checked with a wheel of `v1.0.0` built in a temporary folder (only `accim` and its
+  `.dist-info`: no problem) and with a copy that adds `tests/__init__.py` (reported). `master` gets the change
+  when it is fast-forwarded to `v1.0.0`.
+
 ## 2026-11-01 — The first GUI uses tkinter and covers AddAccis, run_ep and the hours within the setpoints
 
 - **Status**: accepted for the first version (priority task asked by the author on 2026-11-01; its item said that
