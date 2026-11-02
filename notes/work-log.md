@@ -15,6 +15,14 @@ This log is a lightweight, session-scoped complement to the repository's
 existing tracking files — it does not replace them (see
 [[decisions.md#2026-09-13 — `notes/work-log.md` complements, not replaces, existing tracking files|the related decision]]).
 
+## 2026-11-02 — The findings of the branch reviews, fixed
+
+- **Objective**: Continue, without answers of the author, with the P2 items of [[../TODO.md]] that need no decision: the findings of the branch reviews ([[branch-reviews.md]], 1.4), the block means of `Table` and `keep_input` in the parametric notebooks.
+- **Affected files**: `accim/data/` (`postprocessing/main.py`, `postprocessing/utils.py`, `preprocessing.py`, `morphing.py`), `accim/run/run.py`, `accim/utils/` (`editing.py`, `workspace.py`, `accim_args.py`, `verification.py`), `accim/sim/` (`prompts.py`, `accis.py`, `apmv.py`), `accim/parametric_and_optimisation/main.py`, ten notebooks and their pages, 17 test files (four new); [[../CHANGELOG.md]], [[../DEVLOG.md]], [[../TODO.md]], [[../CAMBIOS_CODIGO_v1.0.0.md]], [[branch-reviews.md]].
+- **Finding or decision**: Two of them lost data (`rename_epw_files` deleted the EPWs excluded from the renaming; `WorkspaceArtifactCleaner` removed the empty folders of the user), one ran code of the IDF (`eval` in `get_accim_args`) and one read models with the IDD of another version (`load_idf('auto')`). The relative comparisons of `wrangled_table` stay fractions (their columns are named after the formula): the documentation was corrected instead. Found on the way: messages that cp1252 cannot write stopped the scripts with their output redirected to a file.
+- **Validation**: every new test fails with the code before; 1160 tests passed; the golden master is unchanged; the GUI workflow with real simulations again; details in [[../DEVLOG.md]].
+- **Next step**: the release of 1.0.0 ([[../TODO.md]]).
+
 ## 2026-11-02 — Seven tabs in the GUI
 
 - **Objective**: The answer of the author on the GUI: keep tkinter and add tabs for more steps.

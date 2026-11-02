@@ -370,6 +370,20 @@ Están en la sección 9.3 de la guía de migración y en `CHANGELOG.md`. En resu
   lugar de las baterías de un equipo de calor y otro de frío por zona, así que ya no rechaza los modelos con
   varios tipos de baterías ni detiene EnergyPlus con zonas sin equipo de frío; `hvac_zone_map` queda obsoleto
   y sin efecto, y desaparece `hvac/resolver.py`. Con el modelo de ejemplo con PTAC los resultados no cambian.
+- Hallazgos de las revisiones de las ramas (02/11/2026), cada uno con su test: `rename_epw_files` solo borra
+  los EPW originales que ha copiado con su nombre nuevo (borraba también los excluidos); las peticiones a
+  Nominatim identifican a accim (`NOMINATIM_USER_AGENT`), tienen un tiempo límite y aceptan coordenadas sin
+  dirección (`_osm_address` y `_fill_from_osm_address`, que reúne las tres ramas repetidas de
+  `give_address*`); `morph_epws` pasa la orden de Java como lista y avisa si falla; `get_accim_args` calcula
+  las expresiones numéricas con `ast` en lugar de `eval` (`_value`); `apply_apmv_setpoints` solo pone gestores
+  de llamada a sus programas (`_apmv_program_names`); `select_outputs` conserva las salidas de cada IDF;
+  `load_idf('auto')` se detiene si besos ya usa el IDD de otra versión (`_check_besos_idd`); en `Table`, las
+  medias de los bloques sin las zonas excluidas, `rename_cols=False` (las columnas de accim siempre con su
+  nombre; las figuras usan `rename_subplot_cols`), los títulos de las figuras de una fila (`_label_subplots`),
+  la media exterior del preset `temperature` según la norma y el modo (`_running_mean_outputs`, a partir de
+  `SETPOINT_LINES`: `RMOT` es la de EN 16798-1 y `PMOT` la de ASHRAE 55) y la tabla leída de
+  `gen_csv_concatenated` (`DATE_PART_COLUMNS`); y los mensajes que se imprimen caben en cp1252
+  (`tests/core/test_printed_messages.py`).
 
 ## 11. Pruebas
 

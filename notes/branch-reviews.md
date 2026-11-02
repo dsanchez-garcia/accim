@@ -101,6 +101,14 @@ Found during this review: one commit (35 files, +3167/-488) on top of `master` 0
 
 ### 1.4 Findings of the reviews still open in v1.0.0
 
+**State (2026-11-02)**: all fixed in `v1.0.0`, each with a test, except the check of CS6 with `ComfMod` 2 (a TODO
+item) and the last point (not done), and with the findings of the tests brought on 2026-10-31 (the User-Agent and the
+missing addresses of Nominatim, `morph_epws` on other systems, `make_eplaunch_options`, `remove_accents_in_idf`,
+`reduce_runtime`, `WorkspaceArtifactCleaner`, the prompt of the output frequencies and five problems of `Table`):
+see [[../DEVLOG.md]] (2026-11-02) and [[../CHANGELOG.md]] (Unreleased, Fixed). `get_accim_args` computes arithmetic
+expressions of numbers without `eval` (the sums such as `3.5 + 1` stay numbers). The windows of the existing HVAC
+systems were fixed on 2026-11-01.
+
 Not code to port: candidates for new TODO items.
 
 - `get_accim_args` evaluates IDF text with `eval` (`accim/utils/accim_args.py:67`); a plain `ast.literal_eval`
