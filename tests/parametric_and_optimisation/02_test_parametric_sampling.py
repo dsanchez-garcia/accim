@@ -17,7 +17,7 @@ def test_sampling_full_set():
         parameters_type='accim predefined model'
     )
 
-    sim.set_parameters(accis_params_dict={'ComfStand': [0, 1]})
+    sim.set_parameters(accis_params_dict={'comfort_standard': [0, 1]})
     df_var = sim.get_output_variables_df_from_idf()
     df_meter = sim.get_output_meters_df_from_idf()
     if not df_var.empty:
@@ -150,13 +150,13 @@ def test_sampling_custom_list_of_dicts():
         parameters_type='accim predefined model'
     )
 
-    sim.set_parameters(accis_params_dict={'ComfStand': [0, 1]})
+    sim.set_parameters(accis_params_dict={'comfort_standard': [0, 1]})
     ts.set_meter_readers(sim)
     sim.set_problem()
 
     custom_plan = [
-        {'ComfStand': 0},
-        {'ComfStand': 1}
+        {'comfort_standard': 0},
+        {'comfort_standard': 1}
     ]
     sim.sampling_custom(custom_plan)
 
@@ -175,7 +175,7 @@ def test_sampling_custom_multi_idf_epw():
         parameters_type='accim predefined model'
     )
 
-    sim.set_parameters(accis_params_dict={'ComfStand': [0, 1]})
+    sim.set_parameters(accis_params_dict={'comfort_standard': [0, 1]})
     ts.set_meter_readers(sim)
     sim.set_problem()
 

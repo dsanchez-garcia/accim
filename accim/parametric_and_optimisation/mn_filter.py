@@ -1,7 +1,7 @@
 """Band of plausible (m, n) pairs for the custom adaptive comfort model (CustAST).
 
 The custom adaptive model of accim uses a linear comfort temperature, ``T_comf = m * T_out + n``.
-When ``CustAST_m`` and ``CustAST_n`` are varied independently, many combinations do not
+When ``custom_slope`` and ``custom_intercept`` are varied independently, many combinations do not
 correspond to any published adaptive model (e.g. m = 0.7 with n = 22.5 gives a comfort
 temperature of 36.5 degC for a running mean outdoor temperature of 20 degC).
 
@@ -461,15 +461,15 @@ class MNFilter:
         if empty.size > 0:
             raise ValueError(
                 f'The m-n band does not include any n in [{n_min}, {n_max}] for m between '
-                f'{empty.min():.3f} and {empty.max():.3f}. Narrow the CustAST_m range or widen the '
-                'CustAST_n range.'
+                f'{empty.min():.3f} and {empty.max():.3f}. Narrow the custom_slope range or widen the '
+                'custom_intercept range.'
             )
 
     def map_n(self, m, n_raw, n_min: float, n_max: float):
         """Map n_raw from [n_min, n_max] linearly onto the interval of n inside the band for m."""
         low, high = self.feasible_n_interval(m, float(n_min), float(n_max))
         if np.any(low > high + 1e-12):
-            raise ValueError('The m-n band does not include any n in the CustAST_n range for this m.')
+            raise ValueError('The m-n band does not include any n in the custom_intercept range for this m.')
         span = float(n_max) - float(n_min)
         if span <= 0:
             fraction = np.zeros_like(np.asarray(n_raw, dtype=float))
@@ -493,7 +493,7 @@ class MNFilter:
         u_m, u_n : array-like
             Values in [0, 1].
         m_min, m_max, n_min, n_max : float
-            Ranges of CustAST_m and CustAST_n.
+            Ranges of custom_slope and custom_intercept.
         grid : int
             Points of the m grid used to invert the cumulative distribution.
 
@@ -519,13 +519,13 @@ class MNFilter:
         m_low = max(float(m_min), float(np.min(m_lower)))
         m_high = min(float(m_max), float(np.max(m_upper)))
         if not m_high > m_low:
-            raise ValueError('The m-n band does not overlap the CustAST_m and CustAST_n ranges.')
+            raise ValueError('The m-n band does not overlap the custom_slope and custom_intercept ranges.')
         m_grid = np.linspace(m_low, m_high, int(grid))
         low, high = self.feasible_n_interval(m_grid, n_min, n_max)
         width = np.clip(np.nan_to_num(high - low, nan=0.0, posinf=0.0, neginf=0.0), 0.0, None)
         area = np.concatenate([[0.0], np.cumsum(0.5 * (width[1:] + width[:-1]) * np.diff(m_grid))])
         if not area[-1] > 0:
-            raise ValueError('The m-n band does not overlap the CustAST_m and CustAST_n ranges.')
+            raise ValueError('The m-n band does not overlap the custom_slope and custom_intercept ranges.')
         cdf = area / area[-1]
         increasing = np.r_[True, np.diff(cdf) > 0]
         m = np.interp(u_m, cdf[increasing], m_grid[increasing])
@@ -599,20 +599,20 @@ class MNFilter:
 
 
 class MNFilterMapping:
-    """Picklable mapping of the optimiser's CustAST_n variable into the m-n band.
+    """Picklable mapping of the optimiser's custom_intercept variable into the m-n band.
 
-    The algorithm proposes CustAST_m and CustAST_n within their ranges. Before each evaluation,
-    CustAST_n is mapped linearly from [n_min, n_max] onto the interval of n inside the band for the
-    proposed CustAST_m, so every simulated combination lies inside the band.
+    The algorithm proposes custom_slope and custom_intercept within their ranges. Before each evaluation,
+    custom_intercept is mapped linearly from [n_min, n_max] onto the interval of n inside the band for the
+    proposed custom_slope, so every simulated combination lies inside the band.
 
     Parameters
     ----------
     band : dict
         Output of ``MNFilter.to_dict``.
     m_index, n_index : int
-        Positions of CustAST_m and CustAST_n in the problem inputs.
+        Positions of custom_slope and custom_intercept in the problem inputs.
     n_min, n_max : float
-        Range of CustAST_n.
+        Range of custom_intercept.
 
     Usage
     -----
@@ -635,13 +635,13 @@ class MNFilterMapping:
                         self.band['offset_upper'])
 
     def map_inputs(self, values: Sequence) -> list:
-        """Return a copy of the input vector with CustAST_n mapped into the band."""
+        """Return a copy of the input vector with custom_intercept mapped into the band."""
         mapped = list(values)
         mapped[self.n_index] = self._filter().map_n(float(mapped[self.m_index]), float(mapped[self.n_index]),
                                                     self.n_min, self.n_max)
         return mapped
 
-    def map_dataframe(self, df: pd.DataFrame, m_column: str = 'CustAST_m', n_column: str = 'CustAST_n') -> pd.DataFrame:
+    def map_dataframe(self, df: pd.DataFrame, m_column: str = 'custom_slope', n_column: str = 'custom_intercept') -> pd.DataFrame:
         """Return a copy of df with the n column mapped into the band (rows without values are kept)."""
         if df is None or df.empty or m_column not in df.columns or n_column not in df.columns:
             return df

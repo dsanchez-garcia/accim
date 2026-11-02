@@ -1,11 +1,11 @@
 from accim.sim import accis
 accis.AddAccis(script_type='ex_ac',
-               output_keep_existing=False,
+               keep_existing_outputs=False,
                output_type='standard',
-               output_freqs=['hourly'],
+               output_frequencies=['hourly'],
                energyplus_version='9.5',
-               temp_ctrl='temp',
-               comf_stand=[1],
-               cat=[2],
-               comf_mod=[3],
-               confirm_gen=True)
+               setpoint_type='temp',
+               comfort_standard=[1],
+               category=[2],
+               comfort_mode=[3],
+               confirm=True)

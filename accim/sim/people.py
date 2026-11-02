@@ -11,8 +11,8 @@ from accim.utils.people import get_people_definition
 __all__ = ['set_comfort_models']
 
 
-def _comfort_models(temp_ctrl: str, number: int) -> list:
-    models = ['AdaptiveASH55', 'AdaptiveCEN15251', 'Fanger' if temp_ctrl == 'pmv' else '']
+def _comfort_models(setpoint_type: str, number: int) -> list:
+    models = ['AdaptiveASH55', 'AdaptiveCEN15251', 'Fanger' if setpoint_type == 'pmv' else '']
     return (models + [''] * number)[:number]
 
 
@@ -21,7 +21,7 @@ def set_comfort_models(model: AccimModel) -> None:
 
     The People objects and, in models of EnergyPlus 26.2 with People:Instance objects, the
     People:Definition objects they reference get AdaptiveASH55 and AdaptiveCEN15251 as models 1 and 2
-    (whose running mean outdoor temperatures accim reads), Fanger as model 3 if ``temp_ctrl`` is 'pmv',
+    (whose running mean outdoor temperatures accim reads), Fanger as model 3 if ``setpoint_type`` is 'pmv',
     and no other model.
 
     :raises ValueError: If a People:Instance object references a People:Definition object that is not
@@ -31,7 +31,7 @@ def set_comfort_models(model: AccimModel) -> None:
     for people in idf.idfobjects['PEOPLE']:
         fields = [f'Thermal_Comfort_Model_{n}_Type' for n in range(1, 8)
                   if f'Thermal_Comfort_Model_{n}_Type' in people.fieldnames]
-        for field, comfort_model in zip(fields, _comfort_models(model.temp_ctrl, len(fields))):
+        for field, comfort_model in zip(fields, _comfort_models(model.setpoint_type, len(fields))):
             setattr(people, field, comfort_model)
 
     definitions = []
@@ -45,7 +45,7 @@ def set_comfort_models(model: AccimModel) -> None:
         if all(definition is not d for d in definitions):
             definitions.append(definition)
     for definition in definitions:
-        for n, comfort_model in enumerate(_comfort_models(model.temp_ctrl, 7), start=1):
+        for n, comfort_model in enumerate(_comfort_models(model.setpoint_type, 7), start=1):
             setattr(definition, f'Thermal_Comfort_Model_{n}_Type', comfort_model)
 
     model.log('The people objects in the model have been amended.')

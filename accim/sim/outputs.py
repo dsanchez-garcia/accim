@@ -88,7 +88,7 @@ def remove_existing_outputs(model: AccimModel) -> None:
 
 def add_simplified_outputs(model: AccimModel, frequencies: Iterable[str]) -> None:
     """Add the operative temperature and the coil rates (and PMV and PPD with 'pmv' control)."""
-    outputs = _SIMPLIFIED_OUTPUTS + (_PMV_OUTPUTS if model.temp_ctrl == 'pmv' else ())
+    outputs = _SIMPLIFIED_OUTPUTS + (_PMV_OUTPUTS if model.setpoint_type == 'pmv' else ())
     for frequency in frequencies:
         for variable in outputs:
             _new_output(model, '*', variable, frequency.capitalize())
@@ -98,7 +98,7 @@ def add_standard_outputs(model: AccimModel, frequencies: Iterable[str]) -> None:
     """Add the EMS output variables of ACCIS and the main outputs of the zones, HVAC systems, site and meters."""
     idf = model.idf
     ems_outputs = [v.Name for v in idf.idfobjects['EnergyManagementSystem:OutputVariable']]
-    outputs = _STANDARD_OUTPUTS + (_PMV_OUTPUTS if model.temp_ctrl == 'pmv' else ())
+    outputs = _STANDARD_OUTPUTS + (_PMV_OUTPUTS if model.setpoint_type == 'pmv' else ())
     for frequency in frequencies:
         frequency = frequency.capitalize()
         existing = _variables_of_frequency(model, frequency)
@@ -234,7 +234,7 @@ def add_variable_dictionary(model: AccimModel) -> None:
 
 
 def add_ems_debug_output(model: AccimModel) -> None:
-    """Make EnergyPlus write the EDD file with the EMS actuators, internal variables and errors (argument debugging)."""
+    """Make EnergyPlus write the EDD file with the EMS actuators, internal variables and errors (argument debug_ems)."""
     if list(model.idf.idfobjects['Output:EnergyManagementSystem']):
         model.log('Not added - Output:EnergyManagementSystem object')
         return

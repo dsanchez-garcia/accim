@@ -55,7 +55,7 @@ def _new_parametric():
         buildings=None,
         epws=['Seville.epw', 'Oslo.epw'],
         parameters_type=None,
-        bypass_addAccis=True,
+        bypass_add_accis=True,
     )
 
 
@@ -150,7 +150,7 @@ TABLES = [
 
 @pytest.mark.parametrize(('sim_class', 'df_type', 'attribute'), TABLES, ids=[t[1] for t in TABLES])
 def test_every_results_table_uses_the_floor_area_of_the_idf_of_each_row(sim_class, df_type, attribute):
-    sim = sim_class(buildings=None, epws=['Seville.epw'], parameters_type=None, bypass_addAccis=True)
+    sim = sim_class(buildings=None, epws=['Seville.epw'], parameters_type=None, bypass_add_accis=True)
     sim.building_floor_area = dict(AREAS)
     setattr(sim, attribute, pd.DataFrame({
         'epw': ['Seville'] * 3,

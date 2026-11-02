@@ -150,9 +150,9 @@ def add_curves(model: AccimModel) -> None:
 def add_vrf_objects(
     model: AccimModel,
     supply_air_temp_input_method: str,
-    eer: float = 2,
-    cop: float = 2.1,
-    vrf_schedule: str = 'On 24/7',
+    vrf_eer: float = 2,
+    vrf_cop: float = 2.1,
+    vrf_availability_schedule: str = 'On 24/7',
 ) -> None:
     """Add the outdoor unit, indoor unit, thermostat, sizing and node objects of the VRF system of each zone.
 
@@ -163,7 +163,7 @@ def add_vrf_objects(
     for system in list(idf.idfobjects['ZoneHVAC:IdealLoadsAirSystem']):
         idf.removeidfobject(system)
         model.log(f'{system.Name} ZoneHVAC:IdealLoadsAirSystem Object has been removed')
-    params = dict(eer=eer, cop=cop, vrf_schedule=vrf_schedule,
+    params = dict(vrf_eer=vrf_eer, vrf_cop=vrf_cop, vrf_availability_schedule=vrf_availability_schedule,
                   supply_air_temp_input_method=SUPPLY_AIR_TEMP_INPUT_METHODS[supply_air_temp_input_method])
 
     for zone in model.zones_orig:
@@ -282,16 +282,17 @@ def add_coil_sensors(model: AccimModel) -> None:
 def add_vrf_system(
     model: AccimModel,
     supply_air_temp_input_method: str = 'supply air temperature',
-    eer: float = 2,
-    cop: float = 2.1,
-    vrf_schedule: str = 'On 24/7',
+    vrf_eer: float = 2,
+    vrf_cop: float = 2.1,
+    vrf_availability_schedule: str = 'On 24/7',
 ) -> None:
-    """Add a VRF system to each zone, with operative temperature or PMV thermostats (``model.temp_ctrl``)."""
-    if model.temp_ctrl == 'pmv':
+    """Add a VRF system to each zone, with operative temperature or PMV thermostats (``model.setpoint_type``)."""
+    if model.setpoint_type == 'pmv':
         set_pmv_setpoints(model)
     else:
         add_operative_temperature_thermostats(model)
     add_base_schedules(model)
     add_vrf_schedules(model)
     add_curves(model)
-    add_vrf_objects(model, supply_air_temp_input_method, eer=eer, cop=cop, vrf_schedule=vrf_schedule)
+    add_vrf_objects(model, supply_air_temp_input_method, vrf_eer=vrf_eer, vrf_cop=vrf_cop,
+                    vrf_availability_schedule=vrf_availability_schedule)

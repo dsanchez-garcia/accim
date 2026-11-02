@@ -20,7 +20,7 @@ SAMPLE_IDF = (REPO / 'accim' / 'sample_files' / 'jupyter_notebooks' / 'parametri
 IDD_25_2 = Path('C:/EnergyPlusV25-2-0/Energy+.idd')
 SIZING_FLAGS = ('Do_Zone_Sizing_Calculation', 'Do_System_Sizing_Calculation', 'Do_Plant_Sizing_Calculation')
 ADD_ACCIS_ARGS = dict(supply_air_temp_input_method='temperature difference', output_type='simplified',
-                      output_freqs=['hourly'], temp_ctrl='temperature', verbose_mode=False)
+                      output_frequencies=['hourly'], setpoint_type='temperature', verbose=False)
 
 needs_sample = pytest.mark.skipif(not (IDD_25_2.exists() and SAMPLE_IDF.exists()),
                                   reason='needs EnergyPlus 25.2 and the sample IDF of the repository')
@@ -72,7 +72,7 @@ def test_models_without_sizing_periods_get_a_warning(building):
 
 @needs_sample
 def test_add_vrf_system_enables_the_sizing_calculations(building):
-    apmv.add_vrf_system(building, verbose_mode=False)
+    apmv.add_vrf_system(building, verbose=False)
 
     assert _flags(building) == ['Yes', 'Yes', 'Yes']
 
@@ -89,6 +89,6 @@ def test_add_accis_to_idf_only_changes_the_sizing_of_the_vrf_systems(monkeypatch
 
     accis.add_accis_to_idf(SimpleNamespace(idd_version=(25, 1, 0)), script_type=script_type,
                            supply_air_temp_input_method='temperature difference', output_type='standard',
-                           output_freqs=['hourly'], temp_ctrl='temp', verbose_mode=False)
+                           output_frequencies=['hourly'], setpoint_type='temp', verbose=False)
 
     assert bool(calls) == enabled

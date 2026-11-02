@@ -3,11 +3,11 @@ from accim.sim.accis import AddAccis
 x = AddAccis(
     script_type='vrf_mm',
     supply_air_temp_input_method='supply air temperature',
-    output_keep_existing=False,
+    keep_existing_outputs=False,
     output_type='standard',
-    output_freqs=['hourly'],
-    output_gen_dataframe=False,
+    output_frequencies=['hourly'],
+    make_outputs_dataframe=False,
     energyplus_version='23.2',
-    temp_ctrl='temp',
+    setpoint_type='temp',
 
 )

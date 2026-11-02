@@ -199,7 +199,7 @@ def test_raise_to_power_without_a_real_result_is_an_error():
 
 
 def test_long_expressions():
-    # The building averages of make_averages sum one term per zone: Python cannot compile so many nested parentheses
+    # The building averages of add_building_averages sum one term per zone: Python cannot compile so many nested parentheses
     names = [f'T{n}' for n in range(300)]
     programs = ErlProgramSet({'P': [f"set S = {' + '.join(names)}", f"set D = {' - '.join(names)}"]},
                              global_variables=names + ['S', 'D'])
@@ -344,8 +344,8 @@ def test_the_programs_of_accis_give_the_setpoints_of_en16798():
                             windows=['Zone1_Win'], window_zones=['Zone1'])
     programs = dict(accis_programs(model))
     programs['SetInputData_Zone1'] = input_lines(input_values(dict(
-        comf_stand=1, cat=2, comf_mod=3, hvac_mode=2, vent_ctrl=0, vst_offset=0, min_ot_offset=50, max_wind_speed=50,
-        ast_tol=0.1, cool_season_start=121, cool_season_end=274)), mixed_mode=True)
+        comfort_standard=1, category=2, comfort_mode=3, hvac_mode=2, ventilation_control=0, ventilation_setpoint_offset=0, min_outdoor_temp_offset=50, max_wind_speed=50,
+        setpoint_tolerance=0.1, cooling_season_start=121, cooling_season_end=274)), mixed_mode=True)
     names = set().union(*variables_in_programs(programs).values())
     erl = ErlProgramSet(programs, global_variables=names)
     for name, value in dict(RMOT=20.0, PMOT=20.0, DayOfYear=180.0, CurrentTime=12.0).items():

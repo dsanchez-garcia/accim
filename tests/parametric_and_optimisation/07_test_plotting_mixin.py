@@ -17,7 +17,7 @@ def test_plot_pareto_front():
         parameters_type='accim predefined model'
     )
 
-    sim.set_parameters(accis_params_dict={'CAT': [1, 2, 3], 'HVACmode': [0, 2]})
+    sim.set_parameters(accis_params_dict={'category': [1, 2, 3], 'hvac_mode': [0, 2]})
     ts.set_meter_readers(sim)
     sim.set_problem(minimize_outputs=[True, True])
 
@@ -46,7 +46,7 @@ def test_plot_best_compromise_solutions():
         parameters_type='accim predefined model'
     )
 
-    sim.set_parameters(accis_params_dict={'CAT': [1, 2, 3], 'HVACmode': [0, 2]})
+    sim.set_parameters(accis_params_dict={'category': [1, 2, 3], 'hvac_mode': [0, 2]})
     ts.set_meter_readers(sim)
     sim.set_problem(minimize_outputs=[True, True])
 

@@ -1,9 +1,9 @@
 """Tests for the baseline of AccimPredefModelsParamSim.
 
-The wrapper sets the custom comfort model (ComfStand 99, CAT 80, ComfMod 3). In accim 0.x it did so without
-its coefficients (all 0), so the heating setpoint (0.1 C) was above the cooling one (-0.1 C) and EnergyPlus
+The wrapper sets the custom comfort model (comfort_standard 99, category 80, comfort_mode 3). In accim 0.x it did
+so without its coefficients (all 0), so the heating setpoint (0.1 C) was above the cooling one (-0.1 C) and EnergyPlus
 stopped in any simulation of the baseline: the test simulations of discover_available_outputs() and of
-set_output_*_to_idf(validate=True), and the plans without ComfStand. Now the baseline has the default
+set_output_*_to_idf(validate=True), and the plans without comfort_standard. Now the baseline has the default
 coefficients of 'accim custom model' (those of ASHRAE 55 with 80 % acceptability).
 """
 import shutil
@@ -53,7 +53,7 @@ def _setpoints(building, pmot):
 @pytest.mark.parametrize('pmot, comf_temp', [(20.0, 20 * 0.31 + 17.8), (5.0, 10 * 0.31 + 17.8)])
 def test_the_baseline_is_a_valid_comfort_model(building, pmot, comf_temp):
     AccimPredefModelsParamSim(buildings=[building], epws=['Seville.epw'], output_type='simplified',
-                              ScriptType='vrf_mm')
+                              script_type='vrf_mm')
 
     programs = _program_lines(building)
     inputs = [lines for name, lines in programs.items() if name.startswith('SetInputData_')]

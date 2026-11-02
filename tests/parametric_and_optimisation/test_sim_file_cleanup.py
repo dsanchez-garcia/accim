@@ -134,7 +134,7 @@ def test_run_parametric_simulation_applies_extension_cleanup(tmp_path, monkeypat
         buildings=None,
         epws=['Test.epw'],
         parameters_type=None,
-        bypass_addAccis=True,
+        bypass_add_accis=True,
     )
     sim.problem = _DummyParamProblem()
     sim.parameters_values_df = pd.DataFrame({'x': [1, 2]})
@@ -166,7 +166,7 @@ def test_run_optimisation_applies_extension_cleanup(tmp_path, monkeypatch):
         buildings=None,
         epws=['A.epw'],
         parameters_type=None,
-        bypass_addAccis=True,
+        bypass_add_accis=True,
     )
     sim.buildings = [_DummyBuilding('dummy.idf')]
     sim.building = sim.buildings[0]

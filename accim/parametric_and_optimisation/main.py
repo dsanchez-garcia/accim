@@ -42,6 +42,7 @@ from accim.parametric_and_optimisation.utils import (
     _DEFAULT_HOURLY_START_DATE,
     _auto_year_start_date,
 )
+from accim._deprecation import accepts_legacy_kwargs, warn_deprecated
 import accim.sim.accis as accis
 import accim.sim.apmv as apmv
 import accim.parametric_and_optimisation.funcs_for_besos.param_accis as bf_accim
@@ -56,10 +57,48 @@ from accim.parametric_and_optimisation._pareto import non_dominated_mask
 import accim.parametric_and_optimisation.params_dicts as params_dicts
 allowed_output_freqs = Literal['timestep', 'hourly', 'daily', 'monthly', 'runperiod']
 
-# Default coefficients of the custom comfort model (ComfStand 99), those of ASHRAE 55 with 80 % acceptability: the
-# baseline of 'accim custom model' takes those that the parameters do not set, and AccimPredefModelsParamSim all.
-_CUSTOM_MODEL_DEFAULTS = {'m': 0.31, 'n': 17.8, 'ACSToffset': 3.5, 'AHSToffset': -3.5, 'ACSTaul': 33.5,
-                          'ACSTall': 10, 'AHSTaul': 33.5, 'AHSTall': 10}
+# Default coefficients of the custom comfort model (comfort_standard 99), those of ASHRAE 55 with 80 % acceptability:
+# the baseline of 'accim custom model' takes those that the parameters do not set, and AccimPredefModelsParamSim all.
+# The keys are the names of the parameters (and of the arguments of accim.sim.accis.modify_accis).
+_CUSTOM_MODEL_DEFAULTS = {'custom_slope': 0.31, 'custom_intercept': 17.8, 'custom_cooling_offset': 3.5,
+                          'custom_heating_offset': -3.5, 'custom_cooling_upper_limit': 33.5,
+                          'custom_cooling_lower_limit': 10, 'custom_heating_upper_limit': 33.5,
+                          'custom_heating_lower_limit': 10}
+# The parameters of the custom model that set the cooling and heating coefficients at once
+_CUSTOM_MODEL_COMBINED_PARAMETERS = {
+    'custom_offset': ('custom_cooling_offset', 'custom_heating_offset'),
+    'custom_upper_limit': ('custom_cooling_upper_limit', 'custom_heating_upper_limit'),
+    'custom_lower_limit': ('custom_cooling_lower_limit', 'custom_heating_lower_limit'),
+}
+
+#: The names of the arguments of the classes in accim 0.x -> their names since accim 1.0.0 (those of accim.sim). The
+#: old names keep working, with a DeprecationWarning.
+_LEGACY_ARGUMENTS = {
+    'output_keep_existing': 'keep_existing_outputs',
+    'output_freqs': 'output_frequencies',
+    'ScriptType': 'script_type',
+    'SupplyAirTempInputMethod': 'supply_air_temp_input_method',
+    'make_averages': 'add_building_averages',
+    'debugging': 'debug_ems',
+    'verbosemode': 'verbose',
+    'Output_take_dataframe': 'outputs_dataframe',
+    'EnergyPlus_version': 'energyplus_version',
+    'VRFschedule': 'vrf_availability_schedule',
+    'eer': 'vrf_eer',
+    'cop': 'vrf_cop',
+    'bypass_addAccis': 'bypass_add_accis',
+    'use_dflt_values': 'use_default_values',
+}
+#: The names of the attributes of the classes in accim 0.x -> their names since accim 1.0.0 (deprecated aliases)
+_LEGACY_ATTRIBUTES = {
+    'ScriptType': 'script_type',
+    'temp_ctrl': 'setpoint_type',
+    'SupplyAirTempInputMethod': 'supply_air_temp_input_method',
+    'output_keep_existing': 'keep_existing_outputs',
+    'make_averages': 'add_building_averages',
+    'output_freqs': 'output_frequencies',
+    'bypass_addAccis': 'bypass_add_accis',
+}
 
 # The algorithms of platypus that run_optimisation runs (through besos.optimizer)
 _OPTIMISATION_ALGORITHMS = ['GeneticAlgorithm', 'EvolutionaryStrategy', 'NSGAII', 'EpsMOEA', 'GDE3', 'SPEA2', 'MOEAD',
@@ -2993,27 +3032,28 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
     obj = SimulationBase()
     """
 
+    @accepts_legacy_kwargs(_LEGACY_ARGUMENTS)
     def __init__(
             self,
             buildings: Union[Any, List] = None,
             epws: list = None,
             parameters_type: Literal['accim custom model', 'accim predefined model', 'apmv setpoints', None] = None,
             output_type: Literal['standard', 'custom', 'detailed', 'simplified'] = 'standard',
-            output_keep_existing: bool = True,
-            output_freqs: List[allowed_output_freqs] = ['hourly'],
-            ScriptType: Literal['vrf_mm', 'vrf_ac', 'ex_ac'] = 'vrf_mm',
-            SupplyAirTempInputMethod: Literal['temperature difference', 'supply air temperature'] = 'temperature difference',
-            make_averages: bool = False,
-            debugging: bool = False,
-            verbosemode: bool = True,
+            keep_existing_outputs: bool = True,
+            output_frequencies: List[allowed_output_freqs] = ['hourly'],
+            script_type: Literal['vrf_mm', 'vrf_ac', 'ex_ac'] = 'vrf_mm',
+            supply_air_temp_input_method: Literal['temperature difference', 'supply air temperature'] = 'temperature difference',
+            add_building_averages: bool = False,
+            debug_ems: bool = False,
+            verbose: bool = True,
             # Keep these defaults synchronized with the defaults of accis.add_accis_to_idf.
-            Output_take_dataframe: pd.DataFrame = None,
-            EnergyPlus_version: str = None,
-            VRFschedule: str = 'On 24/7',
-            eer: float = 2,
-            cop: float = 2.1,
+            outputs_dataframe: pd.DataFrame = None,
+            energyplus_version: str = None,
+            vrf_availability_schedule: str = 'On 24/7',
+            vrf_eer: float = 2,
+            vrf_cop: float = 2.1,
             hvac_zone_map: dict = None,
-            bypass_addAccis: bool = False,
+            bypass_add_accis: bool = False,
             building: Any = None,
             accim_results_root: Optional[str] = None,
             remove_output_tables: bool = True,
@@ -3024,20 +3064,20 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         :param epws: a list of .epw filenames
         :param parameters_type: to specify the type of parameters that should be used
         :param output_type: to specify the outputs that are going to be requested
-        :param output_keep_existing: to keep or remove existing outputs
-        :param output_freqs: output frequency specification
-        :param ScriptType: 'vrf_mm', 'vrf_ac', or 'ex_ac'
-        :param SupplyAirTempInputMethod: supply air temperature input method
-        :param make_averages: to make average outputs
-        :param debugging: True to generate the .EDD file
-        :param verbosemode: True to print addAccis progress messages
-        :param Output_take_dataframe: forwarded to ``accim.sim.accis.add_accis_to_idf``.
-        :param EnergyPlus_version: forwarded to ``accim.sim.accis.add_accis_to_idf``.
-        :param VRFschedule: forwarded to ``accim.sim.accis.add_accis_to_idf``.
-        :param eer: forwarded to ``accim.sim.accis.add_accis_to_idf``.
-        :param cop: forwarded to ``accim.sim.accis.add_accis_to_idf``.
+        :param keep_existing_outputs: to keep or remove existing outputs
+        :param output_frequencies: output frequency specification
+        :param script_type: 'vrf_mm', 'vrf_ac', or 'ex_ac'
+        :param supply_air_temp_input_method: supply air temperature input method
+        :param add_building_averages: to make average outputs
+        :param debug_ems: True to make EnergyPlus write the EDD file of the EMS (for debugging).
+        :param verbose: True to print addAccis progress messages
+        :param outputs_dataframe: forwarded to ``accim.sim.accis.add_accis_to_idf``.
+        :param energyplus_version: forwarded to ``accim.sim.accis.add_accis_to_idf``.
+        :param vrf_availability_schedule: forwarded to ``accim.sim.accis.add_accis_to_idf``.
+        :param vrf_eer: forwarded to ``accim.sim.accis.add_accis_to_idf``.
+        :param vrf_cop: forwarded to ``accim.sim.accis.add_accis_to_idf``.
         :param hvac_zone_map: forwarded to ``accim.sim.accis.add_accis_to_idf``.
-        :param bypass_addAccis: True to skip the internal addAccis execution
+        :param bypass_add_accis: True to skip the internal addAccis execution
         :param building: legacy alias for buildings, accepted for backward compatibility
         :param accim_results_root: optional base directory used to resolve relative
             out_dir paths for simulation outputs.
@@ -3062,7 +3102,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         self.buildings = buildings if isinstance(buildings, list) else ([buildings] if buildings is not None else [])
         self.epws = epws if isinstance(epws, list) else ([epws] if epws is not None else [])
         # Copy to avoid sharing (and mutating) the default list across instances.
-        self.output_freqs = list(output_freqs) if isinstance(output_freqs, (list, tuple)) else output_freqs
+        self.output_frequencies = list(output_frequencies) if isinstance(output_frequencies, (list, tuple)) else output_frequencies
         self.parameters_type = parameters_type
         self.remove_output_tables = remove_output_tables
         # The output readers of the problem (set_output_readers); set_problem() also works without them
@@ -3074,79 +3114,79 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         is_accim_custom_model = False
         is_apmv_setpoints = False
         if parameters_type == 'accim custom model':
-            temp_ctrl = 'temperature'
+            setpoint_type = 'temperature'
             is_accim_custom_model = True
         elif parameters_type == 'accim predefined model':
-            temp_ctrl = 'temperature'
+            setpoint_type = 'temperature'
             is_accim_predef_model = True
         elif parameters_type == 'apmv setpoints':
-            temp_ctrl = 'PMV'
+            setpoint_type = 'PMV'
             is_apmv_setpoints = True
         elif parameters_type is None:
-            temp_ctrl = None
+            setpoint_type = None
         else:
             raise KeyError(f'String {parameters_type} entered in argument parametric_simulation_type is not supported. Valid strings are: "accim custom model", "accim predefined model" or "apmv setpoints".')
-        allowed_ScriptType = ['vrf_mm', 'vrf_ac', 'ex_ac']
-        if ScriptType not in allowed_ScriptType:
-            raise ValueError(f'Invalid ScriptType: {ScriptType}. Allowed values are: {allowed_ScriptType}')
-        allowed_SupplyAirTempInputMethod = ['temperature difference', 'supply air temperature']
-        if SupplyAirTempInputMethod not in allowed_SupplyAirTempInputMethod:
-            raise ValueError(f'Invalid ScriptType: {SupplyAirTempInputMethod}. Allowed values are: {allowed_SupplyAirTempInputMethod}')
+        allowed_script_types = ['vrf_mm', 'vrf_ac', 'ex_ac']
+        if script_type not in allowed_script_types:
+            raise ValueError(f'Invalid script_type: {script_type}. Allowed values are: {allowed_script_types}')
+        allowed_supply_air_temp_input_methods = ['temperature difference', 'supply air temperature']
+        if supply_air_temp_input_method not in allowed_supply_air_temp_input_methods:
+            raise ValueError(f'Invalid supply_air_temp_input_method: {supply_air_temp_input_method}. Allowed values are: {allowed_supply_air_temp_input_methods}')
         allowed_output_type = ['standard', 'custom', 'detailed', 'simplified']
         if output_type not in allowed_output_type:
             raise ValueError(f'Invalid output_type: {output_type}. Allowed values are: {allowed_output_type}')
         if is_accim_custom_model or is_accim_predef_model:
-            self.ScriptType = ScriptType
-            self.temp_ctrl = temp_ctrl
-            self.SupplyAirTempInputMethod = SupplyAirTempInputMethod
-            self.output_keep_existing = output_keep_existing
+            self.script_type = script_type
+            self.setpoint_type = setpoint_type
+            self.supply_air_temp_input_method = supply_air_temp_input_method
+            self.keep_existing_outputs = keep_existing_outputs
             self.output_type = output_type
-            self.make_averages = make_averages
+            self.add_building_averages = add_building_averages
             keep_existing_on_init = True
-            if output_keep_existing is False:
+            if keep_existing_outputs is False:
                 warnings.warn(
                     'During class initialization, existing output objects are preserved by design. '
                     'Use clear_outputs(...) later if you want to remove them explicitly.'
                 )
-            if not bypass_addAccis:
+            if not bypass_add_accis:
                 for b in (buildings if isinstance(buildings, list) else [buildings]):
                     accis.add_accis_to_idf(
                         b,
-                        script_type=ScriptType,
-                        supply_air_temp_input_method=SupplyAirTempInputMethod,
+                        script_type=script_type,
+                        supply_air_temp_input_method=supply_air_temp_input_method,
                         output_type=output_type,
-                        output_freqs=output_freqs,
-                        output_keep_existing=keep_existing_on_init,
-                        output_take_dataframe=Output_take_dataframe,
-                        energyplus_version=EnergyPlus_version,
-                        temp_ctrl=temp_ctrl,
-                        vrf_schedule=VRFschedule,
-                        verbose_mode=verbosemode,
-                        eer=eer,
-                        cop=cop,
-                        make_averages=make_averages,
-                        debugging=debugging,
+                        output_frequencies=output_frequencies,
+                        keep_existing_outputs=keep_existing_on_init,
+                        outputs_dataframe=outputs_dataframe,
+                        energyplus_version=energyplus_version,
+                        setpoint_type=setpoint_type,
+                        vrf_availability_schedule=vrf_availability_schedule,
+                        verbose=verbose,
+                        vrf_eer=vrf_eer,
+                        vrf_cop=vrf_cop,
+                        add_building_averages=add_building_averages,
+                        debug_ems=debug_ems,
                         hvac_zone_map=hvac_zone_map,
                     )
         elif is_apmv_setpoints:
-            if not bypass_addAccis:
+            if not bypass_add_accis:
                 if isinstance(buildings, list):
                     for b in buildings:
-                        apmv.apply_apmv_setpoints(building=b, outputs_freq=output_freqs)
+                        apmv.apply_apmv_setpoints(building=b, output_frequencies=output_frequencies)
                 else:
-                    apmv.apply_apmv_setpoints(building=buildings, outputs_freq=output_freqs)
-            print('Arguments output_type, output_keep_existing, ScriptType, and SupplyAirTempInputMethod are only used in accim predefined and custom models, therefore these will not have any effect in this case.')
+                    apmv.apply_apmv_setpoints(building=buildings, output_frequencies=output_frequencies)
+            print('Arguments output_type, keep_existing_outputs, script_type, and supply_air_temp_input_method are only used in accim predefined and custom models, therefore these will not have any effect in this case.')
         elif parameters_type is None:
-            self.ScriptType = None
-            self.temp_ctrl = None
-            self.SupplyAirTempInputMethod = None
-            self.output_keep_existing = None
+            self.script_type = None
+            self.setpoint_type = None
+            self.supply_air_temp_input_method = None
+            self.keep_existing_outputs = None
             self.output_type = None
-            self.make_averages = None
+            self.add_building_averages = None
         self.is_accim_custom_model = is_accim_custom_model
         self.is_accim_predef_model = is_accim_predef_model
         self.is_apmv_setpoints = is_apmv_setpoints
-        self.bypass_addAccis = bypass_addAccis
+        self.bypass_add_accis = bypass_add_accis
 
         for b in self.buildings:
             self._ensure_output_control_files_for_building(b)
@@ -4266,12 +4306,12 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
           IDF first, then add the requested rows. The removal happens even when the
           requested selection ends up empty after validation (a warning is emitted).
 
-        Rows with an empty ``frequency`` are expanded using ``self.output_freqs``.
+        Rows with an empty ``frequency`` are expanded using ``self.output_frequencies``.
 
         :param df_output_variable: DataFrame with columns key_value, variable_name,
             frequency and optionally schedule_name.
         :param output_variables: alternative list to define variables. Supports:
-            - str: variable_name (with key_value='*' and frequencies from self.output_freqs)
+            - str: variable_name (with key_value='*' and frequencies from self.output_frequencies)
             - tuple/list of 2 elements: (key_value, variable_name)
             - dict: variable_name (+ optional key_value, frequency, schedule_name)
         :param validate: when True (default), validates requested variables against
@@ -4332,16 +4372,16 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                     elif 'Reporting_Frequency' in item:
                         freqs = [item.get('Reporting_Frequency')]
                     else:
-                        freqs = list(self.output_freqs)
+                        freqs = list(self.output_frequencies)
                 elif isinstance(item, (tuple, list)) and len(item) == 2:
                     key_value, variable_name = item
                     schedule_name = ''
-                    freqs = list(self.output_freqs)
+                    freqs = list(self.output_frequencies)
                 else:
                     key_value = '*'
                     variable_name = item
                     schedule_name = ''
-                    freqs = list(self.output_freqs)
+                    freqs = list(self.output_frequencies)
 
                 for freq in freqs:
                     variable_rows.append({
@@ -4362,7 +4402,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         if missing_cols:
             raise ValueError(f"outputs_df must contain columns: {sorted(required_cols)}. Missing: {missing_cols}")
 
-        # Normalize once and expand empty frequencies using self.output_freqs
+        # Normalize once and expand empty frequencies using self.output_frequencies
         # (same rule applied by set_output_meters_to_idf).
         if 'schedule_name' not in outputs_df.columns:
             outputs_df['schedule_name'] = ''
@@ -4370,7 +4410,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         expanded_rows = []
         for _, row in outputs_df.iterrows():
             freq_value = str(row.get('frequency', '')).strip()
-            row_freqs = [freq_value] if freq_value != '' else [str(f) for f in self.output_freqs]
+            row_freqs = [freq_value] if freq_value != '' else [str(f) for f in self.output_frequencies]
             for row_freq in row_freqs:
                 expanded_row = row.copy()
                 expanded_row['frequency'] = row_freq
@@ -4804,12 +4844,12 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
           IDF first, then add the requested rows. The removal happens even when the
           requested selection ends up empty after validation (a warning is emitted).
 
-        Rows with an empty ``frequency`` are expanded using ``self.output_freqs``.
+        Rows with an empty ``frequency`` are expanded using ``self.output_frequencies``.
 
         :param df_output_meter: optional DataFrame with a key_name column and optionally
-            frequency. When frequency is missing/empty, self.output_freqs is used.
+            frequency. When frequency is missing/empty, self.output_frequencies is used.
         :param output_meters: optional meter list. Each item can be:
-            - str: key_name (frequencies from self.output_freqs)
+            - str: key_name (frequencies from self.output_frequencies)
             - dict: key_name (+ optional frequency or Reporting_Frequency)
         :param validate: when True (default), validates requested meters against
             discovered outputs from a lightweight test simulation (cached in
@@ -4867,10 +4907,10 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                     elif 'Reporting_Frequency' in item:
                         freqs = [item.get('Reporting_Frequency')]
                     else:
-                        freqs = list(self.output_freqs)
+                        freqs = list(self.output_frequencies)
                 else:
                     key_name = item
-                    freqs = list(self.output_freqs)
+                    freqs = list(self.output_frequencies)
 
                 for freq in freqs:
                     meter_rows.append({'key_name': key_name, 'frequency': freq})
@@ -4985,7 +5025,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                 explicit = [str(v).strip() for v in subset['frequency'].tolist() if str(v).strip() != '']
                 if len(explicit) > 0:
                     return explicit
-                return [str(v) for v in self.output_freqs]
+                return [str(v) for v in self.output_frequencies]
 
             if mode == 'replace':
                 existing_meters = list(self._idfobjects_get_case(b, 'Output:Meter'))
@@ -6255,22 +6295,20 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             available_params = []
         return available_params
 
-    def set_parameters(self, accis_params_dict: dict = None, additional_params: list=None, use_dflt_values: bool=True):
+    @accepts_legacy_kwargs(_LEGACY_ARGUMENTS)
+    def set_parameters(self, accis_params_dict: dict = None, additional_params: list=None, use_default_values: bool=True):
         """Sets the parameters for the parametric analysis or optimisation.
         
-        :param accis_params_dict: a dictionary containing the parameters names in the keys,
-            and in the values, the options or range of values using respectively
+        :param accis_params_dict: a dictionary containing the parameters names in the keys (those of
+            ``get_available_parameters()``, which are the names of the arguments of accim.sim: comfort_standard,
+            category, custom_slope...; the names of accim 0.x, such as ComfStand or CustAST_m, keep working with a
+            DeprecationWarning), and in the values, the options or range of values using respectively
             a list or tuple with min and max values.
         :param additional_params: any other additional parameter, as it would be added in besos
-        :param HVACmode: only used in accim predefined and custom models; sets the HVACmode argument;
-            for more information, refer to addAccis
-        :param VentCtrl: only used in accim predefined and custom models; sets the VentCtrl argument;
-            for more information, refer to addAccis
-        
-        Parameters
-        ----------
-        use_dflt_values : Any
-            Boolean or mode flag controlling behaviour.
+        :param use_default_values: only used in accim custom models: True to give the coefficients of the custom
+            model that are not parameters and are not set yet (their value is 0) the default values (those of
+            ASHRAE 55 with 80 % acceptability), False to ask whether to use them or to enter other values. (Its
+            name was use_dflt_values before accim 1.0.0.)
         
         Usage
         -----
@@ -6278,10 +6316,13 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         
         Examples
         --------
-        result = self.set_parameters(accis_params_dict=..., additional_params=..., use_dflt_values=...)
+        result = self.set_parameters(accis_params_dict={'comfort_mode': [2, 3]}, additional_params=...)
         """
         if accis_params_dict is None:
             accis_params_dict = {}
+        # The names of the parameters (those of accim 0.x keep working, with a DeprecationWarning)
+        accis_params_dict = {params_dicts.resolve_parameter_name(k, stacklevel=4): v
+                             for k, v in accis_params_dict.items()}
         accis_descriptors_has_options = False
         add_descriptors_has_options = False
         descriptors_has_options = False
@@ -6338,32 +6379,17 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                 bf_accim.modify_CustAST_ASToffset(building, 0)
                 bf_accim.modify_CustAST_ASTaul(building, 0)
                 bf_accim.modify_CustAST_ASTall(building, 0)
+            # The coefficients of the custom model that are not parameters (the parameters that set the cooling and
+            # heating coefficients at once set both) and are not set yet (their value is 0)
             custast_args = bf_accim.get_custom_model_arguments(self.building)
-            parameters_to_check = [k for (k, v) in custast_args.items() if 'CustAST_' + k not in parameters and v == 0]
-            if 'CustAST_ASToffset' in parameters:
-                try:
-                    parameters_to_check.remove('AHSToffset')
-                    parameters_to_check.remove('ACSToffset')
-                except ValueError:
-                    pass
-            if 'CustAST_ASTall' in parameters:
-                try:
-                    parameters_to_check.remove('AHSTall')
-                    parameters_to_check.remove('ACSTall')
-                except ValueError:
-                    pass
-            if 'CustAST_ASTaul' in parameters:
-                try:
-                    parameters_to_check.remove('AHSTaul')
-                    parameters_to_check.remove('ACSTaul')
-                except ValueError:
-                    pass
-            parameters_to_be_defined = []
-            for p in parameters_to_check:
-                if custast_args[p] == 0:
-                    parameters_to_be_defined.append(p)
+            set_by_parameters = set(parameters)
+            for combined, pair in _CUSTOM_MODEL_COMBINED_PARAMETERS.items():
+                if combined in parameters:
+                    set_by_parameters.update(pair)
+            parameters_to_be_defined = [k for (k, v) in custast_args.items() if k not in set_by_parameters and v == 0]
             if len(parameters_to_be_defined) > 0:
-                print(f'The following parameters are not included in the parameters to be set, and have not been defined yet (i.e. the value is 0): {parameters_to_be_defined}')
+                print(f'The following parameters are not included in the parameters to be set, and have not been '
+                      f'defined yet (i.e. the value is 0): {parameters_to_be_defined}')
                 dflt_values = dict(_CUSTOM_MODEL_DEFAULTS)
 
                 def _emit_defaults_applied_warning(selected_params):
@@ -6373,12 +6399,11 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                     shown = set()
                     formatted_items = []
                     # Show compact aliases when both cooling/heating sides share the same default.
-                    if 'ACSTaul' in selected_set and 'AHSTaul' in selected_set and dflt_values['ACSTaul'] == dflt_values['AHSTaul']:
-                        formatted_items.append(f"ASTaul={dflt_values['ACSTaul']}")
-                        shown.update({'ACSTaul', 'AHSTaul'})
-                    if 'ACSTall' in selected_set and 'AHSTall' in selected_set and dflt_values['ACSTall'] == dflt_values['AHSTall']:
-                        formatted_items.append(f"ASTall={dflt_values['ACSTall']}")
-                        shown.update({'ACSTall', 'AHSTall'})
+                    for combined, (cooling, heating) in _CUSTOM_MODEL_COMBINED_PARAMETERS.items():
+                        if cooling in selected_set and heating in selected_set \
+                                and dflt_values[cooling] == dflt_values[heating]:
+                            formatted_items.append(f"{combined}={dflt_values[cooling]}")
+                            shown.update({cooling, heating})
                     for p in selected_params:
                         if p in shown:
                             continue
@@ -6387,14 +6412,14 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                     print(f"\033[93mWARNING: Default values applied -> {warning_text}\033[0m")
 
                 custast_setters = {
-                    'm': bf_accim.modify_CustAST_m,
-                    'n': bf_accim.modify_CustAST_n,
-                    'ACSToffset': bf_accim.modify_CustAST_ACSToffset,
-                    'AHSToffset': bf_accim.modify_CustAST_AHSToffset,
-                    'ACSTaul': bf_accim.modify_CustAST_ACSTaul,
-                    'ACSTall': bf_accim.modify_CustAST_ACSTall,
-                    'AHSTaul': bf_accim.modify_CustAST_AHSTaul,
-                    'AHSTall': bf_accim.modify_CustAST_AHSTall,
+                    'custom_slope': bf_accim.modify_CustAST_m,
+                    'custom_intercept': bf_accim.modify_CustAST_n,
+                    'custom_cooling_offset': bf_accim.modify_CustAST_ACSToffset,
+                    'custom_heating_offset': bf_accim.modify_CustAST_AHSToffset,
+                    'custom_cooling_upper_limit': bf_accim.modify_CustAST_ACSTaul,
+                    'custom_cooling_lower_limit': bf_accim.modify_CustAST_ACSTall,
+                    'custom_heating_upper_limit': bf_accim.modify_CustAST_AHSTaul,
+                    'custom_heating_lower_limit': bf_accim.modify_CustAST_AHSTall,
                 }
 
                 def _apply_custast_values(values):
@@ -6402,7 +6427,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                         for p in parameters_to_be_defined:
                             custast_setters[p](building, values[p])
 
-                if use_dflt_values:
+                if use_default_values:
                     _apply_custast_values(dflt_values)
                     _emit_defaults_applied_warning(parameters_to_be_defined)
                 else:
@@ -6441,7 +6466,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             enabled: bool = True,
             verbose: bool = True,
     ):
-        """Restricts the custom adaptive model (CustAST_m, CustAST_n) to the band of published models.
+        """Restricts the custom adaptive model (custom_slope, custom_intercept) to the band of published models.
 
         Independent ranges for the slope m and the intercept n of the comfort temperature
         (``T_comf = m * T_out + n``) include many combinations that do not correspond to any
@@ -6455,15 +6480,15 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
 
         Once set:
 
-        - Parametric simulation: ``sampling_lhs`` draws CustAST_m and CustAST_n inside the band,
+        - Parametric simulation: ``sampling_lhs`` draws custom_slope and custom_intercept inside the band,
           uniformly over its area, so every sample is kept (with ``mn_filter_mode='exclude'``, it
           draws them within their ranges and drops the pairs outside). ``sampling_full_set``,
           ``sampling_full_factorial`` and ``sampling_custom`` drop the combinations outside the
           band from ``parameters_values_df`` (they are kept in ``mn_filter_excluded_df``), and
           ``run_parametric_simulation`` never simulates them. Sobol and Morris samples are not
           filtered, because the sensitivity analysis needs the complete sample.
-        - Optimisation: ``run_optimisation`` maps the CustAST_n proposed by the algorithm linearly
-          from its range onto the interval of n inside the band for the proposed CustAST_m, so
+        - Optimisation: ``run_optimisation`` maps the custom_intercept proposed by the algorithm linearly
+          from its range onto the interval of n inside the band for the proposed custom_slope, so
           every evaluated combination lies inside the band. The results show the simulated n.
 
         :param data: a pandas DataFrame with the columns m and n of the models that define the band;
@@ -6485,7 +6510,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
 
         Usage
         -----
-        Call after ``set_parameters`` (with CustAST_m and CustAST_n among the parameters) and
+        Call after ``set_parameters`` (with custom_slope and custom_intercept among the parameters) and
         before sampling or running the optimisation. ``plot_mn_filter`` plots the band.
 
         Examples
@@ -6502,10 +6527,10 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         parameters_list = getattr(self, 'parameters_list', None) or []
         if len(parameters_list) > 0:
             names = [p.value_descriptors[0].name for p in parameters_list]
-            missing = [p for p in ('CustAST_m', 'CustAST_n') if p not in names]
+            missing = [p for p in ('custom_slope', 'custom_intercept') if p not in names]
             if missing:
                 raise ValueError(
-                    f'set_mn_filter: CustAST_m and CustAST_n must be among the parameters (missing: {missing}). '
+                    f'set_mn_filter: custom_slope and custom_intercept must be among the parameters (missing: {missing}). '
                     'Call set_parameters with both, using parameters_type="accim custom model".'
                 )
         self.mn_filter = MNFilter.from_data(data=data, offset=offset, add_models=add_models, drop_models=drop_models)
@@ -6517,7 +6542,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         return self.mn_filter
 
     def _filter_plan_by_mn_filter(self, df: pd.DataFrame, context: str, store_excluded: bool = False) -> pd.DataFrame:
-        """Drops the rows of a simulation plan whose (CustAST_m, CustAST_n) lie outside the m-n band.
+        """Drops the rows of a simulation plan whose (custom_slope, custom_intercept) lie outside the m-n band.
 
         Parameters
         ----------
@@ -6544,15 +6569,15 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         mn_filter = getattr(self, 'mn_filter', None)
         if mn_filter is None or not isinstance(df, pd.DataFrame) or df.empty:
             return df
-        if 'CustAST_m' not in df.columns or 'CustAST_n' not in df.columns:
+        if 'custom_slope' not in df.columns or 'custom_intercept' not in df.columns:
             warnings.warn(
-                f'{context}: the m-n filter is set, but the plan has no CustAST_m and CustAST_n columns; '
+                f'{context}: the m-n filter is set, but the plan has no custom_slope and custom_intercept columns; '
                 'it is not applied.',
                 UserWarning,
             )
             return df
         inside = np.asarray(
-            mn_filter.contains(df['CustAST_m'].astype(float).to_numpy(), df['CustAST_n'].astype(float).to_numpy()),
+            mn_filter.contains(df['custom_slope'].astype(float).to_numpy(), df['custom_intercept'].astype(float).to_numpy()),
             dtype=bool,
         )
         kept = df.loc[inside].reset_index(drop=True)
@@ -6560,14 +6585,14 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         if store_excluded:
             self.mn_filter_excluded_df = excluded
         if len(excluded) > 0 or store_excluded:
-            pairs_total = len(df[['CustAST_m', 'CustAST_n']].drop_duplicates())
-            pairs_excluded = len(excluded[['CustAST_m', 'CustAST_n']].drop_duplicates()) if len(excluded) > 0 else 0
+            pairs_total = len(df[['custom_slope', 'custom_intercept']].drop_duplicates())
+            pairs_excluded = len(excluded[['custom_slope', 'custom_intercept']].drop_duplicates()) if len(excluded) > 0 else 0
             print(
-                f'[m-n filter] {context}: {pairs_excluded} of {pairs_total} (CustAST_m, CustAST_n) combinations '
+                f'[m-n filter] {context}: {pairs_excluded} of {pairs_total} (custom_slope, custom_intercept) combinations '
                 f'are outside the band and are not simulated; {len(kept)} rows remain.'
             )
         if kept.empty:
-            raise ValueError(f'{context}: all (CustAST_m, CustAST_n) combinations are outside the m-n band.')
+            raise ValueError(f'{context}: all (custom_slope, custom_intercept) combinations are outside the m-n band.')
         return kept
 
     def _apply_mn_filter_to_samples(self, context: str) -> None:
@@ -6594,7 +6619,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         self.parameters_values_df = self._filter_plan_by_mn_filter(df, context=context, store_excluded=True)
 
     def _sample_mn_inside_band(self, df: pd.DataFrame, context: str) -> pd.DataFrame:
-        """Moves the CustAST_m and CustAST_n values of a Latin hypercube sample into the m-n band.
+        """Moves the custom_slope and custom_intercept values of a Latin hypercube sample into the m-n band.
 
         Each value is turned back into its position in [0, 1] within its range, and the pair of
         positions is mapped onto the band with ``MNFilter.sample_inside`` (uniformly over the band
@@ -6610,7 +6635,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         Returns
         -------
         pd.DataFrame
-            The sample with CustAST_m and CustAST_n inside the band (df unchanged if no filter is set).
+            The sample with custom_slope and custom_intercept inside the band (df unchanged if no filter is set).
 
         Usage
         -----
@@ -6625,11 +6650,11 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             return df
         descriptors = {d.name: d for d in self.problem.value_descriptors}
         ranges = {}
-        for name in ('CustAST_m', 'CustAST_n'):
+        for name in ('custom_slope', 'custom_intercept'):
             descriptor = descriptors.get(name)
             if not isinstance(descriptor, RangeParameter) or name not in df.columns:
                 warnings.warn(
-                    f'{context}: CustAST_m and CustAST_n must be ranges (min, max) to be drawn inside the '
+                    f'{context}: custom_slope and custom_intercept must be ranges (min, max) to be drawn inside the '
                     'm-n band; the pairs outside the band are dropped instead.',
                     UserWarning,
                 )
@@ -6640,16 +6665,16 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             values = values.astype(float).to_numpy()
             return np.full(len(values), 0.5) if high <= low else (values - low) / (high - low)
 
-        (m_min, m_max), (n_min, n_max) = ranges['CustAST_m'], ranges['CustAST_n']
+        (m_min, m_max), (n_min, n_max) = ranges['custom_slope'], ranges['custom_intercept']
         m, n = mn_filter.sample_inside(
-            _position(df['CustAST_m'], m_min, m_max), _position(df['CustAST_n'], n_min, n_max),
+            _position(df['custom_slope'], m_min, m_max), _position(df['custom_intercept'], n_min, n_max),
             m_min, m_max, n_min, n_max,
         )
         out = df.copy()
-        out['CustAST_m'] = m
-        out['CustAST_n'] = n
+        out['custom_slope'] = m
+        out['custom_intercept'] = n
         print(
-            f'[m-n filter] {context}: the {len(out)} (CustAST_m, CustAST_n) pairs are drawn inside the band, '
+            f'[m-n filter] {context}: the {len(out)} (custom_slope, custom_intercept) pairs are drawn inside the band, '
             'uniformly over its area.'
         )
         return out
@@ -6678,7 +6703,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             )
 
     def _build_mn_filter_mapping(self):
-        """Builds the mapping of CustAST_n into the m-n band used by ``run_optimisation``.
+        """Builds the mapping of custom_intercept into the m-n band used by ``run_optimisation``.
 
         Returns
         -------
@@ -6687,8 +6712,8 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
 
         Usage
         -----
-        Internal helper called by ``run_optimisation``; it checks that CustAST_m and CustAST_n are
-        range parameters and that the band includes some n for every m in the CustAST_m range.
+        Internal helper called by ``run_optimisation``; it checks that custom_slope and custom_intercept are
+        range parameters and that the band includes some n for every m in the custom_slope range.
 
         Examples
         --------
@@ -6698,26 +6723,26 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         if mn_filter is None:
             return None
         names = list(self.problem.names('inputs'))
-        missing = [p for p in ('CustAST_m', 'CustAST_n') if p not in names]
+        missing = [p for p in ('custom_slope', 'custom_intercept') if p not in names]
         if missing:
-            raise ValueError(f'The m-n filter needs CustAST_m and CustAST_n among the optimisation parameters (missing: {missing}).')
+            raise ValueError(f'The m-n filter needs custom_slope and custom_intercept among the optimisation parameters (missing: {missing}).')
         bounds = {}
-        for name in ('CustAST_m', 'CustAST_n'):
+        for name in ('custom_slope', 'custom_intercept'):
             descriptor = self.problem.inputs[names.index(name)].value_descriptors[0]
             if not isinstance(descriptor, RangeParameter):
                 raise ValueError(f'The m-n filter in optimisation needs {name} as a range (min, max).')
             bounds[name] = (float(descriptor.min), float(descriptor.max))
-        mn_filter.check_ranges(*bounds['CustAST_m'], *bounds['CustAST_n'])
+        mn_filter.check_ranges(*bounds['custom_slope'], *bounds['custom_intercept'])
         print(
-            f'[m-n filter] run_optimisation: CustAST_n is mapped onto the band for each CustAST_m '
+            f'[m-n filter] run_optimisation: custom_intercept is mapped onto the band for each custom_slope '
             f'({mn_filter.equation()}; {mn_filter.offset_lower:.4f} below, {mn_filter.offset_upper:.4f} above).'
         )
         return MNFilterMapping(
             band=mn_filter.to_dict(),
-            m_index=names.index('CustAST_m'),
-            n_index=names.index('CustAST_n'),
-            n_min=bounds['CustAST_n'][0],
-            n_max=bounds['CustAST_n'][1],
+            m_index=names.index('custom_slope'),
+            n_index=names.index('custom_intercept'),
+            n_min=bounds['custom_intercept'][0],
+            n_max=bounds['custom_intercept'][1],
         )
 
     def set_problem(
@@ -6823,6 +6848,9 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             self.parameters_values_df = pd.DataFrame(rows)
         else:
             raise TypeError('custom_plan must be a pandas DataFrame, a list of dicts, or a dict.')
+        # A plan with the parameter names of accim 0.x keeps working, with a DeprecationWarning
+        self.parameters_values_df = params_dicts.rename_legacy_parameter_columns(
+            self.parameters_values_df, 'custom_plan')
         self._apply_mn_filter_to_samples('sampling_custom')
 
     def _expand_samples_with_buildings_and_epws(self, df: pd.DataFrame) -> pd.DataFrame:
@@ -6890,7 +6918,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         
         :param num_samples: an integer; represents the total number of samples
         :param mn_filter_mode: only used if an m-n filter is set (``set_mn_filter``). 'inside' (default):
-            CustAST_m and CustAST_n are drawn inside the band, uniformly over its area, so all
+            custom_slope and custom_intercept are drawn inside the band, uniformly over its area, so all
             ``num_samples`` samples are kept; the Latin hypercube is drawn on the unit square and mapped
             onto the band (``MNFilter.sample_inside``). 'exclude': they are drawn within their ranges, and
             the pairs outside the band are dropped (kept in ``mn_filter_excluded_df``).
@@ -9519,6 +9547,9 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             df = getattr(self, 'parameters_values_df', None)
             if df is None:
                 raise ValueError("Argument 'df' cannot be None if self.parameters_values_df is not populated. Run a sampling method first or provide 'df'.")
+        else:
+            # A plan with the parameter names of accim 0.x keeps working, with a DeprecationWarning
+            df = params_dicts.rename_legacy_parameter_columns(df, "The plan 'df'")
 
         df = self._filter_plan_by_mn_filter(df, context='run_parametric_simulation')
 
@@ -10061,10 +10092,16 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                 print(f'  [info] idf_backup_path restored: {self.idf_backup_path}')
         else:
             self.outputs_param_simulation = pd.read_csv(csv_path)
+        # The results of accim 0.x have the parameter names of accim 0.x, which are renamed
+        self.outputs_param_simulation = params_dicts.rename_legacy_parameter_columns(
+            self.outputs_param_simulation, 'The loaded results', category=UserWarning)
         if hourly_pickle_path:
             self.outputs_param_simulation_hourly = pd.read_pickle(hourly_pickle_path)
         elif hourly_csv_path:
             self.outputs_param_simulation_hourly = pd.read_csv(hourly_csv_path)
+        if hourly_pickle_path or hourly_csv_path:
+            self.outputs_param_simulation_hourly = params_dicts.rename_legacy_parameter_columns(
+                self.outputs_param_simulation_hourly, 'The loaded hourly results', category=UserWarning)
         if hourly_pickle_path or hourly_csv_path:
             # The groups that split_by stored for the replaced hourly table do not describe the new one.
             self.outputs_param_simulation_hourly_by_category = None
@@ -10072,6 +10109,8 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         self._invalidate_normalized_df_types(
             df_types=['parametric', 'parametric_hourly'] if (hourly_pickle_path or hourly_csv_path) else ['parametric']
         )
+        if parameters_names:
+            parameters_names = [params_dicts.resolve_parameter_name(n) for n in parameters_names]
         parameters_names = parameters_names or self.outputs_param_simulation.attrs.get('parameters_names')
         outputs_names = outputs_names or self.outputs_param_simulation.attrs.get('outputs_names')
         if parameters_names and outputs_names and not (hasattr(self, 'problem') and type(self.problem).__name__ != 'MockProblem'):
@@ -10999,6 +11038,9 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                 print(f'  [info] idf_backup_path restored: {self.idf_backup_path}')
         else:
             outputs_optimisation = pd.read_csv(target_path)
+        # The results of accim 0.x have the parameter names of accim 0.x, which are renamed
+        outputs_optimisation = params_dicts.rename_legacy_parameter_columns(
+            outputs_optimisation, 'The loaded results', category=UserWarning)
         if 'pareto-optimal' not in outputs_optimisation.columns:
             raise KeyError("Column 'pareto-optimal' not found in the provided file. Please load a file generated from outputs_optimisation.")
         self.outputs_optimisation_filepath = target_path
@@ -11008,9 +11050,13 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         elif hourly_csv_path:
             self.outputs_optimisation_hourly = pd.read_csv(hourly_csv_path)
         if hourly_pickle_path or hourly_csv_path:
+            self.outputs_optimisation_hourly = params_dicts.rename_legacy_parameter_columns(
+                self.outputs_optimisation_hourly, 'The loaded hourly results', category=UserWarning)
             self._invalidate_normalized_df_types(df_types=['optimisation_hourly'])
             # The groups that split_by stored for the replaced hourly table do not describe the new one.
             self.outputs_optimisation_hourly_by_category = None
+        if parameters_names:
+            parameters_names = [params_dicts.resolve_parameter_name(n) for n in parameters_names]
         parameters_names = parameters_names or outputs_optimisation.attrs.get('parameters_names')
         outputs_names = outputs_names or outputs_optimisation.attrs.get('outputs_names')
         minimize_outputs = minimize_outputs or outputs_optimisation.attrs.get('minimize_outputs')
@@ -12398,7 +12444,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             are used. Use ``get_hourly_df_columns()`` first to discover available names.
             Example: ``['Zone Operative Temperature', 'VRF Heat Pump Cooling']``.
         :param include_summary_columns: if True (default), the parameter columns
-            (e.g. ``CustAST_m``, ``CustAST_n`` …), ``epw`` and ``pareto-optimal`` are
+            (e.g. ``custom_slope``, ``custom_intercept`` …), ``epw`` and ``pareto-optimal`` are
             preserved as identifier columns in the expanded DataFrame.
         :param file_source: source file to read hourly values from: ``'csv'`` (default)
             or ``'eso'``.
@@ -13284,6 +13330,23 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         return report
 
 
+def _legacy_attribute(old: str, new: str) -> property:
+    """A deprecated alias of an attribute of the simulations (its name in accim 0.x)."""
+    def getter(self):
+        warn_deprecated(f'The attribute {old}', new)
+        return getattr(self, new)
+
+    def setter(self, value):
+        warn_deprecated(f'The attribute {old}', new)
+        setattr(self, new, value)
+
+    return property(getter, setter, doc=f'Deprecated alias of ``{new}`` (its name before accim 1.0.0).')
+
+
+for _old, _new in _LEGACY_ATTRIBUTES.items():
+    setattr(SimulationBase, _old, _legacy_attribute(_old, _new))
+
+
 class ParametricSimulation(SimulationBase):
     """Specialization of SimulationBase for parametric simulations.
     
@@ -13313,26 +13376,27 @@ class ParametricSimulation(SimulationBase):
     obj = ParametricSimulation()
     """
 
+    @accepts_legacy_kwargs(_LEGACY_ARGUMENTS)
     def __init__(
             self,
             buildings: Union[Any, List] = None,
             epws: list = None,
             parameters_type: Literal['accim custom model', 'accim predefined model', 'apmv setpoints', None] = None,
             output_type: Literal['standard', 'custom', 'detailed', 'simplified'] = 'standard',
-            output_keep_existing: bool = True,
-            output_freqs: List[allowed_output_freqs] = ['hourly'],
-            ScriptType: Literal['vrf_mm', 'vrf_ac', 'ex_ac'] = 'vrf_mm',
-            SupplyAirTempInputMethod: Literal['temperature difference', 'supply air temperature'] = 'temperature difference',
-            make_averages: bool = False,
-            debugging: bool = False,
-            verbosemode: bool = True,
-            Output_take_dataframe: pd.DataFrame = None,
-            EnergyPlus_version: str = None,
-            VRFschedule: str = 'On 24/7',
-            eer: float = 2,
-            cop: float = 2.1,
+            keep_existing_outputs: bool = True,
+            output_frequencies: List[allowed_output_freqs] = ['hourly'],
+            script_type: Literal['vrf_mm', 'vrf_ac', 'ex_ac'] = 'vrf_mm',
+            supply_air_temp_input_method: Literal['temperature difference', 'supply air temperature'] = 'temperature difference',
+            add_building_averages: bool = False,
+            debug_ems: bool = False,
+            verbose: bool = True,
+            outputs_dataframe: pd.DataFrame = None,
+            energyplus_version: str = None,
+            vrf_availability_schedule: str = 'On 24/7',
+            vrf_eer: float = 2,
+            vrf_cop: float = 2.1,
             hvac_zone_map: dict = None,
-            bypass_addAccis: bool = False,
+            bypass_add_accis: bool = False,
             building: Any = None,
             accim_results_root: Optional[str] = None,
             remove_output_tables: bool = True,
@@ -13344,20 +13408,20 @@ class ParametricSimulation(SimulationBase):
         :param parameters_type: parameter workflow to prepare: accim custom model,
             accim predefined model, apmv setpoints, or None.
         :param output_type: output selection preset used by addAccis.
-        :param output_keep_existing: keep existing IDF output objects when addAccis runs.
-        :param output_freqs: output frequencies requested from EnergyPlus.
-        :param ScriptType: ACCIM script type: vrf_mm, vrf_ac, or ex_ac.
-        :param SupplyAirTempInputMethod: ACCIM supply-air-temperature input mode.
-        :param make_averages: create average outputs in addAccis.
-        :param debugging: create EnergyPlus EDD debugging output.
-        :param verbosemode: print addAccis progress messages.
-        :param Output_take_dataframe: forwarded to ``accim.sim.accis.add_accis_to_idf``.
-        :param EnergyPlus_version: forwarded to ``accim.sim.accis.add_accis_to_idf``.
-        :param VRFschedule: forwarded to ``accim.sim.accis.add_accis_to_idf``.
-        :param eer: forwarded to ``accim.sim.accis.add_accis_to_idf``.
-        :param cop: forwarded to ``accim.sim.accis.add_accis_to_idf``.
+        :param keep_existing_outputs: keep existing IDF output objects when addAccis runs.
+        :param output_frequencies: output frequencies requested from EnergyPlus.
+        :param script_type: ACCIM script type: vrf_mm, vrf_ac, or ex_ac.
+        :param supply_air_temp_input_method: ACCIM supply-air-temperature input mode.
+        :param add_building_averages: create average outputs in addAccis.
+        :param debug_ems: True to make EnergyPlus write the EDD file of the EMS (for debugging).
+        :param verbose: print addAccis progress messages.
+        :param outputs_dataframe: forwarded to ``accim.sim.accis.add_accis_to_idf``.
+        :param energyplus_version: forwarded to ``accim.sim.accis.add_accis_to_idf``.
+        :param vrf_availability_schedule: forwarded to ``accim.sim.accis.add_accis_to_idf``.
+        :param vrf_eer: forwarded to ``accim.sim.accis.add_accis_to_idf``.
+        :param vrf_cop: forwarded to ``accim.sim.accis.add_accis_to_idf``.
         :param hvac_zone_map: forwarded to ``accim.sim.accis.add_accis_to_idf``.
-        :param bypass_addAccis: skip addAccis/apply_apmv_setpoints preparation.
+        :param bypass_add_accis: skip addAccis/apply_apmv_setpoints preparation.
         :param building: legacy alias for buildings, accepted for backward compatibility.
         :param accim_results_root: optional base directory used to resolve
             relative output directories.
@@ -13377,20 +13441,20 @@ class ParametricSimulation(SimulationBase):
             epws=epws,
             parameters_type=parameters_type,
             output_type=output_type,
-            output_keep_existing=output_keep_existing,
-            output_freqs=output_freqs,
-            ScriptType=ScriptType,
-            SupplyAirTempInputMethod=SupplyAirTempInputMethod,
-            make_averages=make_averages,
-            debugging=debugging,
-            verbosemode=verbosemode,
-            Output_take_dataframe=Output_take_dataframe,
-            EnergyPlus_version=EnergyPlus_version,
-            VRFschedule=VRFschedule,
-            eer=eer,
-            cop=cop,
+            keep_existing_outputs=keep_existing_outputs,
+            output_frequencies=output_frequencies,
+            script_type=script_type,
+            supply_air_temp_input_method=supply_air_temp_input_method,
+            add_building_averages=add_building_averages,
+            debug_ems=debug_ems,
+            verbose=verbose,
+            outputs_dataframe=outputs_dataframe,
+            energyplus_version=energyplus_version,
+            vrf_availability_schedule=vrf_availability_schedule,
+            vrf_eer=vrf_eer,
+            vrf_cop=vrf_cop,
             hvac_zone_map=hvac_zone_map,
-            bypass_addAccis=bypass_addAccis,
+            bypass_add_accis=bypass_add_accis,
             building=building,
             accim_results_root=accim_results_root,
             remove_output_tables=remove_output_tables,
@@ -13479,26 +13543,27 @@ class OptimisationSimulation(SimulationBase):
     obj = OptimisationSimulation()
     """
 
+    @accepts_legacy_kwargs(_LEGACY_ARGUMENTS)
     def __init__(
             self,
             buildings: Union[Any, List] = None,
             epws: list = None,
             parameters_type: Literal['accim custom model', 'accim predefined model', 'apmv setpoints', None] = None,
             output_type: Literal['standard', 'custom', 'detailed', 'simplified'] = 'standard',
-            output_keep_existing: bool = True,
-            output_freqs: List[allowed_output_freqs] = ['hourly'],
-            ScriptType: Literal['vrf_mm', 'vrf_ac', 'ex_ac'] = 'vrf_mm',
-            SupplyAirTempInputMethod: Literal['temperature difference', 'supply air temperature'] = 'temperature difference',
-            make_averages: bool = False,
-            debugging: bool = False,
-            verbosemode: bool = True,
-            Output_take_dataframe: pd.DataFrame = None,
-            EnergyPlus_version: str = None,
-            VRFschedule: str = 'On 24/7',
-            eer: float = 2,
-            cop: float = 2.1,
+            keep_existing_outputs: bool = True,
+            output_frequencies: List[allowed_output_freqs] = ['hourly'],
+            script_type: Literal['vrf_mm', 'vrf_ac', 'ex_ac'] = 'vrf_mm',
+            supply_air_temp_input_method: Literal['temperature difference', 'supply air temperature'] = 'temperature difference',
+            add_building_averages: bool = False,
+            debug_ems: bool = False,
+            verbose: bool = True,
+            outputs_dataframe: pd.DataFrame = None,
+            energyplus_version: str = None,
+            vrf_availability_schedule: str = 'On 24/7',
+            vrf_eer: float = 2,
+            vrf_cop: float = 2.1,
             hvac_zone_map: dict = None,
-            bypass_addAccis: bool = False,
+            bypass_add_accis: bool = False,
             building: Any = None,
             accim_results_root: Optional[str] = None,
             remove_output_tables: bool = True,
@@ -13510,20 +13575,20 @@ class OptimisationSimulation(SimulationBase):
         :param parameters_type: parameter workflow to prepare: accim custom model,
             accim predefined model, apmv setpoints, or None.
         :param output_type: output selection preset used by addAccis.
-        :param output_keep_existing: keep existing IDF output objects when addAccis runs.
-        :param output_freqs: output frequencies requested from EnergyPlus.
-        :param ScriptType: ACCIM script type: vrf_mm, vrf_ac, or ex_ac.
-        :param SupplyAirTempInputMethod: ACCIM supply-air-temperature input mode.
-        :param make_averages: create average outputs in addAccis.
-        :param debugging: create EnergyPlus EDD debugging output.
-        :param verbosemode: print addAccis progress messages.
-        :param Output_take_dataframe: forwarded to ``accim.sim.accis.add_accis_to_idf``.
-        :param EnergyPlus_version: forwarded to ``accim.sim.accis.add_accis_to_idf``.
-        :param VRFschedule: forwarded to ``accim.sim.accis.add_accis_to_idf``.
-        :param eer: forwarded to ``accim.sim.accis.add_accis_to_idf``.
-        :param cop: forwarded to ``accim.sim.accis.add_accis_to_idf``.
+        :param keep_existing_outputs: keep existing IDF output objects when addAccis runs.
+        :param output_frequencies: output frequencies requested from EnergyPlus.
+        :param script_type: ACCIM script type: vrf_mm, vrf_ac, or ex_ac.
+        :param supply_air_temp_input_method: ACCIM supply-air-temperature input mode.
+        :param add_building_averages: create average outputs in addAccis.
+        :param debug_ems: True to make EnergyPlus write the EDD file of the EMS (for debugging).
+        :param verbose: print addAccis progress messages.
+        :param outputs_dataframe: forwarded to ``accim.sim.accis.add_accis_to_idf``.
+        :param energyplus_version: forwarded to ``accim.sim.accis.add_accis_to_idf``.
+        :param vrf_availability_schedule: forwarded to ``accim.sim.accis.add_accis_to_idf``.
+        :param vrf_eer: forwarded to ``accim.sim.accis.add_accis_to_idf``.
+        :param vrf_cop: forwarded to ``accim.sim.accis.add_accis_to_idf``.
         :param hvac_zone_map: forwarded to ``accim.sim.accis.add_accis_to_idf``.
-        :param bypass_addAccis: skip addAccis/apply_apmv_setpoints preparation.
+        :param bypass_add_accis: skip addAccis/apply_apmv_setpoints preparation.
         :param building: legacy alias for buildings, accepted for backward compatibility.
         :param accim_results_root: optional base directory used to resolve
             relative output directories.
@@ -13543,20 +13608,20 @@ class OptimisationSimulation(SimulationBase):
             epws=epws,
             parameters_type=parameters_type,
             output_type=output_type,
-            output_keep_existing=output_keep_existing,
-            output_freqs=output_freqs,
-            ScriptType=ScriptType,
-            SupplyAirTempInputMethod=SupplyAirTempInputMethod,
-            make_averages=make_averages,
-            debugging=debugging,
-            verbosemode=verbosemode,
-            Output_take_dataframe=Output_take_dataframe,
-            EnergyPlus_version=EnergyPlus_version,
-            VRFschedule=VRFschedule,
-            eer=eer,
-            cop=cop,
+            keep_existing_outputs=keep_existing_outputs,
+            output_frequencies=output_frequencies,
+            script_type=script_type,
+            supply_air_temp_input_method=supply_air_temp_input_method,
+            add_building_averages=add_building_averages,
+            debug_ems=debug_ems,
+            verbose=verbose,
+            outputs_dataframe=outputs_dataframe,
+            energyplus_version=energyplus_version,
+            vrf_availability_schedule=vrf_availability_schedule,
+            vrf_eer=vrf_eer,
+            vrf_cop=vrf_cop,
             hvac_zone_map=hvac_zone_map,
-            bypass_addAccis=bypass_addAccis,
+            bypass_add_accis=bypass_add_accis,
             building=building,
             accim_results_root=accim_results_root,
             remove_output_tables=remove_output_tables,
@@ -13763,8 +13828,8 @@ class AccimPredefModelsParamSim(ParametricSimulation):
 
     This class keeps the historical constructor style while delegating to
     `ParametricSimulation` with `parameters_type='accim predefined model'`.
-    The baseline of each IDF is the custom comfort model (ComfStand 99, CAT 80,
-    ComfMod 3) with the default coefficients of 'accim custom model' (those of
+    The baseline of each IDF is the custom comfort model (comfort_standard 99, category 80,
+    comfort_mode 3) with the default coefficients of 'accim custom model' (those of
     ASHRAE 55 with 80 % acceptability), which the parameters of the plan change.
 
     Usage
@@ -13777,21 +13842,22 @@ class AccimPredefModelsParamSim(ParametricSimulation):
     sim = AccimPredefModelsParamSim(buildings=[idf], epws=['Seville.epw'])
     """
 
+    @accepts_legacy_kwargs(_LEGACY_ARGUMENTS)
     def __init__(
             self,
             buildings: Union[Any, List] = None,
             epws: list = None,
             output_type: Literal['standard', 'custom', 'detailed', 'simplified'] = 'standard',
-            output_keep_existing: bool = True,
-            output_freqs: List[allowed_output_freqs] = ['hourly'],
-            ScriptType: Literal['vrf_mm', 'vrf_ac', 'ex_ac'] = 'vrf_mm',
-            SupplyAirTempInputMethod: Literal['temperature difference', 'supply air temperature'] = 'temperature difference',
-            debugging: bool = False,
-            Output_take_dataframe: pd.DataFrame = None,
-            EnergyPlus_version: str = None,
-            VRFschedule: str = 'On 24/7',
-            eer: float = 2,
-            cop: float = 2.1,
+            keep_existing_outputs: bool = True,
+            output_frequencies: List[allowed_output_freqs] = ['hourly'],
+            script_type: Literal['vrf_mm', 'vrf_ac', 'ex_ac'] = 'vrf_mm',
+            supply_air_temp_input_method: Literal['temperature difference', 'supply air temperature'] = 'temperature difference',
+            debug_ems: bool = False,
+            outputs_dataframe: pd.DataFrame = None,
+            energyplus_version: str = None,
+            vrf_availability_schedule: str = 'On 24/7',
+            vrf_eer: float = 2,
+            vrf_cop: float = 2.1,
             hvac_zone_map: dict = None,
             building: Any = None,
             accim_results_root: Optional[str] = None,
@@ -13802,16 +13868,16 @@ class AccimPredefModelsParamSim(ParametricSimulation):
         :param buildings: one BESOS/eppy IDF object or a list of IDF objects.
         :param epws: one EPW filename or a list of EPW filenames.
         :param output_type: output selection preset used by addAccis.
-        :param output_keep_existing: keep existing IDF output objects when addAccis runs.
-        :param output_freqs: output frequencies requested from EnergyPlus.
-        :param ScriptType: ACCIM script type: vrf_mm, vrf_ac, or ex_ac.
-        :param SupplyAirTempInputMethod: ACCIM supply-air-temperature input mode.
-        :param debugging: create EnergyPlus EDD debugging output.
-        :param Output_take_dataframe: forwarded to ``accim.sim.accis.add_accis_to_idf``.
-        :param EnergyPlus_version: forwarded to ``accim.sim.accis.add_accis_to_idf``.
-        :param VRFschedule: forwarded to ``accim.sim.accis.add_accis_to_idf``.
-        :param eer: forwarded to ``accim.sim.accis.add_accis_to_idf``.
-        :param cop: forwarded to ``accim.sim.accis.add_accis_to_idf``.
+        :param keep_existing_outputs: keep existing IDF output objects when addAccis runs.
+        :param output_frequencies: output frequencies requested from EnergyPlus.
+        :param script_type: ACCIM script type: vrf_mm, vrf_ac, or ex_ac.
+        :param supply_air_temp_input_method: ACCIM supply-air-temperature input mode.
+        :param debug_ems: True to make EnergyPlus write the EDD file of the EMS (for debugging).
+        :param outputs_dataframe: forwarded to ``accim.sim.accis.add_accis_to_idf``.
+        :param energyplus_version: forwarded to ``accim.sim.accis.add_accis_to_idf``.
+        :param vrf_availability_schedule: forwarded to ``accim.sim.accis.add_accis_to_idf``.
+        :param vrf_eer: forwarded to ``accim.sim.accis.add_accis_to_idf``.
+        :param vrf_cop: forwarded to ``accim.sim.accis.add_accis_to_idf``.
         :param hvac_zone_map: forwarded to ``accim.sim.accis.add_accis_to_idf``.
         :param building: legacy alias for buildings, accepted for backward compatibility.
         :param accim_results_root: optional base directory used to resolve
@@ -13834,30 +13900,24 @@ class AccimPredefModelsParamSim(ParametricSimulation):
             epws=epws,
             parameters_type='accim predefined model',
             output_type=output_type,
-            output_keep_existing=output_keep_existing,
-            output_freqs=output_freqs,
-            ScriptType=ScriptType,
-            SupplyAirTempInputMethod=SupplyAirTempInputMethod,
-            debugging=debugging,
-            Output_take_dataframe=Output_take_dataframe,
-            EnergyPlus_version=EnergyPlus_version,
-            VRFschedule=VRFschedule,
-            eer=eer,
-            cop=cop,
+            keep_existing_outputs=keep_existing_outputs,
+            output_frequencies=output_frequencies,
+            script_type=script_type,
+            supply_air_temp_input_method=supply_air_temp_input_method,
+            debug_ems=debug_ems,
+            outputs_dataframe=outputs_dataframe,
+            energyplus_version=energyplus_version,
+            vrf_availability_schedule=vrf_availability_schedule,
+            vrf_eer=vrf_eer,
+            vrf_cop=vrf_cop,
             hvac_zone_map=hvac_zone_map,
             accim_results_root=accim_results_root,
             remove_output_tables=remove_output_tables,
         )
         # The baseline is the custom model with the default coefficients of 'accim custom model'. Without them, its
         # heating setpoint was above the cooling one, so EnergyPlus stopped in the test simulations of the outputs
-        # and in the plans that do not set ComfStand
-        coefficients = _CUSTOM_MODEL_DEFAULTS
+        # and in the plans that do not set comfort_standard
         for b in self.buildings:
-            accis.modify_accis(
-                b, comf_stand=99, comf_mod=3, cat=80, hvac_mode=2, vent_ctrl=0,
-                cust_ast_m=coefficients['m'], cust_ast_n=coefficients['n'],
-                cust_ast_acst_offset=coefficients['ACSToffset'], cust_ast_ahst_offset=coefficients['AHSToffset'],
-                cust_ast_acst_aul=coefficients['ACSTaul'], cust_ast_acst_all=coefficients['ACSTall'],
-                cust_ast_ahst_aul=coefficients['AHSTaul'], cust_ast_ahst_all=coefficients['AHSTall'],
-            )
+            accis.modify_accis(b, comfort_standard=99, comfort_mode=3, category=80, hvac_mode=2, ventilation_control=0,
+                               **_CUSTOM_MODEL_DEFAULTS)
 

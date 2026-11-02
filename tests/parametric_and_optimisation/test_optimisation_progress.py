@@ -66,7 +66,7 @@ def test_format_seconds():
 
 def _lightweight_optimisation():
     from accim.parametric_and_optimisation.main import OptimisationSimulation
-    return OptimisationSimulation(buildings=None, epws=['A.epw'], parameters_type=None, bypass_addAccis=True)
+    return OptimisationSimulation(buildings=None, epws=['A.epw'], parameters_type=None, bypass_add_accis=True)
 
 
 def test_estimate_counts_the_extra_offspring_of_odd_populations(capsys):

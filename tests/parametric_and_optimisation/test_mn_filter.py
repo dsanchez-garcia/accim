@@ -90,16 +90,16 @@ def test_sampling_plan_is_filtered():
     sim = ParametricSimulation.__new__(ParametricSimulation)
     sim.mn_filter = MNFilter.from_data()
     sim.parameters_values_df = pd.DataFrame({
-        'CustAST_m': [0.31, 0.7, 0.0, 0.5],
-        'CustAST_n': [17.8, 22.5, 5.0, 12.0],
-        'CustAST_ASToffset': [2.0, 2.0, 2.0, 2.0],
+        'custom_slope': [0.31, 0.7, 0.0, 0.5],
+        'custom_intercept': [17.8, 22.5, 5.0, 12.0],
+        'custom_offset': [2.0, 2.0, 2.0, 2.0],
     })
     sim._apply_mn_filter_to_samples('test')
-    assert sim.parameters_values_df[['CustAST_m', 'CustAST_n']].values.tolist() == [[0.31, 17.8], [0.5, 12.0]]
+    assert sim.parameters_values_df[['custom_slope', 'custom_intercept']].values.tolist() == [[0.31, 17.8], [0.5, 12.0]]
     assert len(sim.mn_filter_excluded_df) == 2
     with pytest.raises(ValueError):
         sim._filter_plan_by_mn_filter(
-            pd.DataFrame({'CustAST_m': [0.7], 'CustAST_n': [22.5]}), context='test',
+            pd.DataFrame({'custom_slope': [0.7], 'custom_intercept': [22.5]}), context='test',
         )
 
 
@@ -213,9 +213,9 @@ def test_sample_inside_is_uniform_over_the_band():
 def _custom_model_session(m_range=(0.0, 0.7), n_range=(5.0, 22.5)):
     sim = ParametricSimulation.__new__(ParametricSimulation)
     sim.problem = Problem(inputs=[
-        Parameter(value_descriptors=RangeParameter(*m_range, name='CustAST_m')),
-        Parameter(value_descriptors=RangeParameter(*n_range, name='CustAST_n')),
-        Parameter(value_descriptors=RangeParameter(1.0, 5.0, name='CustAST_ASToffset')),
+        Parameter(value_descriptors=RangeParameter(*m_range, name='custom_slope')),
+        Parameter(value_descriptors=RangeParameter(*n_range, name='custom_intercept')),
+        Parameter(value_descriptors=RangeParameter(1.0, 5.0, name='custom_offset')),
     ], outputs=['out'])
     sim.descriptors_has_range = True
     return sim
@@ -227,9 +227,9 @@ def test_sampling_lhs_draws_inside_the_band():
     sim.sampling_lhs(num_samples=40)
     df = sim.parameters_values_df
     assert len(df) == 40 and len(sim.mn_filter_excluded_df) == 0
-    assert sim.mn_filter.contains(df['CustAST_m'], df['CustAST_n']).all()
+    assert sim.mn_filter.contains(df['custom_slope'], df['custom_intercept']).all()
     # The other parameters keep the Latin hypercube: one sample per stratum.
-    strata = np.floor((df['CustAST_ASToffset'].to_numpy() - 1.0) / 4.0 * 40).astype(int)
+    strata = np.floor((df['custom_offset'].to_numpy() - 1.0) / 4.0 * 40).astype(int)
     assert sorted(strata) == list(range(40))
     sim.sampling_lhs(num_samples=40, mn_filter_mode='exclude')
     assert len(sim.parameters_values_df) + len(sim.mn_filter_excluded_df) == 40

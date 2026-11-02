@@ -3,23 +3,23 @@ import os
 try:
     accis.AddAccis(
         script_type='vrf_mm',
-        output_keep_existing=False,
+        keep_existing_outputs=False,
         output_type='detailed',
-        output_freqs=['timestep', 'hourly'],
+        output_frequencies=['timestep', 'hourly'],
         energyplus_version='22.1',
-        temp_ctrl='temp',
-        comf_stand=[15],
-        cat=[80],
-        comf_mod=[3],
+        setpoint_type='temp',
+        comfort_standard=[15],
+        category=[80],
+        comfort_mode=[3],
         hvac_mode=[2],
-        vent_ctrl=[0],
-        vst_offset=[0],
-        min_ot_offset=[50],
+        ventilation_control=[0],
+        ventilation_setpoint_offset=[0],
+        min_outdoor_temp_offset=[50],
         max_wind_speed=[50],
-        ast_tol_steps=0.1,
-        ast_tol_start=0.1,
-        ast_tol_end_input=0.1,
-        confirm_gen=True
+        setpoint_tolerance_step=0.1,
+        setpoint_tolerance_start=0.1,
+        setpoint_tolerance_end=0.1,
+        confirm=True
     )
 except KeyError:
     print('\nkey error')

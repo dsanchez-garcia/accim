@@ -9,6 +9,7 @@ that gives the new name.
 """
 
 import functools
+import inspect
 import warnings
 from typing import Callable, Dict, Mapping, Optional
 
@@ -88,13 +89,20 @@ def deprecated_alias(
 def accepts_legacy_kwargs(mapping: Mapping[str, str]) -> Callable:
     """Decorator: the function also accepts the old names of its keyword arguments, with a DeprecationWarning.
 
-    :param mapping: The new name of each old keyword argument.
+    :param mapping: The new name of each old keyword argument. Only the names whose new names are parameters of the
+        function are used (unless it takes ``**kwargs``), so the same mapping can serve several functions.
     """
     def decorator(function: Callable) -> Callable:
+        parameters = inspect.signature(function).parameters
+        if any(p.kind is inspect.Parameter.VAR_KEYWORD for p in parameters.values()):
+            used = dict(mapping)
+        else:
+            used = {old: new for old, new in mapping.items() if new in parameters}
+
         @functools.wraps(function)
         def wrapper(*args, **kwargs):
-            if any(key in mapping for key in kwargs):
-                kwargs = rename_legacy_kwargs(kwargs, mapping, function.__name__)
+            if any(key in used for key in kwargs):
+                kwargs = rename_legacy_kwargs(kwargs, used, function.__name__)
             return function(*args, **kwargs)
         return wrapper
     return decorator

@@ -20,7 +20,7 @@ must be given explicitly (see below):
 - `05_test_analysis_mixin.py`: Tests for AnalysisMixin (Floor area, Hourly/Monthly DF, SA Morris, SA Sobol).
 - `06_test_data_loading.py`: Tests for data loading (CSV, Pickle, JSON recover).
 - `07_test_plotting_mixin.py`: Tests for PlottingMixin (Pareto front, MCDM best solutions).
-- `08_test_accim_predef_model.py`: Tests for accim predefined model (Init, Parametric, ComfStand 0 and 22 with the ComfMod of the baseline, the baseline with validated meters and a plan without ComfStand).
+- `08_test_accim_predef_model.py`: Tests for accim predefined model (Init, Parametric, `comfort_standard` 0 and 22 with the `comfort_mode` of the baseline, the baseline with validated meters and a plan without `comfort_standard`).
 - `09_test_integration_complete.py`: Tests for end-to-end workflow integration.
 - `10_test_outputs_preflight.py`: Tests for the discovery, selection and preflight of the outputs.
 - `11_test_compare_simulation_instances.py`: Tests for the comparison of simulation instances.

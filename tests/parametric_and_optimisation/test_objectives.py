@@ -118,8 +118,8 @@ def test_the_comfort_reducers_with_the_status_that_energyplus_reports(tmp_path):
     shutil.copy(SAMPLE_IDF, tmp_path / 'model.idf')
     building = get_building(str(tmp_path / 'model.idf'))
     accis.add_accis_to_idf(building, script_type='vrf_ac', supply_air_temp_input_method='temperature difference',
-                           output_type='simplified', output_freqs=['hourly'], temp_ctrl='temperature',
-                           verbose_mode=False)
+                           output_type='simplified', output_frequencies=['hourly'], setpoint_type='temperature',
+                           verbose=False)
     run_period = building.idfobjects['RunPeriod'][0]
     run_period.Begin_Month, run_period.Begin_Day_of_Month = 5, 10
     run_period.End_Month, run_period.End_Day_of_Month = 5, 16

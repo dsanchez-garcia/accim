@@ -38,9 +38,9 @@ EPW_BOTH = [EPW_SEV, EPW_MAD]
 
 # Parámetros con rango — 3 dimensiones para Sobol (mínimo razonable)
 ACCIS_PARAMS_RANGE = {
-    'CustAST_m':         (0.01, 0.99),
-    'CustAST_n':         (5.0,  23.0),
-    'CustAST_ASToffset': (1.5,   5.0),
+    'custom_slope':         (0.01, 0.99),
+    'custom_intercept':         (5.0,  23.0),
+    'custom_offset': (1.5,   5.0),
 }
 
 # ---------------------------------------------------------------------------
@@ -74,9 +74,9 @@ def build_range_sim():
         epws=EPW_BOTH,
         parameters_type='accim custom model',
         output_type='standard',
-        output_freqs=['hourly'],
-        ScriptType='vrf_mm',
-        verbosemode=False,
+        output_frequencies=['hourly'],
+        script_type='vrf_mm',
+        verbose=False,
     )
     sim.set_output_meters_to_idf(output_meters=['Heating:Electricity', 'Cooling:Electricity'])
     outputs_from_testsim = sim.discover_available_outputs(reduce_sim_time=True)
@@ -85,7 +85,7 @@ def build_range_sim():
         df_meters_ts['key_name'].isin(['Heating:Electricity', 'Cooling:Electricity'])
     ].drop_duplicates(subset=['key_name'])
     sim.set_output_readers(df_output_meter=df_meters_problem)
-    sim.set_parameters(accis_params_dict=ACCIS_PARAMS_RANGE, use_dflt_values=True)
+    sim.set_parameters(accis_params_dict=ACCIS_PARAMS_RANGE, use_default_values=True)
     sim.set_problem(minimize_outputs=[True, True])
     sim.set_building_floor_area(mode='all')
     sim.set_category_mapping(
@@ -187,7 +187,7 @@ assert not sim_factorial.parameters_values_df.empty, "sampling_full_factorial de
 for p in ACCIS_PARAMS_RANGE:
     assert p in sim_factorial.parameters_values_df.columns, f"Columna '{p}' no en parameters_values_df"
 
-print(f"  Valores únicos de CustAST_m: {sim_factorial.parameters_values_df['CustAST_m'].unique()}")
+print(f"  Valores únicos de custom_slope: {sim_factorial.parameters_values_df['custom_slope'].unique()}")
 
 sim_factorial.preview_category_mapping()
 

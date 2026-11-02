@@ -302,7 +302,7 @@ def test_set_pmv_input_parameters_reaches_people_of_a_zone_of_one_space():
                  _people('People Block1:Zone2', 'Block1:Zone2'))
 
     set_pmv_input_parameters(idf, air_velocity={'Space 1 People Block1:Zone1': 0.3}, work_efficiency=0.0,
-                             verbose_mode=False)
+                             verbose=False)
 
     zone1, zone2 = idf.idfobjects['PEOPLE']
     assert zone1.Air_Velocity_Schedule_Name == 'Sch_Vel_People_Block1_Zone1'
@@ -313,7 +313,7 @@ def test_set_pmv_input_parameters_reaches_people_of_a_zone_of_one_space():
 def _accim_model_of_two_spaces_in_zone_1():
     idf = _model(*TWO_SPACES_IN_ZONE_1, _people('People Block1:Zone1', 'Block1:Zone1'),
                  _people('People Block1:Zone2', 'Block1:Zone2'))
-    return AccimModel(idf, 'vrf_ac', 'temperature', verbose_mode=False)
+    return AccimModel(idf, 'vrf_ac', 'temperature', verbose=False)
 
 
 def test_accim_model_gives_the_occupancy_sensors():
@@ -342,7 +342,7 @@ def test_apmv_ems_of_a_zone_with_several_instances():
     idf = _model(*TWO_SPACES_IN_ZONE_1, _people('People Block1:Zone1', 'Block1:Zone1'),
                  _people('People Block1:Zone2', 'Block1:Zone2'))
 
-    apply_apmv_setpoints(idf, verbose_mode=False)
+    apply_apmv_setpoints(idf, verbose=False)
 
     sensors = {s.Name: (s.OutputVariable_or_OutputMeter_Index_Key_Name, s.OutputVariable_or_OutputMeter_Name)
                for s in idf.idfobjects['EnergyManagementSystem:Sensor']}

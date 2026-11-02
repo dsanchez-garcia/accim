@@ -46,10 +46,10 @@ class _DummyPlotSession(PlottingMixin):
                                 'building_type': building_type,
                                 'epw': epw_name,
                                 'city': city,
-                                'ComfStand': comf_stand,
-                                'HVACmode': hvac_mode,
+                                'comfort_standard': comf_stand,
+                                'hvac_mode': hvac_mode,
                                 'performance': 'high' if comf_stand <= 1 else 'low',
-                                'CAT': 80 + comf_stand,
+                                'category': 80 + comf_stand,
                                 'Heating:Electricity [J]': (
                                     12_000_000
                                     + 350_000 * comf_stand
@@ -70,7 +70,7 @@ class _DummyPlotSession(PlottingMixin):
 def test_plot_parametric_scatter_generates_png(tmp_path):
     sim = _DummyPlotSession()
     grid = sim.plot_parametric_scatter(
-        x='ComfStand',
+        x='comfort_standard',
         y='Heating:Electricity [J]',
         df_source='parametric',
         hue='epw',
@@ -87,7 +87,7 @@ def test_plot_parametric_scatter_generates_png(tmp_path):
 def test_plot_parametric_scatter_filename_template_with_mapping_placeholders(tmp_path):
     sim = _DummyPlotSession()
     grid = sim.plot_parametric_scatter(
-        x='ComfStand',
+        x='comfort_standard',
         y='Heating:Electricity [J]',
         df_source='parametric',
         out_dir=str(tmp_path),
@@ -108,7 +108,7 @@ def test_plot_parametric_scatter_filename_template_with_mapping_placeholders(tmp
 def test_plot_parametric_lines_generates_pngs(tmp_path):
     sim = _DummyPlotSession()
     saved = sim.plot_parametric_lines(
-        x='ComfStand',
+        x='comfort_standard',
         y_vars=['Heating:Electricity [J]', 'Cooling:Electricity [J]'],
         df_source='parametric',
         hue='epw',
@@ -127,7 +127,7 @@ def test_plot_parametric_lines_generates_pngs(tmp_path):
 def test_plot_parametric_lines_filename_template_with_placeholders(tmp_path):
     sim = _DummyPlotSession()
     saved = sim.plot_parametric_lines(
-        x='ComfStand',
+        x='comfort_standard',
         y_vars=['Heating:Electricity [J]'],
         df_source='parametric',
         out_dir=str(tmp_path),
@@ -150,7 +150,7 @@ def test_plot_parametric_lines_filename_template_duplicate_output_raises(tmp_pat
 
     with pytest.raises(ValueError, match='duplicate output path'):
         sim.plot_parametric_lines(
-            x='ComfStand',
+            x='comfort_standard',
             y_vars=['Heating:Electricity [J]', 'Cooling:Electricity [J]'],
             df_source='parametric',
             out_dir=str(tmp_path),
@@ -167,8 +167,8 @@ def test_plot_parametric_lines_filename_template_duplicate_output_raises(tmp_pat
 def test_plot_parametric_heatmap_generates_png(tmp_path):
     sim = _DummyPlotSession()
     path = sim.plot_parametric_heatmap(
-        x='ComfStand',
-        y='HVACmode',
+        x='comfort_standard',
+        y='hvac_mode',
         z='Heating:Electricity [J]',
         df_source='parametric',
         col='idf',
@@ -183,8 +183,8 @@ def test_plot_parametric_heatmap_generates_png(tmp_path):
 def test_plot_parametric_contour_generates_png(tmp_path):
     sim = _DummyPlotSession()
     path = sim.plot_parametric_contour(
-        x='ComfStand',
-        y='HVACmode',
+        x='comfort_standard',
+        y='hvac_mode',
         z='Cooling:Electricity [J]',
         df_source='parametric',
         col='idf',
@@ -200,7 +200,7 @@ def test_plot_parametric_distributions_violin_and_boxen(tmp_path):
     sim = _DummyPlotSession()
 
     violin_saved = sim.plot_parametric_distributions(
-        x='HVACmode',
+        x='hvac_mode',
         y_vars=['Heating:Electricity [J]'],
         kind='violin',
         df_source='parametric',
@@ -212,7 +212,7 @@ def test_plot_parametric_distributions_violin_and_boxen(tmp_path):
     assert os.path.exists(violin_saved['Heating:Electricity [J]'])
 
     boxen_saved = sim.plot_parametric_distributions(
-        x='HVACmode',
+        x='hvac_mode',
         y_vars=['Cooling:Electricity [J]'],
         kind='boxen',
         df_source='parametric',
@@ -268,7 +268,7 @@ def test_plot_parametric_density2d_generates_pngs(tmp_path):
 def test_plot_parametric_radar_generates_png_and_returns_df(tmp_path):
     sim = _DummyPlotSession()
     agg_df = sim.plot_parametric_radar(
-        metrics=['Heating:Electricity [J]', 'Cooling:Electricity [J]', 'ComfStand'],
+        metrics=['Heating:Electricity [J]', 'Cooling:Electricity [J]', 'comfort_standard'],
         group_by='epw',
         df_source='parametric',
         normalize_per_m2=True,
@@ -357,7 +357,7 @@ def test_plot_categorical_boxplots_without_hue_passes_no_palette_without_hue(tmp
             df_source='parametric',
             col='city',
             show_points=True,
-            highlight_dict={'HVACmode': [2]},
+            highlight_dict={'hvac_mode': [2]},
             out_dir=str(tmp_path),
         )
 
@@ -394,9 +394,9 @@ def _suptitle_gap(grid):
     ('method', 'kwargs'),
     [
         ('plot_categorical_boxplots', {'y_vars': ['Heating:Electricity [J]', 'Cooling:Electricity [J]'], 'hue': 'performance', 'show_points': False}),
-        ('plot_parametric_scatter', {'x': 'ComfStand', 'y': 'Heating:Electricity [J]', 'hue': 'performance'}),
-        ('plot_parametric_lines', {'x': 'ComfStand', 'y_vars': ['Heating:Electricity [J]'], 'hue': 'performance'}),
-        ('plot_parametric_distributions', {'x': 'HVACmode', 'y_vars': ['Heating:Electricity [J]']}),
+        ('plot_parametric_scatter', {'x': 'comfort_standard', 'y': 'Heating:Electricity [J]', 'hue': 'performance'}),
+        ('plot_parametric_lines', {'x': 'comfort_standard', 'y_vars': ['Heating:Electricity [J]'], 'hue': 'performance'}),
+        ('plot_parametric_distributions', {'x': 'hvac_mode', 'y_vars': ['Heating:Electricity [J]']}),
         ('plot_parametric_ecdf', {'x': 'Heating:Electricity [J]', 'hue': 'performance'}),
     ],
 )
@@ -418,7 +418,7 @@ def test_plot_categorical_boxplots_highlight_legend_keeps_subplots_right(tmp_pat
         y_vars=['Heating:Electricity [J]', 'Cooling:Electricity [J]'],
         col='city',
         hue='performance',
-        highlight_dict={'HVACmode': [2]},
+        highlight_dict={'hvac_mode': [2]},
         subplots_right=0.75,
         show_points=False,
         height=3,
@@ -437,10 +437,10 @@ def test_plot_methods_resolve_column_renamed_by_normalize_outputs(tmp_path):
     still reference the ORIGINAL column name must keep working thanks to
     `PlottingMixin._resolve_plot_axis_column`, instead of raising KeyError.
     """
-    sim = ParametricSimulation(buildings=None, epws=['Test.epw'], parameters_type=None, bypass_addAccis=True)
+    sim = ParametricSimulation(buildings=None, epws=['Test.epw'], parameters_type=None, bypass_add_accis=True)
     sim.building_floor_area = 100.0
     sim.outputs_param_simulation = pd.DataFrame({
-        'CustAST_ASToffset': [1.0, 2.0, 3.0, 4.0],
+        'custom_offset': [1.0, 2.0, 3.0, 4.0],
         'Electricity:HVAC': [10_000_000.0, 12_000_000.0, 9_000_000.0, 11_000_000.0],
         'epw': ['Present', 'Present', 'Future', 'Future'],
         'idf': ['bldg'] * 4,
@@ -462,7 +462,7 @@ def test_plot_methods_resolve_column_renamed_by_normalize_outputs(tmp_path):
     # Plotting methods called with the ORIGINAL (pre-normalization) column
     # name must resolve it automatically instead of raising KeyError.
     grid = sim.plot_parametric_scatter(
-        x='CustAST_ASToffset', y='Electricity:HVAC', df_source='parametric',
+        x='custom_offset', y='Electricity:HVAC', df_source='parametric',
         hue='epw', out_dir=str(tmp_path),
     )
     assert grid is not None

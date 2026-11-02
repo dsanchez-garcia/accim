@@ -65,36 +65,36 @@ class InputVariable:
 #: The inputs, in the order of the lines of SetInputData_<zone>. The first 12 are those of the program SetInputData
 #: of accim 0.x, in the same order; the others were in SetAST, ApplyCAT, SetAppLimits and SetVOFinputData.
 INPUT_VARIABLES = (
-    InputVariable('ComfStand', 'comf_stand', 1),
-    InputVariable('CAT', 'cat', 1),
-    InputVariable('ComfMod', 'comf_mod', 2),
+    InputVariable('ComfStand', 'comfort_standard', 1),
+    InputVariable('CAT', 'category', 1),
+    InputVariable('ComfMod', 'comfort_mode', 2),
     InputVariable('HVACmode', 'hvac_mode', 2),
-    InputVariable('VentCtrl', 'vent_ctrl', 0),
-    InputVariable('VSToffset', 'vst_offset', 0),
-    InputVariable('MinOToffset', 'min_ot_offset', 7),
+    InputVariable('VentCtrl', 'ventilation_control', 0),
+    InputVariable('VSToffset', 'ventilation_setpoint_offset', 0),
+    InputVariable('MinOToffset', 'min_outdoor_temp_offset', 7),
     InputVariable('MaxWindSpeed', 'max_wind_speed', 6),
-    InputVariable('ACSTtol', 'ast_tol', -0.25),
-    InputVariable('AHSTtol', 'ast_tol', 0.25),
-    InputVariable('CoolSeasonStart', 'cool_season_start', 121),
-    InputVariable('CoolSeasonEnd', 'cool_season_end', 274),
-    InputVariable('CATcoolOffset', 'cat_cool_offset', 0),
-    InputVariable('CATheatOffset', 'cat_heat_offset', 0),
-    InputVariable('SetpointAcc', 'setpoint_acc', 10000),
-    InputVariable('m', 'cust_ast_m', 0.31),
-    InputVariable('n', 'cust_ast_n', 17.8),
-    InputVariable('CustAST_ACSToffset', 'cust_ast_acst_offset', 3.5),
-    InputVariable('CustAST_AHSToffset', 'cust_ast_ahst_offset', -3.5),
-    InputVariable('CustAST_ACSTaul', 'cust_ast_acst_aul', 33.5),
-    InputVariable('CustAST_ACSTall', 'cust_ast_acst_all', 10),
-    InputVariable('CustAST_AHSTaul', 'cust_ast_ahst_aul', 33.5),
-    InputVariable('CustAST_AHSTall', 'cust_ast_ahst_all', 10),
-    InputVariable('MaxTempDiffVOF', 'max_temp_diff_vof', 6, mixed_mode_only=True),
-    InputVariable('MinTempDiffVOF', 'min_temp_diff_vof', 1, mixed_mode_only=True),
-    InputVariable('MultiplierVOF', 'multiplier_vof', 0.25, mixed_mode_only=True),
+    InputVariable('ACSTtol', 'setpoint_tolerance', -0.25),
+    InputVariable('AHSTtol', 'setpoint_tolerance', 0.25),
+    InputVariable('CoolSeasonStart', 'cooling_season_start', 121),
+    InputVariable('CoolSeasonEnd', 'cooling_season_end', 274),
+    InputVariable('CATcoolOffset', 'category_cooling_offset', 0),
+    InputVariable('CATheatOffset', 'category_heating_offset', 0),
+    InputVariable('SetpointAcc', 'setpoint_accuracy', 10000),
+    InputVariable('m', 'custom_slope', 0.31),
+    InputVariable('n', 'custom_intercept', 17.8),
+    InputVariable('CustAST_ACSToffset', 'custom_cooling_offset', 3.5),
+    InputVariable('CustAST_AHSToffset', 'custom_heating_offset', -3.5),
+    InputVariable('CustAST_ACSTaul', 'custom_cooling_upper_limit', 33.5),
+    InputVariable('CustAST_ACSTall', 'custom_cooling_lower_limit', 10),
+    InputVariable('CustAST_AHSTaul', 'custom_heating_upper_limit', 33.5),
+    InputVariable('CustAST_AHSTall', 'custom_heating_lower_limit', 10),
+    InputVariable('MaxTempDiffVOF', 'opening_factor_max_temp_diff', 6, mixed_mode_only=True),
+    InputVariable('MinTempDiffVOF', 'opening_factor_min_temp_diff', 1, mixed_mode_only=True),
+    InputVariable('MultiplierVOF', 'min_opening_factor', 0.25, mixed_mode_only=True),
 )
 
 #: The arguments that can be given for each zone (``zone_arguments`` of AddAccis and modify_accis). The tolerance of
-#: the setpoints is ``ast_tol``, as in modify_accis.
+#: the setpoints is ``setpoint_tolerance``, as in modify_accis.
 ZONE_ARGUMENTS = tuple(dict.fromkeys(item.argument for item in INPUT_VARIABLES))
 
 _SET_LINE = re.compile(r'^\s*set\s+([A-Za-z0-9_]+)\s*=\s*(.*?)\s*$', re.IGNORECASE)
@@ -104,9 +104,9 @@ def input_values(arguments: Mapping) -> Dict[str, Any]:
     """The values of the EMS variables set by some arguments of :func:`accim.sim.accis.modify_accis`.
 
     The arguments that are None or missing are left out. The tolerance of the cooling setpoint is the negative of
-    ``ast_tol``, and the dates of the cooling season can be 'dd/mm' dates.
+    ``setpoint_tolerance``, and the dates of the cooling season can be 'dd/mm' dates.
 
-    :param arguments: The arguments, ``{'comf_stand': 1, 'ast_tol': 0.1...}``.
+    :param arguments: The arguments, ``{'comfort_standard': 1, 'setpoint_tolerance': 0.1...}``.
     :return: The values, ``{'ComfStand': 1, 'ACSTtol': -0.1, 'AHSTtol': 0.1...}``.
     """
     values = {}
@@ -116,7 +116,7 @@ def input_values(arguments: Mapping) -> Dict[str, Any]:
             continue
         if item.variable == 'ACSTtol':
             value = -value
-        elif item.argument in ('cool_season_start', 'cool_season_end'):
+        elif item.argument in ('cooling_season_start', 'cooling_season_end'):
             value = to_day_of_year(value, item.argument)
         values[item.variable] = value
     return values
@@ -187,7 +187,7 @@ def check_zone_arguments(zone_arguments: Optional[Mapping]) -> Dict[Any, Dict[st
     """
     if zone_arguments is None:
         return {}
-    example = "{'Block1:Zone1': {'comf_stand': 2, 'cat': 80, 'comf_mod': 3}}"
+    example = "{'Block1:Zone1': {'comfort_standard': 2, 'category': 80, 'comfort_mode': 3}}"
     if not isinstance(zone_arguments, Mapping):
         raise ValueError(f'zone_arguments must be a dictionary with the arguments of each zone, such as {example}, '
                          f'not {zone_arguments!r}.')
@@ -205,8 +205,8 @@ def check_zone_arguments(zone_arguments: Optional[Mapping]) -> Dict[Any, Dict[st
             if value is None or isinstance(value, (list, tuple, set, Mapping)):
                 raise ValueError(f'The argument {name!r} of the zone {zone!r} in zone_arguments must be one value '
                                  f'(a number, or a date for the cooling season), not {value!r}.')
-            if name == 'setpoint_acc' and isinstance(value, (int, float)) and value < 0:
-                raise ValueError(f'The value for setpoint_acc cannot be less than 0 (zone {zone!r}).')
+            if name == 'setpoint_accuracy' and isinstance(value, (int, float)) and value < 0:
+                raise ValueError(f'The value for setpoint_accuracy cannot be less than 0 (zone {zone!r}).')
         checked[zone] = dict(arguments)
     return checked
 

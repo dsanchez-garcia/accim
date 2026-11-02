@@ -43,9 +43,9 @@ EPW_MAD = 'madrid_2024.epw'
 EPW_BOTH = [EPW_SEV, EPW_MAD]
 
 ACCIS_PARAMS = {
-    'CustAST_m':         (0.01, 0.99),
-    'CustAST_n':         (5.0,  23.0),
-    'CustAST_ASToffset': (1.5,   5.0),
+    'custom_slope':         (0.01, 0.99),
+    'custom_intercept':         (5.0,  23.0),
+    'custom_offset': (1.5,   5.0),
 }
 
 # ---------------------------------------------------------------------------
@@ -72,9 +72,9 @@ optim = OptimisationSimulation(
     epws=EPW_BOTH,
     parameters_type='accim custom model',
     output_type='standard',
-    output_freqs=['hourly'],
-    ScriptType='vrf_mm',
-    verbosemode=False,
+    output_frequencies=['hourly'],
+    script_type='vrf_mm',
+    verbose=False,
 )
 
 # ---------------------------------------------------------------------------
@@ -93,7 +93,7 @@ optim.set_output_readers(df_output_meter=df_meters_problem)
 # 4. Parámetros y problema
 # ---------------------------------------------------------------------------
 print("\n=== [4] Parámetros y set_problem ===")
-optim.set_parameters(accis_params_dict=ACCIS_PARAMS, use_dflt_values=True)
+optim.set_parameters(accis_params_dict=ACCIS_PARAMS, use_default_values=True)
 optim.set_problem(minimize_outputs=[True, True])
 
 # ---------------------------------------------------------------------------
@@ -383,16 +383,16 @@ optim2 = OptimisationSimulation(
     epws=[EPW_SEV],
     parameters_type='accim custom model',
     output_type='standard',
-    output_freqs=['hourly'],
-    ScriptType='vrf_mm',
-    verbosemode=False,
+    output_frequencies=['hourly'],
+    script_type='vrf_mm',
+    verbose=False,
 )
 optim2.set_output_meters_to_idf(output_meters=['Heating:Electricity', 'Cooling:Electricity'])
 outputs_from_testsim = optim2.discover_available_outputs(reduce_sim_time=True)
 df_mt2 = outputs_from_testsim['meters']
 df_mt2 = df_mt2[df_mt2['key_name'].isin(['Heating:Electricity', 'Cooling:Electricity'])].drop_duplicates(subset=['key_name'])
 optim2.set_output_readers(df_output_meter=df_mt2)
-optim2.set_parameters(accis_params_dict=ACCIS_PARAMS, use_dflt_values=True)
+optim2.set_parameters(accis_params_dict=ACCIS_PARAMS, use_default_values=True)
 optim2.set_problem(minimize_outputs=[True, True])
 optim2.run_optimisation(
     epws=[EPW_SEV],
@@ -426,16 +426,16 @@ optim3 = OptimisationSimulation(
     epws=[EPW_MAD],
     parameters_type='accim custom model',
     output_type='standard',
-    output_freqs=['hourly'],
-    ScriptType='vrf_mm',
-    verbosemode=False,
+    output_frequencies=['hourly'],
+    script_type='vrf_mm',
+    verbose=False,
 )
 optim3.set_output_meters_to_idf(output_meters=['Heating:Electricity', 'Cooling:Electricity'])
 outputs_from_testsim = optim3.discover_available_outputs(reduce_sim_time=True)
 df_mt3 = outputs_from_testsim['meters']
 df_mt3 = df_mt3[df_mt3['key_name'].isin(['Heating:Electricity', 'Cooling:Electricity'])].drop_duplicates(subset=['key_name'])
 optim3.set_output_readers(df_output_meter=df_mt3)
-optim3.set_parameters(accis_params_dict=ACCIS_PARAMS, use_dflt_values=True)
+optim3.set_parameters(accis_params_dict=ACCIS_PARAMS, use_default_values=True)
 optim3.set_problem(minimize_outputs=[True, True])
 optim3.run_optimisation(
     epws=[EPW_MAD],

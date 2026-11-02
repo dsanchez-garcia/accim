@@ -318,7 +318,7 @@ def test_excluded_zone_whose_name_is_part_of_the_name_of_another_zone(tmp_path, 
 def test_totals_of_the_hours_add_up_only_the_comfortable_hours_of_the_zones(tmp_path, monkeypatch):
     # Found on 2026-11-01: the block and building totals of 'Comfortable Hours_No Applicability' also added up the
     # occupied comfortable hours of the zones ('Occupied Comfortable Hours_No Applicability_<zone>', whose name
-    # contains it), and the totals of the outputs that make_averages averages also added up their building averages
+    # contains it), and the totals of the outputs that add_building_averages averages also added up their building averages
     extra = {}
     for suffix in DESIGNBUILDER['ems_suffixes']:
         extra[f'EMS:Occupied Comfortable Hours_No Applicability_{suffix} [H](Hourly)'] = [1.0, 1.0]

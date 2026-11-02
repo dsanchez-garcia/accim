@@ -1,10 +1,11 @@
 """Tests for the default values of accim.sim.apmv.apply_apmv_setpoints (accim.sim.apmv_setpoints in accim 0.x).
 
-Before, the defaults were pmv_cooling_sp=-0.5 and pmv_heating_sp=0.5, the opposite of the
+Before, the defaults were pmv_cooling_sp=-0.5 and pmv_heating_sp=0.5 (the names of pmv_cooling_setpoint and
+pmv_heating_setpoint in accim 0.x), the opposite of the
 docstring and of the defaults for missing dictionary keys (dflt_for_pmv_cooling_sp=0.5 and
 dflt_for_pmv_heating_sp=-0.5). Since the EMS takes them as aPMV setpoints, both PMV setpoints of
 the thermostat ended up at 0. The cooling season went from day 120 to day 210 (30 April to
-29 July); now it goes from 1 May to 1 October, as cool_season_start and cool_season_end in AddAccis.
+29 July); now it goes from 1 May to 1 October, as cooling_season_start and cooling_season_end in AddAccis.
 """
 import inspect
 import shutil
@@ -23,13 +24,13 @@ IDD_25_2 = Path('C:/EnergyPlusV25-2-0/Energy+.idd')
 def test_default_setpoints_and_cooling_season():
     params = inspect.signature(apply_apmv_setpoints).parameters
 
-    assert params['pmv_cooling_sp'].default == 0.5
-    assert params['pmv_heating_sp'].default == -0.5
+    assert params['pmv_cooling_setpoint'].default == 0.5
+    assert params['pmv_heating_setpoint'].default == -0.5
     assert params['cooling_season_start'].default == 121
     assert params['cooling_season_end'].default == 274
     # The defaults for the keys missing in dictionaries agree with the defaults for single values.
-    assert params['dflt_for_pmv_cooling_sp'].default == params['pmv_cooling_sp'].default
-    assert params['dflt_for_pmv_heating_sp'].default == params['pmv_heating_sp'].default
+    assert params['default_pmv_cooling_setpoint'].default == params['pmv_cooling_setpoint'].default
+    assert params['default_pmv_heating_setpoint'].default == params['pmv_heating_setpoint'].default
 
 
 @pytest.mark.skipif(not (IDD_25_2.exists() and SAMPLE_IDF.exists()),
@@ -40,7 +41,7 @@ def test_default_values_reach_the_ems_programs(tmp_path):
     shutil.copy(SAMPLE_IDF, tmp_path / 'model.idf')
     building = get_building(str(tmp_path / 'model.idf'))
 
-    apply_apmv_setpoints(building=building, verbose_mode=False)
+    apply_apmv_setpoints(building=building, verbose=False)
 
     programs = {p.Name: p for p in building.idfobjects['EnergyManagementSystem:Program']}
     season = programs['set_cooling_season_input_data']

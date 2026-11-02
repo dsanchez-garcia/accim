@@ -30,7 +30,7 @@ explains each step. Usage Examples::
     parametric.apply_outputs_preflight(df_meters_sel=meters, clean_mode='all')
     meters['func'] = [sum_results] * len(meters)
     parametric.set_output_readers(df_output_meter=meters)
-    parametric.set_parameters(accis_params_dict={'CustAST_m': (0.2, 0.6), 'CustAST_n': (15, 21)})
+    parametric.set_parameters(accis_params_dict={'custom_slope': (0.2, 0.6), 'custom_intercept': (15, 21)})
     parametric.set_problem()
     parametric.sampling_lhs(num_samples=10)
     results = parametric.run_parametric_simulation(out_dir='param_results', processes=2)
@@ -45,7 +45,7 @@ explains each step. Usage Examples::
         parameters_type='accim custom model',
     )
     ...
-    optim.set_parameters(accis_params_dict={'CustAST_m': (0.2, 0.6), 'CustAST_ASToffset': (2, 4)})
+    optim.set_parameters(accis_params_dict={'custom_slope': (0.2, 0.6), 'custom_offset': (2, 4)})
     optim.set_problem(minimize_outputs=[True, True])
     results = optim.run_optimisation(algorithm='NSGAII', population_size=20, evaluations=60)
 

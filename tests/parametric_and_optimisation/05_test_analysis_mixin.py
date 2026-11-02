@@ -39,7 +39,7 @@ def test_get_hourly_df():
         parameters_type='accim predefined model'
     )
 
-    sim.set_parameters(accis_params_dict={'ComfMod': [3]})
+    sim.set_parameters(accis_params_dict={'comfort_mode': [3]})
     ts.set_meter_readers(sim)
     sim.set_problem()
     sim.sampling_full_set()
@@ -67,7 +67,7 @@ def test_get_monthly_df():
         parameters_type='accim predefined model'
     )
 
-    sim.set_parameters(accis_params_dict={'ComfMod': [3]})
+    sim.set_parameters(accis_params_dict={'comfort_mode': [3]})
     ts.set_meter_readers(sim)
     sim.set_problem()
     sim.sampling_full_set()

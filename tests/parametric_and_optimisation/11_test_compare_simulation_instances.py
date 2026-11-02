@@ -25,12 +25,12 @@ class DummySimulation:
 def _make_parametric_df() -> pd.DataFrame:
     df = pd.DataFrame(
         {
-            'ComfStand': [0, 1, 2],
+            'comfort_standard': [0, 1, 2],
             'epw': ['Seville.epw', 'Seville.epw', 'Seville.epw'],
             'HVAC energy': [10.0, 12.5, 15.0],
         }
     )
-    df.attrs['parameters_names'] = ['ComfStand', 'epw']
+    df.attrs['parameters_names'] = ['comfort_standard', 'epw']
     df.attrs['outputs_names'] = ['HVAC energy']
     return df
 
@@ -55,7 +55,7 @@ def test_compare_simulation_instances_equal_from_pickle(tmp_path):
 def test_compare_simulation_instances_detects_output_changes(tmp_path):
     left = _make_parametric_df()
     right = _make_parametric_df()
-    right.loc[right['ComfStand'] == 1, 'HVAC energy'] = 25.0
+    right.loc[right['comfort_standard'] == 1, 'HVAC energy'] = 25.0
 
     left_path = tmp_path / 'left_out_diff.pkl'
     right_path = tmp_path / 'right_out_diff.pkl'
@@ -72,7 +72,7 @@ def test_compare_simulation_instances_detects_output_changes(tmp_path):
 def test_compare_simulation_instances_detects_input_set_changes(tmp_path):
     left = _make_parametric_df()
     right = _make_parametric_df()
-    right.loc[right['ComfStand'] == 2, 'ComfStand'] = 3
+    right.loc[right['comfort_standard'] == 2, 'comfort_standard'] = 3
 
     left_path = tmp_path / 'left_input_diff.pkl'
     right_path = tmp_path / 'right_input_diff.pkl'
@@ -106,7 +106,7 @@ def test_compare_latest_pickles_in_folders_uses_newest_pickle(tmp_path):
 
     df_base = _make_parametric_df()
     df_old = _make_parametric_df()
-    df_old.loc[df_old['ComfStand'] == 1, 'HVAC energy'] = 999.0
+    df_old.loc[df_old['comfort_standard'] == 1, 'HVAC energy'] = 999.0
 
     left_old = left_dir / 'old_left.pkl'
     left_new = left_dir / 'new_left.pkl'
@@ -135,7 +135,7 @@ def test_compare_multiple_pickles_with_reference_by_path(tmp_path):
     df_ref = _make_parametric_df()
     df_equal = _make_parametric_df()
     df_diff = _make_parametric_df()
-    df_diff.loc[df_diff['ComfStand'] == 2, 'HVAC energy'] = -1.0
+    df_diff.loc[df_diff['comfort_standard'] == 2, 'HVAC energy'] = -1.0
 
     ref_path = tmp_path / 'ref.pkl'
     equal_path = tmp_path / 'equal.pkl'
@@ -165,7 +165,7 @@ def test_compare_multiple_pickles_with_reference_by_index_from_directory(tmp_pat
     df_ref = _make_parametric_df()
     df_equal = _make_parametric_df()
     df_diff = _make_parametric_df()
-    df_diff.loc[df_diff['ComfStand'] == 0, 'HVAC energy'] = 123.0
+    df_diff.loc[df_diff['comfort_standard'] == 0, 'HVAC energy'] = 123.0
 
     ref_path = tmp_path / 'a_ref.pkl'
     equal_path = tmp_path / 'b_equal.pkl'
@@ -198,7 +198,7 @@ def test_compare_multiple_pickles_with_reference_from_mixed_sources(tmp_path):
     df_ref = _make_parametric_df()
     df_equal = _make_parametric_df()
     df_diff = _make_parametric_df()
-    df_diff.loc[df_diff['ComfStand'] == 1, 'HVAC energy'] = 777.0
+    df_diff.loc[df_diff['comfort_standard'] == 1, 'HVAC energy'] = 777.0
 
     ref_path = source_a / 'ref.pkl'
     equal_path = source_b / 'equal.pkl'
@@ -244,8 +244,8 @@ def test_compare_simulation_instances_relaxed_mode_with_reference_matching():
     left = _make_parametric_df().copy()
     right = _make_parametric_df().copy()
 
-    left['ComfStand'] = [0, 1, 2]
-    right['ComfStand'] = [10, 11, 12]
+    left['comfort_standard'] = [0, 1, 2]
+    right['comfort_standard'] = [10, 11, 12]
     # Keep outputs equivalent so relaxed/reference mode can match behaviour.
     left['HVAC energy'] = [100.0, 200.0, 300.0]
     right['HVAC energy'] = [100.0, 200.0, 300.0]
@@ -256,7 +256,7 @@ def test_compare_simulation_instances_relaxed_mode_with_reference_matching():
         compare_attrs=False,
         equal_mode='strict',
         inputs_mismatch_strategy='auto',
-        reference_columns=['ComfStand'],
+        reference_columns=['comfort_standard'],
     )
     report_relaxed = compare_simulation_instances(
         left,
@@ -264,7 +264,7 @@ def test_compare_simulation_instances_relaxed_mode_with_reference_matching():
         compare_attrs=False,
         equal_mode='relaxed',
         inputs_mismatch_strategy='auto',
-        reference_columns=['ComfStand'],
+        reference_columns=['comfort_standard'],
     )
 
     assert report_strict['equal'] is False
@@ -277,7 +277,7 @@ def test_compare_simulation_instances_relaxed_mode_with_reference_matching():
 def test_compare_multiple_pickles_with_reference_relaxed_mode(tmp_path):
     df_ref = _make_parametric_df().copy()
     df_shifted = _make_parametric_df().copy()
-    df_shifted['ComfStand'] = [10, 11, 12]
+    df_shifted['comfort_standard'] = [10, 11, 12]
 
     ref_path = tmp_path / 'ref_relaxed.pkl'
     shifted_path = tmp_path / 'shifted_relaxed.pkl'
@@ -295,7 +295,7 @@ def test_compare_multiple_pickles_with_reference_relaxed_mode(tmp_path):
         reference='ref_relaxed.pkl',
         equal_mode='relaxed',
         inputs_mismatch_strategy='auto',
-        reference_columns=['ComfStand'],
+        reference_columns=['comfort_standard'],
         compare_attrs=False,
     )
 
@@ -314,9 +314,9 @@ def test_comparison_session_stores_attributes_and_history(tmp_path):
 
     left = _make_parametric_df().copy()
     right = _make_parametric_df().copy()
-    right['ComfStand'] = [10, 11, 12]
+    right['comfort_standard'] = [10, 11, 12]
 
-    report = session.compare(left=left, right=right, reference_columns=['ComfStand'])
+    report = session.compare(left=left, right=right, reference_columns=['comfort_standard'])
 
     assert isinstance(report, dict)
     assert session.last_operation == 'compare'

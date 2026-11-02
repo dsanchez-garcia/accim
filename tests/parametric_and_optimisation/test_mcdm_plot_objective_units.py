@@ -34,7 +34,7 @@ class _DummyProblem:
 
 
 def _optimisation_with_energy_and_temperature_objectives():
-    sim = OptimisationSimulation(buildings=None, epws=['Seville.epw'], parameters_type=None, bypass_addAccis=True)
+    sim = OptimisationSimulation(buildings=None, epws=['Seville.epw'], parameters_type=None, bypass_add_accis=True)
     sim.last_run_type = 'optimisation'
     sim.building_floor_area = 100.0
     sim.problem = _DummyProblem(inputs=['x'], outputs=['Electricity:HVAC', TEMPERATURE])

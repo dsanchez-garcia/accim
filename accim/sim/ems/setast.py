@@ -59,21 +59,21 @@ _CHUNK_SIZE = 3
 _SETPOINT = re.compile(r'^set (ACST|AHST) = ', re.IGNORECASE)
 
 
-def _own_lines(comf_stand: int, comf_mod: Number) -> Tuple[str, ...]:
-    return SETPOINT_LINES.get((comf_stand, comf_mod), SETPOINT_LINES.get((comf_stand, None), ()))
+def _own_lines(comfort_standard: int, comfort_mode: Number) -> Tuple[str, ...]:
+    return SETPOINT_LINES.get((comfort_standard, comfort_mode), SETPOINT_LINES.get((comfort_standard, None), ()))
 
 
-def get_setpoint_lines(comf_stand: int, comf_mod: Number) -> List[str]:
+def get_setpoint_lines(comfort_standard: int, comfort_mode: Number) -> List[str]:
     """The Erl lines that set ACST and AHST for a comfort standard and a comfort mode, with the rounding."""
-    return list(_own_lines(comf_stand, comf_mod)) + list(ROUNDING)
+    return list(_own_lines(comfort_standard, comfort_mode)) + list(ROUNDING)
 
 
-def has_setpoints(comf_stand: int, comf_mod: Number) -> bool:
+def has_setpoints(comfort_standard: int, comfort_mode: Number) -> bool:
     """True if the comfort standard defines both setpoints for the comfort mode.
 
     Without them, EnergyPlus stops at the first timestep ('ACST' used in an expression before it is set).
     """
-    found = {match.group(1).upper() for line in _own_lines(comf_stand, comf_mod) if (match := _SETPOINT.match(line))}
+    found = {match.group(1).upper() for line in _own_lines(comfort_standard, comfort_mode) if (match := _SETPOINT.match(line))}
     return found == {'ACST', 'AHST'}
 
 
@@ -100,51 +100,51 @@ def master_program_lines() -> List[str]:
         'endif',
         'endif',
     ]
-    for comf_stand, comf_mods in MODULAR_COMFORT_MODES.items():
-        lines.append(f'if (ComfStand == {comf_stand})')
-        lines.extend(f'run SetAST_CS{comf_stand}_{n}' for n in range(len(_chunks(comf_mods))))
+    for comfort_standard, comfort_modes in MODULAR_COMFORT_MODES.items():
+        lines.append(f'if (ComfStand == {comfort_standard})')
+        lines.extend(f'run SetAST_CS{comfort_standard}_{n}' for n in range(len(_chunks(comfort_modes))))
         lines.append('endif')
     return lines
 
 
-def _subprogram_lines(comf_stand: int, chunk: int, comf_mods: Sequence[Number]) -> List[str]:
-    name = f'SetAST_CS{comf_stand}_{chunk}'
-    if not depends_on_comfort_mode(comf_stand):
+def _subprogram_lines(comfort_standard: int, chunk: int, comfort_modes: Sequence[Number]) -> List[str]:
+    name = f'SetAST_CS{comfort_standard}_{chunk}'
+    if not depends_on_comfort_mode(comfort_standard):
         # The static standards (ESP CTE, INT ISO7730) set the same setpoints whatever ComfMod is, so they also work
         # with the ComfMod of the zone when it is not 0, as in the models of the parametric module
         return [
             f'! {name}',
-            f'! SetAST subprogram for ComfStand == {comf_stand}, Chunk {chunk}',
+            f'! SetAST subprogram for ComfStand == {comfort_standard}, Chunk {chunk}',
             '! The setpoints of this ComfStand do not depend on ComfMod',
-            *get_setpoint_lines(comf_stand, comf_mods[0]),
+            *get_setpoint_lines(comfort_standard, comfort_modes[0]),
         ]
     lines = [
         f'! {name}',
-        f'! SetAST subprogram for ComfStand == {comf_stand}, Chunk {chunk}',
+        f'! SetAST subprogram for ComfStand == {comfort_standard}, Chunk {chunk}',
         '! ComfMod is resolved internally via if/elseif blocks',
     ]
-    for n, comf_mod in enumerate(comf_mods):
+    for n, comfort_mode in enumerate(comfort_modes):
         keyword = 'if' if n == 0 else 'elseif'
-        text = str(int(comf_mod)) if comf_mod == int(comf_mod) else str(comf_mod)
+        text = str(int(comfort_mode)) if comfort_mode == int(comfort_mode) else str(comfort_mode)
         lines.append(f'{keyword} (ComfMod == {text})')
-        lines.extend(get_setpoint_lines(comf_stand, comf_mod))
-    if comf_mods:
+        lines.extend(get_setpoint_lines(comfort_standard, comfort_mode))
+    if comfort_modes:
         lines.append('endif')
     return lines
 
 
-def depends_on_comfort_mode(comf_stand: int) -> bool:
+def depends_on_comfort_mode(comfort_standard: int) -> bool:
     """False for the comfort standards whose setpoints are the same in every comfort mode (ESP CTE, INT ISO7730)."""
-    return [mode for stand, mode in SETPOINT_LINES if stand == comf_stand] != [None]
+    return [mode for stand, mode in SETPOINT_LINES if stand == comfort_standard] != [None]
 
 
 def subprograms(comf_stands: Optional[Iterable[int]] = None) -> Dict[str, List[str]]:
     """Name and lines of each subprogram ``SetAST_CS<ComfStand>_<chunk>`` (of all the comfort standards, by default)."""
     selected = MODULAR_COMFORT_MODES if comf_stands is None else set(comf_stands)
     programs = {}
-    for comf_stand, comf_mods in MODULAR_COMFORT_MODES.items():
-        if comf_stand not in selected:
+    for comfort_standard, comfort_modes in MODULAR_COMFORT_MODES.items():
+        if comfort_standard not in selected:
             continue
-        for chunk, chunk_mods in enumerate(_chunks(comf_mods)):
-            programs[f'SetAST_CS{comf_stand}_{chunk}'] = _subprogram_lines(comf_stand, chunk, chunk_mods)
+        for chunk, chunk_mods in enumerate(_chunks(comfort_modes)):
+            programs[f'SetAST_CS{comfort_standard}_{chunk}'] = _subprogram_lines(comfort_standard, chunk, chunk_mods)
     return programs

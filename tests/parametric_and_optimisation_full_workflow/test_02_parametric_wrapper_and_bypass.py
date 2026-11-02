@@ -1,9 +1,9 @@
 """
-Test 02 — AccimPredefModelsParamSim + bypass_addAccis + parameters_type=None
+Test 02 — AccimPredefModelsParamSim + bypass_add_accis + parameters_type=None
 =============================================================================
 Clases:
   - AccimPredefModelsParamSim: wrapper de conveniencia
-  - ParametricSimulation(bypass_addAccis=True): reutilizar IDF ya modificado
+  - ParametricSimulation(bypass_add_accis=True): reutilizar IDF ya modificado
   - ParametricSimulation(parameters_type=None): simulación sin addAccis
 Métodos cubiertos:
   AccimPredefModelsParamSim.__init__, set_parameters (opciones predefinidas),
@@ -12,7 +12,7 @@ Métodos cubiertos:
   set_building_floor_area(mode='custom'), set_building_floor_area(mode='list'),
   run_parametric_simulation, get_hourly_df, get_monthly_df,
   plot_categorical_boxplots(sharey=False, show_points=False),
-  ParametricSimulation(bypass_addAccis=True) — flujo completo
+  ParametricSimulation(bypass_add_accis=True) — flujo completo
 IDFs: SF_Detached_B_min_North.idf (principal) + SF_Detached_D_min_North.idf (bypass)
 EPWs: seville_2024, madrid_2024 (sólo 2 para rapidez)
 """
@@ -64,12 +64,12 @@ wrapper_sim = AccimPredefModelsParamSim(
     buildings=[building_b],
     epws=[EPW_SEV, EPW_MAD],
     output_type='simplified',
-    output_freqs=['hourly'],
-    ScriptType='vrf_mm',
+    output_frequencies=['hourly'],
+    script_type='vrf_mm',
 )
 
 # Meters del IDF (el wrapper ya aplicó addAccis), validados con las salidas disponibles (.rdd/.mdd) de una
-# simulación de prueba del modelo base del wrapper (el modelo custom, ComfStand 99, con los coeficientes por
+# simulación de prueba del modelo base del wrapper (el modelo custom, comfort_standard 99, con los coeficientes por
 # defecto de 'accim custom model'). Con output_type='simplified' el modelo no informa todavía de estos meters, así
 # que la validación usa los .rdd/.mdd y no los resultados de la simulación de prueba
 wrapper_sim.discover_available_outputs(prefer='rdd_mdd')
@@ -81,9 +81,9 @@ df_meters_problem = pd.DataFrame({
 wrapper_sim.set_output_readers(df_output_meter=df_meters_problem)
 
 # Parámetros
-# EN16798 cat. I + ASHRAE55 80 % (ComfMod 3 del wrapper); el plan descarta cada norma con la categoría de la otra.
-# ESP CTE (ComfStand 0) no entraría: sampling_full_set la descarta cuando el plan tiene CAT (no depende de ella).
-wrapper_sim.set_parameters(accis_params_dict={'ComfStand': [1, 2], 'CAT': [1, 80]})
+# EN16798 cat. I + ASHRAE55 80 % (comfort_mode 3 del wrapper); el plan descarta cada norma con la categoría de la otra.
+# ESP CTE (comfort_standard 0) no entraría: sampling_full_set la descarta cuando el plan tiene category (no depende de ella).
+wrapper_sim.set_parameters(accis_params_dict={'comfort_standard': [1, 2], 'category': [1, 80]})
 wrapper_sim.sampling_full_set()
 wrapper_sim.set_problem()
 
@@ -123,9 +123,9 @@ wrapper_sim.plot_categorical_boxplots(
 )
 
 # ---------------------------------------------------------------------------
-# PARTE B — ParametricSimulation(bypass_addAccis=True)
+# PARTE B — ParametricSimulation(bypass_add_accis=True)
 # ---------------------------------------------------------------------------
-print("\n=== PARTE B: bypass_addAccis=True ===")
+print("\n=== PARTE B: bypass_add_accis=True ===")
 
 # Aplicar addAccis manualmente al IDF_D antes de pasar a ParametricSimulation (eppy lee todos los modelos de un
 # proceso con el IDD del primero, así que este también es de EnergyPlus 9.6)
@@ -142,10 +142,10 @@ accis.add_accis_to_idf(
     building_bypass,
     script_type='vrf_mm',
     output_type='simplified',
-    output_freqs=['hourly'],
-    temp_ctrl='temperature',
+    output_frequencies=['hourly'],
+    setpoint_type='temperature',
     supply_air_temp_input_method='temperature difference',
-    verbose_mode=False,
+    verbose=False,
 )
 
 bypass_sim = ParametricSimulation(
@@ -153,8 +153,8 @@ bypass_sim = ParametricSimulation(
     epws=[EPW_SEV, EPW_MAD],
     parameters_type='accim predefined model',
     output_type='simplified',
-    output_freqs=['hourly'],
-    bypass_addAccis=True,   # <-- NO re-aplica addAccis
+    output_frequencies=['hourly'],
+    bypass_add_accis=True,   # <-- NO re-aplica addAccis
 )
 
 bypass_sim.set_output_meters_to_idf(output_meters=['Heating:Electricity', 'Cooling:Electricity'])
@@ -166,7 +166,7 @@ df_meters_bp = df_meters_bp[
 bypass_sim.set_output_readers(df_output_meter=df_meters_bp)
 
 # Categorías de EN16798 (la norma por defecto del modelo)
-bypass_sim.set_parameters(accis_params_dict={'CAT': [1, 2]})
+bypass_sim.set_parameters(accis_params_dict={'category': [1, 2]})
 bypass_sim.sampling_full_set()
 bypass_sim.set_problem()
 
@@ -214,7 +214,7 @@ none_sim = ParametricSimulation(
     buildings=[building_none],
     epws=[EPW_SEV, EPW_MAD],
     parameters_type=None,   # sin addAccis
-    output_freqs=['hourly'],
+    output_frequencies=['hourly'],
 )
 
 # Añadir meters estándar directamente

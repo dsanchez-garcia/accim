@@ -57,9 +57,9 @@ def build_custom_sim(out_freqs=None):
         epws=EPW_ALL_3,
         parameters_type='accim custom model',
         output_type='standard',
-        output_freqs=out_freqs,
-        ScriptType='vrf_mm',
-        verbosemode=False,
+        output_frequencies=out_freqs,
+        script_type='vrf_mm',
+        verbose=False,
     )
     sim.set_output_meters_to_idf(output_meters=['Heating:Electricity', 'Cooling:Electricity'])
     outputs_from_testsim = sim.discover_available_outputs(reduce_sim_time=True)
@@ -86,13 +86,13 @@ sim_morris = build_custom_sim(out_freqs=['hourly'])
 # Parámetros custom con rangos (tuple) — necesarios para Morris y LHS
 sim_morris.set_parameters(
     accis_params_dict={
-        'CustAST_m':         (0.01, 0.99),
-        'CustAST_n':         (5.0,  23.0),
-        'CustAST_ASToffset': (1.5,   5.0),
-        'CustAST_ASTall':    (8.0,  16.0),
-        'CustAST_ASTaul':    (28.0, 38.0),
+        'custom_slope':         (0.01, 0.99),
+        'custom_intercept':         (5.0,  23.0),
+        'custom_offset': (1.5,   5.0),
+        'custom_lower_limit':    (8.0,  16.0),
+        'custom_upper_limit':    (28.0, 38.0),
     },
-    use_dflt_values=True,
+    use_default_values=True,
 )
 
 sim_morris.set_problem(minimize_outputs=[True, True])
@@ -182,7 +182,7 @@ p_loaded.epws = []
 p_loaded.buildings = []
 p_loaded.load_outputs_parametric(
     csv_path=csv_path,
-    parameters_names=['CustAST_m', 'CustAST_n', 'CustAST_ASToffset', 'CustAST_ASTall', 'CustAST_ASTaul'],
+    parameters_names=['custom_slope', 'custom_intercept', 'custom_offset', 'custom_lower_limit', 'custom_upper_limit'],
     outputs_names=['Heating:Electricity', 'Cooling:Electricity'],
 )
 print(f"  Cargado desde CSV: {len(p_loaded.outputs_param_simulation)} filas")
@@ -196,13 +196,13 @@ print("\n=== PARTE B: sampling_lhs ===")
 sim_lhs = build_custom_sim()
 sim_lhs.set_parameters(
     accis_params_dict={
-        'CustAST_m':         (0.01, 0.99),
-        'CustAST_n':         (5.0,  23.0),
-        'CustAST_ASToffset': (1.5,   5.0),
-        'CustAST_ASTall':    (8.0,  16.0),
-        'CustAST_ASTaul':    (28.0, 38.0),
+        'custom_slope':         (0.01, 0.99),
+        'custom_intercept':         (5.0,  23.0),
+        'custom_offset': (1.5,   5.0),
+        'custom_lower_limit':    (8.0,  16.0),
+        'custom_upper_limit':    (28.0, 38.0),
     },
-    use_dflt_values=True,
+    use_default_values=True,
 )
 sim_lhs.set_problem(minimize_outputs=[True, True])
 sim_lhs.set_building_floor_area(mode='all')
@@ -237,7 +237,7 @@ print("\n=== PARTE C: sampling_custom (list y DataFrame) ===")
 sim_custom = build_custom_sim()
 # Sin parámetros de rango — parameters_type='accim custom model' sin vary params
 # Usamos sampling_custom para especificar sólo EPWs (sin parámetros variables)
-sim_custom.set_parameters(use_dflt_values=True)   # sin accis_params_dict → lista vacía
+sim_custom.set_parameters(use_default_values=True)   # sin accis_params_dict → lista vacía
 sim_custom.set_problem()
 sim_custom.set_building_floor_area(mode='all')
 

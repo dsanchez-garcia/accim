@@ -33,7 +33,7 @@ class _Problem:
 
 
 def _simulation(samples, epws):
-    sim = ParametricSimulation(buildings=None, epws=list(epws), parameters_type=None, bypass_addAccis=True)
+    sim = ParametricSimulation(buildings=None, epws=list(epws), parameters_type=None, bypass_add_accis=True)
     sim.problem = _Problem()
     sim.last_run_type = 'parametric'
     frames = []

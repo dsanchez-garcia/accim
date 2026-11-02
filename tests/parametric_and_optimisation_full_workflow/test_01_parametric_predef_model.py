@@ -58,7 +58,7 @@ for building in buildings:
     enable_sizing(building)
 
 # ---------------------------------------------------------------------------
-# 2. Instanciar ParametricSimulation — predefined model, output_freqs hourly+monthly
+# 2. Instanciar ParametricSimulation — predefined model, output_frequencies hourly+monthly
 # ---------------------------------------------------------------------------
 print("\n=== [2] Instanciar ParametricSimulation (predefined model) ===")
 parametric = ParametricSimulation(
@@ -66,12 +66,12 @@ parametric = ParametricSimulation(
     epws=EPW_ALL,
     parameters_type='accim predefined model',
     output_type='standard',
-    output_keep_existing=False,
-    output_freqs=['hourly', 'monthly'],
-    ScriptType='vrf_mm',
-    SupplyAirTempInputMethod='temperature difference',
-    make_averages=False,
-    verbosemode=False,
+    keep_existing_outputs=False,
+    output_frequencies=['hourly', 'monthly'],
+    script_type='vrf_mm',
+    supply_air_temp_input_method='temperature difference',
+    add_building_averages=False,
+    verbose=False,
 )
 
 # ---------------------------------------------------------------------------
@@ -128,12 +128,12 @@ print(f"  Parámetros disponibles ({len(available)}): {available}")
 
 parametric.set_parameters(
     accis_params_dict={
-        # EN16798 cat. I + ASHRAE55 80 % (ComfMod 3); el plan descarta cada norma con la categoría de la otra.
-        # ESP CTE (ComfStand 0) no entraría: sampling_full_set la descarta cuando el plan tiene CAT o ComfMod.
-        'ComfStand': [1, 2],
-        'CAT': [1, 80],
-        'ComfMod': [3],
-        'HVACmode': [0, 2],    # AC + mixed-mode
+        # EN16798 cat. I + ASHRAE55 80 % (comfort_mode 3); el plan descarta cada norma con la categoría de la otra.
+        # ESP CTE (comfort_standard 0) no entraría: sampling_full_set la descarta cuando el plan tiene category o comfort_mode.
+        'comfort_standard': [1, 2],
+        'category': [1, 80],
+        'comfort_mode': [3],
+        'hvac_mode': [0, 2],    # AC + mixed-mode
     }
 )
 

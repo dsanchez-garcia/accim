@@ -31,14 +31,14 @@ def _form(folder, **values):
 # Forms ---------------------------------------------------------------------------------------------------------------
 
 def test_numbers_of_the_text_fields():
-    assert forms.parse_numbers('1, 2 3;4', 'cat') == [1, 2, 3, 4]
-    values = forms.parse_numbers(' 0.1  3 ', 'comf_mod')
+    assert forms.parse_numbers('1, 2 3;4', 'category') == [1, 2, 3, 4]
+    values = forms.parse_numbers(' 0.1  3 ', 'comfort_mode')
     assert values == [0.1, 3] and isinstance(values[1], int)
     assert forms.parse_number('-3.5', 'offset') == -3.5
-    with pytest.raises(FormError, match='cat: enter at least one number'):
-        forms.parse_numbers(' , ', 'cat')
-    with pytest.raises(FormError, match="cat: 'x' is not a number"):
-        forms.parse_numbers('1 x', 'cat')
+    with pytest.raises(FormError, match='category: enter at least one number'):
+        forms.parse_numbers(' , ', 'category')
+    with pytest.raises(FormError, match="category: 'x' is not a number"):
+        forms.parse_numbers('1 x', 'category')
     with pytest.raises(FormError, match='enter whole numbers'):
         forms.parse_numbers('1.5', 'num', integers=True)
 
@@ -48,48 +48,48 @@ def test_arguments_of_the_default_form(tmp_path):
 
     assert arguments == dict(
         idfs=['model.idf'], script_type='vrf_mm', supply_air_temp_input_method='temperature difference',
-        output_type='standard', output_freqs=['hourly'], output_keep_existing=False, output_gen_dataframe=False,
-        energyplus_version='auto', temp_ctrl='temperature', make_averages=False, name_suffix='', confirm_gen=True,
-        verbose_mode=True, comf_stand=[1], cat=[3], comf_mod=[3], cool_season_start=121, cool_season_end=274,
-        hvac_mode=[2], vent_ctrl=[0], vst_offset=[0], min_ot_offset=[50], max_wind_speed=[50], max_temp_diff_vof=6,
-        min_temp_diff_vof=1, multiplier_vof=0.25, ast_tol_start=0.1, ast_tol_end_input=0.1, ast_tol_steps=0.1)
+        output_type='standard', output_frequencies=['hourly'], keep_existing_outputs=False, make_outputs_dataframe=False,
+        energyplus_version='auto', setpoint_type='temperature', add_building_averages=False, name_suffix='', confirm=True,
+        verbose=True, comfort_standard=[1], category=[3], comfort_mode=[3], cooling_season_start=121, cooling_season_end=274,
+        hvac_mode=[2], ventilation_control=[0], ventilation_setpoint_offset=[0], min_outdoor_temp_offset=[50], max_wind_speed=[50], opening_factor_max_temp_diff=6,
+        opening_factor_min_temp_diff=1, min_opening_factor=0.25, setpoint_tolerance_start=0.1, setpoint_tolerance_end=0.1, setpoint_tolerance_step=0.1)
     assert forms.output_idf_count(arguments) == 1
 
 
 def test_arguments_that_depend_on_the_script_type_and_the_comfort_standards(tmp_path):
     # Full air-conditioning: HVAC mode 0, whatever the boxes of mixed mode
-    arguments = forms.add_accis_arguments(_form(tmp_path, script_type='vrf_ac', hvac_mode=[], vent_ctrl=[]))
-    assert (arguments['hvac_mode'], arguments['vent_ctrl']) == ([0], [0])
-    assert 'vst_offset' not in arguments
+    arguments = forms.add_accis_arguments(_form(tmp_path, script_type='vrf_ac', hvac_mode=[], ventilation_control=[]))
+    assert (arguments['hvac_mode'], arguments['ventilation_control']) == ([0], [0])
+    assert 'ventilation_setpoint_offset' not in arguments
     # The custom model, with its coefficients; a date for the cooling season
-    arguments = forms.add_accis_arguments(_form(tmp_path, comf_stand=[1, 99], cust_ast_m='0.4',
-                                                cool_season_start='01/06'))
-    assert arguments['cust_ast_m'] == 0.4 and arguments['cust_ast_ahst_offset'] == -3.5
-    assert arguments['cool_season_start'] == '01/06'
+    arguments = forms.add_accis_arguments(_form(tmp_path, comfort_standard=[1, 99], custom_slope='0.4',
+                                                cooling_season_start='01/06'))
+    assert arguments['custom_slope'] == 0.4 and arguments['custom_heating_offset'] == -3.5
+    assert arguments['cooling_season_start'] == '01/06'
 
 
 def test_number_of_output_idfs(tmp_path):
-    arguments = forms.add_accis_arguments(_form(tmp_path, cat='1 2 3', hvac_mode=[0, 2], vent_ctrl=[0, 1]))
+    arguments = forms.add_accis_arguments(_form(tmp_path, category='1 2 3', hvac_mode=[0, 2], ventilation_control=[0, 1]))
     # For each category: HVAC mode 0, and HVAC mode 2 with two ventilation controls
     assert forms.output_idf_count(arguments) == 3 * (1 + 2)
-    arguments = forms.add_accis_arguments(_form(tmp_path, script_type='ex_ac', cat='1 2 3'))
+    arguments = forms.add_accis_arguments(_form(tmp_path, script_type='ex_ac', category='1 2 3'))
     assert forms.output_idf_count(arguments) == 3
     # The combinations without setpoints are not counted (INT EN16798 has no category 80)
-    arguments = forms.add_accis_arguments(_form(tmp_path, cat='80'))
+    arguments = forms.add_accis_arguments(_form(tmp_path, category='80'))
     assert forms.output_idf_count(arguments) == 0
 
 
 @pytest.mark.parametrize('values, message', [
     (dict(idfs=[]), 'select at least one input IDF'),
-    (dict(comf_stand=[]), 'select at least one comfort standard'),
-    (dict(cat='one'), "cat: 'one' is not a number"),
-    (dict(output_freqs=[]), 'check at least one output frequency'),
+    (dict(comfort_standard=[]), 'select at least one comfort standard'),
+    (dict(category='one'), "category: 'one' is not a number"),
+    (dict(output_frequencies=[]), 'check at least one output frequency'),
     (dict(hvac_mode=[]), 'check at least one HVAC mode'),
-    (dict(vent_ctrl=[]), 'check at least one ventilation control'),
-    (dict(ast_tol_steps='0'), 'ast_tol_steps: enter a number greater than 0'),
-    (dict(cool_season_end='31/13'), 'cool_season_end must be a date'),
+    (dict(ventilation_control=[]), 'check at least one ventilation control'),
+    (dict(setpoint_tolerance_step='0'), 'setpoint_tolerance_step: enter a number greater than 0'),
+    (dict(cooling_season_end='31/13'), 'cooling_season_end must be a date'),
     (dict(script_type='vrf'), 'script_type: choose one of'),
-    (dict(comf_stand=[99], cust_ast_n=''), 'cust_ast_n: enter a number'),
+    (dict(comfort_standard=[99], custom_intercept=''), 'custom_intercept: enter a number'),
 ])
 def test_wrong_values_of_the_form(tmp_path, values, message):
     with pytest.raises(FormError, match=message):
@@ -106,19 +106,19 @@ def test_files_of_the_folder(tmp_path):
         (tmp_path / name).write_text('')
 
     assert forms.input_idfs(tmp_path) == ['model.idf']
-    assert forms.simulations(tmp_path, run_only_accim=True) == [('model[CS_INT EN16798[CA_3.idf', 'Seville.epw')]
-    assert len(forms.simulations(tmp_path, run_only_accim=False)) == 3
+    assert forms.simulations(tmp_path, only_accim_idfs=True) == [('model[CS_INT EN16798[CA_3.idf', 'Seville.epw')]
+    assert len(forms.simulations(tmp_path, only_accim_idfs=False)) == 3
     assert forms.input_idfs(tmp_path / 'missing') == [] and forms.simulations(tmp_path / 'missing', True) == []
 
 
 def test_arguments_of_run_ep(tmp_path):
     form = dict(forms.RUN_DEFAULTS, folder=str(tmp_path))
 
-    assert forms.run_ep_arguments(form) == dict(run_only_accim=True, confirm_run=True, num_cpus=2,
+    assert forms.run_ep_arguments(form) == dict(only_accim_idfs=True, confirm=True, processes=2,
                                                 energyplus_version='auto', backend='ems')
-    for num_cpus in ('0', '1.5', 'two'):
-        with pytest.raises(FormError, match='num_cpus'):
-            forms.run_ep_arguments(dict(form, num_cpus=num_cpus))
+    for processes in ('0', '1.5', 'two'):
+        with pytest.raises(FormError, match='processes'):
+            forms.run_ep_arguments(dict(form, processes=processes))
     with pytest.raises(FormError, match='backend: choose one of'):
         forms.run_ep_arguments(dict(form, backend='eppy'))
 
@@ -133,7 +133,7 @@ def test_hints_of_the_categories_and_comfort_modes():
 @pytest.mark.parametrize('script_type', ['vrf_ac', 'vrf_mm'])
 def test_add_accis_runs_with_the_arguments_of_the_form(tmp_path, monkeypatch, script_type):
     shutil.copy(SAMPLE_IDF, tmp_path / 'model.idf')
-    arguments = forms.add_accis_arguments(_form(tmp_path, script_type=script_type, cat='2 3', output_type='simplified'))
+    arguments = forms.add_accis_arguments(_form(tmp_path, script_type=script_type, category='2 3', output_type='simplified'))
 
     def prompt(text=''):
         raise AssertionError(f'AddAccis asked {text!r}')

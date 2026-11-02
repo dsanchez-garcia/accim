@@ -15,12 +15,12 @@ def test_accim_predef_models_init():
         buildings=buildings,
         epws=ts.TEST_CATEGORIES['fast']['epws'][:1],
         output_type='standard',
-        ScriptType='vrf_mm'
+        script_type='vrf_mm'
     )
 
     ts.log_test("Init AccimPredefModelsParamSim", "PASS" if sim.building else "FAIL",
-             f"Script Type: {sim.ScriptType}")
-    assert sim.ScriptType == 'vrf_mm'
+             f"Script Type: {sim.script_type}")
+    assert sim.script_type == 'vrf_mm'
 
 def test_accim_predef_models_parametric():
     """Test: Parametric con AccimPredefModelsParamSim."""
@@ -33,7 +33,7 @@ def test_accim_predef_models_parametric():
         epws=ts.TEST_CATEGORIES['fast']['epws'][:1]
     )
 
-    sim.set_parameters(accis_params_dict={'ComfStand': [1], 'CAT': [1, 2], 'ComfMod': [3]})
+    sim.set_parameters(accis_params_dict={'comfort_standard': [1], 'category': [1, 2], 'comfort_mode': [3]})
     ts.set_meter_readers(sim)
     sim.set_problem()
     sim.sampling_full_set()
@@ -49,11 +49,11 @@ def test_accim_predef_models_parametric():
     assert results[ts.METERS].notna().all().all()
 
 def test_accim_predef_models_static_comfort_standards():
-    """Test: ComfStand 0 (ESP CTE) y 22 (INT ISO7730) con el ComfMod del modelo base (3).
+    """Test: comfort_standard 0 (ESP CTE) y 22 (INT ISO7730) con el comfort_mode del modelo base (3).
 
-    Sus setpoints no dependen de ComfMod; en accim 0.x solo se fijaban con ComfMod 0, y EnergyPlus se detenía.
+    Sus setpoints no dependen de comfort_mode; en accim 0.x solo se fijaban con comfort_mode 0, y EnergyPlus se detenía.
     """
-    ts.print_section("TEST: AccimPredefModelsParamSim ComfStand 0 y 22")
+    ts.print_section("TEST: AccimPredefModelsParamSim comfort_standard 0 y 22")
 
     buildings = ts.prepare_buildings(ts.TEST_CATEGORIES['fast']['idfs'][:1])
 
@@ -62,18 +62,18 @@ def test_accim_predef_models_static_comfort_standards():
         epws=ts.TEST_CATEGORIES['fast']['epws'][:1]
     )
 
-    sim.set_parameters(accis_params_dict={'ComfStand': [0, 22], 'CAT': [1, 2]})
+    sim.set_parameters(accis_params_dict={'comfort_standard': [0, 22], 'category': [1, 2]})
     ts.set_meter_readers(sim)
     sim.set_problem()
-    # sampling_full_set descarta ComfStand 0 cuando el plan tiene CAT (no depende de ella)
-    sim.sampling_custom(ts.pd.DataFrame({'ComfStand': [0, 22], 'CAT': [1, 2]}))
+    # sampling_full_set descarta comfort_standard 0 cuando el plan tiene category (no depende de ella)
+    sim.sampling_custom(ts.pd.DataFrame({'comfort_standard': [0, 22], 'category': [1, 2]}))
 
     results = sim.run_parametric_simulation(
         out_dir='./test_predef_static',
         processes=1
     )
 
-    ts.log_test("AccimPredefModelsParamSim ComfStand 0 y 22", "PASS" if len(results) > 0 else "FAIL",
+    ts.log_test("AccimPredefModelsParamSim comfort_standard 0 y 22", "PASS" if len(results) > 0 else "FAIL",
              f"Results: {len(results)} rows")
     assert len(results) == 2
     assert results[ts.METERS].notna().all().all()
@@ -82,7 +82,7 @@ def test_accim_predef_models_baseline():
     """Test: el modelo base del wrapper (modelo custom con los coeficientes por defecto) simula.
 
     En accim 0.x no tenía coeficientes: la consigna de calefacción quedaba por encima de la de refrigeración, y
-    EnergyPlus se detenía en la simulación de prueba de los outputs y en los planes sin ComfStand.
+    EnergyPlus se detenía en la simulación de prueba de los outputs y en los planes sin comfort_standard.
     """
     ts.print_section("TEST: AccimPredefModelsParamSim modelo base")
 
@@ -98,7 +98,7 @@ def test_accim_predef_models_baseline():
     sim.set_output_readers(
         df_output_meter=ts.pd.DataFrame({'key_name': ts.METERS, 'frequency': ['Hourly'] * len(ts.METERS)})
     )
-    sim.set_parameters(accis_params_dict={'HVACmode': [0, 2]})
+    sim.set_parameters(accis_params_dict={'hvac_mode': [0, 2]})
     sim.set_problem()
     sim.sampling_full_set()
 

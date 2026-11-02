@@ -110,35 +110,35 @@ def _ask_version(energyplus_version: Optional[str]) -> str:
     return energyplus_version
 
 
-def _idf_names(run_only_accim: Optional[bool]) -> List[str]:
-    if run_only_accim is None:
+def _idf_names(only_accim_idfs: Optional[bool]) -> List[str]:
+    if only_accim_idfs is None:
         answer = input('Do you want to run only ACCIM output IDFs? [y or n]: ')
-        run_only_accim = answer.lower() in ('y', '')
-    return sorted(x for x in os.listdir() if x.endswith('.idf') and ('[' in x or not run_only_accim))
+        only_accim_idfs = answer.lower() in ('y', '')
+    return sorted(x for x in os.listdir() if x.endswith('.idf') and ('[' in x or not only_accim_idfs))
 
 
-def _confirm(confirm_run: Optional[bool], number: int) -> bool:
-    if confirm_run is None:
+def _confirm(confirm: Optional[bool], number: int) -> bool:
+    if confirm is None:
         answer = input(f'The number of simulations is going to be {number}. Do you still want to proceed? [y or n]: ')
-        confirm_run = answer == 'y'
-    if not confirm_run:
+        confirm = answer == 'y'
+    if not confirm:
         print('Run has been shut down')
-    return bool(confirm_run)
+    return bool(confirm)
 
 
 def run_ep(
-    run_only_accim: Optional[bool] = None,
-    confirm_run: Optional[bool] = None,
-    num_cpus: int = 2,
+    only_accim_idfs: Optional[bool] = None,
+    confirm: Optional[bool] = None,
+    processes: int = 2,
     energyplus_version: Optional[str] = None,
     backend: str = 'ems',
 ):
     """Run the simulations of the IDFs and EPWs in the working folder, with the EnergyPlus version of each IDF.
 
-    :param run_only_accim: True to run only the output IDFs of accim (those with '[' in the name), False to
+    :param only_accim_idfs: True to run only the output IDFs of accim (those with '[' in the name), False to
         run all IDFs; None to ask.
-    :param confirm_run: True to run the simulations without asking, False to cancel them; None to ask.
-    :param num_cpus: The number of simulations that run at the same time.
+    :param confirm: True to run the simulations without asking, False to cancel them; None to ask.
+    :param processes: The number of simulations that run at the same time.
     :param energyplus_version: The EnergyPlus version of the IDFs, from '9.1' to '26.2', or 'auto' to read it
         from the IDFs; None to ask. With ``backend='api'``, the version of each IDF is used.
     :param backend: 'ems' to run the EMS programs with the EMS of EnergyPlus (through eppy), or 'api' to run
@@ -151,7 +151,7 @@ def run_ep(
     if backend == 'api':
         energyplus_version = energyplus_version or 'auto'
     energyplus_version = _ask_version(energyplus_version)
-    idfnames = _idf_names(run_only_accim)
+    idfnames = _idf_names(only_accim_idfs)
     epwnames = sorted(x for x in os.listdir() if x.endswith('.epw'))
 
     print('The IDFs we are going to run are:')
@@ -167,12 +167,12 @@ def run_ep(
     print(f' and the No. of simulations is going to be {len(pairs)}')
 
     if backend == 'api':
-        if not _confirm(confirm_run, len(pairs)):
+        if not _confirm(confirm, len(pairs)):
             return []
         from accim.sim.energyplus_api import run_simulations
         jobs = [(idf, epw, {'output_directory': os.getcwd(), 'output_prefix': simulation_name(idf, epw)})
                 for idf, epw in pairs]
-        return run_simulations(jobs, processes=num_cpus)
+        return run_simulations(jobs, processes=processes)
 
     if energyplus_version.lower() == 'auto':
         iddfile = get_iddfile_from_idfs(idfnames) if idfnames else None
@@ -183,13 +183,13 @@ def run_ep(
             IDF.setiddname(iddfile)
         except IDDAlreadySetError:
             print('IDD was already set.')
-    if not _confirm(confirm_run, len(pairs)):
+    if not _confirm(confirm, len(pairs)):
         return None
     runs = []
     for idf, epw in pairs:
         model = IDF(idf, epw)
         runs.append((model, make_eplaunch_options(model, epw)))
-    runIDFs(runs, num_cpus)
+    runIDFs(runs, processes)
     return None
 
 
@@ -211,6 +211,6 @@ def remove_files() -> None:
 
 runEp = deprecated_alias(
     run_ep, 'accim.run.run.runEp', 'accim.run.run_ep',
-    legacy_kwargs={'runOnlyAccim': 'run_only_accim', 'confirmRun': 'confirm_run', 'num_CPUs': 'num_cpus',
+    legacy_kwargs={'runOnlyAccim': 'only_accim_idfs', 'confirmRun': 'confirm', 'num_CPUs': 'processes',
                    'EnergyPlus_version': 'energyplus_version'})
 removefiles = deprecated_alias(remove_files, 'accim.run.run.removefiles', 'accim.run.remove_files')

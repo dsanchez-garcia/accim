@@ -251,7 +251,7 @@ def _session(source, simulation_dirs):
             row['simulation_output_csv_path'] = os.path.join(folder, 'eplusout.csv')
         rows.append(row)
     sim_class = ParametricSimulation if source == 'parametric' else OptimisationSimulation
-    sim = sim_class(buildings=None, epws=['Seville.epw', 'Oslo.epw'], parameters_type=None, bypass_addAccis=True)
+    sim = sim_class(buildings=None, epws=['Seville.epw', 'Oslo.epw'], parameters_type=None, bypass_add_accis=True)
     if source == 'parametric':
         sim.outputs_param_simulation = pd.DataFrame(rows)
         sim.outputs_param_simulation.attrs['parameters_names'] = ['x']
@@ -507,7 +507,7 @@ def test_aggregated_groups_without_dropping_leave_empty_the_outputs_their_idf_do
 
 
 def test_aggregation_without_identifier_columns_leaves_empty_the_sums_without_values():
-    sim = ParametricSimulation(buildings=None, epws=['Seville.epw'], parameters_type=None, bypass_addAccis=True)
+    sim = ParametricSimulation(buildings=None, epws=['Seville.epw'], parameters_type=None, bypass_add_accis=True)
     # A table built with include_summary_columns=False: no identifier columns.
     table = pd.DataFrame({
         'datetime': pd.date_range('2023-01-01 01:00', periods=48, freq='h'),

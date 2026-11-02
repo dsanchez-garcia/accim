@@ -18,7 +18,7 @@ def test_load_parametric_csv():
         parameters_type='accim predefined model'
     )
 
-    sim1.set_parameters(accis_params_dict={'CAT': [1, 2]})
+    sim1.set_parameters(accis_params_dict={'category': [1, 2]})
     ts.set_meter_readers(sim1)
     sim1.set_problem()
     sim1.sampling_full_set()
@@ -33,7 +33,7 @@ def test_load_parametric_csv():
         buildings=ts.prepare_buildings(ts.TEST_CATEGORIES['fast']['idfs'][:1]),
         epws=ts.TEST_CATEGORIES['fast']['epws'][:1],
         parameters_type='accim predefined model',
-        bypass_addAccis=True
+        bypass_add_accis=True
     )
 
     csv_path = ts.latest_output('./test_load_param_csv', 'outputs_param_simulation', 'csv')
@@ -54,7 +54,7 @@ def test_load_parametric_pickle():
         parameters_type='accim predefined model'
     )
 
-    sim1.set_parameters(accis_params_dict={'CAT': [1, 2]})
+    sim1.set_parameters(accis_params_dict={'category': [1, 2]})
     ts.set_meter_readers(sim1)
     sim1.set_problem()
     sim1.sampling_full_set()
@@ -68,7 +68,7 @@ def test_load_parametric_pickle():
         buildings=ts.prepare_buildings(ts.TEST_CATEGORIES['fast']['idfs'][:1]),
         epws=ts.TEST_CATEGORIES['fast']['epws'][:1],
         parameters_type='accim predefined model',
-        bypass_addAccis=True
+        bypass_add_accis=True
     )
 
     pickle_path = ts.latest_output('./test_load_param_pickle', 'outputs_param_simulation', 'pkl')
@@ -89,7 +89,7 @@ def test_load_optimization_csv():
         parameters_type='accim predefined model'
     )
 
-    sim1.set_parameters(accis_params_dict={'CAT': [1, 2, 3]})
+    sim1.set_parameters(accis_params_dict={'category': [1, 2, 3]})
     ts.set_meter_readers(sim1, meters=['Electricity:HVAC'])
     sim1.set_problem(minimize_outputs=[True])
 
@@ -105,7 +105,7 @@ def test_load_optimization_csv():
         buildings=ts.prepare_buildings(ts.TEST_CATEGORIES['fast']['idfs'][:1]),
         epws=ts.TEST_CATEGORIES['fast']['epws'][:1],
         parameters_type='accim predefined model',
-        bypass_addAccis=True
+        bypass_add_accis=True
     )
 
     csv_path = ts.latest_output('./test_load_optim_csv', 'outputs_optimisation', 'csv')

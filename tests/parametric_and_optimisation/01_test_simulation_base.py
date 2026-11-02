@@ -18,7 +18,7 @@ def test_simulationbase_init_accim_predefined():
         epws=ts.TEST_CATEGORIES['fast']['epws'],
         parameters_type='accim predefined model',
         output_type='standard',
-        output_freqs=['hourly', 'monthly']
+        output_frequencies=['hourly', 'monthly']
     )
 
     ts.log_test("Init Predefined", "PASS" if sim.building else "FAIL",
@@ -98,7 +98,7 @@ def test_set_evaluator():
     )
 
     # Configurar parámetros, outputs y problema antes de crear evaluador
-    sim.set_parameters(accis_params_dict={'ComfStand': [0, 1]})
+    sim.set_parameters(accis_params_dict={'comfort_standard': [0, 1]})
     df_var = sim.get_output_variables_df_from_idf()
     df_meter = sim.get_output_meters_df_from_idf()
     # Renombrar columnas para que coincidan con lo esperado por set_output_readers

@@ -20,10 +20,10 @@ def test_complete_workflow():
         buildings=buildings,
         epws=ts.TEST_CATEGORIES['medium']['epws'][:2],
         parameters_type='accim predefined model',
-        output_freqs=['hourly', 'monthly']
+        output_frequencies=['hourly', 'monthly']
     )
 
-    param_sim.set_parameters(accis_params_dict={'CAT': [1, 2], 'HVACmode': [0, 2]})
+    param_sim.set_parameters(accis_params_dict={'category': [1, 2], 'hvac_mode': [0, 2]})
     ts.set_meter_readers(param_sim)
     param_sim.set_problem()
     param_sim.sampling_full_set()
@@ -52,7 +52,7 @@ def test_complete_workflow():
         parameters_type='accim predefined model'
     )
 
-    optim_sim.set_parameters(accis_params_dict={'CAT': [1, 2, 3], 'HVACmode': [0, 2]})
+    optim_sim.set_parameters(accis_params_dict={'category': [1, 2, 3], 'hvac_mode': [0, 2]})
     ts.set_meter_readers(optim_sim)
     optim_sim.set_problem(minimize_outputs=[True, True])
 

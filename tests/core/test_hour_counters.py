@@ -13,7 +13,7 @@ Found on 2026-11-01 (and as in accim 0.x):
 - CountHours_<zone> ran before SetAST, with the setpoints of the previous timestep (0 in the first timestep of each
   environment);
 - in mixed mode with HVACmode 0, ApplyAST_<zone> did not set the ventilation hours, which the building average of
-  make_averages reads, so EnergyPlus stopped ("used in expression has not been initialized"); likewise the occupied
+  add_building_averages reads, so EnergyPlus stopped ("used in expression has not been initialized"); likewise the occupied
   comfortable hours with EnergyPlus 26.2.
 """
 from types import SimpleNamespace
@@ -28,7 +28,7 @@ TIMESTEP = 0.25
 # INT EN16798-1, category II, adaptive, with a tolerance of 0.1: with a running mean outdoor temperature of 20 °C,
 # the comfort temperature is 25.4 °C and the setpoints without tolerance are 28.4 and 21.4 °C; the applicability
 # limits are 10 and 30 °C
-EN16798_II = dict(comf_stand=1, cat=2, comf_mod=3, ast_tol=0.1)
+EN16798_II = dict(comfort_standard=1, category=2, comfort_mode=3, setpoint_tolerance=0.1)
 APPLICABILITY = ['ComfHours', 'DiscomfAppHotHours', 'DiscomfAppColdHours', 'DiscomfNonAppHotHours',
                  'DiscomfNonAppColdHours']
 
@@ -118,11 +118,11 @@ def test_the_hours_are_counted_with_the_setpoints_of_the_timestep():
 
 @pytest.mark.parametrize('hvac_mode', [0, 1, 2])
 def test_the_ventilation_hours_are_set_in_every_mode(hvac_mode):
-    erl = _programs(mixed_mode=True, hvac_mode=hvac_mode, vent_ctrl=0)
+    erl = _programs(mixed_mode=True, hvac_mode=hvac_mode, ventilation_control=0)
 
     _timestep(erl, operative=24.0, outdoor=20.0)
 
-    # A number in every timestep, which the building average of make_averages can read
+    # A number in every timestep, which the building average of add_building_averages can read
     assert erl.get('VentHours_Zone1') is not None
     if hvac_mode == 0:
         assert erl.get('VentHours_Zone1') == 0

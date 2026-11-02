@@ -63,9 +63,9 @@ FIRST_STAGE_ARGS = dict(
     script_type='vrf_ac',
     supply_air_temp_input_method='supply air temperature',
     output_type='standard',
-    output_freqs=['hourly'],
-    output_keep_existing=False,
-    temp_ctrl='temp',
+    output_frequencies=['hourly'],
+    keep_existing_outputs=False,
+    setpoint_type='temp',
 )
 
 
@@ -142,7 +142,7 @@ def test_addaccis_accepts_the_latest_versions(monkeypatch, version):
     monkeypatch.setattr(builtins, 'input', _no_prompts)
 
     with pytest.raises(_Reached) as reached:
-        accis.AddAccis(idfs=['model.idf'], energyplus_version=version, verbose_mode=False, **FIRST_STAGE_ARGS)
+        accis.AddAccis(idfs=['model.idf'], energyplus_version=version, verbose=False, **FIRST_STAGE_ARGS)
 
     assert str(reached.value) == version
 
@@ -161,7 +161,7 @@ def test_addaccis_rejects_the_idfs_of_unsupported_versions(monkeypatch):
                         lambda path, version='auto': SimpleNamespace(iddname='Energy+.idd', idd_version=(26, 3, 0)))
 
     with pytest.raises(ValueError, match=r'EnergyPlus 26\.2 \(enter 26\.2\)'):
-        accis.AddAccis(idfs=['model.idf'], energyplus_version='auto', verbose_mode=False, **FIRST_STAGE_ARGS)
+        accis.AddAccis(idfs=['model.idf'], energyplus_version='auto', verbose=False, **FIRST_STAGE_ARGS)
 
 
 def test_addaccis_prompt_accepts_26_2(monkeypatch):
@@ -194,14 +194,14 @@ def test_add_accis_to_idf_accepts_26_x(monkeypatch, idd_version, energyplus_vers
 
     with pytest.raises(_Reached):
         accis.add_accis_to_idf(SimpleNamespace(idd_version=idd_version), energyplus_version=energyplus_version,
-                               verbose_mode=False, **FIRST_STAGE_ARGS)
+                               verbose=False, **FIRST_STAGE_ARGS)
 
 
 def test_add_accis_to_idf_rejects_unlisted_version(monkeypatch):
     monkeypatch.setattr(accis, 'AccimModel', _stub_accim_model)
 
     with pytest.raises(ValueError, match="'26.3' is not a valid energyplus_version"):
-        accis.add_accis_to_idf(SimpleNamespace(idd_version=(26, 3, 0)), verbose_mode=False, **FIRST_STAGE_ARGS)
+        accis.add_accis_to_idf(SimpleNamespace(idd_version=(26, 3, 0)), verbose=False, **FIRST_STAGE_ARGS)
 
 
 def test_get_iddfile_from_idfs_reads_the_idf_version(tmp_path):
@@ -263,7 +263,7 @@ def fake_run_folder(tmp_path, monkeypatch):
 def test_run_ep_auto_uses_the_idd_of_the_idf_version(fake_run_folder, monkeypatch, capsys):
     monkeypatch.setattr(builtins, 'input', _no_prompts)
 
-    run.run_ep(run_only_accim=True, confirm_run=False, energyplus_version='auto')
+    run.run_ep(only_accim_idfs=True, confirm=False, energyplus_version='auto')
 
     assert _FakeIDF.iddname == IDD_25_2
     out = capsys.readouterr().out
@@ -275,7 +275,7 @@ def test_run_ep_auto_accepts_idfs_of_26_2(fake_run_folder, monkeypatch):
     _write_idf(fake_run_folder / 'model[CS_INT EN16798[NS_X.idf', '26.2')
     monkeypatch.setattr(builtins, 'input', _no_prompts)
 
-    run.run_ep(run_only_accim=True, confirm_run=False, energyplus_version='auto')
+    run.run_ep(only_accim_idfs=True, confirm=False, energyplus_version='auto')
 
     assert _FakeIDF.iddname == IDD_26_2
 
@@ -284,7 +284,7 @@ def test_run_ep_auto_accepts_idfs_of_26_2(fake_run_folder, monkeypatch):
 def test_run_ep_accepts_the_latest_versions(fake_run_folder, monkeypatch, version):
     monkeypatch.setattr(builtins, 'input', _no_prompts)
 
-    run.run_ep(run_only_accim=True, confirm_run=False, energyplus_version=version)
+    run.run_ep(only_accim_idfs=True, confirm=False, energyplus_version=version)
 
     assert _FakeIDF.iddname == _idd_path(version)
 
@@ -292,7 +292,7 @@ def test_run_ep_accepts_the_latest_versions(fake_run_folder, monkeypatch, versio
 def test_run_ep_uses_the_version_corrected_in_the_prompt(fake_run_folder, monkeypatch):
     monkeypatch.setattr(builtins, 'input', lambda prompt='': '26.2')
 
-    run.run_ep(run_only_accim=True, confirm_run=False, energyplus_version='30.1')
+    run.run_ep(only_accim_idfs=True, confirm=False, energyplus_version='30.1')
 
     assert _FakeIDF.iddname == IDD_26_2
 
@@ -311,7 +311,7 @@ def test_accim_model_rejects_models_without_people():
     idf = SimpleNamespace(idfobjects={'PEOPLE': []})
 
     with pytest.raises(ValueError, match='The model has no People objects'):
-        AccimModel(idf, 'vrf_ac', 'temperature', verbose_mode=False)
+        AccimModel(idf, 'vrf_ac', 'temperature', verbose=False)
 
 
 class _FakeEMSModel:
@@ -424,8 +424,8 @@ os.chdir(sys.argv[1])
 from accim.sim import accis
 accis.AddAccis(
     script_type='vrf_mm', supply_air_temp_input_method='temperature difference', output_type='standard',
-    output_freqs=['hourly'], output_keep_existing=False, energyplus_version='auto', temp_ctrl='temperature',
-    comf_stand=[1], cat=[3], comf_mod=[3], hvac_mode=[2], vent_ctrl=[0], confirm_gen=True, verbose_mode=False,
+    output_frequencies=['hourly'], keep_existing_outputs=False, energyplus_version='auto', setpoint_type='temperature',
+    comfort_standard=[1], category=[3], comfort_mode=[3], hvac_mode=[2], ventilation_control=[0], confirm=True, verbose=False,
 )
 """
 
@@ -467,11 +467,11 @@ from accim.utils import reduce_runtime
 from besos.eppy_funcs import get_building
 accis.AddAccis(
     script_type='vrf_ac', supply_air_temp_input_method='temperature difference', output_type='simplified',
-    output_freqs=['hourly'], output_keep_existing=False, energyplus_version='auto', temp_ctrl='temperature',
-    comf_stand=[99], cat=[80], comf_mod=[3], hvac_mode=[0],
-    cust_ast_m=0.31, cust_ast_n=17.8, cust_ast_acst_offset=3.5, cust_ast_ahst_offset=-3.5,
-    cust_ast_acst_aul=33.5, cust_ast_acst_all=10, cust_ast_ahst_aul=33.5, cust_ast_ahst_all=10,
-    confirm_gen=True, verbose_mode=False,
+    output_frequencies=['hourly'], keep_existing_outputs=False, energyplus_version='auto', setpoint_type='temperature',
+    comfort_standard=[99], category=[80], comfort_mode=[3], hvac_mode=[0],
+    custom_slope=0.31, custom_intercept=17.8, custom_cooling_offset=3.5, custom_heating_offset=-3.5,
+    custom_cooling_upper_limit=33.5, custom_cooling_lower_limit=10, custom_heating_upper_limit=33.5, custom_heating_lower_limit=10,
+    confirm=True, verbose=False,
 )
 output_idf = [p for p in Path('.').glob('TestModel[[]*.idf')][0]
 building = get_building(str(output_idf))
@@ -531,8 +531,8 @@ for folder in ['people', 'instances']:
     os.chdir(root / folder)
     accis.AddAccis(
         script_type='vrf_mm', supply_air_temp_input_method='temperature difference', output_type='standard',
-        output_freqs=['hourly'], output_keep_existing=False, energyplus_version='auto', temp_ctrl='temperature',
-        comf_stand=[1], cat=[3], comf_mod=[3], hvac_mode=[2], vent_ctrl=[0], confirm_gen=True, verbose_mode=False,
+        output_frequencies=['hourly'], keep_existing_outputs=False, energyplus_version='auto', setpoint_type='temperature',
+        comfort_standard=[1], category=[3], comfort_mode=[3], hvac_mode=[2], ventilation_control=[0], confirm=True, verbose=False,
     )
     output_idf = [p for p in Path('.').glob('TestModel[[]*.idf')][0]
     simulate_1_summer_day(get_building(str(output_idf)))
@@ -543,13 +543,13 @@ from accim.sim.apmv import add_vrf_system, apply_apmv_setpoints, set_pmv_input_p
 for folder in ['people', 'instances']:
     os.chdir(root / folder)
     building = get_building('TestModel.idf')
-    add_vrf_system(building, verbose_mode=False)
+    add_vrf_system(building, verbose=False)
     apply_apmv_setpoints(
-        building, outputs_freq=['hourly'], adap_coeff_cooling=0.293, adap_coeff_heating=-0.293,
-        pmv_cooling_sp=0.5, pmv_heating_sp=-0.5, cooling_season_start='01/05', cooling_season_end='01/10',
-        verbose_mode=False,
+        building, output_frequencies=['hourly'], adaptive_coefficient_cooling=0.293, adaptive_coefficient_heating=-0.293,
+        pmv_cooling_setpoint=0.5, pmv_heating_setpoint=-0.5, cooling_season_start='01/05', cooling_season_end='01/10',
+        verbose=False,
     )
-    set_pmv_input_parameters(building, air_velocity=0.1, work_efficiency=0.0, verbose_mode=False)
+    set_pmv_input_parameters(building, air_velocity=0.1, work_efficiency=0.0, verbose=False)
     simulate_1_summer_day(building)
 """
 
@@ -698,16 +698,16 @@ os.remove('TestModel.idf')
 from accim.sim import accis
 accis.AddAccis(
     script_type='vrf_ac', supply_air_temp_input_method='supply air temperature', output_type='standard',
-    output_freqs=['hourly'], output_keep_existing=False, energyplus_version='auto', temp_ctrl='temperature',
-    comf_stand=[1], cat=[3], comf_mod=[3], hvac_mode=[0], confirm_gen=True, verbose_mode=False,
+    output_frequencies=['hourly'], keep_existing_outputs=False, energyplus_version='auto', setpoint_type='temperature',
+    comfort_standard=[1], category=[3], comfort_mode=[3], hvac_mode=[0], confirm=True, verbose=False,
 )
 for output_idf in sorted(Path('.').glob('*[[]*.idf')):
     simulate_1_day(get_building(str(output_idf)), output_idf.name.split('[')[0])
 
 from accim.sim.apmv import add_vrf_system, apply_apmv_setpoints
 building = get_building('ZoneOfTwoSpaces.idf')
-add_vrf_system(building, verbose_mode=False)
-apply_apmv_setpoints(building, outputs_freq=['hourly'], verbose_mode=False)
+add_vrf_system(building, verbose=False)
+apply_apmv_setpoints(building, output_frequencies=['hourly'], verbose=False)
 simulate_1_day(building, 'aPMV_ZoneOfTwoSpaces')
 """
 

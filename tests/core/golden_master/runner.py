@@ -55,7 +55,7 @@ def _run_batch(name, work, legacy):
     for model in cfg['models']:
         copy_input_model(model, work)
     kwargs = _arguments(cfg['kwargs'], legacy)
-    gen_df, take_df = _arguments({'output_gen_dataframe': 0, 'output_take_dataframe': 0}, legacy)
+    gen_df, take_df = _arguments({'make_outputs_dataframe': 0, 'outputs_dataframe': 0}, legacy)
     cwd = os.getcwd()
     os.chdir(work)
     try:
@@ -106,7 +106,7 @@ def _run_single(name, work, legacy):
             else:
                 from accim.sim import apmv
             if call == 'apmv_vrf':
-                apmv.add_vrf_system(building, verbose_mode=False)
+                apmv.add_vrf_system(building, **_arguments({'verbose': False}, legacy, configs.LEGACY_APMV_NAMES))
                 continue
             for key, value in list(kwargs.items()):
                 if isinstance(value, dict) and '*first*' in value:

@@ -114,7 +114,7 @@ def _run_parametric(monkeypatch, tmp_path, **run_kwargs):
     monkeypatch.chdir(tmp_path)
     monkeypatch.setattr(main_module, '_run_single_evaluation_worker', _fake_worker)
     monkeypatch.setattr(pd.DataFrame, 'to_excel', lambda self, *args, **kwargs: None, raising=False)
-    sim = ParametricSimulation(buildings=None, epws=['Seville.epw'], parameters_type=None, bypass_addAccis=True)
+    sim = ParametricSimulation(buildings=None, epws=['Seville.epw'], parameters_type=None, bypass_add_accis=True)
     sim.problem = _DummyProblem(inputs=['x'], outputs=['Heating:Electricity'])
     sim.run_parametric_simulation(
         df=pd.DataFrame({'x': [1, 2]}),
@@ -162,7 +162,7 @@ def _optimisation_session(tmp_path, keep_sim_files='all'):
         shutil.rmtree(str(tmp_path / 'optim'))
         results['simulation_directory'] = pd.NA
         results['simulation_output_csv_path'] = pd.NA
-    sim = OptimisationSimulation(buildings=None, epws=['Seville.epw'], parameters_type=None, bypass_addAccis=True)
+    sim = OptimisationSimulation(buildings=None, epws=['Seville.epw'], parameters_type=None, bypass_add_accis=True)
     sim.problem = _DummyProblem(inputs=['x'], outputs=['Heating:Electricity'])
     sim.outputs_optimisation = results
     sim.last_run_type = 'optimisation'

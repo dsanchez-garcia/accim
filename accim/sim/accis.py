@@ -35,7 +35,7 @@ from accim.sim.arguments import (
     check_choice,
     is_mixed_mode,
     normalise_energyplus_version,
-    normalise_temp_ctrl,
+    normalise_setpoint_type,
     to_bool,
     to_day_of_year,
 )
@@ -184,33 +184,34 @@ def _input_files(idfs: Optional[Iterable[Union[str, os.PathLike]]]) -> List[str]
 # Arguments
 # ----------------------------------------------------------------------------------------------------------
 
-def _check_model_arguments(script_type, supply_air_temp_input_method, output_type, output_freqs, temp_ctrl) -> Tuple:
-    """Check the arguments of the models; return output_type, output_freqs and temp_ctrl normalised."""
+def _check_model_arguments(script_type, supply_air_temp_input_method, output_type, output_frequencies,
+                           setpoint_type) -> Tuple:
+    """Check the arguments of the models; return output_type, output_frequencies and setpoint_type normalised."""
     check_choice('script_type', script_type, SCRIPT_TYPES)
     if script_type.startswith('vrf'):
         check_choice('supply_air_temp_input_method', supply_air_temp_input_method, SUPPLY_AIR_TEMP_INPUT_METHODS)
     check_choice('output_type', output_type.lower() if isinstance(output_type, str) else output_type, OUTPUT_TYPES)
-    if output_freqs is None:
-        raise ValueError(f'output_freqs is required: a list such as {list(OUTPUT_FREQUENCIES[:2])}.')
-    output_freqs = as_list(output_freqs)
-    invalid = [f for f in output_freqs if not isinstance(f, str) or f.lower() not in OUTPUT_FREQUENCIES]
+    if output_frequencies is None:
+        raise ValueError(f'output_frequencies is required: a list such as {list(OUTPUT_FREQUENCIES[:2])}.')
+    output_frequencies = as_list(output_frequencies)
+    invalid = [f for f in output_frequencies if not isinstance(f, str) or f.lower() not in OUTPUT_FREQUENCIES]
     if invalid:
-        raise ValueError(f'{invalid} are not valid output_freqs. Valid values: {list(OUTPUT_FREQUENCIES)}.')
-    return output_type.lower(), output_freqs, normalise_temp_ctrl(temp_ctrl)
+        raise ValueError(f'{invalid} are not valid output_frequencies. Valid values: {list(OUTPUT_FREQUENCIES)}.')
+    return output_type.lower(), output_frequencies, normalise_setpoint_type(setpoint_type)
 
 
-def _print_model_arguments(script_type, supply_air_temp_input_method, output_type, output_freqs,
-                           energyplus_version, temp_ctrl) -> None:
+def _print_model_arguments(script_type, supply_air_temp_input_method, output_type, output_frequencies,
+                           energyplus_version, setpoint_type) -> None:
     print('Basic input data:')
     print(f'Script type is: {script_type}')
     if script_type.startswith('vrf'):
         print(f'Supply Air Temperature Input Method is: {supply_air_temp_input_method}')
     print(f'Output type is: {output_type}')
     print('Output frequencies are: ')
-    print(output_freqs)
+    print(output_frequencies)
     if energyplus_version != 'auto':
         print(f'EnergyPlus version is: {energyplus_version}')
-    print(f'Temperature Control method is: {temp_ctrl}')
+    print(f'Temperature Control method is: {setpoint_type}')
 
 
 def _check_version(version: str) -> None:
@@ -251,9 +252,9 @@ class AddAccis:
     names that give their arguments, such as ``Model[CS_INT EN16798[CA_1[CM_3[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf``.
 
     The missing arguments are asked: those of the models if ``script_type``, ``output_type``,
-    ``output_freqs``, ``output_keep_existing``, ``temp_ctrl`` or (with VRF systems)
-    ``supply_air_temp_input_method`` is None, and those of the output IDFs if ``comf_stand``, ``cat``,
-    ``comf_mod`` or (in mixed mode) ``hvac_mode`` or ``vent_ctrl`` is None.
+    ``output_frequencies``, ``keep_existing_outputs``, ``setpoint_type`` or (with VRF systems)
+    ``supply_air_temp_input_method`` is None, and those of the output IDFs if ``comfort_standard``, ``category``,
+    ``comfort_mode`` or (in mixed mode) ``hvac_mode`` or ``ventilation_control`` is None.
 
     :param idfs: The IDF files. By default, those in the working folder.
     :param script_type: 'vrf_ac' (a new VRF system in each occupied zone, full air-conditioning), 'vrf_mm' (VRF
@@ -261,74 +262,78 @@ class AddAccis:
         systems, mixed mode).
     :param supply_air_temp_input_method: 'supply air temperature' or 'temperature difference' (VRF systems only).
     :param output_type: 'standard', 'simplified', 'detailed' or 'custom' (which asks which outputs to keep).
-    :param output_freqs: The reporting frequencies of the outputs: a list of 'timestep', 'hourly', 'daily',
+    :param output_frequencies: The reporting frequencies of the outputs: a list of 'timestep', 'hourly', 'daily',
         'monthly' and 'runperiod'.
-    :param output_keep_existing: True to keep the Output:Variable objects of the models.
-    :param output_gen_dataframe: True to keep a DataFrame with the Output:Variable objects in ``df_outputs``.
-    :param output_take_dataframe: A DataFrame like ``df_outputs``, filtered to keep the outputs wanted, which
+    :param keep_existing_outputs: True to keep the Output:Variable objects of the models.
+    :param make_outputs_dataframe: True to keep a DataFrame with the Output:Variable objects in ``df_outputs``.
+    :param outputs_dataframe: A DataFrame like ``df_outputs``, filtered to keep the outputs wanted, which
         replace those of the models.
     :param energyplus_version: '9.1' to '26.2', or 'auto' to read it from the models.
-    :param temp_ctrl: 'temperature' (or 'temp') for adaptive setpoint temperatures, or 'pmv' for setpoints based
+    :param setpoint_type: 'temperature' (or 'temp') for adaptive setpoint temperatures, or 'pmv' for setpoints based
         on the PMV of Fanger.
-    :param vrf_schedule: The availability schedule of the VRF systems.
-    :param comf_stand: The comfort standards (a list): 0 = ESP CTE; 1 = INT EN16798-1; 2 = INT ASHRAE55;
+    :param vrf_availability_schedule: The availability schedule of the VRF systems.
+    :param comfort_standard: The comfort standards (a list): 0 = ESP CTE; 1 = INT EN16798-1; 2 = INT ASHRAE55;
         3 = JPN Rijal; 4 = CHN GBT50785 Cold; 5 = CHN GBT50785 HotMild; 6 = CHN Yang; 7 = IND IMAC C NV;
         8 = IND IMAC C MM; 9 = IND IMAC R 7DRM; 10 = IND IMAC R 30DRM; 11 = IND Dhaka; 12 = ROM Udrea;
         13 = AUS Williamson; 14 = AUS DeDear; 15 = BRA Rupp NV; 16 = BRA Rupp AC; 17 = MEX Oropeza Arid;
         18 = MEX Oropeza DryTropic; 19 = MEX Oropeza Temperate; 20 = MEX Oropeza HumTropic;
         21 = CHL Perez-Fargallo; 22 = INT ISO7730; 99 = CUSTOM.
-    :param cat: The categories (a list): 1, 2 or 3 (CAT I, II, III), or 80, 85 or 90 (% of acceptability).
-    :param cat_cool_offset: An offset summed to the cooling setpoint offset of the category.
-    :param cat_heat_offset: An offset summed to the heating setpoint offset of the category.
-    :param comf_mod: The comfort modes (a list): 0 or 0.X = static; 1 or 1.X = adaptive when applicable,
+    :param category: The categories (a list): 1, 2 or 3 (CAT I, II, III), or 80, 85 or 90 (% of acceptability).
+    :param category_cooling_offset: An offset summed to the cooling setpoint offset of the category.
+    :param category_heating_offset: An offset summed to the heating setpoint offset of the category.
+    :param comfort_mode: The comfort modes (a list): 0 or 0.X = static; 1 or 1.X = adaptive when applicable,
         otherwise the local static model; 2 = adaptive when applicable, otherwise the international static
         model; 3 = adaptive when applicable, otherwise the adaptive setpoints extended horizontally.
-    :param setpoint_acc: The accuracy of the setpoints: 2 rounds them to every half degree, 10 to the first
+    :param setpoint_accuracy: The accuracy of the setpoints: 2 rounds them to every half degree, 10 to the first
         decimal...
-    :param cust_ast_acst_aul: Custom model (comf_stand 99): upper applicability limit of the cooling setpoint.
-    :param cust_ast_acst_all: Custom model: lower applicability limit of the cooling setpoint.
-    :param cust_ast_ahst_aul: Custom model: upper applicability limit of the heating setpoint.
-    :param cust_ast_ahst_all: Custom model: lower applicability limit of the heating setpoint.
-    :param cust_ast_m: Custom model: slope m of the comfort temperature (m * running mean outdoor temperature + n).
-    :param cust_ast_n: Custom model: intercept n of the comfort temperature.
-    :param cust_ast_acst_offset: Custom model: offset of the cooling setpoint from the comfort temperature (positive).
-    :param cust_ast_ahst_offset: Custom model: offset of the heating setpoint from the comfort temperature (negative).
-    :param cool_season_start: The start of the cooling season (a date 'dd/mm' or a day of the year), used by
+    :param custom_cooling_upper_limit: Custom model (comfort_standard 99): upper applicability limit of the cooling
+        setpoint (of the running mean outdoor temperature).
+    :param custom_cooling_lower_limit: Custom model: lower applicability limit of the cooling setpoint.
+    :param custom_heating_upper_limit: Custom model: upper applicability limit of the heating setpoint.
+    :param custom_heating_lower_limit: Custom model: lower applicability limit of the heating setpoint.
+    :param custom_slope: Custom model: slope m of the comfort temperature (m * running mean outdoor temperature + n).
+    :param custom_intercept: Custom model: intercept n of the comfort temperature.
+    :param custom_cooling_offset: Custom model: offset of the cooling setpoint from the comfort temperature (positive).
+    :param custom_heating_offset: Custom model: offset of the heating setpoint from the comfort temperature (negative).
+    :param cooling_season_start: The start of the cooling season (a date 'dd/mm' or a day of the year), used by
         some static models.
-    :param cool_season_end: The end of the cooling season.
+    :param cooling_season_end: The end of the cooling season.
     :param hvac_mode: The HVAC modes (a list): 0 = fully air-conditioned; 1 = naturally ventilated; 2 = mixed mode.
-    :param vent_ctrl: The ventilation controls (a list). With HVAC mode 1: 0 = ventilates above the comfort
+    :param ventilation_control: The ventilation controls (a list). With HVAC mode 1: 0 = ventilates above the comfort
         temperature; 1 = above the upper comfort limit. With HVAC mode 2: 0 = above the comfort temperature,
         opening the windows fully; 1 = above the lower comfort limit, opening them fully; 2 and 3 = like 0 and 1,
         with the customised venting opening factor.
-    :param max_temp_diff_vof: The maximum temperature difference of the venting opening factor (greater than 0).
-    :param min_temp_diff_vof: The minimum temperature difference of the venting opening factor.
-    :param multiplier_vof: The multiplier of the venting opening factor (between 0 and 1).
-    :param vst_offset: The offsets of the ventilation setpoint temperature (a list).
-    :param min_ot_offset: The offsets of the minimum outdoor temperature for ventilation (a list).
+    :param opening_factor_max_temp_diff: The maximum temperature difference (indoor minus outdoor) of the venting
+        opening factor (greater than 0).
+    :param opening_factor_min_temp_diff: The minimum temperature difference of the venting opening factor.
+    :param min_opening_factor: The venting opening factor from the maximum temperature difference up (between 0 and
+        1): with the ventilation controls 2 and 3, the opening factor goes from 1, below the minimum temperature
+        difference, to this value, above the maximum one.
+    :param ventilation_setpoint_offset: The offsets of the ventilation setpoint temperature (a list).
+    :param min_outdoor_temp_offset: The offsets of the minimum outdoor temperature for ventilation (a list).
     :param max_wind_speed: The maximum wind speeds for ventilation (a list).
-    :param ast_tol_start: The first tolerance of the setpoints.
-    :param ast_tol_end_input: The last tolerance of the setpoints.
-    :param ast_tol_steps: The step between tolerances.
+    :param setpoint_tolerance_start: The first tolerance of the setpoints.
+    :param setpoint_tolerance_end: The last tolerance of the setpoints.
+    :param setpoint_tolerance_step: The step between tolerances.
     :param name_suffix: A suffix for the names of the output IDFs.
-    :param verbose_mode: True to print the process.
-    :param confirm_gen: True to write the output IDFs without asking; None to ask.
-    :param eer: The energy efficiency ratio of the VRF systems.
-    :param cop: The coefficient of performance of the VRF systems.
-    :param make_averages: True to add the building averages of the hours of each zone and of some outputs.
-    :param debugging: True to make EnergyPlus write the EDD file of the EMS.
+    :param verbose: True to print the process.
+    :param confirm: True to write the output IDFs without asking; None to ask.
+    :param vrf_eer: The energy efficiency ratio of the VRF systems.
+    :param vrf_cop: The coefficient of performance of the VRF systems.
+    :param add_building_averages: True to add the building averages of the hours of each zone and of some outputs.
+    :param debug_ems: True to make EnergyPlus write the EDD file of the EMS.
     :param hvac_zone_map: Deprecated since accim 1.0.0, without effect: 'ex_mm' reads whether the HVAC system of
         each zone is on from the load that its thermostat asks for, so it no longer needs the zone of each existing
         HVAC object.
     :param zone_arguments: The arguments of some zones, which are the same in all the output IDFs:
-        ``{zone: {argument: value}}``, for instance ``{'Block1:Zone1': {'comf_stand': 2, 'cat': 80,
-        'comf_mod': 3}}``. The zones are the occupied zones, given by their names (or '<space> <people>', as in
+        ``{zone: {argument: value}}``, for instance ``{'Block1:Zone1': {'comfort_standard': 2, 'category': 80,
+        'comfort_mode': 3}}``. The zones are the occupied zones, given by their names (or '<space> <people>', as in
         the dictionaries of :func:`accim.sim.apmv.apply_apmv_setpoints`); the arguments are those of
-        :func:`modify_accis`, with one value each (the tolerance of the setpoints is ``ast_tol``). The other
+        :func:`modify_accis`, with one value each (the tolerance of the setpoints is ``setpoint_tolerance``). The other
         arguments of these zones, and the arguments of the other zones, are those of each output IDF, whose name
         does not change. Each zone needs a valid combination of comfort standard, category and comfort mode, and
         the HVAC mode and ventilation control of mixed mode only with 'vrf_mm' and 'ex_mm'. Only with temperature
-        control (``temp_ctrl`` 'temperature').
+        control (``setpoint_type`` 'temperature').
     :ivar arguments: The arguments, after asking the missing ones.
     :ivar input_idfs: The input IDFs, {'input IDF name': IDF object}.
     :ivar occupied_zones: The occupied zones of each input IDF, as in the EMS objects.
@@ -339,7 +344,7 @@ class AddAccis:
         zones in the EMS objects: ``{input IDF name: {zone: {argument: value}}}``.
     :ivar output_idfs: The output IDFs, {'output IDF file name': IDF object} (each one is read when it is used;
         ``output_idfs.paths`` has their paths).
-    :ivar df_outputs: The DataFrame of Output:Variable objects (argument ``output_gen_dataframe``).
+    :ivar df_outputs: The DataFrame of Output:Variable objects (argument ``make_outputs_dataframe``).
     """
 
     def __init__(
@@ -348,91 +353,91 @@ class AddAccis:
         script_type: Optional[str] = None,
         supply_air_temp_input_method: Optional[str] = None,
         output_type: Optional[str] = None,
-        output_freqs: Optional[Sequence[str]] = None,
-        output_keep_existing: Optional[bool] = None,
-        output_gen_dataframe: Optional[bool] = None,
-        output_take_dataframe: Optional[pd.DataFrame] = None,
+        output_frequencies: Optional[Sequence[str]] = None,
+        keep_existing_outputs: Optional[bool] = None,
+        make_outputs_dataframe: Optional[bool] = None,
+        outputs_dataframe: Optional[pd.DataFrame] = None,
         energyplus_version: str = 'auto',
-        temp_ctrl: Optional[str] = None,
-        vrf_schedule: str = 'On 24/7',
-        comf_stand: Optional[Sequence[int]] = None,
-        cat: Optional[Sequence[Number]] = None,
-        cat_cool_offset: Number = 0,
-        cat_heat_offset: Number = 0,
-        comf_mod: Optional[Sequence[Number]] = None,
-        setpoint_acc: Number = 10000,
-        cust_ast_acst_aul: Number = 0,
-        cust_ast_acst_all: Number = 0,
-        cust_ast_ahst_aul: Number = 0,
-        cust_ast_ahst_all: Number = 0,
-        cust_ast_m: Number = 0,
-        cust_ast_n: Number = 0,
-        cust_ast_acst_offset: Number = 0,
-        cust_ast_ahst_offset: Number = 0,
-        cool_season_start: Union[int, str] = 121,
-        cool_season_end: Union[int, str] = 274,
+        setpoint_type: Optional[str] = None,
+        vrf_availability_schedule: str = 'On 24/7',
+        comfort_standard: Optional[Sequence[int]] = None,
+        category: Optional[Sequence[Number]] = None,
+        category_cooling_offset: Number = 0,
+        category_heating_offset: Number = 0,
+        comfort_mode: Optional[Sequence[Number]] = None,
+        setpoint_accuracy: Number = 10000,
+        custom_cooling_upper_limit: Number = 0,
+        custom_cooling_lower_limit: Number = 0,
+        custom_heating_upper_limit: Number = 0,
+        custom_heating_lower_limit: Number = 0,
+        custom_slope: Number = 0,
+        custom_intercept: Number = 0,
+        custom_cooling_offset: Number = 0,
+        custom_heating_offset: Number = 0,
+        cooling_season_start: Union[int, str] = 121,
+        cooling_season_end: Union[int, str] = 274,
         hvac_mode: Optional[Sequence[int]] = None,
-        vent_ctrl: Optional[Sequence[int]] = None,
-        max_temp_diff_vof: Number = 6,
-        min_temp_diff_vof: Number = 1,
-        multiplier_vof: Number = 0.25,
-        vst_offset: Sequence[Number] = (0,),
-        min_ot_offset: Sequence[Number] = (50,),
+        ventilation_control: Optional[Sequence[int]] = None,
+        opening_factor_max_temp_diff: Number = 6,
+        opening_factor_min_temp_diff: Number = 1,
+        min_opening_factor: Number = 0.25,
+        ventilation_setpoint_offset: Sequence[Number] = (0,),
+        min_outdoor_temp_offset: Sequence[Number] = (50,),
         max_wind_speed: Sequence[Number] = (50,),
-        ast_tol_start: Number = 0.1,
-        ast_tol_end_input: Number = 0.1,
-        ast_tol_steps: Number = 0.1,
+        setpoint_tolerance_start: Number = 0.1,
+        setpoint_tolerance_end: Number = 0.1,
+        setpoint_tolerance_step: Number = 0.1,
         name_suffix: str = '',
-        verbose_mode: bool = True,
-        confirm_gen: Optional[bool] = None,
-        eer: Number = 2,
-        cop: Number = 2.1,
-        make_averages: bool = False,
-        debugging: bool = False,
+        verbose: bool = True,
+        confirm: Optional[bool] = None,
+        vrf_eer: Number = 2,
+        vrf_cop: Number = 2.1,
+        add_building_averages: bool = False,
+        debug_ems: bool = False,
         hvac_zone_map: Optional[Dict[str, str]] = None,
         zone_arguments: Optional[Dict[str, Dict[str, Any]]] = None,
     ):
         files = _input_files(idfs)
         print(BANNER)
         _warn_hvac_zone_map(hvac_zone_map)
-        self.verbose_mode = verbose_mode
+        self.verbose = verbose
         checked_zone_arguments = check_zone_arguments(zone_arguments)
 
-        if (script_type is None or output_type is None or output_freqs is None or output_keep_existing is None
-                or temp_ctrl is None
+        if (script_type is None or output_type is None or output_frequencies is None or keep_existing_outputs is None
+                or setpoint_type is None
                 or (supply_air_temp_input_method is None and script_type not in ('ex_mm', 'ex_ac'))):
             asked = prompts.ask_model_arguments()
             script_type = asked['script_type']
             supply_air_temp_input_method = asked['supply_air_temp_input_method']
-            output_keep_existing = asked['output_keep_existing']
+            keep_existing_outputs = asked['keep_existing_outputs']
             output_type = asked['output_type']
-            output_freqs = asked['output_freqs']
-            output_gen_dataframe = asked['output_gen_dataframe']
+            output_frequencies = asked['output_frequencies']
+            make_outputs_dataframe = asked['make_outputs_dataframe']
             energyplus_version = asked['energyplus_version']
-            temp_ctrl = asked['temp_ctrl']
+            setpoint_type = asked['setpoint_type']
         energyplus_version = normalise_energyplus_version(energyplus_version)
-        output_type, output_freqs, temp_ctrl = _check_model_arguments(
-            script_type, supply_air_temp_input_method, output_type, output_freqs, temp_ctrl)
-        if checked_zone_arguments and temp_ctrl == 'pmv':
-            raise ValueError("zone_arguments needs temp_ctrl 'temperature': with 'pmv', the Fanger thermostats "
+        output_type, output_frequencies, setpoint_type = _check_model_arguments(
+            script_type, supply_air_temp_input_method, output_type, output_frequencies, setpoint_type)
+        if checked_zone_arguments and setpoint_type == 'pmv':
+            raise ValueError("zone_arguments needs setpoint_type 'temperature': with 'pmv', the Fanger thermostats "
                              "control the zones and the arguments of the ACCIS are not used.")
-        if verbose_mode:
-            _print_model_arguments(script_type, supply_air_temp_input_method, output_type, output_freqs,
-                                   energyplus_version, temp_ctrl)
-        output_keep_existing = to_bool(output_keep_existing, 'output_keep_existing')
+        if verbose:
+            _print_model_arguments(script_type, supply_air_temp_input_method, output_type, output_frequencies,
+                                   energyplus_version, setpoint_type)
+        keep_existing_outputs = to_bool(keep_existing_outputs, 'keep_existing_outputs')
         # The outputs chosen with 'custom' are not known before
-        output_gen_dataframe = False if output_type == 'custom' else bool(output_gen_dataframe)
+        make_outputs_dataframe = False if output_type == 'custom' else bool(make_outputs_dataframe)
 
         self.arguments = _Arguments(
             script_type=script_type,
             supply_air_temp_input_method=supply_air_temp_input_method,
             output_type=output_type,
-            output_freqs=output_freqs,
-            output_keep_existing=output_keep_existing,
-            output_gen_dataframe=output_gen_dataframe,
-            output_take_dataframe=output_take_dataframe,
+            output_frequencies=output_frequencies,
+            keep_existing_outputs=keep_existing_outputs,
+            make_outputs_dataframe=make_outputs_dataframe,
+            outputs_dataframe=outputs_dataframe,
             energyplus_version=energyplus_version,
-            temp_ctrl=temp_ctrl,
+            setpoint_type=setpoint_type,
         )
         self.input_idfs: Dict[str, Any] = {}
         self.occupied_zones: Dict[str, List[str]] = {}
@@ -457,7 +462,7 @@ class AddAccis:
             if self.arguments['energyplus_version'] == 'auto':
                 self.arguments['energyplus_version'] = version
             idf = copy_idf(idf0)
-            model = AccimModel(idf, script_type, temp_ctrl, verbose_mode=verbose_mode,
+            model = AccimModel(idf, script_type, setpoint_type, verbose=verbose,
                                hvac_zone_map=hvac_zone_map, name=stem)
             self.input_idfs[stem] = idf0
             self.occupied_zones[stem] = model.occupied_zones
@@ -475,10 +480,11 @@ class AddAccis:
             if model.not_working:
                 not_working.append(stem)
                 continue
-            add_accis_objects(model, supply_air_temp_input_method, vrf_schedule=vrf_schedule, eer=eer, cop=cop,
-                              make_averages=make_averages, debugging=debugging)
-            add_outputs(model, output_type, output_freqs, output_keep_existing, output_take_dataframe, file=stem)
-            if output_gen_dataframe:
+            add_accis_objects(model, supply_air_temp_input_method,
+                              vrf_availability_schedule=vrf_availability_schedule, vrf_eer=vrf_eer, vrf_cop=vrf_cop,
+                              add_building_averages=add_building_averages, debug_ems=debug_ems)
+            add_outputs(model, output_type, output_frequencies, keep_existing_outputs, outputs_dataframe, file=stem)
+            if make_outputs_dataframe:
                 dataframes.append(output_variables_dataframe(idf, file=stem))
             enable_sizing_calculations(model)
             # The text of the model is kept instead of the model, which needs much more memory
@@ -489,7 +495,7 @@ class AddAccis:
         if missing_zones:
             raise ValueError(f'The zones {missing_zones} of zone_arguments are not occupied zones of the input IDFs. '
                              f'Their occupied zones are {self.occupied_zones_original_name}.')
-        if output_gen_dataframe:
+        if make_outputs_dataframe:
             self.df_outputs = (pd.concat(dataframes) if dataframes
                                else pd.DataFrame(columns=['file'] + OUTPUT_DATAFRAME_COLUMNS))
         self._log('The following IDFs will not work, so no output IDFs will be generated from them:',
@@ -497,34 +503,41 @@ class AddAccis:
         self._log(_START_OUTPUTS)
 
         generation = self._generation_arguments(
-            script_type, comf_stand=comf_stand, cat=cat, cat_cool_offset=cat_cool_offset,
-            cat_heat_offset=cat_heat_offset, comf_mod=comf_mod, setpoint_acc=setpoint_acc,
-            cust_ast_acst_aul=cust_ast_acst_aul, cust_ast_acst_all=cust_ast_acst_all,
-            cust_ast_ahst_aul=cust_ast_ahst_aul, cust_ast_ahst_all=cust_ast_ahst_all, cust_ast_m=cust_ast_m,
-            cust_ast_n=cust_ast_n, cust_ast_acst_offset=cust_ast_acst_offset,
-            cust_ast_ahst_offset=cust_ast_ahst_offset, cool_season_start=cool_season_start,
-            cool_season_end=cool_season_end, hvac_mode=hvac_mode, vent_ctrl=vent_ctrl,
-            max_temp_diff_vof=max_temp_diff_vof, min_temp_diff_vof=min_temp_diff_vof, multiplier_vof=multiplier_vof,
-            vst_offset=vst_offset, min_ot_offset=min_ot_offset, max_wind_speed=max_wind_speed,
-            ast_tol_start=ast_tol_start, ast_tol_end_input=ast_tol_end_input, ast_tol_steps=ast_tol_steps,
+            script_type, comfort_standard=comfort_standard, category=category,
+            category_cooling_offset=category_cooling_offset, category_heating_offset=category_heating_offset,
+            comfort_mode=comfort_mode, setpoint_accuracy=setpoint_accuracy,
+            custom_cooling_upper_limit=custom_cooling_upper_limit,
+            custom_cooling_lower_limit=custom_cooling_lower_limit,
+            custom_heating_upper_limit=custom_heating_upper_limit,
+            custom_heating_lower_limit=custom_heating_lower_limit,
+            custom_slope=custom_slope, custom_intercept=custom_intercept, custom_cooling_offset=custom_cooling_offset,
+            custom_heating_offset=custom_heating_offset, cooling_season_start=cooling_season_start,
+            cooling_season_end=cooling_season_end, hvac_mode=hvac_mode, ventilation_control=ventilation_control,
+            opening_factor_max_temp_diff=opening_factor_max_temp_diff,
+            opening_factor_min_temp_diff=opening_factor_min_temp_diff, min_opening_factor=min_opening_factor,
+            ventilation_setpoint_offset=ventilation_setpoint_offset, min_outdoor_temp_offset=min_outdoor_temp_offset,
+            max_wind_speed=max_wind_speed, setpoint_tolerance_start=setpoint_tolerance_start,
+            setpoint_tolerance_end=setpoint_tolerance_end, setpoint_tolerance_step=setpoint_tolerance_step,
             name_suffix=name_suffix)
         self.arguments.update({k: v for k, v in vars(generation).items()})
-        self.arguments.update(verbose_mode=verbose_mode, confirm_gen=confirm_gen, zone_arguments=zone_arguments)
+        self.arguments.update(verbose=verbose, confirm=confirm, zone_arguments=zone_arguments)
 
-        paths = self._write_output_idfs(models, generation, temp_ctrl, confirm_gen, idf_class,
+        paths = self._write_output_idfs(models, generation, setpoint_type, confirm, idf_class,
                                         is_mixed_mode(script_type))
         self.output_idfs = OutputIdfs(paths, idf_class)
         self._log(_END_OUTPUTS)
 
     def _log(self, *lines) -> None:
-        if self.verbose_mode:
+        if self.verbose:
             print(*lines, sep='\n')
 
     @staticmethod
     def _generation_arguments(script_type: str, **kwargs) -> GenerationArguments:
         """The arguments of the output IDFs, asking them if some are missing."""
         name_suffix = kwargs.pop('name_suffix')
-        needed = ['comf_stand', 'cat', 'comf_mod'] + (['hvac_mode', 'vent_ctrl'] if is_mixed_mode(script_type) else [])
+        needed = ['comfort_standard', 'category', 'comfort_mode']
+        if is_mixed_mode(script_type):
+            needed += ['hvac_mode', 'ventilation_control']
         if any(kwargs[name] is None for name in needed):
             kwargs = prompts.ask_generation_arguments(script_type)
         if not is_mixed_mode(script_type):
@@ -546,20 +559,20 @@ class AddAccis:
             raise ValueError('The arguments of some zones of zone_arguments are not valid (give the comfort '
                              'standard, category and comfort mode of each of these zones):\n' + '\n'.join(errors))
 
-    def _write_output_idfs(self, models, generation: GenerationArguments, temp_ctrl: str, confirm_gen,
+    def _write_output_idfs(self, models, generation: GenerationArguments, setpoint_type: str, confirm,
                            idf_class, mixed_mode: bool) -> Dict[str, str]:
-        combos = list(combinations(generation, temp_ctrl))
+        combos = list(combinations(generation, setpoint_type))
         self._check_zone_arguments(models, generation, combos, mixed_mode)
         names = [output_name(stem, c, generation.name_suffix) for stem, _ in models for c in combos]
         self._log('The list of output IDFs is going to be:', *names,
                   f'And the total number of output IDFs is going to be {len(names)}')
         paths: Dict[str, str] = {}
-        if not _to_confirmation(confirm_gen):
+        if not _to_confirmation(confirm):
             self._log('IDF generation has been shut down')
             return paths
         self._log('Generating the following output IDF files:')
         for stem, text in models:
-            writer = IdfWriter(idf_class(StringIO(text)), generation, temp_ctrl, self.zone_arguments.get(stem))
+            writer = IdfWriter(idf_class(StringIO(text)), generation, setpoint_type, self.zone_arguments.get(stem))
             for combination in combos:
                 path = output_name(stem, combination, generation.name_suffix)
                 self._log(path)
@@ -586,17 +599,17 @@ def add_accis_to_idf(
     script_type: Optional[str] = None,
     supply_air_temp_input_method: Optional[str] = None,
     output_type: Optional[str] = None,
-    output_freqs: Optional[Sequence[str]] = None,
-    output_keep_existing: Optional[bool] = None,
-    output_take_dataframe: Optional[pd.DataFrame] = None,
+    output_frequencies: Optional[Sequence[str]] = None,
+    keep_existing_outputs: Optional[bool] = None,
+    outputs_dataframe: Optional[pd.DataFrame] = None,
     energyplus_version: Optional[str] = None,
-    temp_ctrl: Optional[str] = None,
-    vrf_schedule: str = 'On 24/7',
-    verbose_mode: bool = True,
-    eer: Number = 2,
-    cop: Number = 2.1,
-    make_averages: bool = False,
-    debugging: bool = False,
+    setpoint_type: Optional[str] = None,
+    vrf_availability_schedule: str = 'On 24/7',
+    verbose: bool = True,
+    vrf_eer: Number = 2,
+    vrf_cop: Number = 2.1,
+    add_building_averages: bool = False,
+    debug_ems: bool = False,
     hvac_zone_map: Optional[Dict[str, str]] = None,
 ) -> AccimModel:
     """Add the ACCIS to an IDF object of eppy or besos (in place).
@@ -613,30 +626,31 @@ def add_accis_to_idf(
     :return: The model, whose attributes give its occupied zones and windows.
     :raises ValueError: If an argument is missing or not valid.
     """
-    if verbose_mode:
+    if verbose:
         print(BANNER)
     _warn_hvac_zone_map(hvac_zone_map)
     if energyplus_version is None or str(energyplus_version).lower() == 'auto':
         energyplus_version = _idf_version(idf)
-    output_type, output_freqs, temp_ctrl = _check_model_arguments(
-        script_type, supply_air_temp_input_method, output_type, output_freqs, temp_ctrl)
-    if verbose_mode:
-        _print_model_arguments(script_type, supply_air_temp_input_method, output_type, output_freqs,
-                               energyplus_version, temp_ctrl)
+    output_type, output_frequencies, setpoint_type = _check_model_arguments(
+        script_type, supply_air_temp_input_method, output_type, output_frequencies, setpoint_type)
+    if verbose:
+        _print_model_arguments(script_type, supply_air_temp_input_method, output_type, output_frequencies,
+                               energyplus_version, setpoint_type)
     check_choice('energyplus_version', energyplus_version, SUPPORTED_ENERGYPLUS_VERSIONS)
-    output_keep_existing = bool(output_keep_existing) if not isinstance(output_keep_existing, str) \
-        else to_bool(output_keep_existing, 'output_keep_existing')
-    if verbose_mode:
+    keep_existing_outputs = bool(keep_existing_outputs) if not isinstance(keep_existing_outputs, str) \
+        else to_bool(keep_existing_outputs, 'keep_existing_outputs')
+    if verbose:
         print(_START_MODEL)
-    model = AccimModel(idf, script_type, temp_ctrl, verbose_mode=verbose_mode, hvac_zone_map=hvac_zone_map)
-    add_accis_objects(model, supply_air_temp_input_method, vrf_schedule=vrf_schedule, eer=eer, cop=cop,
-                      make_averages=make_averages, debugging=debugging)
-    add_outputs(model, output_type, output_freqs, output_keep_existing, output_take_dataframe)
+    model = AccimModel(idf, script_type, setpoint_type, verbose=verbose, hvac_zone_map=hvac_zone_map)
+    add_accis_objects(model, supply_air_temp_input_method, vrf_availability_schedule=vrf_availability_schedule,
+                      vrf_eer=vrf_eer, vrf_cop=vrf_cop, add_building_averages=add_building_averages,
+                      debug_ems=debug_ems)
+    add_outputs(model, output_type, output_frequencies, keep_existing_outputs, outputs_dataframe)
     if script_type.startswith('vrf'):
         # EnergyPlus cannot run the VRF systems without sizing them (they are autosized). The existing HVAC systems
         # are the user's, so their sizing does not change (in accim 0.x, this function did not change it either)
         enable_sizing_calculations(model)
-    if verbose_mode:
+    if verbose:
         print(_END_MODEL)
     return model
 
@@ -645,17 +659,18 @@ def gen_outputs_df(
     idf,
     script_type: Optional[str] = None,
     output_type: Optional[str] = None,
-    output_freqs: Optional[Sequence[str]] = None,
-    output_keep_existing: Optional[bool] = None,
-    temp_ctrl: Optional[str] = None,
-    make_averages: bool = False,
-    verbose_mode: bool = False,
+    output_frequencies: Optional[Sequence[str]] = None,
+    keep_existing_outputs: Optional[bool] = None,
+    setpoint_type: Optional[str] = None,
+    add_building_averages: bool = False,
+    verbose: bool = False,
 ) -> pd.DataFrame:
     """Add the ACCIS to an IDF object (in place, see :func:`add_accis_to_idf`) and return a DataFrame with its
-    Output:Variable objects, which can be filtered and given as ``output_take_dataframe``."""
-    add_accis_to_idf(idf, script_type=script_type, output_type=output_type, output_freqs=output_freqs,
-                     output_keep_existing=output_keep_existing, temp_ctrl=temp_ctrl, make_averages=make_averages,
-                     supply_air_temp_input_method='temperature difference', verbose_mode=verbose_mode)
+    Output:Variable objects, which can be filtered and given as ``outputs_dataframe``."""
+    add_accis_to_idf(idf, script_type=script_type, output_type=output_type, output_frequencies=output_frequencies,
+                     keep_existing_outputs=keep_existing_outputs, setpoint_type=setpoint_type,
+                     add_building_averages=add_building_averages,
+                     supply_air_temp_input_method='temperature difference', verbose=verbose)
     return output_variables_dataframe(idf)
 
 
@@ -665,31 +680,31 @@ def _programs(idf) -> Dict[str, Any]:
 
 def modify_accis(
     idf,
-    comf_stand: Optional[int] = None,
-    cat: Optional[Number] = None,
-    cat_cool_offset: Number = 0,
-    cat_heat_offset: Number = 0,
-    comf_mod: Optional[Number] = None,
-    setpoint_acc: Number = 10000,
-    cust_ast_acst_aul: Number = 0,
-    cust_ast_acst_all: Number = 0,
-    cust_ast_ahst_aul: Number = 0,
-    cust_ast_ahst_all: Number = 0,
-    cust_ast_m: Number = 0,
-    cust_ast_n: Number = 0,
-    cust_ast_acst_offset: Number = 0,
-    cust_ast_ahst_offset: Number = 0,
-    cool_season_start: Union[int, str] = 121,
-    cool_season_end: Union[int, str] = 274,
+    comfort_standard: Optional[int] = None,
+    category: Optional[Number] = None,
+    category_cooling_offset: Number = 0,
+    category_heating_offset: Number = 0,
+    comfort_mode: Optional[Number] = None,
+    setpoint_accuracy: Number = 10000,
+    custom_cooling_upper_limit: Number = 0,
+    custom_cooling_lower_limit: Number = 0,
+    custom_heating_upper_limit: Number = 0,
+    custom_heating_lower_limit: Number = 0,
+    custom_slope: Number = 0,
+    custom_intercept: Number = 0,
+    custom_cooling_offset: Number = 0,
+    custom_heating_offset: Number = 0,
+    cooling_season_start: Union[int, str] = 121,
+    cooling_season_end: Union[int, str] = 274,
     hvac_mode: Optional[int] = None,
-    vent_ctrl: Optional[int] = None,
-    max_temp_diff_vof: Number = 6,
-    min_temp_diff_vof: Number = 1,
-    multiplier_vof: Number = 0.25,
-    vst_offset: Number = 0,
-    min_ot_offset: Number = 50,
+    ventilation_control: Optional[int] = None,
+    opening_factor_max_temp_diff: Number = 6,
+    opening_factor_min_temp_diff: Number = 1,
+    min_opening_factor: Number = 0.25,
+    ventilation_setpoint_offset: Number = 0,
+    min_outdoor_temp_offset: Number = 50,
     max_wind_speed: Number = 50,
-    ast_tol: Number = 0.1,
+    setpoint_tolerance: Number = 0.1,
     zone_arguments: Optional[Dict[str, Dict[str, Any]]] = None,
 ) -> None:
     """Set the arguments of the ACCIS of an IDF object (one value of each argument of :class:`AddAccis`), in all
@@ -704,23 +719,27 @@ def modify_accis(
     the same arguments in all the zones, and they get the subprograms of this version where they behave
     differently (those of ESP CTE and INT ISO7730 set the setpoints whatever the comfort mode is).
 
-    :param ast_tol: The tolerance of the setpoints.
+    :param setpoint_tolerance: The tolerance of the setpoints.
     :param zone_arguments: The arguments of some zones, which replace those of the call in these zones:
-        ``{zone: {argument: value}}``, for instance ``{'Block1:Zone1': {'comf_stand': 2, 'cat': 80, 'comf_mod': 3}}``
-        (see :class:`AddAccis`). An argument that is None in the call and is not given for a zone keeps its value
-        in the zone.
-    :raises ValueError: If the model has no ACCIS, setpoint_acc is negative, or zone_arguments is not valid (or is
-        given for a model of an earlier version of accim).
+        ``{zone: {argument: value}}``, for instance
+        ``{'Block1:Zone1': {'comfort_standard': 2, 'category': 80, 'comfort_mode': 3}}`` (see :class:`AddAccis`). An
+        argument that is None in the call and is not given for a zone keeps its value in the zone.
+    :raises ValueError: If the model has no ACCIS, setpoint_accuracy is negative, or zone_arguments is not valid (or
+        is given for a model of an earlier version of accim).
     """
     arguments = dict(
-        comf_stand=comf_stand, cat=cat, cat_cool_offset=cat_cool_offset, cat_heat_offset=cat_heat_offset,
-        comf_mod=comf_mod, setpoint_acc=setpoint_acc, cust_ast_acst_aul=cust_ast_acst_aul,
-        cust_ast_acst_all=cust_ast_acst_all, cust_ast_ahst_aul=cust_ast_ahst_aul, cust_ast_ahst_all=cust_ast_ahst_all,
-        cust_ast_m=cust_ast_m, cust_ast_n=cust_ast_n, cust_ast_acst_offset=cust_ast_acst_offset,
-        cust_ast_ahst_offset=cust_ast_ahst_offset, cool_season_start=cool_season_start,
-        cool_season_end=cool_season_end, hvac_mode=hvac_mode, vent_ctrl=vent_ctrl,
-        max_temp_diff_vof=max_temp_diff_vof, min_temp_diff_vof=min_temp_diff_vof, multiplier_vof=multiplier_vof,
-        vst_offset=vst_offset, min_ot_offset=min_ot_offset, max_wind_speed=max_wind_speed, ast_tol=ast_tol,
+        comfort_standard=comfort_standard, category=category, category_cooling_offset=category_cooling_offset,
+        category_heating_offset=category_heating_offset, comfort_mode=comfort_mode,
+        setpoint_accuracy=setpoint_accuracy, custom_cooling_upper_limit=custom_cooling_upper_limit,
+        custom_cooling_lower_limit=custom_cooling_lower_limit, custom_heating_upper_limit=custom_heating_upper_limit,
+        custom_heating_lower_limit=custom_heating_lower_limit, custom_slope=custom_slope,
+        custom_intercept=custom_intercept, custom_cooling_offset=custom_cooling_offset,
+        custom_heating_offset=custom_heating_offset, cooling_season_start=cooling_season_start,
+        cooling_season_end=cooling_season_end, hvac_mode=hvac_mode, ventilation_control=ventilation_control,
+        opening_factor_max_temp_diff=opening_factor_max_temp_diff,
+        opening_factor_min_temp_diff=opening_factor_min_temp_diff, min_opening_factor=min_opening_factor,
+        ventilation_setpoint_offset=ventilation_setpoint_offset, min_outdoor_temp_offset=min_outdoor_temp_offset,
+        max_wind_speed=max_wind_speed, setpoint_tolerance=setpoint_tolerance,
     )
     programs = _programs(idf)
     zone_programs = input_programs(idf)
@@ -734,8 +753,8 @@ def modify_accis(
     missing = [n for n in ('SetAST', 'ApplyCAT', 'SetComfTemp', 'SetAppLimits') if n not in programs]
     if missing:
         raise ValueError(f'The model has no EMS programs {missing}. Add the ACCIS first with add_accis_to_idf().')
-    if setpoint_acc < 0:
-        raise ValueError('The value for setpoint_acc cannot be less than 0.')
+    if setpoint_accuracy < 0:
+        raise ValueError('The value for setpoint_accuracy cannot be less than 0.')
     zones = check_zone_arguments(zone_arguments)
     resolved: Dict[str, Dict[str, Any]] = {}
     if zones:
@@ -745,35 +764,38 @@ def modify_accis(
 
 
 def _modify_accis_of_earlier_versions(
-    idf, programs: Dict[str, Any], comf_stand, cat, cat_cool_offset, cat_heat_offset, comf_mod, setpoint_acc,
-    cust_ast_acst_aul, cust_ast_acst_all, cust_ast_ahst_aul, cust_ast_ahst_all, cust_ast_m, cust_ast_n,
-    cust_ast_acst_offset, cust_ast_ahst_offset, cool_season_start, cool_season_end, hvac_mode, vent_ctrl,
-    max_temp_diff_vof, min_temp_diff_vof, multiplier_vof, vst_offset, min_ot_offset, max_wind_speed, ast_tol,
+    idf, programs: Dict[str, Any], comfort_standard, category, category_cooling_offset, category_heating_offset,
+    comfort_mode, setpoint_accuracy, custom_cooling_upper_limit, custom_cooling_lower_limit,
+    custom_heating_upper_limit, custom_heating_lower_limit, custom_slope, custom_intercept, custom_cooling_offset,
+    custom_heating_offset, cooling_season_start, cooling_season_end, hvac_mode, ventilation_control,
+    opening_factor_max_temp_diff, opening_factor_min_temp_diff, min_opening_factor, ventilation_setpoint_offset,
+    min_outdoor_temp_offset, max_wind_speed, setpoint_tolerance,
 ) -> None:
     """:func:`modify_accis` for the models of earlier versions of accim, which have one program SetInputData for all
     the zones, and the other arguments in SetAST, ApplyCAT, SetAppLimits and SetVOFinputData."""
     missing = [n for n in ('SetInputData', 'SetAST', 'ApplyCAT', 'SetComfTemp', 'SetAppLimits') if n not in programs]
     if missing:
         raise ValueError(f'The model has no EMS programs {missing}. Add the ACCIS first with add_accis_to_idf().')
-    if setpoint_acc < 0:
-        raise ValueError('The value for setpoint_acc cannot be less than 0.')
-    start = to_day_of_year(cool_season_start, 'cool_season_start')
-    end = to_day_of_year(cool_season_end, 'cool_season_end')
+    if setpoint_accuracy < 0:
+        raise ValueError('The value for setpoint_accuracy cannot be less than 0.')
+    start = to_day_of_year(cooling_season_start, 'cooling_season_start')
+    end = to_day_of_year(cooling_season_end, 'cooling_season_end')
 
-    input_data = [('ComfStand', comf_stand), ('CAT', cat), ('ComfMod', comf_mod), ('HVACmode', hvac_mode),
-                  ('VentCtrl', vent_ctrl), ('VSToffset', vst_offset), ('MinOToffset', min_ot_offset),
-                  ('MaxWindSpeed', max_wind_speed), ('ACSTtol', -ast_tol), ('AHSTtol', ast_tol),
+    input_data = [('ComfStand', comfort_standard), ('CAT', category), ('ComfMod', comfort_mode),
+                  ('HVACmode', hvac_mode), ('VentCtrl', ventilation_control),
+                  ('VSToffset', ventilation_setpoint_offset), ('MinOToffset', min_outdoor_temp_offset),
+                  ('MaxWindSpeed', max_wind_speed), ('ACSTtol', -setpoint_tolerance), ('AHSTtol', setpoint_tolerance),
                   ('CoolSeasonStart', start), ('CoolSeasonEnd', end)]
     for number, (name, value) in enumerate(input_data, start=1):
         if value is not None:
             setattr(programs['SetInputData'], f'Program_Line_{number}', f'set {name} = {value}')
 
-    programs['SetComfTemp'].Program_Line_2 = f'set ComfTemp = PMOT*{cust_ast_m}+{cust_ast_n}'
+    programs['SetComfTemp'].Program_Line_2 = f'set ComfTemp = PMOT*{custom_slope}+{custom_intercept}'
     set_program_lines(programs['SetAppLimits'], [
-        f'set ACSTaul = {cust_ast_acst_aul}', f'set ACSTall = {cust_ast_acst_all}',
-        f'set AHSTaul = {cust_ast_ahst_aul}', f'set AHSTall = {cust_ast_ahst_all}'], first=2)
-    replace_program_lines(programs['SetAST'], [f'set SetpointAcc = {setpoint_acc}', f'set m = {cust_ast_m}',
-                                               f'set n = {cust_ast_n}', 'run SetAST_Master'])
+        f'set ACSTaul = {custom_cooling_upper_limit}', f'set ACSTall = {custom_cooling_lower_limit}',
+        f'set AHSTaul = {custom_heating_upper_limit}', f'set AHSTall = {custom_heating_lower_limit}'], first=2)
+    replace_program_lines(programs['SetAST'], [f'set SetpointAcc = {setpoint_accuracy}', f'set m = {custom_slope}',
+                                               f'set n = {custom_intercept}', 'run SetAST_Master'])
     # The models of accim before 0.8 have no SetAST_Master
     if 'SetAST_Master' not in programs:
         add_program(idf, 'SetAST_Master', master_program_lines())
@@ -788,9 +810,11 @@ def _modify_accis_of_earlier_versions(
                 replace_program_lines(programs[name], lines)
     if 'SetVOFinputData' in programs:
         set_program_lines(programs['SetVOFinputData'], [
-            f'set MaxTempDiffVOF = {max_temp_diff_vof}', f'set MinTempDiffVOF = {min_temp_diff_vof}',
-            f'set MultiplierVOF = {multiplier_vof}'])
-    set_program_lines(programs['ApplyCAT'], [f'set CATcoolOffset = {cat_cool_offset}',
-                                             f'set CATheatOffset = {cat_heat_offset}'])
-    set_program_lines(programs['ApplyCAT'], [f'set ACSToffset = {cust_ast_acst_offset} + {cat_cool_offset}',
-                                             f'set AHSToffset = {cust_ast_ahst_offset} + {cat_heat_offset}'], first=4)
+            f'set MaxTempDiffVOF = {opening_factor_max_temp_diff}',
+            f'set MinTempDiffVOF = {opening_factor_min_temp_diff}',
+            f'set MultiplierVOF = {min_opening_factor}'])
+    set_program_lines(programs['ApplyCAT'], [f'set CATcoolOffset = {category_cooling_offset}',
+                                             f'set CATheatOffset = {category_heating_offset}'])
+    set_program_lines(programs['ApplyCAT'], [f'set ACSToffset = {custom_cooling_offset} + {category_cooling_offset}',
+                                             f'set AHSToffset = {custom_heating_offset} + {category_heating_offset}'],
+                      first=4)

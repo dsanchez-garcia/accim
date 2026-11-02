@@ -40,7 +40,7 @@ def _make_lightweight_parametric(epws=('Test.epw',)):
         buildings=None,
         epws=list(epws),
         parameters_type=None,
-        bypass_addAccis=True,
+        bypass_add_accis=True,
     )
     sim.problem = _DummyProblem(inputs=['x'], outputs=['energy'])
     return sim
@@ -217,7 +217,10 @@ def test_custom_model_baseline_is_written_in_every_building(monkeypatch):
     monkeypatch.setattr(
         main_module.bf_accim,
         'get_custom_model_arguments',
-        lambda building: {k: 0 for k in ['m', 'n', 'ACSToffset', 'AHSToffset', 'ACSTaul', 'AHSTaul', 'ACSTall', 'AHSTall']},
+        lambda building: {k: 0 for k in ['custom_slope', 'custom_intercept', 'custom_cooling_offset',
+                                         'custom_heating_offset', 'custom_cooling_upper_limit',
+                                         'custom_heating_upper_limit', 'custom_cooling_lower_limit',
+                                         'custom_heating_lower_limit']},
     )
 
     sim = _make_lightweight_parametric()
@@ -229,9 +232,9 @@ def test_custom_model_baseline_is_written_in_every_building(monkeypatch):
     sim.building = sim.buildings[0]
 
     sim.set_parameters(accis_params_dict={
-        'CustAST_m': (0.2, 0.6),
-        'CustAST_n': (10.0, 20.0),
-        'CustAST_ASToffset': (1.0, 4.0),
+        'custom_slope': (0.2, 0.6),
+        'custom_intercept': (10.0, 20.0),
+        'custom_offset': (1.0, 4.0),
     })
 
     for idfname in ['office_a.idf', 'office_b.idf']:

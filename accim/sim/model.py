@@ -48,8 +48,8 @@ class AccimModel:
 
     :param idf: The eppy or besos IDF object. It is modified in place.
     :param script_type: 'vrf_ac', 'vrf_mm', 'ex_ac' or 'ex_mm'.
-    :param temp_ctrl: 'temperature' or 'pmv'.
-    :param verbose_mode: True to print the process.
+    :param setpoint_type: 'temperature' or 'pmv'.
+    :param verbose: True to print the process.
     :param hvac_zone_map: Not used (deprecated since accim 1.0.0): 'ex_mm' no longer needs the zone of each existing
         HVAC object.
     :param name: The name of the model in the messages.
@@ -70,15 +70,15 @@ class AccimModel:
         self,
         idf,
         script_type: str,
-        temp_ctrl: str,
-        verbose_mode: bool = True,
+        setpoint_type: str,
+        verbose: bool = True,
         hvac_zone_map: Optional[Dict[str, str]] = None,
         name: Optional[str] = None,
     ):
         self.idf = idf
         self.script_type = script_type
-        self.temp_ctrl = temp_ctrl
-        self.verbose_mode = verbose_mode
+        self.setpoint_type = setpoint_type
+        self.verbose = verbose
         self.hvac_zone_map = hvac_zone_map
         self.name = name if name is not None else str(idf)
         self.not_working = False
@@ -104,8 +104,8 @@ class AccimModel:
             self._scan_thermostats()
 
     def log(self, *lines) -> None:
-        """Print the lines if verbose_mode is True."""
-        if self.verbose_mode:
+        """Print the lines if verbose is True."""
+        if self.verbose:
             print(*lines, sep='\n')
 
     @property

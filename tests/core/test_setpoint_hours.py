@@ -60,7 +60,7 @@ def test_a_zone_without_occupied_hours_has_no_percentage(tmp_path):
 
 
 def test_several_frequencies_and_building_averages_are_not_added_twice(tmp_path):
-    # The run period values of the same outputs, and the building averages of make_averages
+    # The run period values of the same outputs, and the building averages of add_building_averages
     extra = {OCC.format(zone='Z1', frequency='RunPeriod'): [None, 2.0],
              WITHIN.format(zone='Z1', frequency='RunPeriod'): [None, 1.0],
              'EMS:Occupied Hours_Building_Average [H](Hourly)': [1.0, 1.0],

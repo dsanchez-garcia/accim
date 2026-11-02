@@ -17,10 +17,10 @@ def test_parametric_basic():
         buildings=buildings,
         epws=ts.TEST_CATEGORIES['fast']['epws'],
         parameters_type='accim predefined model',
-        output_freqs=['hourly', 'monthly']
+        output_frequencies=['hourly', 'monthly']
     )
 
-    sim.set_parameters(accis_params_dict={'ComfStand': [1, 2], 'CAT': [1, 80], 'ComfMod': [3]})
+    sim.set_parameters(accis_params_dict={'comfort_standard': [1, 2], 'category': [1, 80], 'comfort_mode': [3]})
     meters = ts.set_meter_readers(sim)
     sim.set_problem()
     sim.sampling_full_set()
@@ -51,7 +51,7 @@ def test_parametric_multi_epw():
         parameters_type='accim predefined model'
     )
 
-    sim.set_parameters(accis_params_dict={'ComfMod': [3]})
+    sim.set_parameters(accis_params_dict={'comfort_mode': [3]})
     ts.set_meter_readers(sim)
     sim.set_problem()
     sim.sampling_full_set()
@@ -77,7 +77,7 @@ def test_parametric_multi_idf():
         parameters_type='accim predefined model'
     )
 
-    sim.set_parameters(accis_params_dict={'ComfMod': [3]})
+    sim.set_parameters(accis_params_dict={'comfort_mode': [3]})
     ts.set_meter_readers(sim)
     sim.set_problem()
     sim.sampling_full_set()
@@ -105,7 +105,7 @@ def test_parametric_output_types():
             output_type=output_type
         )
 
-        sim.set_parameters(accis_params_dict={'ComfMod': [3]})
+        sim.set_parameters(accis_params_dict={'comfort_mode': [3]})
         ts.set_meter_readers(sim)
         sim.set_problem()
         sim.sampling_full_set()
@@ -126,16 +126,16 @@ def test_parametric_apmv():
 
     buildings = ts.prepare_buildings(ts.TEST_CATEGORIES['fast']['idfs'][:1])
     for building in buildings:
-        apmv.add_vrf_system(building=building, verbose_mode=False)
+        apmv.add_vrf_system(building=building, verbose=False)
         apmv.set_pmv_input_parameters(building, clothing_insulation=0.5, air_velocity=0.1, work_efficiency=0.0,
-                                      verbose_mode=False)
+                                      verbose=False)
     sim = ts.ParametricSimulation(
         buildings=buildings,
         epws=ts.TEST_CATEGORIES['fast']['epws'][:1],
         parameters_type='apmv setpoints'
     )
 
-    sim.set_parameters(accis_params_dict={'Adaptive coefficient': [0.0, 0.9], 'PMV setpoint': [0.5]})
+    sim.set_parameters(accis_params_dict={'adaptive_coefficient': [0.0, 0.9], 'pmv_setpoint': [0.5]})
     ts.set_meter_readers(sim)
     sim.set_problem()
     sim.sampling_full_set()
@@ -172,7 +172,7 @@ def test_parametric_with_custom_outputs():
     sim.set_output_meters_to_idf(df_output_meter=df_meters_filtered, validate=False)
     sim.set_output_readers(df_output_meter=df_meters_filtered)
 
-    sim.set_parameters(accis_params_dict={'ComfMod': [3]})
+    sim.set_parameters(accis_params_dict={'comfort_mode': [3]})
     sim.set_problem()
     sim.sampling_full_set()
 

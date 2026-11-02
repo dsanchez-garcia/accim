@@ -219,7 +219,7 @@ def _varies(column) -> bool:
 
 
 # The hour counters of the ACCIS whose names contain the name of another one, and the suffix of the building averages
-# of make_averages, which are not outputs of a zone
+# of add_building_averages, which are not outputs of a zone
 _LONGER_OUTPUTS = ('Occupied Comfortable Hours_No Applicability', 'Occupied Discomfortable Hours_No Applicability')
 _BUILDING_AVERAGE = '_BUILDING_AVERAGE'
 
@@ -228,7 +228,7 @@ def _of_output(column: str, output: str) -> bool:
     """
     Whether Table adds a column up in the block and building totals of an output: the column contains the name of
     the output, but not as part of the name of a longer output ('Occupied Comfortable Hours_No Applicability' is not
-    'Comfortable Hours_No Applicability'), and it is not a building average of make_averages.
+    'Comfortable Hours_No Applicability'), and it is not a building average of add_building_averages.
     """
     column, output = column.upper(), output.upper()
     if output not in column or _BUILDING_AVERAGE in column:

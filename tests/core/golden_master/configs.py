@@ -33,82 +33,82 @@ INPUT_MODELS = {
 BASE = dict(
     supply_air_temp_input_method='temperature difference',
     output_type='standard',
-    output_freqs=['hourly'],
-    output_keep_existing=False,
+    output_frequencies=['hourly'],
+    keep_existing_outputs=False,
     energyplus_version='auto',
-    temp_ctrl='temperature',
-    confirm_gen=True,
-    verbose_mode=False,
+    setpoint_type='temperature',
+    confirm=True,
+    verbose=False,
 )
 
 # AddAccis on the files of the working folder
 BATCH = {
     # every valid comfort model with full air-conditioning
     'b01_vrf_ac_all': dict(models=['vrf2zones'], kwargs=dict(
-        BASE, script_type='vrf_ac', comf_stand=ALL_CS, cat=ALL_CAT, comf_mod=ALL_CM, hvac_mode=[0])),
+        BASE, script_type='vrf_ac', comfort_standard=ALL_CS, category=ALL_CAT, comfort_mode=ALL_CM, hvac_mode=[0])),
     # mixed mode: HVAC modes, ventilation controls, offsets, tolerances and other arguments
     'b02_vrf_mm_grid': dict(models=['vrf2zones'], kwargs=dict(
-        BASE, script_type='vrf_mm', comf_stand=[1, 13], cat=[3, 80], comf_mod=[0.1, 2, 3], hvac_mode=[0, 1, 2],
-        vent_ctrl=[0, 1, 2, 3], vst_offset=[0, -1.5], min_ot_offset=[50], max_wind_speed=[50],
-        ast_tol_start=0.1, ast_tol_end_input=0.2, ast_tol_steps=0.1, name_suffix='grid', setpoint_acc=2,
-        cat_cool_offset=0.5, cat_heat_offset=-0.5, cool_season_start='15/05', cool_season_end=300,
-        output_type='detailed', output_freqs=['hourly', 'daily'], output_keep_existing=True,
-        make_averages=True, debugging=True, output_gen_dataframe=True,
-        max_temp_diff_vof=5, min_temp_diff_vof=2, multiplier_vof=0.5)),
+        BASE, script_type='vrf_mm', comfort_standard=[1, 13], category=[3, 80], comfort_mode=[0.1, 2, 3], hvac_mode=[0, 1, 2],
+        ventilation_control=[0, 1, 2, 3], ventilation_setpoint_offset=[0, -1.5], min_outdoor_temp_offset=[50], max_wind_speed=[50],
+        setpoint_tolerance_start=0.1, setpoint_tolerance_end=0.2, setpoint_tolerance_step=0.1, name_suffix='grid', setpoint_accuracy=2,
+        category_cooling_offset=0.5, category_heating_offset=-0.5, cooling_season_start='15/05', cooling_season_end=300,
+        output_type='detailed', output_frequencies=['hourly', 'daily'], keep_existing_outputs=True,
+        add_building_averages=True, debug_ems=True, make_outputs_dataframe=True,
+        opening_factor_max_temp_diff=5, opening_factor_min_temp_diff=2, min_opening_factor=0.5)),
     'b03_vrf_mm_all_cs': dict(models=['vrf2zones'], kwargs=dict(
-        BASE, script_type='vrf_mm', comf_stand=ALL_CS, cat=[1, 80], comf_mod=[0, 1.2, 3], hvac_mode=[2],
-        vent_ctrl=[1], vst_offset=[1], min_ot_offset=[4], max_wind_speed=[6], output_freqs=['timestep', 'monthly'])),
+        BASE, script_type='vrf_mm', comfort_standard=ALL_CS, category=[1, 80], comfort_mode=[0, 1.2, 3], hvac_mode=[2],
+        ventilation_control=[1], ventilation_setpoint_offset=[1], min_outdoor_temp_offset=[4], max_wind_speed=[6], output_frequencies=['timestep', 'monthly'])),
     'b04_vrf_pmv': dict(models=['vrf2zones'], kwargs=dict(
-        BASE, script_type='vrf_ac', temp_ctrl='pmv', comf_stand=[1], cat=[3], comf_mod=[3], hvac_mode=[0])),
+        BASE, script_type='vrf_ac', setpoint_type='pmv', comfort_standard=[1], category=[3], comfort_mode=[3], hvac_mode=[0])),
     'b05_vrf_mm_pmv_simplified': dict(models=['vrf2zones'], kwargs=dict(
-        BASE, script_type='vrf_mm', temp_ctrl='pmv', supply_air_temp_input_method='supply air temperature',
-        output_type='simplified', comf_stand=[2], cat=[80], comf_mod=[3], hvac_mode=[2], vent_ctrl=[0])),
+        BASE, script_type='vrf_mm', setpoint_type='pmv', supply_air_temp_input_method='supply air temperature',
+        output_type='simplified', comfort_standard=[2], category=[80], comfort_mode=[3], hvac_mode=[2], ventilation_control=[0])),
     'b06_ex_ac_ptac': dict(models=['exptac'], kwargs=dict(
-        BASE, script_type='ex_ac', comf_stand=[1, 2], cat=[2, 90], comf_mod=[2, 3], hvac_mode=[0],
-        output_type='simplified', output_freqs=['timestep'])),
+        BASE, script_type='ex_ac', comfort_standard=[1, 2], category=[2, 90], comfort_mode=[2, 3], hvac_mode=[0],
+        output_type='simplified', output_frequencies=['timestep'])),
     'b07_ex_mm_ptac': dict(models=['exptac'], kwargs=dict(
-        BASE, script_type='ex_mm', comf_stand=[2], cat=[80], comf_mod=[3], hvac_mode=[1, 2], vent_ctrl=[0, 2],
-        max_temp_diff_vof=5, min_temp_diff_vof=2, multiplier_vof=0.5, make_averages=True)),
+        BASE, script_type='ex_mm', comfort_standard=[2], category=[80], comfort_mode=[3], hvac_mode=[1, 2], ventilation_control=[0, 2],
+        opening_factor_max_temp_diff=5, opening_factor_min_temp_diff=2, min_opening_factor=0.5, add_building_averages=True)),
     'b08_ex_mm_radiators': dict(models=['exrad'], kwargs=dict(
-        BASE, script_type='ex_mm', comf_stand=[1], cat=[2], comf_mod=[3], hvac_mode=[2], vent_ctrl=[1])),
+        BASE, script_type='ex_mm', comfort_standard=[1], category=[2], comfort_mode=[3], hvac_mode=[2], ventilation_control=[1])),
     'b09_ex_mm_beams': dict(models=['exbeams'], kwargs=dict(
-        BASE, script_type='ex_mm', comf_stand=[14], cat=[90], comf_mod=[1.3, 2], hvac_mode=[2], vent_ctrl=[3])),
+        BASE, script_type='ex_mm', comfort_standard=[14], category=[90], comfort_mode=[1.3, 2], hvac_mode=[2], ventilation_control=[3])),
     # an existing HVAC system with two kinds of heating coils (accim 0.8.2 rejected the model)
     'b10_ex_mm_osm_office': dict(models=['osmofficeex'], kwargs=dict(
-        BASE, script_type='ex_mm', comf_stand=[2], cat=[90], comf_mod=[3], hvac_mode=[0, 2], vent_ctrl=[0],
+        BASE, script_type='ex_mm', comfort_standard=[2], category=[90], comfort_mode=[3], hvac_mode=[0, 2], ventilation_control=[0],
         output_type='detailed')),
     'b11_ex_ac_osm_office': dict(models=['osmofficeex'], kwargs=dict(
-        BASE, script_type='ex_ac', comf_stand=[1], cat=[1], comf_mod=[0, 3], hvac_mode=[0],
-        output_keep_existing=True)),
+        BASE, script_type='ex_ac', comfort_standard=[1], category=[1], comfort_mode=[0, 3], hvac_mode=[0],
+        keep_existing_outputs=True)),
     'b12_vrf_mm_osm_office_nohvac': dict(models=['osmofficenohvac'], kwargs=dict(
-        BASE, script_type='vrf_mm', comf_stand=[7], cat=[85], comf_mod=[1, 3], hvac_mode=[2], vent_ctrl=[0])),
+        BASE, script_type='vrf_mm', comfort_standard=[7], category=[85], comfort_mode=[1, 3], hvac_mode=[2], ventilation_control=[0])),
     'b13_vrf_mm_scheduled_vent': dict(models=['osmresschvent'], kwargs=dict(
-        BASE, script_type='vrf_mm', comf_stand=[1, 99], cat=[3, 80], comf_mod=[3], hvac_mode=[1, 2],
-        vent_ctrl=[0, 1], output_type='detailed', cust_ast_m=0.4, cust_ast_n=15, cust_ast_acst_offset=3,
-        cust_ast_ahst_offset=-3, cust_ast_acst_aul=32, cust_ast_acst_all=12, cust_ast_ahst_aul=31,
-        cust_ast_ahst_all=11)),
+        BASE, script_type='vrf_mm', comfort_standard=[1, 99], category=[3, 80], comfort_mode=[3], hvac_mode=[1, 2],
+        ventilation_control=[0, 1], output_type='detailed', custom_slope=0.4, custom_intercept=15, custom_cooling_offset=3,
+        custom_heating_offset=-3, custom_cooling_upper_limit=32, custom_cooling_lower_limit=12, custom_heating_upper_limit=31,
+        custom_heating_lower_limit=11)),
     'b14_vrf_ac_osm_res': dict(models=['osmres'], kwargs=dict(
-        BASE, script_type='vrf_ac', comf_stand=[22, 0], cat=[2], comf_mod=[0], hvac_mode=[0], make_averages=True)),
+        BASE, script_type='vrf_ac', comfort_standard=[22, 0], category=[2], comfort_mode=[0], hvac_mode=[0], add_building_averages=True)),
     'b15_two_models_explicit_version': dict(models=['vrf2zones', 'osmresschvent'], kwargs=dict(
-        BASE, script_type='vrf_mm', energyplus_version='25.1', comf_stand=[3], cat=[90], comf_mod=[3],
-        hvac_mode=[2], vent_ctrl=[0], eer=3.5, cop=3.2, vrf_schedule='On', output_gen_dataframe=True)),
+        BASE, script_type='vrf_mm', energyplus_version='25.1', comfort_standard=[3], category=[90], comfort_mode=[3],
+        hvac_mode=[2], ventilation_control=[0], vrf_eer=3.5, vrf_cop=3.2, vrf_availability_schedule='On', make_outputs_dataframe=True)),
     'b16_vrf_mm_262': dict(models=['vrf2zones262'], kwargs=dict(
-        BASE, script_type='vrf_mm', comf_stand=[1, 99], cat=[3, 80], comf_mod=[3], hvac_mode=[2], vent_ctrl=[0])),
+        BASE, script_type='vrf_mm', comfort_standard=[1, 99], category=[3, 80], comfort_mode=[3], hvac_mode=[2], ventilation_control=[0])),
     'b17_vrf_mm_262_instances': dict(models=['vrf2zones262inst'], kwargs=dict(
-        BASE, script_type='vrf_mm', comf_stand=[1], cat=[3], comf_mod=[3], hvac_mode=[2], vent_ctrl=[0],
-        make_averages=True)),
+        BASE, script_type='vrf_mm', comfort_standard=[1], category=[3], comfort_mode=[3], hvac_mode=[2], ventilation_control=[0],
+        add_building_averages=True)),
     'b18_vrf_ac_262_pmv_instances': dict(models=['vrf2zones262inst'], kwargs=dict(
-        BASE, script_type='vrf_ac', temp_ctrl='pmv', comf_stand=[1], cat=[3], comf_mod=[3], hvac_mode=[0])),
-    # output_take_dataframe: the temperature outputs of a first run with output_gen_dataframe
+        BASE, script_type='vrf_ac', setpoint_type='pmv', comfort_standard=[1], category=[3], comfort_mode=[3], hvac_mode=[0])),
+    # outputs_dataframe: the temperature outputs of a first run with make_outputs_dataframe
     'b19_take_dataframe': dict(models=['vrf2zones'], take_dataframe=True, kwargs=dict(
-        BASE, script_type='vrf_ac', comf_stand=[2], cat=[80], comf_mod=[3], hvac_mode=[0])),
+        BASE, script_type='vrf_ac', comfort_standard=[2], category=[80], comfort_mode=[3], hvac_mode=[0])),
     'b20_tolerance_range': dict(models=['vrf2zones'], kwargs=dict(
-        BASE, script_type='vrf_ac', comf_stand=[0, 2], cat=[80], comf_mod=[3], hvac_mode=[0],
-        ast_tol_start=0, ast_tol_end_input=1, ast_tol_steps=0.25)),
+        BASE, script_type='vrf_ac', comfort_standard=[0, 2], category=[80], comfort_mode=[3], hvac_mode=[0],
+        setpoint_tolerance_start=0, setpoint_tolerance_end=1, setpoint_tolerance_step=0.25)),
 }
 
-_ADD = dict(supply_air_temp_input_method='temperature difference', output_type='standard', output_freqs=['hourly'],
-            output_keep_existing=False, temp_ctrl='temperature', verbose_mode=False)
+_ADD = dict(supply_air_temp_input_method='temperature difference', output_type='standard', output_frequencies=['hourly'],
+            keep_existing_outputs=False, setpoint_type='temperature', verbose=False)
 
 # In-memory functions on one model: a list of (call, arguments), in order. 'class_add' is the class of
 # accim 0.x (accis_single_idf.addAccis); with accim 1.0.0 it is add_accis_to_idf, as 'add'.
@@ -118,43 +118,43 @@ SINGLE = {
     ]),
     's02_add_modify': dict(model='vrf2zones', calls=[
         ('add', dict(_ADD, script_type='vrf_mm', supply_air_temp_input_method='supply air temperature',
-                     output_type='detailed', output_keep_existing=True, make_averages=True)),
-        ('modify', dict(comf_stand=2, cat=80, comf_mod=3, hvac_mode=2, vent_ctrl=0, vst_offset=1, min_ot_offset=3,
-                        max_wind_speed=8, ast_tol=0.25, cool_season_start='01/06', cool_season_end=250)),
-        ('modify', dict(comf_stand=99, cat=80, comf_mod=3, hvac_mode=2, vent_ctrl=2, cust_ast_m=0.3, cust_ast_n=17,
-                        cust_ast_acst_offset=2.5, cust_ast_ahst_offset=-2.5, cust_ast_acst_aul=30,
-                        cust_ast_acst_all=10, cust_ast_ahst_aul=30, cust_ast_ahst_all=10, max_temp_diff_vof=7,
-                        min_temp_diff_vof=1.5, multiplier_vof=0.3)),
+                     output_type='detailed', keep_existing_outputs=True, add_building_averages=True)),
+        ('modify', dict(comfort_standard=2, category=80, comfort_mode=3, hvac_mode=2, ventilation_control=0, ventilation_setpoint_offset=1, min_outdoor_temp_offset=3,
+                        max_wind_speed=8, setpoint_tolerance=0.25, cooling_season_start='01/06', cooling_season_end=250)),
+        ('modify', dict(comfort_standard=99, category=80, comfort_mode=3, hvac_mode=2, ventilation_control=2, custom_slope=0.3, custom_intercept=17,
+                        custom_cooling_offset=2.5, custom_heating_offset=-2.5, custom_cooling_upper_limit=30,
+                        custom_cooling_lower_limit=10, custom_heating_upper_limit=30, custom_heating_lower_limit=10, opening_factor_max_temp_diff=7,
+                        opening_factor_min_temp_diff=1.5, min_opening_factor=0.3)),
     ]),
     's03_add_ex_ac': dict(model='exptac', calls=[
-        ('add', dict(script_type='ex_ac', output_type='simplified', output_freqs=['timestep'],
-                     output_keep_existing=False, temp_ctrl='temperature', verbose_mode=False)),
+        ('add', dict(script_type='ex_ac', output_type='simplified', output_frequencies=['timestep'],
+                     keep_existing_outputs=False, setpoint_type='temperature', verbose=False)),
     ]),
     's04_add_ex_mm_osm': dict(model='osmofficeex', calls=[
-        ('add', dict(script_type='ex_mm', output_type='standard', output_freqs=['hourly'], output_keep_existing=False,
-                     temp_ctrl='temperature', verbose_mode=False, debugging=True)),
+        ('add', dict(script_type='ex_mm', output_type='standard', output_frequencies=['hourly'], keep_existing_outputs=False,
+                     setpoint_type='temperature', verbose=False, debug_ems=True)),
     ]),
     's05_gen_outputs_df': dict(model='vrf2zones', calls=[
-        ('gen_outputs_df', dict(script_type='vrf_ac', output_type='standard', output_freqs=['hourly', 'daily'],
-                                output_keep_existing=False, temp_ctrl='temperature')),
+        ('gen_outputs_df', dict(script_type='vrf_ac', output_type='standard', output_frequencies=['hourly', 'daily'],
+                                keep_existing_outputs=False, setpoint_type='temperature')),
     ]),
     's06_class_add_vrf_mm_pmv': dict(model='vrf2zones', calls=[
-        ('class_add', dict(_ADD, script_type='vrf_mm', temp_ctrl='pmv')),
+        ('class_add', dict(_ADD, script_type='vrf_mm', setpoint_type='pmv')),
     ]),
     's07_apmv_default': dict(model='vrf2zones', calls=[
         ('apmv_vrf', dict()),
-        ('apmv', dict(outputs_freq=['hourly'], verbose_mode=False)),
+        ('apmv', dict(output_frequencies=['hourly'], verbose=False)),
     ]),
     # '*first*': the first target of the model (get_available_target_names)
     's08_apmv_dicts': dict(model='osmresschvent', calls=[
         ('apmv_vrf', dict()),
-        ('apmv', dict(outputs_freq=['hourly', 'timestep'], other_pmv_related_outputs=False,
-                      adap_coeff_cooling={'*first*': 0.3}, pmv_cooling_sp=0.4, cooling_season_start='01/06',
-                      cooling_season_end='15/09', verbose_mode=False)),
+        ('apmv', dict(output_frequencies=['hourly', 'timestep'], other_pmv_related_outputs=False,
+                      adaptive_coefficient_cooling={'*first*': 0.3}, pmv_cooling_setpoint=0.4, cooling_season_start='01/06',
+                      cooling_season_end='15/09', verbose=False)),
     ]),
     's09_add_vrf_mm_262_instances': dict(model='vrf2zones262inst', calls=[
         ('add', dict(_ADD, script_type='vrf_mm')),
-        ('modify', dict(comf_stand=1, cat=3, comf_mod=3, hvac_mode=2, vent_ctrl=0)),
+        ('modify', dict(comfort_standard=1, category=3, comfort_mode=3, hvac_mode=2, ventilation_control=0)),
     ]),
 }
 
@@ -163,24 +163,31 @@ NAMES = list(BATCH) + list(SINGLE)
 # The names of the arguments in accim 0.x (accim.sim.arguments.LEGACY_ARGUMENT_NAMES, reversed)
 LEGACY_NAMES = {
     'script_type': 'ScriptType', 'supply_air_temp_input_method': 'SupplyAirTempInputMethod',
-    'output_type': 'Output_type', 'output_freqs': 'Output_freqs', 'output_keep_existing': 'Output_keep_existing',
-    'output_gen_dataframe': 'Output_gen_dataframe', 'output_take_dataframe': 'Output_take_dataframe',
-    'energyplus_version': 'EnergyPlus_version', 'temp_ctrl': 'TempCtrl', 'vrf_schedule': 'VRFschedule',
-    'comf_stand': 'ComfStand', 'cat': 'CAT', 'cat_cool_offset': 'CATcoolOffset', 'cat_heat_offset': 'CATheatOffset',
-    'comf_mod': 'ComfMod', 'setpoint_acc': 'SetpointAcc', 'cust_ast_acst_aul': 'CustAST_ACSTaul',
-    'cust_ast_acst_all': 'CustAST_ACSTall', 'cust_ast_ahst_aul': 'CustAST_AHSTaul',
-    'cust_ast_ahst_all': 'CustAST_AHSTall', 'cust_ast_m': 'CustAST_m', 'cust_ast_n': 'CustAST_n',
-    'cust_ast_acst_offset': 'CustAST_ACSToffset', 'cust_ast_ahst_offset': 'CustAST_AHSToffset',
-    'cool_season_start': 'CoolSeasonStart', 'cool_season_end': 'CoolSeasonEnd', 'hvac_mode': 'HVACmode',
-    'vent_ctrl': 'VentCtrl', 'max_temp_diff_vof': 'MaxTempDiffVOF', 'min_temp_diff_vof': 'MinTempDiffVOF',
-    'multiplier_vof': 'MultiplierVOF', 'vst_offset': 'VSToffset', 'min_ot_offset': 'MinOToffset',
-    'max_wind_speed': 'MaxWindSpeed', 'ast_tol_start': 'ASTtol_start', 'ast_tol_end_input': 'ASTtol_end_input',
-    'ast_tol_steps': 'ASTtol_steps', 'ast_tol': 'ASTtol', 'name_suffix': 'NameSuffix', 'verbose_mode': 'verboseMode',
-    'confirm_gen': 'confirmGen',
+    'output_type': 'Output_type', 'output_frequencies': 'Output_freqs', 'keep_existing_outputs': 'Output_keep_existing',
+    'make_outputs_dataframe': 'Output_gen_dataframe', 'outputs_dataframe': 'Output_take_dataframe',
+    'energyplus_version': 'EnergyPlus_version', 'setpoint_type': 'TempCtrl',
+    'vrf_availability_schedule': 'VRFschedule', 'vrf_eer': 'eer', 'vrf_cop': 'cop',
+    'add_building_averages': 'make_averages', 'debug_ems': 'debugging', 'comfort_standard': 'ComfStand',
+    'category': 'CAT', 'category_cooling_offset': 'CATcoolOffset', 'category_heating_offset': 'CATheatOffset',
+    'comfort_mode': 'ComfMod', 'setpoint_accuracy': 'SetpointAcc', 'custom_cooling_upper_limit': 'CustAST_ACSTaul',
+    'custom_cooling_lower_limit': 'CustAST_ACSTall', 'custom_heating_upper_limit': 'CustAST_AHSTaul',
+    'custom_heating_lower_limit': 'CustAST_AHSTall', 'custom_slope': 'CustAST_m', 'custom_intercept': 'CustAST_n',
+    'custom_cooling_offset': 'CustAST_ACSToffset', 'custom_heating_offset': 'CustAST_AHSToffset',
+    'cooling_season_start': 'CoolSeasonStart', 'cooling_season_end': 'CoolSeasonEnd', 'hvac_mode': 'HVACmode',
+    'ventilation_control': 'VentCtrl', 'opening_factor_max_temp_diff': 'MaxTempDiffVOF',
+    'opening_factor_min_temp_diff': 'MinTempDiffVOF', 'min_opening_factor': 'MultiplierVOF',
+    'ventilation_setpoint_offset': 'VSToffset', 'min_outdoor_temp_offset': 'MinOToffset',
+    'max_wind_speed': 'MaxWindSpeed', 'setpoint_tolerance_start': 'ASTtol_start',
+    'setpoint_tolerance_end': 'ASTtol_end_input', 'setpoint_tolerance_step': 'ASTtol_steps',
+    'setpoint_tolerance': 'ASTtol', 'name_suffix': 'NameSuffix', 'verbose': 'verboseMode', 'confirm': 'confirmGen',
 }
-# apply_apmv_setpoints of accim 0.x already used the other names of its arguments (verbose_mode, for instance)
-LEGACY_APMV_NAMES = {'other_pmv_related_outputs': 'other_PMV_related_outputs'}
-
+# The names of the arguments of apply_apmv_setpoints and add_vrf_system in accim 0.x (accim.sim.apmv._LEGACY_ARGUMENTS,
+# reversed)
+LEGACY_APMV_NAMES = {
+    'output_frequencies': 'outputs_freq', 'other_pmv_related_outputs': 'other_PMV_related_outputs',
+    'adaptive_coefficient_cooling': 'adap_coeff_cooling', 'adaptive_coefficient_heating': 'adap_coeff_heating',
+    'pmv_cooling_setpoint': 'pmv_cooling_sp', 'pmv_heating_setpoint': 'pmv_heating_sp', 'verbose': 'verbose_mode',
+}
 
 def models(name):
     """The input models of a configuration."""

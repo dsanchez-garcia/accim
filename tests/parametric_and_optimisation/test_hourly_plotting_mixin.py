@@ -63,12 +63,12 @@ def _results_and_hourly(tmp_path):
             csv = pd.DataFrame({COLS[k]: v for k, v in values.items()})
             csv.insert(0, 'Date/Time', [' 01/01  01:00:00'] * N)
             csv.to_csv(folder / 'eplusout.csv', index=False)
-            rows.append({'ComfMod': float(cm), 'HVACmode': float(hm), 'epw': epw, 'idf': 'office',
+            rows.append({'comfort_mode': float(cm), 'hvac_mode': float(hm), 'epw': epw, 'idf': 'office',
                          'Electricity:HVAC': values['e'].sum(), 'output_dir': str(folder)})
             frame = pd.DataFrame({COLS[k]: v for k, v in values.items()})
             frame.insert(0, 'datetime', pd.date_range('2024-01-01 01:00', periods=N, freq='h'))
             frame.insert(0, 'hour', np.arange(1, N + 1))
-            for col in ('idf', 'epw', 'HVACmode', 'ComfMod'):
+            for col in ('idf', 'epw', 'hvac_mode', 'comfort_mode'):
                 frame.insert(0, col, rows[-1][col])
             frames.append(frame)
     return pd.DataFrame(rows), pd.concat(frames, ignore_index=True)
@@ -168,7 +168,7 @@ def _png(fig):
 
 def test_plot_hourly_heatmaps(session, tmp_path):
     summary = _png(session.plot_hourly_heatmaps(['Zone Operative Temperature', 'Electricity:HVAC'],
-                                                case=['ComfMod', 'HVACmode'], case_labels=CASES,
+                                                case=['comfort_mode', 'hvac_mode'], case_labels=CASES,
                                                 data_filter={'include': {'epw': {'contains': 'Present'}}},
                                                 out_dir=str(tmp_path)))
     assert len(summary) == 8
@@ -177,49 +177,49 @@ def test_plot_hourly_heatmaps(session, tmp_path):
 def test_plot_hourly_period_selects_windows(session, tmp_path):
     fig = session.plot_hourly_period(
         {'Outdoor air': 'Outdoor Air Drybulb', 'Operative temperature': 'Zone Operative Temperature'},
-        case='ComfMod', case_labels={0: 'Static', 3: 'Adaptive'}, col='epw',
+        case='comfort_mode', case_labels={0: 'Static', 3: 'Adaptive'}, col='epw',
         col_labels={'Present': 'Present', '2080': '2080'},
         select={'Present': {'method': 'max_difference', 'variable': 'Electricity:HVAC', 'cases': ('Static', 'Adaptive')},
                 '2080': {'method': 'max', 'variable': 'Outdoor Air Drybulb'}},
         energy_variable='Electricity:HVAC', shade=('Window or Door Opening Factor', 'Windows open'),
-        data_filter={'include': {'HVACmode': 2}}, out_dir=str(tmp_path))
+        data_filter={'include': {'hvac_mode': 2}}, out_dir=str(tmp_path))
     summary = _png(fig)
     assert len(summary) == 4 and 'energy_per_m2' in summary
 
 
 def test_plot_hourly_binned_response(session, tmp_path):
     summary = _png(session.plot_hourly_binned_response(
-        x='Outdoor Air Drybulb', y='Electricity:HVAC', hue=['ComfMod', 'HVACmode'], hue_labels=CASES,
+        x='Outdoor Air Drybulb', y='Electricity:HVAC', hue=['comfort_mode', 'hvac_mode'], hue_labels=CASES,
         idle_when_zero=['Cooling Coil Total Cooling Rate', 'Heating Coil Heating Rate'], out_dir=str(tmp_path)))
     assert np.allclose(summary['idle_level'].dropna(), 0.45)
 
 
 def test_plot_load_duration_curves_with_peak_panel(session, tmp_path):
     ind = session.compute_hourly_indicators(df_source='parametric_hourly', store=False, verbose=False)
-    summary = _png(session.plot_load_duration_curves('Electricity:HVAC', panel=['ComfMod', 'HVACmode'],
+    summary = _png(session.plot_load_duration_curves('Electricity:HVAC', panel=['comfort_mode', 'hvac_mode'],
                                                      panel_labels=CASES, hue='epw', peak_df=ind,
-                                                     peak_marker_by='HVACmode', peak_marker_labels={0: 'AC', 2: 'MM'},
+                                                     peak_marker_by='hvac_mode', peak_marker_labels={0: 'AC', 2: 'MM'},
                                                      out_dir=str(tmp_path)))
     assert (summary['peak'] > 0).all()
 
 
 def test_plot_adaptive_comfort_chart(session, tmp_path):
-    summary = _png(session.plot_adaptive_comfort_chart(row='HVACmode', col='epw', hue='ComfMod',
+    summary = _png(session.plot_adaptive_comfort_chart(row='hvac_mode', col='epw', hue='comfort_mode',
                                                        hue_labels={0: 'Static', 3: 'Adaptive'},
-                                                       annotate_by='ComfMod', out_dir=str(tmp_path)))
+                                                       annotate_by='comfort_mode', out_dir=str(tmp_path)))
     assert {'share_outside', 'share_above', 'share_below'} <= set(summary.columns)
 
 
 def test_plot_hourly_scatter_matrix(session, tmp_path):
     summary = _png(session.plot_hourly_scatter_matrix(
         {'tout': 'Outdoor Air Drybulb', 'rm': 'CEN 15251', 'top': 'Zone Operative Temperature', 'e': 'Electricity:HVAC'},
-        hue=['ComfMod', 'HVACmode'], hue_labels=CASES, weather_variables=['tout', 'rm'], n_sample=500,
+        hue=['comfort_mode', 'hvac_mode'], hue_labels=CASES, weather_variables=['tout', 'rm'], n_sample=500,
         data_filter={'include': {'epw': {'contains': 'Present'}}}, out_dir=str(tmp_path)))
     assert len(summary) == 4 and 'top_iqr' in summary
 
 
 def test_plot_monthly_distributions_with_band(session, tmp_path):
-    summary = _png(session.plot_monthly_distributions('Zone Operative Temperature', panel=['ComfMod', 'HVACmode'],
+    summary = _png(session.plot_monthly_distributions('Zone Operative Temperature', panel=['comfort_mode', 'hvac_mode'],
                                                       panel_labels=CASES, compare_by='epw',
                                                       band={'running_mean': 'auto', 'category': 'II'},
                                                       out_dir=str(tmp_path)))
@@ -230,15 +230,15 @@ def test_plot_results_scatter_matrix_and_screening(session, tmp_path):
     ind = session.compute_hourly_indicators(df_source='parametric', verbose=False)
     ind['pareto-optimal'] = ind['E_HVAC'] < ind['E_HVAC'].median()
     summary = _png(session.plot_results_scatter_matrix(['E_HVAC', 'T_mean', 'share_outside_II', 'Kh_outside_II'],
-                                                       hue='HVACmode', upper='spearman',
+                                                       hue='hvac_mode', upper='spearman',
                                                        log_columns=['Kh_outside_II'],
                                                        percent_columns=['share_outside_II'], out_dir=str(tmp_path)))
     assert len(summary) == 2
-    _png(session.plot_results_scatter_matrix(['ComfMod', 'E_HVAC', 'share_outside_II'], hue='comfort_outcome',
+    _png(session.plot_results_scatter_matrix(['comfort_mode', 'E_HVAC', 'share_outside_II'], hue='comfort_outcome',
                                              upper='scatter', color_by='T_mean', diag='stacked',
                                              out_dir=str(tmp_path), filename='outcome.png'))
     selected = session.outputs_param_simulation.iloc[[0]]
-    summary = _png(session.plot_comfort_screening(col='epw', row='HVACmode', highlight='pareto-optimal',
+    summary = _png(session.plot_comfort_screening(col='epw', row='hvac_mode', highlight='pareto-optimal',
                                                   selections={'Selected': selected}, threshold=0.05,
                                                   out_dir=str(tmp_path)))
     assert summary['n'].sum() == 8

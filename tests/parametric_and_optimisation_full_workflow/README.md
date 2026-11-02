@@ -25,7 +25,7 @@ flujo de trabajo completo (no tests unitarios parciales).
   `set_building_floor_area` (all + occupied), `normalize_outputs`
 
 ### `test_02_parametric_wrapper_and_bypass.py`
-- **Clases**: `AccimPredefModelsParamSim` · `ParametricSimulation(bypass_addAccis=True)` · `parameters_type=None`
+- **Clases**: `AccimPredefModelsParamSim` · `ParametricSimulation(bypass_add_accis=True)` · `parameters_type=None`
 - **IDFs**: B (wrapper y `parameters_type=None`) + D (bypass) · **EPWs**: seville_2024 + madrid_2024
 - **Cubre**: `sampling_custom` (dict / list / DataFrame), `set_building_floor_area`
   (custom + list), `plot_categorical_boxplots(sharey=False, show_points=False)`

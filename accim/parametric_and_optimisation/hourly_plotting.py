@@ -81,7 +81,7 @@ Examples
 >>> ind = sim.compute_hourly_indicators(df_source='parametric', comfort_standard='EN16798-1')
 >>> sim.plot_comfort_screening(df=ind, x='E_HVAC', y='share_outside_II', col='epw')
 >>> sim.get_hourly_df_parametric(simulation_indices=[0, 1], output_columns=['Operative', 'Electricity:HVAC'])
->>> sim.plot_hourly_heatmaps(variables=['Zone Operative Temperature', 'Electricity:HVAC'], case=['ComfMod', 'HVACmode'])
+>>> sim.plot_hourly_heatmaps(variables=['Zone Operative Temperature', 'Electricity:HVAC'], case=['comfort_mode', 'hvac_mode'])
 """
 
 import os
@@ -1324,7 +1324,7 @@ class HourlyPlottingMixin:
             Long hourly dataframe (default ``'parametric_hourly'``).
         case : str or list of str, optional
             Column(s) whose combinations define the rows (for example
-            ``['ComfMod', 'HVACmode']``); each row should hold one simulation.
+            ``['comfort_mode', 'hvac_mode']``); each row should hold one simulation.
         case_labels : dict, optional
             ``{value or tuple of values: label}``; strings may be substrings.
         case_order : list, optional
@@ -1356,7 +1356,7 @@ class HourlyPlottingMixin:
         Examples
         --------
         >>> sim.plot_hourly_heatmaps(['Zone Operative Temperature', 'Electricity:HVAC'],
-        ...                          case=['ComfMod', 'HVACmode'], data_filter={'include': {'epw': {'contains': 'Present'}}})
+        ...                          case=['comfort_mode', 'hvac_mode'], data_filter={'include': {'epw': {'contains': 'Present'}}})
         """
         var_map = dict(variables) if isinstance(variables, dict) else {str(v): v for v in variables}
         data = self._hp_source(df, df_source, data_filter, data_filter_case_sensitive, data_filter_strict,
@@ -1540,7 +1540,7 @@ class HourlyPlottingMixin:
         --------
         >>> sim.plot_hourly_period(
         ...     variables={'Outdoor air': 'Outdoor Air Drybulb', 'Operative temperature': 'Zone Operative Temperature'},
-        ...     case='ComfMod', energy_variable='Electricity:HVAC',
+        ...     case='comfort_mode', energy_variable='Electricity:HVAC',
         ...     select={'method': 'max_difference', 'variable': 'Electricity:HVAC', 'cases': ('0', '3')})
         """
         var_map = dict(variables) if isinstance(variables, dict) else {_pretty_name(str(v)): v for v in variables}
@@ -1770,7 +1770,7 @@ class HourlyPlottingMixin:
 
         Examples
         --------
-        >>> sim.plot_hourly_binned_response(x='Outdoor Air Drybulb', y='Electricity:HVAC', hue=['ComfMod', 'HVACmode'],
+        >>> sim.plot_hourly_binned_response(x='Outdoor Air Drybulb', y='Electricity:HVAC', hue=['comfort_mode', 'hvac_mode'],
         ...                                 idle_when_zero=['Cooling Coil Total Cooling Rate', 'Heating Coil Heating Rate'])
         """
         data = self._hp_source(df, df_source, data_filter, data_filter_case_sensitive, data_filter_strict,
@@ -1924,7 +1924,7 @@ class HourlyPlottingMixin:
 
         Examples
         --------
-        >>> sim.plot_load_duration_curves('Electricity:HVAC', panel=['ComfMod', 'HVACmode'], hue='epw',
+        >>> sim.plot_load_duration_curves('Electricity:HVAC', panel=['comfort_mode', 'hvac_mode'], hue='epw',
         ...                               peak_df=sim.hourly_indicators)
         """
         data = self._hp_source(df, df_source, data_filter, data_filter_case_sensitive, data_filter_strict,
@@ -2109,9 +2109,9 @@ class HourlyPlottingMixin:
         Examples
         --------
         >>> rm = sim_ex1.get_hourly_series_by_epw('CEN 15251 Adaptive Model Running Average')
-        >>> sim_apmv.plot_adaptive_comfort_chart(running_mean=rm, row='PMV setpoint', col='epw',
+        >>> sim_apmv.plot_adaptive_comfort_chart(running_mean=rm, row='pmv_setpoint', col='epw',
         ...                                      hue='CLOTHING SCHEDULE', hue_bins=[0, 0.75, 2],
-        ...                                      annotate_by='Adaptive cooling coefficient')
+        ...                                      annotate_by='adaptive_coefficient_cooling')
         """
         data = self._hp_source(df, df_source, data_filter, data_filter_case_sensitive, data_filter_strict,
                                data_filter_on_empty, 'plot_adaptive_comfort_chart')
@@ -2373,7 +2373,7 @@ class HourlyPlottingMixin:
         >>> sim.plot_hourly_scatter_matrix(
         ...     {'tout': 'Outdoor Air Drybulb', 'rm': 'CEN 15251 Adaptive Model Running Average',
         ...      'top': 'Zone Operative Temperature', 'e': 'Electricity:HVAC'},
-        ...     hue=['ComfMod', 'HVACmode'], weather_variables=['tout', 'rm'])
+        ...     hue=['comfort_mode', 'hvac_mode'], weather_variables=['tout', 'rm'])
         """
         var_map = dict(variables) if isinstance(variables, dict) else {str(v): v for v in variables}
         keys = list(var_map)
@@ -2581,7 +2581,7 @@ class HourlyPlottingMixin:
 
         Examples
         --------
-        >>> sim.plot_results_scatter_matrix(['CustAST_m', 'CustAST_n', 'E_HVAC', 'share_outside_II'],
+        >>> sim.plot_results_scatter_matrix(['custom_slope', 'custom_intercept', 'E_HVAC', 'share_outside_II'],
         ...                                 hue='comfort_outcome', upper='scatter', color_by='T_mean',
         ...                                 percent_columns=['share_outside_II'])
         """
@@ -2815,7 +2815,7 @@ class HourlyPlottingMixin:
 
         Examples
         --------
-        >>> sim.plot_monthly_distributions('Zone Operative Temperature', panel=['ComfMod', 'HVACmode'],
+        >>> sim.plot_monthly_distributions('Zone Operative Temperature', panel=['comfort_mode', 'hvac_mode'],
         ...                                compare_by='epw', band={'running_mean': 'auto', 'category': 'II'})
         """
         data = self._hp_source(df, df_source, data_filter, data_filter_case_sensitive, data_filter_strict,

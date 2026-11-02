@@ -69,46 +69,46 @@ BACKENDS = {'ems': 'Energy Management System of EnergyPlus', 'api': 'Python API 
 #: The arguments of the custom comfort model (ComfStand 99): argument -> (label, default). The defaults are those of
 #: ASHRAE 55 with 80 % acceptability, as in the parametric module.
 CUSTOM_MODEL_FIELDS = {
-    'cust_ast_m': ('Slope m (comfort temperature = m·T + n)', '0.31'),
-    'cust_ast_n': ('Intercept n', '17.8'),
-    'cust_ast_acst_offset': ('Offset of the cooling setpoint (°C)', '3.5'),
-    'cust_ast_ahst_offset': ('Offset of the heating setpoint (°C)', '-3.5'),
-    'cust_ast_acst_aul': ('Upper applicability limit, cooling (°C)', '33.5'),
-    'cust_ast_acst_all': ('Lower applicability limit, cooling (°C)', '10'),
-    'cust_ast_ahst_aul': ('Upper applicability limit, heating (°C)', '33.5'),
-    'cust_ast_ahst_all': ('Lower applicability limit, heating (°C)', '10'),
+    'custom_slope': ('Slope m (comfort temperature = m·T + n)', '0.31'),
+    'custom_intercept': ('Intercept n', '17.8'),
+    'custom_cooling_offset': ('Offset of the cooling setpoint (°C)', '3.5'),
+    'custom_heating_offset': ('Offset of the heating setpoint (°C)', '-3.5'),
+    'custom_cooling_upper_limit': ('Upper applicability limit, cooling (°C)', '33.5'),
+    'custom_cooling_lower_limit': ('Lower applicability limit, cooling (°C)', '10'),
+    'custom_heating_upper_limit': ('Upper applicability limit, heating (°C)', '33.5'),
+    'custom_heating_lower_limit': ('Lower applicability limit, heating (°C)', '10'),
 }
 #: The initial values of the form of AddAccis (the texts of the lists are separated by commas or spaces).
 ADD_ACCIS_DEFAULTS = {
     'script_type': 'vrf_mm',
     'supply_air_temp_input_method': 'temperature difference',
-    'temp_ctrl': 'temperature',
+    'setpoint_type': 'temperature',
     'energyplus_version': 'auto',
     'output_type': 'standard',
-    'output_freqs': ['hourly'],
-    'output_keep_existing': False,
-    'make_averages': False,
-    'comf_stand': [1],
-    'cat': '3',
-    'comf_mod': '3',
-    'cool_season_start': '121',
-    'cool_season_end': '274',
+    'output_frequencies': ['hourly'],
+    'keep_existing_outputs': False,
+    'add_building_averages': False,
+    'comfort_standard': [1],
+    'category': '3',
+    'comfort_mode': '3',
+    'cooling_season_start': '121',
+    'cooling_season_end': '274',
     'hvac_mode': [2],
-    'vent_ctrl': [0],
-    'vst_offset': '0',
-    'min_ot_offset': '50',
+    'ventilation_control': [0],
+    'ventilation_setpoint_offset': '0',
+    'min_outdoor_temp_offset': '50',
     'max_wind_speed': '50',
-    'max_temp_diff_vof': '6',
-    'min_temp_diff_vof': '1',
-    'multiplier_vof': '0.25',
-    'ast_tol_start': '0.1',
-    'ast_tol_end_input': '0.1',
-    'ast_tol_steps': '0.1',
+    'opening_factor_max_temp_diff': '6',
+    'opening_factor_min_temp_diff': '1',
+    'min_opening_factor': '0.25',
+    'setpoint_tolerance_start': '0.1',
+    'setpoint_tolerance_end': '0.1',
+    'setpoint_tolerance_step': '0.1',
     'name_suffix': '',
     **{name: default for name, (_, default) in CUSTOM_MODEL_FIELDS.items()},
 }
 #: The initial values of the form of run_ep.
-RUN_DEFAULTS = {'run_only_accim': True, 'num_cpus': '2', 'energyplus_version': 'auto', 'backend': 'ems'}
+RUN_DEFAULTS = {'only_accim_idfs': True, 'processes': '2', 'energyplus_version': 'auto', 'backend': 'ems'}
 
 _SEPARATORS = re.compile(r'[\s,;]+')
 
@@ -211,13 +211,13 @@ def add_accis_arguments(form: Mapping[str, Any]) -> Dict[str, Any]:
     """The arguments of :class:`accim.sim.accis.AddAccis` from the values of its form.
 
     :param form: The values of the form: ``folder`` and ``idfs`` (the selected input IDFs of the folder), the
-        choices (``script_type``, ``supply_air_temp_input_method``, ``temp_ctrl``, ``energyplus_version``,
-        ``output_type``), the lists of the checked boxes or selected items (``output_freqs``, ``comf_stand``,
-        ``hvac_mode``, ``vent_ctrl``), the booleans (``output_keep_existing``, ``make_averages``) and the texts of
+        choices (``script_type``, ``supply_air_temp_input_method``, ``setpoint_type``, ``energyplus_version``,
+        ``output_type``), the lists of the checked boxes or selected items (``output_frequencies``, ``comfort_standard``,
+        ``hvac_mode``, ``ventilation_control``), the booleans (``keep_existing_outputs``, ``add_building_averages``) and the texts of
         the other fields (lists of numbers separated by commas or spaces, or numbers), as in
         :data:`ADD_ACCIS_DEFAULTS`.
     :return: The keyword arguments of AddAccis, with all the arguments that it would otherwise ask in the prompt,
-        ``confirm_gen=True`` and ``idfs`` (the names of the selected input IDFs, to run in the folder).
+        ``confirm=True`` and ``idfs`` (the names of the selected input IDFs, to run in the folder).
     :raises FormError: If a value is missing or not valid.
     """
     folder = str(form.get('folder', '')).strip()
@@ -227,70 +227,70 @@ def add_accis_arguments(form: Mapping[str, Any]) -> Dict[str, Any]:
     if not idfs:
         raise FormError('idfs: select at least one input IDF.')
     script_type = _choice(form, 'script_type', SCRIPT_TYPES)
-    temp_ctrl = _choice(form, 'temp_ctrl', TEMP_CTRLS)
-    output_freqs = [f for f in OUTPUT_FREQUENCIES if f in (form.get('output_freqs') or [])]
-    if not output_freqs:
-        raise FormError('output_freqs: check at least one output frequency.')
+    setpoint_type = _choice(form, 'setpoint_type', TEMP_CTRLS)
+    output_frequencies = [f for f in OUTPUT_FREQUENCIES if f in (form.get('output_frequencies') or [])]
+    if not output_frequencies:
+        raise FormError('output_frequencies: check at least one output frequency.')
     arguments: Dict[str, Any] = dict(
         idfs=idfs,
         script_type=script_type,
         supply_air_temp_input_method=_choice(form, 'supply_air_temp_input_method', SUPPLY_AIR_TEMP_INPUT_METHODS),
         output_type=_choice(form, 'output_type', OUTPUT_TYPES),
-        output_freqs=output_freqs,
-        output_keep_existing=bool(form.get('output_keep_existing')),
-        output_gen_dataframe=False,
+        output_frequencies=output_frequencies,
+        keep_existing_outputs=bool(form.get('keep_existing_outputs')),
+        make_outputs_dataframe=False,
         energyplus_version=_choice(form, 'energyplus_version', ENERGYPLUS_VERSIONS),
-        temp_ctrl=temp_ctrl,
-        make_averages=bool(form.get('make_averages')),
+        setpoint_type=setpoint_type,
+        add_building_averages=bool(form.get('add_building_averages')),
         name_suffix=str(form.get('name_suffix', '')).strip(),
-        confirm_gen=True,
-        verbose_mode=True,
+        confirm=True,
+        verbose=True,
     )
-    comf_stand = [int(number) for number in form.get('comf_stand') or []]
-    if not comf_stand:
-        raise FormError('comf_stand: select at least one comfort standard.')
+    comfort_standard = [int(number) for number in form.get('comfort_standard') or []]
+    if not comfort_standard:
+        raise FormError('comfort_standard: select at least one comfort standard.')
     arguments.update(
-        comf_stand=comf_stand,
-        cat=parse_numbers(form.get('cat', ''), 'cat'),
-        comf_mod=parse_numbers(form.get('comf_mod', ''), 'comf_mod'),
-        cool_season_start=_day(form, 'cool_season_start'),
-        cool_season_end=_day(form, 'cool_season_end'),
+        comfort_standard=comfort_standard,
+        category=parse_numbers(form.get('category', ''), 'category'),
+        comfort_mode=parse_numbers(form.get('comfort_mode', ''), 'comfort_mode'),
+        cooling_season_start=_day(form, 'cooling_season_start'),
+        cooling_season_end=_day(form, 'cooling_season_end'),
     )
-    if 99 in comf_stand:
+    if 99 in comfort_standard:
         arguments.update({name: parse_number(form.get(name, ''), name) for name in CUSTOM_MODEL_FIELDS})
     if script_type in MIXED_MODE_SCRIPT_TYPES:
         hvac_mode = sorted(int(mode) for mode in form.get('hvac_mode') or [])
-        vent_ctrl = sorted(int(control) for control in form.get('vent_ctrl') or [])
+        ventilation_control = sorted(int(control) for control in form.get('ventilation_control') or [])
         if not hvac_mode:
             raise FormError('hvac_mode: check at least one HVAC mode.')
-        if not vent_ctrl:
-            raise FormError('vent_ctrl: check at least one ventilation control.')
+        if not ventilation_control:
+            raise FormError('ventilation_control: check at least one ventilation control.')
         arguments.update(
             hvac_mode=hvac_mode,
-            vent_ctrl=vent_ctrl,
-            vst_offset=parse_numbers(form.get('vst_offset', ''), 'vst_offset'),
-            min_ot_offset=parse_numbers(form.get('min_ot_offset', ''), 'min_ot_offset'),
+            ventilation_control=ventilation_control,
+            ventilation_setpoint_offset=parse_numbers(form.get('ventilation_setpoint_offset', ''), 'ventilation_setpoint_offset'),
+            min_outdoor_temp_offset=parse_numbers(form.get('min_outdoor_temp_offset', ''), 'min_outdoor_temp_offset'),
             max_wind_speed=parse_numbers(form.get('max_wind_speed', ''), 'max_wind_speed'),
-            max_temp_diff_vof=parse_number(form.get('max_temp_diff_vof', ''), 'max_temp_diff_vof'),
-            min_temp_diff_vof=parse_number(form.get('min_temp_diff_vof', ''), 'min_temp_diff_vof'),
-            multiplier_vof=parse_number(form.get('multiplier_vof', ''), 'multiplier_vof'),
+            opening_factor_max_temp_diff=parse_number(form.get('opening_factor_max_temp_diff', ''), 'opening_factor_max_temp_diff'),
+            opening_factor_min_temp_diff=parse_number(form.get('opening_factor_min_temp_diff', ''), 'opening_factor_min_temp_diff'),
+            min_opening_factor=parse_number(form.get('min_opening_factor', ''), 'min_opening_factor'),
         )
     else:
-        arguments.update(hvac_mode=[0], vent_ctrl=[0])
+        arguments.update(hvac_mode=[0], ventilation_control=[0])
     arguments.update(
-        ast_tol_start=parse_number(form.get('ast_tol_start', ''), 'ast_tol_start'),
-        ast_tol_end_input=parse_number(form.get('ast_tol_end_input', ''), 'ast_tol_end_input'),
-        ast_tol_steps=parse_number(form.get('ast_tol_steps', ''), 'ast_tol_steps'),
+        setpoint_tolerance_start=parse_number(form.get('setpoint_tolerance_start', ''), 'setpoint_tolerance_start'),
+        setpoint_tolerance_end=parse_number(form.get('setpoint_tolerance_end', ''), 'setpoint_tolerance_end'),
+        setpoint_tolerance_step=parse_number(form.get('setpoint_tolerance_step', ''), 'setpoint_tolerance_step'),
     )
-    if arguments['ast_tol_steps'] <= 0:
-        raise FormError('ast_tol_steps: enter a number greater than 0.')
+    if arguments['setpoint_tolerance_step'] <= 0:
+        raise FormError('setpoint_tolerance_step: enter a number greater than 0.')
     return arguments
 
 
 #: The arguments of AddAccis that give the output IDFs of each input IDF.
 _GENERATION_ARGUMENTS = (
-    'comf_stand', 'cat', 'comf_mod', 'hvac_mode', 'vent_ctrl', 'vst_offset', 'min_ot_offset', 'max_wind_speed',
-    'ast_tol_start', 'ast_tol_end_input', 'ast_tol_steps', 'cool_season_start', 'cool_season_end',
+    'comfort_standard', 'category', 'comfort_mode', 'hvac_mode', 'ventilation_control', 'ventilation_setpoint_offset', 'min_outdoor_temp_offset', 'max_wind_speed',
+    'setpoint_tolerance_start', 'setpoint_tolerance_end', 'setpoint_tolerance_step', 'cooling_season_start', 'cooling_season_end',
 )
 
 
@@ -306,37 +306,37 @@ def output_idf_count(arguments: Mapping[str, Any]) -> int:
         generation = GenerationArguments.air_conditioned(**kwargs)
     with warnings.catch_warnings():
         warnings.simplefilter('ignore')
-        return sum(1 for _ in combinations(generation, arguments['temp_ctrl']))
+        return sum(1 for _ in combinations(generation, arguments['setpoint_type']))
 
 
 def run_ep_arguments(form: Mapping[str, Any]) -> Dict[str, Any]:
-    """The arguments of :func:`accim.run.run_ep` from the values of its form (``folder``, ``run_only_accim``,
-    ``num_cpus``, ``energyplus_version`` and ``backend``), with ``confirm_run=True``.
+    """The arguments of :func:`accim.run.run_ep` from the values of its form (``folder``, ``only_accim_idfs``,
+    ``processes``, ``energyplus_version`` and ``backend``), with ``confirm=True``.
 
     :raises FormError: If a value is missing or not valid.
     """
     folder = str(form.get('folder', '')).strip()
     if not folder or not os.path.isdir(folder):
         raise FormError('folder: choose the folder of the IDFs and EPWs.')
-    num_cpus = parse_number(form.get('num_cpus', ''), 'num_cpus')
-    if not isinstance(num_cpus, int) or num_cpus < 1:
-        raise FormError('num_cpus: enter a whole number greater than 0.')
+    processes = parse_number(form.get('processes', ''), 'processes')
+    if not isinstance(processes, int) or processes < 1:
+        raise FormError('processes: enter a whole number greater than 0.')
     return dict(
-        run_only_accim=bool(form.get('run_only_accim')),
-        confirm_run=True,
-        num_cpus=num_cpus,
+        only_accim_idfs=bool(form.get('only_accim_idfs')),
+        confirm=True,
+        processes=processes,
         energyplus_version=_choice(form, 'energyplus_version', ENERGYPLUS_VERSIONS),
         backend=_choice(form, 'backend', BACKENDS),
     )
 
 
-def simulations(folder: Union[str, os.PathLike], run_only_accim: bool) -> List[Tuple[str, str]]:
+def simulations(folder: Union[str, os.PathLike], only_accim_idfs: bool) -> List[Tuple[str, str]]:
     """The simulations that :func:`accim.run.run_ep` runs in a folder: (IDF, EPW) for each IDF (only the output IDFs
-    of accim, with '[' in the name, if ``run_only_accim``) and each EPW."""
+    of accim, with '[' in the name, if ``only_accim_idfs``) and each EPW."""
     try:
         names = sorted(os.listdir(folder))
     except OSError:
         return []
-    idfs = [name for name in names if name.endswith('.idf') and ('[' in name or not run_only_accim)]
+    idfs = [name for name in names if name.endswith('.idf') and ('[' in name or not only_accim_idfs)]
     epws = [name for name in names if name.endswith('.epw')]
     return [(idf, epw) for idf in idfs for epw in epws]

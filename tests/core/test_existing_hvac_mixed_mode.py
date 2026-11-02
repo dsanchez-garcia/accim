@@ -52,7 +52,7 @@ def _programs():
     """The programs of ACCIS of one zone with a window, with the existing HVAC systems in mixed mode (HVACmode 2,
     VentCtrl 0), INT EN16798-1 category II and the adaptive comfort mode."""
     programs = dict(accis_programs(_model('ex_mm')))
-    arguments = dict(comf_stand=1, cat=2, comf_mod=3, hvac_mode=2, vent_ctrl=0, ast_tol=0.1)
+    arguments = dict(comfort_standard=1, category=2, comfort_mode=3, hvac_mode=2, ventilation_control=0, setpoint_tolerance=0.1)
     programs['SetInputData_Zone1'] = input_lines(input_values(arguments), mixed_mode=True)
     names = set().union(*variables_in_programs(programs).values())
     erl = ErlProgramSet(programs, global_variables=names)
@@ -100,8 +100,8 @@ def radiators(tmp_path):
 def test_ex_mm_reads_the_load_of_the_zone_of_each_zone_and_window(radiators):
     from accim.sim.accis import add_accis_to_idf
 
-    model = add_accis_to_idf(radiators, script_type='ex_mm', output_type='simplified', output_freqs=['hourly'],
-                             output_keep_existing=False, temp_ctrl='temperature', verbose_mode=False)
+    model = add_accis_to_idf(radiators, script_type='ex_mm', output_type='simplified', output_frequencies=['hourly'],
+                             keep_existing_outputs=False, setpoint_type='temperature', verbose=False)
 
     sensors = {s.Name: s for s in radiators.idfobjects['EnergyManagementSystem:Sensor']}
     assert not [name for name in sensors if name.endswith('_CoolCoil') or name.endswith('_HeatCoil')]
@@ -119,6 +119,6 @@ def test_hvac_zone_map_is_deprecated(radiators):
     from accim.sim.accis import add_accis_to_idf
 
     with pytest.warns(DeprecationWarning, match='hvac_zone_map is deprecated since accim 1.0.0 and has no effect'):
-        add_accis_to_idf(radiators, script_type='ex_mm', output_type='simplified', output_freqs=['hourly'],
-                         output_keep_existing=False, temp_ctrl='temperature', verbose_mode=False,
+        add_accis_to_idf(radiators, script_type='ex_mm', output_type='simplified', output_frequencies=['hourly'],
+                         keep_existing_outputs=False, setpoint_type='temperature', verbose=False,
                          hvac_zone_map={'Block1:Zone1 Electric Baseboard': 'Block1:Zone1'})

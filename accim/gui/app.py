@@ -147,16 +147,16 @@ class AddAccisTab(_Tab):
         body.columnconfigure(0, weight=1)
         body.columnconfigure(1, weight=1)
         self.vars: Dict[str, tk.Variable] = {}
-        for name in ('script_type', 'supply_air_temp_input_method', 'temp_ctrl', 'energyplus_version', 'output_type',
-                     'cat', 'comf_mod', 'cool_season_start', 'cool_season_end', 'vst_offset', 'min_ot_offset',
-                     'max_wind_speed', 'max_temp_diff_vof', 'min_temp_diff_vof', 'multiplier_vof', 'ast_tol_start',
-                     'ast_tol_end_input', 'ast_tol_steps', 'name_suffix', *forms.CUSTOM_MODEL_FIELDS):
+        for name in ('script_type', 'supply_air_temp_input_method', 'setpoint_type', 'energyplus_version', 'output_type',
+                     'category', 'comfort_mode', 'cooling_season_start', 'cooling_season_end', 'ventilation_setpoint_offset', 'min_outdoor_temp_offset',
+                     'max_wind_speed', 'opening_factor_max_temp_diff', 'opening_factor_min_temp_diff', 'min_opening_factor', 'setpoint_tolerance_start',
+                     'setpoint_tolerance_end', 'setpoint_tolerance_step', 'name_suffix', *forms.CUSTOM_MODEL_FIELDS):
             self.vars[name] = tk.StringVar(value=defaults[name])
-        for name in ('output_keep_existing', 'make_averages'):
+        for name in ('keep_existing_outputs', 'add_building_averages'):
             self.vars[name] = tk.BooleanVar(value=defaults[name])
-        self.frequencies = {f: tk.BooleanVar(value=f in defaults['output_freqs']) for f in forms.OUTPUT_FREQUENCIES}
+        self.frequencies = {f: tk.BooleanVar(value=f in defaults['output_frequencies']) for f in forms.OUTPUT_FREQUENCIES}
         self.hvac_modes = {m: tk.BooleanVar(value=m in defaults['hvac_mode']) for m in forms.HVAC_MODES}
-        self.vent_ctrls = {c: tk.BooleanVar(value=c in defaults['vent_ctrl']) for c in forms.VENT_CTRLS}
+        self.vent_ctrls = {c: tk.BooleanVar(value=c in defaults['ventilation_control']) for c in forms.VENT_CTRLS}
         self.standards = forms.comfort_standard_choices()
 
         self._folder_row(0, 'Working folder (input IDFs):', refresh=True)
@@ -174,7 +174,7 @@ class AddAccisTab(_Tab):
         self.count = tk.StringVar(value='')
         ttk.Label(buttons, textvariable=self.count).pack(side='left', padx=6)
         self.vars['script_type'].trace_add('write', lambda *args: self.update_state())
-        self.vars['temp_ctrl'].trace_add('write', lambda *args: self.update_state())
+        self.vars['setpoint_type'].trace_add('write', lambda *args: self.update_state())
         self.update_state()
 
     def _idf_frame(self, parent) -> ttk.LabelFrame:
@@ -196,7 +196,7 @@ class AddAccisTab(_Tab):
         self.script_description.grid(row=1, column=0, columnspan=2, sticky='w', pady=(0, 4))
         self.supply_air = _grid_combo(frame, 2, 'Supply air temperature input:', self.vars['supply_air_temp_input_method'],
                                       forms.SUPPLY_AIR_TEMP_INPUT_METHODS)
-        _grid_combo(frame, 3, 'Temperature control:', self.vars['temp_ctrl'], forms.TEMP_CTRLS)
+        _grid_combo(frame, 3, 'Temperature control:', self.vars['setpoint_type'], forms.TEMP_CTRLS)
         _grid_combo(frame, 4, 'EnergyPlus version:', self.vars['energyplus_version'], forms.ENERGYPLUS_VERSIONS)
         _grid_combo(frame, 5, 'Outputs:', self.vars['output_type'], forms.OUTPUT_TYPES)
         ttk.Label(frame, text='Output frequencies:').grid(row=6, column=0, sticky='nw', pady=2)
@@ -206,9 +206,9 @@ class AddAccisTab(_Tab):
             ttk.Checkbutton(checks, text=frequency, variable=variable).grid(row=column // 3, column=column % 3,
                                                                            sticky='w', padx=(0, 6))
         ttk.Checkbutton(frame, text='Keep the outputs of the input IDFs',
-                        variable=self.vars['output_keep_existing']).grid(row=7, column=0, columnspan=2, sticky='w')
-        ttk.Checkbutton(frame, text='Building averages of the hour counters (make_averages)',
-                        variable=self.vars['make_averages']).grid(row=8, column=0, columnspan=2, sticky='w')
+                        variable=self.vars['keep_existing_outputs']).grid(row=7, column=0, columnspan=2, sticky='w')
+        ttk.Checkbutton(frame, text='Building averages of the hour counters (add_building_averages)',
+                        variable=self.vars['add_building_averages']).grid(row=8, column=0, columnspan=2, sticky='w')
         return frame
 
     def _comfort_frame(self, parent) -> ttk.LabelFrame:
@@ -227,19 +227,19 @@ class AddAccisTab(_Tab):
         scrollbar.grid(row=0, column=1, sticky='ns')
         for index, (number, title) in enumerate(self.standards):
             self.standard_list.insert('end', title)
-            if number in forms.ADD_ACCIS_DEFAULTS['comf_stand']:
+            if number in forms.ADD_ACCIS_DEFAULTS['comfort_standard']:
                 self.standard_list.selection_set(index)
         self.standard_list.bind('<<ListboxSelect>>', lambda event: self.update_state())
         self.comfort_widgets.append(self.standard_list)
-        self.comfort_widgets.append(_grid_entry(frame, 2, 'Categories:', self.vars['cat']))
+        self.comfort_widgets.append(_grid_entry(frame, 2, 'Categories:', self.vars['category']))
         self.categories = ttk.Label(frame, text='', wraplength=380, foreground='gray25')
         self.categories.grid(row=3, column=0, columnspan=2, sticky='w')
-        self.comfort_widgets.append(_grid_entry(frame, 4, 'Comfort modes:', self.vars['comf_mod']))
+        self.comfort_widgets.append(_grid_entry(frame, 4, 'Comfort modes:', self.vars['comfort_mode']))
         self.comfort_modes = ttk.Label(frame, text='', wraplength=380, foreground='gray25')
         self.comfort_modes.grid(row=5, column=0, columnspan=2, sticky='w')
         self.comfort_widgets.append(_grid_entry(frame, 6, 'Cooling season from (dd/mm or day):',
-                                                self.vars['cool_season_start']))
-        self.comfort_widgets.append(_grid_entry(frame, 7, 'to (dd/mm or day):', self.vars['cool_season_end']))
+                                                self.vars['cooling_season_start']))
+        self.comfort_widgets.append(_grid_entry(frame, 7, 'to (dd/mm or day):', self.vars['cooling_season_end']))
         return frame
 
     def _mixed_mode_frame(self, parent) -> ttk.LabelFrame:
@@ -262,12 +262,12 @@ class AddAccisTab(_Tab):
             check.grid(row=row, column=0, sticky='w')
             self.mixed_mode_widgets.append(check)
         for row, (name, label) in enumerate((
-                ('vst_offset', 'Offsets of the ventilation setpoint (°C):'),
-                ('min_ot_offset', 'Offsets of the minimum outdoor temperature (°C):'),
+                ('ventilation_setpoint_offset', 'Offsets of the ventilation setpoint (°C):'),
+                ('min_outdoor_temp_offset', 'Offsets of the minimum outdoor temperature (°C):'),
                 ('max_wind_speed', 'Maximum wind speeds (m/s):'),
-                ('max_temp_diff_vof', 'Opening factor: maximum temperature difference:'),
-                ('min_temp_diff_vof', 'Opening factor: minimum temperature difference:'),
-                ('multiplier_vof', 'Opening factor: multiplier (0 to 1):')), start=2):
+                ('opening_factor_max_temp_diff', 'Opening factor: maximum temperature difference:'),
+                ('opening_factor_min_temp_diff', 'Opening factor: minimum temperature difference:'),
+                ('min_opening_factor', 'Opening factor: multiplier (0 to 1):')), start=2):
             self.mixed_mode_widgets.append(_grid_entry(frame, row, label, self.vars[name]))
         return frame
 
@@ -280,9 +280,9 @@ class AddAccisTab(_Tab):
 
     def _tolerance_frame(self, parent) -> ttk.LabelFrame:
         frame = ttk.LabelFrame(parent, text='Tolerance of the setpoints and names of the output IDFs', padding=6)
-        _grid_entry(frame, 0, 'Tolerance from (°C):', self.vars['ast_tol_start'], width=8)
-        _grid_entry(frame, 0, 'to:', self.vars['ast_tol_end_input'], width=8, column=2)
-        _grid_entry(frame, 0, 'in steps of:', self.vars['ast_tol_steps'], width=8, column=4)
+        _grid_entry(frame, 0, 'Tolerance from (°C):', self.vars['setpoint_tolerance_start'], width=8)
+        _grid_entry(frame, 0, 'to:', self.vars['setpoint_tolerance_end'], width=8, column=2)
+        _grid_entry(frame, 0, 'in steps of:', self.vars['setpoint_tolerance_step'], width=8, column=4)
         _grid_entry(frame, 0, 'Name suffix:', self.vars['name_suffix'], width=14, column=6)
         for column in (2, 4, 6):
             frame.columnconfigure(column, pad=12)
@@ -304,7 +304,7 @@ class AddAccisTab(_Tab):
         self.script_description.configure(text=forms.SCRIPT_TYPES.get(script_type, ''))
         _set_state([self.supply_air], script_type.startswith('vrf'))
         _set_state(self.mixed_mode_widgets, script_type in forms.MIXED_MODE_SCRIPT_TYPES)
-        temperature = self.vars['temp_ctrl'].get() == 'temperature'
+        temperature = self.vars['setpoint_type'].get() == 'temperature'
         _set_state(self.comfort_widgets, temperature)
         standards = self.selected_standards() if temperature else []
         _set_state(self.custom_widgets, 99 in standards)
@@ -317,14 +317,14 @@ class AddAccisTab(_Tab):
         values.update(
             folder=self.folder.get(),
             idfs=[self.idf_list.get(index) for index in self.idf_list.curselection()],
-            output_freqs=[f for f, variable in self.frequencies.items() if variable.get()],
-            comf_stand=self.selected_standards(),
+            output_frequencies=[f for f, variable in self.frequencies.items() if variable.get()],
+            comfort_standard=self.selected_standards(),
             hvac_mode=[m for m, variable in self.hvac_modes.items() if variable.get()],
-            vent_ctrl=[c for c, variable in self.vent_ctrls.items() if variable.get()],
+            ventilation_control=[c for c, variable in self.vent_ctrls.items() if variable.get()],
         )
-        if values['temp_ctrl'] == 'pmv' and not values['comf_stand']:
+        if values['setpoint_type'] == 'pmv' and not values['comfort_standard']:
             # The comfort models are not used with PMV control, but AddAccis needs them
-            values['comf_stand'] = forms.ADD_ACCIS_DEFAULTS['comf_stand']
+            values['comfort_standard'] = forms.ADD_ACCIS_DEFAULTS['comfort_standard']
         return values
 
     def _arguments(self) -> Optional[Dict[str, Any]]:
@@ -382,17 +382,17 @@ class RunTab(_Tab):
         body = self.body
         body.columnconfigure(1, weight=1)
         self.vars: Dict[str, tk.Variable] = {
-            'run_only_accim': tk.BooleanVar(value=defaults['run_only_accim']),
-            'num_cpus': tk.StringVar(value=defaults['num_cpus']),
+            'only_accim_idfs': tk.BooleanVar(value=defaults['only_accim_idfs']),
+            'processes': tk.StringVar(value=defaults['processes']),
             'energyplus_version': tk.StringVar(value=defaults['energyplus_version']),
             'backend': tk.StringVar(value=defaults['backend']),
         }
         self._folder_row(0, 'Working folder (IDFs and EPWs):', refresh=True)
         self.run_only_accim_check = ttk.Checkbutton(body, text="Only the output IDFs of accim (with '[' in the name)",
-                                                    variable=self.vars['run_only_accim'], command=self.preview)
+                                                    variable=self.vars['only_accim_idfs'], command=self.preview)
         self.run_only_accim_check.grid(row=1, column=0, columnspan=2, sticky='w', pady=2)
         ttk.Label(body, text='Simulations at the same time:').grid(row=2, column=0, sticky='w', pady=2)
-        ttk.Spinbox(body, from_=1, to=max(os.cpu_count() or 1, 1), textvariable=self.vars['num_cpus'],
+        ttk.Spinbox(body, from_=1, to=max(os.cpu_count() or 1, 1), textvariable=self.vars['processes'],
                     width=6).grid(row=2, column=1, sticky='w', pady=2)
         _grid_combo(body, 3, 'EnergyPlus version of the IDFs:', self.vars['energyplus_version'],
                     forms.ENERGYPLUS_VERSIONS, width=10).grid(sticky='w')
@@ -418,7 +418,7 @@ class RunTab(_Tab):
         return values
 
     def preview(self) -> None:
-        pairs = forms.simulations(self.folder.get(), self.vars['run_only_accim'].get())
+        pairs = forms.simulations(self.folder.get(), self.vars['only_accim_idfs'].get())
         idfs = sorted({idf for idf, _ in pairs})
         epws = sorted({epw for _, epw in pairs})
         self.count.set(f'{len(idfs)} IDFs and {len(epws)} EPWs: {len(pairs)} simulations')
@@ -430,7 +430,7 @@ class RunTab(_Tab):
         except forms.FormError as error:
             self.app.show_error('Run the simulations', str(error))
             return False
-        pairs = forms.simulations(self.folder.get(), arguments['run_only_accim'])
+        pairs = forms.simulations(self.folder.get(), arguments['only_accim_idfs'])
         if not pairs:
             self.app.show_error('Run the simulations', 'The folder has no IDFs or no EPWs to simulate.')
             return False

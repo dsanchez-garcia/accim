@@ -44,8 +44,8 @@ def test_addaccis_prints_the_link_to_the_full_example(monkeypatch, capsys):
 
     with pytest.raises(_Reached):
         accis.AddAccis(
-            idfs=['model.idf'], script_type='ex_ac', output_type='standard', output_freqs=['hourly'],
-            output_keep_existing=False, temp_ctrl='temp',
+            idfs=['model.idf'], script_type='ex_ac', output_type='standard', output_frequencies=['hourly'],
+            keep_existing_outputs=False, setpoint_type='temp',
         )
 
     out = capsys.readouterr().out
@@ -54,12 +54,12 @@ def test_addaccis_prints_the_link_to_the_full_example(monkeypatch, capsys):
     assert f'v{accim.__version__}' in out
 
 
-@pytest.mark.parametrize('verbose_mode', [True, False])
-def test_add_accis_to_idf_prints_the_banner_in_verbose_mode(monkeypatch, capsys, verbose_mode):
+@pytest.mark.parametrize('verbose', [True, False])
+def test_add_accis_to_idf_prints_the_banner_in_verbose_mode(monkeypatch, capsys, verbose):
     monkeypatch.setattr(accis, 'AccimModel', _stub_accim_model)
 
     with pytest.raises(_Reached):
         accis.add_accis_to_idf(SimpleNamespace(idd_version=(25, 1, 0)), script_type='ex_ac', output_type='standard',
-                               output_freqs=['hourly'], temp_ctrl='temp', verbose_mode=verbose_mode)
+                               output_frequencies=['hourly'], setpoint_type='temp', verbose=verbose)
 
-    assert (FULL_EXAMPLE in capsys.readouterr().out) == verbose_mode
+    assert (FULL_EXAMPLE in capsys.readouterr().out) == verbose

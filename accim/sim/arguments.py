@@ -16,12 +16,12 @@ __all__ = [
     'OUTPUT_TYPES',
     'SCRIPT_TYPES',
     'SUPPLY_AIR_TEMP_INPUT_METHODS',
-    'TEMP_CTRL_VALUES',
+    'SETPOINT_TYPES',
     'check_choice',
     'check_choices',
     'is_mixed_mode',
     'normalise_energyplus_version',
-    'normalise_temp_ctrl',
+    'normalise_setpoint_type',
     'to_bool',
     'to_day_of_year',
 ]
@@ -37,53 +37,59 @@ SUPPLY_AIR_TEMP_INPUT_METHODS = {
 }
 OUTPUT_TYPES = ('standard', 'simplified', 'detailed', 'custom')
 OUTPUT_FREQUENCIES = ('timestep', 'hourly', 'daily', 'monthly', 'runperiod')
-#: 'temperature' (or 'temp') for adaptive setpoint temperatures, 'pmv' for Fanger PMV setpoints.
-TEMP_CTRL_VALUES = ('temperature', 'temp', 'pmv')
+#: The values of ``setpoint_type``: 'temperature' (or 'temp') for adaptive setpoint temperatures, 'pmv' for setpoints
+#: based on the PMV of Fanger.
+SETPOINT_TYPES = ('temperature', 'temp', 'pmv')
 
 #: New name of each argument of accim 0.x (``accis.addAccis``, ``accis_single_idf_funcs.addAccis``,
-#: ``modifyAccis``...), renamed to follow PEP 8 in accim 1.0.0.
+#: ``modifyAccis``...), renamed in accim 1.0.0 to follow PEP 8 and to say what each argument is.
 LEGACY_ARGUMENT_NAMES = {
     'ScriptType': 'script_type',
     'SupplyAirTempInputMethod': 'supply_air_temp_input_method',
     'Output_type': 'output_type',
-    'Output_freqs': 'output_freqs',
-    'Output_keep_existing': 'output_keep_existing',
-    'Output_gen_dataframe': 'output_gen_dataframe',
-    'Output_take_dataframe': 'output_take_dataframe',
+    'Output_freqs': 'output_frequencies',
+    'Output_keep_existing': 'keep_existing_outputs',
+    'Output_gen_dataframe': 'make_outputs_dataframe',
+    'Output_take_dataframe': 'outputs_dataframe',
     'EnergyPlus_version': 'energyplus_version',
-    'TempCtrl': 'temp_ctrl',
-    'VRFschedule': 'vrf_schedule',
-    'ComfStand': 'comf_stand',
-    'CAT': 'cat',
-    'CATcoolOffset': 'cat_cool_offset',
-    'CATheatOffset': 'cat_heat_offset',
-    'ComfMod': 'comf_mod',
-    'SetpointAcc': 'setpoint_acc',
-    'CustAST_ACSTaul': 'cust_ast_acst_aul',
-    'CustAST_ACSTall': 'cust_ast_acst_all',
-    'CustAST_AHSTaul': 'cust_ast_ahst_aul',
-    'CustAST_AHSTall': 'cust_ast_ahst_all',
-    'CustAST_m': 'cust_ast_m',
-    'CustAST_n': 'cust_ast_n',
-    'CustAST_ACSToffset': 'cust_ast_acst_offset',
-    'CustAST_AHSToffset': 'cust_ast_ahst_offset',
-    'CoolSeasonStart': 'cool_season_start',
-    'CoolSeasonEnd': 'cool_season_end',
+    'TempCtrl': 'setpoint_type',
+    'VRFschedule': 'vrf_availability_schedule',
+    'ComfStand': 'comfort_standard',
+    'CAT': 'category',
+    'CATcoolOffset': 'category_cooling_offset',
+    'CATheatOffset': 'category_heating_offset',
+    'ComfMod': 'comfort_mode',
+    'SetpointAcc': 'setpoint_accuracy',
+    'CustAST_ACSTaul': 'custom_cooling_upper_limit',
+    'CustAST_ACSTall': 'custom_cooling_lower_limit',
+    'CustAST_AHSTaul': 'custom_heating_upper_limit',
+    'CustAST_AHSTall': 'custom_heating_lower_limit',
+    'CustAST_m': 'custom_slope',
+    'CustAST_n': 'custom_intercept',
+    'CustAST_ACSToffset': 'custom_cooling_offset',
+    'CustAST_AHSToffset': 'custom_heating_offset',
+    'CoolSeasonStart': 'cooling_season_start',
+    'CoolSeasonEnd': 'cooling_season_end',
     'HVACmode': 'hvac_mode',
-    'VentCtrl': 'vent_ctrl',
-    'MaxTempDiffVOF': 'max_temp_diff_vof',
-    'MinTempDiffVOF': 'min_temp_diff_vof',
-    'MultiplierVOF': 'multiplier_vof',
-    'VSToffset': 'vst_offset',
-    'MinOToffset': 'min_ot_offset',
+    'VentCtrl': 'ventilation_control',
+    'MaxTempDiffVOF': 'opening_factor_max_temp_diff',
+    'MinTempDiffVOF': 'opening_factor_min_temp_diff',
+    'MultiplierVOF': 'min_opening_factor',
+    'VSToffset': 'ventilation_setpoint_offset',
+    'MinOToffset': 'min_outdoor_temp_offset',
     'MaxWindSpeed': 'max_wind_speed',
-    'ASTtol_start': 'ast_tol_start',
-    'ASTtol_end_input': 'ast_tol_end_input',
-    'ASTtol_steps': 'ast_tol_steps',
-    'ASTtol': 'ast_tol',
+    'ASTtol_start': 'setpoint_tolerance_start',
+    'ASTtol_end_input': 'setpoint_tolerance_end',
+    'ASTtol_steps': 'setpoint_tolerance_step',
+    'ASTtol': 'setpoint_tolerance',
     'NameSuffix': 'name_suffix',
-    'verboseMode': 'verbose_mode',
-    'confirmGen': 'confirm_gen',
+    'verboseMode': 'verbose',
+    'confirmGen': 'confirm',
+    # The names of accim 0.x that 1.0.0 also renames
+    'make_averages': 'add_building_averages',
+    'debugging': 'debug_ems',
+    'eer': 'vrf_eer',
+    'cop': 'vrf_cop',
 }
 
 
@@ -109,10 +115,11 @@ def check_choices(name: str, values: Sequence, choices: Iterable) -> None:
         raise ValueError(f'{invalid} are not valid {name}. Valid values: {choices}.')
 
 
-def normalise_temp_ctrl(temp_ctrl: str) -> str:
+def normalise_setpoint_type(setpoint_type: str) -> str:
     """Return 'temperature' or 'pmv'."""
-    check_choice('temp_ctrl', temp_ctrl.lower() if isinstance(temp_ctrl, str) else temp_ctrl, TEMP_CTRL_VALUES)
-    return 'pmv' if temp_ctrl.lower() == 'pmv' else 'temperature'
+    check_choice('setpoint_type', setpoint_type.lower() if isinstance(setpoint_type, str) else setpoint_type,
+                 SETPOINT_TYPES)
+    return 'pmv' if setpoint_type.lower() == 'pmv' else 'temperature'
 
 
 def normalise_energyplus_version(energyplus_version: Optional[str]) -> str:

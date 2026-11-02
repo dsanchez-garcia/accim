@@ -45,7 +45,7 @@ def _parametric_session(tmp_path, n_sims=2):
     for i in range(n_sims):
         sim_dir = tmp_path / 'BESOS_Output' / f'SIM{i}'
         _write_eplus_csv(sim_dir)
-        rows.append({'CustAST_m': 0.1 * i, 'epw': 'Seville', 'output_dir': str(sim_dir)})
+        rows.append({'custom_slope': 0.1 * i, 'epw': 'Seville', 'output_dir': str(sim_dir)})
     sim = ParametricSimulation(parameters_type=None)
     sim.outputs_param_simulation = pd.DataFrame(rows)
     sim.last_run_type = 'parametric'

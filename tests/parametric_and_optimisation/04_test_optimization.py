@@ -52,7 +52,7 @@ def test_optimization_basic():
         parameters_type='accim predefined model'
     )
 
-    sim.set_parameters(accis_params_dict={'CAT': [1, 2, 3], 'HVACmode': [0, 2]})
+    sim.set_parameters(accis_params_dict={'category': [1, 2, 3], 'hvac_mode': [0, 2]})
     ts.set_meter_readers(sim)
     sim.set_problem(
         minimize_outputs=[True, True],
@@ -90,7 +90,7 @@ def _single_objective_simulation(algo):
             epws=ts.TEST_CATEGORIES['fast']['epws'][:1],
             parameters_type='accim predefined model'
         )
-        sim.set_parameters(accis_params_dict={'CAT': [1, 2, 3]})
+        sim.set_parameters(accis_params_dict={'category': [1, 2, 3]})
     ts.set_meter_readers(sim, meters=['Electricity:HVAC'])
     sim.set_problem(minimize_outputs=[True])
     return sim
@@ -138,7 +138,7 @@ def test_optimization_multi_epw():
         parameters_type='accim predefined model'
     )
 
-    sim.set_parameters(accis_params_dict={'CAT': [1, 2, 3]})
+    sim.set_parameters(accis_params_dict={'category': [1, 2, 3]})
     ts.set_meter_readers(sim, meters=['Electricity:HVAC'])
     sim.set_problem(minimize_outputs=[True])
 
@@ -168,7 +168,7 @@ def test_optimization_keep_sim_files():
             parameters_type='accim predefined model'
         )
 
-        sim.set_parameters(accis_params_dict={'CAT': [1, 2, 3]})
+        sim.set_parameters(accis_params_dict={'category': [1, 2, 3]})
         ts.set_meter_readers(sim, meters=['Electricity:HVAC'])
         sim.set_problem(minimize_outputs=[True])
 
@@ -195,7 +195,7 @@ def test_optimization_estimate_sims():
         parameters_type='accim predefined model'
     )
 
-    sim.set_parameters(accis_params_dict={'CAT': [1, 2, 3]})
+    sim.set_parameters(accis_params_dict={'category': [1, 2, 3]})
     ts.set_meter_readers(sim, meters=['Electricity:HVAC'])
     sim.set_problem(minimize_outputs=[True])
 

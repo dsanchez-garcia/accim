@@ -3,9 +3,9 @@
 - supply_air_temp_input_method is only used by the VRF systems, but before, with script_type 'ex_ac' or
   'ex_mm', addAccis asked for all the arguments of the first stage when it was not given, and used
   the answers instead of the arguments of the call.
-- When the setpoint accuracy (setpoint_acc) was left empty in the prompts, it was 100, while the
+- When the setpoint accuracy (setpoint_accuracy) was left empty in the prompts, it was 100, while the
   default of the function is 10000.
-- The prompts of the arguments of the output IDFs replaced name_suffix, verbose_mode and confirm_gen
+- The prompts of the arguments of the output IDFs replaced name_suffix, verbose and confirm
   with their defaults.
 """
 import builtins
@@ -17,9 +17,9 @@ from accim.sim.generation import GenerationArguments
 
 FIRST_STAGE_ARGS_WITHOUT_SUPPLY_AIR = dict(
     output_type='standard',
-    output_freqs=['hourly'],
-    output_keep_existing=False,
-    temp_ctrl='temp',
+    output_frequencies=['hourly'],
+    keep_existing_outputs=False,
+    setpoint_type='temp',
 )
 
 
@@ -41,7 +41,7 @@ def test_existing_hvac_does_not_need_supply_air_temp_input_method(monkeypatch, s
     monkeypatch.setattr(builtins, 'input', _no_prompts)
 
     with pytest.raises(_ReachedLoadIdf):
-        accis.AddAccis(idfs=['model.idf'], script_type=script_type, verbose_mode=False,
+        accis.AddAccis(idfs=['model.idf'], script_type=script_type, verbose=False,
                        **FIRST_STAGE_ARGS_WITHOUT_SUPPLY_AIR)
 
 
@@ -62,7 +62,7 @@ def test_invalid_arguments_are_rejected_before_reading_the_idfs(monkeypatch, arg
     monkeypatch.setattr(accis, 'load_idf', _stub_load_idf)
 
     with pytest.raises(ValueError, match=message):
-        accis.AddAccis(idfs=['model.idf'], verbose_mode=False, **arguments, **FIRST_STAGE_ARGS_WITHOUT_SUPPLY_AIR)
+        accis.AddAccis(idfs=['model.idf'], verbose=False, **arguments, **FIRST_STAGE_ARGS_WITHOUT_SUPPLY_AIR)
 
 
 def test_input_files_skip_the_output_idfs(tmp_path, monkeypatch):
@@ -96,10 +96,10 @@ def test_setpoint_accuracy_left_empty_in_the_prompts_is_10000():
 
     args = prompts.ask_generation_arguments('vrf_ac', ask=_scripted_answers(prompts_seen))
 
-    assert args['setpoint_acc'] == 10000
+    assert args['setpoint_accuracy'] == 10000
     assert any('if omitted will be 10000' in p for p in prompts_seen)
-    assert (args['comf_stand'], args['cat'], args['comf_mod']) == ([1], [1], [3.0])
-    assert args['ast_tol_start'] == args['ast_tol_end_input'] == args['ast_tol_steps'] == 0.1
+    assert (args['comfort_standard'], args['category'], args['comfort_mode']) == ([1], [1], [3.0])
+    assert args['setpoint_tolerance_start'] == args['setpoint_tolerance_end'] == args['setpoint_tolerance_step'] == 0.1
     # Fully air-conditioned: no natural ventilation
     assert args['hvac_mode'] == [0]
 
@@ -108,20 +108,20 @@ def test_the_prompts_keep_the_name_suffix_of_the_call(monkeypatch):
     monkeypatch.setattr(builtins, 'input', _scripted_answers([]))
 
     generation = accis.AddAccis._generation_arguments(
-        'vrf_ac', comf_stand=None, cat=None, cat_cool_offset=0, cat_heat_offset=0, comf_mod=None, setpoint_acc=10000,
-        cust_ast_acst_aul=0, cust_ast_acst_all=0, cust_ast_ahst_aul=0, cust_ast_ahst_all=0, cust_ast_m=0,
-        cust_ast_n=0, cust_ast_acst_offset=0, cust_ast_ahst_offset=0, cool_season_start=121, cool_season_end=274,
-        hvac_mode=None, vent_ctrl=None, max_temp_diff_vof=6, min_temp_diff_vof=1, multiplier_vof=0.25,
-        vst_offset=[0], min_ot_offset=[50], max_wind_speed=[50], ast_tol_start=0.1, ast_tol_end_input=0.1,
-        ast_tol_steps=0.1, name_suffix='suffix')
+        'vrf_ac', comfort_standard=None, category=None, category_cooling_offset=0, category_heating_offset=0, comfort_mode=None, setpoint_accuracy=10000,
+        custom_cooling_upper_limit=0, custom_cooling_lower_limit=0, custom_heating_upper_limit=0, custom_heating_lower_limit=0, custom_slope=0,
+        custom_intercept=0, custom_cooling_offset=0, custom_heating_offset=0, cooling_season_start=121, cooling_season_end=274,
+        hvac_mode=None, ventilation_control=None, opening_factor_max_temp_diff=6, opening_factor_min_temp_diff=1, min_opening_factor=0.25,
+        ventilation_setpoint_offset=[0], min_outdoor_temp_offset=[50], max_wind_speed=[50], setpoint_tolerance_start=0.1, setpoint_tolerance_end=0.1,
+        setpoint_tolerance_step=0.1, name_suffix='suffix')
 
     assert isinstance(generation, GenerationArguments)
     assert generation.name_suffix == 'suffix'
-    assert (generation.comf_stand, generation.cat, generation.comf_mod) == ([1], [1], [3.0])
+    assert (generation.comfort_standard, generation.category, generation.comfort_mode) == ([1], [1], [3.0])
 
 
 def test_arguments_are_also_available_with_the_names_of_accim_0x():
-    arguments = accis._Arguments(script_type='vrf_ac', comf_stand=[1])
+    arguments = accis._Arguments(script_type='vrf_ac', comfort_standard=[1])
 
     with pytest.warns(DeprecationWarning, match="arguments\\['ScriptType'\\] is deprecated"):
         assert arguments['ScriptType'] == 'vrf_ac'

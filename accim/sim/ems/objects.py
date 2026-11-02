@@ -97,11 +97,12 @@ _GLOBAL_VARIABLES_MIXED_MODE = (
 )
 #: Variables of each zone in mixed mode only
 _ZONE_GLOBAL_VARIABLES_MIXED_MODE = ('VentHours',) + zone_variables(mixed_mode=True)[len(zone_variables(False)):]
-#: Variables of each zone whose building averages make_averages adds
+#: Variables of each zone whose building averages add_building_averages adds
 _HOURS_TO_AVERAGE = ('ComfHours', 'DiscomfAppHotHours', 'DiscomfAppColdHours', 'DiscomfNonAppHotHours',
                      'DiscomfNonAppColdHours', 'ComfHoursNoApp', 'OccHours', 'OccComfHoursNoApp',
                      'OccDiscomfHoursNoApp', 'VentHours')
-#: Outputs whose building averages make_averages adds: output -> (sensor suffix, short name, units, type of data)
+#: Outputs whose building averages add_building_averages adds:
+#: output -> (sensor suffix, short name, units, type of data)
 _OUTPUTS_TO_AVERAGE = {
     'Zone Operative Temperature': ('OpT', 'OpTemp', 'C', 'Averaged'),
     'AFN Zone Ventilation Air Change Rate': ('VentACR', 'VentACR', 'ach', 'Averaged'),
@@ -275,7 +276,7 @@ def _add_average(model: AccimModel, global_variables, key: str, terms, output_na
 
 
 def add_building_averages(model: AccimModel) -> None:
-    """Add the building averages of the hours of each zone and of some outputs (argument make_averages)."""
+    """Add the building averages of the hours of each zone and of some outputs (argument add_building_averages)."""
     idf = model.idf
     names = [name for obj in idf.idfobjects['EnergyManagementSystem:GlobalVariable'] for name in obj.obj
              if 'energymanagementsystem' not in name.lower()]

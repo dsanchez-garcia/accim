@@ -54,8 +54,8 @@ def test_outputs_preflight_discover_and_select_with_suggestions():
         buildings=buildings,
         epws=ts.TEST_CATEGORIES['fast']['epws'],
         parameters_type=None,
-        output_freqs=['monthly'],
-        verbosemode=False,
+        output_frequencies=['monthly'],
+        verbose=False,
     )
 
     available_outputs = sim.discover_available_outputs(reduce_sim_time=True, prefer='testsimeplus')
@@ -92,7 +92,7 @@ def test_outputs_preflight_discover_and_select_with_suggestions():
 
 
 def test_simulationbase_init_forwards_explicit_addaccis_kwargs(monkeypatch):
-    ts.print_section('TEST: addAccis passthrough explícito (eer/cop)')
+    ts.print_section('TEST: addAccis passthrough explícito (vrf_eer/vrf_cop)')
 
     captured_calls = []
 
@@ -106,15 +106,15 @@ def test_simulationbase_init_forwards_explicit_addaccis_kwargs(monkeypatch):
         buildings=buildings,
         epws=ts.TEST_CATEGORIES['fast']['epws'],
         parameters_type='accim custom model',
-        bypass_addAccis=False,
-        verbosemode=False,
-        eer=4.42,
-        cop=4.95,
+        bypass_add_accis=False,
+        verbose=False,
+        vrf_eer=4.42,
+        vrf_cop=4.95,
     )
 
     assert len(captured_calls) == 1
-    assert captured_calls[0]['eer'] == pytest.approx(4.42)
-    assert captured_calls[0]['cop'] == pytest.approx(4.95)
+    assert captured_calls[0]['vrf_eer'] == pytest.approx(4.42)
+    assert captured_calls[0]['vrf_cop'] == pytest.approx(4.95)
 
 
 def test_simulationbase_init_forwards_addaccis_defaults(monkeypatch):
@@ -128,16 +128,17 @@ def test_simulationbase_init_forwards_addaccis_defaults(monkeypatch):
 
     monkeypatch.setattr(main_module.accis, 'add_accis_to_idf', fake_add_accis_to_idf)
 
-    # The arguments of SimulationBase keep the names of accim 0.x; add_accis_to_idf follows PEP 8
-    replicated = ['output_take_dataframe', 'energyplus_version', 'vrf_schedule', 'eer', 'cop', 'hvac_zone_map']
+    # The arguments of SimulationBase have the names of those of add_accis_to_idf (since accim 1.0.0)
+    replicated = ['outputs_dataframe', 'energyplus_version', 'vrf_availability_schedule', 'vrf_eer', 'vrf_cop',
+                  'hvac_zone_map']
 
     buildings = ts.prepare_buildings(ts.TEST_CATEGORIES['fast']['idfs'])
     ts.ParametricSimulation(
         buildings=buildings,
         epws=ts.TEST_CATEGORIES['fast']['epws'],
         parameters_type='accim custom model',
-        bypass_addAccis=False,
-        verbosemode=False,
+        bypass_add_accis=False,
+        verbose=False,
     )
 
     assert len(captured_calls) == 1
@@ -150,11 +151,11 @@ def test_simulationbase_addaccis_default_sync_contract():
 
     # (argument of SimulationBase, argument of add_accis_to_idf)
     replicated = [
-        ('Output_take_dataframe', 'output_take_dataframe'),
-        ('EnergyPlus_version', 'energyplus_version'),
-        ('VRFschedule', 'vrf_schedule'),
-        ('eer', 'eer'),
-        ('cop', 'cop'),
+        ('outputs_dataframe', 'outputs_dataframe'),
+        ('energyplus_version', 'energyplus_version'),
+        ('vrf_availability_schedule', 'vrf_availability_schedule'),
+        ('vrf_eer', 'vrf_eer'),
+        ('vrf_cop', 'vrf_cop'),
         ('hvac_zone_map', 'hvac_zone_map'),
     ]
     base_sig = inspect.signature(main_module.SimulationBase.__init__)
@@ -192,7 +193,7 @@ def test_discover_available_outputs_rdd_mdd_uses_existing_files_without_simulati
         buildings=buildings,
         epws=ts.TEST_CATEGORIES['fast']['epws'],
         parameters_type=None,
-        verbosemode=False,
+        verbose=False,
     )
 
     discovered = sim.discover_available_outputs(prefer='rdd_mdd', refresh=False)
@@ -236,7 +237,7 @@ def test_discover_available_outputs_rdd_mdd_generates_and_caches_without_testsim
         buildings=buildings,
         epws=ts.TEST_CATEGORIES['fast']['epws'],
         parameters_type=None,
-        verbosemode=False,
+        verbose=False,
     )
 
     discovered = sim.discover_available_outputs(
@@ -288,7 +289,7 @@ def test_discover_available_outputs_default_prefer_still_uses_testsimeplus(monke
         buildings=buildings,
         epws=ts.TEST_CATEGORIES['fast']['epws'],
         parameters_type=None,
-        verbosemode=False,
+        verbose=False,
     )
 
     discovered = sim.discover_available_outputs()
@@ -306,8 +307,8 @@ def test_apply_outputs_preflight_cleans_all_and_applies_selection():
         buildings=buildings,
         epws=ts.TEST_CATEGORIES['fast']['epws'],
         parameters_type=None,
-        output_freqs=['monthly'],
-        verbosemode=False,
+        output_frequencies=['monthly'],
+        verbose=False,
     )
 
     # Discover once to pick a known-valid variable name.
@@ -359,8 +360,8 @@ def test_keep_only_outputs_in_idfs_filters_all_buildings():
         buildings=buildings,
         epws=ts.TEST_CATEGORIES['medium']['epws'][:1],
         parameters_type=None,
-        output_freqs=['hourly'],
-        verbosemode=False,
+        output_frequencies=['hourly'],
+        verbose=False,
     )
 
     sim.clear_outputs(mode='meters_vars', idf_scope='all')
@@ -404,8 +405,8 @@ def test_set_output_meters_to_idf_mode_replace_replaces_existing_meters():
         buildings=buildings,
         epws=ts.TEST_CATEGORIES['medium']['epws'][:1],
         parameters_type=None,
-        output_freqs=['hourly'],
-        verbosemode=False,
+        output_frequencies=['hourly'],
+        verbose=False,
     )
 
     sim.clear_outputs(mode='meters_vars', idf_scope='all')
@@ -455,8 +456,8 @@ def test_set_output_variables_to_idf_validate_autofilter_skips_missing(monkeypat
         buildings=buildings,
         epws=ts.TEST_CATEGORIES['medium']['epws'][:1],
         parameters_type=None,
-        output_freqs=['hourly'],
-        verbosemode=False,
+        output_frequencies=['hourly'],
+        verbose=False,
     )
 
     sim.clear_outputs(mode='meters_vars', idf_scope='all')
@@ -538,8 +539,8 @@ def test_simulation_init_ensures_outputcontrol_files(sim_cls, precreate_outputco
         buildings=buildings,
         epws=ts.TEST_CATEGORIES['fast']['epws'],
         parameters_type=None,
-        output_freqs=['hourly'],
-        verbosemode=False,
+        output_frequencies=['hourly'],
+        verbose=False,
     )
 
     output_control_files = _idfobjects_get_case(building, 'OutputControl:Files')
@@ -566,8 +567,8 @@ def test_simulation_init_removes_tabular_outputs_by_default(sim_cls):
         buildings=buildings,
         epws=ts.TEST_CATEGORIES['fast']['epws'],
         parameters_type=None,
-        output_freqs=['hourly'],
-        verbosemode=False,
+        output_frequencies=['hourly'],
+        verbose=False,
     )
 
     assert len(_idfobjects_get_case(building, 'Output:Table:Monthly')) == 0
@@ -590,8 +591,8 @@ def test_simulation_init_keeps_tabular_outputs_when_disabled(sim_cls):
         buildings=buildings,
         epws=ts.TEST_CATEGORIES['fast']['epws'],
         parameters_type=None,
-        output_freqs=['hourly'],
-        verbosemode=False,
+        output_frequencies=['hourly'],
+        verbose=False,
         remove_output_tables=False,
     )
 
@@ -607,8 +608,8 @@ def test_get_hourly_df_split_by_category_handles_variable_output_columns():
         buildings=buildings,
         epws=ts.TEST_CATEGORIES['medium']['epws'][:2],
         parameters_type=None,
-        output_freqs=['hourly'],
-        verbosemode=False,
+        output_frequencies=['hourly'],
+        verbose=False,
     )
 
     sim.set_category_mapping(
@@ -664,8 +665,8 @@ def test_get_monthly_df_supports_daily_monthly_and_runperiod_frequency():
         buildings=buildings,
         epws=ts.TEST_CATEGORIES['medium']['epws'][:2],
         parameters_type=None,
-        output_freqs=['hourly'],
-        verbosemode=False,
+        output_frequencies=['hourly'],
+        verbose=False,
     )
 
     sim.set_category_mapping(
@@ -727,8 +728,8 @@ def test_get_monthly_df_optimisation_supports_daily_and_runperiod_frequency():
         buildings=buildings,
         epws=ts.TEST_CATEGORIES['medium']['epws'][:2],
         parameters_type=None,
-        output_freqs=['hourly'],
-        verbosemode=False,
+        output_frequencies=['hourly'],
+        verbose=False,
     )
     sim.last_run_type = 'optimisation'
 
@@ -798,14 +799,14 @@ def test_get_monthly_df_optimisation_supports_daily_and_runperiod_frequency():
 
 
 def test_output_keep_existing_default_is_consistent_across_classes():
-    ts.print_section("TEST: output_keep_existing default consistency")
+    ts.print_section("TEST: keep_existing_outputs default consistency")
 
     from accim.parametric_and_optimisation.main import SimulationBase
 
-    base_default = inspect.signature(SimulationBase.__init__).parameters['output_keep_existing'].default
-    param_default = inspect.signature(ts.ParametricSimulation.__init__).parameters['output_keep_existing'].default
-    optim_default = inspect.signature(ts.OptimisationSimulation.__init__).parameters['output_keep_existing'].default
-    predef_default = inspect.signature(ts.AccimPredefModelsParamSim.__init__).parameters['output_keep_existing'].default
+    base_default = inspect.signature(SimulationBase.__init__).parameters['keep_existing_outputs'].default
+    param_default = inspect.signature(ts.ParametricSimulation.__init__).parameters['keep_existing_outputs'].default
+    optim_default = inspect.signature(ts.OptimisationSimulation.__init__).parameters['keep_existing_outputs'].default
+    predef_default = inspect.signature(ts.AccimPredefModelsParamSim.__init__).parameters['keep_existing_outputs'].default
 
     assert base_default is True
     assert param_default is True
@@ -817,11 +818,11 @@ def test_addaccis_passthrough_params_are_exposed_in_all_constructors():
     ts.print_section('TEST: parámetros addAccis expuestos en constructores')
 
     expected = [
-        'Output_take_dataframe',
-        'EnergyPlus_version',
-        'VRFschedule',
-        'eer',
-        'cop',
+        'outputs_dataframe',
+        'energyplus_version',
+        'vrf_availability_schedule',
+        'vrf_eer',
+        'vrf_cop',
         'hvac_zone_map',
     ]
     classes_to_check = [
@@ -868,8 +869,8 @@ def test_normalize_outputs_tracks_df_types_without_global_blocking():
         buildings=buildings,
         epws=ts.TEST_CATEGORIES['fast']['epws'],
         parameters_type=None,
-        output_freqs=['hourly'],
-        verbosemode=False,
+        output_frequencies=['hourly'],
+        verbose=False,
     )
 
     idf_0 = sim._get_idf_identifier(buildings[0], 0)
@@ -914,8 +915,8 @@ def test_get_output_df_warns_for_unclassified_numeric_columns_defaulting_to_sum(
         buildings=buildings,
         epws=ts.TEST_CATEGORIES['fast']['epws'],
         parameters_type=None,
-        output_freqs=['hourly'],
-        verbosemode=False,
+        output_frequencies=['hourly'],
+        verbose=False,
     )
 
     idf_0 = sim._get_idf_identifier(buildings[0], 0)
@@ -942,8 +943,8 @@ def test_deprecated_output_api_wrappers_delegate_with_warning(monkeypatch):
         buildings=buildings,
         epws=ts.TEST_CATEGORIES['fast']['epws'],
         parameters_type=None,
-        output_freqs=['hourly'],
-        verbosemode=False,
+        output_frequencies=['hourly'],
+        verbose=False,
     )
 
     with pytest.warns(DeprecationWarning, match='get_output_variables_df_from_idf'):
@@ -981,8 +982,8 @@ def test_set_output_readers_does_not_mutate_input_dataframes():
         buildings=buildings,
         epws=ts.TEST_CATEGORIES['fast']['epws'],
         parameters_type=None,
-        output_freqs=['hourly'],
-        verbosemode=False,
+        output_frequencies=['hourly'],
+        verbose=False,
     )
 
     df_meter = pd.DataFrame([{'key_name': 'Heating:Electricity', 'frequency': 'hourly'}])
@@ -1004,8 +1005,8 @@ def test_select_outputs_match_exact_respects_original_case(monkeypatch):
         buildings=buildings,
         epws=ts.TEST_CATEGORIES['fast']['epws'],
         parameters_type=None,
-        output_freqs=['hourly'],
-        verbosemode=False,
+        output_frequencies=['hourly'],
+        verbose=False,
     )
 
     def fake_discover(self, reduce_sim_time=True, prefer='testsimeplus', refresh=False, idf_scope='all', keep_available_outputs=False):
@@ -1048,8 +1049,8 @@ def test_output_scope_first_modifies_only_first_idf():
         buildings=buildings,
         epws=ts.TEST_CATEGORIES['medium']['epws'][:1],
         parameters_type=None,
-        output_freqs=['hourly'],
-        verbosemode=False,
+        output_frequencies=['hourly'],
+        verbose=False,
     )
 
     sim.clear_outputs(mode='meters_vars', idf_scope='all')

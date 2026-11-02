@@ -367,9 +367,9 @@ def test_run_ep_with_the_api_backend(run_folder, monkeypatch):
 
     monkeypatch.setattr(energyplus_api, 'run_simulations', fake_run_simulations)
 
-    assert run.run_ep(run_only_accim=True, confirm_run=False, backend='api') == []
+    assert run.run_ep(only_accim_idfs=True, confirm=False, backend='api') == []
     assert calls == []
-    assert run.run_ep(run_only_accim=True, confirm_run=True, num_cpus=3, backend='api') == ['results']
+    assert run.run_ep(only_accim_idfs=True, confirm=True, processes=3, backend='api') == ['results']
     assert calls == [([('model[CS_INT EN16798[NS_X.idf', 'Seville.epw',
                         {'output_directory': str(run_folder), 'output_prefix': 'model[CS_INT EN16798[NS_X[Seville'})],
                       3)]
@@ -384,7 +384,7 @@ def test_both_backends_name_the_simulations_alike(run_folder, monkeypatch):
     (run_folder / 'USA_CO_Golden-NREL.724666_TMY3.epw').write_text('')
     jobs = []
     monkeypatch.setattr(energyplus_api, 'run_simulations', lambda j, processes=2: jobs.extend(j) or [])
-    run.run_ep(run_only_accim=True, confirm_run=True, backend='api')
+    run.run_ep(only_accim_idfs=True, confirm=True, backend='api')
     idf = SimpleNamespace(idfname=str(run_folder / 'model[CS_INT EN16798[NS_X.idf'),
                           idfobjects={'version': [SimpleNamespace(Version_Identifier='25.1')]})
 
@@ -397,7 +397,7 @@ def test_both_backends_name_the_simulations_alike(run_folder, monkeypatch):
 
 def test_run_ep_rejects_unknown_backends(run_folder):
     with pytest.raises(ValueError, match="'python' is not a valid backend"):
-        run.run_ep(run_only_accim=True, confirm_run=False, backend='python')
+        run.run_ep(only_accim_idfs=True, confirm=False, backend='python')
 
 
 def _energyplus_with_api(version):
@@ -410,7 +410,7 @@ def _energyplus_with_api(version):
 @pytest.mark.parametrize('zone_arguments', [
     None,
     # Each zone with its own arguments: INT ASHRAE 55 and natural ventilation in the zone 2
-    {'Block1:Zone2': {'comf_stand': 2, 'cat': 80, 'comf_mod': 3, 'hvac_mode': 1, 'vent_ctrl': 1}},
+    {'Block1:Zone2': {'comfort_standard': 2, 'category': 80, 'comfort_mode': 3, 'hvac_mode': 1, 'ventilation_control': 1}},
 ])
 def test_the_ems_and_api_backends_give_the_same_results(tmp_path, monkeypatch, zone_arguments):
     from accim.sim.accis import AddAccis
@@ -418,9 +418,9 @@ def test_the_ems_and_api_backends_give_the_same_results(tmp_path, monkeypatch, z
     shutil.copy(SAMPLE_IDF, tmp_path / 'TestModel.idf')
     monkeypatch.chdir(tmp_path)
     AddAccis(script_type='vrf_mm', supply_air_temp_input_method='temperature difference', output_type='standard',
-             output_freqs=['hourly'], output_keep_existing=False, energyplus_version='auto', temp_ctrl='temperature',
-             comf_stand=[1], cat=[3], comf_mod=[3], hvac_mode=[2], vent_ctrl=[0], confirm_gen=True,
-             verbose_mode=False, zone_arguments=zone_arguments)
+             output_frequencies=['hourly'], keep_existing_outputs=False, energyplus_version='auto', setpoint_type='temperature',
+             comfort_standard=[1], category=[3], comfort_mode=[3], hvac_mode=[2], ventilation_control=[0], confirm=True,
+             verbose=False, zone_arguments=zone_arguments)
     output_idf = sorted(tmp_path.glob('TestModel[[]*.idf'))[0]
     # Three days of July, after the sizing of the design days
     objects = parse_idf(output_idf.read_bytes().decode('latin-1'))

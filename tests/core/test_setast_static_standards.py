@@ -18,13 +18,13 @@ from accim.sim.ems.programs import accis_programs
 from accim.sim.ems.setast import MODULAR_COMFORT_MODES, depends_on_comfort_mode, get_setpoint_lines, subprograms
 
 
-def _setpoints(comf_stand, cat, comf_mod, current_time=12.0, day_of_year=180.0):
+def _setpoints(comfort_standard, category, comfort_mode, current_time=12.0, day_of_year=180.0):
     """ACST and AHST of the programs of ACCIS in their first run, as in EnergyPlus (without initialised variables)."""
     model = SimpleNamespace(ems_names=['Zone1'], is_mixed_mode=False, windows=[])
     programs = dict(accis_programs(model))
     programs['SetInputData_Zone1'] = input_lines(input_values(dict(
-        comf_stand=comf_stand, cat=cat, comf_mod=comf_mod, hvac_mode=0, vent_ctrl=0, vst_offset=0, min_ot_offset=50,
-        max_wind_speed=50, ast_tol=0.1, cool_season_start=121, cool_season_end=274)), mixed_mode=False)
+        comfort_standard=comfort_standard, category=category, comfort_mode=comfort_mode, hvac_mode=0, ventilation_control=0, ventilation_setpoint_offset=0, min_outdoor_temp_offset=50,
+        max_wind_speed=50, setpoint_tolerance=0.1, cooling_season_start=121, cooling_season_end=274)), mixed_mode=False)
     names = set().union(*variables_in_programs(programs).values())
     erl = ErlProgramSet(programs, global_variables=names)
     for name, value in dict(RMOT=20.0, PMOT=20.0, DayOfYear=day_of_year, CurrentTime=current_time).items():
@@ -55,20 +55,20 @@ def test_subprograms_of_some_comfort_standards():
     assert len(subprograms()) == sum(len(range(0, len(modes), 3)) for modes in MODULAR_COMFORT_MODES.values())
 
 
-@pytest.mark.parametrize('comf_mod', [0, 1, 2, 3])
+@pytest.mark.parametrize('comfort_mode', [0, 1, 2, 3])
 @pytest.mark.parametrize('current_time, expected', [(6.0, (26.9, 17.1)), (12.0, (24.9, 20.1)), (23.5, (26.9, 17.1))])
-def test_esp_cte_sets_its_setpoints_in_every_comfort_mode(comf_mod, current_time, expected):
-    acst, ahst = _setpoints(0, 1, comf_mod, current_time=current_time)
+def test_esp_cte_sets_its_setpoints_in_every_comfort_mode(comfort_mode, current_time, expected):
+    acst, ahst = _setpoints(0, 1, comfort_mode, current_time=current_time)
     assert (acst, ahst) == (pytest.approx(expected[0]), pytest.approx(expected[1]))
 
 
-@pytest.mark.parametrize('comf_mod', [0, 2, 3])
-@pytest.mark.parametrize('cat, day_of_year, expected', [
+@pytest.mark.parametrize('comfort_mode', [0, 2, 3])
+@pytest.mark.parametrize('category, day_of_year, expected', [
     (1, 180.0, (25.4, 23.6)), (2, 180.0, (25.9, 23.1)), (3, 180.0, (26.9, 22.1)),
     (1, 30.0, (22.9, 21.1)), (2, 30.0, (23.9, 20.1)), (3, 30.0, (24.9, 19.1)),
 ])
-def test_int_iso7730_sets_its_setpoints_in_every_comfort_mode(comf_mod, cat, day_of_year, expected):
-    acst, ahst = _setpoints(22, cat, comf_mod, day_of_year=day_of_year)
+def test_int_iso7730_sets_its_setpoints_in_every_comfort_mode(comfort_mode, category, day_of_year, expected):
+    acst, ahst = _setpoints(22, category, comfort_mode, day_of_year=day_of_year)
     assert (acst, ahst) == (pytest.approx(expected[0]), pytest.approx(expected[1]))
 
 

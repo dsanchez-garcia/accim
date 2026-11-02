@@ -60,7 +60,7 @@ METERS = ['Heating:Electricity', 'Cooling:Electricity']
 # Rangos (tuplas) del modelo custom ('accim custom model'): los muestreos de rangos (LHS, Sobol, Morris, factorial)
 # solo admiten rangos, que el modelo predefinido no admite (solo listas de opciones). Los demás coeficientes toman
 # los valores por defecto del modelo custom, con los que las temperaturas de consigna son válidas.
-CUSTOM_RANGES = {'CustAST_m': (0.2, 0.4), 'CustAST_n': (15.0, 20.0)}
+CUSTOM_RANGES = {'custom_slope': (0.2, 0.4), 'custom_intercept': (15.0, 20.0)}
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # FUNCIONES AUXILIARES

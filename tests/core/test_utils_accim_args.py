@@ -23,12 +23,12 @@ SAMPLE_IDF = (REPO / 'accim' / 'sample_files' / 'sample IDFs' / 'input_IDFs'
               / 'TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2510.idf')
 IDD_25_1 = default_energyplus_folder('25.1') / 'Energy+.idd'
 ADD_ACCIS_ARGS = dict(supply_air_temp_input_method='temperature difference', output_type='simplified',
-                      output_freqs=['hourly'], output_keep_existing=False, temp_ctrl='temperature',
-                      verbose_mode=False)
+                      output_frequencies=['hourly'], keep_existing_outputs=False, setpoint_type='temperature',
+                      verbose=False)
 #: Arguments of modify_accis whose EMS variable is named after the argument of accim 0.x
-ARGUMENTS = dict(comf_stand=2, cat=80, comf_mod=3, hvac_mode=2, vent_ctrl=1, vst_offset=1, min_ot_offset=5,
-                 max_wind_speed=8, cool_season_start=152, cool_season_end=273, setpoint_acc=1000)
-VOF_DEFAULTS = dict(max_temp_diff_vof=6, min_temp_diff_vof=1, multiplier_vof=0.25)
+ARGUMENTS = dict(comfort_standard=2, category=80, comfort_mode=3, hvac_mode=2, ventilation_control=1, ventilation_setpoint_offset=1, min_outdoor_temp_offset=5,
+                 max_wind_speed=8, cooling_season_start=152, cooling_season_end=273, setpoint_accuracy=1000)
+VOF_DEFAULTS = dict(opening_factor_max_temp_diff=6, opening_factor_min_temp_diff=1, min_opening_factor=0.25)
 
 pytestmark = pytest.mark.skipif(not (IDD_25_1.exists() and SAMPLE_IDF.exists()),
                                 reason='needs EnergyPlus 25.1 and the sample IDF of the repository')
@@ -47,16 +47,16 @@ def test_get_accim_args_reads_back_the_arguments_of_modify_accis(building, scrip
     from accim.sim.accis import add_accis_to_idf, modify_accis
 
     add_accis_to_idf(building, script_type=script_type, **ADD_ACCIS_ARGS)
-    modify_accis(building, ast_tol=0.25, cust_ast_m=0.31, cust_ast_n=17.8, cust_ast_acst_offset=2.5,
-                 cat_cool_offset=1, cust_ast_acst_aul=33.5, cust_ast_acst_all=10, cust_ast_ahst_aul=32.5,
-                 cust_ast_ahst_all=11, **ARGUMENTS)
+    modify_accis(building, setpoint_tolerance=0.25, custom_slope=0.31, custom_intercept=17.8, custom_cooling_offset=2.5,
+                 category_cooling_offset=1, custom_cooling_upper_limit=33.5, custom_cooling_lower_limit=10, custom_heating_upper_limit=32.5,
+                 custom_heating_lower_limit=11, **ARGUMENTS)
 
     args = get_accim_args(building)
     flattened = get_accim_args_flattened(building)
 
     assert sorted(args) == ['SetInputData_Block1_Zone1', 'SetInputData_Block1_Zone2']
-    expected = dict(ARGUMENTS, cat_cool_offset=1, cat_heat_offset=0, cust_ast_acst_offset=2.5, cust_ast_ahst_offset=0,
-                    cust_ast_acst_aul=33.5, cust_ast_acst_all=10, cust_ast_ahst_aul=32.5, cust_ast_ahst_all=11,
+    expected = dict(ARGUMENTS, category_cooling_offset=1, category_heating_offset=0, custom_cooling_offset=2.5, custom_heating_offset=0,
+                    custom_cooling_upper_limit=33.5, custom_cooling_lower_limit=10, custom_heating_upper_limit=32.5, custom_heating_lower_limit=11,
                     **(VOF_DEFAULTS if script_type == 'vrf_mm' else {}))
     for program in args.values():
         assert {LEGACY_ARGUMENT_NAMES[k]: v for k, v in program.items() if k in LEGACY_ARGUMENT_NAMES} == expected
@@ -71,8 +71,8 @@ def test_get_accim_args_of_the_apmv_setpoints(building):
 
     assert get_accim_args(building) == {}
 
-    apply_apmv_setpoints(building, adap_coeff_cooling=0.3, adap_coeff_heating=-0.2, pmv_cooling_sp=0.4,
-                         pmv_heating_sp=-0.6, verbose_mode=False)
+    apply_apmv_setpoints(building, adaptive_coefficient_cooling=0.3, adaptive_coefficient_heating=-0.2, pmv_cooling_setpoint=0.4,
+                         pmv_heating_setpoint=-0.6, verbose=False)
 
     args = get_accim_args(building)
     assert sorted(args) == ['set_zone_input_data_Block1_Zone1', 'set_zone_input_data_Block1_Zone2']

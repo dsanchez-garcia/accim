@@ -32,73 +32,77 @@ __all__ = ['Combination', 'GenerationArguments', 'IdfWriter', 'OutputIdfs', 'com
 Number = Union[int, float]
 _STATIC_MODES = (0.1, 0.2, 0.3, 0.4, 0.5, 1.1, 1.2, 1.3, 1.4, 1.5)
 #: The ventilation arguments of the zones with HVACmode 0 in the output IDFs, where ventilation is not used
-_NO_VENTILATION = {'vent_ctrl': 0, 'vst_offset': 0, 'min_ot_offset': 7, 'max_wind_speed': 6}
+_NO_VENTILATION = {'ventilation_control': 0, 'ventilation_setpoint_offset': 0, 'min_outdoor_temp_offset': 7,
+                   'max_wind_speed': 6}
 
 
 @dataclass
 class GenerationArguments:
     """Arguments of the output IDFs (the lists give one output IDF for each combination of their values)."""
 
-    comf_stand: List[int]
-    cat: List[Number]
-    comf_mod: List[Number]
+    comfort_standard: List[int]
+    category: List[Number]
+    comfort_mode: List[Number]
     hvac_mode: List[int] = field(default_factory=lambda: [0])
-    vent_ctrl: List[int] = field(default_factory=lambda: [0])
-    setpoint_acc: Number = 10000
-    cat_cool_offset: Number = 0
-    cat_heat_offset: Number = 0
-    cust_ast_acst_aul: Number = 0
-    cust_ast_acst_all: Number = 0
-    cust_ast_ahst_aul: Number = 0
-    cust_ast_ahst_all: Number = 0
-    cust_ast_m: Number = 0
-    cust_ast_n: Number = 0
-    cust_ast_acst_offset: Number = 0
-    cust_ast_ahst_offset: Number = 0
-    cool_season_start: int = 121
-    cool_season_end: int = 274
-    max_temp_diff_vof: Number = 6
-    min_temp_diff_vof: Number = 1
-    multiplier_vof: Number = 0.25
-    vst_offset: List[float] = field(default_factory=lambda: [0.0])
-    min_ot_offset: List[float] = field(default_factory=lambda: [50.0])
+    ventilation_control: List[int] = field(default_factory=lambda: [0])
+    setpoint_accuracy: Number = 10000
+    category_cooling_offset: Number = 0
+    category_heating_offset: Number = 0
+    custom_cooling_upper_limit: Number = 0
+    custom_cooling_lower_limit: Number = 0
+    custom_heating_upper_limit: Number = 0
+    custom_heating_lower_limit: Number = 0
+    custom_slope: Number = 0
+    custom_intercept: Number = 0
+    custom_cooling_offset: Number = 0
+    custom_heating_offset: Number = 0
+    cooling_season_start: int = 121
+    cooling_season_end: int = 274
+    opening_factor_max_temp_diff: Number = 6
+    opening_factor_min_temp_diff: Number = 1
+    min_opening_factor: Number = 0.25
+    ventilation_setpoint_offset: List[float] = field(default_factory=lambda: [0.0])
+    min_outdoor_temp_offset: List[float] = field(default_factory=lambda: [50.0])
     max_wind_speed: List[float] = field(default_factory=lambda: [50.0])
-    ast_tol_start: Number = 0.1
-    ast_tol_end_input: Number = 0.1
-    ast_tol_steps: Number = 0.1
+    setpoint_tolerance_start: Number = 0.1
+    setpoint_tolerance_end: Number = 0.1
+    setpoint_tolerance_step: Number = 0.1
     name_suffix: str = ''
 
     def __post_init__(self):
-        self.comf_stand = as_list(self.comf_stand)
-        self.cat = as_list(self.cat)
-        self.comf_mod = as_list(self.comf_mod)
+        self.comfort_standard = as_list(self.comfort_standard)
+        self.category = as_list(self.category)
+        self.comfort_mode = as_list(self.comfort_mode)
         self.hvac_mode = as_list(self.hvac_mode)
-        self.vent_ctrl = as_list(self.vent_ctrl)
-        self.vst_offset = [float(v) for v in as_list(self.vst_offset)]
-        self.min_ot_offset = [float(v) for v in as_list(self.min_ot_offset)]
+        self.ventilation_control = as_list(self.ventilation_control)
+        self.ventilation_setpoint_offset = [float(v) for v in as_list(self.ventilation_setpoint_offset)]
+        self.min_outdoor_temp_offset = [float(v) for v in as_list(self.min_outdoor_temp_offset)]
         self.max_wind_speed = [float(v) for v in as_list(self.max_wind_speed)]
-        self.cool_season_start = to_day_of_year(self.cool_season_start, 'cool_season_start')
-        self.cool_season_end = to_day_of_year(self.cool_season_end, 'cool_season_end')
+        self.cooling_season_start = to_day_of_year(self.cooling_season_start, 'cooling_season_start')
+        self.cooling_season_end = to_day_of_year(self.cooling_season_end, 'cooling_season_end')
         if self.name_suffix is None:
             self.name_suffix = ''
 
     @classmethod
     def air_conditioned(cls, **kwargs) -> 'GenerationArguments':
         """The arguments for full air-conditioning (no natural ventilation): HVACmode 0 only."""
-        kwargs.update(hvac_mode=[0], vent_ctrl=[0], vst_offset=[0], min_ot_offset=[0], max_wind_speed=[0],
-                      max_temp_diff_vof=1, min_temp_diff_vof=0, multiplier_vof=0)
+        kwargs.update(hvac_mode=[0], ventilation_control=[0], ventilation_setpoint_offset=[0],
+                      min_outdoor_temp_offset=[0], max_wind_speed=[0], opening_factor_max_temp_diff=1,
+                      opening_factor_min_temp_diff=0, min_opening_factor=0)
         return cls(**kwargs)
 
     def tolerances(self) -> List[float]:
-        """The setpoint tolerances, from ast_tol_start to ast_tol_end_input (both included) in steps of ast_tol_steps.
+        """The setpoint tolerances, from setpoint_tolerance_start to setpoint_tolerance_end (both included) in steps
+        of setpoint_tolerance_step.
 
         The values are those of ``numpy.arange``, but their number does not depend on the rounding of the floats
         (``numpy.arange(0.1, 0.3 + 0.1, 0.1)`` gives 0.4 too).
         """
-        start, step = round(self.ast_tol_start, 2), round(self.ast_tol_steps, 2)
-        stop = round(self.ast_tol_end_input + self.ast_tol_steps, 2)
+        start, step = round(self.setpoint_tolerance_start, 2), round(self.setpoint_tolerance_step, 2)
+        stop = round(self.setpoint_tolerance_end + self.setpoint_tolerance_step, 2)
         if step <= 0:
-            raise ValueError(f'ast_tol_steps must be greater than 0 (it is {self.ast_tol_steps}).')
+            raise ValueError(f'setpoint_tolerance_step must be greater than 0 '
+                             f'(it is {self.setpoint_tolerance_step}).')
         count = math.ceil((stop - start) / step - 1e-6)
         if count <= 0:
             return []
@@ -109,83 +113,85 @@ class GenerationArguments:
 class Combination:
     """The arguments of one output IDF. None is not applicable ('X' in the name of the file)."""
 
-    comf_stand: Optional[int]
-    cat: Optional[Number]
-    comf_mod: Optional[Number]
+    comfort_standard: Optional[int]
+    category: Optional[Number]
+    comfort_mode: Optional[Number]
     hvac_mode: int
-    vent_ctrl: Optional[int]
-    vst_offset: Optional[float]
-    min_ot_offset: Optional[float]
+    ventilation_control: Optional[int]
+    ventilation_setpoint_offset: Optional[float]
+    min_outdoor_temp_offset: Optional[float]
     max_wind_speed: Optional[float]
-    ast_tol: Optional[float]
+    setpoint_tolerance: Optional[float]
 
     @property
     def is_pmv(self) -> bool:
-        return self.comf_stand is None
+        return self.comfort_standard is None
 
 
-def _generates(comf_stand: int, cat: Number, comf_mod: Number) -> bool:
+def _generates(comfort_standard: int, category: Number, comfort_mode: Number) -> bool:
     """The combinations of ComfStand, CAT and ComfMod that give an output IDF (as in accim 0.x)."""
-    if comf_stand in (1, 4, 5, 22):
-        if comf_stand in (1, 22) and cat not in range(0, 4):
+    if comfort_standard in (1, 4, 5, 22):
+        if comfort_standard in (1, 22) and category not in range(0, 4):
             return False
-        if comf_stand in (4, 5) and cat not in (1, 2):
+        if comfort_standard in (4, 5) and category not in (1, 2):
             return False
-        if comf_mod in _STATIC_MODES:
+        if comfort_mode in _STATIC_MODES:
             return False
-        return not (comf_stand == 22 and comf_mod != 0)
-    if comf_stand in (2, 3, 6, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21) and cat not in range(80, 91, 10):
+        return not (comfort_standard == 22 and comfort_mode != 0)
+    if comfort_standard in (2, 3, 6, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21) \
+            and category not in range(80, 91, 10):
         return False
-    if comf_stand in (7, 8) and cat not in range(80, 91, 5):
+    if comfort_standard in (7, 8) and category not in range(80, 91, 5):
         return False
-    if comf_stand in (13, 14) and comf_mod in (0, 1):
+    if comfort_standard in (13, 14) and comfort_mode in (0, 1):
         return False
-    if comf_stand not in (13, 14) and comf_mod in _STATIC_MODES:
+    if comfort_standard not in (13, 14) and comfort_mode in _STATIC_MODES:
         return False
-    return not (comf_stand == 21 and comf_mod not in (2, 3))
+    return not (comfort_standard == 21 and comfort_mode not in (2, 3))
 
 
-def _ventilation(args: GenerationArguments, comf_stand, cat, comf_mod) -> Iterator[Combination]:
+def _ventilation(args: GenerationArguments, comfort_standard, category, comfort_mode) -> Iterator[Combination]:
     for hvac_mode in args.hvac_mode:
         if hvac_mode == 0:
             for tol in args.tolerances():
-                yield Combination(comf_stand, cat, comf_mod, hvac_mode, None, None, None, None, tol)
+                yield Combination(comfort_standard, category, comfort_mode, hvac_mode, None, None, None, None, tol)
             continue
-        for vent_ctrl in args.vent_ctrl:
+        for ventilation_control in args.ventilation_control:
             # Natural ventilation (HVACmode 1) only has the ventilation controls 0 and 1
-            if hvac_mode == 1 and vent_ctrl in (2, 3):
+            if hvac_mode == 1 and ventilation_control in (2, 3):
                 continue
-            for vst_offset in args.vst_offset:
-                for min_ot_offset in args.min_ot_offset:
+            for ventilation_setpoint_offset in args.ventilation_setpoint_offset:
+                for min_outdoor_temp_offset in args.min_outdoor_temp_offset:
                     for max_wind_speed in args.max_wind_speed:
                         for tol in args.tolerances():
-                            yield Combination(comf_stand, cat, comf_mod, hvac_mode, vent_ctrl, vst_offset,
-                                              min_ot_offset, max_wind_speed, tol)
+                            yield Combination(comfort_standard, category, comfort_mode, hvac_mode,
+                                              ventilation_control, ventilation_setpoint_offset,
+                                              min_outdoor_temp_offset, max_wind_speed, tol)
 
 
-def combinations(args: GenerationArguments, temp_ctrl: str = 'temperature') -> Iterator[Combination]:
+def combinations(args: GenerationArguments, setpoint_type: str = 'temperature') -> Iterator[Combination]:
     """The combinations of the arguments, in the order of the output IDFs.
 
     The combinations whose comfort standard has no setpoints for the comfort mode are skipped with a warning.
     """
-    if temp_ctrl == 'pmv':
+    if setpoint_type == 'pmv':
         yield Combination(None, None, None, 0, None, None, None, None, None)
         return
     skipped = []
-    for comf_stand in args.comf_stand:
-        if comf_stand == 0:
+    for comfort_standard in args.comfort_standard:
+        if comfort_standard == 0:
             yield from _ventilation(args, 0, None, None)
             continue
-        if comf_stand not in COMFORT_STANDARDS:
+        if comfort_standard not in COMFORT_STANDARDS:
             continue
-        for cat in args.cat:
-            for comf_mod in args.comf_mod:
-                if not _generates(comf_stand, cat, comf_mod):
+        for category in args.category:
+            for comfort_mode in args.comfort_mode:
+                if not _generates(comfort_standard, category, comfort_mode):
                     continue
-                if not has_setpoints(comf_stand, comf_mod):
-                    skipped.append((comf_stand, comf_mod))
+                if not has_setpoints(comfort_standard, comfort_mode):
+                    skipped.append((comfort_standard, comfort_mode))
                     continue
-                yield from _ventilation(args, comf_stand, cat, comf_mod)
+                yield from _ventilation(args, comfort_standard, category, comfort_mode)
     if skipped:
         warnings.warn(f'The combinations of (ComfStand, ComfMod) {sorted(set(skipped))} have no setpoints, so no '
                       f'output IDF has been generated for them.', UserWarning, stacklevel=3)
@@ -201,9 +207,10 @@ def output_name(stem: str, combination: Combination, name_suffix: str = '') -> s
     if combination.is_pmv:
         return f'{stem}[CS_PMV[CA_X[CM_X[HM_0[VC_X[VO_X[MT_X[MW_X[AT_X{suffix}.idf'
     c = combination
-    return (f'{stem}[CS_{COMFORT_STANDARDS[c.comf_stand].label}[CA_{_x(c.cat)}[CM_{_x(c.comf_mod)}'
-            f'[HM_{c.hvac_mode}[VC_{_x(c.vent_ctrl)}[VO_{_x(c.vst_offset)}[MT_{_x(c.min_ot_offset)}'
-            f'[MW_{_x(c.max_wind_speed)}[AT_{round(c.ast_tol, 2)}{suffix}.idf')
+    return (f'{stem}[CS_{COMFORT_STANDARDS[c.comfort_standard].label}[CA_{_x(c.category)}[CM_{_x(c.comfort_mode)}'
+            f'[HM_{c.hvac_mode}[VC_{_x(c.ventilation_control)}[VO_{_x(c.ventilation_setpoint_offset)}'
+            f'[MT_{_x(c.min_outdoor_temp_offset)}[MW_{_x(c.max_wind_speed)}'
+            f'[AT_{round(c.setpoint_tolerance, 2)}{suffix}.idf')
 
 
 def _save_text(text: str) -> bytes:
@@ -225,19 +232,24 @@ def zone_input_arguments(args: GenerationArguments, combination: Combination,
     a = args
     c = combination
     arguments = dict(
-        comf_stand=c.comf_stand, cat=c.cat, comf_mod=c.comf_mod, hvac_mode=c.hvac_mode, vent_ctrl=c.vent_ctrl,
-        vst_offset=c.vst_offset, min_ot_offset=c.min_ot_offset, max_wind_speed=c.max_wind_speed, ast_tol=c.ast_tol,
-        cool_season_start=a.cool_season_start, cool_season_end=a.cool_season_end, cat_cool_offset=a.cat_cool_offset,
-        cat_heat_offset=a.cat_heat_offset, setpoint_acc=a.setpoint_acc, cust_ast_m=a.cust_ast_m,
-        cust_ast_n=a.cust_ast_n, cust_ast_acst_offset=a.cust_ast_acst_offset,
-        cust_ast_ahst_offset=a.cust_ast_ahst_offset, cust_ast_acst_aul=a.cust_ast_acst_aul,
-        cust_ast_acst_all=a.cust_ast_acst_all, cust_ast_ahst_aul=a.cust_ast_ahst_aul,
-        cust_ast_ahst_all=a.cust_ast_ahst_all, max_temp_diff_vof=a.max_temp_diff_vof,
-        min_temp_diff_vof=a.min_temp_diff_vof, multiplier_vof=a.multiplier_vof,
+        comfort_standard=c.comfort_standard, category=c.category, comfort_mode=c.comfort_mode,
+        hvac_mode=c.hvac_mode, ventilation_control=c.ventilation_control,
+        ventilation_setpoint_offset=c.ventilation_setpoint_offset,
+        min_outdoor_temp_offset=c.min_outdoor_temp_offset, max_wind_speed=c.max_wind_speed,
+        setpoint_tolerance=c.setpoint_tolerance, cooling_season_start=a.cooling_season_start,
+        cooling_season_end=a.cooling_season_end, category_cooling_offset=a.category_cooling_offset,
+        category_heating_offset=a.category_heating_offset, setpoint_accuracy=a.setpoint_accuracy,
+        custom_slope=a.custom_slope, custom_intercept=a.custom_intercept, custom_cooling_offset=a.custom_cooling_offset,
+        custom_heating_offset=a.custom_heating_offset, custom_cooling_upper_limit=a.custom_cooling_upper_limit,
+        custom_cooling_lower_limit=a.custom_cooling_lower_limit,
+        custom_heating_upper_limit=a.custom_heating_upper_limit,
+        custom_heating_lower_limit=a.custom_heating_lower_limit,
+        opening_factor_max_temp_diff=a.opening_factor_max_temp_diff,
+        opening_factor_min_temp_diff=a.opening_factor_min_temp_diff, min_opening_factor=a.min_opening_factor,
     )
     arguments.update(zone_arguments or {})
-    if arguments['comf_stand'] == 0:
-        arguments.update(cat=1, comf_mod=0)
+    if arguments['comfort_standard'] == 0:
+        arguments.update(category=1, comfort_mode=0)
     if arguments['hvac_mode'] == 0:
         arguments.update(_NO_VENTILATION)
     else:
@@ -251,21 +263,25 @@ def zone_arguments_errors(arguments: Mapping[str, Any], mixed_mode: bool) -> Lis
     """The reasons why the arguments of a zone (see :func:`zone_input_arguments`) give no setpoints (empty if they
     are valid)."""
     errors = []
-    comf_stand, cat, comf_mod = arguments['comf_stand'], arguments['cat'], arguments['comf_mod']
-    if comf_stand not in COMFORT_STANDARDS:
-        errors.append(f'comf_stand {comf_stand!r} is not a comfort standard (valid: {list(COMFORT_STANDARDS)})')
-    elif comf_stand != 0:
-        categories = COMFORT_STANDARDS[comf_stand].categories
-        if categories and cat not in categories:
-            errors.append(f'cat {cat!r} is not a category of comf_stand {comf_stand} (valid: {list(categories)})')
-        if not has_setpoints(comf_stand, comf_mod):
-            errors.append(f'comf_stand {comf_stand} has no setpoints with comf_mod {comf_mod!r}')
+    comfort_standard = arguments['comfort_standard']
+    category, comfort_mode = arguments['category'], arguments['comfort_mode']
+    if comfort_standard not in COMFORT_STANDARDS:
+        errors.append(f'comfort_standard {comfort_standard!r} is not a comfort standard '
+                      f'(valid: {list(COMFORT_STANDARDS)})')
+    elif comfort_standard != 0:
+        categories = COMFORT_STANDARDS[comfort_standard].categories
+        if categories and category not in categories:
+            errors.append(f'category {category!r} is not a category of comfort_standard {comfort_standard} '
+                          f'(valid: {list(categories)})')
+        if not has_setpoints(comfort_standard, comfort_mode):
+            errors.append(f'comfort_standard {comfort_standard} has no setpoints with comfort_mode {comfort_mode!r}')
     hvac_mode = arguments['hvac_mode']
     if hvac_mode not in (0, 1, 2) or (hvac_mode != 0 and not mixed_mode):
         valid = [0, 1, 2] if mixed_mode else [0]
         errors.append(f'hvac_mode {hvac_mode!r} is not valid with this script type (valid: {valid})')
-    elif arguments['vent_ctrl'] not in ((0, 1) if hvac_mode == 1 else (0, 1, 2, 3)):
-        errors.append(f"vent_ctrl {arguments['vent_ctrl']!r} is not valid with hvac_mode {hvac_mode}")
+    elif arguments['ventilation_control'] not in ((0, 1) if hvac_mode == 1 else (0, 1, 2, 3)):
+        errors.append(f"ventilation_control {arguments['ventilation_control']!r} is not valid with "
+                      f"hvac_mode {hvac_mode}")
     return errors
 
 
@@ -274,16 +290,16 @@ class IdfWriter:
 
     :param idf: The model, with the EMS programs of ACCIS.
     :param args: The arguments of the output IDFs.
-    :param temp_ctrl: 'temperature' or 'pmv'.
+    :param setpoint_type: 'temperature' or 'pmv'.
     :param zone_arguments: The arguments of some zones, which are the same in all the output IDFs,
         ``{zone name in the EMS objects: {argument: value}}`` (see :func:`zone_input_arguments`).
     """
 
-    def __init__(self, idf, args: GenerationArguments, temp_ctrl: str = 'temperature',
+    def __init__(self, idf, args: GenerationArguments, setpoint_type: str = 'temperature',
                  zone_arguments: Optional[Mapping[str, Mapping[str, Any]]] = None):
         self.idf = idf
         self.args = args
-        self.temp_ctrl = temp_ctrl
+        self.setpoint_type = setpoint_type
         self.zone_arguments = dict(zone_arguments or {})
         self.programs = input_programs(idf)
         # The models in mixed mode have the program SetVST and the inputs of the venting opening factor
@@ -305,8 +321,9 @@ class IdfWriter:
         a = self.args
         if combination.is_pmv:
             # The Fanger thermostats control the zones: the inputs keep their default values, except HVACmode
-            values = input_values(dict(hvac_mode=0, max_temp_diff_vof=a.max_temp_diff_vof,
-                                       min_temp_diff_vof=a.min_temp_diff_vof, multiplier_vof=a.multiplier_vof))
+            values = input_values(dict(hvac_mode=0, opening_factor_max_temp_diff=a.opening_factor_max_temp_diff,
+                                       opening_factor_min_temp_diff=a.opening_factor_min_temp_diff,
+                                       min_opening_factor=a.min_opening_factor))
             for program in self.programs.values():
                 replace_program_lines(program, input_lines(values, self.mixed_mode))
             return

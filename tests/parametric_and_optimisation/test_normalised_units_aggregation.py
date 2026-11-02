@@ -101,7 +101,7 @@ def _parametric_session():
         buildings=None,
         epws=['Seville.epw', 'Oslo.epw'],
         parameters_type=None,
-        bypass_addAccis=True,
+        bypass_add_accis=True,
     )
     rows = []
     for (x, epw, idf, seed) in SIMULATIONS:
@@ -142,7 +142,7 @@ def _optimisation_session(tmp_path):
             'simulation_directory': str(sim_dir),
             'simulation_output_csv_path': str(sim_dir / 'eplusout.csv'),
         })
-    sim = OptimisationSimulation(buildings=None, epws=['Seville.epw'], parameters_type=None, bypass_addAccis=True)
+    sim = OptimisationSimulation(buildings=None, epws=['Seville.epw'], parameters_type=None, bypass_add_accis=True)
     sim.problem = _DummyProblem(inputs=['x'], outputs=['Heating:Electricity'])
     sim.outputs_optimisation = pd.DataFrame(rows)
     sim.last_run_type = 'optimisation'
@@ -312,7 +312,7 @@ def test_optimisation_aggregation_with_normalize_per_m2_normalises_only_once(tmp
 # ----------------------------------------------------------------------------- energy columns
 
 def test_normalisation_converts_only_energy_columns():
-    sim = ParametricSimulation(buildings=None, epws=['Seville.epw'], parameters_type=None, bypass_addAccis=True)
+    sim = ParametricSimulation(buildings=None, epws=['Seville.epw'], parameters_type=None, bypass_add_accis=True)
     sim.building_floor_area = dict(AREAS)
     other_units = {
         'EMS:Adaptive Heating Setpoint Temperature [C](Hourly)': [20.5, 21.0],
@@ -348,7 +348,7 @@ def test_normalisation_converts_only_energy_columns():
 
 def _single_simulation_session(hourly_heating_kwh_per_m2):
     # 'office_a' has 50 m2: the hourly values normalise to the given kWh/m2.
-    sim = ParametricSimulation(buildings=None, epws=['Seville.epw'], parameters_type=None, bypass_addAccis=True)
+    sim = ParametricSimulation(buildings=None, epws=['Seville.epw'], parameters_type=None, bypass_add_accis=True)
     sim.building_floor_area = dict(AREAS)
     heating_j = np.asarray(hourly_heating_kwh_per_m2, dtype=float) * J_PER_KWH * AREAS['office_a']
     sim.outputs_param_simulation = pd.DataFrame([
@@ -418,7 +418,7 @@ def _write_full_year_csv(sim_dir, hours):
 def test_the_start_date_read_from_the_csv_files_gets_its_year_from_the_length_of_the_series(tmp_path, source, hours, year):
     csv_path = _write_full_year_csv(tmp_path / 'sim', hours)
     if source == 'parametric':
-        sim = ParametricSimulation(buildings=None, epws=['Seville.epw'], parameters_type=None, bypass_addAccis=True)
+        sim = ParametricSimulation(buildings=None, epws=['Seville.epw'], parameters_type=None, bypass_add_accis=True)
         sim.outputs_param_simulation = pd.DataFrame([
             {'x': 1, 'epw': 'Seville', 'idf': 'office_a', 'output_dir': str(tmp_path / 'sim')},
         ])
@@ -426,7 +426,7 @@ def test_the_start_date_read_from_the_csv_files_gets_its_year_from_the_length_of
         sim.last_run_type = 'parametric'
         hourly = sim.get_hourly_df_parametric(skip_confirmation=True, start_date=None)
     else:
-        sim = OptimisationSimulation(buildings=None, epws=['Seville.epw'], parameters_type=None, bypass_addAccis=True)
+        sim = OptimisationSimulation(buildings=None, epws=['Seville.epw'], parameters_type=None, bypass_add_accis=True)
         sim.problem = _DummyProblem(inputs=['x'], outputs=['Heating:Electricity'])
         sim.outputs_optimisation = pd.DataFrame([
             {'x': 1.0, 'epw': 'Seville', 'idf': 'office_a', 'pareto-optimal': True, 'simulation_output_csv_path': csv_path},
@@ -450,7 +450,7 @@ def _timeline_table(labels):
 
 
 def test_timestep_values_are_grouped_into_the_day_and_month_of_their_interval():
-    sim = ParametricSimulation(buildings=None, epws=['Seville.epw'], parameters_type=None, bypass_addAccis=True)
+    sim = ParametricSimulation(buildings=None, epws=['Seville.epw'], parameters_type=None, bypass_add_accis=True)
     # 15-minute values from 31 January 00:15 to 2 February 00:00 (the 24:00 of 1 February).
     labels = pd.date_range('2023-01-31 00:15', periods=4 * 24 * 2, freq='15min')
     table = _timeline_table(labels)
@@ -475,7 +475,7 @@ def test_timestep_values_are_grouped_into_the_day_and_month_of_their_interval():
 )
 def test_labels_at_the_start_of_each_interval_and_daily_or_monthly_values_are_grouped_as_they_are(
         labels, frequency, expected_periods, expected_sums):
-    sim = ParametricSimulation(buildings=None, epws=['Seville.epw'], parameters_type=None, bypass_addAccis=True)
+    sim = ParametricSimulation(buildings=None, epws=['Seville.epw'], parameters_type=None, bypass_add_accis=True)
 
     table = sim._aggregate_hourly_dataframe(df_hourly=_timeline_table(labels), source='parametric', frequency=frequency)
 

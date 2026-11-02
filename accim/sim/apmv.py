@@ -37,6 +37,39 @@ __all__ = [
 IDF = Any
 _sanitize_ems_name = sanitize_ems_name
 
+#: The names of the arguments in accim 0.x -> their names since accim 1.0.0 (the old names keep working, with a
+#: DeprecationWarning). The EMS variables keep the old names (adap_coeff_cooling_<target>...).
+_LEGACY_ARGUMENTS = {
+    'outputs_freq': 'output_frequencies',
+    'other_PMV_related_outputs': 'other_pmv_related_outputs',
+    'adap_coeff_cooling': 'adaptive_coefficient_cooling',
+    'adap_coeff_heating': 'adaptive_coefficient_heating',
+    'pmv_cooling_sp': 'pmv_cooling_setpoint',
+    'pmv_heating_sp': 'pmv_heating_setpoint',
+    'tolerance_cooling_sp_cooling_season': 'cooling_setpoint_tolerance_cooling_season',
+    'tolerance_cooling_sp_heating_season': 'cooling_setpoint_tolerance_heating_season',
+    'tolerance_heating_sp_cooling_season': 'heating_setpoint_tolerance_cooling_season',
+    'tolerance_heating_sp_heating_season': 'heating_setpoint_tolerance_heating_season',
+    'dflt_for_adap_coeff_cooling': 'default_adaptive_coefficient_cooling',
+    'dflt_for_adap_coeff_heating': 'default_adaptive_coefficient_heating',
+    'dflt_for_pmv_cooling_sp': 'default_pmv_cooling_setpoint',
+    'dflt_for_pmv_heating_sp': 'default_pmv_heating_setpoint',
+    'dflt_for_tolerance_cooling_sp_cooling_season': 'default_cooling_setpoint_tolerance_cooling_season',
+    'dflt_for_tolerance_cooling_sp_heating_season': 'default_cooling_setpoint_tolerance_heating_season',
+    'dflt_for_tolerance_heating_sp_cooling_season': 'default_heating_setpoint_tolerance_cooling_season',
+    'dflt_for_tolerance_heating_sp_heating_season': 'default_heating_setpoint_tolerance_heating_season',
+    'SupplyAirTempInputMethod': 'supply_air_temp_input_method',
+    'VRFschedule': 'vrf_availability_schedule',
+    'eer': 'vrf_eer',
+    'cop': 'vrf_cop',
+    'verbose_mode': 'verbose',
+}
+#: The arguments of the setpoints (the columns of the DataFrame of generate_df_from_args), accim 0.x -> 1.0.0
+_LEGACY_SETPOINT_ARGUMENTS = {old: new for old, new in _LEGACY_ARGUMENTS.items()
+                              if old.startswith(('adap_coeff', 'pmv_', 'tolerance_'))}
+#: Decorator: the function also accepts the names of its arguments in accim 0.x
+_accepts_legacy_arguments = accepts_legacy_kwargs(_LEGACY_ARGUMENTS)
+
 
 def _resolve_targets(building: IDF) -> List[Dict[str, Any]]:
     """The targets of the EMS (see :func:`accim.sim.targets.resolve_targets`), as dictionaries."""
@@ -47,30 +80,30 @@ def _resolve_targets(building: IDF) -> List[Dict[str, Any]]:
 # MAIN FUNCTION
 # ==============================================================================
 
-@accepts_legacy_kwargs({'other_PMV_related_outputs': 'other_pmv_related_outputs'})
+@_accepts_legacy_arguments
 def apply_apmv_setpoints(
         building: IDF,
-        outputs_freq: Sequence[str] = ('hourly',),
+        output_frequencies: Sequence[str] = ('hourly',),
         other_pmv_related_outputs: bool = True,
-        adap_coeff_cooling: Union[float, dict] = 0.293,
-        adap_coeff_heating: Union[float, dict] = -0.293,
-        pmv_cooling_sp: Union[float, dict] = 0.5,
-        pmv_heating_sp: Union[float, dict] = -0.5,
-        tolerance_cooling_sp_cooling_season: Union[float, dict] = -0.1,
-        tolerance_cooling_sp_heating_season: Union[float, dict] = -0.1,
-        tolerance_heating_sp_cooling_season: Union[float, dict] = 0.1,
-        tolerance_heating_sp_heating_season: Union[float, dict] = 0.1,
+        adaptive_coefficient_cooling: Union[float, dict] = 0.293,
+        adaptive_coefficient_heating: Union[float, dict] = -0.293,
+        pmv_cooling_setpoint: Union[float, dict] = 0.5,
+        pmv_heating_setpoint: Union[float, dict] = -0.5,
+        cooling_setpoint_tolerance_cooling_season: Union[float, dict] = -0.1,
+        cooling_setpoint_tolerance_heating_season: Union[float, dict] = -0.1,
+        heating_setpoint_tolerance_cooling_season: Union[float, dict] = 0.1,
+        heating_setpoint_tolerance_heating_season: Union[float, dict] = 0.1,
         cooling_season_start: Union[float, str] = 121,
         cooling_season_end: Union[float, str] = 274,
-        dflt_for_adap_coeff_cooling: float = 0.4,
-        dflt_for_adap_coeff_heating: float = -0.4,
-        dflt_for_pmv_cooling_sp: float = 0.5,
-        dflt_for_pmv_heating_sp: float = -0.5,
-        dflt_for_tolerance_cooling_sp_cooling_season: float = -0.1,
-        dflt_for_tolerance_cooling_sp_heating_season: float = -0.1,
-        dflt_for_tolerance_heating_sp_cooling_season: float = 0.1,
-        dflt_for_tolerance_heating_sp_heating_season: float = 0.1,
-        verbose_mode: bool = True,
+        default_adaptive_coefficient_cooling: float = 0.4,
+        default_adaptive_coefficient_heating: float = -0.4,
+        default_pmv_cooling_setpoint: float = 0.5,
+        default_pmv_heating_setpoint: float = -0.5,
+        default_cooling_setpoint_tolerance_cooling_season: float = -0.1,
+        default_cooling_setpoint_tolerance_heating_season: float = -0.1,
+        default_heating_setpoint_tolerance_cooling_season: float = 0.1,
+        default_heating_setpoint_tolerance_heating_season: float = 0.1,
+        verbose: bool = True,
 ) -> IDF:
     """
     Applies setpoints based on the Adaptive Predicted Mean Vote (aPMV) index.
@@ -83,33 +116,44 @@ def apply_apmv_setpoints(
     automatically resolving the model hierarchy.
 
     :param building: The BESOS/eppy IDF object to be modified.
-    :param outputs_freq: List of reporting frequencies for the output variables (e.g., ['hourly', 'timestep']).
-    :param other_pmv_related_outputs: If True, adds additional comfort-related output variables (e.g., Fanger PMV, PPD).
-        (Its name was other_PMV_related_outputs before accim 1.0.0.)
-    :param adap_coeff_cooling: Adaptive coefficient (lambda) for cooling. Can be a single float (applied globally) or a dict {TargetName: Value}.
-    :param adap_coeff_heating: Adaptive coefficient (lambda) for heating. Float or Dict {TargetName: Value}.
-    :param pmv_cooling_sp: Target aPMV setpoint for cooling. Float or Dict. Default is 0.5. The PMV setpoint
+    :param output_frequencies: List of reporting frequencies for the output variables (e.g., ['hourly', 'timestep']).
+    :param other_pmv_related_outputs: If True, adds additional comfort-related output variables (e.g., Fanger PMV,
+        PPD).
+    :param adaptive_coefficient_cooling: Adaptive coefficient (lambda) for cooling. Can be a single float (applied
+        globally) or a dict {TargetName: Value}.
+    :param adaptive_coefficient_heating: Adaptive coefficient (lambda) for heating. Float or Dict {TargetName: Value}.
+    :param pmv_cooling_setpoint: Target aPMV setpoint for cooling. Float or Dict. Default is 0.5. The PMV setpoint
         applied to the thermostat is obtained with the inverse aPMV formula, PMV = aPMV/(1 - lambda*aPMV).
-    :param pmv_heating_sp: Target aPMV setpoint for heating. Float or Dict. Default is -0.5. Converted to PMV in
+    :param pmv_heating_setpoint: Target aPMV setpoint for heating. Float or Dict. Default is -0.5. Converted to PMV in
         the same way.
-    :param tolerance_cooling_sp_cooling_season: Tolerance to widen the cooling setpoint band during cooling season.
-    :param tolerance_cooling_sp_heating_season: Tolerance to widen the cooling setpoint band during heating season.
-    :param tolerance_heating_sp_cooling_season: Tolerance to widen the heating setpoint band during cooling season.
-    :param tolerance_heating_sp_heating_season: Tolerance to widen the heating setpoint band during heating season.
+    :param cooling_setpoint_tolerance_cooling_season: Tolerance to widen the cooling setpoint band during cooling
+        season.
+    :param cooling_setpoint_tolerance_heating_season: Tolerance to widen the cooling setpoint band during heating
+        season.
+    :param heating_setpoint_tolerance_cooling_season: Tolerance to widen the heating setpoint band during cooling
+        season.
+    :param heating_setpoint_tolerance_heating_season: Tolerance to widen the heating setpoint band during heating
+        season.
     :param cooling_season_start: Start day of the cooling season. Can be an integer (Day of Year) or string ('dd/mm').
-        Default is 121 (1 May), as CoolSeasonStart in addAccis.
+        Default is 121 (1 May), as cooling_season_start in AddAccis.
     :param cooling_season_end: End day of the cooling season, which is not included in it. Can be an integer
-        (Day of Year) or string ('dd/mm'). Default is 274 (1 October), as CoolSeasonEnd in addAccis.
-    :param dflt_for_adap_coeff_cooling: Default value for cooling adaptive coefficient if key is missing in dict input.
-    :param dflt_for_adap_coeff_heating: Default value for heating adaptive coefficient if key is missing in dict input.
-    :param dflt_for_pmv_cooling_sp: Default value for cooling PMV setpoint if key is missing in dict input.
-    :param dflt_for_pmv_heating_sp: Default value for heating PMV setpoint if key is missing in dict input.
-    :param dflt_for_tolerance_cooling_sp_cooling_season: Default tolerance value if key is missing.
-    :param dflt_for_tolerance_cooling_sp_heating_season: Default tolerance value if key is missing.
-    :param dflt_for_tolerance_heating_sp_cooling_season: Default tolerance value if key is missing.
-    :param dflt_for_tolerance_heating_sp_heating_season: Default tolerance value if key is missing.
-    :param verbose_mode: If True, prints detailed progress messages (added objects) and warnings to the console.
+        (Day of Year) or string ('dd/mm'). Default is 274 (1 October), as cooling_season_end in AddAccis.
+    :param default_adaptive_coefficient_cooling: Default value for cooling adaptive coefficient if key is missing in
+        dict input.
+    :param default_adaptive_coefficient_heating: Default value for heating adaptive coefficient if key is missing in
+        dict input.
+    :param default_pmv_cooling_setpoint: Default value for cooling PMV setpoint if key is missing in dict input.
+    :param default_pmv_heating_setpoint: Default value for heating PMV setpoint if key is missing in dict input.
+    :param default_cooling_setpoint_tolerance_cooling_season: Default tolerance value if key is missing.
+    :param default_cooling_setpoint_tolerance_heating_season: Default tolerance value if key is missing.
+    :param default_heating_setpoint_tolerance_cooling_season: Default tolerance value if key is missing.
+    :param default_heating_setpoint_tolerance_heating_season: Default tolerance value if key is missing.
+    :param verbose: If True, prints detailed progress messages (added objects) and warnings to the console.
     :return: The modified BESOS IDF object with EMS controls added.
+
+    The arguments had other names before accim 1.0.0 (outputs_freq, other_PMV_related_outputs, adap_coeff_cooling,
+    pmv_cooling_sp, tolerance_cooling_sp_cooling_season, dflt_for_adap_coeff_cooling, verbose_mode...), which keep
+    working with a DeprecationWarning (see the migration guide). The EMS variables keep the old names.
     """
 
     # --- 1. RESOLVE TARGETS ---
@@ -144,7 +188,7 @@ def apply_apmv_setpoints(
     # - Schedule:Compact objects for Heating and Cooling setpoints (which EMS will write to).
     # - ZoneControl:Thermostat objects configured for 'ThermalComfort' control type.
     # - ThermostatSetpoint:ThermalComfort:Fanger:DualSetpoint objects linked to the schedules.
-    _ensure_infrastructure(building, unique_zones, verbose_mode)
+    _ensure_infrastructure(building, unique_zones, verbose)
 
     # --- 4. GENERATE ARGUMENTS DATAFRAME ---
     # Map the user's input arguments (which might be single floats or dictionaries)
@@ -154,46 +198,47 @@ def apply_apmv_setpoints(
     df_arguments = generate_df_from_args(
         target_keys_input=df_keys,
         ems_suffixes=ems_target_suffixes,
-        adap_coeff_heating=adap_coeff_heating,
-        adap_coeff_cooling=adap_coeff_cooling,
-        pmv_heating_sp=pmv_heating_sp,
-        pmv_cooling_sp=pmv_cooling_sp,
-        tolerance_cooling_sp_cooling_season=tolerance_cooling_sp_cooling_season,
-        tolerance_cooling_sp_heating_season=tolerance_cooling_sp_heating_season,
-        tolerance_heating_sp_cooling_season=tolerance_heating_sp_cooling_season,
-        tolerance_heating_sp_heating_season=tolerance_heating_sp_heating_season,
-        dflt_for_adap_coeff_cooling=dflt_for_adap_coeff_cooling,
-        dflt_for_adap_coeff_heating=dflt_for_adap_coeff_heating,
-        dflt_for_pmv_cooling_sp=dflt_for_pmv_cooling_sp,
-        dflt_for_pmv_heating_sp=dflt_for_pmv_heating_sp,
-        dflt_for_tolerance_cooling_sp_cooling_season=dflt_for_tolerance_cooling_sp_cooling_season,
-        dflt_for_tolerance_cooling_sp_heating_season=dflt_for_tolerance_cooling_sp_heating_season,
-        dflt_for_tolerance_heating_sp_cooling_season=dflt_for_tolerance_heating_sp_cooling_season,
-        dflt_for_tolerance_heating_sp_heating_season=dflt_for_tolerance_heating_sp_heating_season,
+        adaptive_coefficient_heating=adaptive_coefficient_heating,
+        adaptive_coefficient_cooling=adaptive_coefficient_cooling,
+        pmv_heating_setpoint=pmv_heating_setpoint,
+        pmv_cooling_setpoint=pmv_cooling_setpoint,
+        cooling_setpoint_tolerance_cooling_season=cooling_setpoint_tolerance_cooling_season,
+        cooling_setpoint_tolerance_heating_season=cooling_setpoint_tolerance_heating_season,
+        heating_setpoint_tolerance_cooling_season=heating_setpoint_tolerance_cooling_season,
+        heating_setpoint_tolerance_heating_season=heating_setpoint_tolerance_heating_season,
+        default_adaptive_coefficient_cooling=default_adaptive_coefficient_cooling,
+        default_adaptive_coefficient_heating=default_adaptive_coefficient_heating,
+        default_pmv_cooling_setpoint=default_pmv_cooling_setpoint,
+        default_pmv_heating_setpoint=default_pmv_heating_setpoint,
+        default_cooling_setpoint_tolerance_cooling_season=default_cooling_setpoint_tolerance_cooling_season,
+        default_cooling_setpoint_tolerance_heating_season=default_cooling_setpoint_tolerance_heating_season,
+        default_heating_setpoint_tolerance_cooling_season=default_heating_setpoint_tolerance_cooling_season,
+        default_heating_setpoint_tolerance_heating_season=default_heating_setpoint_tolerance_heating_season,
     )
 
     # --- 5. EMS GENERATION ---
     # Now we generate the actual EMS code blocks in the IDF.
 
     # A. Sensors: To read 'Zone Thermal Comfort Fanger Model PMV' and 'People Occupant Count'.
-    _add_apmv_sensors(building, target_data, verbose_mode)
+    _add_apmv_sensors(building, target_data, verbose)
 
     # B. Global Variables: To store intermediate calculations (aPMV, comfort hours, etc.).
-    _add_apmv_global_variables(building, ems_target_suffixes, verbose_mode, list(instance_counts))
+    _add_apmv_global_variables(building, ems_target_suffixes, verbose, list(instance_counts))
 
     # C. Actuators: To overwrite the values of the Schedule:Compact objects created in step 3.
     # Note: Actuators link the specific EMS logic (Space/People level) to the Zone Schedule.
-    _add_apmv_actuators(building, target_data, verbose_mode)
+    _add_apmv_actuators(building, target_data, verbose)
 
     # D. Programs: The Erl code that performs the logic (If Season -> Calc aPMV -> Set Actuator).
-    _add_apmv_programs(building, ems_target_suffixes, df_arguments, cooling_season_start, cooling_season_end, verbose_mode,
+    _add_apmv_programs(building, ems_target_suffixes, df_arguments, cooling_season_start, cooling_season_end, verbose,
                        instance_counts)
 
     # E. Program Calling Managers: To tell EnergyPlus WHEN to run these programs (BeginTimestepBeforePredictor).
-    _add_apmv_program_calling_managers(building, verbose_mode)
+    _add_apmv_program_calling_managers(building, verbose)
 
     # F. Outputs: To report the EMS variables and standard variables to the .eso file.
-    _add_apmv_outputs(building, outputs_freq, other_pmv_related_outputs, ems_target_suffixes, unique_zones, verbose_mode)
+    _add_apmv_outputs(building, output_frequencies, other_pmv_related_outputs, ems_target_suffixes, unique_zones,
+                      verbose)
 
     return building
 
@@ -202,7 +247,7 @@ def apply_apmv_setpoints(
 # INFRASTRUCTURE HELPERS
 # ==============================================================================
 
-def _ensure_infrastructure(building: IDF, unique_zones: List[str], verbose_mode: bool):
+def _ensure_infrastructure(building: IDF, unique_zones: List[str], verbose: bool):
     """
     Ensures that the necessary standard EnergyPlus objects exist for the target zones.
     Specifically, it creates or verifies:
@@ -214,7 +259,7 @@ def _ensure_infrastructure(building: IDF, unique_zones: List[str], verbose_mode:
 
     :param building: The BESOS/eppy IDF object to be modified.
     :param unique_zones: A list of RAW zone names (strings) derived from the targets.
-    :param verbose_mode: If True, prints success messages for created objects. Warnings are always printed.
+    :param verbose: If True, prints success messages for created objects. Warnings are always printed.
     """
     # Get list of existing schedules to avoid duplicates
     sch_comp_objs = [i.Name for i in building.idfobjects['Schedule:Compact']]
@@ -234,10 +279,10 @@ def _ensure_infrastructure(building: IDF, unique_zones: List[str], verbose_mode:
                     Field_2='For: AllDays',
                     Field_3='Until: 24:00,1'  # Default value (will be overwritten by EMS)
                 )
-                if verbose_mode:
+                if verbose:
                     print(f"Added Schedule: {sch_name}")
             else:
-                # Warning is issued regardless of verbose_mode
+                # Warning is issued regardless of verbose
                 warnings.warn(f"Schedule '{sch_name}' already exists. Skipping creation.")
 
     # 2. Ensure Thermostats
@@ -258,7 +303,7 @@ def _ensure_infrastructure(building: IDF, unique_zones: List[str], verbose_mode:
         # Case A: No thermostat exists at all.
         # Action: Create a new Thermal Comfort Thermostat.
         if z_upper not in existing_thermostats and z_upper not in existing_tc_thermostats:
-            _create_tc_thermostat(building, zone, verbose_mode)
+            _create_tc_thermostat(building, zone, verbose)
 
         # Case B: A Standard Thermostat exists (e.g., DualSetpoint).
         # Action: Remove the old standard thermostat and replace it with a Thermal Comfort one.
@@ -266,20 +311,20 @@ def _ensure_infrastructure(building: IDF, unique_zones: List[str], verbose_mode:
         elif z_upper in existing_thermostats and z_upper not in existing_tc_thermostats:
             old_t = existing_thermostats[z_upper]
             building.removeidfobject(old_t)
-            if verbose_mode:
+            if verbose:
                 print(f"Removed existing Standard Thermostat for zone: {zone}")
-            _create_tc_thermostat(building, zone, verbose_mode)
+            _create_tc_thermostat(building, zone, verbose)
 
         # Case C: A Thermal Comfort Thermostat already exists.
         # Action: Ensure it points to a Fanger DualSetpoint object and update that object
         # to use our new EMS-controlled schedules.
         elif z_upper in existing_tc_thermostats:
             tc_t = existing_tc_thermostats[z_upper]
-            # Warning is issued regardless of verbose_mode
+            # Warning is issued regardless of verbose
             warnings.warn(f"Thermal Comfort Thermostat already exists for zone '{zone}'. Updating configuration.")
 
             # Ensure the control type schedule exists and is linked correctly.
-            sch_name = _ensure_tc_control_schedule(building, zone, verbose_mode)
+            sch_name = _ensure_tc_control_schedule(building, zone, verbose)
             tc_t.Thermal_Comfort_Control_Type_Schedule_Name = sch_name
 
             # Ensure the control type is Fanger DualSetpoint
@@ -293,19 +338,19 @@ def _ensure_infrastructure(building: IDF, unique_zones: List[str], verbose_mode:
             tc_t.Thermal_Comfort_Control_1_Name = fanger_name
 
             # Update the referenced Fanger object
-            _update_fanger_object(building, fanger_name, zone, verbose_mode)
+            _update_fanger_object(building, fanger_name, zone, verbose)
 
 
-def _create_tc_thermostat(building: IDF, zone: str, verbose_mode: bool):
+def _create_tc_thermostat(building: IDF, zone: str, verbose: bool):
     """
     Creates a new ZoneControl:Thermostat:ThermalComfort object and its dependencies.
 
     :param building: The BESOS/eppy IDF object.
     :param zone: The RAW zone name.
-    :param verbose_mode: If True, prints success messages.
+    :param verbose: If True, prints success messages.
     """
     # 1. Create the Control Type Schedule (Type 4 = Thermal Comfort)
-    sch_name = _ensure_tc_control_schedule(building, zone, verbose_mode)
+    sch_name = _ensure_tc_control_schedule(building, zone, verbose)
 
     # 2. Create the Thermostat Object linking the zone to the Fanger object
     building.newidfobject(
@@ -316,14 +361,14 @@ def _create_tc_thermostat(building: IDF, zone: str, verbose_mode: bool):
         Thermal_Comfort_Control_1_Object_Type='ThermostatSetpoint:ThermalComfort:Fanger:DualSetpoint',
         Thermal_Comfort_Control_1_Name=f'Fanger Setpoint {zone}'
     )
-    if verbose_mode:
+    if verbose:
         print(f"Added Thermal Comfort Thermostat for zone: {zone}")
 
     # 3. Create the Fanger Setpoint object
-    _update_fanger_object(building, f'Fanger Setpoint {zone}', zone, verbose_mode)
+    _update_fanger_object(building, f'Fanger Setpoint {zone}', zone, verbose)
 
 
-def _ensure_tc_control_schedule(building: IDF, zone: str, verbose_mode: bool) -> str:
+def _ensure_tc_control_schedule(building: IDF, zone: str, verbose: bool) -> str:
     """Ensure thermal comfort control schedule exists for a zone and return its name."""
     sch_name = f'Thermal Comfort Control Type Schedule Name {zone}'
     if not any(s.Name == sch_name for s in building.idfobjects['Schedule:Compact']):
@@ -335,12 +380,12 @@ def _ensure_tc_control_schedule(building: IDF, zone: str, verbose_mode: bool) ->
             Field_2='For: AllDays',
             Field_3='Until: 24:00,4'  # 4 maps to 'Thermal Comfort' control type in E+
         )
-        if verbose_mode:
+        if verbose:
             print(f"Added Control Type Schedule: {sch_name}")
     return sch_name
 
 
-def _update_fanger_object(building: IDF, obj_name: str, zone: str, verbose_mode: bool):
+def _update_fanger_object(building: IDF, obj_name: str, zone: str, verbose: bool):
     """
     Creates or updates the 'ThermostatSetpoint:ThermalComfort:Fanger:DualSetpoint' object.
     This object links the thermostat logic to the specific Heating/Cooling schedules.
@@ -348,7 +393,7 @@ def _update_fanger_object(building: IDF, obj_name: str, zone: str, verbose_mode:
     :param building: The BESOS/eppy IDF object.
     :param obj_name: Name of the Fanger object.
     :param zone: The RAW zone name used to find the correct schedules.
-    :param verbose_mode: If True, prints success messages.
+    :param verbose: If True, prints success messages.
     """
     # Check if the object already exists
     fanger_obj = None
@@ -363,7 +408,7 @@ def _update_fanger_object(building: IDF, obj_name: str, zone: str, verbose_mode:
             'ThermostatSetpoint:ThermalComfort:Fanger:DualSetpoint',
             Name=obj_name
         )
-        if verbose_mode:
+        if verbose:
             print(f"Added Fanger DualSetpoint Object: {obj_name}")
 
     # Link the object to the EMS-controlled schedules we created in _ensure_infrastructure
@@ -375,7 +420,7 @@ def _update_fanger_object(building: IDF, obj_name: str, zone: str, verbose_mode:
 # EMS GENERATORS
 # ==============================================================================
 
-def _add_apmv_sensors(building: IDF, target_data: List[Dict], verbose_mode: bool):
+def _add_apmv_sensors(building: IDF, target_data: List[Dict], verbose: bool):
     """
     Adds EnergyManagementSystem:Sensor objects to the IDF.
     Sensors allow the EMS to read data from EnergyPlus Output:Variables during the simulation.
@@ -391,7 +436,7 @@ def _add_apmv_sensors(building: IDF, target_data: List[Dict], verbose_mode: bool
 
     :param building: The BESOS/eppy IDF object.
     :param target_data: List of target dictionaries resolved earlier.
-    :param verbose_mode: If True, prints success messages. Warnings are always printed.
+    :param verbose: If True, prints success messages. Warnings are always printed.
     """
     # Get existing sensors to avoid duplicates
     sensornamelist = [s.Name for s in building.idfobjects['EnergyManagementSystem:Sensor']]
@@ -404,7 +449,7 @@ def _add_apmv_sensors(building: IDF, target_data: List[Dict], verbose_mode: bool
                 OutputVariable_or_OutputMeter_Index_Key_Name=key,
                 OutputVariable_or_OutputMeter_Name=variable
             )
-            if verbose_mode:
+            if verbose:
                 print(f"Added Sensor: {name}")
         else:
             warnings.warn(f"Sensor '{name}' already exists. Skipping.")
@@ -425,7 +470,7 @@ def _add_apmv_sensors(building: IDF, target_data: List[Dict], verbose_mode: bool
         add_sensor(f'People_Occupant_Count_{suffix}', target['occupancy_key'], target['occupancy_variable'])
 
 
-def _add_apmv_actuators(building: IDF, target_data: List[Dict], verbose_mode: bool):
+def _add_apmv_actuators(building: IDF, target_data: List[Dict], verbose: bool):
     """
     Adds EnergyManagementSystem:Actuator objects.
 
@@ -435,7 +480,7 @@ def _add_apmv_actuators(building: IDF, target_data: List[Dict], verbose_mode: bo
 
     :param building: The BESOS/eppy IDF object.
     :param target_data: List of target dictionaries resolved earlier.
-    :param verbose_mode: If True, prints success messages. Warnings are always printed.
+    :param verbose: If True, prints success messages. Warnings are always printed.
     """
     actuatornamelist = [actuator.Name for actuator in building.idfobjects['EnergyManagementSystem:Actuator']]
 
@@ -461,13 +506,13 @@ def _add_apmv_actuators(building: IDF, target_data: List[Dict], verbose_mode: bo
                     Actuated_Component_Type='Schedule:Compact',
                     Actuated_Component_Control_Type='Schedule Value',
                 )
-                if verbose_mode:
+                if verbose:
                     print(f"Added Actuator: {act_name}")
             else:
                 warnings.warn(f"Actuator '{act_name}' already exists. Skipping creation.")
 
 
-def _add_apmv_global_variables(building: IDF, suffixes: List[str], verbose_mode: bool,
+def _add_apmv_global_variables(building: IDF, suffixes: List[str], verbose: bool,
                                averaged_suffixes: Optional[List[str]] = None):
     """
     Adds EnergyManagementSystem:GlobalVariable objects.
@@ -476,11 +521,11 @@ def _add_apmv_global_variables(building: IDF, suffixes: List[str], verbose_mode:
 
     :param building: The BESOS/eppy IDF object.
     :param suffixes: List of sanitized suffixes for unique naming per target.
-    :param verbose_mode: If True, prints success messages. Warnings are always printed.
+    :param verbose: If True, prints success messages. Warnings are always printed.
     :param averaged_suffixes: Suffixes of the targets of zones with several occupant instances,
         whose PMV is a global variable calculated from the PMV of the instances.
     """
-    # List of variable prefixes needed for the logic
+    # List of variable prefixes needed for the logic (the names of the EMS variables, which keep those of accim 0.x)
     prefixes = [
         'tolerance_cooling_sp', 'tolerance_cooling_sp_cooling_season', 'tolerance_cooling_sp_heating_season',
         'tolerance_heating_sp', 'tolerance_heating_sp_cooling_season', 'tolerance_heating_sp_heating_season',
@@ -496,7 +541,7 @@ def _add_apmv_global_variables(building: IDF, suffixes: List[str], verbose_mode:
     for gv in ['CoolingSeason', 'CoolSeasonEnd', 'CoolSeasonStart']:
         if gv not in existing:
             building.newidfobject('EnergyManagementSystem:GlobalVariable', Erl_Variable_1_Name=gv)
-            if verbose_mode:
+            if verbose:
                 print(f"Added Global Variable: {gv}")
         else:
             warnings.warn(f"Global Variable '{gv}' already exists. Skipping.")
@@ -507,14 +552,14 @@ def _add_apmv_global_variables(building: IDF, suffixes: List[str], verbose_mode:
     for gv in per_target:
         if gv not in existing:
             building.newidfobject('EnergyManagementSystem:GlobalVariable', Erl_Variable_1_Name=gv)
-            if verbose_mode:
+            if verbose:
                 print(f"Added Global Variable: {gv}")
         else:
             warnings.warn(f"Global Variable '{gv}' already exists. Skipping.")
 
 
-def _add_apmv_programs(building: IDF, suffixes: List[str], df_arguments: pd.DataFrame, cool_start: int, cool_end: int, verbose_mode: bool,
-                       instance_counts: Optional[Dict[str, int]] = None):
+def _add_apmv_programs(building: IDF, suffixes: List[str], df_arguments: pd.DataFrame, cool_start: int,
+                       cool_end: int, verbose: bool, instance_counts: Optional[Dict[str, int]] = None):
     """
     Adds EnergyManagementSystem:Program objects.
     This contains the actual Erl (EnergyPlus Runtime Language) code that executes the control logic.
@@ -524,7 +569,7 @@ def _add_apmv_programs(building: IDF, suffixes: List[str], df_arguments: pd.Data
     :param df_arguments: DataFrame containing user inputs (coeffs, setpoints) mapped to targets.
     :param cool_start: Integer representing the start day of cooling season.
     :param cool_end: Integer representing the end day of cooling season.
-    :param verbose_mode: If True, prints success messages. Warnings are always printed.
+    :param verbose: If True, prints success messages. Warnings are always printed.
     :param instance_counts: Number of occupant instances of the targets of zones with several
         ({suffix: number}). The PMV of these zones is the average of the PMV of their instances,
         weighted by their occupants (the simple average while the zone is unoccupied), as the
@@ -539,7 +584,7 @@ def _add_apmv_programs(building: IDF, suffixes: List[str], df_arguments: pd.Data
         building.newidfobject('EnergyManagementSystem:Program', Name=prog_name,
                               Program_Line_1=f'set CoolSeasonStart = {cool_start}',
                               Program_Line_2=f'set CoolSeasonEnd = {cool_end}')
-        if verbose_mode: print(f"Added Program: {prog_name}")
+        if verbose: print(f"Added Program: {prog_name}")
     else:
         warnings.warn(f"Program '{prog_name}' already exists. Skipping.")
 
@@ -556,7 +601,7 @@ def _add_apmv_programs(building: IDF, suffixes: List[str], df_arguments: pd.Data
                               Program_Line_9='set CoolingSeason = 1',
                               Program_Line_10='else', Program_Line_11='set CoolingSeason = 0', Program_Line_12='endif',
                               Program_Line_13='endif')
-        if verbose_mode: print(f"Added Program: {prog_name}")
+        if verbose: print(f"Added Program: {prog_name}")
     else:
         warnings.warn(f"Program '{prog_name}' already exists. Skipping.")
 
@@ -571,16 +616,23 @@ def _add_apmv_programs(building: IDF, suffixes: List[str], df_arguments: pd.Data
         # --- PROGRAM 3: Initialize Zone Parameters ---
         prog_name = f'set_zone_input_data_{suffix}'
         if prog_name not in programlist:
-            building.newidfobject('EnergyManagementSystem:Program', Name=prog_name,
-                                  Program_Line_1=f'set adap_coeff_cooling_{suffix} = {df_arguments.loc[row_idx, "adap_coeff_cooling"]}',
-                                  Program_Line_2=f'set adap_coeff_heating_{suffix} = {df_arguments.loc[row_idx, "adap_coeff_heating"]}',
-                                  Program_Line_3=f'set pmv_cooling_sp_{suffix} = {df_arguments.loc[row_idx, "pmv_cooling_sp"]}',
-                                  Program_Line_4=f'set pmv_heating_sp_{suffix} = {df_arguments.loc[row_idx, "pmv_heating_sp"]}',
-                                  Program_Line_5=f'set tolerance_cooling_sp_cooling_season_{suffix} = {df_arguments.loc[row_idx, "tolerance_cooling_sp_cooling_season"]}',
-                                  Program_Line_6=f'set tolerance_cooling_sp_heating_season_{suffix} = {df_arguments.loc[row_idx, "tolerance_cooling_sp_heating_season"]}',
-                                  Program_Line_7=f'set tolerance_heating_sp_cooling_season_{suffix} = {df_arguments.loc[row_idx, "tolerance_heating_sp_cooling_season"]}',
-                                  Program_Line_8=f'set tolerance_heating_sp_heating_season_{suffix} = {df_arguments.loc[row_idx, "tolerance_heating_sp_heating_season"]}')
-            if verbose_mode: print(f"Added Program: {prog_name}")
+            # The EMS variables keep the names of the arguments in accim 0.x
+            row = df_arguments.loc[row_idx]
+            building.newidfobject(
+                'EnergyManagementSystem:Program', Name=prog_name,
+                Program_Line_1=f'set adap_coeff_cooling_{suffix} = {row["adaptive_coefficient_cooling"]}',
+                Program_Line_2=f'set adap_coeff_heating_{suffix} = {row["adaptive_coefficient_heating"]}',
+                Program_Line_3=f'set pmv_cooling_sp_{suffix} = {row["pmv_cooling_setpoint"]}',
+                Program_Line_4=f'set pmv_heating_sp_{suffix} = {row["pmv_heating_setpoint"]}',
+                Program_Line_5=f'set tolerance_cooling_sp_cooling_season_{suffix} = '
+                               f'{row["cooling_setpoint_tolerance_cooling_season"]}',
+                Program_Line_6=f'set tolerance_cooling_sp_heating_season_{suffix} = '
+                               f'{row["cooling_setpoint_tolerance_heating_season"]}',
+                Program_Line_7=f'set tolerance_heating_sp_cooling_season_{suffix} = '
+                               f'{row["heating_setpoint_tolerance_cooling_season"]}',
+                Program_Line_8=f'set tolerance_heating_sp_heating_season_{suffix} = '
+                               f'{row["heating_setpoint_tolerance_heating_season"]}')
+            if verbose: print(f"Added Program: {prog_name}")
         else:
             warnings.warn(f"Program '{prog_name}' already exists. Skipping.")
 
@@ -633,7 +685,7 @@ def _add_apmv_programs(building: IDF, suffixes: List[str], df_arguments: pd.Data
                                   Program_Line_26=f'set {act_h} = -100',
                                   Program_Line_27=f'set {act_c} = 100',
                                   Program_Line_28='endif')
-            if verbose_mode: print(f"Added Program: {prog_name}")
+            if verbose: print(f"Added Program: {prog_name}")
         else:
             warnings.warn(f"Program '{prog_name}' already exists. Skipping.")
 
@@ -658,7 +710,7 @@ def _add_apmv_programs(building: IDF, suffixes: List[str], df_arguments: pd.Data
                 ]
                 building.newidfobject('EnergyManagementSystem:Program', Name=prog_name,
                                       **{f'Program_Line_{i}': line for i, line in enumerate(lines, start=1)})
-                if verbose_mode: print(f"Added Program: {prog_name}")
+                if verbose: print(f"Added Program: {prog_name}")
             else:
                 warnings.warn(f"Program '{prog_name}' already exists. Skipping.")
 
@@ -667,7 +719,7 @@ def _add_apmv_programs(building: IDF, suffixes: List[str], df_arguments: pd.Data
         if prog_name not in programlist:
             building.newidfobject('EnergyManagementSystem:Program', Name=prog_name,
                                   Program_Line_1=f'set aPMV_{suffix} = PMV_{suffix}/(1+adap_coeff_{suffix}*PMV_{suffix})')
-            if verbose_mode: print(f"Added Program: {prog_name}")
+            if verbose: print(f"Added Program: {prog_name}")
         else:
             warnings.warn(f"Program '{prog_name}' already exists. Skipping.")
 
@@ -692,18 +744,18 @@ def _add_apmv_programs(building: IDF, suffixes: List[str], df_arguments: pd.Data
                                   Program_Line_15=f'set occupied_hour_{suffix} = 1*ZoneTimeStep',
                                   Program_Line_16='else', Program_Line_17=f'set occupied_hour_{suffix} = 0', Program_Line_18='endif',
                                   Program_Line_19=f'set discomfhour_{suffix} = discomfhour_cold_{suffix} + discomfhour_heat_{suffix}')
-            if verbose_mode: print(f"Added Program: {prog_name}")
+            if verbose: print(f"Added Program: {prog_name}")
         else:
             warnings.warn(f"Program '{prog_name}' already exists. Skipping.")
 
 
-def _add_apmv_program_calling_managers(building: IDF, verbose_mode: bool):
+def _add_apmv_program_calling_managers(building: IDF, verbose: bool):
     """
     Adds EnergyManagementSystem:ProgramCallingManager objects.
     These objects tell EnergyPlus WHEN to execute the programs defined above.
 
     :param building: The BESOS/eppy IDF object.
-    :param verbose_mode: If True, prints success messages. Warnings are always printed.
+    :param verbose: If True, prints success messages. Warnings are always printed.
     """
     programlist = [p.Name for p in building.idfobjects['EnergyManagementSystem:Program']]
     pcmlist = [pcm.Name for pcm in building.idfobjects['EnergyManagementSystem:ProgramCallingManager']]
@@ -712,22 +764,22 @@ def _add_apmv_program_calling_managers(building: IDF, verbose_mode: bool):
         if prog not in pcmlist:
             building.newidfobject('EnergyManagementSystem:ProgramCallingManager', Name=prog,
                                   EnergyPlus_Model_Calling_Point="BeginTimestepBeforePredictor", Program_Name_1=prog)
-            if verbose_mode: print(f"Added ProgramCallingManager for: {prog}")
+            if verbose: print(f"Added ProgramCallingManager for: {prog}")
         else:
             warnings.warn(f"ProgramCallingManager for '{prog}' already exists. Skipping.")
 
 
-def _add_apmv_outputs(building: IDF, outputs_freq: Sequence[str], other_pmv_related_outputs: bool, suffixes: List[str],
-                      unique_zones: List[str], verbose_mode: bool):
+def _add_apmv_outputs(building: IDF, output_frequencies: Sequence[str], other_pmv_related_outputs: bool,
+                      suffixes: List[str], unique_zones: List[str], verbose: bool):
     """
     Adds Output:Variable objects to report EMS calculations and standard results.
 
     :param building: The BESOS/eppy IDF object.
-    :param outputs_freq: List of frequencies (e.g., ['hourly']).
+    :param output_frequencies: List of frequencies (e.g., ['hourly']).
     :param other_pmv_related_outputs: Boolean to add extra comfort outputs.
     :param suffixes: List of sanitized suffixes for EMS variables.
     :param unique_zones: List of RAW zone names for Schedule outputs.
-    :param verbose_mode: If True, prints success messages. Warnings are always printed.
+    :param verbose: If True, prints success messages. Warnings are always printed.
     """
     outputvariablelist = [v.Name for v in building.idfobjects['EnergyManagementSystem:OutputVariable']]
 
@@ -753,7 +805,7 @@ def _add_apmv_outputs(building: IDF, outputs_freq: Sequence[str], other_pmv_rela
                 building.newidfobject('EnergyManagementSystem:OutputVariable', Name=out_name,
                                       EMS_Variable_Name=f'{val[0]}_{suffix}', Type_of_Data_in_Variable=val[2],
                                       Update_Frequency='ZoneTimestep', Units=val[1])
-                if verbose_mode: print(f"Added EMS Output Variable: {out_name}")
+                if verbose: print(f"Added EMS Output Variable: {out_name}")
             else:
                 warnings.warn(f"EMS Output Variable '{out_name}' already exists. Skipping.")
 
@@ -764,7 +816,7 @@ def _add_apmv_outputs(building: IDF, outputs_freq: Sequence[str], other_pmv_rela
         return (_norm(key_value), _norm(variable_name), _norm(frequency))
 
     # 2. Add Standard Output:Variables for reporting
-    for freq in outputs_freq:
+    for freq in output_frequencies:
         freq_cap = str(freq).capitalize()
         existing_output_keys = {
             _var_key(getattr(o, 'Key_Value', ''), getattr(o, 'Variable_Name', ''), getattr(o, 'Reporting_Frequency', ''))
@@ -777,7 +829,7 @@ def _add_apmv_outputs(building: IDF, outputs_freq: Sequence[str], other_pmv_rela
             if key not in existing_output_keys and not outvar.startswith("WIP"):
                 building.newidfobject('Output:Variable', Key_Value='*', Variable_Name=outvar, Reporting_Frequency=freq_cap)
                 existing_output_keys.add(key)
-                if verbose_mode: print(f"Added Output:Variable for {outvar} ({freq})")
+                if verbose: print(f"Added Output:Variable for {outvar} ({freq})")
             elif key in existing_output_keys:
                 warnings.warn(f"Output:Variable already exists for '{outvar}' ({freq_cap}). Skipping.")
 
@@ -789,7 +841,7 @@ def _add_apmv_outputs(building: IDF, outputs_freq: Sequence[str], other_pmv_rela
                 if key not in existing_output_keys:
                     building.newidfobject('Output:Variable', Key_Value=sch_name, Variable_Name='Schedule Value', Reporting_Frequency=freq_cap)
                     existing_output_keys.add(key)
-                    if verbose_mode: print(f"Added Output:Variable for Schedule {sch_name} ({freq})")
+                    if verbose: print(f"Added Output:Variable for Schedule {sch_name} ({freq})")
                 else:
                     warnings.warn(f"Output:Variable already exists for Schedule '{sch_name}' ({freq_cap}). Skipping.")
 
@@ -801,7 +853,7 @@ def _add_apmv_outputs(building: IDF, outputs_freq: Sequence[str], other_pmv_rela
                 if key not in existing_output_keys:
                     building.newidfobject('Output:Variable', Key_Value='*', Variable_Name=item, Reporting_Frequency=freq_cap)
                     existing_output_keys.add(key)
-                    if verbose_mode: print(f"Added Output:Variable for {item} ({freq})")
+                    if verbose: print(f"Added Output:Variable for {item} ({freq})")
                 else:
                     warnings.warn(f"Output:Variable already exists for '{item}' ({freq_cap}). Skipping.")
 
@@ -817,7 +869,7 @@ def _add_apmv_outputs(building: IDF, outputs_freq: Sequence[str], other_pmv_rela
             'DistrictCooling:Facility'
         ]
 
-        for freq in outputs_freq:
+        for freq in output_frequencies:
             # Get existing meters for this frequency to avoid duplicates
             # Note: Key_Name is the field for the meter name
             current_meters = [
@@ -832,7 +884,7 @@ def _add_apmv_outputs(building: IDF, outputs_freq: Sequence[str], other_pmv_rela
                         Key_Name=meter,
                         Reporting_Frequency=freq.capitalize()
                     )
-                    if verbose_mode:
+                    if verbose:
                         print(f"Added Output:Meter for {meter} ({freq})")
                 else:
                     warnings.warn(f"Output:Meter '{meter}' ({freq}) already exists. Skipping.")
@@ -840,39 +892,40 @@ def _add_apmv_outputs(building: IDF, outputs_freq: Sequence[str], other_pmv_rela
     # 4. Ensure OutputControl:Files is present
     if not building.idfobjects['OutputControl:Files']:
         building.newidfobject('OutputControl:Files', Output_CSV='Yes', Output_MTR='Yes', Output_ESO='Yes')
-        if verbose_mode: print("Added OutputControl:Files object")
+        if verbose: print("Added OutputControl:Files object")
     else:
         # Update existing object
         obj = building.idfobjects['OutputControl:Files'][0]
         obj.Output_CSV = 'Yes'
         obj.Output_MTR = 'Yes'
         obj.Output_ESO = 'Yes'
-        if verbose_mode: print("Updated existing OutputControl:Files object")
+        if verbose: print("Updated existing OutputControl:Files object")
 
 
 # ==============================================================================
 # UTILS
 # ==============================================================================
 
+@_accepts_legacy_arguments
 def generate_df_from_args(
         target_keys_input: List[str],
         ems_suffixes: List[str],
-        adap_coeff_cooling: Union[float, Dict[str, float]],
-        adap_coeff_heating: Union[float, Dict[str, float]],
-        pmv_cooling_sp: Union[float, Dict[str, float]],
-        pmv_heating_sp: Union[float, Dict[str, float]],
-        tolerance_cooling_sp_cooling_season: Union[float, Dict[str, float]],
-        tolerance_cooling_sp_heating_season: Union[float, Dict[str, float]],
-        tolerance_heating_sp_cooling_season: Union[float, Dict[str, float]],
-        tolerance_heating_sp_heating_season: Union[float, Dict[str, float]],
-        dflt_for_adap_coeff_cooling: float,
-        dflt_for_adap_coeff_heating: float,
-        dflt_for_pmv_cooling_sp: float,
-        dflt_for_pmv_heating_sp: float,
-        dflt_for_tolerance_cooling_sp_cooling_season: float,
-        dflt_for_tolerance_cooling_sp_heating_season: float,
-        dflt_for_tolerance_heating_sp_cooling_season: float,
-        dflt_for_tolerance_heating_sp_heating_season: float,
+        adaptive_coefficient_cooling: Union[float, Dict[str, float]],
+        adaptive_coefficient_heating: Union[float, Dict[str, float]],
+        pmv_cooling_setpoint: Union[float, Dict[str, float]],
+        pmv_heating_setpoint: Union[float, Dict[str, float]],
+        cooling_setpoint_tolerance_cooling_season: Union[float, Dict[str, float]],
+        cooling_setpoint_tolerance_heating_season: Union[float, Dict[str, float]],
+        heating_setpoint_tolerance_cooling_season: Union[float, Dict[str, float]],
+        heating_setpoint_tolerance_heating_season: Union[float, Dict[str, float]],
+        default_adaptive_coefficient_cooling: float,
+        default_adaptive_coefficient_heating: float,
+        default_pmv_cooling_setpoint: float,
+        default_pmv_heating_setpoint: float,
+        default_cooling_setpoint_tolerance_cooling_season: float,
+        default_cooling_setpoint_tolerance_heating_season: float,
+        default_heating_setpoint_tolerance_cooling_season: float,
+        default_heating_setpoint_tolerance_heating_season: float,
 ) -> pd.DataFrame:
     """
     Maps user input arguments (which can be single floats or dictionaries) to the
@@ -881,11 +934,15 @@ def generate_df_from_args(
 
     :param target_keys_input: List of unique keys identifying the targets (e.g., "Space1 People").
     :param ems_suffixes: List of sanitized suffixes corresponding to the keys (e.g., "Space1_People").
-    :param adap_coeff_*: Adaptive coefficients for cooling/heating.
-    :param pmv_*_sp: PMV setpoints for cooling/heating.
-    :param tolerance_*: Tolerance bands for different seasons and modes.
-    :param dflt_*: Default values to use if a specific key is missing in the dictionary inputs.
-    :return: A pandas DataFrame indexed by target keys, containing all parameters and the 'underscore_zonename'.
+    :param adaptive_coefficient_cooling: Adaptive coefficient for cooling (and adaptive_coefficient_heating, for
+        heating).
+    :param pmv_cooling_setpoint: aPMV setpoint for cooling (and pmv_heating_setpoint, for heating).
+    :param cooling_setpoint_tolerance_cooling_season: Tolerance of the cooling setpoint in the cooling season (and
+        the other tolerances, for the other setpoints and seasons).
+    :param default_adaptive_coefficient_cooling: Default value to use if a specific key is missing in the dictionary
+        input of adaptive_coefficient_cooling (and the other default_* arguments, for the other arguments).
+    :return: A pandas DataFrame indexed by target keys, containing all parameters (a column for each argument, with
+        its name) and the 'underscore_zonename'.
     """
 
     space_ppl_names = target_keys_input
@@ -898,7 +955,8 @@ def generate_df_from_args(
             dropped = [k for k in arg_val if k not in space_ppl_names]
 
             if dropped:
-                warnings.warn(f"The following keys in '{arg_name}' were not found in the model and will be ignored: {dropped}")
+                warnings.warn(f"The following keys in '{arg_name}' were not found in the model and will be "
+                              f"ignored: {dropped}")
 
             # Fill data, using default if key is missing
             for k in space_ppl_names:
@@ -911,14 +969,20 @@ def generate_df_from_args(
 
     # Process all arguments into Series
     series_list = [
-        process_arg(adap_coeff_cooling, 'adap_coeff_cooling', dflt_for_adap_coeff_cooling),
-        process_arg(adap_coeff_heating, 'adap_coeff_heating', dflt_for_adap_coeff_heating),
-        process_arg(pmv_cooling_sp, 'pmv_cooling_sp', dflt_for_pmv_cooling_sp),
-        process_arg(pmv_heating_sp, 'pmv_heating_sp', dflt_for_pmv_heating_sp),
-        process_arg(tolerance_cooling_sp_cooling_season, 'tolerance_cooling_sp_cooling_season', dflt_for_tolerance_cooling_sp_cooling_season),
-        process_arg(tolerance_cooling_sp_heating_season, 'tolerance_cooling_sp_heating_season', dflt_for_tolerance_cooling_sp_heating_season),
-        process_arg(tolerance_heating_sp_cooling_season, 'tolerance_heating_sp_cooling_season', dflt_for_tolerance_heating_sp_cooling_season),
-        process_arg(tolerance_heating_sp_heating_season, 'tolerance_heating_sp_heating_season', dflt_for_tolerance_heating_sp_heating_season),
+        process_arg(adaptive_coefficient_cooling, 'adaptive_coefficient_cooling',
+                    default_adaptive_coefficient_cooling),
+        process_arg(adaptive_coefficient_heating, 'adaptive_coefficient_heating',
+                    default_adaptive_coefficient_heating),
+        process_arg(pmv_cooling_setpoint, 'pmv_cooling_setpoint', default_pmv_cooling_setpoint),
+        process_arg(pmv_heating_setpoint, 'pmv_heating_setpoint', default_pmv_heating_setpoint),
+        process_arg(cooling_setpoint_tolerance_cooling_season, 'cooling_setpoint_tolerance_cooling_season',
+                    default_cooling_setpoint_tolerance_cooling_season),
+        process_arg(cooling_setpoint_tolerance_heating_season, 'cooling_setpoint_tolerance_heating_season',
+                    default_cooling_setpoint_tolerance_heating_season),
+        process_arg(heating_setpoint_tolerance_cooling_season, 'heating_setpoint_tolerance_cooling_season',
+                    default_heating_setpoint_tolerance_cooling_season),
+        process_arg(heating_setpoint_tolerance_heating_season, 'heating_setpoint_tolerance_heating_season',
+                    default_heating_setpoint_tolerance_heating_season),
     ]
 
     # Concatenate into a single DataFrame
@@ -934,7 +998,7 @@ def generate_df_from_args(
 def get_available_target_names(building: IDF) -> List[str]:
     """
     Identifies and returns a list of valid target names (keys) for the current model.
-    These keys are what the user should use in the input dictionaries (e.g., adap_coeff_cooling).
+    These keys are what the user should use in the input dictionaries (e.g., adaptive_coefficient_cooling).
 
     :param building: The BESOS/eppy IDF object.
     :return: A list of strings representing the valid keys (e.g., ['Space1 People', 'Space2 People']).
@@ -955,13 +1019,14 @@ def get_input_template_dictionary(building: IDF) -> Dict[str, str]:
     return {key: "replace-me-with-float-value" for key in keys}
 
 
-def set_zones_always_occupied(building: IDF, verbose_mode: bool = True):
+@_accepts_legacy_arguments
+def set_zones_always_occupied(building: IDF, verbose: bool = True):
     """
     Sets the occupancy schedule of all 'People' objects (and 'People:Instance' objects, in
     EnergyPlus 26.2) to 'On' (always occupied). If the 'On' schedule does not exist, it creates it.
 
     :param building: The BESOS/eppy IDF object.
-    :param verbose_mode: If True, prints success messages. Warnings are always printed.
+    :param verbose: If True, prints success messages. Warnings are always printed.
     """
     sch_comp_objs = [i.Name for i in building.idfobjects['schedule:compact']]
 
@@ -975,7 +1040,7 @@ def set_zones_always_occupied(building: IDF, verbose_mode: bool = True):
             Field_2='For: AllDays',
             Field_3='Until: 24:00,1'
         )
-        if verbose_mode:
+        if verbose:
             print("Added Schedule: On")
     else:
         warnings.warn("Schedule 'On' already exists. Using existing schedule.")
@@ -984,19 +1049,18 @@ def set_zones_always_occupied(building: IDF, verbose_mode: bool = True):
     for i in get_people_objects(building):
         i.Number_of_People_Schedule_Name = 'On'
 
-    if verbose_mode:
+    if verbose:
         print("Updated all People objects to use schedule 'On'.")
 
 
-@accepts_legacy_kwargs({'SupplyAirTempInputMethod': 'supply_air_temp_input_method',
-                        'VRFschedule': 'vrf_schedule'})
+@_accepts_legacy_arguments
 def add_vrf_system(
         building: IDF,
         supply_air_temp_input_method: str = 'supply air temperature',
-        eer: float = 2,
-        cop: float = 2.1,
-        vrf_schedule: str = 'On 24/7',
-        verbose_mode: bool = True,
+        vrf_eer: float = 2,
+        vrf_cop: float = 2.1,
+        vrf_availability_schedule: str = 'On 24/7',
+        verbose: bool = True,
 ):
     """
     Adds a Variable Refrigerant Flow (VRF) system to each occupied zone of the model, controlled by
@@ -1006,21 +1070,24 @@ def add_vrf_system(
 
     :param building: The BESOS/eppy IDF object.
     :param supply_air_temp_input_method: Method for supply air temperature ('supply air temperature' or
-        'temperature difference'). (Its name was SupplyAirTempInputMethod before accim 1.0.0.)
-    :param eer: Energy Efficiency Ratio for cooling.
-    :param cop: Coefficient of Performance for heating.
-    :param vrf_schedule: Name of the availability schedule for the VRF system. (Its name was VRFschedule
-        before accim 1.0.0.)
-    :param verbose_mode: If True, prints the process.
+        'temperature difference').
+    :param vrf_eer: Energy Efficiency Ratio for cooling.
+    :param vrf_cop: Coefficient of Performance for heating.
+    :param vrf_availability_schedule: Name of the availability schedule for the VRF system.
+    :param verbose: If True, prints the process.
+
+    The arguments had other names before accim 1.0.0 (SupplyAirTempInputMethod, eer, cop, VRFschedule,
+    verbose_mode), which keep working with a DeprecationWarning.
     """
     from accim.sim.hvac import vrf
     from accim.sim.model import AccimModel
     from accim.sim.outputs import enable_sizing_calculations
     from accim.sim.people import set_comfort_models
 
-    model = AccimModel(building, 'vrf_ac', 'pmv', verbose_mode=verbose_mode)
+    model = AccimModel(building, 'vrf_ac', 'pmv', verbose=verbose)
     set_comfort_models(model)
-    vrf.add_vrf_system(model, supply_air_temp_input_method, eer=eer, cop=cop, vrf_schedule=vrf_schedule)
+    vrf.add_vrf_system(model, supply_air_temp_input_method, vrf_eer=vrf_eer, vrf_cop=vrf_cop,
+                       vrf_availability_schedule=vrf_availability_schedule)
     vrf.add_setpoint_schedules(model)
     enable_sizing_calculations(model)
 
@@ -1032,8 +1099,17 @@ def change_adaptive_coeff(building: IDF, df_arguments: pd.DataFrame):
     entire EMS structure from scratch.
 
     :param building: The BESOS/eppy IDF object.
-    :param df_arguments: DataFrame containing the new coefficients, indexed by target key.
+    :param df_arguments: DataFrame containing the new coefficients, indexed by target key (as that of
+        :func:`generate_df_from_args`, with the columns adaptive_coefficient_cooling, adaptive_coefficient_heating
+        and underscore_zonename; the names of the columns before accim 1.0.0, adap_coeff_cooling and
+        adap_coeff_heating, keep working with a DeprecationWarning).
     """
+    legacy = {old: new for old, new in _LEGACY_SETPOINT_ARGUMENTS.items()
+              if old in df_arguments.columns and new not in df_arguments.columns}
+    if legacy:
+        warnings.warn(f'The names of the columns {list(legacy)} of df_arguments are deprecated since accim 1.0.0; '
+                      f'use {list(legacy.values())} instead.', DeprecationWarning, stacklevel=2)
+        df_arguments = df_arguments.rename(columns=legacy)
     for i in df_arguments.index:
         zonename = df_arguments.loc[i, 'underscore_zonename']
 
@@ -1042,12 +1118,15 @@ def change_adaptive_coeff(building: IDF, df_arguments: pd.DataFrame):
                    if 'set_zone_input_data' in p.Name and zonename.lower() in p.Name.lower()]
 
         if program:
-            # Update the lines corresponding to adaptive coefficients
-            program[0].Program_Line_1 = f'set adap_coeff_cooling_{zonename} = {df_arguments.loc[i, "adap_coeff_cooling"]}'
-            program[0].Program_Line_2 = f'set adap_coeff_heating_{zonename} = {df_arguments.loc[i, "adap_coeff_heating"]}'
+            # Update the lines corresponding to adaptive coefficients (the EMS variables keep the names of accim 0.x)
+            program[0].Program_Line_1 = (f'set adap_coeff_cooling_{zonename} = '
+                                         f'{df_arguments.loc[i, "adaptive_coefficient_cooling"]}')
+            program[0].Program_Line_2 = (f'set adap_coeff_heating_{zonename} = '
+                                         f'{df_arguments.loc[i, "adaptive_coefficient_heating"]}')
 
 
-def add_ems_debug_output(building: IDF, verbose_mode: bool = True):
+@_accepts_legacy_arguments
+def add_ems_debug_output(building: IDF, verbose: bool = True):
     """
     Adds an Output:EnergyManagementSystem object to the IDF.
 
@@ -1061,7 +1140,7 @@ def add_ems_debug_output(building: IDF, verbose_mode: bool = True):
     - EMS Runtime Language Debug Output Level: Verbose
 
     :param building: The BESOS/eppy IDF object.
-    :param verbose_mode: If True, prints success messages. Warnings are always printed.
+    :param verbose: If True, prints success messages. Warnings are always printed.
     """
     # Check if the object already exists to avoid duplicates
     output_ems_objs = [i for i in building.idfobjects['Output:EnergyManagementSystem']]
@@ -1073,20 +1152,21 @@ def add_ems_debug_output(building: IDF, verbose_mode: bool = True):
             Internal_Variable_Availability_Dictionary_Reporting='Verbose',
             EMS_Runtime_Language_Debug_Output_Level='Verbose'
         )
-        if verbose_mode:
+        if verbose:
             print("Added Output:EnergyManagementSystem object (Verbose Debugging)")
     else:
         # Warn if it already exists, as it might have different settings
         warnings.warn("Output:EnergyManagementSystem object already exists. Skipping creation.")
 
 
+@_accepts_legacy_arguments
 def set_pmv_input_parameters(
         building: IDF,
         activity_level: Optional[Union[float, Dict[str, float]]] = None,
         clothing_insulation: Optional[Union[float, Dict[str, float]]] = None,
         air_velocity: Optional[Union[float, Dict[str, float]]] = None,
         work_efficiency: Optional[Union[float, Dict[str, float]]] = None,
-        verbose_mode: bool = True
+        verbose: bool = True
 ):
     """
     Modifies 'People' objects in the IDF to set the parameters that influence the PMV calculation.
@@ -1105,7 +1185,7 @@ def set_pmv_input_parameters(
     :param clothing_insulation: Clothing insulation in clo units. If None, ignores this parameter.
     :param air_velocity: Air velocity in m/s. If None, ignores this parameter.
     :param work_efficiency: Work efficiency (0.0 - 1.0). If None, ignores this parameter.
-    :param verbose_mode: If True, prints created schedules to console.
+    :param verbose: If True, prints created schedules to console.
     """
 
     # 1. Resolve targets to map People objects to Data Keys
@@ -1184,7 +1264,7 @@ def set_pmv_input_parameters(
                 building.newidfobject('Schedule:Compact', Name=sch_name, Schedule_Type_Limits_Name="Any Number",
                                       Field_1='Through: 12/31', Field_2='For: AllDays', Field_3=f'Until: 24:00,{act_val}')
                 sch_comp_objs.append(sch_name)
-                if verbose_mode: print(f"Set Activity for '{p_name}': {act_val} W/person")
+                if verbose: print(f"Set Activity for '{p_name}': {act_val} W/person")
 
             people.Activity_Level_Schedule_Name = sch_name
             any_modified = True
@@ -1196,7 +1276,7 @@ def set_pmv_input_parameters(
                 building.newidfobject('Schedule:Compact', Name=sch_name, Schedule_Type_Limits_Name="Any Number",
                                       Field_1='Through: 12/31', Field_2='For: AllDays', Field_3=f'Until: 24:00,{clo_val}')
                 sch_comp_objs.append(sch_name)
-                if verbose_mode: print(f"Set Clothing for '{p_name}': {clo_val} clo")
+                if verbose: print(f"Set Clothing for '{p_name}': {clo_val} clo")
 
             # people.Clothing_Insulation_Calculation_Method = 'Schedule'
             # people.Clothing_Insulation_Calculation_Method_Schedule_Name = sch_name
@@ -1210,7 +1290,7 @@ def set_pmv_input_parameters(
                 building.newidfobject('Schedule:Compact', Name=sch_name, Schedule_Type_Limits_Name="Any Number",
                                       Field_1='Through: 12/31', Field_2='For: AllDays', Field_3=f'Until: 24:00,{vel_val}')
                 sch_comp_objs.append(sch_name)
-                if verbose_mode: print(f"Set Air Velocity for '{p_name}': {vel_val} m/s")
+                if verbose: print(f"Set Air Velocity for '{p_name}': {vel_val} m/s")
 
             people.Air_Velocity_Schedule_Name = sch_name
             any_modified = True
@@ -1222,7 +1302,7 @@ def set_pmv_input_parameters(
                 building.newidfobject('Schedule:Compact', Name=sch_name, Schedule_Type_Limits_Name="Any Number",
                                       Field_1='Through: 12/31', Field_2='For: AllDays', Field_3=f'Until: 24:00,{eff_val}')
                 sch_comp_objs.append(sch_name)
-                if verbose_mode: print(f"Set Work Efficiency for '{p_name}': {eff_val}")
+                if verbose: print(f"Set Work Efficiency for '{p_name}': {eff_val}")
 
             people.Work_Efficiency_Schedule_Name = sch_name
             any_modified = True

@@ -800,7 +800,7 @@ class PlottingMixin(HourlyPlottingMixin):
         context : str
             Name of the plotting method, used in the message.
         **dimensions
-            Column requested for each dimension, for example ``row='ComfMod'``.
+            Column requested for each dimension, for example ``row='comfort_mode'``.
 
         Returns
         -------
@@ -884,7 +884,7 @@ class PlottingMixin(HourlyPlottingMixin):
             Input dataframe used by this routine.
         id_vars : Any
             Columns kept as identifiers. By default, the datetime column, the parameters
-            of the custom model (``CustAST_m``, ``CustAST_n``), ``epw`` and the running
+            of the custom model (``custom_slope``, ``custom_intercept``), ``epw`` and the running
             mean outdoor temperature, when they are in the hourly results.
         extra_id_vars : Optional[list]
             Columns kept as identifiers in addition to ``id_vars`` (or its default), when
@@ -946,7 +946,7 @@ class PlottingMixin(HourlyPlottingMixin):
         rmot_col = self._find_first_column_contains(columns=list(df.columns), pattern=rmot_pattern)
 
         if id_vars is None:
-            default_id_vars = [datetime_col, 'CustAST_m', 'CustAST_n', 'epw']
+            default_id_vars = [datetime_col, 'custom_slope', 'custom_intercept', 'epw']
             if rmot_col is not None:
                 default_id_vars.append(rmot_col)
             id_vars = [c for c in default_id_vars if c in df.columns]
@@ -1025,8 +1025,8 @@ class PlottingMixin(HourlyPlottingMixin):
             x: str = None,
             y: str = 'value',
             hue: str = 'variable',
-            row: str = 'CustAST_m',
-            col: str = 'CustAST_n',
+            row: str = 'custom_slope',
+            col: str = 'custom_intercept',
             epw_filter=None,
             id_vars: list = None,
             value_vars: list = None,
@@ -1074,10 +1074,10 @@ class PlottingMixin(HourlyPlottingMixin):
         hue : Any
             Argument used by `PlottingMixin.plot_hourly_scatter`.
         row : Any
-            Column of the subplot rows (default ``'CustAST_m'``, a parameter of the custom
+            Column of the subplot rows (default ``'custom_slope'``, a parameter of the custom
             model). A column that is not in the plotted data is ignored with a message.
         col : Any
-            Column of the subplot columns (default ``'CustAST_n'``), as ``row``.
+            Column of the subplot columns (default ``'custom_intercept'``), as ``row``.
         id_vars : Any
             Columns kept as identifiers when the hourly results are stacked (see
             `PlottingMixin.prepare_hourly_long_df`). The ``row``, ``col`` and ``hue``
@@ -1268,8 +1268,8 @@ class PlottingMixin(HourlyPlottingMixin):
             x: str = 'datetime',
             y: str = 'value',
             hue: str = 'variable',
-            row: str = 'CustAST_m',
-            col: str = 'CustAST_n',
+            row: str = 'custom_slope',
+            col: str = 'custom_intercept',
             epw_filter=None,
             id_vars: list = None,
             value_vars: list = None,
@@ -1316,10 +1316,10 @@ class PlottingMixin(HourlyPlottingMixin):
         hue : Any
             Argument used by `PlottingMixin.plot_hourly_lines`.
         row : Any
-            Column of the subplot rows (default ``'CustAST_m'``, a parameter of the custom
+            Column of the subplot rows (default ``'custom_slope'``, a parameter of the custom
             model). A column that is not in the plotted data is ignored with a message.
         col : Any
-            Column of the subplot columns (default ``'CustAST_n'``), as ``row``.
+            Column of the subplot columns (default ``'custom_intercept'``), as ``row``.
         id_vars : Any
             Columns kept as identifiers when the hourly results are stacked (see
             `PlottingMixin.prepare_hourly_long_df`). The ``row``, ``col`` and ``hue``
@@ -2116,7 +2116,7 @@ class PlottingMixin(HourlyPlottingMixin):
             show_removed_models: bool = True,
             filename_template: str = None,
     ):
-        """Plot the m-n band of published adaptive models and the simulated (CustAST_m, CustAST_n) pairs.
+        """Plot the m-n band of published adaptive models and the simulated (custom_slope, custom_intercept) pairs.
 
         The figure shows the published models used to fit the band (see ``set_mn_filter``), the
         regression line of m on n, the inclusion interval between the two parallel bounds, and the
@@ -2160,10 +2160,10 @@ class PlottingMixin(HourlyPlottingMixin):
             raise ValueError("plot_mn_filter: df_source must be 'parametric', 'optimisation' or None.")
 
         def _pairs(df):
-            if not isinstance(df, pd.DataFrame) or df.empty or 'CustAST_m' not in df.columns or 'CustAST_n' not in df.columns:
+            if not isinstance(df, pd.DataFrame) or df.empty or 'custom_slope' not in df.columns or 'custom_intercept' not in df.columns:
                 return pd.DataFrame({'m': pd.Series(dtype=float), 'n': pd.Series(dtype=float)})
-            pairs = df[['CustAST_m', 'CustAST_n']].dropna().drop_duplicates()
-            return pairs.rename(columns={'CustAST_m': 'm', 'CustAST_n': 'n'}).astype(float)
+            pairs = df[['custom_slope', 'custom_intercept']].dropna().drop_duplicates()
+            return pairs.rename(columns={'custom_slope': 'm', 'custom_intercept': 'n'}).astype(float)
 
         included = _pairs(None)
         excluded = _pairs(None)

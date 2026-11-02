@@ -158,13 +158,13 @@ def test_resolve_targets_expands_a_people_instance_of_a_zone_list():
     assert get_available_target_names(idf) == ['Block1:Zone1 Office Occupants', 'Block1:Zone2 Office Occupants']
 
 
-def _model(idf, temp_ctrl='temperature'):
+def _model(idf, setpoint_type='temperature'):
     """The model of set_comfort_models: the IDF, the temperature control and the messages."""
-    return SimpleNamespace(idf=idf, temp_ctrl=temp_ctrl, log=lambda *lines: None)
+    return SimpleNamespace(idf=idf, setpoint_type=setpoint_type, log=lambda *lines: None)
 
 
 def test_accim_model_reads_people_instance_objects():
-    model = AccimModel(_two_zone_model(), 'vrf_ac', 'temperature', verbose_mode=False)
+    model = AccimModel(_two_zone_model(), 'vrf_ac', 'temperature', verbose=False)
 
     assert sorted(model.occupied_zones_orig) == ['Block1:Zone1', 'Block1:Zone2']
     assert model.ems_names == ['Block1_Zone1', 'Block1_Zone2']
@@ -176,11 +176,11 @@ def test_accim_model_rejects_models_without_people_or_people_instances():
     idf = _FakeIDF([_zone('Block1:Zone1'), _definition('Office Definition')])
 
     with pytest.raises(ValueError, match='The model has no People objects or People:Instance objects'):
-        AccimModel(idf, 'vrf_ac', 'temperature', verbose_mode=False)
+        AccimModel(idf, 'vrf_ac', 'temperature', verbose=False)
 
 
-@pytest.mark.parametrize('temp_ctrl, model_3', [('temperature', ''), ('pmv', 'Fanger')])
-def test_set_comfort_models_sets_the_comfort_models_in_the_people_definitions(temp_ctrl, model_3):
+@pytest.mark.parametrize('setpoint_type, model_3', [('temperature', ''), ('pmv', 'Fanger')])
+def test_set_comfort_models_sets_the_comfort_models_in_the_people_definitions(setpoint_type, model_3):
     # Models 4 to 7 are emptied, as in the People objects
     shared = _definition('Office Definition', Thermal_Comfort_Model_4_Type='Pierce', Thermal_Comfort_Model_7_Type='KSU')
     unused = _definition('Unused Definition', Thermal_Comfort_Model_1_Type='KSU')
@@ -190,7 +190,7 @@ def test_set_comfort_models_sets_the_comfort_models_in_the_people_definitions(te
         _instance('People Block1:Zone2', 'OFFICE DEFINITION', 'Block1:Zone2'),
     ])
 
-    set_comfort_models(_model(idf, temp_ctrl))
+    set_comfort_models(_model(idf, setpoint_type))
 
     assert [getattr(shared, f) for f in COMFORT_MODEL_FIELDS] == [
         'AdaptiveASH55', 'AdaptiveCEN15251', model_3, '', '', '', '']
@@ -209,7 +209,7 @@ def test_set_comfort_models_rejects_a_missing_people_definition():
 def test_set_pmv_input_parameters_changes_the_people_instances_and_their_definitions():
     idf = _two_zone_model()
 
-    set_pmv_input_parameters(idf, air_velocity={'Block1:Zone1': 0.3}, work_efficiency=0.0, verbose_mode=False)
+    set_pmv_input_parameters(idf, air_velocity={'Block1:Zone1': 0.3}, work_efficiency=0.0, verbose=False)
 
     zone1, zone2 = idf.idfobjects['PEOPLE:INSTANCE']
     assert zone1.Air_Velocity_Schedule_Name == 'Sch_Vel_People_Block1_Zone1'
@@ -226,7 +226,7 @@ def test_set_pmv_input_parameters_changes_the_people_instances_and_their_definit
 def test_always_occupied_functions_change_the_people_instances():
     idf = _two_zone_model(_people('Old People', 'Block1:Zone1'))
 
-    set_zones_always_occupied(idf, verbose_mode=False)
+    set_zones_always_occupied(idf, verbose=False)
     assert {p.Number_of_People_Schedule_Name for p in get_people_objects(idf)} == {'On'}
 
     set_occupancy_to_always(idf)

@@ -66,16 +66,18 @@ _EARLIER_VERSION_LINES = {
     'MinTempDiffVOF': ('SetVOFinputData', 2, 'MinTempDiffVOF'),
     'MultiplierVOF': ('SetVOFinputData', 3, 'MultiplierVOF'),
 }
-#: The coefficients of the custom comfort model, by their names in the parametric module, and their EMS variables
+#: The coefficients of the custom comfort model: their parameter names -> (their EMS variables in the programs
+#: SetInputData_<zone>, their names in the arguments that accim.utils.get_accim_args reads from the models of
+#: earlier versions of accim)
 CUSTOM_MODEL_VARIABLES = {
-    'm': 'm',
-    'n': 'n',
-    'ACSToffset': 'CustAST_ACSToffset',
-    'AHSToffset': 'CustAST_AHSToffset',
-    'ACSTaul': 'CustAST_ACSTaul',
-    'ACSTall': 'CustAST_ACSTall',
-    'AHSTaul': 'CustAST_AHSTaul',
-    'AHSTall': 'CustAST_AHSTall',
+    'custom_slope': ('m', 'm'),
+    'custom_intercept': ('n', 'n'),
+    'custom_cooling_offset': ('CustAST_ACSToffset', 'ACSToffset'),
+    'custom_heating_offset': ('CustAST_AHSToffset', 'AHSToffset'),
+    'custom_cooling_upper_limit': ('CustAST_ACSTaul', 'ACSTaul'),
+    'custom_cooling_lower_limit': ('CustAST_ACSTall', 'ACSTall'),
+    'custom_heating_upper_limit': ('CustAST_AHSTaul', 'AHSTaul'),
+    'custom_heating_lower_limit': ('CustAST_AHSTall', 'AHSTall'),
 }
 
 
@@ -105,18 +107,18 @@ def _set_inputs(idf, values: dict) -> None:
 
 
 def get_custom_model_arguments(idf) -> dict:
-    """The coefficients of the custom comfort model (ComfStand 99) of a model, by their names in the parametric
-    module (``{'m': 0.31, 'n': 17.8, 'ACSToffset': 3.5...}``): those of its first zone, or those of the programs of
-    the models of earlier versions of accim."""
+    """The coefficients of the custom comfort model (comfort_standard 99) of a model, by their parameter names
+    (``{'custom_slope': 0.31, 'custom_intercept': 17.8, 'custom_cooling_offset': 3.5...}``): those of its first
+    zone, or those of the programs of the models of earlier versions of accim."""
     zone_programs = input_programs(idf)
     if zone_programs:
         values = read_inputs(next(iter(zone_programs.values())))
-        return {name: values.get(variable, 0) for name, variable in CUSTOM_MODEL_VARIABLES.items()}
+        return {name: values.get(variable, 0) for name, (variable, _) in CUSTOM_MODEL_VARIABLES.items()}
     from accim.utils import get_accim_args
     arguments = get_accim_args(idf).get('CustAST')
     if not isinstance(arguments, dict):
         return {name: 0 for name in CUSTOM_MODEL_VARIABLES}
-    return {name: arguments.get(name, 0) for name in CUSTOM_MODEL_VARIABLES}
+    return {name: arguments.get(key, 0) for name, (_, key) in CUSTOM_MODEL_VARIABLES.items()}
 
 # def modify_VSToffset(building, value):
 #     import accim.sim.accis_single_idf_funcs as accis
@@ -138,7 +140,7 @@ def get_custom_model_arguments(idf) -> dict:
 
 
 def get_valid_param_combinations():
-    """List the allowed `(CAT, ComfMod)` options per `ComfStand` value.
+    """List the allowed `(category, comfort_mode)` options per `comfort_standard` value.
 
     Parameters
     ----------
@@ -148,8 +150,8 @@ def get_valid_param_combinations():
     Returns
     -------
     dict
-        Dictionary keyed by `ComfStand` with two lists:
-        `[valid_CAT_values, valid_ComfMod_values]`.
+        Dictionary keyed by `comfort_standard` with two lists:
+        `[valid_category_values, valid_comfort_mode_values]`.
 
     Usage
     -----
@@ -232,8 +234,9 @@ def drop_invalid_param_combinations(samples_df):
     Parameters
     ----------
     samples_df : pandas.DataFrame
-        Dataframe with sampled ACCIS parameters (for example `ComfStand`,
-        `CAT`, `ComfMod`, `HVACmode`).
+        Dataframe with sampled ACCIS parameters (for example `comfort_standard`,
+        `category`, `comfort_mode`, `hvac_mode`; the names of accim 0.x, such as
+        `ComfStand`, are also accepted).
 
     Returns
     -------
@@ -276,74 +279,43 @@ def drop_invalid_param_combinations(samples_df):
         22: [[1, 2, 3], [0]],
     }
 
+    # The columns of the parameters: their names since accim 1.0.0, or those of accim 0.x
+    legacy_names = {
+        'comfort_standard': 'ComfStand', 'category': 'CAT', 'comfort_mode': 'ComfMod', 'hvac_mode': 'HVACmode',
+        'ventilation_control': 'VentCtrl', 'ventilation_setpoint_offset': 'VSToffset',
+        'min_outdoor_temp_offset': 'MinOToffset', 'max_wind_speed': 'MaxWindSpeed', 'setpoint_accuracy': 'SetpointAcc',
+        'opening_factor_max_temp_diff': 'MaxTempDiffVOF', 'opening_factor_min_temp_diff': 'MinTempDiffVOF',
+        'min_opening_factor': 'MultiplierVOF',
+    }
+    columns = {new: (old if old in samples_df.columns and new not in samples_df.columns else new)
+               for new, old in legacy_names.items()}
+
+    # The rules that make a combination not valid: each one is checked if the plan has its columns (a missing column,
+    # or a comfort_standard that is not in valid_params, such as 99, only skips that rule)
+    rules = (
+        lambda v: v('category') not in valid_params[v('comfort_standard')][0],
+        lambda v: v('comfort_mode') not in valid_params[v('comfort_standard')][1],
+        lambda v: v('ventilation_control') != 0 and v('hvac_mode') == 0,
+        lambda v: v('ventilation_setpoint_offset') != 0 and v('hvac_mode') == 0,
+        lambda v: v('min_outdoor_temp_offset') != 0 and v('hvac_mode') == 0,
+        lambda v: v('max_wind_speed') != 0 and v('hvac_mode') == 0,
+        lambda v: v('setpoint_accuracy') < 0,
+        lambda v: v('opening_factor_max_temp_diff') <= 0,
+        lambda v: v('opening_factor_min_temp_diff') <= 0,
+        lambda v: v('opening_factor_min_temp_diff') >= v('opening_factor_max_temp_diff'),
+        lambda v: v('min_opening_factor') < 0 or v('min_opening_factor') > 1,
+    )
     samples_df['valid'] = True
     for i in samples_df.index:
-        # Each rule is checked if the plan has its columns: a missing column (or a ComfStand that is not in
-        # valid_params, such as 99) only skips that rule
-        try:
-            if samples_df.loc[i, 'CAT'] not in valid_params[samples_df.loc[i, 'ComfStand']][0]:
-                samples_df.loc[i, 'valid'] = False
-        except KeyError:
-            pass
+        def value(name, i=i):
+            return samples_df.loc[i, columns[name]]
 
-        try:
-            if samples_df.loc[i, 'ComfMod'] not in valid_params[samples_df.loc[i, 'ComfStand']][1]:
-                samples_df.loc[i, 'valid'] = False
-        except KeyError:
-            pass
-
-        try:
-            if samples_df.loc[i, 'VentCtrl'] != 0 and samples_df.loc[i, 'HVACmode'] == 0:
-                samples_df.loc[i, 'valid'] = False
-        except KeyError:
-            pass
-
-        try:
-            if samples_df.loc[i, 'VSToffset'] != 0 and samples_df.loc[i, 'HVACmode'] == 0:
-                samples_df.loc[i, 'valid'] = False
-        except KeyError:
-            pass
-
-        try:
-            if samples_df.loc[i, 'MinOToffset'] != 0 and samples_df.loc[i, 'HVACmode'] == 0:
-                samples_df.loc[i, 'valid'] = False
-        except KeyError:
-            pass
-
-        try:
-            if samples_df.loc[i, 'MaxWindSpeed'] != 0 and samples_df.loc[i, 'HVACmode'] == 0:
-                samples_df.loc[i, 'valid'] = False
-        except KeyError:
-            pass
-
-        try:
-            if samples_df.loc[i, 'SetpointAcc'] < 0:
-                samples_df.loc[i, 'valid'] = False
-        except KeyError:
-            pass
-        try:
-            if samples_df.loc[i, 'MaxTempDiffVOF'] <= 0:
-                samples_df.loc[i, 'valid'] = False
-        except KeyError:
-            pass
-
-        try:
-            if samples_df.loc[i, 'MinTempDiffVOF'] <= 0:
-                samples_df.loc[i, 'valid'] = False
-        except KeyError:
-            pass
-        try:
-            if samples_df.loc[i, 'MinTempDiffVOF'] >= samples_df.loc[i, 'MaxTempDiffVOF']:
-                samples_df.loc[i, 'valid'] = False
-        except KeyError:
-            pass
-
-        try:
-            if samples_df.loc[i, 'MultiplierVOF'] < 0 or samples_df.loc[i, 'MultiplierVOF'] > 1:
-                samples_df.loc[i, 'valid'] = False
-        except KeyError:
-            pass
-
+        for rule in rules:
+            try:
+                if rule(value):
+                    samples_df.loc[i, 'valid'] = False
+            except KeyError:
+                pass
 
     samples_cleaned = samples_df[samples_df['valid'] == True].drop(columns=['valid'])
 

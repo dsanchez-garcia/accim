@@ -47,7 +47,7 @@ _FREQUENCIES = ('timestep', 'hourly', 'daily', 'monthly', 'runperiod', 'annual',
 # The frequency whose columns are summed when a CSV file has the outputs at several frequencies (they add up to the
 # same hours)
 _FREQUENCY_ORDER = ('runperiod', 'annual', 'monthly', 'daily', 'hourly', 'timestep', 'detailed', 'each call', '')
-# The building averages of make_averages, which are not zones
+# The building averages of add_building_averages, which are not zones
 _NOT_ZONES = ('BUILDING_AVERAGE',)
 # The CSV files of EnergyPlus and of Table that have no outputs of the zones
 _AUXILIARY_CSV = ('Meter.csv', 'Table.csv', 'Zsz.csv', 'Ssz.csv', 'Map.csv', 'Screen.csv', 'CSVconcatenated.csv',

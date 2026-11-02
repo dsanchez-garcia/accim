@@ -27,8 +27,8 @@ class _DummySubplotOrderingSession(PlottingMixin):
                                 'epw': epw,
                                 'building_type': building_type,
                                 'performance': performance,
-                                'ComfStand': comf_stand,
-                                'HVACmode': comf_stand,
+                                'comfort_standard': comf_stand,
+                                'hvac_mode': comf_stand,
                                 'Heating:Electricity [J]': 10_000_000 + 100_000 * comf_stand,
                                 'Cooling:Electricity [J]': 8_000_000 + 120_000 * comf_stand,
                             }
@@ -77,7 +77,7 @@ def test_plot_parametric_scatter_descending_subplot_order(tmp_path):
     sim = _DummySubplotOrderingSession()
 
     grid = sim.plot_parametric_scatter(
-        x='ComfStand',
+        x='comfort_standard',
         y='Heating:Electricity [J]',
         df_source='parametric',
         hue='performance',
@@ -96,7 +96,7 @@ def test_plot_parametric_scatter_ordering_without_subplots_raises(tmp_path):
 
     with pytest.raises(ValueError, match='no active subplot dimensions'):
         sim.plot_parametric_scatter(
-            x='ComfStand',
+            x='comfort_standard',
             y='Heating:Electricity [J]',
             df_source='parametric',
             out_dir=str(tmp_path),
@@ -109,7 +109,7 @@ def test_plot_parametric_scatter_custom_dimension_not_active_raises(tmp_path):
 
     with pytest.raises(ValueError, match='not active in this plot'):
         sim.plot_parametric_scatter(
-            x='ComfStand',
+            x='comfort_standard',
             y='Heating:Electricity [J]',
             df_source='parametric',
             col='epw',

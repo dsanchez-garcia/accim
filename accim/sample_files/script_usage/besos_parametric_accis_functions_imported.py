@@ -16,11 +16,11 @@ accis.add_accis_to_idf(
     idf=building,
     script_type='vrf_mm',
     supply_air_temp_input_method='temperature difference',
-    output_keep_existing=False,
+    keep_existing_outputs=False,
     output_type='standard',
-    output_freqs=['hourly'],
+    output_frequencies=['hourly'],
     # energyplus_version='9.4',
-    temp_ctrl='temperature',
+    setpoint_type='temperature',
 )
 
 ##
@@ -28,16 +28,16 @@ accis.add_accis_to_idf(
 # def modify_accis(building, value):
 #     accis.modify_accis(
 #         idf=building,
-#         comf_stand=1,
-#         cat=3,
-#         comf_mod=3,
-#         # setpoint_acc=1000,
+#         comfort_standard=1,
+#         category=3,
+#         comfort_mode=3,
+#         # setpoint_accuracy=1000,
 #         hvac_mode=2,
-#         vent_ctrl=0,
-#         cool_season_start='01/02',
-#         cool_season_end='01/03',
-#         vst_offset=value,
-#         # min_ot_offset=50,
+#         ventilation_control=0,
+#         cooling_season_start='01/02',
+#         cooling_season_end='01/03',
+#         ventilation_setpoint_offset=value,
+#         # min_outdoor_temp_offset=50,
 #         # max_wind_speed=50
 #     )
 #     return

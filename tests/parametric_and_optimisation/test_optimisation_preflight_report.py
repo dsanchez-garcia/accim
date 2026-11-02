@@ -34,7 +34,7 @@ def _make_lightweight_optimisation(epws):
         buildings=None,
         epws=epws,
         parameters_type=None,
-        bypass_addAccis=True,
+        bypass_add_accis=True,
     )
     sim.buildings = [_DummyBuilding('idf_a.idf'), _DummyBuilding('idf_b.idf')]
     sim.building = sim.buildings[0]

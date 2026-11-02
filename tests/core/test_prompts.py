@@ -45,12 +45,12 @@ VRF_MODEL_ANSWERS = [
 VRF_MODEL_ARGUMENTS = {
     'script_type': 'vrf_mm',
     'supply_air_temp_input_method': 'supply air temperature',
-    'output_keep_existing': False,
+    'keep_existing_outputs': False,
     'output_type': 'standard',
-    'output_freqs': ['hourly'],
-    'output_gen_dataframe': False,
+    'output_frequencies': ['hourly'],
+    'make_outputs_dataframe': False,
     'energyplus_version': 'auto',
-    'temp_ctrl': 'temperature',
+    'setpoint_type': 'temperature',
 }
 
 
@@ -76,12 +76,12 @@ def test_ask_model_arguments_of_the_existing_hvac_systems():
     assert prompts.ask_model_arguments(ask=script) == {
         'script_type': 'ex_mm',
         'supply_air_temp_input_method': None,
-        'output_keep_existing': True,
+        'keep_existing_outputs': True,
         'output_type': 'detailed',
-        'output_freqs': ['hourly', 'runperiod'],
-        'output_gen_dataframe': True,
+        'output_frequencies': ['hourly', 'runperiod'],
+        'make_outputs_dataframe': True,
         'energyplus_version': '9.6',
-        'temp_ctrl': 'pmv',
+        'setpoint_type': 'pmv',
     }
     assert script.steps == []
 
@@ -129,12 +129,12 @@ MIXED_MODE_STEPS = _confirmed(
     ('ASTtol value steps', ''),
 )
 MIXED_MODE_ARGUMENTS = dict(
-    comf_stand=[1, 2], cat=[1, 80], comf_mod=[0, 3], setpoint_acc=1000, cat_cool_offset=1, cat_heat_offset=-1,
-    cool_season_start=152, cool_season_end=273, hvac_mode=[0, 2], vent_ctrl=[0, 2], max_temp_diff_vof=5,
-    min_temp_diff_vof=2, multiplier_vof=0.5, vst_offset=[0, 1], min_ot_offset=[50], max_wind_speed=[10],
-    ast_tol_start=0.1, ast_tol_end_input=0.3, ast_tol_steps=0.1,
-    cust_ast_m=0, cust_ast_n=0, cust_ast_acst_offset=0, cust_ast_ahst_offset=0, cust_ast_acst_aul=0,
-    cust_ast_acst_all=0, cust_ast_ahst_aul=0, cust_ast_ahst_all=0,
+    comfort_standard=[1, 2], category=[1, 80], comfort_mode=[0, 3], setpoint_accuracy=1000, category_cooling_offset=1, category_heating_offset=-1,
+    cooling_season_start=152, cooling_season_end=273, hvac_mode=[0, 2], ventilation_control=[0, 2], opening_factor_max_temp_diff=5,
+    opening_factor_min_temp_diff=2, min_opening_factor=0.5, ventilation_setpoint_offset=[0, 1], min_outdoor_temp_offset=[50], max_wind_speed=[10],
+    setpoint_tolerance_start=0.1, setpoint_tolerance_end=0.3, setpoint_tolerance_step=0.1,
+    custom_slope=0, custom_intercept=0, custom_cooling_offset=0, custom_heating_offset=0, custom_cooling_upper_limit=0,
+    custom_cooling_lower_limit=0, custom_heating_upper_limit=0, custom_heating_lower_limit=0,
 )
 
 
@@ -173,14 +173,14 @@ def test_ask_generation_arguments_of_the_custom_comfort_model():
     args = prompts.ask_generation_arguments('vrf_ac', ask=script)
 
     assert script.steps == []
-    assert (args['comf_stand'], args['cat'], args['comf_mod']) == ([99], [80], [3])
-    assert (args['cust_ast_m'], args['cust_ast_n'], args['cust_ast_ahst_offset'], args['cust_ast_acst_offset'],
-            args['cust_ast_acst_all'], args['cust_ast_acst_aul'], args['cust_ast_ahst_all'],
-            args['cust_ast_ahst_aul']) == (0.31, 17.8, -3.5, 3.5, 10, 33.5, 10, 33.5)
+    assert (args['comfort_standard'], args['category'], args['comfort_mode']) == ([99], [80], [3])
+    assert (args['custom_slope'], args['custom_intercept'], args['custom_heating_offset'], args['custom_cooling_offset'],
+            args['custom_cooling_lower_limit'], args['custom_cooling_upper_limit'], args['custom_heating_lower_limit'],
+            args['custom_heating_upper_limit']) == (0.31, 17.8, -3.5, 3.5, 10, 33.5, 10, 33.5)
     # Fully air-conditioned, with the defaults of the questions left empty
-    assert (args['hvac_mode'], args['vent_ctrl']) == ([0], [0])
-    assert (args['setpoint_acc'], args['cat_cool_offset'], args['cat_heat_offset']) == (10000, 0, 0)
-    assert (args['cool_season_start'], args['cool_season_end']) == (121, 274)
+    assert (args['hvac_mode'], args['ventilation_control']) == ([0], [0])
+    assert (args['setpoint_accuracy'], args['category_cooling_offset'], args['category_heating_offset']) == (10000, 0, 0)
+    assert (args['cooling_season_start'], args['cooling_season_end']) == (121, 274)
 
 
 def _replace(steps, expected, *new_steps):
@@ -211,8 +211,8 @@ def _replace(steps, expected, *new_steps):
     ('minimum temperature difference number',
      [('minimum temperature difference number', '5'), ('minimum temperature difference number', '2')],
      'The minimum temperature difference number is not correct'),
-], ids=['comf_stand', 'cat', 'comf_mod', 'setpoint_acc', 'cat_heat_offset', 'cool_season_start', 'hvac_mode',
-        'min_temp_diff_vof'])
+], ids=['comfort_standard', 'category', 'comfort_mode', 'setpoint_accuracy', 'category_heating_offset', 'cooling_season_start', 'hvac_mode',
+        'opening_factor_min_temp_diff'])
 def test_ask_generation_arguments_asks_again_after_an_invalid_answer(capsys, question, new_steps, message):
     script = _Script(_replace(MIXED_MODE_STEPS, question, *new_steps))
 

@@ -12,6 +12,7 @@ import warnings
 from pathlib import Path
 from types import SimpleNamespace
 
+import pandas as pd
 import pytest
 
 import accim
@@ -80,9 +81,9 @@ def test_the_old_argument_names_are_arguments_of_the_new_functions():
 
 
 def test_arguments_with_the_names_of_accim_0x():
-    arguments = accis._Arguments(comf_stand=[1], script_type='vrf_ac')
+    arguments = accis._Arguments(comfort_standard=[1], script_type='vrf_ac')
 
-    assert 'ComfStand' in arguments and 'comf_stand' in arguments
+    assert 'ComfStand' in arguments and 'comfort_standard' in arguments
     assert 'NameSuffix' not in arguments
     with pytest.warns(DeprecationWarning, match="arguments\\['ComfStand'\\] is deprecated"):
         assert arguments.get('ComfStand') == [1]
@@ -110,8 +111,8 @@ def test_deprecated_class_keeps_the_positional_arguments_of_accim_0x(monkeypatch
         job = accis_single_idf.addAccis(idf, 'vrf_ac', 'temperature difference', 'standard', ['hourly'], False, False,
                                         None, '25.1', 'temperature')
 
-    assert calls[0]['energyplus_version'] == '25.1' and calls[0]['temp_ctrl'] == 'temperature'
-    assert calls[0]['output_take_dataframe'] is None and 'output_gen_dataframe' not in calls[0]
+    assert calls[0]['energyplus_version'] == '25.1' and calls[0]['setpoint_type'] == 'temperature'
+    assert calls[0]['outputs_dataframe'] is None and 'make_outputs_dataframe' not in calls[0]
     assert job.arguments['ScriptType'] == 'vrf_ac' and job.arguments['EnergyPlus_version'] == '25.1'
     assert (job.occupied_zones, job.SetAST.Name, job.SetInputData) == (['Z1'], 'SetAST', None)
 
@@ -135,7 +136,57 @@ def test_apmv_setpoints_module_is_a_deprecated_alias_of_apmv(monkeypatch):
 
 def test_apmv_functions_have_pep8_arguments_and_accept_the_old_ones():
     assert 'other_pmv_related_outputs' in inspect.signature(apmv.apply_apmv_setpoints).parameters
-    assert {'supply_air_temp_input_method', 'vrf_schedule'} <= set(inspect.signature(apmv.add_vrf_system).parameters)
+    assert {'supply_air_temp_input_method', 'vrf_availability_schedule'} <= \
+           set(inspect.signature(apmv.add_vrf_system).parameters)
+
+
+def test_the_old_apmv_argument_names_are_arguments_of_the_new_functions():
+    functions = [apmv.apply_apmv_setpoints, apmv.generate_df_from_args, apmv.add_vrf_system,
+                 apmv.set_zones_always_occupied, apmv.add_ems_debug_output, apmv.set_pmv_input_parameters]
+    new_names = set().union(*(inspect.signature(f).parameters for f in functions))
+
+    assert set(apmv._LEGACY_ARGUMENTS.values()) <= new_names
+    assert not set(apmv._LEGACY_ARGUMENTS) & new_names
+
+
+def test_generate_df_from_args_accepts_the_names_of_accim_0x():
+    values = dict(adap_coeff_cooling=0.3, adap_coeff_heating=-0.3, pmv_cooling_sp=0.4, pmv_heating_sp=-0.4,
+                  tolerance_cooling_sp_cooling_season=-0.1, tolerance_cooling_sp_heating_season=-0.2,
+                  tolerance_heating_sp_cooling_season=0.1, tolerance_heating_sp_heating_season=0.2)
+    defaults = {f'dflt_for_{name}': 0 for name in values}
+
+    with pytest.warns(DeprecationWarning, match='adap_coeff_cooling -> adaptive_coefficient_cooling'):
+        df = apmv.generate_df_from_args(['Zone1 People'], ['Zone1_People'], **values, **defaults)
+
+    expected = {apmv._LEGACY_ARGUMENTS[name]: value for name, value in values.items()}
+    assert df.loc['Zone1 People', list(expected)].to_dict() == expected
+    assert df.loc['Zone1 People', 'underscore_zonename'] == 'Zone1_People'
+
+
+def test_change_adaptive_coeff_accepts_the_columns_of_accim_0x():
+    program = SimpleNamespace(Name='set_zone_input_data_Zone1_People', Program_Line_1='', Program_Line_2='')
+    building = SimpleNamespace(idfobjects={'EnergyManagementSystem:Program': [program]})
+    df = pd.DataFrame({'adap_coeff_cooling': [0.3], 'adap_coeff_heating': [-0.2],
+                       'underscore_zonename': ['Zone1_People']}, index=['Zone1 People'])
+
+    with pytest.warns(DeprecationWarning, match='adap_coeff_cooling'):
+        apmv.change_adaptive_coeff(building, df)
+
+    # The EMS variables keep the names of accim 0.x
+    assert program.Program_Line_1 == 'set adap_coeff_cooling_Zone1_People = 0.3'
+    assert program.Program_Line_2 == 'set adap_coeff_heating_Zone1_People = -0.2'
+
+
+def test_accepts_legacy_kwargs_only_renames_the_arguments_of_the_function():
+    @accepts_legacy_kwargs({'oldName': 'new_name', 'otherOld': 'other_new'})
+    def function(new_name=0):
+        return new_name
+
+    with pytest.warns(DeprecationWarning):
+        assert function(oldName=2) == 2
+    # other_new is not an argument of the function, so otherOld is an unexpected argument, as before
+    with pytest.raises(TypeError, match='otherOld'):
+        function(otherOld=1)
 
 
 def test_accepts_legacy_kwargs():

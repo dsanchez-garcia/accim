@@ -18,7 +18,7 @@ SAMPLE_IDF = (REPO / 'accim' / 'sample_files' / 'sample IDFs' / 'input_IDFs'
 IDD_25_1 = Path('C:/EnergyPlusV25-1-0/Energy+.idd')
 IDEAL_LOADS = 'ZoneHVAC:IdealLoadsAirSystem'
 ADD_ACCIS_ARGS = dict(supply_air_temp_input_method='temperature difference', output_type='simplified',
-                      output_freqs=['hourly'], temp_ctrl='temperature', verbose_mode=False)
+                      output_frequencies=['hourly'], setpoint_type='temperature', verbose=False)
 
 pytestmark = pytest.mark.skipif(not (IDD_25_1.exists() and SAMPLE_IDF.exists()),
                                 reason='needs EnergyPlus 25.1 and the sample IDF of the repository')
@@ -59,7 +59,7 @@ def test_add_accis_to_idf_removes_the_ideal_loads_systems_that_the_vrf_systems_r
 
 
 def test_add_vrf_system_of_the_apmv_setpoints_removes_the_ideal_loads_systems(building):
-    apmv.add_vrf_system(building, verbose_mode=False)
+    apmv.add_vrf_system(building, verbose=False)
 
     assert len(building.idfobjects[IDEAL_LOADS]) == 0
     assert {object_type for object_type, _ in _equipment(building)} == {

@@ -28,7 +28,7 @@ def _make_summary_sim(epw='Test.epw'):
         buildings=None,
         epws=[epw],
         parameters_type=None,
-        bypass_addAccis=True,
+        bypass_add_accis=True,
     )
 
 
@@ -100,7 +100,7 @@ def _make_summary_optim_sim(epws):
         buildings=None,
         epws=epws,
         parameters_type=None,
-        bypass_addAccis=True,
+        bypass_add_accis=True,
     )
     sim.buildings = [_DummyOptimBuilding('dummy.idf')]
     sim.building = sim.buildings[0]
@@ -350,7 +350,7 @@ def test_load_outputs_optimisation_updates_simulation_summary(tmp_path):
         buildings=None,
         epws=['A.epw'],
         parameters_type=None,
-        bypass_addAccis=True,
+        bypass_add_accis=True,
     )
     loaded = sim.load_outputs_optimisation(pickle_path=str(pickle_path))
 

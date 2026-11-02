@@ -77,22 +77,22 @@ def _build_parametric_session_with_csv_outputs(tmp_path):
     sim.outputs_param_simulation = pd.DataFrame(
         [
             {
-                'CustAST_m': 0.01,
-                'CustAST_n': 5.0,
+                'custom_slope': 0.01,
+                'custom_intercept': 5.0,
                 'epw': 'Seville',
                 'idf': 'idf_a',
                 'output_dir': str(seville_dir),
             },
             {
-                'CustAST_m': 0.66,
-                'CustAST_n': 17.0,
+                'custom_slope': 0.66,
+                'custom_intercept': 17.0,
                 'epw': 'Sydney',
                 'idf': 'idf_a',
                 'output_dir': str(sydney_dir),
             },
         ]
     )
-    sim.outputs_param_simulation.attrs['parameters_names'] = ['CustAST_m', 'CustAST_n']
+    sim.outputs_param_simulation.attrs['parameters_names'] = ['custom_slope', 'custom_intercept']
     sim.last_run_type = 'parametric'
     return sim
 
@@ -150,11 +150,11 @@ def test_get_hourly_df_parametric_keeps_requested_column_order(tmp_path):
 def test_get_hourly_df_optimisation_keeps_csv_column_order(tmp_path):
     sim_dir = tmp_path / 'sim_seville'
     _write_hourly_csv(sim_dir, offset=0.0)
-    sim = OptimisationSimulation(buildings=None, epws=['Seville.epw'], parameters_type=None, bypass_addAccis=True)
+    sim = OptimisationSimulation(buildings=None, epws=['Seville.epw'], parameters_type=None, bypass_add_accis=True)
     sim.outputs_optimisation = pd.DataFrame(
         [
             {
-                'CustAST_m': 0.01,
+                'custom_slope': 0.01,
                 'epw': 'Seville',
                 'pareto-optimal': True,
                 'simulation_output_csv_path': str(sim_dir / 'eplusout.csv'),
@@ -219,14 +219,14 @@ def test_get_hourly_df_wrapper_supports_embedded_list_columns():
     sim = ParametricSimulation(parameters_type=None)
     sim.outputs_param_simulation = pd.DataFrame(
         {
-            'CustAST_m': [0.01, 0.66],
+            'custom_slope': [0.01, 0.66],
             'epw': ['Seville', 'Sydney'],
             'idf': ['idf_a', 'idf_a'],
             'Zone Operative Temperature': [[20.0, 21.0, 22.0], [23.0, 24.0, 25.0]],
             'Running Average Outdoor Air Temperature': [[16.0, 16.0, 16.0], [17.0, 17.0, 17.0]],
         }
     )
-    sim.outputs_param_simulation.attrs['parameters_names'] = ['CustAST_m']
+    sim.outputs_param_simulation.attrs['parameters_names'] = ['custom_slope']
     sim.last_run_type = 'parametric'
 
     hourly = sim.get_hourly_df(start_date='2024-01-01 01')

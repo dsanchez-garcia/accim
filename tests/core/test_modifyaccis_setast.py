@@ -33,10 +33,10 @@ ADD_ACCIS_ARGS = dict(
     script_type='vrf_mm',
     supply_air_temp_input_method='temperature difference',
     output_type='simplified',
-    output_freqs=['hourly'],
-    output_keep_existing=True,
-    temp_ctrl='temperature',
-    verbose_mode=False,
+    output_frequencies=['hourly'],
+    keep_existing_outputs=True,
+    setpoint_type='temperature',
+    verbose=False,
 )
 # The names of accim 0.x, which the deprecated functions accept
 LEGACY_ADD_ACCIS_ARGS = dict(
@@ -78,8 +78,8 @@ def _zone_inputs(building):
 def test_modify_accis_sets_m_and_n_in_the_inputs_of_each_zone(building):
     accis.add_accis_to_idf(building, **ADD_ACCIS_ARGS)
 
-    accis.modify_accis(building, comf_stand=99, comf_mod=3, cat=80, hvac_mode=2, vent_ctrl=0, cust_ast_m=0.3,
-                       cust_ast_n=18)
+    accis.modify_accis(building, comfort_standard=99, comfort_mode=3, category=80, hvac_mode=2, ventilation_control=0, custom_slope=0.3,
+                       custom_intercept=18)
     assert _setast_lines(building) == ['run SetAST_Master']
     inputs = _zone_inputs(building)
     assert len(inputs) == 2
@@ -95,8 +95,8 @@ def test_modify_accis_sets_m_and_n_in_the_inputs_of_each_zone(building):
 def test_modify_accis_sets_the_input_data_and_none_keeps_it(building):
     accis.add_accis_to_idf(building, **ADD_ACCIS_ARGS)
 
-    accis.modify_accis(building, comf_stand=2, cat=80, comf_mod=3, hvac_mode=2, vent_ctrl=1,
-                       cool_season_start='01/06', cool_season_end=250, ast_tol=0.2)
+    accis.modify_accis(building, comfort_standard=2, category=80, comfort_mode=3, hvac_mode=2, ventilation_control=1,
+                       cooling_season_start='01/06', cooling_season_end=250, setpoint_tolerance=0.2)
     for zone in input_programs(building):
         assert _program_lines(building, f'SetInputData_{zone}') == [
             'set ComfStand = 2', 'set CAT = 80', 'set ComfMod = 3', 'set HVACmode = 2', 'set VentCtrl = 1',
@@ -107,7 +107,7 @@ def test_modify_accis_sets_the_input_data_and_none_keeps_it(building):
             'set CustAST_AHSTaul = 0', 'set CustAST_AHSTall = 0', 'set MaxTempDiffVOF = 6',
             'set MinTempDiffVOF = 1', 'set MultiplierVOF = 0.25']
 
-    accis.modify_accis(building, comf_stand=1)
+    accis.modify_accis(building, comfort_standard=1)
     for zone in input_programs(building):
         assert _program_lines(building, f'SetInputData_{zone}')[:5] == [
             'set ComfStand = 1', 'set CAT = 80', 'set ComfMod = 3', 'set HVACmode = 2', 'set VentCtrl = 1']
@@ -129,8 +129,9 @@ def test_parametric_setters_set_the_inputs_of_all_the_zones(building):
                (152, 2.5, -2.5)
         assert inputs['MultiplierVOF'] == 0.5
     assert param_accis.get_custom_model_arguments(building) == {
-        'm': 0.31, 'n': 17.8, 'ACSToffset': 2.5, 'AHSToffset': -2.5, 'ACSTaul': 33.5, 'ACSTall': 10,
-        'AHSTaul': 33.5, 'AHSTall': 10}
+        'custom_slope': 0.31, 'custom_intercept': 17.8, 'custom_cooling_offset': 2.5, 'custom_heating_offset': -2.5,
+        'custom_cooling_upper_limit': 33.5, 'custom_cooling_lower_limit': 10, 'custom_heating_upper_limit': 33.5,
+        'custom_heating_lower_limit': 10}
 
 
 def test_parametric_setters_need_the_inputs_of_the_model(tmp_path):
@@ -147,7 +148,7 @@ def test_parametric_setters_need_the_inputs_of_the_model(tmp_path):
 
 def test_modify_accis_needs_the_accis(building):
     with pytest.raises(ValueError, match='Add the ACCIS first'):
-        accis.modify_accis(building, comf_stand=1)
+        accis.modify_accis(building, comfort_standard=1)
 
 
 @pytest.mark.skipif(LEGACY_IDF is None, reason='needs the output IDF of accim 0.x of the repository')
@@ -160,14 +161,14 @@ def test_modify_accis_updates_the_subprograms_of_esp_cte_and_int_iso7730_of_earl
 
     shutil.copy(LEGACY_IDF, tmp_path / 'legacy.idf')
     building = get_building(str(tmp_path / 'legacy.idf'))
-    accis.modify_accis(building, comf_stand=1, cat=3, comf_mod=3, hvac_mode=2, vent_ctrl=0)
+    accis.modify_accis(building, comfort_standard=1, category=3, comfort_mode=3, hvac_mode=2, ventilation_control=0)
     programs = {p.Name: p for p in building.idfobjects['EnergyManagementSystem:Program']}
-    for name, comf_stand in [('SetAST_CS0_0', 0), ('SetAST_CS22_0', 22)]:
+    for name, comfort_standard in [('SetAST_CS0_0', 0), ('SetAST_CS22_0', 22)]:
         replace_program_lines(programs[name], [f'! {name}', 'if (ComfMod == 0)',
-                                               *get_setpoint_lines(comf_stand, 0), 'endif'])
+                                               *get_setpoint_lines(comfort_standard, 0), 'endif'])
     others = {name: _program_lines(building, name) for name in ['SetAST_Master', 'SetAST_CS1_0', 'SetAST_CS13_0']}
 
-    accis.modify_accis(building, comf_stand=0, comf_mod=3)
+    accis.modify_accis(building, comfort_standard=0, comfort_mode=3)
 
     for name, lines in subprograms([0, 22]).items():
         assert _program_lines(building, name) == lines

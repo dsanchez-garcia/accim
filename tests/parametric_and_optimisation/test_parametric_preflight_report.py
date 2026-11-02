@@ -24,7 +24,7 @@ def _make_lightweight_parametric(epws, inputs):
         buildings=None,
         epws=epws,
         parameters_type=None,
-        bypass_addAccis=True,
+        bypass_add_accis=True,
     )
     sim.problem = _DummyProblem(inputs=inputs, outputs=['energy'])
     return sim

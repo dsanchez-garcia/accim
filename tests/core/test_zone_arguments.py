@@ -40,8 +40,8 @@ IDD_25_1 = default_energyplus_folder('25.1') / 'Energy+.idd'
 needs_energyplus = pytest.mark.skipif(not (IDD_25_1.exists() and SAMPLE_IDF.exists()),
                                       reason='needs EnergyPlus 25.1 and the sample IDF of the repository')
 ADD_ACCIS_ARGS = dict(supply_air_temp_input_method='temperature difference', output_type='simplified',
-                      output_freqs=['hourly'], output_keep_existing=False, temp_ctrl='temperature', verbose_mode=False)
-EN16798_II = dict(comf_stand=1, cat=2, comf_mod=3)
+                      output_frequencies=['hourly'], keep_existing_outputs=False, setpoint_type='temperature', verbose=False)
+EN16798_II = dict(comfort_standard=1, category=2, comfort_mode=3)
 
 
 # Inputs -------------------------------------------------------------------------------------------------------
@@ -80,7 +80,7 @@ def test_the_inputs_of_a_zone_are_all_the_arguments_of_the_accis():
 
 
 def test_input_values_of_the_arguments():
-    values = input_values(dict(comf_stand=2, cat=None, ast_tol=0.25, cool_season_start='01/06', cust_ast_m=0.3))
+    values = input_values(dict(comfort_standard=2, category=None, setpoint_tolerance=0.25, cooling_season_start='01/06', custom_slope=0.3))
 
     assert values == {'ComfStand': 2, 'ACSTtol': -0.25, 'AHSTtol': 0.25, 'CoolSeasonStart': 152, 'm': 0.3}
     assert input_lines(values, mixed_mode=False)[:3] == ['set ComfStand = 2', 'set CAT = 1', 'set ComfMod = 2']
@@ -99,13 +99,13 @@ def test_set_and_read_the_inputs_of_a_program():
 
 
 @pytest.mark.parametrize('zone_arguments, message', [
-    ([('Zone1', {'cat': 2})], 'must be a dictionary with the arguments of each zone'),
+    ([('Zone1', {'category': 2})], 'must be a dictionary with the arguments of each zone'),
     ({'Zone1': 2}, "The arguments of the zone 'Zone1'"),
     ({'Zone1': {'colour': 2}}, "'colour' \\(zone 'Zone1'\\) cannot be given for each zone"),
     # The names of accim 0.x are not accepted, with a hint
-    ({'Zone1': {'ComfStand': 2}}, "Its name is 'comf_stand'"),
-    ({'Zone1': {'comf_stand': [1, 2]}}, 'must be one value'),
-    ({'Zone1': {'setpoint_acc': -1}}, 'setpoint_acc cannot be less than 0'),
+    ({'Zone1': {'ComfStand': 2}}, "Its name is 'comfort_standard'"),
+    ({'Zone1': {'comfort_standard': [1, 2]}}, 'must be one value'),
+    ({'Zone1': {'setpoint_accuracy': -1}}, 'setpoint_accuracy cannot be less than 0'),
 ])
 def test_wrong_zone_arguments(zone_arguments, message):
     with pytest.raises(ValueError, match=message):
@@ -117,47 +117,47 @@ def test_the_zones_can_be_given_by_any_of_their_names():
                SimpleNamespace(zone_name='Floor 2', df_key='Bedroom People', ems_suffix='Bedroom_People')]
     names = zone_names(targets)
 
-    resolved = resolve_zone_arguments({'block1:zone1': {'cat': 2}, 'BEDROOM PEOPLE': {'cat': 3},
-                                       'Floor 2': {'comf_mod': 2}, 'Block1_Zone1': {'comf_mod': 3}}, names)
+    resolved = resolve_zone_arguments({'block1:zone1': {'category': 2}, 'BEDROOM PEOPLE': {'category': 3},
+                                       'Floor 2': {'comfort_mode': 2}, 'Block1_Zone1': {'comfort_mode': 3}}, names)
 
-    assert resolved == {'Block1_Zone1': {'cat': 2, 'comf_mod': 3}, 'Bedroom_People': {'cat': 3, 'comf_mod': 2}}
+    assert resolved == {'Block1_Zone1': {'category': 2, 'comfort_mode': 3}, 'Bedroom_People': {'category': 3, 'comfort_mode': 2}}
     with pytest.raises(ValueError, match=r"zones \['Kitchen'\] of zone_arguments are not occupied zones"):
-        resolve_zone_arguments({'Kitchen': {'cat': 2}}, names)
-    assert resolve_zone_arguments({'Kitchen': {'cat': 2}}, names, strict=False) == {}
+        resolve_zone_arguments({'Kitchen': {'category': 2}}, names)
+    assert resolve_zone_arguments({'Kitchen': {'category': 2}}, names, strict=False) == {}
 
 
 # Arguments of the zones in the output IDFs of AddAccis -----------------------------------------------------------
 
 def test_the_arguments_of_a_zone_in_an_output_idf():
-    args = GenerationArguments(comf_stand=[1], cat=[3], comf_mod=[3], hvac_mode=[0, 2], vent_ctrl=[1],
-                               vst_offset=[1], cust_ast_m=0.3)
+    args = GenerationArguments(comfort_standard=[1], category=[3], comfort_mode=[3], hvac_mode=[0, 2], ventilation_control=[1],
+                               ventilation_setpoint_offset=[1], custom_slope=0.3)
     mixed_mode = Combination(1, 3, 3, 2, 1, 1.0, 50.0, 50.0, 0.1)
     air_conditioned = Combination(1, 3, 3, 0, None, None, None, None, 0.1)
 
     arguments = zone_input_arguments(args, mixed_mode)
-    assert (arguments['comf_stand'], arguments['vent_ctrl'], arguments['vst_offset'], arguments['ast_tol'],
-            arguments['cust_ast_m']) == (1, 1, 1.0, 0.1, 0.3)
+    assert (arguments['comfort_standard'], arguments['ventilation_control'], arguments['ventilation_setpoint_offset'], arguments['setpoint_tolerance'],
+            arguments['custom_slope']) == (1, 1, 1.0, 0.1, 0.3)
     # ESP CTE has category 1 and comfort mode 0, and HVACmode 0 the ventilation arguments of no ventilation
-    arguments = zone_input_arguments(args, mixed_mode, {'comf_stand': 0, 'hvac_mode': 0})
-    assert (arguments['cat'], arguments['comf_mod'], arguments['vent_ctrl'], arguments['vst_offset'],
-            arguments['min_ot_offset'], arguments['max_wind_speed']) == (1, 0, 0, 0, 7, 6)
+    arguments = zone_input_arguments(args, mixed_mode, {'comfort_standard': 0, 'hvac_mode': 0})
+    assert (arguments['category'], arguments['comfort_mode'], arguments['ventilation_control'], arguments['ventilation_setpoint_offset'],
+            arguments['min_outdoor_temp_offset'], arguments['max_wind_speed']) == (1, 0, 0, 0, 7, 6)
     # A zone with natural ventilation in an output IDF without it takes the first ventilation arguments
     arguments = zone_input_arguments(args, air_conditioned, {'hvac_mode': 2})
-    assert (arguments['vent_ctrl'], arguments['vst_offset'], arguments['min_ot_offset']) == (1, 1.0, 50.0)
+    assert (arguments['ventilation_control'], arguments['ventilation_setpoint_offset'], arguments['min_outdoor_temp_offset']) == (1, 1.0, 50.0)
 
 
 @pytest.mark.parametrize('overrides, mixed_mode, error', [
     ({}, True, None),
-    ({'comf_stand': 2}, True, 'cat 3 is not a category of comf_stand 2'),
-    ({'comf_stand': 4, 'cat': 1, 'comf_mod': 0}, True, 'comf_stand 4 has no setpoints with comf_mod 0'),
-    ({'comf_stand': 22, 'cat': 2}, True, None),
-    ({'comf_stand': 0}, True, None),
-    ({'comf_stand': 23}, True, 'comf_stand 23 is not a comfort standard'),
+    ({'comfort_standard': 2}, True, 'category 3 is not a category of comfort_standard 2'),
+    ({'comfort_standard': 4, 'category': 1, 'comfort_mode': 0}, True, 'comfort_standard 4 has no setpoints with comfort_mode 0'),
+    ({'comfort_standard': 22, 'category': 2}, True, None),
+    ({'comfort_standard': 0}, True, None),
+    ({'comfort_standard': 23}, True, 'comfort_standard 23 is not a comfort standard'),
     ({'hvac_mode': 2}, False, 'hvac_mode 2 is not valid with this script type'),
-    ({'hvac_mode': 1, 'vent_ctrl': 2}, True, 'vent_ctrl 2 is not valid with hvac_mode 1'),
+    ({'hvac_mode': 1, 'ventilation_control': 2}, True, 'ventilation_control 2 is not valid with hvac_mode 1'),
 ])
 def test_the_arguments_of_a_zone_must_give_setpoints(overrides, mixed_mode, error):
-    args = GenerationArguments(comf_stand=[1], cat=[3], comf_mod=[3], hvac_mode=[2], vent_ctrl=[0])
+    args = GenerationArguments(comfort_standard=[1], category=[3], comfort_mode=[3], hvac_mode=[2], ventilation_control=[0])
     errors = zone_arguments_errors(zone_input_arguments(args, Combination(1, 3, 3, 2, 0, 0.0, 50.0, 50.0, 0.1),
                                                         overrides), mixed_mode)
     if error is None:
@@ -174,7 +174,7 @@ def _programs(zone_arguments):
                             windows=[], window_zones=[])
     programs = dict(accis_programs(model))
     for zone, arguments in zone_arguments.items():
-        arguments = dict(dict(hvac_mode=0, ast_tol=0.1), **arguments)
+        arguments = dict(dict(hvac_mode=0, setpoint_tolerance=0.1), **arguments)
         programs[f'SetInputData_{zone}'] = input_lines(input_values(arguments), mixed_mode=False)
     names = set().union(*variables_in_programs(programs).values())
     erl = ErlProgramSet(programs, global_variables=names)
@@ -213,7 +213,7 @@ def test_zones_with_the_same_arguments_have_the_setpoints_of_the_whole_model():
 
 def test_each_zone_has_the_setpoints_of_its_arguments():
     # Zone2: INT ASHRAE 55, 80 % acceptability, adaptive: Tcomf = 0.31*PMOT + 17.8, setpoints Tcomf +- 3.5
-    erl = _programs({'Zone1': EN16798_II, 'Zone2': dict(comf_stand=2, cat=80, comf_mod=3)})
+    erl = _programs({'Zone1': EN16798_II, 'Zone2': dict(comfort_standard=2, category=80, comfort_mode=3)})
 
     _timestep(erl)
 
@@ -228,7 +228,7 @@ def test_each_zone_has_the_setpoints_of_its_arguments():
 def test_each_zone_keeps_its_own_setpoints_from_one_timestep_to_the_next():
     # ESP CTE sets no setpoint at the end of the day (CurrentTime 24), when they keep their previous value: that of
     # its zone, not that of the zone that ran before it
-    erl = _programs({'Zone1': dict(comf_stand=0, cat=1, comf_mod=0), 'Zone2': EN16798_II})
+    erl = _programs({'Zone1': dict(comfort_standard=0, category=1, comfort_mode=0), 'Zone2': EN16798_II})
 
     _timestep(erl, current_time=23.5)
     assert (erl.get('ACST_Act_Zone1'), erl.get('AHST_Act_Zone1')) == (pytest.approx(26.9), pytest.approx(17.1))
@@ -241,7 +241,7 @@ def test_each_zone_keeps_its_own_setpoints_from_one_timestep_to_the_next():
 def test_a_zone_without_setpoints_stops_the_simulation():
     # CHN GBT50785 Cold (4) has no setpoints with the comfort mode 0: the setpoints of the zone are Null, as when they
     # were not set, instead of those of the other zone
-    erl = _programs({'Zone1': EN16798_II, 'Zone2': dict(comf_stand=4, cat=1, comf_mod=0)})
+    erl = _programs({'Zone1': EN16798_II, 'Zone2': dict(comfort_standard=4, category=1, comfort_mode=0)})
 
     with pytest.raises(ErlRuntimeError):
         _timestep(erl)
@@ -266,8 +266,8 @@ def test_modify_accis_sets_the_arguments_of_each_zone(building):
     from accim.sim.accis import add_accis_to_idf, modify_accis
 
     add_accis_to_idf(building, script_type='vrf_mm', **ADD_ACCIS_ARGS)
-    modify_accis(building, hvac_mode=2, vent_ctrl=0, **EN16798_II,
-                 zone_arguments={'block1:zone2': {'comf_stand': 2, 'cat': 80, 'ast_tol': 0.25}})
+    modify_accis(building, hvac_mode=2, ventilation_control=0, **EN16798_II,
+                 zone_arguments={'block1:zone2': {'comfort_standard': 2, 'category': 80, 'setpoint_tolerance': 0.25}})
 
     inputs = _inputs(building)
     assert sorted(inputs) == ['Block1_Zone1', 'Block1_Zone2']
@@ -275,13 +275,13 @@ def test_modify_accis_sets_the_arguments_of_each_zone(building):
     assert [inputs['Block1_Zone2'][v] for v in ('ComfStand', 'CAT', 'ComfMod', 'AHSTtol')] == [2, 80, 3, 0.25]
 
     # The arguments that are None keep the values of each zone; the zones can also be given by their EMS names
-    modify_accis(building, comf_mod=2, zone_arguments={'Block1_Zone1': {'hvac_mode': 0}})
+    modify_accis(building, comfort_mode=2, zone_arguments={'Block1_Zone1': {'hvac_mode': 0}})
     inputs = _inputs(building)
     assert [inputs['Block1_Zone1'][v] for v in ('ComfStand', 'ComfMod', 'HVACmode')] == [1, 2, 0]
     assert [inputs['Block1_Zone2'][v] for v in ('ComfStand', 'CAT', 'ComfMod', 'HVACmode')] == [2, 80, 2, 2]
 
     with pytest.raises(ValueError, match='not occupied zones of the model'):
-        modify_accis(building, zone_arguments={'Kitchen': {'cat': 2}})
+        modify_accis(building, zone_arguments={'Kitchen': {'category': 2}})
 
 
 @needs_energyplus
@@ -319,8 +319,8 @@ def _add_accis(tmp_path, monkeypatch, **kwargs):
 
     shutil.copy(SAMPLE_IDF, tmp_path / 'TestModel.idf')
     monkeypatch.chdir(tmp_path)
-    arguments = dict(ADD_ACCIS_ARGS, script_type='vrf_mm', energyplus_version='auto', comf_stand=[1, 2],
-                     cat=[3, 80], comf_mod=[3], hvac_mode=[2], vent_ctrl=[0], confirm_gen=True)
+    arguments = dict(ADD_ACCIS_ARGS, script_type='vrf_mm', energyplus_version='auto', comfort_standard=[1, 2],
+                     category=[3, 80], comfort_mode=[3], hvac_mode=[2], ventilation_control=[0], confirm=True)
     arguments.update(kwargs)
     with warnings.catch_warnings():
         warnings.simplefilter('ignore')
@@ -329,7 +329,7 @@ def _add_accis(tmp_path, monkeypatch, **kwargs):
 
 @needs_energyplus
 def test_add_accis_gives_the_same_arguments_to_a_zone_in_all_the_output_idfs(tmp_path, monkeypatch):
-    zone2 = {'comf_stand': 99, 'cat': 80, 'comf_mod': 3, 'hvac_mode': 0, 'cust_ast_m': 0.3, 'cust_ast_n': 18}
+    zone2 = {'comfort_standard': 99, 'category': 80, 'comfort_mode': 3, 'hvac_mode': 0, 'custom_slope': 0.3, 'custom_intercept': 18}
 
     job = _add_accis(tmp_path, monkeypatch, zone_arguments={'Block1:Zone2': zone2})
 
@@ -338,10 +338,10 @@ def test_add_accis_gives_the_same_arguments_to_a_zone_in_all_the_output_idfs(tmp
     assert sorted(job.output_idfs) == [
         'TestModel[CS_INT ASHRAE55[CA_80[CM_3[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf',
         'TestModel[CS_INT EN16798[CA_3[CM_3[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf']
-    for name, comf_stand, cat in [(sorted(job.output_idfs)[0], 2, 80), (sorted(job.output_idfs)[1], 1, 3)]:
+    for name, comfort_standard, category in [(sorted(job.output_idfs)[0], 2, 80), (sorted(job.output_idfs)[1], 1, 3)]:
         inputs = _inputs(job.output_idfs[name])
         assert [inputs['Block1_Zone1'][v] for v in ('ComfStand', 'CAT', 'HVACmode', 'MinOToffset')] == \
-               [comf_stand, cat, 2, 50]
+               [comfort_standard, category, 2, 50]
         # The zone of zone_arguments, with the ventilation arguments of HVACmode 0
         assert [inputs['Block1_Zone2'][v] for v in ('ComfStand', 'CAT', 'HVACmode', 'MinOToffset', 'm', 'n')] == \
                [99, 80, 0, 7, 0.3, 18]
@@ -350,9 +350,9 @@ def test_add_accis_gives_the_same_arguments_to_a_zone_in_all_the_output_idfs(tmp
 @needs_energyplus
 @pytest.mark.parametrize('kwargs, message', [
     # INT ASHRAE 55 has no category 3: the zone needs its own category
-    (dict(zone_arguments={'Block1:Zone2': {'comf_stand': 2}}), 'cat 3 is not a category of comf_stand 2'),
-    (dict(zone_arguments={'Kitchen': {'cat': 2}}), r"zones \['Kitchen'\] of zone_arguments are not occupied zones"),
-    (dict(zone_arguments={'Block1:Zone2': {'cat': 2}}, temp_ctrl='pmv'), "zone_arguments needs temp_ctrl"),
+    (dict(zone_arguments={'Block1:Zone2': {'comfort_standard': 2}}), 'category 3 is not a category of comfort_standard 2'),
+    (dict(zone_arguments={'Kitchen': {'category': 2}}), r"zones \['Kitchen'\] of zone_arguments are not occupied zones"),
+    (dict(zone_arguments={'Block1:Zone2': {'category': 2}}, setpoint_type='pmv'), "zone_arguments needs setpoint_type"),
 ])
 def test_add_accis_checks_the_arguments_of_the_zones(tmp_path, monkeypatch, kwargs, message):
     with pytest.raises(ValueError, match=message):
@@ -371,7 +371,7 @@ def test_modify_accis_keeps_working_with_the_models_of_earlier_versions(tmp_path
     shutil.copy(LEGACY_IDF, tmp_path / 'legacy.idf')
     building = get_building(str(tmp_path / 'legacy.idf'))
 
-    modify_accis(building, hvac_mode=2, vent_ctrl=0, cust_ast_m=0.3, **EN16798_II)
+    modify_accis(building, hvac_mode=2, ventilation_control=0, custom_slope=0.3, **EN16798_II)
 
     programs = {p.Name: p for p in building.idfobjects['EnergyManagementSystem:Program']}
     assert not input_programs(building)
@@ -381,4 +381,4 @@ def test_modify_accis_keeps_working_with_the_models_of_earlier_versions(tmp_path
     # Its programs get the subprograms of this version
     assert 'SetAST_Master' in programs and 'SetAST_CS22_0' in programs
     with pytest.raises(ValueError, match='earlier version of accim'):
-        modify_accis(building, zone_arguments={'Block1:Zone1': {'cat': 3}})
+        modify_accis(building, zone_arguments={'Block1:Zone1': {'category': 3}})

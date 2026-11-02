@@ -10,7 +10,7 @@ stopped likewise. Since accim 1.0.0, the arguments of each zone are in its progr
 only runs SetAST_Master, which runs the subprograms of the comfort standard and comfort mode of the zone, so the
 output IDFs only differ in the programs SetInputData_<zone>.
 
-With temp_ctrl='pmv' the output IDF has no comfort model (the Fanger thermostat controls the zones), so the inputs
+With setpoint_type='pmv' the output IDF has no comfort model (the Fanger thermostat controls the zones), so the inputs
 of the zones keep their default values, except HVACmode 0.
 """
 import re
@@ -48,11 +48,11 @@ def _inputs(lines):
 @pytest.mark.skipif(not (IDD_25_1.exists() and SAMPLE_IDF.exists()),
                     reason='needs EnergyPlus 25.1 and the sample IDF of the repository')
 @pytest.mark.parametrize('script_type, extra_args, n_idfs', [
-    ('vrf_ac', dict(comf_stand=[2, 7], cat=[80], comf_mod=[0, 3], hvac_mode=[0]), 4),
-    ('vrf_mm', dict(comf_stand=[2], cat=[80], comf_mod=[0, 3], hvac_mode=[2], vent_ctrl=[0]), 2),
+    ('vrf_ac', dict(comfort_standard=[2, 7], category=[80], comfort_mode=[0, 3], hvac_mode=[0]), 4),
+    ('vrf_mm', dict(comfort_standard=[2], category=[80], comfort_mode=[0, 3], hvac_mode=[2], ventilation_control=[0]), 2),
     # ComfStand 0 as the only standard
-    ('vrf_ac', dict(comf_stand=[0], cat=[1], comf_mod=[0], hvac_mode=[0]), 1),
-    ('vrf_mm', dict(comf_stand=[0], cat=[1], comf_mod=[0], hvac_mode=[2], vent_ctrl=[0]), 1),
+    ('vrf_ac', dict(comfort_standard=[0], category=[1], comfort_mode=[0], hvac_mode=[0]), 1),
+    ('vrf_mm', dict(comfort_standard=[0], category=[1], comfort_mode=[0], hvac_mode=[2], ventilation_control=[0]), 1),
 ])
 def test_each_output_idf_has_the_inputs_of_its_comfort_model(tmp_path, monkeypatch, script_type, extra_args,
                                                              n_idfs):
@@ -63,12 +63,12 @@ def test_each_output_idf_has_the_inputs_of_its_comfort_model(tmp_path, monkeypat
         script_type=script_type,
         supply_air_temp_input_method='temperature difference',
         output_type='simplified',
-        output_freqs=['hourly'],
-        output_keep_existing=False,
+        output_frequencies=['hourly'],
+        keep_existing_outputs=False,
         energyplus_version='auto',
-        temp_ctrl='temperature',
-        confirm_gen=True,
-        verbose_mode=False,
+        setpoint_type='temperature',
+        confirm=True,
+        verbose=False,
         **extra_args,
     )
 
@@ -100,16 +100,16 @@ def test_pmv_output_idf_has_the_default_inputs_and_hvac_mode_0(tmp_path, monkeyp
         script_type='vrf_ac',
         supply_air_temp_input_method='temperature difference',
         output_type='standard',
-        output_freqs=['hourly'],
-        output_keep_existing=False,
+        output_frequencies=['hourly'],
+        keep_existing_outputs=False,
         energyplus_version='auto',
-        temp_ctrl='pmv',
-        comf_stand=[1],
-        cat=[3],
-        comf_mod=[3],
+        setpoint_type='pmv',
+        comfort_standard=[1],
+        category=[3],
+        comfort_mode=[3],
         hvac_mode=[0],
-        confirm_gen=True,
-        verbose_mode=False,
+        confirm=True,
+        verbose=False,
     )
 
     output_idfs = sorted(tmp_path.glob('TestModel[[]*.idf'))

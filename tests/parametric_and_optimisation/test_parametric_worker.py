@@ -150,8 +150,8 @@ def test_worker_applies_the_additional_parameters_and_the_accim_ones(fake_besos,
     accim_values = []
     monkeypatch.setitem(
         main_module.params_dicts.all_params,
-        'CustAST_m',
-        lambda building, value: accim_values.append(('CustAST_m', value)),
+        'custom_slope',
+        lambda building, value: accim_values.append(('custom_slope', value)),
     )
     WRITTEN_VALUES.clear()
     roof = Parameter(
@@ -161,13 +161,13 @@ def test_worker_applies_the_additional_parameters_and_the_accim_ones(fake_besos,
 
     result = main_module._run_single_evaluation_worker(
         'model.idf', 'weather.epw', 'weather', 'model', str(tmp_path / 'results'),
-        ['CustAST_m', 'roof_thickness'], ['energy'],
+        ['custom_slope', 'roof_thickness'], ['energy'],
         [{'kind': 'meter', 'key_name': 'Electricity:HVAC', 'frequency': 'Hourly', 'output_name': 'energy'}],
-        [], [], {'CustAST_m': 0.4, 'roof_thickness': 0.12}, False, True, None, 'keep',
+        [], [], {'custom_slope': 0.4, 'roof_thickness': 0.12}, False, True, None, 'keep',
         additional_params=[roof],
     )
 
-    assert accim_values == [('CustAST_m', 0.4)]
+    assert accim_values == [('custom_slope', 0.4)]
     assert WRITTEN_VALUES == [('roof thickness', 0.12)]
     inputs = fake_besos.created[-1].problem.inputs
     assert inputs[1] is roof

@@ -18,9 +18,9 @@ class Param(NamedTuple):
 
 
 ZONE = Param('zone')
-VRF_SCHEDULE = Param('vrf_schedule')
-EER = Param('eer')
-COP = Param('cop')
+VRF_SCHEDULE = Param('vrf_availability_schedule')
+EER = Param('vrf_eer')
+COP = Param('vrf_cop')
 SUPPLY_AIR_TEMP_INPUT_METHOD = Param('supply_air_temp_input_method')
 
 #: Performance curves of the VRF systems: (object type, fields).

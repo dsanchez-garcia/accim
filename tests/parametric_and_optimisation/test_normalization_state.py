@@ -44,11 +44,11 @@ def _hourly_table():
 
 
 def _parametric_normalised_with_hourly_table_not_normalised():
-    sim = ParametricSimulation(buildings=None, epws=['Seville.epw'], parameters_type=None, bypass_addAccis=True)
+    sim = ParametricSimulation(buildings=None, epws=['Seville.epw'], parameters_type=None, bypass_add_accis=True)
     sim.building_floor_area = 100.0
     # 3.6e8 J over 100 m2 is 1 kWh/m2.
     sim.outputs_param_simulation = pd.DataFrame({
-        'ComfStand': [1, 2, 3, 4],
+        'comfort_standard': [1, 2, 3, 4],
         'epw': ['Seville'] * 4,
         'Heating:Electricity [J]': [3.6e8, 7.2e8, 3.6e8, 7.2e8],
     })
@@ -105,7 +105,7 @@ def test_scatter_of_a_normalised_table_is_not_divided_again(tmp_path):
     sim = _parametric_normalised_with_hourly_table_not_normalised()
 
     grid = sim.plot_parametric_scatter(
-        x='ComfStand',
+        x='comfort_standard',
         y='Heating:Electricity [kWh/m2]',
         df_source='parametric',
         out_dir=str(tmp_path),
@@ -117,7 +117,7 @@ def test_scatter_of_a_normalised_table_is_not_divided_again(tmp_path):
 
 
 def test_mcdm_plot_of_a_normalised_optimisation_table_is_not_divided_again(monkeypatch, tmp_path):
-    sim = OptimisationSimulation(buildings=None, epws=['Seville.epw'], parameters_type=None, bypass_addAccis=True)
+    sim = OptimisationSimulation(buildings=None, epws=['Seville.epw'], parameters_type=None, bypass_add_accis=True)
     sim.last_run_type = 'optimisation'
     sim.building_floor_area = 100.0
     sim.problem = _DummyProblem(inputs=['x'], outputs=['Heating:Electricity', 'Cooling:Electricity'])
@@ -159,7 +159,7 @@ def _worker_returning_heating(idf_path, epw, epwname, idf_basename, out_dir, pro
 def parametric_with_fake_worker(monkeypatch):
     monkeypatch.setattr(main_module, '_run_single_evaluation_worker', _worker_returning_heating)
     monkeypatch.setattr(pd.DataFrame, 'to_excel', lambda self, *args, **kwargs: None, raising=False)
-    sim = ParametricSimulation(buildings=None, epws=['Seville.epw'], parameters_type=None, bypass_addAccis=True)
+    sim = ParametricSimulation(buildings=None, epws=['Seville.epw'], parameters_type=None, bypass_add_accis=True)
     sim.problem = _DummyProblem(inputs=['x'], outputs=['Heating:Electricity'])
     sim.building_floor_area = 100.0
     return sim
@@ -203,7 +203,7 @@ def test_loaded_parametric_results_reset_the_state_of_their_tables(tmp_path):
     sim.normalize_outputs(df_types=['parametric_hourly'])
     results_csv = tmp_path / 'results.csv'
     hourly_csv = tmp_path / 'hourly.csv'
-    pd.DataFrame({'ComfStand': [1], 'epw': ['Seville'], 'Heating:Electricity [J]': [3.6e8]}).to_csv(results_csv, index=False)
+    pd.DataFrame({'comfort_standard': [1], 'epw': ['Seville'], 'Heating:Electricity [J]': [3.6e8]}).to_csv(results_csv, index=False)
     _hourly_table().to_csv(hourly_csv, index=False)
 
     sim.load_outputs_parametric(csv_path=str(results_csv), hourly_csv_path=str(hourly_csv))
@@ -215,7 +215,7 @@ def test_loaded_parametric_results_reset_the_state_of_their_tables(tmp_path):
 
 
 def test_loaded_optimisation_results_reset_the_state_of_their_table(tmp_path):
-    sim = OptimisationSimulation(buildings=None, epws=['Seville.epw'], parameters_type=None, bypass_addAccis=True)
+    sim = OptimisationSimulation(buildings=None, epws=['Seville.epw'], parameters_type=None, bypass_add_accis=True)
     sim.building_floor_area = 100.0
     results = pd.DataFrame({
         'x': [1.0],

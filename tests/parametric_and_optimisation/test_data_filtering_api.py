@@ -25,8 +25,8 @@ class _DummyFilterSession(PlottingMixin):
                         {
                             'idf': idf_name,
                             'epw': epw_name,
-                            'ComfStand': comf_stand,
-                            'HVACmode': comf_stand,
+                            'comfort_standard': comf_stand,
+                            'hvac_mode': comf_stand,
                             'performance': 'high' if comf_stand <= 1 else 'low',
                             'pareto-optimal': bool(comf_stand % 2 == 0),
                             'Heating:Electricity [J]': 10_000_000 + 200_000 * comf_stand,
@@ -40,7 +40,7 @@ def test_apply_data_filter_include_exclude_query():
     df = pd.DataFrame(
         {
             'epw': ['Seville.epw', 'Sydney.epw', 'Madrid.epw', 'Sydney.epw'],
-            'ComfStand': [0, 1, 2, 3],
+            'comfort_standard': [0, 1, 2, 3],
             'value': [10, 20, 30, 40],
         }
     )
@@ -50,17 +50,17 @@ def test_apply_data_filter_include_exclude_query():
         data_filter={
             'include': {
                 'epw': ['Sydney.epw', 'Madrid.epw'],
-                'ComfStand': {'between': [1, 3]},
+                'comfort_standard': {'between': [1, 3]},
             },
             'exclude': {
-                'ComfStand': [2],
+                'comfort_standard': [2],
             },
             'query': 'value >= 20',
         },
     )
 
     assert len(filtered) == 2
-    assert set(filtered['ComfStand'].tolist()) == {1, 3}
+    assert set(filtered['comfort_standard'].tolist()) == {1, 3}
     assert report['rows_before'] == 4
     assert report['rows_after'] == 2
 
@@ -87,24 +87,24 @@ def test_get_filtered_results_table_supports_columns_and_non_strict_missing_filt
                 'non_existing_filter_col': ['ignored'],
             },
             'exclude': {
-                'ComfStand': [2],
+                'comfort_standard': [2],
             },
         },
-        columns=['idf', 'epw', 'ComfStand'],
+        columns=['idf', 'epw', 'comfort_standard'],
         data_filter_strict=False,
     )
 
-    assert list(df.columns) == ['idf', 'epw', 'ComfStand']
+    assert list(df.columns) == ['idf', 'epw', 'comfort_standard']
     assert df['epw'].nunique() == 1
     assert df['epw'].iloc[0] == 'Sydney.epw'
-    assert set(df['ComfStand'].unique().tolist()) == {0, 1}
+    assert set(df['comfort_standard'].unique().tolist()) == {0, 1}
 
 
 def test_plot_parametric_scatter_applies_data_filter(tmp_path):
     sim = _DummyFilterSession()
 
     grid = sim.plot_parametric_scatter(
-        x='ComfStand',
+        x='comfort_standard',
         y='Heating:Electricity [J]',
         df_source='parametric',
         col='epw',
@@ -154,7 +154,7 @@ def test_plot_parametric_scatter_empty_filter_raises(tmp_path):
 
     with pytest.raises(ValueError, match='zero rows'):
         sim.plot_parametric_scatter(
-            x='ComfStand',
+            x='comfort_standard',
             y='Heating:Electricity [J]',
             df_source='parametric',
             col='epw',

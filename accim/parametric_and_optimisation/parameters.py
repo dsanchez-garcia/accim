@@ -28,9 +28,9 @@ Typical workflows are:
 
 Examples
 --------
-p = accis_parameter("ComfStand", [1, 2, 3])
+p = accis_parameter("comfort_standard", [1, 2, 3])
 p.name
-'ComfStand'
+'comfort_standard'
 ComfStand().modify(idf, 1)
 """
 
@@ -65,61 +65,19 @@ def accis_parameter(parameter_name, values):
 
     Examples
     --------
-    p = accis_parameter("ComfStand", [1, 2, 3])
+    p = accis_parameter("comfort_standard", [1, 2, 3])
     p.name
-    'ComfStand'
-    q = accis_parameter("CustAST_m", (0.0, 0.7))
+    'comfort_standard'
+    q = accis_parameter("custom_slope", (0.0, 0.7))
     q.name
-    'CustAST_m'
+    'custom_slope'
     """
     desc_has_options = descriptor_has_options(values)
 
-    # all_params = {
-    #     # accim predefined models parameters
-    #     'ComfStand': param_accis.modify_ComfStand,
-    #     'CAT': param_accis.modify_CAT,
-    #     'CATcoolOffset': param_accis.modify_CATcoolOffset,
-    #     'CATheatOffset': param_accis.modify_CATheatOffset,
-    #     'ComfMod': param_accis.modify_ComfMod,
-    #     'SetpointAcc': param_accis.modify_SetpointAcc,
-    #     'CoolSeasonStart': param_accis.modify_CoolSeasonStart,
-    #     'CoolSeasonEnd': param_accis.modify_CoolSeasonEnd,
-    #     'HVACmode': param_accis.modify_HVACmode,
-    #     'VentCtrl': param_accis.modify_VentCtrl,
-    #     'MaxTempDiffVOF': param_accis.modify_MaxTempDiffVOF,
-    #     'MinTempDiffVOF': param_accis.modify_MinTempDiffVOF,
-    #     'MultiplierVOF': param_accis.modify_MultiplierVOF,
-    #     'VSToffset': param_accis.modify_VSToffset,
-    #     'MinOToffset': param_accis.modify_MinOToffset,
-    #     'MaxWindSpeed': param_accis.modify_MaxWindSpeed,
-    #     'ASTtol': param_accis.modify_ASTtol,
-    #     # accim custom models parameters
-    #     'CustAST_ACSTaul': param_accis.modify_CustAST_ACSTaul,
-    #     'CustAST_ACSTall': param_accis.modify_CustAST_ACSTall,
-    #     'CustAST_AHSTaul': param_accis.modify_CustAST_AHSTaul,
-    #     'CustAST_AHSTall': param_accis.modify_CustAST_AHSTall,
-    #     'CustAST_ASTaul': param_accis.modify_CustAST_ASTaul,
-    #     'CustAST_ASTall': param_accis.modify_CustAST_ASTall,
-    #     'CustAST_m': param_accis.modify_CustAST_m,
-    #     'CustAST_n': param_accis.modify_CustAST_n,
-    #     'CustAST_ACSToffset': param_accis.modify_CustAST_ACSToffset,
-    #     'CustAST_AHSToffset': param_accis.modify_CustAST_AHSToffset,
-    #     'CustAST_ASToffset': param_accis.modify_CustAST_ASToffset,
-    #     #apmv setpoints parameters
-    #     'Adaptive coefficient': param_apmv.change_adaptive_coeff_all_zones,
-    #     'Adaptive cooling coefficient': param_apmv.change_adaptive_coeff_cooling_all_zones,
-    #     'Adaptive heating coefficient': param_apmv.change_adaptive_coeff_heating_all_zones,
-    #     'PMV setpoint': param_apmv.change_pmv_setpoint_all_zones,
-    #     'PMV cooling setpoint': param_apmv.change_pmv_cooling_setpoint_all_zones,
-    #     'PMV heating setpoint': param_apmv.change_pmv_heating_setpoint_all_zones,
-    # }
-
-
-    if parameter_name.lower() not in [k.lower() for k in params_dicts.all_params.keys()]:
-        raise KeyError(f'Parameter do not exist.'
-                       f'You need to chose one of the following list: {params_dicts.all_params.keys()}')
-
-    name = [i for i in params_dicts.all_params.keys() if i.lower() == parameter_name.lower()][0]
+    name = params_dicts.resolve_parameter_name(parameter_name)
+    if name not in params_dicts.all_params:
+        raise KeyError(f'The parameter {parameter_name!r} does not exist. '
+                       f'You need to choose one of the following list: {list(params_dicts.all_params)}')
 
     from besos.parameters import Parameter, GenericSelector, CategoryParameter, RangeParameter
     import accim.parametric_and_optimisation.funcs_for_besos.param_accis as bf
@@ -133,7 +91,7 @@ def accis_parameter(parameter_name, values):
             # from besos (harmless, since both names are identical, but noisy).
             # selector=GenericSelector(set=change_adaptive_coeff),
             selector=GenericSelector(set=params_dicts.all_params[name]),
-            # value_descriptors=RangeParameter(name='CustAST_m', min_val=0, max_val=0.7),
+            # value_descriptors=RangeParameter(name='custom_slope', min_val=0, max_val=0.7),
             value_descriptors=CategoryParameter(
                 name=name,
                 options=values
@@ -144,7 +102,7 @@ def accis_parameter(parameter_name, values):
             # NOTE: see comment above; 'name' is set via value_descriptors only.
             # selector=GenericSelector(set=change_adaptive_coeff),
             selector=GenericSelector(set=params_dicts.all_params[name]),
-            # value_descriptors=RangeParameter(name='CustAST_m', min_val=0, max_val=0.7),
+            # value_descriptors=RangeParameter(name='custom_slope', min_val=0, max_val=0.7),
             value_descriptors=RangeParameter(
                 name=name,
                 min_val=values[0],
@@ -170,7 +128,7 @@ def get_available_params_accim_predef_models():
     Examples
     --------
     >>> names = get_available_params_accim_predef_models()
-    >>> 'ComfStand' in names
+    >>> 'comfort_standard' in names
     True
     """
     param_dict = [k for k in params_dicts.accim_predef_model_params.keys()]
@@ -192,7 +150,7 @@ def get_available_params_accim_custom_models():
     Examples
     --------
     >>> names = get_available_params_accim_custom_models()
-    >>> 'CustAST_m' in names
+    >>> 'custom_slope' in names
     True
     """
     param_dict = [k for k in params_dicts.accim_custom_model_params.keys()]
@@ -214,7 +172,7 @@ def get_available_params_apmv_setpoints():
     Examples
     --------
     >>> names = get_available_params_apmv_setpoints()
-    >>> 'PMV setpoint' in names
+    >>> 'pmv_setpoint' in names
     True
     """
     param_dict = [k for k in params_dicts.apmv_setpoints_params.keys()]
@@ -233,7 +191,7 @@ class Parameter:
 
     Examples
     --------
-    p = Parameter('ComfStand')
+    p = Parameter('comfort_standard')
     p.modify(idf, 1)
     """
 
@@ -243,7 +201,8 @@ class Parameter:
         Parameters
         ----------
         parameter : str
-            Requested parameter name (case-insensitive).
+            Requested parameter name (case-insensitive): one of the parameters of the accim predefined and custom
+            models, or its name in accim 0.x (``ComfStand``...), with a DeprecationWarning.
 
         Returns
         -------
@@ -256,43 +215,16 @@ class Parameter:
 
         Examples
         --------
-        p = Parameter('comfstand')
+        p = Parameter('Comfort_Standard')
         p.name
-        'ComfStand'
+        'comfort_standard'
         """
-        parameters_accis = {
-            'ComfStand': param_accis.modify_ComfStand,
-            'CAT': param_accis.modify_CAT,
-            'CATcoolOffset': param_accis.modify_CATcoolOffset,
-            'CATheatOffset': param_accis.modify_CATheatOffset,
-            'ComfMod': param_accis.modify_ComfMod,
-            'SetpointAcc': param_accis.modify_SetpointAcc,
-            'CustAST_ACSTaul': param_accis.modify_CustAST_ACSTaul,
-            'CustAST_ACSTall': param_accis.modify_CustAST_ACSTall,
-            'CustAST_AHSTaul': param_accis.modify_CustAST_AHSTaul,
-            'CustAST_AHSTall': param_accis.modify_CustAST_AHSTall,
-            'CustAST_m': param_accis.modify_CustAST_m,
-            'CustAST_n': param_accis.modify_CustAST_n,
-            'CustAST_ACSToffset': param_accis.modify_CustAST_ACSToffset,
-            'CustAST_AHSToffset': param_accis.modify_CustAST_AHSToffset,
-            'CoolSeasonStart': param_accis.modify_CoolSeasonStart,
-            'CoolSeasonEnd': param_accis.modify_CoolSeasonEnd,
-            'HVACmode': param_accis.modify_HVACmode,
-            'VentCtrl': param_accis.modify_VentCtrl,
-            'MaxTempDiffVOF': param_accis.modify_MaxTempDiffVOF,
-            'MinTempDiffVOF': param_accis.modify_MinTempDiffVOF,
-            'MultiplierVOF': param_accis.modify_MultiplierVOF,
-            'VSToffset': param_accis.modify_VSToffset,
-            'MinOToffset': param_accis.modify_MinOToffset,
-            'MaxWindSpeed': param_accis.modify_MaxWindSpeed,
-            'ASTtol': param_accis.modify_ASTtol,
-        }
-
-        if parameter.lower() not in [k.lower() for k in parameters_accis.keys()]:
-            raise KeyError(f'Parameter do not exist.'
-                           f'You need to chose one of the following list: {parameters_accis.keys()}')
-
-        self.name = [i for i in parameters_accis.keys() if i.lower() == parameter.lower()][0]
+        parameters_accis = {**params_dicts.accim_predef_model_params, **params_dicts.accim_custom_model_params}
+        name = params_dicts.resolve_parameter_name(parameter)
+        if name not in parameters_accis:
+            raise KeyError(f'The parameter {parameter!r} does not exist. '
+                           f'You need to choose one of the following list: {list(parameters_accis)}')
+        self.name = name
 
     def modify(self, idf, value):
         """Apply the configured parameter value into an IDF.
@@ -316,38 +248,10 @@ class Parameter:
 
         Examples
         --------
-        p = Parameter('ComfStand')
+        p = Parameter('comfort_standard')
         p.modify(idf, 1)
         """
-        parameters_accis = {
-            'ComfStand': param_accis.modify_ComfStand(idf, value),
-            'CAT': param_accis.modify_CAT(idf, value),
-            'CATcoolOffset': param_accis.modify_CATcoolOffset(idf, value),
-            'CATheatOffset': param_accis.modify_CATheatOffset(idf, value),
-            'ComfMod': param_accis.modify_ComfMod(idf, value),
-            'SetpointAcc': param_accis.modify_SetpointAcc(idf, value),
-            'CustAST_ACSTaul': param_accis.modify_CustAST_ACSTaul(idf, value),
-            'CustAST_ACSTall': param_accis.modify_CustAST_ACSTall(idf, value),
-            'CustAST_AHSTaul': param_accis.modify_CustAST_AHSTaul(idf, value),
-            'CustAST_AHSTall': param_accis.modify_CustAST_AHSTall(idf, value),
-            'CustAST_m': param_accis.modify_CustAST_m(idf, value),
-            'CustAST_n': param_accis.modify_CustAST_n(idf, value),
-            'CustAST_ACSToffset': param_accis.modify_CustAST_ACSToffset(idf, value),
-            'CustAST_AHSToffset': param_accis.modify_CustAST_AHSToffset(idf, value),
-            'CoolSeasonStart': param_accis.modify_CoolSeasonStart(idf, value),
-            'CoolSeasonEnd': param_accis.modify_CoolSeasonEnd(idf, value),
-            'HVACmode': param_accis.modify_HVACmode(idf, value),
-            'VentCtrl': param_accis.modify_VentCtrl(idf, value),
-            'MaxTempDiffVOF': param_accis.modify_MaxTempDiffVOF(idf, value),
-            'MinTempDiffVOF': param_accis.modify_MinTempDiffVOF(idf, value),
-            'MultiplierVOF': param_accis.modify_MultiplierVOF(idf, value),
-            'VSToffset': param_accis.modify_VSToffset(idf, value),
-            'MinOToffset': param_accis.modify_MinOToffset(idf, value),
-            'MaxWindSpeed': param_accis.modify_MaxWindSpeed(idf, value),
-            'ASTtol': param_accis.modify_ASTtol(idf, value),
-        }
-
-        parameters_accis[self.name]
+        params_dicts.all_params[self.name](idf, value)
 
 
 # Add class/method docstrings for every ACCIS wrapper class below
@@ -358,7 +262,7 @@ class Parameter:
 # Keep behavior unchanged.
 
 class ComfStand:
-    """OO wrapper for ACCIS parameter ``ComfStand``.
+    """OO wrapper for the ACCIS parameter ``comfort_standard`` (``ComfStand`` in accim 0.x).
 
     Usage
     -----
@@ -380,12 +284,12 @@ class ComfStand:
         Examples
         --------
         ComfStand().name
-        'ComfStand'
+        'comfort_standard'
         """
-        self.name = 'ComfStand'
+        self.name = 'comfort_standard'
 
     def modify(self, idf, value):
-        """Apply parameter ``ComfStand`` to an IDF in place.
+        """Apply parameter ``comfort_standard`` to an IDF in place.
 
         Parameters
         ----------
@@ -410,7 +314,7 @@ class ComfStand:
         param_accis.modify_ComfStand(idf, value)
 
 class CustAST_ACSTaul:
-    """OO wrapper for ACCIS parameter ``CustAST_ACSTaul``.
+    """OO wrapper for the ACCIS parameter ``custom_cooling_upper_limit`` (``CustAST_ACSTaul`` in accim 0.x).
 
     Usage
     -----
@@ -432,12 +336,12 @@ class CustAST_ACSTaul:
         Examples
         --------
         CustAST_ACSTaul().name
-        'CustAST_ACSTaul'
+        'custom_cooling_upper_limit'
         """
-        self.name = 'CustAST_ACSTaul'
+        self.name = 'custom_cooling_upper_limit'
 
     def modify(self, idf, value):
-        """Apply parameter ``CustAST_ACSTaul`` to an IDF in place.
+        """Apply parameter ``custom_cooling_upper_limit`` to an IDF in place.
 
         Parameters
         ----------
@@ -462,7 +366,7 @@ class CustAST_ACSTaul:
         param_accis.modify_CustAST_ACSTaul(idf, value)
 
 class CustAST_ACSTall:
-    """OO wrapper for ACCIS parameter ``CustAST_ACSTall``.
+    """OO wrapper for the ACCIS parameter ``custom_cooling_lower_limit`` (``CustAST_ACSTall`` in accim 0.x).
 
     Usage
     -----
@@ -484,12 +388,12 @@ class CustAST_ACSTall:
         Examples
         --------
         CustAST_ACSTall().name
-        'CustAST_ACSTall'
+        'custom_cooling_lower_limit'
         """
-        self.name = 'CustAST_ACSTall'
+        self.name = 'custom_cooling_lower_limit'
 
     def modify(self, idf, value):
-        """Apply parameter ``CustAST_ACSTall`` to an IDF in place.
+        """Apply parameter ``custom_cooling_lower_limit`` to an IDF in place.
 
         Parameters
         ----------
@@ -514,7 +418,7 @@ class CustAST_ACSTall:
         param_accis.modify_CustAST_ACSTall(idf, value)
 
 class CustAST_AHSTaul:
-    """OO wrapper for ACCIS parameter ``CustAST_AHSTaul``.
+    """OO wrapper for the ACCIS parameter ``custom_heating_upper_limit`` (``CustAST_AHSTaul`` in accim 0.x).
 
     Usage
     -----
@@ -536,12 +440,12 @@ class CustAST_AHSTaul:
         Examples
         --------
         CustAST_AHSTaul().name
-        'CustAST_AHSTaul'
+        'custom_heating_upper_limit'
         """
-        self.name = 'CustAST_AHSTaul'
+        self.name = 'custom_heating_upper_limit'
 
     def modify(self, idf, value):
-        """Apply parameter ``CustAST_AHSTaul`` to an IDF in place.
+        """Apply parameter ``custom_heating_upper_limit`` to an IDF in place.
 
         Parameters
         ----------
@@ -566,7 +470,7 @@ class CustAST_AHSTaul:
         param_accis.modify_CustAST_AHSTaul(idf, value)
 
 class CustAST_AHSTall:
-    """OO wrapper for ACCIS parameter ``CustAST_AHSTall``.
+    """OO wrapper for the ACCIS parameter ``custom_heating_lower_limit`` (``CustAST_AHSTall`` in accim 0.x).
 
     Usage
     -----
@@ -588,12 +492,12 @@ class CustAST_AHSTall:
         Examples
         --------
         CustAST_AHSTall().name
-        'CustAST_AHSTall'
+        'custom_heating_lower_limit'
         """
-        self.name = 'CustAST_AHSTall'
+        self.name = 'custom_heating_lower_limit'
 
     def modify(self, idf, value):
-        """Apply parameter ``CustAST_AHSTall`` to an IDF in place.
+        """Apply parameter ``custom_heating_lower_limit`` to an IDF in place.
 
         Parameters
         ----------
@@ -618,7 +522,7 @@ class CustAST_AHSTall:
         param_accis.modify_CustAST_AHSTall(idf, value)
 
 class CustAST_ASTaul:
-    """OO wrapper for ACCIS parameter ``CustAST_ASTaul``.
+    """OO wrapper for the ACCIS parameter ``custom_upper_limit`` (``CustAST_ASTaul`` in accim 0.x).
 
     Usage
     -----
@@ -640,12 +544,12 @@ class CustAST_ASTaul:
         Examples
         --------
         CustAST_ASTaul().name
-        'CustAST_ASTaul'
+        'custom_upper_limit'
         """
-        self.name = 'CustAST_ASTaul'
+        self.name = 'custom_upper_limit'
 
     def modify(self, idf, value):
-        """Apply parameter ``CustAST_ASTaul`` to an IDF in place.
+        """Apply parameter ``custom_upper_limit`` to an IDF in place.
 
         Parameters
         ----------
@@ -670,7 +574,7 @@ class CustAST_ASTaul:
         param_accis.modify_CustAST_ASTaul(idf, value)
 
 class CustAST_ASTall:
-    """OO wrapper for ACCIS parameter ``CustAST_ASTall``.
+    """OO wrapper for the ACCIS parameter ``custom_lower_limit`` (``CustAST_ASTall`` in accim 0.x).
 
     Usage
     -----
@@ -692,12 +596,12 @@ class CustAST_ASTall:
         Examples
         --------
         CustAST_ASTall().name
-        'CustAST_ASTall'
+        'custom_lower_limit'
         """
-        self.name = 'CustAST_ASTall'
+        self.name = 'custom_lower_limit'
 
     def modify(self, idf, value):
-        """Apply parameter ``CustAST_ASTall`` to an IDF in place.
+        """Apply parameter ``custom_lower_limit`` to an IDF in place.
 
         Parameters
         ----------
@@ -722,7 +626,7 @@ class CustAST_ASTall:
         param_accis.modify_CustAST_ASTall(idf, value)
 
 class CustAST_m:
-    """OO wrapper for ACCIS parameter ``CustAST_m``.
+    """OO wrapper for the ACCIS parameter ``custom_slope`` (``CustAST_m`` in accim 0.x).
 
     Usage
     -----
@@ -744,12 +648,12 @@ class CustAST_m:
         Examples
         --------
         CustAST_m().name
-        'CustAST_m'
+        'custom_slope'
         """
-        self.name = 'CustAST_m'
+        self.name = 'custom_slope'
 
     def modify(self, idf, value):
-        """Apply parameter ``CustAST_m`` to an IDF in place.
+        """Apply parameter ``custom_slope`` to an IDF in place.
 
         Parameters
         ----------
@@ -774,7 +678,7 @@ class CustAST_m:
         param_accis.modify_CustAST_m(idf, value)
 
 class CustAST_n:
-    """OO wrapper for ACCIS parameter ``CustAST_n``.
+    """OO wrapper for the ACCIS parameter ``custom_intercept`` (``CustAST_n`` in accim 0.x).
 
     Usage
     -----
@@ -796,12 +700,12 @@ class CustAST_n:
         Examples
         --------
         CustAST_n().name
-        'CustAST_n'
+        'custom_intercept'
         """
-        self.name = 'CustAST_n'
+        self.name = 'custom_intercept'
 
     def modify(self, idf, value):
-        """Apply parameter ``CustAST_n`` to an IDF in place.
+        """Apply parameter ``custom_intercept`` to an IDF in place.
 
         Parameters
         ----------
@@ -826,7 +730,7 @@ class CustAST_n:
         param_accis.modify_CustAST_n(idf, value)
 
 class CustAST_ACSToffset:
-    """OO wrapper for ACCIS parameter ``CustAST_ACSToffset``.
+    """OO wrapper for the ACCIS parameter ``custom_cooling_offset`` (``CustAST_ACSToffset`` in accim 0.x).
 
     Usage
     -----
@@ -848,12 +752,12 @@ class CustAST_ACSToffset:
         Examples
         --------
         CustAST_ACSToffset().name
-        'CustAST_ACSToffset'
+        'custom_cooling_offset'
         """
-        self.name = 'CustAST_ACSToffset'
+        self.name = 'custom_cooling_offset'
 
     def modify(self, idf, value):
-        """Apply parameter ``CustAST_ACSToffset`` to an IDF in place.
+        """Apply parameter ``custom_cooling_offset`` to an IDF in place.
 
         Parameters
         ----------
@@ -878,7 +782,7 @@ class CustAST_ACSToffset:
         param_accis.modify_CustAST_ACSToffset(idf, value)
 
 class CustAST_AHSToffset:
-    """OO wrapper for ACCIS parameter ``CustAST_AHSToffset``.
+    """OO wrapper for the ACCIS parameter ``custom_heating_offset`` (``CustAST_AHSToffset`` in accim 0.x).
 
     Usage
     -----
@@ -900,12 +804,12 @@ class CustAST_AHSToffset:
         Examples
         --------
         CustAST_AHSToffset().name
-        'CustAST_AHSToffset'
+        'custom_heating_offset'
         """
-        self.name = 'CustAST_AHSToffset'
+        self.name = 'custom_heating_offset'
 
     def modify(self, idf, value):
-        """Apply parameter ``CustAST_AHSToffset`` to an IDF in place.
+        """Apply parameter ``custom_heating_offset`` to an IDF in place.
 
         Parameters
         ----------
@@ -930,7 +834,7 @@ class CustAST_AHSToffset:
         param_accis.modify_CustAST_AHSToffset(idf, value)
 
 class CustAST_ASToffset:
-    """OO wrapper for ACCIS parameter ``CustAST_ASToffset``.
+    """OO wrapper for the ACCIS parameter ``custom_offset`` (``CustAST_ASToffset`` in accim 0.x).
 
     Usage
     -----
@@ -952,12 +856,12 @@ class CustAST_ASToffset:
         Examples
         --------
         CustAST_ASToffset().name
-        'CustAST_ASToffset'
+        'custom_offset'
         """
-        self.name = 'CustAST_ASToffset'
+        self.name = 'custom_offset'
 
     def modify(self, idf, value):
-        """Apply parameter ``CustAST_ASToffset`` to an IDF in place.
+        """Apply parameter ``custom_offset`` to an IDF in place.
 
         Parameters
         ----------
@@ -982,7 +886,7 @@ class CustAST_ASToffset:
         param_accis.modify_CustAST_ASToffset(idf, value)
 
 class CAT:
-    """OO wrapper for ACCIS parameter ``CAT``.
+    """OO wrapper for the ACCIS parameter ``category`` (``CAT`` in accim 0.x).
 
     Usage
     -----
@@ -1004,12 +908,12 @@ class CAT:
         Examples
         --------
         CAT().name
-        'CAT'
+        'category'
         """
-        self.name = 'CAT'
+        self.name = 'category'
 
     def modify(self, idf, value):
-        """Apply parameter ``CAT`` to an IDF in place.
+        """Apply parameter ``category`` to an IDF in place.
 
         Parameters
         ----------
@@ -1034,7 +938,7 @@ class CAT:
         param_accis.modify_CAT(idf, value)
 
 class CATcoolOffset:
-    """OO wrapper for ACCIS parameter ``CATcoolOffset``.
+    """OO wrapper for the ACCIS parameter ``category_cooling_offset`` (``CATcoolOffset`` in accim 0.x).
 
     Usage
     -----
@@ -1056,12 +960,12 @@ class CATcoolOffset:
         Examples
         --------
         CATcoolOffset().name
-        'CATcoolOffset'
+        'category_cooling_offset'
         """
-        self.name = 'CATcoolOffset'
+        self.name = 'category_cooling_offset'
 
     def modify(self, idf, value):
-        """Apply parameter ``CATcoolOffset`` to an IDF in place.
+        """Apply parameter ``category_cooling_offset`` to an IDF in place.
 
         Parameters
         ----------
@@ -1086,7 +990,7 @@ class CATcoolOffset:
         param_accis.modify_CATcoolOffset(idf, value)
 
 class CATheatOffset:
-    """OO wrapper for ACCIS parameter ``CATheatOffset``.
+    """OO wrapper for the ACCIS parameter ``category_heating_offset`` (``CATheatOffset`` in accim 0.x).
 
     Usage
     -----
@@ -1108,12 +1012,12 @@ class CATheatOffset:
         Examples
         --------
         CATheatOffset().name
-        'CATheatOffset'
+        'category_heating_offset'
         """
-        self.name = 'CATheatOffset'
+        self.name = 'category_heating_offset'
 
     def modify(self, idf, value):
-        """Apply parameter ``CATheatOffset`` to an IDF in place.
+        """Apply parameter ``category_heating_offset`` to an IDF in place.
 
         Parameters
         ----------
@@ -1138,7 +1042,7 @@ class CATheatOffset:
         param_accis.modify_CATheatOffset(idf, value)
 
 class ComfMod:
-    """OO wrapper for ACCIS parameter ``ComfMod``.
+    """OO wrapper for the ACCIS parameter ``comfort_mode`` (``ComfMod`` in accim 0.x).
 
     Usage
     -----
@@ -1160,12 +1064,12 @@ class ComfMod:
         Examples
         --------
         ComfMod().name
-        'ComfMod'
+        'comfort_mode'
         """
-        self.name = 'ComfMod'
+        self.name = 'comfort_mode'
 
     def modify(self, idf, value):
-        """Apply parameter ``ComfMod`` to an IDF in place.
+        """Apply parameter ``comfort_mode`` to an IDF in place.
 
         Parameters
         ----------
@@ -1190,7 +1094,7 @@ class ComfMod:
         param_accis.modify_ComfMod(idf, value)
 
 class HVACmode:
-    """OO wrapper for ACCIS parameter ``HVACmode``.
+    """OO wrapper for the ACCIS parameter ``hvac_mode`` (``HVACmode`` in accim 0.x).
 
     Usage
     -----
@@ -1212,12 +1116,12 @@ class HVACmode:
         Examples
         --------
         HVACmode().name
-        'HVACmode'
+        'hvac_mode'
         """
-        self.name = 'HVACmode'
+        self.name = 'hvac_mode'
 
     def modify(self, idf, value):
-        """Apply parameter ``HVACmode`` to an IDF in place.
+        """Apply parameter ``hvac_mode`` to an IDF in place.
 
         Parameters
         ----------
@@ -1242,7 +1146,7 @@ class HVACmode:
         param_accis.modify_HVACmode(idf, value)
 
 class VentCtrl:
-    """OO wrapper for ACCIS parameter ``VentCtrl``.
+    """OO wrapper for the ACCIS parameter ``ventilation_control`` (``VentCtrl`` in accim 0.x).
 
     Usage
     -----
@@ -1264,12 +1168,12 @@ class VentCtrl:
         Examples
         --------
         VentCtrl().name
-        'VentCtrl'
+        'ventilation_control'
         """
-        self.name = 'VentCtrl'
+        self.name = 'ventilation_control'
 
     def modify(self, idf, value):
-        """Apply parameter ``VentCtrl`` to an IDF in place.
+        """Apply parameter ``ventilation_control`` to an IDF in place.
 
         Parameters
         ----------
@@ -1294,7 +1198,7 @@ class VentCtrl:
         param_accis.modify_VentCtrl(idf, value)
 
 class VSToffset:
-    """OO wrapper for ACCIS parameter ``VSToffset``.
+    """OO wrapper for the ACCIS parameter ``ventilation_setpoint_offset`` (``VSToffset`` in accim 0.x).
 
     Usage
     -----
@@ -1316,12 +1220,12 @@ class VSToffset:
         Examples
         --------
         VSToffset().name
-        'VSToffset'
+        'ventilation_setpoint_offset'
         """
-        self.name = 'VSToffset'
+        self.name = 'ventilation_setpoint_offset'
 
     def modify(self, idf, value):
-        """Apply parameter ``VSToffset`` to an IDF in place.
+        """Apply parameter ``ventilation_setpoint_offset`` to an IDF in place.
 
         Parameters
         ----------
@@ -1346,7 +1250,7 @@ class VSToffset:
         param_accis.modify_VSToffset(idf, value)
 
 class MinOToffset:
-    """OO wrapper for ACCIS parameter ``MinOToffset``.
+    """OO wrapper for the ACCIS parameter ``min_outdoor_temp_offset`` (``MinOToffset`` in accim 0.x).
 
     Usage
     -----
@@ -1368,12 +1272,12 @@ class MinOToffset:
         Examples
         --------
         MinOToffset().name
-        'MinOToffset'
+        'min_outdoor_temp_offset'
         """
-        self.name = 'MinOToffset'
+        self.name = 'min_outdoor_temp_offset'
 
     def modify(self, idf, value):
-        """Apply parameter ``MinOToffset`` to an IDF in place.
+        """Apply parameter ``min_outdoor_temp_offset`` to an IDF in place.
 
         Parameters
         ----------
@@ -1398,7 +1302,7 @@ class MinOToffset:
         param_accis.modify_MinOToffset(idf, value)
 
 class MaxWindSpeed:
-    """OO wrapper for ACCIS parameter ``MaxWindSpeed``.
+    """OO wrapper for the ACCIS parameter ``max_wind_speed`` (``MaxWindSpeed`` in accim 0.x).
 
     Usage
     -----
@@ -1420,12 +1324,12 @@ class MaxWindSpeed:
         Examples
         --------
         MaxWindSpeed().name
-        'MaxWindSpeed'
+        'max_wind_speed'
         """
-        self.name = 'MaxWindSpeed'
+        self.name = 'max_wind_speed'
 
     def modify(self, idf, value):
-        """Apply parameter ``MaxWindSpeed`` to an IDF in place.
+        """Apply parameter ``max_wind_speed`` to an IDF in place.
 
         Parameters
         ----------
@@ -1450,7 +1354,7 @@ class MaxWindSpeed:
         param_accis.modify_MaxWindSpeed(idf, value)
 
 class ASTtol:
-    """OO wrapper for ACCIS parameter ``ASTtol``.
+    """OO wrapper for the ACCIS parameter ``setpoint_tolerance`` (``ASTtol`` in accim 0.x).
 
     Usage
     -----
@@ -1472,12 +1376,12 @@ class ASTtol:
         Examples
         --------
         ASTtol().name
-        'ASTtol'
+        'setpoint_tolerance'
         """
-        self.name = 'ASTtol'
+        self.name = 'setpoint_tolerance'
 
     def modify(self, idf, value):
-        """Apply parameter ``ASTtol`` to an IDF in place.
+        """Apply parameter ``setpoint_tolerance`` to an IDF in place.
 
         Parameters
         ----------
@@ -1502,7 +1406,7 @@ class ASTtol:
         param_accis.modify_ASTtol(idf, value)
 
 class CoolSeasonStart:
-    """OO wrapper for ACCIS parameter ``CoolSeasonStart``.
+    """OO wrapper for the ACCIS parameter ``cooling_season_start`` (``CoolSeasonStart`` in accim 0.x).
 
     Usage
     -----
@@ -1524,12 +1428,12 @@ class CoolSeasonStart:
         Examples
         --------
         CoolSeasonStart().name
-        'CoolSeasonStart'
+        'cooling_season_start'
         """
-        self.name = 'CoolSeasonStart'
+        self.name = 'cooling_season_start'
 
     def modify(self, idf, value):
-        """Apply parameter ``CoolSeasonStart`` to an IDF in place.
+        """Apply parameter ``cooling_season_start`` to an IDF in place.
 
         Parameters
         ----------
@@ -1554,7 +1458,7 @@ class CoolSeasonStart:
         param_accis.modify_CoolSeasonStart(idf, value)
 
 class CoolSeasonEnd:
-    """OO wrapper for ACCIS parameter ``CoolSeasonEnd``.
+    """OO wrapper for the ACCIS parameter ``cooling_season_end`` (``CoolSeasonEnd`` in accim 0.x).
 
     Usage
     -----
@@ -1576,12 +1480,12 @@ class CoolSeasonEnd:
         Examples
         --------
         CoolSeasonEnd().name
-        'CoolSeasonEnd'
+        'cooling_season_end'
         """
-        self.name = 'CoolSeasonEnd'
+        self.name = 'cooling_season_end'
 
     def modify(self, idf, value):
-        """Apply parameter ``CoolSeasonEnd`` to an IDF in place.
+        """Apply parameter ``cooling_season_end`` to an IDF in place.
 
         Parameters
         ----------
@@ -1606,7 +1510,7 @@ class CoolSeasonEnd:
         param_accis.modify_CoolSeasonEnd(idf, value)
 
 class SetpointAcc:
-    """OO wrapper for ACCIS parameter ``SetpointAcc``.
+    """OO wrapper for the ACCIS parameter ``setpoint_accuracy`` (``SetpointAcc`` in accim 0.x).
 
     Usage
     -----
@@ -1628,12 +1532,12 @@ class SetpointAcc:
         Examples
         --------
         SetpointAcc().name
-        'SetpointAcc'
+        'setpoint_accuracy'
         """
-        self.name = 'SetpointAcc'
+        self.name = 'setpoint_accuracy'
 
     def modify(self, idf, value):
-        """Apply parameter ``SetpointAcc`` to an IDF in place.
+        """Apply parameter ``setpoint_accuracy`` to an IDF in place.
 
         Parameters
         ----------
@@ -1658,7 +1562,7 @@ class SetpointAcc:
         param_accis.modify_SetpointAcc(idf, value)
 
 class MaxTempDiffVOF:
-    """OO wrapper for ACCIS parameter ``MaxTempDiffVOF``.
+    """OO wrapper for the ACCIS parameter ``opening_factor_max_temp_diff`` (``MaxTempDiffVOF`` in accim 0.x).
 
     Usage
     -----
@@ -1680,12 +1584,12 @@ class MaxTempDiffVOF:
         Examples
         --------
         MaxTempDiffVOF().name
-        'MaxTempDiffVOF'
+        'opening_factor_max_temp_diff'
         """
-        self.name = 'MaxTempDiffVOF'
+        self.name = 'opening_factor_max_temp_diff'
 
     def modify(self, idf, value):
-        """Apply parameter ``MaxTempDiffVOF`` to an IDF in place.
+        """Apply parameter ``opening_factor_max_temp_diff`` to an IDF in place.
 
         Parameters
         ----------
@@ -1710,7 +1614,7 @@ class MaxTempDiffVOF:
         param_accis.modify_MaxTempDiffVOF(idf, value)
 
 class MinTempDiffVOF:
-    """OO wrapper for ACCIS parameter ``MinTempDiffVOF``.
+    """OO wrapper for the ACCIS parameter ``opening_factor_min_temp_diff`` (``MinTempDiffVOF`` in accim 0.x).
 
     Usage
     -----
@@ -1732,12 +1636,12 @@ class MinTempDiffVOF:
         Examples
         --------
         MinTempDiffVOF().name
-        'MinTempDiffVOF'
+        'opening_factor_min_temp_diff'
         """
-        self.name = 'MinTempDiffVOF'
+        self.name = 'opening_factor_min_temp_diff'
 
     def modify(self, idf, value):
-        """Apply parameter ``MinTempDiffVOF`` to an IDF in place.
+        """Apply parameter ``opening_factor_min_temp_diff`` to an IDF in place.
 
         Parameters
         ----------
@@ -1762,7 +1666,7 @@ class MinTempDiffVOF:
         param_accis.modify_MinTempDiffVOF(idf, value)
 
 class MultiplierVOF:
-    """OO wrapper for ACCIS parameter ``MultiplierVOF``.
+    """OO wrapper for the ACCIS parameter ``min_opening_factor`` (``MultiplierVOF`` in accim 0.x).
 
     Usage
     -----
@@ -1784,12 +1688,12 @@ class MultiplierVOF:
         Examples
         --------
         MultiplierVOF().name
-        'MultiplierVOF'
+        'min_opening_factor'
         """
-        self.name = 'MultiplierVOF'
+        self.name = 'min_opening_factor'
 
     def modify(self, idf, value):
-        """Apply parameter ``MultiplierVOF`` to an IDF in place.
+        """Apply parameter ``min_opening_factor`` to an IDF in place.
 
         Parameters
         ----------

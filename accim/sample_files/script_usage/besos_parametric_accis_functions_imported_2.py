@@ -14,11 +14,11 @@ accis.add_accis_to_idf(
     idf=building,
     script_type='vrf_mm',
     supply_air_temp_input_method='temperature difference',
-    output_keep_existing=False,
+    keep_existing_outputs=False,
     output_type='standard',
-    output_freqs=['hourly'],
+    output_frequencies=['hourly'],
     # energyplus_version='9.4',
-    temp_ctrl='temperature',
+    setpoint_type='temperature',
 )
 
 # gv = [i for i in building.idfobjects['EnergyManagementSystem:GlobalVariable']]
