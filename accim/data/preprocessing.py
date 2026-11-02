@@ -18,6 +18,8 @@
 Submodule to perform data processing before simulation run.
 """
 
+from accim import __version__
+
 
 def import_geopy():
     """
@@ -37,6 +39,45 @@ def import_geopy():
             "of the EPW files from their coordinates. Please install it with: pip install geopy"
         ) from err
     return geopy, Nominatim
+
+
+#: The User-Agent of the requests to Nominatim (OpenStreetMap), whose usage policy asks for one that identifies the
+#: application, and their timeout, in seconds
+NOMINATIM_USER_AGENT = f'accim/{__version__} (https://github.com/dsanchez-garcia/accim)'
+NOMINATIM_TIMEOUT = 10
+
+
+def _osm_address(response: dict, latitude, longitude) -> dict:
+    """The address of an answer of Nominatim: empty, with a message, if it has none (Nominatim answers
+    ``{'error': 'Unable to geocode'}`` for the coordinates without an address, such as those in the sea)."""
+    address = response.get('address') or {}
+    if not address:
+        print(f'OpenStreetMap gives no address for the coordinates {latitude}, {longitude}: '
+              f'{response.get("error", "no address")}.')
+    return address
+
+
+def _fill_from_osm_address(epw_df, i, osm_address) -> None:
+    """Set the country, the address and, if it is still unknown, the city or subcountry of the EPW of row ``i`` of
+    rename_epw_files from the address that give_address, give_address_ssl or give_address_openssl found: the city is
+    the part of the name of the EPW found in the city district, the city or the municipality of the address. Without
+    an address, they stay unknown, so rename_epw_files asks for them."""
+    import pycountry
+    from unidecode import unidecode
+
+    address = osm_address.address
+    if not address.get('country_code'):
+        epw_df.loc[i, 'location_address'] = unidecode(osm_address.full_address) or 'UNKNOWN'
+        return
+    epw_df.loc[i, 'EPW_country_code'] = address['country_code'].upper()
+    epw_df.loc[i, 'EPW_country'] = pycountry.countries.get(
+        alpha_2=epw_df.loc[i, 'EPW_country_code']).name.replace(' ', '-')
+    epw_df.loc[i, 'location_address'] = unidecode(osm_address.full_address)
+    for part in epw_df.loc[i, 'EPW_mod_filtered']:
+        for key in ('city_district', 'city', 'municipality'):
+            if 'UNKNOWN' in epw_df.loc[i, 'EPW_city_or_subcountry'] and key in address:
+                if part.lower() in str(unidecode(address[key])).lower():
+                    epw_df.loc[i, 'EPW_city_or_subcountry'] = part.replace(' ', '-').capitalize()
 
 
 def capitalize_words(text):
@@ -85,10 +126,11 @@ class give_address_ssl:
 
         # Make request to OpenStreetMap API with SSL verification enabled
         url = f"https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat={latitude}&lon={longitude}"
-        response = requests.get(url, verify=cafile, headers={'User-Agent': 'Mozilla/5.0'}, timeout=10).json()
+        response = requests.get(url, verify=cafile, headers={'User-Agent': NOMINATIM_USER_AGENT},
+                                timeout=NOMINATIM_TIMEOUT).json()
 
         # Extract address information from response
-        self.address = response['address']
+        self.address = _osm_address(response, latitude, longitude)
 
         # Print the full address
         self.full_address = ", ".join([v for k,v in self.address.items() if v and k != 'country_code'])
@@ -129,10 +171,11 @@ class give_address_openssl:
 
         # Make request to OpenStreetMap API with SSL verification enabled
         url = f"https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat={latitude}&lon={longitude}"
-        response = requests.get(url, verify=cafile, headers={'User-Agent': 'Mozilla/5.0'}, timeout=10).json()
+        response = requests.get(url, verify=cafile, headers={'User-Agent': NOMINATIM_USER_AGENT},
+                                timeout=NOMINATIM_TIMEOUT).json()
 
         # Extract address information from response
-        self.address = response['address']
+        self.address = _osm_address(response, latitude, longitude)
 
         # Print the full address
         self.full_address = ", ".join([v for k,v in self.address.items() if v and k != 'country_code'])
@@ -157,10 +200,10 @@ class give_address:
 
         # Make request to OpenStreetMap API
         url = f"https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat={latitude}&lon={longitude}"
-        response = requests.get(url).json()
+        response = requests.get(url, headers={'User-Agent': NOMINATIM_USER_AGENT}, timeout=NOMINATIM_TIMEOUT).json()
 
         # Extract address information from response
-        self.address = response['address']
+        self.address = _osm_address(response, latitude, longitude)
 
         # Print the full address
         self.full_address = ", ".join([v for k,v in self.address.items() if v and k != 'country_code'])
@@ -188,7 +231,9 @@ class rename_epw_files:
         to skip renaming confirmation on prompt command or console
     :type confirm_renaming: bool
     :param confirm_deletion: True or False,
-        to skip deletion confirmation on prompt command or console
+        to skip deletion confirmation on prompt command or console.
+        Only the original EPWs that have been copied with their new names are deleted:
+        those excluded from the renaming, or not copied, are kept.
     :type confirm_deletion: bool
     """
     def __init__(
@@ -338,6 +383,7 @@ class rename_epw_files:
 
         epw_df['EPW_city_or_subcountry'] = 'UNKNOWN'
         epw_df['EPW_country'] = 'UNKNOWN'
+        epw_df['location_address'] = 'UNKNOWN'
 
         for i in range(len(epw_df)):
             if rename_city_dict is not None:
@@ -352,23 +398,25 @@ class rename_epw_files:
             if epw_df.loc[i, 'EPW_city_or_subcountry'] == 'UNKNOWN' or epw_df.loc[i, 'EPW_country'] == 'UNKNOWN':
                 geopy, Nominatim = import_geopy()
                 try:
-                    geolocator = Nominatim(user_agent="abcd")
+                    geolocator = Nominatim(user_agent=NOMINATIM_USER_AGENT, timeout=NOMINATIM_TIMEOUT)
                     location = geolocator.reverse(epw_df.loc[i, 'EPW_latitude'] + "," + epw_df.loc[i, 'EPW_longitude'])
-                    # address = location.raw['address']
+                    # Nominatim gives no address for some coordinates (those in the sea, for instance): then the
+                    # country and the city stay unknown, and they are asked for below
+                    if location is None or not location.raw.get('address', {}).get('country_code'):
+                        print(f"OpenStreetMap gives no address for the coordinates of {epw_df.loc[i, 'EPW_names']}.")
+                    else:
+                        epw_df.loc[i, 'EPW_country_code'] = location.raw['address']['country_code'].upper()
+                        epw_df.loc[i, 'EPW_country'] = pycountry.countries.get(alpha_2=epw_df.loc[i, 'EPW_country_code']).name.replace(' ', '-')
+                        epw_df.loc[i, 'location_address'] = unidecode(location.raw['display_name'])
 
-                    epw_df.loc[i, 'EPW_country_code'] = location.raw['address']['country_code'].upper()
-                    epw_df.loc[i, 'EPW_country'] = pycountry.countries.get(alpha_2=epw_df.loc[i, 'EPW_country_code']).name.replace(' ', '-')
-                    # epw_df.loc[i, 'EPW_country'] = capitalize_words(location.raw['address']['country'])
-                    epw_df.loc[i, 'location_address'] = unidecode(location.raw['display_name'])
-
-                    loc_matches = []
-                    for j in epw_df.loc[i, 'EPW_mod_filtered']:
-                        if 'UNKNOWN' in epw_df.loc[i, 'EPW_city_or_subcountry']:
-                            if j != 'IWEC' and j != 'SWEC':
-                                if j in location.raw['display_name']:
-                                    loc_matches.append(j)
-                    proposed_city = capitalize_words(' '.join(loc_matches))
-                    epw_df.loc[i, 'EPW_city_or_subcountry'] = proposed_city
+                        loc_matches = []
+                        for j in epw_df.loc[i, 'EPW_mod_filtered']:
+                            if 'UNKNOWN' in epw_df.loc[i, 'EPW_city_or_subcountry']:
+                                if j != 'IWEC' and j != 'SWEC':
+                                    if j in location.raw['display_name']:
+                                        loc_matches.append(j)
+                        proposed_city = capitalize_words(' '.join(loc_matches))
+                        epw_df.loc[i, 'EPW_city_or_subcountry'] = proposed_city
 
                                 # if any(j.lower() in [c for c in str(unidecode(location.raw['address']['city'])).lower().split(' ')]):
                                 #     epw_df.loc[i, 'EPW_city_or_subcountry'] = j.replace(' ', '-').capitalize()
@@ -378,87 +426,17 @@ class rename_epw_files:
                             # except KeyError:
                             #     pass
 
-                except geopy.exc.GeocoderUnavailable:
+                except geopy.exc.GeocoderServiceError:
+                    # Nominatim through geopy is unavailable, too slow or refuses the request: ask it directly
+                    latitude, longitude = epw_df.loc[i, 'EPW_latitude'], epw_df.loc[i, 'EPW_longitude']
                     try:
-                        osm_address = give_address(epw_df.loc[i, 'EPW_latitude'], epw_df.loc[i, 'EPW_longitude'])
-
-                        epw_df.loc[i, 'EPW_country_code'] = osm_address.address['country_code'].upper()
-                        epw_df.loc[i, 'EPW_country'] = pycountry.countries.get(alpha_2=epw_df.loc[i, 'EPW_country_code']).name.replace(' ', '-')
-                        epw_df.loc[i, 'location_address'] = unidecode(osm_address.full_address)
-
-                        for j in epw_df.loc[i, 'EPW_mod_filtered']:
-                            if 'UNKNOWN' in epw_df.loc[i, 'EPW_city_or_subcountry']:
-                                try:
-                                    if j.lower() in str(unidecode(osm_address.address['city_district'])).lower():
-                                        epw_df.loc[i, 'EPW_city_or_subcountry'] = j.replace(' ', '-').capitalize()
-                                except KeyError:
-                                    pass
-                            if 'UNKNOWN' in epw_df.loc[i, 'EPW_city_or_subcountry']:
-                                try:
-                                    if j.lower() in str(unidecode(osm_address.address['city'])).lower():
-                                        epw_df.loc[i, 'EPW_city_or_subcountry'] = j.replace(' ', '-').capitalize()
-                                except KeyError:
-                                    pass
-                            if 'UNKNOWN' in epw_df.loc[i, 'EPW_city_or_subcountry']:
-                                try:
-                                    if j.lower() in str(unidecode(osm_address.address['municipality'])).lower():
-                                        epw_df.loc[i, 'EPW_city_or_subcountry'] = j.replace(' ', '-').capitalize()
-                                except KeyError:
-                                    pass
+                        _fill_from_osm_address(epw_df, i, give_address(latitude, longitude))
                     except requests.exceptions.SSLError:
                         try:
-                            osm_address = give_address_ssl(epw_df.loc[i, 'EPW_latitude'], epw_df.loc[i, 'EPW_longitude'])
-
-                            epw_df.loc[i, 'EPW_country_code'] = osm_address.address['country_code'].upper()
-                            epw_df.loc[i, 'EPW_country'] = pycountry.countries.get(alpha_2=epw_df.loc[i, 'EPW_country_code']).name.replace(' ', '-')
-                            epw_df.loc[i, 'location_address'] = unidecode(osm_address.full_address)
-
-                            for j in epw_df.loc[i, 'EPW_mod_filtered']:
-                                if 'UNKNOWN' in epw_df.loc[i, 'EPW_city_or_subcountry']:
-                                    try:
-                                        if j.lower() in str(unidecode(osm_address.address['city_district'])).lower():
-                                            epw_df.loc[i, 'EPW_city_or_subcountry'] = j.replace(' ', '-').capitalize()
-                                    except KeyError:
-                                        pass
-                                if 'UNKNOWN' in epw_df.loc[i, 'EPW_city_or_subcountry']:
-                                    try:
-                                        if j.lower() in str(unidecode(osm_address.address['city'])).lower():
-                                            epw_df.loc[i, 'EPW_city_or_subcountry'] = j.replace(' ', '-').capitalize()
-                                    except KeyError:
-                                        pass
-                                if 'UNKNOWN' in epw_df.loc[i, 'EPW_city_or_subcountry']:
-                                    try:
-                                        if j.lower() in str(unidecode(osm_address.address['municipality'])).lower():
-                                            epw_df.loc[i, 'EPW_city_or_subcountry'] = j.replace(' ', '-').capitalize()
-                                    except KeyError:
-                                        pass
+                            _fill_from_osm_address(epw_df, i, give_address_ssl(latitude, longitude))
                         except requests.exceptions.SSLError:
                             try:
-                                osm_address = give_address_openssl(epw_df.loc[i, 'EPW_latitude'], epw_df.loc[i, 'EPW_longitude'])
-
-                                epw_df.loc[i, 'EPW_country_code'] = osm_address.address['country_code'].upper()
-                                epw_df.loc[i, 'EPW_country'] = pycountry.countries.get(alpha_2=epw_df.loc[i, 'EPW_country_code']).name.replace(' ', '-')
-                                epw_df.loc[i, 'location_address'] = unidecode(osm_address.full_address)
-
-                                for j in epw_df.loc[i, 'EPW_mod_filtered']:
-                                    if 'UNKNOWN' in epw_df.loc[i, 'EPW_city_or_subcountry']:
-                                        try:
-                                            if j.lower() in str(unidecode(osm_address.address['city_district'])).lower():
-                                                epw_df.loc[i, 'EPW_city_or_subcountry'] = j.replace(' ', '-').capitalize()
-                                        except KeyError:
-                                            pass
-                                    if 'UNKNOWN' in epw_df.loc[i, 'EPW_city_or_subcountry']:
-                                        try:
-                                            if j.lower() in str(unidecode(osm_address.address['city'])).lower():
-                                                epw_df.loc[i, 'EPW_city_or_subcountry'] = j.replace(' ', '-').capitalize()
-                                        except KeyError:
-                                            pass
-                                    if 'UNKNOWN' in epw_df.loc[i, 'EPW_city_or_subcountry']:
-                                        try:
-                                            if j.lower() in str(unidecode(osm_address.address['municipality'])).lower():
-                                                epw_df.loc[i, 'EPW_city_or_subcountry'] = j.replace(' ', '-').capitalize()
-                                        except KeyError:
-                                            pass
+                                _fill_from_osm_address(epw_df, i, give_address_openssl(latitude, longitude))
                             except AttributeError:
                                 epw_df.loc[i, 'EPW_country_code'] = 'UNKNOWN'
                                 epw_df.loc[i, 'EPW_country'] = 'UNKNOWN'
@@ -658,15 +636,17 @@ class rename_epw_files:
 
         checkpoint = checkpoint + 1
 
+        # The original EPWs that have been copied with their new names: only these can be deleted
+        copied = []
         if confirm_renaming:
             for i in range(len(epw_df)):
                 if i not in exclusion_list:
                     try:
                         shutil.copy(epw_df.loc[i, 'EPW_abs_path'], path + '/' + epw_df.loc[i, 'EPW_new_names'] + '.epw')
                         print(f'The file {epw_df.loc[i, "EPW_names"]} has been renamed to {epw_df.loc[i, "EPW_new_names"]}')
+                        copied.append(i)
                     except shutil.SameFileError:
                         print(f'The old and new names of file {epw_df.loc[i, "EPW_names"]} are the same.')
-                        epw_files_to_rename.remove(epw_df.loc[i, "EPW_names"] + '.epw')
 
         if confirm_deletion is None:
             proceed = input('\nDo you want to delete the original EPW file or files? [y/n]:')
@@ -676,8 +656,13 @@ class rename_epw_files:
                 confirm_deletion = False
 
         if confirm_deletion:
-            for i in epw_files_to_rename:
-                os.remove(i)
-                print(f'The file {i} has been deleted.')
+            for i in copied:
+                os.remove(epw_df.loc[i, 'EPW_abs_path'])
+                print(f'The file {epw_df.loc[i, "EPW_file_names"]} has been deleted.')
+            kept = [epw_df.loc[i, 'EPW_file_names'] for i in range(len(epw_df)) if i not in copied]
+            if kept:
+                print('The following original EPW files have not been copied with a new name, so they have been '
+                      'kept:')
+                print(*kept, sep='\n')
 
         # todo pop up when process ends; by default True

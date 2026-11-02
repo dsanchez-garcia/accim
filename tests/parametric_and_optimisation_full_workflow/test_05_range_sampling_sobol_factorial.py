@@ -237,7 +237,7 @@ assert not pf.outputs_param_simulation.empty
 # RESUMEN FINAL
 # ===========================================================================
 print("\n=== RESUMEN SCRIPT 5 ===")
-print(f"  Sobol: {n_sobol} muestras por EPW → {len(results_sobol)} sims totales")
-print(f"  Factorial (level=2): {n_factorial // 2} puntos/EPW → {len(results_factorial)} sims totales")
+print(f"  Sobol: {n_sobol} muestras por EPW -> {len(results_sobol)} sims totales")
+print(f"  Factorial (level=2): {n_factorial // 2} puntos/EPW -> {len(results_factorial)} sims totales")
 print(f"  Outputs en '{OUT_SOBOL}/' y '{OUT_FACTORIAL}/'")
 print("\n=== SCRIPT 5 COMPLETADO ===")

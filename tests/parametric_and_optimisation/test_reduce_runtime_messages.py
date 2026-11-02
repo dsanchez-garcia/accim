@@ -6,6 +6,8 @@ these two settings also said "days".
 """
 from types import SimpleNamespace
 
+import pytest
+
 from accim.utils import modify_timesteps, reduce_runtime
 
 
@@ -51,3 +53,16 @@ def test_modify_timesteps_message_has_no_unit(capsys):
     lines = capsys.readouterr().out.splitlines()
     assert lines == ['Number of Timesteps per Hour was previously set to 6, and it has been modified to 4.']
     assert idf.idfobjects['Timestep'][0].Number_of_Timesteps_per_Hour == 4
+
+
+@pytest.mark.parametrize('timesteps', [1, 7, 61])
+def test_reduce_runtime_only_takes_the_timesteps_that_energyplus_allows(timesteps):
+    # Before, it took any number from 2 to 60, such as 7, which EnergyPlus and modify_timesteps reject (it must
+    # divide 60)
+    idf = _fake_idf()
+
+    with pytest.raises(ValueError, match=f'timesteps cannot be {timesteps}: it must be 2, 3, 4'):
+        reduce_runtime(idf_object=idf, timesteps=timesteps)
+    assert idf.idfobjects['Timestep'][0].Number_of_Timesteps_per_Hour == 6
+    with pytest.raises(ValueError, match='not in allowable values'):
+        modify_timesteps(idf_object=idf, timesteps=7)

@@ -105,6 +105,18 @@ def test_ask_model_arguments_asks_again_after_an_invalid_answer(index, invalid, 
     assert script.steps == []
 
 
+@pytest.mark.parametrize('empty', ['', '   '])
+def test_an_empty_answer_to_the_output_frequencies_is_asked_again(empty):
+    # Before, an empty answer was valid and gave no output frequencies ([])
+    index = 4
+    expected, answer = VRF_MODEL_ANSWERS[index]
+    script = _Script(VRF_MODEL_ANSWERS[:index] + [(expected, empty), ('Some of the Output frequencies', answer)]
+                     + VRF_MODEL_ANSWERS[index + 1:])
+
+    assert prompts.ask_model_arguments(ask=script)['output_frequencies'] == ['hourly']
+    assert script.steps == []
+
+
 MIXED_MODE_STEPS = _confirmed(
     ('Enter the Comfort Standard numbers', '1 2'),
     ('):', '1 80'),

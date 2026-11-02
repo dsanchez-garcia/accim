@@ -153,18 +153,18 @@ def _outputs(building, ems_suffixes):
     return columns
 
 
-def _table(tmp_path, monkeypatch, model, extra_columns=None, **kwargs):
+def _table(tmp_path, monkeypatch, model, extra_columns=None, csv_name=CSV_NAME, **kwargs):
     """Run Table on a CSV file with the outputs of the model (and extra_columns)."""
     columns = _outputs(model['building'], model['ems_suffixes'])
     columns.update(extra_columns or {})
     lines = [','.join(['Date/Time', *columns])]
     for hour in range(2):
         lines.append(','.join([f' 01/01  0{hour + 1}:00:00', *(str(v[hour]) for v in columns.values())]))
-    (tmp_path / CSV_NAME).write_text('\n'.join(lines) + '\n', encoding='utf-8')
+    (tmp_path / csv_name).write_text('\n'.join(lines) + '\n', encoding='utf-8')
     monkeypatch.chdir(tmp_path)
     monkeypatch.setattr(besos.eppy_funcs, 'get_building', lambda idf_path: model['building'])
     arguments = dict(
-        datasets=[CSV_NAME], source_frequency='hourly', frequency='hourly', frequency_agg_func='sum',
+        datasets=[csv_name], source_frequency='hourly', frequency='hourly', frequency_agg_func='sum',
         standard_outputs=True, level=['block', 'building'], level_agg_func=['sum', 'mean'], level_excluded_zones=[],
         block_zone_hierarchy=model['hierarchy'], normalised_energy_units=False, energy_units_in_kwh=False,
         idf_path='model.idf',
@@ -315,6 +315,19 @@ def test_excluded_zone_whose_name_is_part_of_the_name_of_another_zone(tmp_path, 
         ZONE_VALUES[1]['comfortable']
 
 
+def test_block_means_leave_out_the_excluded_zones(tmp_path, monkeypatch):
+    # Found on 2026-11-01: the block means also averaged the columns of the excluded zones, which the block sums and
+    # the building sums and means left out
+    table = _table(tmp_path, monkeypatch, DESIGNBUILDER, level_excluded_zones=['Block1:Zone1'])
+
+    # Only the outputs of Block1:Zone2 (the second zone)
+    second = ZONE_VALUES[1]
+    for level in ('Block1', 'Building'):
+        assert _values(table, f'{level}_Total_Zone Operative Temperature (°C) (mean)') == second['temperature']
+        assert _values(table, f'{level}_Total_Comfortable Hours_No Applicability (h) (mean)') == second['comfortable']
+        assert _values(table, f'{level}_Total_Cooling Energy Demand (Wh) (mean)') == second['cooling']
+
+
 def test_totals_of_the_hours_add_up_only_the_comfortable_hours_of_the_zones(tmp_path, monkeypatch):
     # Found on 2026-11-01: the block and building totals of 'Comfortable Hours_No Applicability' also added up the
     # occupied comfortable hours of the zones ('Occupied Comfortable Hours_No Applicability_<zone>', whose name
@@ -340,3 +353,58 @@ def test_table_without_idf_path_explains_that_it_needs_it(tmp_path, monkeypatch)
 
     with pytest.raises(ValueError, match='Table needs idf_path'):
         _table(tmp_path, monkeypatch, model, idf_path=None)
+
+
+def test_table_that_keeps_the_names_of_the_outputs(tmp_path, monkeypatch):
+    # Before, Table(rename_cols=False) stopped with KeyError: 'Model', because the columns of accim (the parts of the
+    # names of the simulations, and the date) kept the capitals in which Table reads the CSV files
+    table = _table(tmp_path, monkeypatch, DESIGNBUILDER, rename_cols=False)
+
+    assert list(table.df.columns[:13]) == ['Source', 'Model', 'ComfStand', 'CAT', 'ComfMod', 'HVACmode', 'VentCtrl',
+                                           'VSToffset', 'MinOToffset', 'MaxWindSpeed', 'ASTtol', 'NameSuffix', 'EPW']
+    # The outputs of EnergyPlus keep their names (in the capitals in which Table reads them)
+    zone_cooling = 'BLOCK1:ZONE1 VRF INDOOR UNIT DX COOLING COIL:COOLING COIL TOTAL COOLING RATE (Wh)(HOURLY)'
+    assert zone_cooling in table.df
+    table.format_table(type_of_table='energy demand')
+    assert zone_cooling in table.val_cols and 'Building_Total_Total Energy Demand (Wh) (summed)' in table.val_cols
+    assert len(table.val_cols) == 18 and not [c for c in table.val_cols if 'ELECTRICITY' in c.upper()]
+    table.format_table(type_of_table='comfort hours')
+    assert {'EMS:COMFORTABLE HOURS_NO APPLICABILITY_BLOCK1:ZONE1 [H](HOURLY)',
+            'Building_Total_Comfortable Hours_No Applicability (h) (summed)'} <= set(table.val_cols)
+    assert all('COMFORTABLE HOURS_NO APPLICABILITY' in c.upper() for c in table.val_cols)
+    with pytest.raises(ValueError, match="type_of_table='temperature' takes the renamed columns"):
+        table.format_table(type_of_table='temperature')
+
+
+@pytest.mark.parametrize('standard, mode, expected', [
+    ('INT EN16798', 3, ['EN16798-1']), ('INT ASHRAE55', 3, ['ASHRAE 55']),
+    # IMAC R 30DRM uses the prevailing mean outdoor temperature with the comfort mode 0, and the running mean with
+    # the others
+    ('IND IMAC R 30DRM', 0, ['ASHRAE 55']), ('IND IMAC R 30DRM', 3, ['EN16798-1']),
+])
+def test_the_temperature_table_takes_the_running_mean_that_the_setpoints_use(tmp_path, monkeypatch, standard, mode,
+                                                                             expected):
+    # Found on 2026-10-31: it took the first running mean outdoor temperature column, that of ASHRAE 55 for the models
+    # of EN 16798-1 in the CSV files of EnergyPlus
+    ashrae = {f'{target.sensor_key.upper()}:Zone Thermal Comfort ASHRAE 55 Adaptive Model Running Average Outdoor Air '
+              f'Temperature [C](Hourly)': [18.0, 18.5] for target in resolve_targets(DESIGNBUILDER['building'])}
+    csv_name = CSV_NAME.replace('CS_INT EN16798', f'CS_{standard}').replace('CM_3', f'CM_{mode}')
+    table = _table(tmp_path, monkeypatch, DESIGNBUILDER, extra_columns=ashrae, csv_name=csv_name)
+    # The column of the other running mean first, whatever the order of the CSV file
+    other = [c for c in table.df_backup.columns if 'Running mean outdoor temperature' in c and expected[0] not in c]
+    assert other
+    table.df_backup = table.df_backup[other + [c for c in table.df_backup.columns if c not in other]]
+
+    table.format_table(type_of_table='temperature')
+
+    assert [c for c in table.val_cols if 'Running mean outdoor temperature' in c] == [
+        f'Block1:Zone1_{expected[0]} Running mean outdoor temperature (°C)']
+
+
+def test_the_running_means_that_the_setpoints_use():
+    from accim.data.postprocessing.main import _running_mean_outputs
+
+    assert _running_mean_outputs(['CS_INT EN16798', 'CS_INT ASHRAE55'], ['CM_3', 'CM_2']) == ['EN16798-1', 'ASHRAE 55']
+    # Static setpoints, and the setpoints of PMV
+    assert _running_mean_outputs(['CS_ESP CTE', 'CS_INT EN16798', 'CS_PMV'], ['CM_X', 'CM_0', 'CM_X']) == []
+    assert _running_mean_outputs(['CS_AUS DeDear'], ['CM_1.1']) == ['ASHRAE 55']

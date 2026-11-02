@@ -47,6 +47,8 @@ def morph_epws(
     :param fwg_options_do_multithread_computation: True to do the computations in multithread.
     :param fwg_options_interpolation_method_id: Selects the grid method: 0 – bilinear interpolation, 1 – an average of the four nearest points; 2 – nearest point.
     :param fwg_options_do_limit_variables: True to bound each generated variable to its physical limits
+    :raises RuntimeError: If Java cannot be run or the tool fails with an EPW (after moving all the original EPWs
+        back to the working folder).
     """
     import os
     import shutil
@@ -83,19 +85,22 @@ def morph_epws(
         if verbose:
             print(f"Moved {epw_file} to folder {folder_name}")
 
+    # The EPWs whose morphing failed, with the reason
+    failed = []
     for folder_name, epw_name, folder_path, epw_path in [i for i in directory_file_paths]:
-        # directory = os.path.dirname(epw)
-        # directory = r'D:\OneDrive - ZER0CEM\Python\testing_morphing_python'
-        subprocess.run(f'java -cp '
-                       f'"{fwg_path}" '
-                       f'futureweathergenerator.Morph "{epw_path}" '
-                       f'{fwg_options_gcms} '
-                       f'{fwg_options_ensemble} '
-                       f'{fwg_options_month_transition_hours} '
-                       f'"{folder_path}/" '
-                       f'{fwg_options_do_multithread_computation} '
-                       f'{fwg_options_interpolation_method_id} '
-                       f'{fwg_options_do_limit_variables}')
+        # A list of arguments, so that the paths with blanks need no quotes, in any operating system
+        command = ['java', '-cp', str(fwg_path), 'futureweathergenerator.Morph', epw_path, fwg_options_gcms,
+                   str(fwg_options_ensemble), str(fwg_options_month_transition_hours), folder_path + '/',
+                   str(fwg_options_do_multithread_computation), str(fwg_options_interpolation_method_id),
+                   str(fwg_options_do_limit_variables)]
+        try:
+            returncode = subprocess.run(command).returncode
+        except OSError as error:
+            # Java is not installed, or not in the PATH
+            failed.append(f'{epw_name} (Java could not be run: {error})')
+            continue
+        if returncode != 0:
+            failed.append(f'{epw_name} (exit code {returncode})')
 
 
     # Search for new EPW files in the folder paths and rename them according to the pattern
@@ -138,4 +143,10 @@ def morph_epws(
             shutil.rmtree(folder_path)
             if verbose:
                 print(f"Deleted folder: {folder_path}")
+
+    if failed:
+        raise RuntimeError('FutureWeatherGenerator could not morph ' + '; '.join(failed) + '. The original EPW '
+                           'files are back in the working folder. Check that Java is installed and that fwg_path is '
+                           'the path of the jar file of FutureWeatherGenerator (with delete_morphing_files=False, '
+                           'the files that the tool wrote are kept).')
 

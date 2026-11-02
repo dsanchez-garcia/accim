@@ -30,6 +30,9 @@ __all__ = [
 #: The IDF object of a model (eppy or besos)
 IDF = Any
 
+#: The numbers of timesteps per hour that EnergyPlus allows (those that divide 60)
+TIMESTEPS_PER_HOUR = (1, 2, 3, 4, 5, 6, 10, 12, 15, 20, 30, 60)
+
 
 def modify_timesteps(idf_object: IDF, timesteps: int) -> IDF:
     """
@@ -41,7 +44,7 @@ def modify_timesteps(idf_object: IDF, timesteps: int) -> IDF:
         Allowable values include 1, 2, 3, 4, 5, 6, 10, 12, 15, 20, 30, and 60
     :type timesteps: int
     """
-    if timesteps not in [1, 2, 3, 4, 5, 6, 10, 12, 15, 20, 30, 60]:
+    if timesteps not in TIMESTEPS_PER_HOUR:
         raise ValueError(f'{timesteps} not in allowable values: 1, 2, 3, 4, 5, 6, 10, 12, 15, 20, 30, and 60')
     obj_timestep = [i for i in idf_object.idfobjects['Timestep']][0]
     timestep_prev = obj_timestep.Number_of_Timesteps_per_Hour
@@ -125,7 +128,8 @@ def reduce_runtime(
     :param shading_calculation_update_frequency: An integer. Sets the intervals for the shading calculation update
     :param maximum_figures_in_shadow_overlap_calculations: An integer.
         Applies the number to the maximum figures in shadow overlap calculations.
-    :param timesteps: An integer. Sets the number of timesteps.
+    :param timesteps: An integer. Sets the number of timesteps per hour: 2, 3, 4, 5, 6, 10, 12, 15, 20, 30 or 60
+        (EnergyPlus needs a number that divides 60).
     :param runperiod_begin_day_of_month: the day of the month to start the simulation
     :param runperiod_begin_month: the month to start the simulation
     :param runperiod_end_day_of_month: the day of the month to end the simulation
@@ -133,8 +137,9 @@ def reduce_runtime(
     """
     if shading_calculation_update_frequency < 1 or shading_calculation_update_frequency > 365:
         raise ValueError('shading_calculation_update_frequency cannot be smaller than 1 or larger than 365')
-    if timesteps < 2 or timesteps > 60:
-        raise ValueError('timesteps cannot be smaller than 2 or larger than 60')
+    if timesteps not in TIMESTEPS_PER_HOUR or timesteps < 2:
+        raise ValueError(f'timesteps cannot be {timesteps}: it must be 2, 3, 4, 5, 6, 10, 12, 15, 20, 30 or 60 '
+                         f'(EnergyPlus needs a number of timesteps per hour that divides 60)')
 
     if minimal_shadowing:
         obj_building = [i for i in idf_object.idfobjects['Building']][0]
@@ -211,15 +216,24 @@ def remove_accents(input_str: str) -> str:
 def remove_accents_in_idf(idf_path: str):
     """
     Replaces all letters with accent with the same letter without accent.
+    The file can be in UTF-8, or in the encoding of Windows or Latin-1 (as eppy and DesignBuilder save it); it is
+    written in ASCII, which is also UTF-8, with the same line endings.
 
     :type idf_path: str
     """
-    with open(idf_path, 'r', encoding='utf-8') as file:
-        content = file.read()
+    with open(idf_path, 'rb') as file:
+        data = file.read()
+    for encoding in ('utf-8', 'cp1252', 'latin-1'):
+        try:
+            content = data.decode(encoding)
+            break
+        except UnicodeDecodeError:
+            continue
 
     content_without_accents = remove_accents(content)
 
-    with open(idf_path, 'w', encoding='utf-8') as file:
+    # newline='' keeps the line endings of the file
+    with open(idf_path, 'w', encoding='utf-8', newline='') as file:
         file.write(content_without_accents)
 
 

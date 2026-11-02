@@ -222,6 +222,9 @@ def _varies(column) -> bool:
 # of add_building_averages, which are not outputs of a zone
 _LONGER_OUTPUTS = ('Occupied Comfortable Hours_No Applicability', 'Occupied Discomfortable Hours_No Applicability')
 _BUILDING_AVERAGE = '_BUILDING_AVERAGE'
+#: The columns of Table with the parts of the dates, which are text ('01'), also in the CSV files of
+#: gen_csv_concatenated
+DATE_PART_COLUMNS = ('Month/Day', 'Month', 'Day', 'Hour', 'Minute', 'Second')
 
 
 def _of_output(column: str, output: str) -> bool:
@@ -235,6 +238,28 @@ def _of_output(column: str, output: str) -> bool:
         return False
     longer = [name.upper() for name in _LONGER_OUTPUTS if output in name.upper() and name.upper() != output]
     return not any(name in column for name in longer)
+
+
+def _running_mean_outputs(comfort_standards, comfort_modes) -> list:
+    """
+    The running mean outdoor temperatures that the adaptive setpoints of some simulations use, as in the names of the
+    columns of Table: 'EN16798-1' (that of CEN 15251 in EnergyPlus, RMOT in the EMS programs of accim) and 'ASHRAE 55'
+    (the prevailing mean outdoor temperature, PMOT), from their comfort standards and comfort modes as in the
+    columns ComfStand and ComfMod ('CS_INT EN16798', 'CM_3'...). The static setpoints use neither.
+    """
+    from accim.sim.ems.setpoint_lines import SETPOINT_LINES
+    from accim.sim.standards import COMFORT_STANDARDS
+
+    numbers = {f'CS_{standard.label}': number for number, standard in COMFORT_STANDARDS.items()}
+    variables = set()
+    for standard, mode in set(zip(comfort_standards, comfort_modes)):
+        try:
+            mode = None if str(mode) == 'CM_X' else float(str(mode)[3:])
+        except ValueError:
+            continue
+        lines = ' '.join(SETPOINT_LINES.get((numbers.get(standard), mode), ()))
+        variables.update(variable for variable in ('RMOT', 'PMOT') if variable in lines)
+    return [name for variable, name in (('RMOT', 'EN16798-1'), ('PMOT', 'ASHRAE 55')) if variable in variables]
 
 
 class Table:
@@ -717,12 +742,16 @@ class Table:
             # df = df.round(decimals=2)
 
         else:
-            # todo amend order of columns
-            df = pd.read_csv(filepath_or_buffer=source_concatenated_csv_filepath)
-            df = df.drop(columns=df.columns[0])
-            cols = df.columns.tolist()
-            cols = cols[-1:] + cols[:-1]
-            df = df[cols]
+            # The CSV file of gen_csv_concatenated has the columns of the table above, after its index; the parts of
+            # the dates are read as text ('01'), as in the CSV files of the simulations (before, they were read as
+            # numbers, and the last column was moved to the beginning)
+            df = pd.read_csv(filepath_or_buffer=source_concatenated_csv_filepath, index_col=0,
+                             dtype={part: str for part in DATE_PART_COLUMNS})
+            df = df.reset_index(drop=True)
+            # The files of earlier versions have them as numbers ('1')
+            for part in ('Month', 'Day', 'Hour', 'Minute', 'Second'):
+                if part in df.columns:
+                    df[part] = df[part].str.zfill(2)
 
         checkpoint = checkpoint + 1
 
@@ -1164,7 +1193,8 @@ class Table:
                         if any('mean' in j for j in level_agg_func):
                             df[f'{block}' + '_Total_' + outputdict[output] + ' (mean)_pymod'] = df[
                                 [i for i in df.columns
-                                 if in_block(i, block) and _of_output(i, output) and '_pymod' not in i.lower()]
+                                 if in_block(i, block) and _of_output(i, output) and '_pymod' not in i.lower()
+                                 and not excluded(i)]
                             ].mean(axis=1)
         if any('building' in i for i in level):
             for output in outputdict:
@@ -1504,6 +1534,14 @@ class Table:
 
         self.rename_cols = rename_cols
 
+        # The columns of accim (the parts of the names of the simulations, and the date) get their names whatever
+        # rename_cols is (before, Table(rename_cols=False) stopped with KeyError: 'Model'); rename_cols renames the
+        # outputs of EnergyPlus
+        accim_cols_renamed = {'SOURCE': 'Source', 'COUNT': 'Count'}
+        accim_cols_renamed.update({i.upper(): i for i in fixed_columns_orig})
+        accim_cols_renamed.update({i.upper(): i.capitalize() for i in cols_date})
+        df = df.rename(columns=accim_cols_renamed)
+
         if rename_cols:
             renaming_criteria_bz = {
                 'EMS:Comfortable Hours_No Applicability': 'Comfortable Hours_No Applicability (h)',
@@ -1559,16 +1597,6 @@ class Table:
             }
 
             all_cols_renamed = {}
-
-            all_cols_renamed.update({'SOURCE': 'Source'})
-
-            for i in fixed_columns_orig:
-                all_cols_renamed.update({i.upper(): i})
-
-            all_cols_renamed.update({'COUNT': 'Count'})
-
-            for i in cols_date:
-                all_cols_renamed.update({i.upper(): i.capitalize()})
 
             for col in df.columns:
                 for crit in renaming_criteria_bz:
@@ -1806,19 +1834,23 @@ class Table:
                                  'Heating Energy Demand' in col
                                  ]
             else:
-                self.val_cols = [col for col in self.df.columns if
-                                 'Cooling Coil Total Cooling Rate' in col or
-                                 'Heating Coil Heating Rate' in col or
-                                 'Total Energy Demand' in col]
+                # The names of the outputs of EnergyPlus, which Table reads in capitals
+                self.val_cols = [col for col in self.df.columns if any(
+                    name.upper() in col.upper()
+                    for name in ('Cooling Coil Total Cooling Rate', 'Heating Coil Heating Rate', 'Total Energy Demand'))]
         elif type_of_table == 'comfort hours':
-            self.val_cols = [col for col in self.df.columns if 'Comfortable Hours_No Applicability' in col
-                             or 'Comfortable Hours_Applicability' in col
-                             or 'Discomfortable Applicable Hot Hours' in col
-                             or 'Discomfortable Applicable Cold Hours' in col
-                             or 'Discomfortable Non Applicable Hot Hours' in col
-                             or 'Discomfortable Non Applicable Cold Hours' in col
-                             or 'Ventilation Hours' in col]
+            hours = ['Comfortable Hours_No Applicability', 'Comfortable Hours_Applicability',
+                     'Discomfortable Applicable Hot Hours', 'Discomfortable Applicable Cold Hours',
+                     'Discomfortable Non Applicable Hot Hours', 'Discomfortable Non Applicable Cold Hours',
+                     'Ventilation Hours']
+            if self.rename_cols:
+                self.val_cols = [col for col in self.df.columns if any(name in col for name in hours)]
+            else:
+                self.val_cols = [col for col in self.df.columns if any(name.upper() in col.upper() for name in hours)]
         elif type_of_table == 'temperature':
+            if not self.rename_cols:
+                raise ValueError("type_of_table='temperature' takes the renamed columns: make the Table with "
+                                 "rename_cols=True, or use type_of_table='custom'.")
             self.val_cols = [
                 col for col in self.df.columns
                 if 'Adaptive Cooling Setpoint Temperature_No Tolerance (°C)' in col
@@ -1827,11 +1859,16 @@ class Table:
                    or 'Building_Total_Cooling Energy Demand' in col
                    or 'Building_Total_Heating Energy Demand' in col
             ]
-            RMOT_col = [
+            RMOT_cols = [
                 col for col in self.df.columns
                 if 'Running mean outdoor temperature' in col
-            ][0]
-            self.val_cols.extend([RMOT_col])
+            ]
+            # The running mean outdoor temperature that the setpoints of the simulations use (before, the first
+            # column, that of ASHRAE 55 for EN 16798-1), or the first one if they use none (static setpoints)
+            used = _running_mean_outputs(self.df['ComfStand'], self.df['ComfMod'])
+            chosen = [next(col for col in RMOT_cols if name in col) for name in used
+                      if any(name in col for col in RMOT_cols)]
+            self.val_cols.extend(chosen or RMOT_cols[:1])
         # elif type_of_table == 'all':
         #     # self.val_cols = list(set(self.df.columns) - set(self.indexcols))
         #     self.val_cols = []
@@ -1923,7 +1960,8 @@ class Table:
             Used to customise the comparison of variables.
         :type comparison_mode: list
         :param comparison_cols: A list of strings.
-            'absolute' to get the difference or 'relative' to get the percentage of reduction.
+            'absolute' to get the difference or 'relative' to get the reduction relative to the baseline, as a
+            fraction (the columns '1-(other/baseline)': 0.25 is a reduction of 25 %).
         :type comparison_cols: list
         :param check_index_and_cols: A boolean. True to check index and cols, False to skip.
         :type check_index_and_cols: bool
@@ -2354,6 +2392,19 @@ class Table:
         return vars_to_gather
 
 
+    def _label_subplots(self, ax, rows: list, cols: list) -> None:
+        """Label each row of subplots (the y axis of its first subplot) and each column (the title of its first
+        subplot), with their new names if they were renamed: one subplot, one row, one column or both."""
+        import numpy as np
+
+        axes = np.array(ax, dtype=object).reshape(len(rows), len(cols))
+        row_names = self.rows_new_names if self.rename_rows == 'y' else rows
+        col_names = self.cols_new_names if self.rename_subplot_cols == 'y' else cols
+        for i in range(len(rows)):
+            axes[i, 0].set_ylabel(row_names[i], rotation=90, size='large')
+        for j in range(len(cols)):
+            axes[0, j].set_title(col_names[j])
+
     def generate_fig_data(
             self,
             vars_to_gather_cols: list = None,
@@ -2776,7 +2827,7 @@ class Table:
         print('List of columns:')
         print(*cols, sep='\n')
 
-        self.rename_cols = 'n'
+        self.rename_subplot_cols = 'n'
 
         try:
             if all([i in cols for i in [j for j in cols_renaming_dict]]):
@@ -2787,7 +2838,7 @@ class Table:
                             self.cols_new_names.append(cols_renaming_dict[j])
                 print('The renamed columns are going to be:')
                 print(*self.cols_new_names, sep='\n')
-                self.rename_cols = 'y'
+                self.rename_subplot_cols = 'y'
         except TypeError:
             pass
 
@@ -2809,12 +2860,12 @@ class Table:
                 self.cols_new_names.append(new_name)
             print('The renamed columns are going to be:')
             print(*self.cols_new_names, sep='\n')
-            self.rename_cols = 'y'
+            self.rename_subplot_cols = 'y'
 
         # elif rename_cols:
         #     if len(self.cols_new_names) == 0:
-        #         self.rename_cols = input('Column names will be the subplot titles. Do you want to rename them? [y/n]: ')
-        #         if self.rename_cols == 'y':
+        #         self.rename_subplot_cols = input('Column names will be the subplot titles. Do you want to rename them? [y/n]: ')
+        #         if self.rename_subplot_cols == 'y':
         #             self.cols_new_names = []
         #             for i in cols:
         #                 new_name = input(f'Please enter the new name for {i}: ')
@@ -3165,48 +3216,8 @@ class Table:
                                     zorder=2
                                 )
 
-            if len(rows) == 1:
-                if len(cols) == 1:
-                    for i in range(len(rows)):
-                        if self.rename_rows == 'y':
-                        # if self.rows_new_names is not None:
-                            ax.set_ylabel(self.rows_new_names[i], rotation=90, size='large')
-                        else:
-                            ax.set_ylabel(rows[i], rotation=90, size='large')
-                    for j in range(len(cols)):
-                        if self.rename_cols == 'y':
-                        # if self.cols_new_names is not None:
-                            ax.set_title(self.cols_new_names[j])
-                        else:
-                            ax.set_title(cols[j])
-
-            if len(rows) > 1:
-                if len(cols) == 1:
-                    for i in range(len(rows)):
-                        if self.rename_rows == 'y':
-                        # if self.rows_new_names is not None:
-                            ax[i].set_ylabel(self.rows_new_names[i], rotation=90, size='large')
-                        else:
-                            ax[i].set_ylabel(rows[i], rotation=90, size='large')
-                    for j in range(len(cols)):
-                        if self.rename_cols == 'y':
-                        # if self.cols_new_names is not None:
-                            ax[0].set_title(self.cols_new_names[j])
-                        else:
-                            ax[0].set_title(cols[j])
-                else:
-                    for i in range(len(rows)):
-                        if self.rename_rows == 'y':
-                        # if self.rows_new_names is not None:
-                            ax[i, 0].set_ylabel(self.rows_new_names[i], rotation=90, size='large')
-                        else:
-                            ax[i, 0].set_ylabel(rows[i], rotation=90, size='large')
-                    for j in range(len(cols)):
-                        if self.rename_cols == 'y':
-                        # if self.cols_new_names is not None:
-                            ax[0, j].set_title(self.cols_new_names[j])
-                        else:
-                            ax[0, j].set_title(cols[j])
+            # Before, the figures of one row and several columns had no titles or row labels
+            self._label_subplots(ax, rows, cols)
 
             supx = fig.supxlabel(supxlabel)
             supy = fig.supylabel(self.data_on_y_main_axis[0][0])
@@ -3776,59 +3787,15 @@ class Table:
                         ax[i, j].set_ylim((0, self.max_value))
                         ax[i, j].set_xlim((0, self.max_value))
 
-            if len(self.rows) == 1:
-                if len(self.cols) == 1:
-                    ax.set_aspect('equal',
-                                  # adjustable='box',
-                                  'box',
-                                  share=True)
-                    for i in range(len(self.rows)):
-                        if self.rename_rows == 'y':
-                        # if self.rows_new_names is not None:
-                            ax.set_ylabel(self.rows_new_names[i], rotation=90, size='large')
-                        else:
-                            ax.set_ylabel(self.rows[i], rotation=90, size='large')
-                    for j in range(len(self.cols)):
-                        if self.rename_cols == 'y':
-                        # if self.cols_new_names is not None:
-                            ax.set_title(self.cols_new_names[j])
-                        else:
-                            ax.set_title(self.cols[j])
-
-            if len(self.rows) > 1:
-                if len(self.cols) == 1:
-                    ax[0].set_aspect('equal',
-                                     'box',
-                                     # adjustable='box',
-                                     share=True)
-                    for i in range(len(self.rows)):
-                        if self.rename_rows == 'y':
-                        # if self.rows_new_names is not None:
-                            ax[i].set_ylabel(self.rows_new_names[i], rotation=90, size='large')
-                        else:
-                            ax[i].set_ylabel(self.rows[i], rotation=90, size='large')
-                    for j in range(len(self.cols)):
-                        if self.rename_cols == 'y':
-                        # if self.cols_new_names is not None:
-                            ax[0].set_title(self.cols_new_names[j])
-                        else:
-                            ax[0].set_title(self.cols[j])
-                else:
-                    ax[0, 0].set_aspect('equal',
-                                        # adjustable='box',
-                                        share=True)
-                    for i in range(len(self.rows)):
-                        if self.rename_rows == 'y':
-                        # if self.rows_new_names is not None:
-                            ax[i, 0].set_ylabel(self.rows_new_names[i], rotation=90, size='large')
-                        else:
-                            ax[i, 0].set_ylabel(self.rows[i], rotation=90, size='large')
-                    for j in range(len(self.cols)):
-                        if self.rename_cols == 'y':
-                        # if self.cols_new_names is not None:
-                            ax[0, j].set_title(self.cols_new_names[j])
-                        else:
-                            ax[0, j].set_title(self.cols[j])
+            if len(self.rows) == 1 and len(self.cols) == 1:
+                ax.set_aspect('equal', 'box', share=True)
+            elif len(self.cols) == 1:
+                ax[0].set_aspect('equal', 'box', share=True)
+            elif len(self.rows) == 1:
+                ax[0].set_aspect('equal', share=True)
+            else:
+                ax[0, 0].set_aspect('equal', share=True)
+            self._label_subplots(ax, self.rows, self.cols)
 
             supx = fig.supxlabel(supxlabel)
             supy = fig.supylabel(supylabel)
@@ -4158,42 +4125,7 @@ class Table:
                                     zorder=zord,
                                 )
 
-            if len(self.rows) == 1:
-                if len(self.cols) == 1:
-                    for i in range(len(self.rows)):
-                        if self.rename_rows == 'y':
-                            ax.set_ylabel(self.rows_new_names[i], rotation=90, size='large')
-                        else:
-                            ax.set_ylabel(self.rows[i], rotation=90, size='large')
-                    for j in range(len(self.cols)):
-                        if self.rename_cols == 'y':
-                            ax.set_title(self.cols_new_names[j])
-                        else:
-                            ax.set_title(self.cols[j])
-
-            if len(self.rows) > 1:
-                if len(self.cols) == 1:
-                    for i in range(len(self.rows)):
-                        if self.rename_rows == 'y':
-                            ax[i].set_ylabel(self.rows_new_names[i], rotation=90, size='large')
-                        else:
-                            ax[i].set_ylabel(self.rows[i], rotation=90, size='large')
-                    for j in range(len(self.cols)):
-                        if self.rename_cols == 'y':
-                            ax[0].set_title(self.cols_new_names[j])
-                        else:
-                            ax[0].set_title(self.cols[j])
-                else:
-                    for i in range(len(self.rows)):
-                        if self.rename_rows == 'y':
-                            ax[i, 0].set_ylabel(self.rows_new_names[i], rotation=90, size='large')
-                        else:
-                            ax[i, 0].set_ylabel(self.rows[i], rotation=90, size='large')
-                    for j in range(len(self.cols)):
-                        if self.rename_cols == 'y':
-                            ax[0, j].set_title(self.cols_new_names[j])
-                        else:
-                            ax[0, j].set_title(self.cols[j])
+            self._label_subplots(ax, self.rows, self.cols)
 
             if len(self.rows) == 1:
                 if len(self.cols) == 1:

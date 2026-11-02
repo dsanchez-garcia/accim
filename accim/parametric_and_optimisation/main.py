@@ -5794,7 +5794,10 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
 
             if selected_rows:
                 df_meters_sel = pd.concat(selected_rows, ignore_index=True)
-                df_meters_sel = df_meters_sel.drop_duplicates(subset=['key_name', 'frequency']).reset_index(drop=True)
+                # The same meter of several IDFs is kept for each one (before, only for the first IDF)
+                df_meters_sel = df_meters_sel.drop_duplicates(
+                    subset=['key_name', 'frequency'] + (['idf'] if 'idf' in df_meters_sel.columns else [])
+                ).reset_index(drop=True)
 
             report['missing']['meters'] = missing_m
             if missing_m:
@@ -5874,7 +5877,9 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
 
             if selected_rows_v:
                 df_vars_sel = pd.concat(selected_rows_v, ignore_index=True)
-                df_vars_sel = df_vars_sel.drop_duplicates(subset=['key_value', 'variable_name', 'frequency']).reset_index(drop=True)
+                df_vars_sel = df_vars_sel.drop_duplicates(
+                    subset=['key_value', 'variable_name', 'frequency'] + (['idf'] if 'idf' in df_vars_sel.columns else [])
+                ).reset_index(drop=True)
 
             report['missing']['variables'] = missing_v
             if missing_v:
@@ -7182,7 +7187,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                 f"[apply_category_mapping] The following category name(s) are used for "
                 f"BOTH EPW and IDF mappings: {sorted(epw_idf_collisions)}. "
                 f"The EPW categories will be automatically renamed with an 'epw_' prefix "
-                f"(e.g. 'type' → 'epw_type') to avoid silent data loss. "
+                f"(e.g. 'type' -> 'epw_type') to avoid silent data loss. "
                 f"Update your highlight_dict / col / row / hue arguments accordingly.",
                 UserWarning,
                 stacklevel=2,
@@ -12541,7 +12546,13 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         total_rows = n_rows * n_steps
         total_cols = len(param_cols) + n_hourly + 2
         approx_mb = total_rows * total_cols * 8 / 1000000.0
-        size_msg = f"\n  Simulations selected : {n_rows}\n  Hourly steps per sim : {n_steps}\n  Hourly output columns: {n_hourly}  → {hourly_cols[:5]}{('...' if n_hourly > 5 else '')}\n  Expanded shape       : ~{total_rows:,} rows × {total_cols} cols\n  Approx. memory       : ~{approx_mb:.1f} MB"
+        size_msg = (
+            f"\n  Simulations selected : {n_rows}"
+            f"\n  Hourly steps per sim : {n_steps}"
+            f"\n  Hourly output columns: {n_hourly}  -> {hourly_cols[:5]}{('...' if n_hourly > 5 else '')}"
+            f"\n  Expanded shape       : ~{total_rows:,} rows x {total_cols} cols"
+            f"\n  Approx. memory       : ~{approx_mb:.1f} MB"
+        )
         if _using_defaults and (not skip_confirmation):
             print(f'[get_hourly_df_optimisation] Estimated output size:{size_msg}')
             answer = input('\nProceed with expansion? [y/N]: ').strip().lower()
@@ -12549,7 +12560,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                 print('Expansion cancelled. Use epw_filter, output_columns or simulation_indices to reduce the size.')
                 return None
         else:
-            print(f'[get_hourly_df_optimisation] Expanding…{size_msg}')
+            print(f'[get_hourly_df_optimisation] Expanding...{size_msg}')
         self._invalidate_normalized_df_types(df_types=['optimisation_hourly'])
         self.outputs_optimisation_hourly = expand_to_hourly_dataframe(df=source_df, parameter_columns=param_cols, start_date=start_date)
         self.outputs_optimisation_hourly_by_category = None

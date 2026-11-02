@@ -68,11 +68,12 @@ def ask_model_arguments(ask: Optional[Callable[[str], str]] = None) -> Dict:
         ask, '\nEnter the Output type (standard, simplified, detailed or custom): ',
         '   Output type was not correct. Please, enter the Output type (standard, simplified, detailed or custom): ',
         lambda a: a.lower() in OUTPUT_TYPES)
+    # At least one frequency (before, an empty answer gave no frequencies)
     args['output_frequencies'] = _ask_until_valid(
         ask, '\nEnter the Output frequencies separated by space (timestep, hourly, daily, monthly, runperiod): ',
         'Some of the Output frequencies are not correct. Please, enter the Output frequencies again separated by '
         'space (timestep, hourly, daily, monthly, runperiod): ',
-        lambda a: all(f.lower() in OUTPUT_FREQUENCIES for f in a.split())).split()
+        lambda a: bool(a.split()) and all(f.lower() in OUTPUT_FREQUENCIES for f in a.split())).split()
     args['make_outputs_dataframe'] = _ask_until_valid(
         ask, '\nDo you want to generate a dataframe to see all outputs? (true or false): ',
         'The answer you entered is not valid. Do you want to generate a dataframe to see all outputs? '

@@ -234,7 +234,7 @@ def apply_apmv_setpoints(
                        instance_counts)
 
     # E. Program Calling Managers: To tell EnergyPlus WHEN to run these programs (BeginTimestepBeforePredictor).
-    _add_apmv_program_calling_managers(building, verbose)
+    _add_apmv_program_calling_managers(building, verbose, _apmv_program_names(ems_target_suffixes, instance_counts))
 
     # F. Outputs: To report the EMS variables and standard variables to the .eso file.
     _add_apmv_outputs(building, output_frequencies, other_pmv_related_outputs, ems_target_suffixes, unique_zones,
@@ -749,15 +749,30 @@ def _add_apmv_programs(building: IDF, suffixes: List[str], df_arguments: pd.Data
             warnings.warn(f"Program '{prog_name}' already exists. Skipping.")
 
 
-def _add_apmv_program_calling_managers(building: IDF, verbose: bool):
+def _apmv_program_names(suffixes: List[str], instance_counts: Optional[Dict[str, int]] = None) -> List[str]:
+    """The names of the EMS programs of the aPMV setpoints (those of :func:`_add_apmv_programs`)."""
+    names = ['set_cooling_season_input_data', 'set_cooling_season']
+    for suffix in suffixes:
+        names += [f'set_zone_input_data_{suffix}', f'apply_aPMV_{suffix}']
+        if suffix in (instance_counts or {}):
+            names.append(f'average_PMV_{suffix}')
+        names += [f'monitor_aPMV_{suffix}', f'count_aPMV_comfort_hours_{suffix}']
+    return names
+
+
+def _add_apmv_program_calling_managers(building: IDF, verbose: bool, apmv_programs: Sequence[str]):
     """
     Adds EnergyManagementSystem:ProgramCallingManager objects.
     These objects tell EnergyPlus WHEN to execute the programs defined above.
 
     :param building: The BESOS/eppy IDF object.
     :param verbose: If True, prints success messages. Warnings are always printed.
+    :param apmv_programs: The names of the programs of the aPMV setpoints: only these get a calling manager, in the
+        order of the programs of the IDF (before, every program of the model without a calling manager of its name,
+        the user's ones included, got one).
     """
-    programlist = [p.Name for p in building.idfobjects['EnergyManagementSystem:Program']]
+    apmv_programs = set(apmv_programs)
+    programlist = [p.Name for p in building.idfobjects['EnergyManagementSystem:Program'] if p.Name in apmv_programs]
     pcmlist = [pcm.Name for pcm in building.idfobjects['EnergyManagementSystem:ProgramCallingManager']]
 
     for prog in programlist:

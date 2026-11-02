@@ -104,3 +104,20 @@ def test_excluded_and_hidden_folders_are_neither_tracked_nor_removed(tmp_path):
         assert (tmp_path / folder).is_dir(), f'{folder} was removed'
     for name in ('.git/index', 'venv/new.py', '.hidden.txt'):
         assert (tmp_path / name).is_file()
+
+
+def test_the_empty_folders_of_the_snapshot_are_kept(tmp_path):
+    # Found on 2026-10-31: remove_empty_dirs also removed the empty folders that existed before the snapshot, which
+    # only recorded files
+    for folder in ('inputs/empty', 'results'):
+        (tmp_path / folder).mkdir(parents=True)
+    cleaner = WorkspaceArtifactCleaner(tmp_path)
+    cleaner.capture_initial_state()
+    (tmp_path / 'results' / 'run1').mkdir()
+    (tmp_path / 'results' / 'run1' / 'out.eso').write_text('', encoding='utf-8')
+    (tmp_path / 'new' / 'deep').mkdir(parents=True)
+
+    cleaner.delete_generated_files(dry_run=False, remove_empty_dirs=True)
+
+    assert sorted(p.relative_to(tmp_path).as_posix() for p in tmp_path.rglob('*')) == [
+        'inputs', 'inputs/empty', 'results']

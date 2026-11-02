@@ -113,9 +113,12 @@ def test_gen_csv_concatenated_gives_the_table_of_all_the_results(tmp_path, monke
     direct = Table(datasets=names, source_frequency='hourly', frequency='runperiod', frequency_agg_func='sum',
                    standard_outputs=True, **arguments)
     assert concatenated.frequency == 'runperiod'
-    # One row per result, in the order of the datasets, and the columns of Table
+    # One row per result, in the order of the datasets, and the columns of Table, in the same order (found on
+    # 2026-10-31: the last column was moved to the beginning, and the parts of the dates were read as numbers)
     assert concatenated.df['Source'].tolist() == [name[:-4] for name in names]
-    assert sorted(concatenated.df.columns) == sorted(direct.df.columns)
+    assert list(concatenated.df.columns) == list(direct.df.columns)
+    for column in ['Month/day', 'Month', 'Day', 'Hour', 'Minute', 'Second']:
+        assert concatenated.df[column].tolist() == direct.df[column].tolist(), column
     for column in ['Building_Total_Cooling Energy Demand (kWh/m2) (summed)',
                    'Building_Total_Heating Energy Demand (kWh/m2) (summed)',
                    'Building_Total_Comfortable Hours_No Applicability (h) (summed)',

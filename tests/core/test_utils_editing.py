@@ -88,6 +88,18 @@ def test_remove_accents_in_idf(tmp_path):
     assert path.read_text(encoding='utf-8') == 'Zone, Salon;\nZone, Almacen;\n'
 
 
+@pytest.mark.parametrize('encoding', ['latin-1', 'cp1252'])
+def test_remove_accents_in_idf_of_other_encodings(tmp_path, encoding):
+    # eppy saves the IDFs in Latin-1, and DesignBuilder in the encoding of Windows; before, UnicodeDecodeError. The
+    # line endings do not change
+    path = tmp_path / 'model.idf'
+    path.write_bytes('Zone, Sal\u00f3n;\r\nZone, Almac\u00e9n \u00d1;\r\n'.encode(encoding))
+
+    remove_accents_in_idf(str(path))
+
+    assert path.read_bytes() == b'Zone, Salon;\r\nZone, Almacen N;\r\n'
+
+
 @needs_energyplus_25_1
 def test_get_available_fields_of_the_idd_and_of_the_objects_of_the_model(building):
     from_idd = get_available_fields(building, 'Zone', source='idd')
@@ -139,15 +151,15 @@ def test_reduce_runtime_simplifies_the_model(building):
     assert building.idfobjects['Timestep'][0].Number_of_Timesteps_per_Hour == 4
 
 
-@pytest.mark.parametrize('arguments', [
-    dict(timesteps=1),
-    dict(timesteps=61),
-    dict(shading_calculation_update_frequency=0),
-    dict(shading_calculation_update_frequency=366),
+@pytest.mark.parametrize('arguments, message', [
+    (dict(timesteps=1), 'timesteps cannot be 1'),
+    (dict(timesteps=61), 'timesteps cannot be 61'),
+    (dict(shading_calculation_update_frequency=0), 'cannot be smaller than'),
+    (dict(shading_calculation_update_frequency=366), 'cannot be smaller than'),
 ])
-def test_reduce_runtime_rejects_values_out_of_range(arguments):
+def test_reduce_runtime_rejects_values_out_of_range(arguments, message):
     # The values are checked before the model is changed
-    with pytest.raises(ValueError, match='cannot be smaller than'):
+    with pytest.raises(ValueError, match=message):
         reduce_runtime(SimpleNamespace(), **arguments)
 
 

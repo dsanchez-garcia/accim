@@ -36,6 +36,8 @@ class WorkspaceArtifactCleaner:
         ])
         # None until capture_initial_state(): an empty workspace is a valid initial state
         self._baseline_files: Optional[set] = None
+        # The folders of the snapshot, which remove_empty_dirs keeps even if they are empty
+        self._baseline_dirs: set = set()
         self.generated_files: List[str] = []
         self.files_planned_for_deletion: List[str] = []
         self.files_deleted: List[str] = []
@@ -55,8 +57,16 @@ class WorkspaceArtifactCleaner:
                 rel_path = (root_path / name).relative_to(self.workspace_root).as_posix()
                 yield rel_path
 
+    def _iter_relative_dirs(self):
+        """The folders that the cleaner walks (never those inside an excluded or hidden folder, such as .git)."""
+        for root, dirs, _ in os.walk(self.workspace_root):
+            dirs[:] = [d for d in dirs if self._is_walked(d)]
+            for name in dirs:
+                yield (Path(root) / name).relative_to(self.workspace_root).as_posix()
+
     def capture_initial_state(self) -> List[str]:
         self._baseline_files = set(self._iter_relative_files())
+        self._baseline_dirs = set(self._iter_relative_dirs())
         return sorted(self._baseline_files)
 
     def get_current_files(self) -> List[str]:
@@ -137,13 +147,11 @@ class WorkspaceArtifactCleaner:
         self.files_deleted = deleted
 
         if remove_empty_dirs:
-            # Only the folders that the cleaner walks (never those inside an excluded or hidden folder, such as
-            # .git), the deepest first
-            folders: List[Path] = []
-            for root, dirs, _ in os.walk(self.workspace_root):
-                dirs[:] = [d for d in dirs if self._is_walked(d)]
-                folders.extend(Path(root) / d for d in dirs)
-            for folder in reversed(folders):
+            # Only the empty folders created after the snapshot, among those that the cleaner walks, the deepest
+            # first (so that a folder whose subfolders are removed is empty too)
+            folders = [self.workspace_root / rel for rel in self._iter_relative_dirs()
+                       if rel not in self._baseline_dirs]
+            for folder in sorted(folders, key=lambda path: len(path.parts), reverse=True):
                 try:
                     folder.rmdir()
                 except OSError:

@@ -30,8 +30,8 @@ ARGUMENTS = dict(comfort_standard=2, category=80, comfort_mode=3, hvac_mode=2, v
                  max_wind_speed=8, cooling_season_start=152, cooling_season_end=273, setpoint_accuracy=1000)
 VOF_DEFAULTS = dict(opening_factor_max_temp_diff=6, opening_factor_min_temp_diff=1, min_opening_factor=0.25)
 
-pytestmark = pytest.mark.skipif(not (IDD_25_1.exists() and SAMPLE_IDF.exists()),
-                                reason='needs EnergyPlus 25.1 and the sample IDF of the repository')
+needs_energyplus_25_1 = pytest.mark.skipif(not (IDD_25_1.exists() and SAMPLE_IDF.exists()),
+                                           reason='needs EnergyPlus 25.1 and the sample IDF of the repository')
 
 
 @pytest.fixture
@@ -42,6 +42,7 @@ def building(tmp_path):
     return get_building(str(tmp_path / 'model.idf'))
 
 
+@needs_energyplus_25_1
 @pytest.mark.parametrize('script_type', ['vrf_mm', 'vrf_ac'])
 def test_get_accim_args_reads_back_the_arguments_of_modify_accis(building, script_type):
     from accim.sim.accis import add_accis_to_idf, modify_accis
@@ -66,6 +67,7 @@ def test_get_accim_args_reads_back_the_arguments_of_modify_accis(building, scrip
     assert flattened == args['SetInputData_Block1_Zone1']
 
 
+@needs_energyplus_25_1
 def test_get_accim_args_of_the_apmv_setpoints(building):
     from accim.sim.apmv import apply_apmv_setpoints
 
@@ -81,3 +83,16 @@ def test_get_accim_args_of_the_apmv_setpoints(building):
     assert zone1['adap_coeff_heating_Block1_Zone1'] == -0.2
     assert zone1['pmv_cooling_sp_Block1_Zone1'] == 0.4
     assert zone1['pmv_heating_sp_Block1_Zone1'] == -0.6
+
+
+@pytest.mark.parametrize('text, value', [
+    ('2', 2), ('-0.25', -0.25), ('3.5 + 1', 4.5), ('(33.5 - 1) * 2 / 4', 16.25), ('+1', 1),
+    # Not numbers: they are kept as text
+    ('CAT', 'CAT'), ('ACSToffset + 1', 'ACSToffset + 1'), ('1/0', '1/0'), ('2 ** 999999', '2 ** 999999'),
+    ('', ''), ("__import__('os').getcwd()", "__import__('os').getcwd()"),
+])
+def test_the_values_of_the_program_lines_are_read_without_eval(text, value):
+    # Found by the review of 2026-10-24: they were evaluated with eval, which runs any code of the program lines
+    from accim.utils.accim_args import _value
+
+    assert _value(text) == value and type(_value(text)) is type(value)

@@ -4,6 +4,8 @@
 
 """The arguments of the ACCIS of a model, read from its EMS programs."""
 
+import ast
+import operator
 from typing import Any
 
 __all__ = [
@@ -13,6 +15,28 @@ __all__ = [
 
 #: The IDF object of a model (eppy or besos)
 IDF = Any
+
+_OPERATORS = {ast.Add: operator.add, ast.Sub: operator.sub, ast.Mult: operator.mul, ast.Div: operator.truediv,
+              ast.UAdd: operator.pos, ast.USub: operator.neg}
+
+
+def _value(text: str):
+    """The number of an arithmetic expression of numbers (such as '-0.25', or '3.5 + 1', which accim writes for the
+    offsets), or the text if it is anything else. Before, the text was evaluated with ``eval``, which runs any code
+    written in the program lines of the IDF."""
+    def evaluate(node):
+        if isinstance(node, ast.Constant) and type(node.value) in (int, float):
+            return node.value
+        if isinstance(node, ast.UnaryOp) and type(node.op) in _OPERATORS:
+            return _OPERATORS[type(node.op)](evaluate(node.operand))
+        if isinstance(node, ast.BinOp) and type(node.op) in _OPERATORS:
+            return _OPERATORS[type(node.op)](evaluate(node.left), evaluate(node.right))
+        raise ValueError(f'{text!r} is not an arithmetic expression of numbers')
+
+    try:
+        return evaluate(ast.parse(text, mode='eval').body)
+    except (SyntaxError, ValueError, ZeroDivisionError):
+        return text
 
 
 def get_accim_args(idf_object: IDF) -> dict:
@@ -66,12 +90,7 @@ def get_accim_args(idf_object: IDF) -> dict:
                 parts = line.split("=", 1)  # Split only at the first occurrence of "="
                 # key = parts[0].replace("set", "").strip()
                 key = parts[0][4:].strip()
-                value = parts[1].replace(",", "").strip()
-                try:
-                    # Evaluate the expression to get the actual value
-                    value = eval(value)
-                except:
-                    pass
+                value = _value(parts[1].replace(",", "").strip())
                 parameters[key] = value
 
         return parameters

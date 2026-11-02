@@ -152,7 +152,9 @@ def test_generate_fig_data_gathers_the_data_of_each_subplot(table, monkeypatch):
     assert table.cols == ['London', 'Aberdeen']
     assert table.rows_new_names == ['Static', 'Adaptive']
     assert table.cols_new_names == ['LDN', 'ABZ']
-    assert (table.rename_rows, table.rename_cols) == ('y', 'y')
+    # The figures do not change rename_cols of the Table, which format_table reads (before, they set it to 'y' or
+    # 'n')
+    assert (table.rename_rows, table.rename_subplot_cols, table.rename_cols) == ('y', 'y', True)
     assert len(table.df_for_graph) == HOURS
     for i, comf_mod in enumerate(table.rows):
         for j, city in enumerate(table.cols):
@@ -268,3 +270,22 @@ def test_time_plot_names_the_rows_and_columns_of_subplots(table, monkeypatch, re
         assert (titles, labels) == (['Aberdeen', 'London'], ['Static', 'Adaptive'])
     else:
         assert (titles, labels) == (['Aberdeen (UK)', 'London (UK)'], ['CM_0', 'CM_3'])
+
+
+@pytest.mark.parametrize('figure', ['scatter_plot', 'time_plot'])
+def test_the_figures_of_one_row_name_their_row_and_columns(table, monkeypatch, figure):
+    # Found on 2026-10-31: the figures of one row and several columns had no titles or row labels
+    _no_questions(monkeypatch)
+    kwargs = dict(
+        vars_to_gather_rows=['ComfMod'], detailed_rows=['CM_3'], vars_to_gather_cols=['EPW_City_or_subcountry'],
+        data_on_y_main_axis=[['Temperature (°C)', [OPERATIVE]]], colorlist_y_main_axis=[['Temperature (°C)', ['g']]],
+        rows_renaming_dict={'CM_3': 'Adaptive'}, cols_renaming_dict=CITIES, figname='one_row', figsize=2, dpi=50,
+        confirm_graph=True)
+    if figure == 'scatter_plot':
+        kwargs['data_on_x_axis'] = RMOT
+
+    fig = _new_figure(lambda: getattr(table, figure)(**kwargs))
+
+    assert len(fig.axes) == 2
+    assert [ax.get_title() for ax in fig.axes] == ['Aberdeen', 'London']
+    assert [ax.get_ylabel() for ax in fig.axes] == ['Adaptive', '']

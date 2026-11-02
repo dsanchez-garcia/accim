@@ -85,7 +85,8 @@ def make_eplaunch_options(idf, epw: str) -> dict:
     :param idf: The eppy IDF object.
     :param epw: The name of the EPW file (with or without '.epw').
     """
-    idfversion = idf.idfobjects['version'][0].Version_Identifier.split('.')
+    # The major, minor and patch numbers ('9.4.0.002' of DesignBuilder is '9-4-0', '23.1' is '23-1-0')
+    idfversion = [item.strip() for item in idf.idfobjects['version'][0].Version_Identifier.split('.')][:3]
     idfversion.extend([0] * (3 - len(idfversion)))
     idfversionstr = '-'.join([str(item) for item in idfversion])
     return {

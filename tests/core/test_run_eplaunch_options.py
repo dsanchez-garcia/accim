@@ -15,7 +15,9 @@ def _idf(version):
     return SimpleNamespace(idfname='model.idf', idfobjects={'version': [SimpleNamespace(Version_Identifier=version)]})
 
 
-@pytest.mark.parametrize('version, ep_version', [('9.6.0', '9-6-0'), ('23.1', '23-1-0'), ('26.2', '26-2-0')])
+@pytest.mark.parametrize('version, ep_version', [('9.6.0', '9-6-0'), ('23.1', '23-1-0'), ('26.2', '26-2-0'),
+                                                 # DesignBuilder writes the build (before, '9-4-0-002')
+                                                 ('9.4.0.002', '9-4-0')])
 def test_make_eplaunch_options_pads_the_version(version, ep_version):
     assert run.make_eplaunch_options(_idf(version), 'Seville.epw')['ep_version'] == ep_version
 

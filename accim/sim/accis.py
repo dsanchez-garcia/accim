@@ -13,6 +13,7 @@ The ACCIS is an EnergyManagementSystem script that applies adaptive setpoint tem
 """
 
 import os
+import re
 import warnings
 from io import StringIO
 from pathlib import Path
@@ -23,7 +24,7 @@ import pandas as pd
 from accim import __version__
 from accim._deprecation import rename_legacy_kwargs, warn_deprecated
 from accim.constants import SUPPORTED_ENERGYPLUS_VERSIONS
-from accim.energyplus import idd_path, unsupported_version_message
+from accim.energyplus import idd_path, read_idf_version, unsupported_version_message
 from accim.sim import prompts
 from accim.sim.arguments import (
     LEGACY_ARGUMENT_NAMES,
@@ -146,16 +147,52 @@ def _set_idd(idf_class, path: str) -> None:
         )
 
 
+def _idd_version(idd: str) -> Optional[str]:
+    """The EnergyPlus version of an IDD file ('25.1'), from its first line ('!IDD_Version 25.1.0'), or None."""
+    try:
+        with open(idd, encoding='latin-1') as file:
+            first_line = file.readline()
+    except OSError:
+        return None
+    match = re.match(r'\s*!IDD_Version\s+(\d+)\.(\d+)', first_line)
+    return f'{match[1]}.{match[2]}' if match else None
+
+
+def _check_besos_idd(path: Union[str, os.PathLike]) -> None:
+    """besos reads the models with the IDD of the first model that it read in the Python session: with a model of
+    another EnergyPlus version, it only warns, and objects of the model can be lost (the People:Instance objects of
+    EnergyPlus 26.2, for instance). Stop instead, as with an explicit ``energyplus_version``."""
+    import besos.eppy_funcs
+
+    current = getattr(getattr(besos.eppy_funcs, 'IDF', None), 'iddname', None)
+    loaded = _idd_version(current) if current else None
+    if loaded is None:
+        return
+    try:
+        version = read_idf_version(path)
+    except ValueError:
+        return
+    if version != loaded:
+        raise ValueError(
+            f'besos is already using the IDD of EnergyPlus {loaded} ({current}) in this Python session, and it '
+            f'cannot read {os.path.basename(os.fspath(path))}, a model of EnergyPlus {version}. Use a new Python '
+            f'session for the models of other EnergyPlus versions (or update the model to EnergyPlus {loaded}).'
+        )
+
+
 def load_idf(path: Union[str, os.PathLike], energyplus_version: str = 'auto'):
     """Read an IDF file: with besos (which finds the IDD of its version) if ``energyplus_version`` is 'auto',
     or with eppy and the IDD of ``energyplus_version`` otherwise.
 
     :param path: The path of the IDF file.
     :param energyplus_version: 'auto' or an EnergyPlus version, such as '25.1'.
+    :raises ValueError: If the Python session already reads the models of another EnergyPlus version (eppy can only
+        use one IDD in a session).
     """
     _amend_designbuilder_version(path)
     if normalise_energyplus_version(energyplus_version) == 'auto':
         from besos.eppy_funcs import get_building
+        _check_besos_idd(path)
         return get_building(str(path))
     from eppy.modeleditor import IDF
     _set_idd(IDF, idd_path(energyplus_version))

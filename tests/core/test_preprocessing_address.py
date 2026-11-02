@@ -52,10 +52,24 @@ def test_give_address(requests_sent):
     # rename_epw_files gives the coordinates as they are written in the EPW file
     address = preprocessing.give_address('37.42', '-5.9')
 
-    assert [url for url, _ in requests_sent] == [f'{NOMINATIM}&lat=37.42&lon=-5.9']
+    [(url, kwargs)] = requests_sent
+    assert url == f'{NOMINATIM}&lat=37.42&lon=-5.9'
+    # The usage policy of Nominatim asks for a User-Agent that identifies the application; before, there was none
+    assert kwargs['headers']['User-Agent'].startswith('accim/') and kwargs['timeout'] == 10
     assert address.address == ADDRESS
     # The values that are not empty, without the country code
     assert address.full_address == 'Seville, Andalusia, Spain'
+
+
+@pytest.mark.parametrize('function', [preprocessing.give_address, preprocessing.give_address_ssl])
+def test_coordinates_without_an_address(monkeypatch, capsys, function):
+    # Nominatim answers so for the coordinates without an address, such as those in the sea; before, KeyError
+    monkeypatch.setattr(requests, 'get', lambda url, **kwargs: _Response({'error': 'Unable to geocode'}))
+
+    address = function(40.0, -30.0)
+
+    assert address.address == {} and address.full_address == ''
+    assert 'OpenStreetMap gives no address for the coordinates 40.0, -30.0: Unable to geocode' in capsys.readouterr().out
 
 
 def test_give_address_ssl_verifies_the_certificates_with_those_of_certifi(requests_sent):
@@ -65,6 +79,6 @@ def test_give_address_ssl_verifies_the_certificates_with_those_of_certifi(reques
     assert url == f'{NOMINATIM}&lat=57.2&lon=-2.2'
     assert kwargs['verify'] == certifi.where()
     assert kwargs['timeout'] == 10
-    assert kwargs['headers']['User-Agent']
+    assert kwargs['headers']['User-Agent'].startswith('accim/')
     assert address.address == ADDRESS
     assert address.full_address == 'Seville, Andalusia, Spain'

@@ -98,7 +98,7 @@ def gen_csv_concatenated(
     :type drop_nan: bool
     """
     import pandas as pd
-    from accim.data.postprocessing.main import Table
+    from accim.data.postprocessing.main import DATE_PART_COLUMNS, Table
     from time import time
     import os
     import gc
@@ -158,8 +158,8 @@ def gen_csv_concatenated(
     merged_datasets = []
     for i in datasetlist_to_merge:
         # The first column is the index that Table wrote: read as a column, it would be written again next to the
-        # new index, and Table would read it as one more output
-        tempdf = pd.read_csv(i, index_col=0)
+        # new index, and Table would read it as one more output. The parts of the dates are text ('01')
+        tempdf = pd.read_csv(i, index_col=0, dtype={part: str for part in DATE_PART_COLUMNS})
         merged_datasets.append(tempdf)
 
     concatenated_df = pd.concat(merged_datasets)

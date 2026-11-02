@@ -226,10 +226,10 @@ def verify_accim_simulation(
 
     is_mixed_mode = len(window_names) > 0
     print(f"Detected {len(ems_zone_names)} EMS zone(s): {ems_zone_names}")
-    print(f"  EMS→EP key map: { {k: v for k, v in ems_zone_map.items()} }")
+    print(f"  EMS->EP key map: { {k: v for k, v in ems_zone_map.items()} }")
     print(f"Mixed-mode model: {is_mixed_mode}  |  Windows detected: {window_names}")
     if window_vent_sch_map:
-        print(f"  Window→VentSchedule map: {window_vent_sch_map}")
+        print(f"  Window->VentSchedule map: {window_vent_sch_map}")
     print(f"EMS params — HVACmode={HVACmode}, VentCtrl={VentCtrl}, "
           f"MaxWindSpeed={MaxWindSpeed}, MinOutTemp={MinOutTemp}, VST={VST}")
 
@@ -721,9 +721,9 @@ def verify_accim_simulation(
     result_df = pd.DataFrame(mismatch_rows)
 
     if result_df.empty:
-        print("\n✓ All checks passed. No mismatches detected.")
+        print("\nAll checks passed. No mismatches detected.")
     else:
-        print(f"\n✗ {len(result_df)} mismatch(es) detected across "
+        print(f"\n{len(result_df)} mismatch(es) detected across "
               f"{result_df['check'].nunique()} check type(s).")
         print(result_df.groupby(['zone_or_window', 'check']).size()
               .rename('count').reset_index().to_string(index=False))
@@ -1117,7 +1117,7 @@ class AccimSimulationVerifier:
             hot_pos = valid_hot.nonzero()[0]
             
             _add(hot_pos, violations_setpoint, zone, 'Check1_TooHot',
-                 lambda p: f"OpT ({opt.iat[p]:.2f}°C) > ACST_SCH−ACSTtol ({acst_limit.iat[p]:.2f}°C)",
+                 lambda p: f"OpT ({opt.iat[p]:.2f}°C) > ACST_SCH-ACSTtol ({acst_limit.iat[p]:.2f}°C)",
                  lambda p: round(float(opt.iat[p]), 4),
                  lambda p: f"<= {acst_limit.iat[p]:.2f}°C")
 
@@ -1129,7 +1129,7 @@ class AccimSimulationVerifier:
             cold_pos = valid_cold.nonzero()[0]
             
             _add(cold_pos, violations_setpoint, zone, 'Check1_TooCold',
-                 lambda p: f"OpT ({opt.iat[p]:.2f}°C) < AHST_SCH−AHSTtol ({ahst_limit.iat[p]:.2f}°C)",
+                 lambda p: f"OpT ({opt.iat[p]:.2f}°C) < AHST_SCH-AHSTtol ({ahst_limit.iat[p]:.2f}°C)",
                  lambda p: round(float(opt.iat[p]), 4),
                  lambda p: f">= {ahst_limit.iat[p]:.2f}°C")
 
