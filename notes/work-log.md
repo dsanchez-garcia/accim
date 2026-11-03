@@ -15,6 +15,14 @@ This log is a lightweight, session-scoped complement to the repository's
 existing tracking files — it does not replace them (see
 [[decisions.md#2026-09-13 — `notes/work-log.md` complements, not replaces, existing tracking files|the related decision]]).
 
+## 2026-11-03 — The answers to the P2 items, EnergyPlus 26.1, and the EMS of 0.8.2 against 1.0.0
+
+- **Objective**: Apply the answers of the author to the five P2 items of [[../TODO.md]] (radiant systems with a True/False argument, the `existing_hvac_*` arguments in the GUI, ESP CTE in the full sets, his correction of CHN Yang, EnergyPlus 26.1), and show him an output IDF to see whether the EMS code changed since 0.x.
+- **Affected files**: `accim/sim/hvac/existing.py`, `model.py`, `build.py`, `accis.py`, `ems/setpoint_lines.py` (the author), `accim/parametric_and_optimisation/main.py`, `funcs_for_besos/param_accis.py`, `accim/gui/` (`forms.py`, `app.py`, `tasks.py`); tests (`test_existing_hvac.py`, `test_setast_chn_yang.py` (new), `test_gui.py`, `test_energyplus_versions.py`, `_golden.py`, `test_golden_master.py`, all the golden files, `test_param_accis_filter.py`); [[../docs/source/4_detailed use.md]], [[../docs/source/9_migration_guide.md]], [[../CHANGELOG.md]], [[../DEVLOG.md]], [[../TODO.md]], [[../CAMBIOS_CODIGO_v1.0.0.md]], [[decisions.md]].
+- **Finding or decision**: Four decisions of 2026-11-03 in [[decisions.md]] (radiant setpoints, the GUI, ESP CTE rows, CHN Yang). The cooling panels follow the thermostat (`ZoneTotalLoad`), since their operative temperature control gave plant flow errors. The stop of the custom model without `InitASTvariables` comes with EnergyPlus 26.2, not 26.1 (contrary to the notes of 0.8.2). The EMS of 1.0.0 is restructured (per-zone `RunACCIS_<zone>` and `SetInputData_<zone>`, 5 calling managers instead of 29) with the same results as 0.8.2 except the corrected hour counters.
+- **Validation**: year simulations of six radiant example files; the 26.1 campaign (14 simulations per version: identical sums to 25.2, both backends identical, a parametric study); the 0.8.2 comparison (86/96 and 90/100 identical columns); the test suites; details in [[../DEVLOG.md]].
+- **Next step**: the review of the author (committed and pushed to `v1.0.0` at his request); the release ([[../TODO.md]]).
+
 ## 2026-11-02 — The existing HVAC systems keep the operative temperature between the setpoints
 
 - **Objective**: The question of the author: with existing HVAC systems the operative temperature exceeded the setpoints in some models (he used the VRF systems instead); can the existing equipment keep it between them (`ex_mm`)? Then: investigate the HVAC systems themselves (capacity, outdoor temperature limits), for any IDF, with arguments that simulate the model as it is when they are off.

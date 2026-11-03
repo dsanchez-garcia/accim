@@ -11,6 +11,60 @@ Durable architectural/process decisions for this repository and its Obsidian
 vault. Newest first. Use [[templates/decision-record.md|the decision-record
 template]] to add a new entry.
 
+## 2026-11-03 — The radiant systems, ventilated slabs and cooling panels follow the setpoints with `existing_hvac_radiant_setpoints`
+
+- **Status**: accepted (the author answered the TODO item on 2026-11-03: "yes, but as one or several True/False
+  arguments that apply the change or not, in line with the previous decisions", and chose `True` as the default)
+- **Context**: with `ex_ac` and `ex_mm`, these objects heat or cool with setpoint schedules of their own, not with
+  the thermostats, so their zones kept the setpoints of the model (65 to 82 % of the occupied hours of the example
+  file `RadLoHydrHeatCoolAuto` of EnergyPlus within the setpoints, in a year in Seville). Since 2026-11-02 accim only
+  warned about them.
+- **Decision**: one argument, `existing_hvac_radiant_setpoints` (`True`), in `AddAccis`, `add_accis_to_idf`, the
+  classes of the parametric module and the GUI. Those of the occupied zones get the setpoint schedules of their zones
+  in the setpoint fields that they have (so they keep heating, cooling or both) and the operative temperature as their
+  control temperature; the constant flow systems and ventilated slabs get the same schedule as high and low control
+  temperature (on/off at the setpoint, which EnergyPlus accepts: checked in its sources); the `:Design` objects shared
+  by several zones are copied per zone; the cooling panels of zones with a thermostat get `ZoneTotalLoad` instead,
+  because their operative temperature control gave plant flow errors in `5ZoneCoolingPanelBaseboard`. `False` keeps
+  them as in 0.x, with the warning.
+- **Consequences**: the output IDFs of the models with these objects change by default (none of the golden master);
+  `RadLoHydrHeatCoolAuto` reaches 99.5 to 100 % within the setpoints, and the hours that remain in other example files
+  come from the models (radiant systems that only heat, slow slabs, capacity). The zones whose radiant systems follow
+  the setpoints are not reported as zones without a thermostat. Section 4.1.1 of [[../docs/source/4_detailed use.md]].
+
+## 2026-11-03 — The GUI shows the `existing_hvac_*` arguments with the existing HVAC systems
+
+- **Status**: accepted (answer of the author to the TODO item on 2026-11-03)
+- **Context**: the tab *Add the ACCIS* used the defaults of these arguments without showing them.
+- **Decision**: a frame with the four booleans and the availability schedule (empty, `On 24/7` or any schedule
+  typed), enabled with `ex_ac` and `ex_mm` (the two options of the setpoints only with temperature setpoints), in
+  *Add the ACCIS* and in *Parametric study* (with `ex_ac`, its only existing HVAC script type). The other script types
+  do not get these arguments.
+- **Consequences**: `accim/gui/forms.py` (`EXISTING_HVAC_*`, `existing_hvac_arguments`), `app.py`, `tasks.py`;
+  tests in `tests/core/test_gui.py`.
+
+## 2026-11-03 — ESP CTE and INT ISO7730 keep one row per combination of the other parameters in the full sets
+
+- **Status**: accepted (answer of the author to the TODO item on 2026-11-03)
+- **Context**: `drop_invalid_param_combinations` dropped all the rows of ESP CTE (`comfort_standard` 0) when the
+  plan had `category` or `comfort_mode`, and kept INT ISO7730 (22) only with `comfort_mode` 0, although their
+  setpoints do not depend on these parameters (ESP CTE: neither; ISO7730: not on the comfort mode).
+- **Decision**: their rows are kept only with the first value of these columns in the plan (`pd.unique(...)[0]`),
+  so each one is simulated once for each combination of the other parameters.
+- **Consequences**: plans with these columns can compare ESP CTE with the other standards; the results tables have
+  one row of them per combination, with the first category and comfort mode of the plan. Migration guide, 9.3.
+
+## 2026-11-03 — The heating setpoints of CHN Yang with `ComfMod` 2 are those of the source of the standard
+
+- **Status**: accepted (the author checked the formulas of `(6, 2)` and `(6, 3)` against the source and corrected 2
+  lines of `(6, 2)` on 2026-11-03); supersedes the decision of 2026-10-31 on comfort standard 6 below
+- **Context**: within the applicability limits, the heating setpoint of `(6, 2)` used the formula of the cooling
+  setpoint, as in 0.x.
+- **Decision**: `PMOT*0.32+14.88` (category 80) and `PMOT*0.31+17.14` (category 90), as in `(6, 3)`.
+- **Consequences**: the subprogram `SetAST_CS6_0` changes in every output IDF (every configuration of the golden
+  master was written again, and only these 2 lines differ); the results change only with comfort standard 6 and
+  comfort mode 2. Test in `tests/core/test_setast_chn_yang.py`.
+
 ## 2026-11-02 — The existing HVAC systems keep the operative temperature between the setpoints with arguments `existing_hvac_*`
 
 - **Status**: accepted (asked by the author on 2026-11-02, who chose the default of the operative temperature control,
@@ -39,7 +93,8 @@ template]] to add a new entry.
   models with the thermostats of the example files of EnergyPlus simulate. With all the options, the sample models
   have 99.7 to 100 % of the occupied hours between the setpoints in a year in Seville; the energy of a backup is
   reported apart (district heating and cooling), as the loads that the existing system does not meet. Pending
-  ([[../TODO.md]]): the radiant systems following the setpoints, and the arguments in the GUI.
+    ([[../TODO.md]]): the radiant systems following the setpoints, and the arguments in the GUI (both done on
+    2026-11-03, see the decisions above).
 
 ## 2026-11-02 — The arguments and parameters have descriptive names, the same in the whole package
 
@@ -282,7 +337,8 @@ template]] to add a new entry.
 
 ## 2026-10-31 — The setpoints of comfort standard 6 with `ComfMod` 2 stay as in 0.x until they are checked
 
-- **Status**: accepted (by the author on 2026-10-31, as a provisional decision; the check is a TODO item)
+- **Status**: superseded on 2026-11-03 by "The heating setpoints of CHN Yang with `ComfMod` 2 are those of the source
+  of the standard" (above): the author checked them and corrected them
 - **Context**: In `accim/sim/ems/setpoint_lines.py`, key `(6, 2)` (CHN Yang), the heating setpoint uses, within the
   applicability limits, the formula of the cooling setpoint (`PMOT*0.30+25.9` with `CAT` 80, `+23.6` with 90), as
   in 0.x (question of the review of 2026-10-24, [[branch-reviews.md]], section 1.4). With `ComfMod` 3, the heating

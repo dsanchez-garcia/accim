@@ -176,10 +176,12 @@ The argument `hvac_zone_map` of `AddAccis` and `add_accis_to_idf` (and of the cl
 `accim.parametric_and_optimisation`) is deprecated and has no effect: it gave the zones of the HVAC objects that `ex_mm`
 could not find, and `ex_mm` no longer needs them (see 9.3). Giving it raises a `DeprecationWarning`.
 
-Four new arguments of `AddAccis` and `add_accis_to_idf` (and of the classes of `accim.parametric_and_optimisation`)
+Five new arguments of `AddAccis` and `add_accis_to_idf` (and of the classes of `accim.parametric_and_optimisation`)
 adapt the existing HVAC systems (`ex_ac`, `ex_mm`) so that they keep the operative temperature between the setpoints
 (see section 4.1.1): `existing_hvac_operative_temperature_control` (`True` by default: the thermostats of the occupied
 zones control the operative temperature; `False` keeps the thermostats as accim 0.x did, see 9.3),
+`existing_hvac_radiant_setpoints` (`True` by default: the radiant systems, ventilated slabs and cooling panels of the
+occupied zones follow the setpoints; `False` keeps them as accim 0.x did, see 9.3),
 `existing_hvac_availability_schedule` (`None` by default), `existing_hvac_widen_outdoor_temperature_limits` and
 `existing_hvac_ideal_loads_backup` (`False` by default). With their values other than the default, accim 0.x had no
 equivalent.
@@ -268,6 +270,13 @@ of each class of `accim.parametric_and_optimisation` and their results):
   `existing_hvac_operative_temperature_control=False` keeps the thermostats as accim 0.x did. With the existing HVAC
   systems, accim also warns if their availability or their outdoor temperature limits can switch them off (see
   section 4.1.1).
+- With the existing HVAC systems and temperature setpoints, the radiant systems (`ZoneHVAC:LowTemperatureRadiant:*`,
+  `ZoneHVAC:HighTemperatureRadiant`), ventilated slabs and cooling panels of the occupied zones follow the setpoints
+  of accim, with the operative temperature (section 4.1.1). In accim 0.x they kept the setpoint schedules of the
+  model, since they do not follow the thermostats of the zones, so these zones kept the setpoints of the model (in a
+  year in Seville, 65 to 82 % of the occupied hours of the example file `RadLoHydrHeatCoolAuto` of EnergyPlus within
+  the setpoints of accim, and 99.5 to 100 % now). The output IDFs of the models with these objects change;
+  `existing_hvac_radiant_setpoints=False` keeps them as accim 0.x did, and warns about them.
 - The output IDFs are the same in every run: the zones, and the objects of each zone, are always in the same
   order. Before, the order of the zones could change from one run to another. Since EnergyPlus adds up some
   results (the meters, for instance) in the order of the objects, the results of a model whose objects are in a
@@ -299,12 +308,23 @@ of each class of `accim.parametric_and_optimisation` and their results):
   `ComfMod` 3, so a plan with `comfort_standard` 0 or 22 stopped EnergyPlus ("Variable = 'ACST' used in expression
   has not been initialized!") unless it also set `comfort_mode` 0. The text of these two subprograms changes in all the
   output IDFs, not their results, and `modify_accis` updates them in the models of earlier versions of accim.
+- The heating setpoints of CHN Yang (`comfort_standard` 6) with `comfort_mode` 2, when the prevailing mean outdoor
+  temperature is within the applicability limits, are `PMOT*0.32+14.88` (category 80) and `PMOT*0.31+17.14`
+  (category 90), plus the tolerance, as in the source of the standard and in `comfort_mode` 3. In accim 0.x they
+  were the cooling setpoints (`PMOT*0.30+25.9` and `PMOT*0.30+23.6`), so the heating setpoint was the cooling one
+  (except for the tolerances) and the HVAC systems kept the zones at that temperature. The text of the subprogram `SetAST_CS6_0` changes in
+  all the output IDFs (they have the subprograms of all the comfort standards), and the results only with comfort
+  standard 6 and comfort mode 2.
 - The plans of `sampling_full_set` with the predefined models (`drop_invalid_param_combinations`) are checked rule
   by rule: before, a column missing from the plan (`category`, for instance) or a comfort standard without a table
   of valid categories and comfort modes (99) skipped all the remaining rules of the row, so these plans could keep
   invalid comfort modes, or `ventilation_control`, `ventilation_setpoint_offset`, `min_outdoor_temp_offset` and
-  `max_wind_speed` with `hvac_mode` 0. As before, the rows of `comfort_standard` 0 are dropped when the plan has
-  `category` or `comfort_mode`.
+  `max_wind_speed` with `hvac_mode` 0. The setpoints of ESP CTE (`comfort_standard` 0) depend neither on the
+  category nor on the comfort mode, and those of INT ISO7730 (22) not on the comfort mode, so their rows are kept
+  only with the first value of these columns in the plan, one row for each combination of the other parameters.
+  Before, the rows of ESP CTE were dropped when the plan had `category` or `comfort_mode`, so a plan with these
+  columns could not compare ESP CTE with the other comfort standards, and those of INT ISO7730 were kept only with
+  `comfort_mode` 0.
 - The baseline of `AccimPredefModelsParamSim` (the custom comfort model: `comfort_standard` 99, `category` 80,
   `comfort_mode` 3) has the default coefficients that `ParametricSimulation(parameters_type='accim custom model')`
   applies (those of ASHRAE 55 with 80 % acceptability: `custom_slope` 0.31, `custom_intercept` 17.8, offsets

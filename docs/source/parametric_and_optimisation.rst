@@ -165,8 +165,9 @@ names (those of accim 0.x, such as ``ScriptType`` or ``output_freqs``, still wor
 ``DeprecationWarning``). ``script_type`` is ``'vrf_ac'`` (VRF system, fully air-conditioned), ``'vrf_mm'`` (VRF
 system with mixed-mode operation) or ``'ex_ac'`` (the existing HVAC system of the model, fully
 air-conditioned). With ``'ex_ac'``, the arguments ``existing_hvac_operative_temperature_control``,
-``existing_hvac_availability_schedule``, ``existing_hvac_widen_outdoor_temperature_limits`` and
-``existing_hvac_ideal_loads_backup`` adapt the existing HVAC system so that it keeps the operative temperature between
+``existing_hvac_radiant_setpoints``, ``existing_hvac_availability_schedule``,
+``existing_hvac_widen_outdoor_temperature_limits`` and ``existing_hvac_ideal_loads_backup`` adapt the existing HVAC
+system so that it keeps the operative temperature between
 the setpoints (section 4.1.1 of :doc:`4_detailed use`). Mixed-mode operation needs a model with natural ventilation: calculated
 (AirflowNetwork), or given by ``ZoneVentilation:WindandStackOpenArea`` or
 ``ZoneVentilation:DesignFlowRate`` objects, whose opening accim controls; see :doc:`4_detailed use`.

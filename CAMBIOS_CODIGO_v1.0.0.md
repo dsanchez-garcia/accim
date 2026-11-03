@@ -391,6 +391,23 @@ Están en la sección 9.3 de la guía de migración y en `CHANGELOG.md`. En resu
   refrigerantes: `warn_own_setpoints`).
   `hvac/schedules.py` (nuevo) reúne los horarios que comparten el VRF y los sistemas existentes y lee los
   valores de los horarios de un modelo (`schedule_values`, `is_always_on`), para los avisos de disponibilidad.
+- Respuestas del autor a los puntos P2 del `TODO.md` (03/11/2026): (1) los sistemas radiantes, forjados
+  ventilados y paneles refrigerantes de las zonas ocupadas siguen las consignas con el argumento
+  `existing_hvac_radiant_setpoints` (`True` por defecto; `hvac/existing.set_radiant_setpoints`): reciben
+  `AHST_Sch_<zona>`/`ACST_Sch_<zona>` en los campos de consigna que tengan (`_RADIANT_FIELDS`; en el objeto
+  `:Design` de los de caudal variable desde la 9.6, copiado por zona si lo comparten varias) y la temperatura
+  operativa como temperatura de control; los de caudal constante y los forjados ventilados, la misma consigna
+  como temperatura alta y baja (todo o nada); los paneles de zonas con termostato, el tipo de control
+  `ZoneTotalLoad` (con la operativa, EnergyPlus daba errores de caudal de planta). Este paso va antes de los
+  termostatos, para que las zonas que controlan sus radiantes (`model.radiant_zones`) no salgan en el aviso de
+  zonas sin termostato; con `False`, el aviso de antes (`warn_own_setpoints`). (2) La GUI muestra los
+  argumentos `existing_hvac_*` con `ex_ac` y `ex_mm` (`forms.EXISTING_HVAC_OPTIONS`,
+  `existing_hvac_arguments`; en el estudio paramétrico, con `ex_ac`). (3) `drop_invalid_param_combinations`
+  conserva las filas de ESP CTE e INT ISO7730 con el primer valor de `category` y `comfort_mode` del plan
+  (`_INDEPENDENT_OF` en `param_accis.py`). (4) Las consignas de calefacción de CHN Yang con `ComfMod` 2
+  (corregidas por el autor en `setpoint_lines.py`). (5) Simulaciones con EnergyPlus 26.1 (ver `DEVLOG.md`).
+  Además, el *golden master* muestra las diferencias desde la primera línea distinta (`_golden.text_diff`):
+  el diff completo de los IDF más grandes tardaba más de 25 minutos.
 - Hallazgos de las revisiones de las ramas (02/11/2026), cada uno con su test: `rename_epw_files` solo borra
   los EPW originales que ha copiado con su nombre nuevo (borraba también los excluidos); las peticiones a
   Nominatim identifican a accim (`NOMINATIM_USER_AGENT`), tienen un tiempo límite y aceptan coordenadas sin
@@ -435,7 +452,7 @@ Durante la refactorización se usaron dos herramientas que ahora están en el re
 | Añadir un argumento del ACCIS | `ems/inputs.INPUT_VARIABLES` (variable, argumento y valor por defecto), el argumento en `modify_accis`, `AddAccis` y `GenerationArguments` (y en `generation.zone_input_arguments`), su variable global en `ems/objects.py` y, para el módulo paramétrico, una función en `param_accis.py` |
 | Cambiar o añadir salidas | `outputs.py` |
 | Cambiar el sistema VRF | `hvac/vrf.py` y `hvac/vrf_data.py` |
-| Cambiar cómo se adaptan los sistemas existentes (termostatos, disponibilidad, límites, respaldo) | `hvac/existing.py`, los horarios compartidos en `hvac/schedules.py`, y los argumentos `existing_hvac_*` en `build.add_accis_objects`, `AddAccis`, `add_accis_to_idf` y las clases del módulo paramétrico (`SimulationBase` y sus subclases) |
+| Cambiar cómo se adaptan los sistemas existentes (termostatos, radiantes, disponibilidad, límites, respaldo) | `hvac/existing.py`, los horarios compartidos en `hvac/schedules.py`, y los argumentos `existing_hvac_*` en `build.add_accis_objects`, `AddAccis`, `add_accis_to_idf`, las clases del módulo paramétrico (`SimulationBase` y sus subclases) y la GUI (`gui/forms.py`, `gui/app.py`) |
 | Admitir una versión de EnergyPlus | `constants.SUPPORTED_ENERGYPLUS_VERSIONS` (y `ENERGYPLUS_VERSIONS_WITH_SPACES`); revisar `energyplus.py` y `tests/core/test_energyplus_versions.py` |
 | Renombrar un argumento | El argumento en las funciones, y el nombre antiguo en `arguments.LEGACY_ARGUMENT_NAMES` (o en la correspondencia de su módulo, sección 7); en el módulo paramétrico, también el parámetro (`params_dicts`) |
 | Añadir una función de Erl al backend de la API | `ems/erl.py`: `_FUNCTIONS`, la versión rápida en `_FAST_NAMESPACE` y la exacta en `_ExactEvaluator.function`, con un test en `tests/core/test_erl.py` |
