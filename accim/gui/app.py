@@ -159,6 +159,37 @@ def _set_state(widgets, enabled: bool) -> None:
             widget.state(['!disabled'] if enabled else ['disabled'])
 
 
+def _existing_hvac_widgets(frame, variables: Mapping[str, tk.Variable]) -> Tuple[List[Any], List[Any], ttk.Combobox]:
+    """The options of the existing HVAC systems in a frame (forms.EXISTING_HVAC_OPTIONS and the availability schedule):
+    return their widgets, those that need the adaptive setpoint temperatures, and the field of the schedule."""
+    frame.columnconfigure(1, weight=1)
+    widgets: List[Any] = []
+    temperature_widgets: List[Any] = []
+    for index, (name, label) in enumerate(forms.EXISTING_HVAC_OPTIONS.items()):
+        check = ttk.Checkbutton(frame, text=f'{label} ({name})', variable=variables[name])
+        check.grid(row=index, column=0, columnspan=2, sticky='w')
+        widgets.append(check)
+        if name in ('existing_hvac_operative_temperature_control', 'existing_hvac_radiant_setpoints'):
+            temperature_widgets.append(check)
+    row = len(forms.EXISTING_HVAC_OPTIONS)
+    ttk.Label(frame, text='Availability schedule (existing_hvac_availability_schedule; empty: that of the model, '
+                          'On 24/7: always available):').grid(row=row, column=0, sticky='w', padx=(0, 6), pady=2)
+    combo = ttk.Combobox(frame, textvariable=variables['existing_hvac_availability_schedule'],
+                         values=list(forms.EXISTING_HVAC_AVAILABILITY), width=24)
+    combo.grid(row=row, column=1, sticky='w', pady=2)
+    return widgets, temperature_widgets, combo
+
+
+def _set_existing_hvac_state(widgets, temperature_widgets, combo: ttk.Combobox, existing: bool,
+                             temperature: bool = True) -> None:
+    """Enable the options of the existing HVAC systems with their script types (and the options of the setpoints with
+    the adaptive setpoint temperatures)."""
+    _set_state(widgets, existing)
+    _set_state(temperature_widgets, existing and temperature)
+    # Any schedule of the model can be typed, so the field is not read-only
+    combo.configure(state='normal' if existing else 'disabled')
+
+
 def _list_frame(parent, text: str, height: int = 5) -> Tuple[ttk.LabelFrame, tk.Listbox]:
     """A frame with a list of several choices, and the buttons All and None."""
     frame = ttk.LabelFrame(parent, text=text, padding=6)
@@ -250,8 +281,10 @@ class AddAccisTab(_Tab):
                      'setpoint_tolerance_start', 'setpoint_tolerance_end', 'setpoint_tolerance_step', 'name_suffix',
                      *forms.CUSTOM_MODEL_FIELDS):
             self.vars[name] = tk.StringVar(value=defaults[name])
-        for name in ('keep_existing_outputs', 'add_building_averages'):
+        for name in ('keep_existing_outputs', 'add_building_averages', *forms.EXISTING_HVAC_OPTIONS):
             self.vars[name] = tk.BooleanVar(value=defaults[name])
+        self.vars['existing_hvac_availability_schedule'] = tk.StringVar(
+            value=defaults['existing_hvac_availability_schedule'])
         self.frequencies = {f: tk.BooleanVar(value=f in defaults['output_frequencies'])
                             for f in forms.OUTPUT_FREQUENCIES}
         self.hvac_modes = {m: tk.BooleanVar(value=m in defaults['hvac_mode']) for m in forms.HVAC_MODES}
@@ -265,10 +298,11 @@ class AddAccisTab(_Tab):
         self._comfort_frame(body).grid(row=2, column=1, sticky='nsew', pady=4)
         self._mixed_mode_frame(body).grid(row=3, column=0, sticky='nsew', padx=(0, 6), pady=4)
         self._custom_frame(body).grid(row=3, column=1, sticky='nsew', pady=4)
-        self._tolerance_frame(body).grid(row=4, column=0, columnspan=2, sticky='ew', pady=4)
-        self._zone_frame(body).grid(row=5, column=0, columnspan=2, sticky='ew', pady=4)
+        self._existing_hvac_frame(body).grid(row=4, column=0, columnspan=2, sticky='ew', pady=4)
+        self._tolerance_frame(body).grid(row=5, column=0, columnspan=2, sticky='ew', pady=4)
+        self._zone_frame(body).grid(row=6, column=0, columnspan=2, sticky='ew', pady=4)
         buttons = ttk.Frame(body)
-        buttons.grid(row=6, column=0, columnspan=2, sticky='ew', pady=(6, 0))
+        buttons.grid(row=7, column=0, columnspan=2, sticky='ew', pady=(6, 0))
         ttk.Button(buttons, text='Preview', command=self.preview).pack(side='left')
         self.add_button = ttk.Button(buttons, text='Add the ACCIS', command=self.add)
         self.add_button.pack(side='left', padx=6)
@@ -372,6 +406,13 @@ class AddAccisTab(_Tab):
                                for row, (name, (label, _)) in enumerate(forms.CUSTOM_MODEL_FIELDS.items())]
         return frame
 
+    def _existing_hvac_frame(self, parent) -> ttk.LabelFrame:
+        frame = ttk.LabelFrame(parent, text='Existing HVAC systems (script types ex_ac and ex_mm): keep the operative '
+                                            'temperature between the setpoints', padding=6)
+        (self.existing_hvac_widgets, self.existing_hvac_temperature_widgets,
+         self.availability_combo) = _existing_hvac_widgets(frame, self.vars)
+        return frame
+
     def _tolerance_frame(self, parent) -> ttk.LabelFrame:
         frame = ttk.LabelFrame(parent, text='Tolerance of the setpoints and names of the output IDFs', padding=6)
         _grid_entry(frame, 0, 'Tolerance from (°C):', self.vars['setpoint_tolerance_start'], width=8)
@@ -430,6 +471,8 @@ class AddAccisTab(_Tab):
         _set_state([self.supply_air], script_type.startswith('vrf'))
         _set_state(self.mixed_mode_widgets, script_type in forms.MIXED_MODE_SCRIPT_TYPES)
         temperature = self.vars['setpoint_type'].get() == 'temperature'
+        _set_existing_hvac_state(self.existing_hvac_widgets, self.existing_hvac_temperature_widgets,
+                                 self.availability_combo, script_type.startswith('ex'), temperature)
         _set_state(self.comfort_widgets, temperature)
         _set_state(self.zone_widgets, temperature)
         # The zone can also be typed, so its field is not read-only
@@ -1085,7 +1128,9 @@ class ParametricTab(_Tab):
         self.vars: Dict[str, tk.Variable] = {
             name: tk.StringVar(value=defaults[name])
             for name in ('idf', 'parameters_type', 'script_type', 'sampling', 'samples', 'meters', 'processes',
-                         'out_dir')}
+                         'out_dir', 'existing_hvac_availability_schedule')}
+        for name in forms.EXISTING_HVAC_OPTIONS:
+            self.vars[name] = tk.BooleanVar(value=defaults[name])
         self.results = None
         self._folder_row(0, 'Working folder (IDF and EPWs):', refresh=True)
 
@@ -1121,8 +1166,14 @@ class ParametricTab(_Tab):
                                    'for the Latin hypercube sample of the custom models.', foreground='gray25',
                   wraplength=420).grid(row=4, column=0, columnspan=3, sticky='w')
 
+        existing = ttk.LabelFrame(body, text='Existing HVAC systems (script type ex_ac): keep the operative temperature '
+                                             'between the setpoints', padding=6)
+        existing.grid(row=2, column=0, columnspan=2, sticky='ew', pady=4)
+        (self.existing_hvac_widgets, self.existing_hvac_temperature_widgets,
+         self.availability_combo) = _existing_hvac_widgets(existing, self.vars)
+
         plan = ttk.LabelFrame(body, text='Plan, outputs and run', padding=6)
-        plan.grid(row=2, column=0, columnspan=2, sticky='ew', pady=4)
+        plan.grid(row=3, column=0, columnspan=2, sticky='ew', pady=4)
         plan.columnconfigure(1, weight=1)
         _grid_combo(plan, 0, 'Plan:', self.vars['sampling'], forms.SAMPLINGS).grid(sticky='w')
         self.samples_entry = _grid_entry(plan, 1, 'Number of samples (Latin hypercube):', self.vars['samples'],
@@ -1143,24 +1194,28 @@ class ParametricTab(_Tab):
         ttk.Label(plan, textvariable=self.count, wraplength=900).grid(row=6, column=0, columnspan=2, sticky='w')
 
         self.tree = _tree(body, height=8)
-        self.tree.master.grid(row=3, column=0, columnspan=2, sticky='nsew', pady=4)
+        self.tree.master.grid(row=4, column=0, columnspan=2, sticky='nsew', pady=4)
         ttk.Label(body, text='The model gets accim with each combination of the parameters (the coefficients of the '
                              'custom model that are not parameters take the default values), and the results are the '
                              'sums of the meters over the run period of each simulation. Other outputs, objectives, '
                              'optimisations, the m-n filter and the plots need Python: see the parametric and '
                              'optimisation section of the documentation.',
-                  foreground='gray25', wraplength=900).grid(row=4, column=0, columnspan=2, sticky='w')
+                  foreground='gray25', wraplength=900).grid(row=5, column=0, columnspan=2, sticky='w')
         self.vars['parameters_type'].trace_add('write', lambda *args: self.update_state())
         self.vars['sampling'].trace_add('write', lambda *args: self.update_state())
+        self.vars['script_type'].trace_add('write', lambda *args: self.update_state())
         self.update_state()
 
     def update_state(self) -> None:
-        """The parameters of the type of model, and the number of samples only for the Latin hypercube."""
+        """The parameters of the type of model, the number of samples only for the Latin hypercube, and the options of
+        the existing HVAC systems only with them."""
         names = list(forms.PARAMETERS_TYPES.get(self.vars['parameters_type'].get(), ()))
         self.parameter_combo.configure(values=names)
         if self.parameter_name.get() not in names:
             self.parameter_name.set(names[0] if names else '')
         _set_state([self.samples_entry], self.vars['sampling'].get() == 'lhs')
+        _set_existing_hvac_state(self.existing_hvac_widgets, self.existing_hvac_temperature_widgets,
+                                 self.availability_combo, self.vars['script_type'].get().startswith('ex'))
 
     def refresh(self) -> None:
         """List the input IDFs and the EPWs of the folder."""

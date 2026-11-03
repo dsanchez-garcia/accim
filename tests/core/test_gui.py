@@ -65,11 +65,35 @@ def test_arguments_that_depend_on_the_script_type_and_the_comfort_standards(tmp_
     arguments = forms.add_accis_arguments(_form(tmp_path, script_type='vrf_ac', hvac_mode=[], ventilation_control=[]))
     assert (arguments['hvac_mode'], arguments['ventilation_control']) == ([0], [0])
     assert 'ventilation_setpoint_offset' not in arguments
+    assert not any(name.startswith('existing_hvac') for name in arguments)
     # The custom model, with its coefficients; a date for the cooling season
     arguments = forms.add_accis_arguments(_form(tmp_path, comfort_standard=[1, 99], custom_slope='0.4',
                                                 cooling_season_start='01/06'))
     assert arguments['custom_slope'] == 0.4 and arguments['custom_heating_offset'] == -3.5
     assert arguments['cooling_season_start'] == '01/06'
+
+
+def test_arguments_of_the_existing_hvac_systems(tmp_path):
+    from accim.sim.accis import AddAccis
+
+    # The defaults of the form are those of AddAccis (an empty availability schedule is None)
+    parameters = inspect.signature(AddAccis).parameters
+    defaults = {name: parameters[name].default for name in forms.EXISTING_HVAC_DEFAULTS}
+    for script_type in ('ex_ac', 'ex_mm'):
+        arguments = forms.add_accis_arguments(_form(tmp_path, script_type=script_type))
+        assert {name: arguments[name] for name in defaults} == defaults
+    arguments = forms.add_accis_arguments(_form(
+        tmp_path, script_type='ex_mm', existing_hvac_operative_temperature_control=False,
+        existing_hvac_radiant_setpoints=False, existing_hvac_widen_outdoor_temperature_limits=True,
+        existing_hvac_ideal_loads_backup=True, existing_hvac_availability_schedule=' Office Hours '))
+    assert {name: arguments[name] for name in defaults} == dict(
+        existing_hvac_operative_temperature_control=False, existing_hvac_radiant_setpoints=False,
+        existing_hvac_widen_outdoor_temperature_limits=True, existing_hvac_ideal_loads_backup=True,
+        existing_hvac_availability_schedule='Office Hours')
+    for schedule in ('On; 24/7', 'a,b', 'On!'):
+        with pytest.raises(FormError, match='existing_hvac_availability_schedule: enter the name of a schedule'):
+            forms.add_accis_arguments(_form(tmp_path, script_type='ex_ac',
+                                            existing_hvac_availability_schedule=schedule))
 
 
 def test_number_of_output_idfs(tmp_path):
@@ -313,13 +337,24 @@ def test_arguments_of_the_parametric_study(tmp_path):
                              script_type='vrf_mm',
                              accis_params_dict={'comfort_standard': [1, 2], 'category': [1, 2, 3]},
                              sampling='full set', samples=0, meters=['Heating:Electricity', 'Cooling:Electricity'],
-                             processes=2, out_dir='gui_parametric_results')
+                             processes=2, out_dir='gui_parametric_results', existing_hvac={})
     assert forms.parametric_simulation_count(arguments) == 2 * 3 * 2
     custom = forms.parametric_arguments(_parametric_form(
         tmp_path, parameters_type='accim custom model', sampling='lhs', samples='8',
         parameters=[('custom_slope', '0.2 to 0.6'), ('custom_offset', '2 to 4')]))
     assert custom['accis_params_dict'] == {'custom_slope': (0.2, 0.6), 'custom_offset': (2, 4)}
     assert forms.parametric_simulation_count(custom) == 8 * 2
+
+
+def test_the_parametric_study_with_the_existing_hvac_systems(tmp_path):
+    arguments = forms.parametric_arguments(_parametric_form(
+        tmp_path, script_type='ex_ac', existing_hvac_ideal_loads_backup=True,
+        existing_hvac_availability_schedule='On 24/7'))
+
+    assert arguments['existing_hvac'] == dict(
+        existing_hvac_operative_temperature_control=True, existing_hvac_radiant_setpoints=True,
+        existing_hvac_widen_outdoor_temperature_limits=False, existing_hvac_ideal_loads_backup=True,
+        existing_hvac_availability_schedule='On 24/7')
 
 
 @pytest.mark.parametrize('values, message', [
@@ -336,6 +371,7 @@ def test_arguments_of_the_parametric_study(tmp_path):
     (dict(meters=' , '), 'enter at least one meter'),
     (dict(out_dir='C:/results'), 'out_dir'),
     (dict(processes='0'), 'processes'),
+    (dict(script_type='ex_ac', existing_hvac_availability_schedule='On, 24/7'), 'existing_hvac_availability_schedule'),
 ])
 def test_wrong_arguments_of_the_parametric_study(tmp_path, values, message):
     with pytest.raises(FormError, match=message):
@@ -483,10 +519,26 @@ def test_the_task_of_the_parametric_study(tmp_path, monkeypatch):
     calls.clear()
     tasks.parametric_study(lhs)
     assert ('sampling_lhs', {'num_samples': 3}) in calls
+    # The existing HVAC systems get their arguments
+    existing = forms.parametric_arguments(_parametric_form(
+        tmp_path, epws=['a.epw'], script_type='ex_ac', existing_hvac_widen_outdoor_temperature_limits=True))
+    calls.clear()
+    tasks.parametric_study(existing)
+    assert calls[0][1] == dict(buildings=['BUILDING'], epws=['a.epw'], parameters_type='accim predefined model',
+                               output_frequencies=['hourly'], script_type='ex_ac', **existing['existing_hvac'])
+    assert calls[0][1]['existing_hvac_widen_outdoor_temperature_limits'] is True
+
+
+def test_the_parametric_simulation_accepts_the_arguments_of_the_existing_hvac_systems():
+    from accim.parametric_and_optimisation.main import ParametricSimulation
+
+    parameters = inspect.signature(ParametricSimulation).parameters
+    assert all(parameters[name].default == (None if default == '' else default)
+               for name, default in forms.EXISTING_HVAC_DEFAULTS.items())
 
 
 @needs_energyplus
-@pytest.mark.parametrize('script_type', ['vrf_ac', 'vrf_mm'])
+@pytest.mark.parametrize('script_type', ['vrf_ac', 'vrf_mm', 'ex_mm'])
 def test_add_accis_runs_with_the_arguments_of_the_form(tmp_path, monkeypatch, script_type):
     shutil.copy(SAMPLE_IDF, tmp_path / 'model.idf')
     arguments = forms.add_accis_arguments(_form(tmp_path, script_type=script_type, category='2 3',
@@ -549,13 +601,36 @@ def test_the_fields_follow_the_script_type_and_the_comfort_standards(app):
 
     tab.vars['script_type'].set('vrf_ac')
     assert tab.mixed_mode_widgets[0].instate(['disabled']) and not tab.supply_air.instate(['disabled'])
+    assert all(widget.instate(['disabled']) for widget in tab.existing_hvac_widgets)
+    assert str(tab.availability_combo.cget('state')) == 'disabled'
     tab.vars['script_type'].set('ex_mm')
     assert not tab.mixed_mode_widgets[0].instate(['disabled']) and tab.supply_air.instate(['disabled'])
+    assert not any(widget.instate(['disabled']) for widget in tab.existing_hvac_widgets)
+    # Any schedule of the model can be typed
+    assert str(tab.availability_combo.cget('state')) == 'normal'
     assert tab.custom_widgets[0].instate(['disabled'])
     tab.standard_list.selection_set(len(tab.standards) - 1)
     tab.update_state()
     assert tab.selected_standards() == [1, 99] and not tab.custom_widgets[0].instate(['disabled'])
     assert '99 = CUSTOM' in tab.categories.cget('text')
+    # The options of the setpoints need the adaptive setpoint temperatures
+    tab.vars['setpoint_type'].set('pmv')
+    assert all(widget.instate(['disabled']) for widget in tab.existing_hvac_temperature_widgets)
+    assert not tab.existing_hvac_widgets[-1].instate(['disabled'])
+
+
+def test_the_window_gives_the_arguments_of_the_existing_hvac_systems(app, tmp_path):
+    (tmp_path / 'model.idf').write_text('')
+    app.folder.set(str(tmp_path))
+    tab = app.add_accis
+
+    tab.vars['script_type'].set('ex_ac')
+    tab.vars['existing_hvac_ideal_loads_backup'].set(True)
+    tab.vars['existing_hvac_availability_schedule'].set('On 24/7')
+    arguments = forms.add_accis_arguments(tab.form())
+    assert arguments['existing_hvac_ideal_loads_backup'] is True
+    assert arguments['existing_hvac_availability_schedule'] == 'On 24/7'
+    assert arguments['existing_hvac_operative_temperature_control'] is True
 
 
 def test_wrong_values_are_shown_and_nothing_runs(app, tmp_path):
@@ -721,6 +796,14 @@ def test_the_tab_of_the_parametric_study(app, tmp_path):
     tab = app.parametric
 
     assert tab.samples_entry.instate(['disabled'])
+    assert all(widget.instate(['disabled']) for widget in tab.existing_hvac_widgets)
+    tab.vars['script_type'].set('ex_ac')
+    assert not any(widget.instate(['disabled']) for widget in tab.existing_hvac_widgets)
+    assert str(tab.availability_combo.cget('state')) == 'normal'
+    tab.vars['existing_hvac_radiant_setpoints'].set(False)
+    assert forms.parametric_arguments(dict(tab.form(), parameters=[('category', '1')]))['existing_hvac'][
+        'existing_hvac_radiant_setpoints'] is False
+    tab.vars['script_type'].set('vrf_mm')
     tab.parameter_name.set('comfort_standard')
     tab.parameter_values.set('1, 2')
     assert tab.set_parameter()

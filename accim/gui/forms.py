@@ -28,6 +28,9 @@ __all__ = [
     'CUSTOM_MODEL_FIELDS',
     'CUSTOM_MODEL_PARAMETERS',
     'ENERGYPLUS_VERSIONS',
+    'EXISTING_HVAC_AVAILABILITY',
+    'EXISTING_HVAC_DEFAULTS',
+    'EXISTING_HVAC_OPTIONS',
     'FIGURE_COLORS',
     'FIGURE_TYPES',
     'FormError',
@@ -56,6 +59,7 @@ __all__ = [
     'comfort_modes_hint',
     'comfort_standard_choices',
     'epw_files',
+    'existing_hvac_arguments',
     'figure_arguments',
     'idf_files',
     'input_idfs',
@@ -110,6 +114,24 @@ CUSTOM_MODEL_FIELDS = {
     'custom_heating_upper_limit': ('Upper applicability limit, heating (°C)', '33.5'),
     'custom_heating_lower_limit': ('Lower applicability limit, heating (°C)', '10'),
 }
+#: The options of the existing HVAC systems (script types 'ex_ac' and 'ex_mm') that are booleans: argument -> label.
+EXISTING_HVAC_OPTIONS = {
+    'existing_hvac_operative_temperature_control': 'The thermostats control the operative temperature',
+    'existing_hvac_radiant_setpoints': 'The radiant systems, ventilated slabs and cooling panels follow the setpoints',
+    'existing_hvac_widen_outdoor_temperature_limits': 'Widen the outdoor temperature limits (to -20 and 80 °C)',
+    'existing_hvac_ideal_loads_backup': 'Backup ideal loads air systems (the loads that the HVAC system does not meet)',
+}
+#: The suggested availability schedules of the existing HVAC systems ('' keeps the availability of the model).
+EXISTING_HVAC_AVAILABILITY = ('', 'On 24/7')
+#: The initial values of the options of the existing HVAC systems (the defaults of AddAccis; the availability schedule
+#: '' is None).
+EXISTING_HVAC_DEFAULTS = {
+    'existing_hvac_operative_temperature_control': True,
+    'existing_hvac_radiant_setpoints': True,
+    'existing_hvac_widen_outdoor_temperature_limits': False,
+    'existing_hvac_ideal_loads_backup': False,
+    'existing_hvac_availability_schedule': '',
+}
 #: The initial values of the form of AddAccis (the texts of the lists are separated by commas or spaces).
 ADD_ACCIS_DEFAULTS = {
     'script_type': 'vrf_mm',
@@ -138,6 +160,7 @@ ADD_ACCIS_DEFAULTS = {
     'setpoint_tolerance_step': '0.1',
     'name_suffix': '',
     **{name: default for name, (_, default) in CUSTOM_MODEL_FIELDS.items()},
+    **EXISTING_HVAC_DEFAULTS,
 }
 #: The initial values of the form of run_ep.
 RUN_DEFAULTS = {'only_accim_idfs': True, 'processes': '2', 'energyplus_version': 'auto', 'backend': 'ems'}
@@ -246,6 +269,7 @@ PARAMETRIC_DEFAULTS = {
     'meters': 'Heating:Electricity, Cooling:Electricity',
     'processes': '2',
     'out_dir': 'gui_parametric_results',
+    **EXISTING_HVAC_DEFAULTS,
 }
 
 _SEPARATORS = re.compile(r'[\s,;]+')
@@ -427,6 +451,22 @@ def zone_arguments(rows: Iterable[Tuple[str, str]]) -> Dict[str, Dict[str, Any]]
     return result
 
 
+def existing_hvac_arguments(form: Mapping[str, Any]) -> Dict[str, Any]:
+    """The arguments of the existing HVAC systems (those of :data:`EXISTING_HVAC_DEFAULTS`) from the values of a form:
+    the booleans of :data:`EXISTING_HVAC_OPTIONS` and ``existing_hvac_availability_schedule``, the name of a schedule
+    of the model or 'On 24/7' (None if it is empty: the availability of the model).
+
+    :raises FormError: If the name of the schedule has a character that EnergyPlus does not accept in names.
+    """
+    schedule = str(form.get('existing_hvac_availability_schedule', '') or '').strip()
+    if re.search(r'[,;!]', schedule):
+        raise FormError('existing_hvac_availability_schedule: enter the name of a schedule of the model, or On 24/7, '
+                        'without commas, semicolons or exclamation marks (empty: the availability of the model).')
+    arguments = {name: bool(form.get(name, EXISTING_HVAC_DEFAULTS[name])) for name in EXISTING_HVAC_OPTIONS}
+    arguments['existing_hvac_availability_schedule'] = schedule or None
+    return arguments
+
+
 def add_accis_arguments(form: Mapping[str, Any]) -> Dict[str, Any]:
     """The arguments of :class:`accim.sim.accis.AddAccis` from the values of its form.
 
@@ -434,11 +474,13 @@ def add_accis_arguments(form: Mapping[str, Any]) -> Dict[str, Any]:
         choices (``script_type``, ``supply_air_temp_input_method``, ``setpoint_type``, ``energyplus_version``,
         ``output_type``), the lists of the checked boxes or selected items (``output_frequencies``,
         ``comfort_standard``, ``hvac_mode``, ``ventilation_control``), the booleans (``keep_existing_outputs``,
-        ``add_building_averages``), the texts of the other fields (lists of numbers separated by commas or
-        spaces, or numbers), as in :data:`ADD_ACCIS_DEFAULTS`, and ``zone_arguments``, the rows of the table of the
-        zones (see :func:`zone_arguments`; none by default).
+        ``add_building_averages`` and those of :data:`EXISTING_HVAC_OPTIONS`), the texts of the other fields (lists
+        of numbers separated by commas or spaces, or numbers, and ``existing_hvac_availability_schedule``), as in
+        :data:`ADD_ACCIS_DEFAULTS`, and ``zone_arguments``, the rows of the table of the zones (see
+        :func:`zone_arguments`; none by default).
     :return: The keyword arguments of AddAccis, with all the arguments that it would otherwise ask in the prompt,
-        ``confirm=True`` and ``idfs`` (the names of the selected input IDFs, to run in the folder).
+        ``confirm=True`` and ``idfs`` (the names of the selected input IDFs, to run in the folder); with the existing
+        HVAC systems ('ex_ac' and 'ex_mm'), also their arguments (:func:`existing_hvac_arguments`).
     :raises FormError: If a value is missing or not valid.
     """
     _folder(form, 'the input IDFs')
@@ -504,6 +546,8 @@ def add_accis_arguments(form: Mapping[str, Any]) -> Dict[str, Any]:
             raise FormError('zone_arguments: the arguments of each zone need the adaptive setpoint temperatures '
                             '(setpoint_type temperature).')
         arguments['zone_arguments'] = zones
+    if script_type.startswith('ex'):
+        arguments.update(existing_hvac_arguments(form))
     return arguments
 
 
@@ -772,7 +816,9 @@ def parametric_arguments(form: Mapping[str, Any]) -> Dict[str, Any]:
 
     :return: ``idf``, ``epws``, ``parameters_type``, ``script_type``, ``accis_params_dict`` (the argument of
         ``set_parameters``), ``sampling`` ('full set' or 'lhs'), ``samples``, ``meters`` (the outputs, read as the
-        results), ``processes`` and ``out_dir`` (the folder of the results, in the working folder).
+        results), ``processes``, ``out_dir`` (the folder of the results, in the working folder) and
+        ``existing_hvac`` (with 'ex_ac', the arguments of the existing HVAC systems, :func:`existing_hvac_arguments`;
+        otherwise empty).
     :raises FormError: If a value is missing or not valid.
     """
     folder = _folder(form, 'the IDF and the EPWs')
@@ -818,10 +864,11 @@ def parametric_arguments(form: Mapping[str, Any]) -> Dict[str, Any]:
     out_dir = str(form.get('out_dir', '')).strip()
     if not out_dir or re.search(r'[\\/:*?"<>|]', out_dir):
         raise FormError('out_dir: enter the name of a folder for the results (inside the working folder).')
-    return dict(idf=idf, epws=epws, parameters_type=parameters_type,
-                script_type=_choice(form, 'script_type', PARAMETRIC_SCRIPT_TYPES),
+    script_type = _choice(form, 'script_type', PARAMETRIC_SCRIPT_TYPES)
+    return dict(idf=idf, epws=epws, parameters_type=parameters_type, script_type=script_type,
                 accis_params_dict=accis_params_dict, sampling=sampling, samples=samples, meters=meters,
-                processes=_processes(form), out_dir=out_dir)
+                processes=_processes(form), out_dir=out_dir,
+                existing_hvac=existing_hvac_arguments(form) if script_type.startswith('ex') else {})
 
 
 def parametric_simulation_count(arguments: Mapping[str, Any]) -> int:

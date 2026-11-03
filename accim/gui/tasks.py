@@ -135,7 +135,8 @@ def parametric_study(arguments: Mapping[str, Any]):
     building = load_idf(arguments['idf'], 'auto')
     simulation = ParametricSimulation(buildings=[building], epws=list(arguments['epws']),
                                       parameters_type=arguments['parameters_type'],
-                                      output_frequencies=['hourly'], script_type=arguments['script_type'])
+                                      output_frequencies=['hourly'], script_type=arguments['script_type'],
+                                      **dict(arguments.get('existing_hvac') or {}))
     simulation.discover_available_outputs(reduce_sim_time=True, prefer='testsimeplus')
     selection = simulation.select_outputs(meters=list(arguments['meters']), match='case_insensitive',
                                           on_missing='raise', suggest=True)
