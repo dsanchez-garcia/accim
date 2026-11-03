@@ -10,9 +10,10 @@ runEp with 'auto' stopped because they were not supported, the addAccis of
 accis_single_idf_funcs (used by the parametric module) rejected the IDFs of 26.x even with
 EnergyPlus_version=None, and read_eso_using_readvarseso did not look for ReadVarsESO in their
 installation folders. A model without People objects now stops with a clear error.
-Since EnergyPlus 26.1, a variable that a program reads before another one sets it stops the
+Since EnergyPlus 26.2, a variable that a program reads before another one sets it stops the
 simulation in the first timestep of each environment, which stopped the custom model; the program
-InitASTvariables now sets those variables at BeginNewEnvironment.
+InitASTvariables now sets those variables at BeginNewEnvironment. EnergyPlus 26.1 does not stop
+(the custom model is simulated with both).
 
 accim also reads the People:Definition and People:Instance objects of EnergyPlus 26.2, which it
 rejected before (see test_people_instance.py): the sample model converted to these objects gives the
@@ -330,8 +331,8 @@ class _FakeEMSModel:
 
 
 def test_pcm_of_the_initialisation_program_runs_at_begin_new_environment():
-    # Since EnergyPlus 26.1, a variable read before it is set in the first timestep of an environment
-    # stops the simulation. The variables that each zone keeps from one timestep to the next are read
+    # Since EnergyPlus 26.2 (not 26.1: checked on 2026-11-03), a variable read before it is set in the first timestep
+    # of an environment stops the simulation. The variables that each zone keeps from one timestep to the next are read
     # before they are set, so InitASTvariables sets them at BeginNewEnvironment. The other programs of
     # ACCIS are run by RunACCIS_<zone>, without their own calling managers.
     idf = _FakeEMSModel(['SetComfTemp', 'SetAST_Master', 'SetAST', 'SetASTnoTol', 'InitASTvariables', 'SetInputData_Z1',
@@ -491,6 +492,31 @@ def test_custom_model_simulates_with_26_2(idf_26_2, tmp_path):
     _run_in_new_process(_SIMULATE_CUSTOM_MODEL_SCRIPT, tmp_path)
 
     err = (tmp_path / 'out' / 'eplusout.err').read_text(encoding='utf-8', errors='ignore')
+    assert 'has not been initialized' not in err
+    assert 'EnergyPlus Completed Successfully' in err, err[-3000:]
+
+
+IDD_26_1 = 'C:/EnergyPlusV26-1-0/Energy+.idd'
+UPDATER_26_1 = Path('C:/EnergyPlusV26-1-0/PreProcess/IDFVersionUpdater')
+needs_26_1 = pytest.mark.skipif(
+    not (Path(IDD_26_1).exists() and UPDATER_26_1.exists() and SAMPLE_IDF.exists() and SAMPLE_EPW.exists()),
+    reason='needs EnergyPlus 26.1 and the sample files of the repository')
+
+
+@needs_26_1
+def test_custom_model_simulates_with_26_1(tmp_path):
+    # accim accepted EnergyPlus 26.1 since 0.8.2, checked only against its IDD and transition rules. The custom model
+    # is the one that EnergyPlus 26.2 stopped before InitASTvariables; 26.1 does not stop it, even without that
+    # program (checked on 2026-11-03 with the output IDFs of 0.8.2 and 1.0.0)
+    shutil.copy(SAMPLE_IDF, tmp_path / 'TestModel.idf')
+    accim.utils.update_idf_version(str(tmp_path / 'TestModel.idf'), '26.1')
+    shutil.copy(SAMPLE_EPW, tmp_path / 'Seville.epw')
+
+    _run_in_new_process(_SIMULATE_CUSTOM_MODEL_SCRIPT.replace('C:/EnergyPlusV26-2-0', 'C:/EnergyPlusV26-1-0'),
+                        tmp_path)
+
+    err = (tmp_path / 'out' / 'eplusout.err').read_text(encoding='utf-8', errors='ignore')
+    assert 'EnergyPlus, Version 26.1' in err
     assert 'has not been initialized' not in err
     assert 'EnergyPlus Completed Successfully' in err, err[-3000:]
 
