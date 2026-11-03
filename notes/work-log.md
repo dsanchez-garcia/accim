@@ -15,6 +15,14 @@ This log is a lightweight, session-scoped complement to the repository's
 existing tracking files — it does not replace them (see
 [[decisions.md#2026-09-13 — `notes/work-log.md` complements, not replaces, existing tracking files|the related decision]]).
 
+## 2026-11-03 — Release 1.0.0 (PyPI, GitHub, Read the Docs)
+
+- **Objective**: The request of the author: publish 1.0.0 on PyPI, make the GitHub release, move the changes to `master` and push them, and make sure that the notebook pages of Read the Docs show the results of every cell.
+- **Affected files**: `docs/prepare_parametric_notebooks.py`, the page of the parametric tutorial 10, `tests/core/test_docs_notebook_pages.py` (new), `docs/source/conf.py`, [[../CHANGELOG.md]], [[../docs/README.md]], [[../packaging/README.md]], [[../DEVLOG.md]], [[../TODO.md]], [[../CAMBIOS_CODIGO_v1.0.0.md]].
+- **Finding or decision**: The published page of tutorial 10 had two empty outputs (tqdm widgets, whose state the export drops): the export now leaves them out. The PDF of Read the Docs stopped at the value of `SETPOINT_LINES` (more than 200,000 characters in one line), and then Read the Docs published nothing: `conf.py` cuts long values, and, with the approval of the author, the tag `v1.0.0` was moved to that fix of the documentation (the package is unchanged). The branch `v1.0.0` was deleted before pushing the tag (same name: git and the slug of Read the Docs).
+- **Validation**: 1273 tests; three clean installs (local wheels, TestPyPI, PyPI), two of them with simulations of the installed accim; the 23 notebook pages of `latest`, `master` and `v1.0.0` compared cell by cell with their notebooks; details in [[../DEVLOG.md]].
+- **Next step**: none for the release.
+
 ## 2026-11-03 — Sessions saved in a pickle file and a readable JSON file
 
 - **Objective**: The request of the author: save a pickle file that resumes the session of the classic workflow (as in the notebook of the research paper case study), as the parametric module does, also in the GUI, and a JSON file that people can read; he chose `Table.save`/`Table.load` and `save_session`/`load_session`, and in the GUI the whole session plus opening tables saved in Python.

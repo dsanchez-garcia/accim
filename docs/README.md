@@ -38,7 +38,7 @@ Revisada el 19/10/2026, con accim 0.8.2.
 - `docs/requirements.txt` es solo para Read the Docs (Python 3.9, `numpy<2`, `matplotlib<=3.7`): no
   lo instales en tu Python.
 - Versiones: `latest` (la de por defecto) y `master` siguen la rama `master`; las etiquetas `v0.7.5`
-  a `v0.8.2` están activas, cada una con su HTML, PDF y EPUB, y aparecen en el menú de Read the Docs
+  a `v1.0.0` están activas, cada una con su HTML, PDF y EPUB, y aparecen en el menú de Read the Docs
   (abajo a la derecha de cada página). `stable` está desactivada: `/en/stable/` da 404.
 - **Al publicar una versión**, Read the Docs ve la etiqueta nueva, pero no la compila hasta
   activarla: en el panel del proyecto, Versions → «Add version» (o «Edit», si ya aparece) → marcar

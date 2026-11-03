@@ -220,8 +220,8 @@ git push origin vX.Y.Z
 publica nada. Con la 1.0.0 falló el PDF; el arreglo, solo de la documentación, se subió a `master`
 y la etiqueta se movió a su commit (`git tag -f vX.Y.Z <commit>` y
 `git push --force origin refs/tags/vX.Y.Z`), para que Read the Docs pudiera compilar `vX.Y.Z`.
-Read the Docs no ve que una etiqueta se ha movido hasta que sincroniza las versiones, lo que hace
-en cada compilación de `master`: antes de activar la versión, comprueba en la API de versiones que
+Read the Docs no ve que una etiqueta se ha movido hasta que sincroniza las versiones, lo que hizo
+con el siguiente push a `master`: antes de activar la versión, comprueba en la API de versiones que
 su `identifier` es el commit nuevo.
 
 ### 4.9 Release de GitHub
