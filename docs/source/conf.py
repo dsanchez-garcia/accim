@@ -50,6 +50,30 @@ nbsphinx_execute = 'never'
 myst_enable_extensions = ['substitution']
 myst_substitutions = {'version': version}
 
+# autodoc writes the value of each constant of the API reference in one line. Some are dictionaries
+# or tuples of hundreds of thousands of characters (SETPOINT_LINES, with the EMS lines of every
+# comfort standard), and pdflatex stops at lines longer than 200,000 characters ("TeX capacity
+# exceeded"), so Read the Docs published no format of the documentation. Longer values are cut.
+MAX_VALUE_LENGTH = 300
+
+
+def _with_short_value(directive):
+    class ShortValue(directive):
+        def run(self):
+            value = self.options.get('value')
+            if value and len(value) > MAX_VALUE_LENGTH:
+                self.options['value'] = value[:MAX_VALUE_LENGTH] + ' ...'
+            return super().run()
+
+    return ShortValue
+
+
+def setup(app):
+    from sphinx.domains.python import PyAttribute, PyVariable
+
+    app.add_directive_to_domain('py', 'data', _with_short_value(PyVariable), override=True)
+    app.add_directive_to_domain('py', 'attribute', _with_short_value(PyAttribute), override=True)
+
 
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
