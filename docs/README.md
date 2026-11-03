@@ -226,7 +226,9 @@ python docs/prepare_howto_notebooks.py export --executed-dir D:\runs --only usin
 - Necesitan EnergyPlus 25.1, la versión de sus modelos. `rename_epw_files()` necesita además
   internet (OpenStreetMap) y geopy.
 - `export` toma la copia ejecutada más reciente y la limpia antes de escribirla en
-  `docs/source/jupyter_notebooks/`: rutas relativas o genéricas, sin barras de progreso, registros
+  `docs/source/jupyter_notebooks/`: rutas relativas o genéricas, sin barras de progreso (tampoco
+  las de tqdm que el notebook muestra como widgets: `export` no guarda el estado de los widgets, y
+  sin él Read the Docs las mostraría como salidas vacías), registros
   de más de 100 líneas acortados (las 30 primeras y las 15 últimas, con
   «[... n lines not shown in the documentation ...]») y figuras reducidas (`--max-width`, 1400 px
   por defecto). No exporta, y escribe «NOT EXPORTED», si el notebook tiene errores, si su código no
@@ -311,6 +313,9 @@ for i, (a, b) in enumerate(zip(old['cells'], new['cells'])):
     if images_a != images_b:
         print(f'cell {i}: the figures differ')
 ```
+
+Además, `tests/core/test_docs_notebook_pages.py` comprueba que ninguna página tiene salidas que
+Read the Docs mostraría vacías (vistas de widgets, textos vacíos) ni errores.
 
 ### 7.5 Ejecutar los notebooks con otra copia de accim
 

@@ -20,7 +20,8 @@ can be repeated) and, before writing it to the documentation:
 
 - replaces the absolute paths of the run (working folder, Python, temporary folder, home folder)
   with relative or generic ones;
-- removes progress bars and shortens long logs;
+- removes progress bars (also those shown as widgets, which the documentation would show as empty
+  outputs) and shortens long logs;
 - scales the figures down to ``--max-width`` pixels and, when it does not change them visibly,
   reduces them to 256 colours.
 
@@ -53,6 +54,7 @@ DOCS_DIR = ROOT / 'docs' / 'source' / 'jupyter_notebooks' / 'parametric_and_opti
 INPUT_SUFFIXES = ('.idf', '.epw')
 RUN_INFO = 'prepare_parametric_notebooks_run.json'
 PROGRESS_BAR = re.compile(r'\d+%\|[^|]*\|')
+WIDGET_VIEW = 'application/vnd.jupyter.widget-view+json'
 PALETTE_MAX_ERROR = 8
 LONG_STREAM_LINES = 100
 KEEP_HEAD, KEEP_TAIL = 30, 15
@@ -189,6 +191,24 @@ def _shrink_png(data, max_width):
     return base64.b64encode(buffer.getvalue()).decode('ascii') + '\n'
 
 
+def _without_widget_view(output):
+    """The output without the view of a widget, or None when nothing else would be shown.
+
+    ``export`` drops the state of the widgets (``metadata.widgets``), without which nbsphinx shows
+    their views as empty outputs; the other formats of the output, if any, are kept. The progress
+    bars of tqdm in notebooks are widgets whose text is a progress bar: they are dropped.
+    """
+    data = output.get('data', {})
+    if WIDGET_VIEW not in data:
+        return output
+    data = {mime: value for (mime, value) in data.items() if mime != WIDGET_VIEW}
+    text = data.get('text/plain', '')
+    text = text if isinstance(text, str) else ''.join(text)
+    if not set(data) - {'text/plain'} and (not text.strip() or PROGRESS_BAR.search(text)):
+        return None
+    return {**output, 'data': data}
+
+
 def _clean_outputs(outputs, replacements, max_width):
     cleaned = []
     for output in outputs:
@@ -199,6 +219,9 @@ def _clean_outputs(outputs, replacements, max_width):
             if text.strip():
                 cleaned.append({**output, 'text': text})
         elif kind in ('display_data', 'execute_result'):
+            output = _without_widget_view(output)
+            if output is None:
+                continue
             data = dict(output.get('data', {}))
             for (mime, value) in list(data.items()):
                 if mime == 'image/png':
