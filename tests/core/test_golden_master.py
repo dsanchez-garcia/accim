@@ -16,7 +16,7 @@ import pytest
 
 from accim.energyplus import find_energyplus
 
-from ._golden import check_golden
+from ._golden import check_golden, text_diff
 from .golden_master import configs, runner
 
 HERE = Path(__file__).resolve().parent
@@ -85,3 +85,16 @@ def test_the_outputs_of_a_configuration_can_be_split_by_file():
 
     assert runner.split_outputs(text) == {'b.idf': 'Version,\n    25.1;', 'df_outputs.csv': 'a,b\n1,2'}
     assert runner.split_outputs(runner.canonical_outputs({}).decode()) == {'(no output files)': ''}
+
+
+def test_the_diff_of_a_different_output_starts_at_its_first_difference():
+    # Long texts with changes all along them from line 150001 (as a configuration with many output IDFs whose programs
+    # change, b01, whose complete diff took difflib more than 25 minutes)
+    expected = '\n'.join(f'line {i}' for i in range(200000)).encode()
+    actual = '\n'.join(f'changed {i}' if i >= 150000 and i % 100 == 0 else f'line {i}' for i in range(200000)).encode()
+
+    diff = text_diff(expected, actual, max_lines=12).splitlines()
+
+    assert diff[:5] == ['--- golden', '+++ actual', '@@ -149999,5 +149999,5 @@', ' line 149998', ' line 149999']
+    assert diff[5:7] == ['-line 150000', '+changed 150000']
+    assert len(diff) == 13 and diff[-1] == '... (more lines)'

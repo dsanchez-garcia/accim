@@ -13,7 +13,9 @@ After an intended change, write them again and review the change before committi
 """
 import difflib
 import gzip
+import itertools
 import lzma
+import re
 from pathlib import Path
 
 import pytest
@@ -48,13 +50,31 @@ def write_golden(path, data):
     return True
 
 
-def text_diff(expected, actual, max_lines=80, from_label='golden', to_label='actual'):
-    """Unified diff of two byte strings, cut after ``max_lines`` lines."""
-    diff = list(difflib.unified_diff(expected.decode('utf-8', 'replace').splitlines(),
-                                     actual.decode('utf-8', 'replace').splitlines(),
-                                     from_label, to_label, lineterm='', n=2))
+def _shift_hunk(line, offset):
+    """A hunk header of a unified diff ('@@ -a,b +c,d @@') with its line numbers moved by ``offset``."""
+    match = re.match(r'^@@ -(\d+)(,\d+)? \+(\d+)(,\d+)? @@$', line)
+    if match is None or offset == 0:
+        return line
+    old, old_count, new, new_count = match.groups()
+    return f'@@ -{int(old) + offset}{old_count or ""} +{int(new) + offset}{new_count or ""} @@'
+
+
+def text_diff(expected, actual, max_lines=80, from_label='golden', to_label='actual', window=4000):
+    """Unified diff of two byte strings, from their first different line, cut after ``max_lines`` lines.
+
+    Only ``window`` lines of each text are compared, from just before their first different line: the complete
+    diff of two long texts with changes all along them (the outputs of a configuration of the golden master with
+    many output IDFs) takes difflib a very long time, and only its first lines are shown.
+    """
+    a = expected.decode('utf-8', 'replace').splitlines()
+    b = actual.decode('utf-8', 'replace').splitlines()
+    first = next((i for i, (x, y) in enumerate(zip(a, b)) if x != y), min(len(a), len(b)))
+    start = max(first - 2, 0)
+    lines = difflib.unified_diff(a[start:start + window], b[start:start + window], from_label, to_label, lineterm='',
+                                 n=2)
+    diff = [_shift_hunk(line, start) for line in itertools.islice(lines, max_lines + 1)]
     if len(diff) > max_lines:
-        diff = diff[:max_lines] + [f'... ({len(diff) - max_lines} more lines)']
+        diff = diff[:max_lines] + ['... (more lines)']
     return '\n'.join(diff)
 
 

@@ -25,7 +25,8 @@ python -m pytest tests/core/test_golden_master.py -q -p no:cacheprovider
 It is part of `tests/core` and takes about a minute and a half. It needs EnergyPlus 25.1 and 26.2 (their IDD
 files): the configurations whose version is not installed are skipped. Each configuration runs in its own Python
 process (`runner.py write`, four at a time), because eppy reads all the models of a process with the IDD of the
-first one. A failing configuration shows the first lines of the difference and the path of its whole output.
+first one. A failing configuration shows the difference from its first different line (4000 lines at most, so that
+the diff of the biggest outputs takes seconds) and the path of its whole output.
 
 ## After an intended change of the output IDFs
 
