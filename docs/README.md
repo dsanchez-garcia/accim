@@ -54,7 +54,12 @@ Revisada el 19/10/2026, con accim 0.8.2.
 - PDF: Read the Docs lo compila con pdflatex y no falla por errores de LaTeX, así que un carácter
   Unicode que pdflatex no conoce desaparece del PDF sin que nada lo avise. Los que usan las páginas
   (λ, ≤, −, ⌈, ⌉ y algunos emoji) están definidos en `latex_elements` de `conf.py`: añade ahí los
-  nuevos. Los 9 errores «Too deeply nested» del paso de LaTeX vienen de docstrings.
+  nuevos. Los 9 errores «Too deeply nested» del paso de LaTeX vienen de docstrings. Un error fatal,
+  en cambio, hace fallar la compilación entera, y entonces Read the Docs no publica ningún formato,
+  ni siquiera el HTML: con 1.0.0, «TeX capacity exceeded, sorry [buffer size=200000]», porque autodoc
+  escribía en una sola línea el valor de una constante (`SETPOINT_LINES`, de más de 200 000
+  caracteres). `conf.py` corta los valores de más de `MAX_VALUE_LENGTH` caracteres. Sin pdflatex en
+  local, compila con `-b latex` y mira la línea más larga de `accim.tex`.
 - **URL que imprime el código.** `AddAccis()` imprime enlaces a la portada, a cinco páginas de
   How-to y a `4_detailed%20use.html`, siempre en `/en/master/` (`accim/sim/accis.py`,
   `accis_single_idf.py` y `accis_single_idf_funcs.py`), y `accim/sim/accim_IDFgeneration.py` enlaza

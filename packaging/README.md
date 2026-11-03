@@ -141,11 +141,12 @@ cd /d C:\tmp
 py -m venv C:\tmp\accim_test
 C:\tmp\accim_test\Scripts\python -m pip install --find-links D:\Python\accim\dist "accim[samples]==X.Y.Z"
 C:\tmp\accim_test\Scripts\python -m pip check
-C:\tmp\accim_test\Scripts\python -c "import accim, os; from accim.parametric_and_optimisation import ParametricSimulation, OptimisationSimulation; from accim.data.preprocessing import rename_epw_files; from accim.sim import accis; d = os.path.join(os.path.dirname(accim.__file__), 'sample_files'); print(accim.__version__, accim.__file__); print(sum(len(f) for _, _, f in os.walk(d)), 'sample files')"
+C:\tmp\accim_test\Scripts\python -c "import accim, os; from accim.parametric_and_optimisation import ParametricSimulation, OptimisationSimulation; from accim.data.preprocessing import rename_epw_files; from accim.sim import accis; d = os.path.join(os.path.dirname(accim.__file__), 'sample_files'); print(accim.__version__, accim.__file__); print(sum(len(f) for r, _, f in os.walk(d) if '__pycache__' not in r), 'sample files')"
 ```
 
 La última orden tiene que dar la versión nueva, una ruta dentro de `C:\tmp\accim_test` (no
-`D:\Python\accim`) y unos 133 archivos de muestra. Para una prueba más completa, genera con
+`D:\Python\accim`) y unos 133 archivos de muestra (sin contar `__pycache__`, donde pip compila los
+`.py` de las muestras al instalarlas). Para una prueba más completa, genera con
 `addAccis()` un IDF del `TestModel` de muestra y simula un día con EnergyPlus. Al terminar, borra
 el entorno (`rmdir /s /q C:\tmp\accim_test`).
 
@@ -159,7 +160,13 @@ Pon la etiqueta en el commit de la versión, ligera como las anteriores:
 git tag vX.Y.Z
 ```
 
-No la subas todavía (§4.8).
+No la subas todavía (§4.8). Si hay una rama con el mismo nombre (la 1.0.0 se preparó en la rama
+`v1.0.0`), intégrala en `master` y bórrala, en local y en GitHub, antes de subir la etiqueta: con
+las dos, git no sabe a cuál se refiere `vX.Y.Z` (`git push origin vX.Y.Z` falla), y Read the Docs
+ya tiene una versión `vX.Y.Z` de la rama, así que daría a la etiqueta otro slug (`vX.Y.Z_a`) y
+`/en/vX.Y.Z/` no la mostraría. Borrada la rama en GitHub, Read the Docs quita su versión (si no está
+activa) en unos segundos: compruébalo en la API de versiones (§2 de
+[../docs/README.md](../docs/README.md)) antes de subir la etiqueta.
 
 ### 4.6 TestPyPI
 
@@ -208,7 +215,14 @@ git push origin vX.Y.Z
 
 **Nunca uses `git push --tags` ni `--follow-tags`:** la etiqueta local
 `archive/codex-paper-simple-energy` no se publica. Con el push, Read the Docs compila `master` y
-`latest` con la versión nueva.
+`latest` con la versión nueva. Comprueba que esas compilaciones terminan bien (§2 de
+[../docs/README.md](../docs/README.md)): si falla una, aunque sea solo el PDF, Read the Docs no
+publica nada. Con la 1.0.0 falló el PDF; el arreglo, solo de la documentación, se subió a `master`
+y la etiqueta se movió a su commit (`git tag -f vX.Y.Z <commit>` y
+`git push --force origin refs/tags/vX.Y.Z`), para que Read the Docs pudiera compilar `vX.Y.Z`.
+Read the Docs no ve que una etiqueta se ha movido hasta que sincroniza las versiones, lo que hace
+en cada compilación de `master`: antes de activar la versión, comprueba en la API de versiones que
+su `identifier` es el commit nuevo.
 
 ### 4.9 Release de GitHub
 
