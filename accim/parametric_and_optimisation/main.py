@@ -3061,6 +3061,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             existing_hvac_availability_schedule: Optional[str] = None,
             existing_hvac_widen_outdoor_temperature_limits: bool = False,
             existing_hvac_ideal_loads_backup: bool = False,
+            existing_hvac_radiant_setpoints: bool = True,
     ):
         """Initialize the simulation base instance.
         
@@ -3092,6 +3093,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         :param existing_hvac_availability_schedule: forwarded to ``accim.sim.accis.add_accis_to_idf``.
         :param existing_hvac_widen_outdoor_temperature_limits: forwarded to ``accim.sim.accis.add_accis_to_idf``.
         :param existing_hvac_ideal_loads_backup: forwarded to ``accim.sim.accis.add_accis_to_idf``.
+        :param existing_hvac_radiant_setpoints: forwarded to ``accim.sim.accis.add_accis_to_idf``.
         
         Usage
         -----
@@ -3180,6 +3182,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                         existing_hvac_availability_schedule=existing_hvac_availability_schedule,
                         existing_hvac_widen_outdoor_temperature_limits=existing_hvac_widen_outdoor_temperature_limits,
                         existing_hvac_ideal_loads_backup=existing_hvac_ideal_loads_backup,
+                        existing_hvac_radiant_setpoints=existing_hvac_radiant_setpoints,
                     )
         elif is_apmv_setpoints:
             if not bypass_add_accis:
@@ -13428,6 +13431,7 @@ class ParametricSimulation(SimulationBase):
             existing_hvac_availability_schedule: Optional[str] = None,
             existing_hvac_widen_outdoor_temperature_limits: bool = False,
             existing_hvac_ideal_loads_backup: bool = False,
+            existing_hvac_radiant_setpoints: bool = True,
     ):
         """Initialize a parametric simulation.
         
@@ -13459,6 +13463,7 @@ class ParametricSimulation(SimulationBase):
         :param existing_hvac_availability_schedule: forwarded to ``accim.sim.accis.add_accis_to_idf``.
         :param existing_hvac_widen_outdoor_temperature_limits: forwarded to ``accim.sim.accis.add_accis_to_idf``.
         :param existing_hvac_ideal_loads_backup: forwarded to ``accim.sim.accis.add_accis_to_idf``.
+        :param existing_hvac_radiant_setpoints: forwarded to ``accim.sim.accis.add_accis_to_idf``.
         
         Usage
         -----
@@ -13494,6 +13499,7 @@ class ParametricSimulation(SimulationBase):
             existing_hvac_availability_schedule=existing_hvac_availability_schedule,
             existing_hvac_widen_outdoor_temperature_limits=existing_hvac_widen_outdoor_temperature_limits,
             existing_hvac_ideal_loads_backup=existing_hvac_ideal_loads_backup,
+            existing_hvac_radiant_setpoints=existing_hvac_radiant_setpoints,
         )
         # Parametric-specific attributes
         self.outputs_param_simulation = None
@@ -13607,6 +13613,7 @@ class OptimisationSimulation(SimulationBase):
             existing_hvac_availability_schedule: Optional[str] = None,
             existing_hvac_widen_outdoor_temperature_limits: bool = False,
             existing_hvac_ideal_loads_backup: bool = False,
+            existing_hvac_radiant_setpoints: bool = True,
     ):
         """Initialize an optimisation simulation.
         
@@ -13638,6 +13645,7 @@ class OptimisationSimulation(SimulationBase):
         :param existing_hvac_availability_schedule: forwarded to ``accim.sim.accis.add_accis_to_idf``.
         :param existing_hvac_widen_outdoor_temperature_limits: forwarded to ``accim.sim.accis.add_accis_to_idf``.
         :param existing_hvac_ideal_loads_backup: forwarded to ``accim.sim.accis.add_accis_to_idf``.
+        :param existing_hvac_radiant_setpoints: forwarded to ``accim.sim.accis.add_accis_to_idf``.
         
         Usage
         -----
@@ -13673,6 +13681,7 @@ class OptimisationSimulation(SimulationBase):
             existing_hvac_availability_schedule=existing_hvac_availability_schedule,
             existing_hvac_widen_outdoor_temperature_limits=existing_hvac_widen_outdoor_temperature_limits,
             existing_hvac_ideal_loads_backup=existing_hvac_ideal_loads_backup,
+            existing_hvac_radiant_setpoints=existing_hvac_radiant_setpoints,
         )
         # Optimization-specific attributes
         self.outputs_optimisation = None
@@ -13914,6 +13923,7 @@ class AccimPredefModelsParamSim(ParametricSimulation):
             existing_hvac_availability_schedule: Optional[str] = None,
             existing_hvac_widen_outdoor_temperature_limits: bool = False,
             existing_hvac_ideal_loads_backup: bool = False,
+            existing_hvac_radiant_setpoints: bool = True,
     ):
         """Initialize the predefined-model parametric wrapper.
         
@@ -13940,6 +13950,7 @@ class AccimPredefModelsParamSim(ParametricSimulation):
         :param existing_hvac_availability_schedule: forwarded to ``accim.sim.accis.add_accis_to_idf``.
         :param existing_hvac_widen_outdoor_temperature_limits: forwarded to ``accim.sim.accis.add_accis_to_idf``.
         :param existing_hvac_ideal_loads_backup: forwarded to ``accim.sim.accis.add_accis_to_idf``.
+        :param existing_hvac_radiant_setpoints: forwarded to ``accim.sim.accis.add_accis_to_idf``.
         
         Usage
         -----
@@ -13973,6 +13984,7 @@ class AccimPredefModelsParamSim(ParametricSimulation):
             existing_hvac_availability_schedule=existing_hvac_availability_schedule,
             existing_hvac_widen_outdoor_temperature_limits=existing_hvac_widen_outdoor_temperature_limits,
             existing_hvac_ideal_loads_backup=existing_hvac_ideal_loads_backup,
+            existing_hvac_radiant_setpoints=existing_hvac_radiant_setpoints,
         )
         # The baseline is the custom model with the default coefficients of 'accim custom model'. Without them, its
         # heating setpoint was above the cooling one, so EnergyPlus stopped in the test simulations of the outputs

@@ -265,16 +265,19 @@ def _to_confirmation(value: Any) -> bool:
 
 
 def _check_existing_hvac_arguments(operative_temperature_control: Any, availability_schedule: Any,
-                                   widen_outdoor_temperature_limits: Any, ideal_loads_backup: Any) -> Tuple[bool, ...]:
+                                   widen_outdoor_temperature_limits: Any, ideal_loads_backup: Any,
+                                   radiant_setpoints: Any) -> Tuple[bool, ...]:
     """Check the arguments of the existing HVAC systems; return existing_hvac_operative_temperature_control,
-    existing_hvac_widen_outdoor_temperature_limits and existing_hvac_ideal_loads_backup as booleans."""
+    existing_hvac_widen_outdoor_temperature_limits, existing_hvac_ideal_loads_backup and
+    existing_hvac_radiant_setpoints as booleans."""
     if availability_schedule is not None and (not isinstance(availability_schedule, str)
                                               or not availability_schedule.strip()):
         raise ValueError(f"existing_hvac_availability_schedule must be None or the name of a schedule (such as "
                          f"'On 24/7'), not {availability_schedule!r}.")
     return (to_bool(operative_temperature_control, 'existing_hvac_operative_temperature_control'),
             to_bool(widen_outdoor_temperature_limits, 'existing_hvac_widen_outdoor_temperature_limits'),
-            to_bool(ideal_loads_backup, 'existing_hvac_ideal_loads_backup'))
+            to_bool(ideal_loads_backup, 'existing_hvac_ideal_loads_backup'),
+            to_bool(radiant_setpoints, 'existing_hvac_radiant_setpoints'))
 
 
 def _warn_hvac_zone_map(hvac_zone_map: Optional[Dict[str, str]]) -> None:
@@ -411,6 +414,16 @@ class AddAccis:
         operative temperature stays between the setpoints. Its energy is reported apart, as district heating and
         cooling and in the outputs 'Zone Ideal Loads Zone Sensible Heating Rate' and 'Zone Ideal Loads Zone Sensible
         Cooling Rate'. False (the default) adds nothing.
+    :param existing_hvac_radiant_setpoints: With the existing HVAC systems and ``setpoint_type`` 'temperature': True
+        (the default) to make their radiant systems (``ZoneHVAC:LowTemperatureRadiant:*``,
+        ``ZoneHVAC:HighTemperatureRadiant``),
+        ventilated slabs and cooling panels, which heat or cool with setpoint schedules of their own, not with the
+        thermostats, follow the setpoints of their zones: they get the setpoint schedules of their zones in their
+        heating and cooling setpoint fields (both the high and the low control temperatures of the constant flow
+        radiant systems and the ventilated slabs, which then work at full output beyond the setpoints) and the
+        operative temperature as their control temperature (the cooling panels in zones with a thermostat get the
+        control type ZoneTotalLoad, so that they follow the thermostat); a design object that several zones share is
+        copied for each zone. False keeps them as in the model, with a warning.
     :ivar arguments: The arguments, after asking the missing ones.
     :ivar input_idfs: The input IDFs, {'input IDF name': IDF object}.
     :ivar occupied_zones: The occupied zones of each input IDF, as in the EMS objects.
@@ -477,6 +490,7 @@ class AddAccis:
         existing_hvac_availability_schedule: Optional[str] = None,
         existing_hvac_widen_outdoor_temperature_limits: bool = False,
         existing_hvac_ideal_loads_backup: bool = False,
+        existing_hvac_radiant_setpoints: bool = True,
     ):
         files = _input_files(idfs)
         print(BANNER)
@@ -484,9 +498,10 @@ class AddAccis:
         self.verbose = verbose
         checked_zone_arguments = check_zone_arguments(zone_arguments)
         (existing_hvac_operative_temperature_control, existing_hvac_widen_outdoor_temperature_limits,
-         existing_hvac_ideal_loads_backup) = _check_existing_hvac_arguments(
+         existing_hvac_ideal_loads_backup, existing_hvac_radiant_setpoints) = _check_existing_hvac_arguments(
             existing_hvac_operative_temperature_control, existing_hvac_availability_schedule,
-            existing_hvac_widen_outdoor_temperature_limits, existing_hvac_ideal_loads_backup)
+            existing_hvac_widen_outdoor_temperature_limits, existing_hvac_ideal_loads_backup,
+            existing_hvac_radiant_setpoints)
 
         if (script_type is None or output_type is None or output_frequencies is None or keep_existing_outputs is None
                 or setpoint_type is None
@@ -572,7 +587,8 @@ class AddAccis:
                               existing_hvac_availability_schedule=existing_hvac_availability_schedule,
                               existing_hvac_widen_outdoor_temperature_limits=(
                                   existing_hvac_widen_outdoor_temperature_limits),
-                              existing_hvac_ideal_loads_backup=existing_hvac_ideal_loads_backup)
+                              existing_hvac_ideal_loads_backup=existing_hvac_ideal_loads_backup,
+                              existing_hvac_radiant_setpoints=existing_hvac_radiant_setpoints)
             add_outputs(model, output_type, output_frequencies, keep_existing_outputs, outputs_dataframe, file=stem)
             if make_outputs_dataframe:
                 dataframes.append(output_variables_dataframe(idf, file=stem))
@@ -705,6 +721,7 @@ def add_accis_to_idf(
     existing_hvac_availability_schedule: Optional[str] = None,
     existing_hvac_widen_outdoor_temperature_limits: bool = False,
     existing_hvac_ideal_loads_backup: bool = False,
+    existing_hvac_radiant_setpoints: bool = True,
 ) -> AccimModel:
     """Add the ACCIS to an IDF object of eppy or besos (in place).
 
@@ -724,9 +741,10 @@ def add_accis_to_idf(
         print(BANNER)
     _warn_hvac_zone_map(hvac_zone_map)
     (existing_hvac_operative_temperature_control, existing_hvac_widen_outdoor_temperature_limits,
-     existing_hvac_ideal_loads_backup) = _check_existing_hvac_arguments(
+     existing_hvac_ideal_loads_backup, existing_hvac_radiant_setpoints) = _check_existing_hvac_arguments(
         existing_hvac_operative_temperature_control, existing_hvac_availability_schedule,
-        existing_hvac_widen_outdoor_temperature_limits, existing_hvac_ideal_loads_backup)
+        existing_hvac_widen_outdoor_temperature_limits, existing_hvac_ideal_loads_backup,
+        existing_hvac_radiant_setpoints)
     if energyplus_version is None or str(energyplus_version).lower() == 'auto':
         energyplus_version = _idf_version(idf)
     output_type, output_frequencies, setpoint_type = _check_model_arguments(
@@ -746,7 +764,8 @@ def add_accis_to_idf(
                       existing_hvac_operative_temperature_control=existing_hvac_operative_temperature_control,
                       existing_hvac_availability_schedule=existing_hvac_availability_schedule,
                       existing_hvac_widen_outdoor_temperature_limits=existing_hvac_widen_outdoor_temperature_limits,
-                      existing_hvac_ideal_loads_backup=existing_hvac_ideal_loads_backup)
+                      existing_hvac_ideal_loads_backup=existing_hvac_ideal_loads_backup,
+                      existing_hvac_radiant_setpoints=existing_hvac_radiant_setpoints)
     add_outputs(model, output_type, output_frequencies, keep_existing_outputs, outputs_dataframe)
     if script_type.startswith('vrf'):
         # EnergyPlus cannot run the VRF systems without sizing them (they are autosized). The existing HVAC systems

@@ -31,6 +31,7 @@ def add_accis_objects(
     existing_hvac_availability_schedule: Optional[str] = None,
     existing_hvac_widen_outdoor_temperature_limits: bool = False,
     existing_hvac_ideal_loads_backup: bool = False,
+    existing_hvac_radiant_setpoints: bool = True,
 ) -> None:
     """Add the HVAC systems (VRF) or adapt the existing ones, and add the EMS objects of the ACCIS.
 
@@ -55,6 +56,10 @@ def add_accis_objects(
     :param existing_hvac_ideal_loads_backup: With the existing HVAC systems, True to add to each occupied zone a
         backup ideal loads air system that supplies the load that they do not meet
         (:func:`accim.sim.hvac.existing.add_ideal_loads_backups`).
+    :param existing_hvac_radiant_setpoints: With the existing HVAC systems and temperature setpoints, True to make
+        their radiant systems, ventilated slabs and cooling panels follow the setpoints of their zones with the
+        operative temperature (:func:`accim.sim.hvac.existing.set_radiant_setpoints`); False to keep them as in the
+        model (with a warning).
     """
     set_comfort_models(model)
     if model.script_type.startswith('vrf'):
@@ -64,11 +69,16 @@ def add_accis_objects(
             vrf.check_ventilation(model)
         vrf.add_setpoint_schedules(model)
     else:
+        # The radiant systems first, so that the zones whose radiant systems follow the setpoints do not get the
+        # warning of the zones without a thermostat
+        if existing_hvac_radiant_setpoints and model.setpoint_type == 'temperature':
+            existing.set_radiant_setpoints(model)
+        else:
+            existing.warn_own_setpoints(model)
         if existing_hvac_operative_temperature_control and model.setpoint_type == 'temperature':
             existing.set_operative_temperature_thermostats(model)
         else:
             existing.add_setpoint_schedules(model)
-        existing.warn_own_setpoints(model)
         if existing_hvac_availability_schedule is None:
             existing.warn_availability(model)
         else:

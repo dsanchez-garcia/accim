@@ -2,8 +2,9 @@
 # Copyright (C) 2021-2026 Daniel Sánchez-García
 # Distributed under the GNU General Public License v3 or later.
 
-"""Existing HVAC systems (ScriptType 'ex_ac' and 'ex_mm'): their thermostats, availability, outdoor temperature limits
-and backup ideal loads air systems and, in mixed mode, the sensors that tell whether they heat or cool each zone.
+"""Existing HVAC systems (ScriptType 'ex_ac' and 'ex_mm'): their thermostats, radiant systems, availability, outdoor
+temperature limits and backup ideal loads air systems and, in mixed mode, the sensors that tell whether they heat or
+cool each zone.
 
 Thermostats. The adaptive setpoints are setpoints of the operative temperature, but the thermostats of EnergyPlus
 (ZoneControl:Thermostat) control the air temperature unless a ZoneControl:Thermostat:OperativeTemperature object
@@ -28,9 +29,12 @@ accim (:func:`widen_outdoor_temperature_limits`); by default, they do not change
 narrower (:func:`warn_outdoor_temperature_limits`). Whatever the existing HVAC system, it may also lack capacity, have
 controls that do not reach the setpoints (the supply air temperatures of an air loop...), or have no equipment that
 cools or heats: ``existing_hvac_ideal_loads_backup`` adds to each occupied zone a backup ideal loads air system that
-supplies the load to the setpoints that the existing HVAC system does not meet (:func:`add_ideal_loads_backups`). The
-radiant systems, ventilated slabs and cooling panels follow setpoint schedules of their own, not the thermostats, so
-accim warns about them (:func:`warn_own_setpoints`).
+supplies the load to the setpoints that the existing HVAC system does not meet (:func:`add_ideal_loads_backups`).
+
+Radiant systems. The radiant systems, ventilated slabs and cooling panels follow setpoint schedules of their own, not
+the thermostats. ``existing_hvac_radiant_setpoints=True`` (the default) gives them the setpoint schedules of their
+zones and the operative temperature as their control temperature (:func:`set_radiant_setpoints`); otherwise accim
+warns about them (:func:`warn_own_setpoints`).
 
 Mixed mode. The windows of a zone open only when its HVAC system is off. With the existing HVAC systems, whatever
 their equipment (zone equipment, air loops, baseboards, radiant systems, beams...), accim reads it from the
@@ -41,7 +45,7 @@ its heating and cooling setpoints.
 
 import re
 import warnings
-from typing import Dict, Iterator, List, Optional, Tuple
+from typing import Dict, Iterator, List, Mapping, Optional, Tuple
 
 from accim.sim.hvac.schedules import (
     ALWAYS_ON_SCHEDULE,
@@ -69,6 +73,7 @@ __all__ = [
     'outdoor_temperature_limits_warning',
     'own_setpoints_warning',
     'set_operative_temperature_thermostats',
+    'set_radiant_setpoints',
     'warn_availability',
     'warn_outdoor_temperature_limits',
     'warn_own_setpoints',
@@ -104,12 +109,32 @@ _LOOPS = ('AIRLOOPHVAC', 'PLANTLOOP')
 #: The operation schemes of the plant and condenser loops: EnergyPlus uses the first scheme whose schedule is on, so
 #: the equipment of an object with one scheme is not available while its schedule is 0.
 _OPERATION_SCHEMES = ('PlantEquipmentOperationSchemes', 'CondenserEquipmentOperationSchemes')
-#: The HVAC objects that heat or cool the zones with setpoint schedules of their own, not with the thermostats of the
-#: zones (the cooling panels follow the thermostat with the control types of the loads of the zone).
-_OWN_SETPOINT_TYPES = ('ZONEHVAC:LOWTEMPERATURERADIANT:VARIABLEFLOW', 'ZONEHVAC:LOWTEMPERATURERADIANT:CONSTANTFLOW',
-                       'ZONEHVAC:LOWTEMPERATURERADIANT:ELECTRIC', 'ZONEHVAC:HIGHTEMPERATURERADIANT',
-                       'ZONEHVAC:VENTILATEDSLAB', 'ZONEHVAC:COOLINGPANEL:RADIANTCONVECTIVE:WATER')
+#: The radiant systems, ventilated slabs and cooling panels, which heat or cool the zones with setpoint schedules of
+#: their own, not with the thermostats of the zones: object type -> (the fields of their heating setpoints, those of
+#: their cooling setpoints, the field of their control temperature), with the names of eppy. The constant flow
+#: radiant systems and the ventilated slabs have a high and a low control temperature for each mode; the cooling
+#: panels follow the thermostat with the control types of the loads of the zone (_LOAD_CONTROL_TYPES).
+_RADIANT_FIELDS = {
+    'ZONEHVAC:LOWTEMPERATURERADIANT:VARIABLEFLOW': (
+        ('Heating_Control_Temperature_Schedule_Name',), ('Cooling_Control_Temperature_Schedule_Name',),
+        'Temperature_Control_Type'),
+    'ZONEHVAC:LOWTEMPERATURERADIANT:CONSTANTFLOW': (
+        ('Heating_High_Control_Temperature_Schedule_Name', 'Heating_Low_Control_Temperature_Schedule_Name'),
+        ('Cooling_High_Control_Temperature_Schedule_Name', 'Cooling_Low_Control_Temperature_Schedule_Name'),
+        'Temperature_Control_Type'),
+    'ZONEHVAC:LOWTEMPERATURERADIANT:ELECTRIC': (
+        ('Heating_Setpoint_Temperature_Schedule_Name',), (), 'Temperature_Control_Type'),
+    'ZONEHVAC:HIGHTEMPERATURERADIANT': (
+        ('Heating_Setpoint_Temperature_Schedule_Name',), (), 'Temperature_Control_Type'),
+    'ZONEHVAC:VENTILATEDSLAB': (
+        ('Heating_High_Control_Temperature_Schedule_Name', 'Heating_Low_Control_Temperature_Schedule_Name'),
+        ('Cooling_High_Control_Temperature_Schedule_Name', 'Cooling_Low_Control_Temperature_Schedule_Name'),
+        'Temperature_Control_Type'),
+    'ZONEHVAC:COOLINGPANEL:RADIANTCONVECTIVE:WATER': (
+        (), ('Cooling_Control_Temperature_Schedule_Name',), 'Control_Type'),
+}
 _LOAD_CONTROL_TYPES = ('ZONETOTALLOAD', 'ZONECONVECTIVELOAD')
+_COOLING_PANEL = 'ZONEHVAC:COOLINGPANEL:RADIANTCONVECTIVE:WATER'
 #: The availability managers that can switch a loop off: those that follow a schedule (with the field of the
 #: schedule) and those that switch it off with some temperatures (None).
 _SWITCHING_OFF_MANAGERS = {
@@ -253,7 +278,8 @@ def set_operative_temperature_thermostats(model: AccimModel) -> None:
       would replace the cooling setpoint of accim.
 
     The thermostats of the zones without occupants do not change. A warning lists the occupied zones without a
-    thermostat, whose operative temperature accim cannot keep between the setpoints.
+    thermostat (and without radiant systems that follow the setpoints, see :func:`set_radiant_setpoints`, which runs
+    before), whose operative temperature accim cannot keep between the setpoints.
 
     :raises ValueError: If the thermostat of an occupied zone controls the zones of a ZoneList: accim needs a
         thermostat for each occupied zone.
@@ -290,10 +316,12 @@ def set_operative_temperature_thermostats(model: AccimModel) -> None:
         model.log(f'The thermostat {thermostat.Name} controls the operative temperature of {zone} between its '
                   f'setpoints, with {dual.Name}')
     # The EMS actuates the setpoint schedules of all the occupied zones
+    radiant = {zone.upper() for zone in getattr(model, 'radiant_zones', ())}
     missing = []
     for zone, ems_name in zip(model.ems_zones, model.ems_names):
         if zone.upper() not in controlled:
-            missing.append(zone)
+            if zone.upper() not in radiant:
+                missing.append(zone)
             _add_schedule(model, existing, f'AHST_Sch_{ems_name}', 20)
             _add_schedule(model, existing, f'ACST_Sch_{ems_name}', 24)
     if missing:
@@ -557,25 +585,30 @@ def warn_outdoor_temperature_limits(model: AccimModel) -> None:
         warnings.warn(message, stacklevel=3)
 
 
+def _radiant_systems(idf) -> Iterator:
+    """The radiant systems, ventilated slabs and cooling panels that follow setpoint schedules of their own (not the
+    cooling panels whose control type is the load of the zone)."""
+    for object_type in idf.idfobjects:
+        if object_type.upper() not in _RADIANT_FIELDS:
+            continue
+        for obj in idf.idfobjects[object_type]:
+            if str(getattr(obj, 'Control_Type', '') or '').strip().upper() in _LOAD_CONTROL_TYPES:
+                continue
+            yield obj
+
+
 def own_setpoints_warning(model: AccimModel) -> Optional[str]:
     """The warning about the HVAC objects that heat or cool the zones with setpoint schedules of their own, not with
     the thermostats of the zones (radiant systems, cooling panels, ventilated slabs), which do not follow the
-    setpoints of accim, or None if the model has none."""
-    objects = []
-    for object_type in model.idf.idfobjects:
-        if object_type.upper() not in _OWN_SETPOINT_TYPES:
-            continue
-        for obj in model.idf.idfobjects[object_type]:
-            if str(getattr(obj, 'Control_Type', '') or '').strip().upper() in _LOAD_CONTROL_TYPES:
-                continue
-            objects.append(f'{_object_type(obj)} {_object_name(obj)}')
+    setpoints of accim with ``existing_hvac_radiant_setpoints=False``, or None if the model has none."""
+    objects = [f'{_object_type(obj)} {_object_name(obj)}' for obj in _radiant_systems(model.idf)]
     if not objects:
         return None
     return (f'The HVAC objects {_listed(objects)} of the model {_model_label(model)} heat or cool the zones with '
             f'setpoint schedules of their own, not with the thermostats of the zones, so they do not follow the '
-            f'setpoints of accim. To make them follow them, give them the setpoint schedules of their zones '
-            f'(AHST_Sch_<zone> for heating and ACST_Sch_<zone> for cooling, which the EMS actuates) and the operative '
-            f'temperature as their control temperature, or the control type ZoneTotalLoad to the cooling panels.')
+            f'setpoints of accim. existing_hvac_radiant_setpoints=True gives them the setpoint schedules of their '
+            f'zones (AHST_Sch_<zone> for heating and ACST_Sch_<zone> for cooling, which the EMS actuates) and the '
+            f'operative temperature as their control temperature.')
 
 
 def warn_own_setpoints(model: AccimModel) -> None:
@@ -584,6 +617,148 @@ def warn_own_setpoints(model: AccimModel) -> None:
     message = own_setpoints_warning(model)
     if message is not None:
         warnings.warn(message, stacklevel=3)
+
+
+def _equipment_zones(idf) -> Dict[Tuple[str, str], str]:
+    """The zone of each zone HVAC equipment of the zone equipment lists: {(type, name) in capitals: zone}."""
+    lists = {e.Name.upper(): e for e in idf.idfobjects['ZoneHVAC:EquipmentList']}
+    zones: Dict[Tuple[str, str], str] = {}
+    for connections in idf.idfobjects['ZoneHVAC:EquipmentConnections']:
+        equipment = lists.get(str(connections.Zone_Conditioning_Equipment_List_Name).strip().upper())
+        number = 1
+        while equipment is not None and f'Zone_Equipment_{number}_Object_Type' in equipment.fieldnames:
+            object_type = str(getattr(equipment, f'Zone_Equipment_{number}_Object_Type') or '').strip()
+            if not object_type:
+                break
+            name = str(getattr(equipment, f'Zone_Equipment_{number}_Name') or '').strip()
+            zones[(object_type.upper(), name.upper())] = connections.Zone_Name
+            number += 1
+    return zones
+
+
+def _radiant_zone(obj, equipment_zones: Mapping[Tuple[str, str], str]) -> Optional[str]:
+    """The zone of a radiant system: its field 'Zone Name' or, for the cooling panels, which have none, the zone whose
+    equipment list has it."""
+    if 'Zone_Name' in obj.fieldnames:
+        return str(obj.Zone_Name).strip() or None
+    return equipment_zones.get((obj.key.upper(), _object_name(obj).upper()))
+
+
+def _thermostat_zones(idf) -> set:
+    """The zones (in capitals) with a thermostat (ZoneControl:Thermostat), also through a ZoneList."""
+    zone_lists = {z.Name.upper(): [str(name).strip().upper() for name in z.obj[2:] if str(name).strip()]
+                  for z in try_objects(idf, 'ZoneList')}
+    zones = set()
+    for thermostat in idf.idfobjects['ZoneControl:Thermostat']:
+        key = str(thermostat.Zone_or_ZoneList_Name).strip().upper()
+        zones.update(zone_lists.get(key, [key]))
+    return zones
+
+
+def _design_object(model: AccimModel, obj, zone: str, design_zones: Mapping[str, set], copies: Dict):
+    """The design object of a low temperature radiant system (EnergyPlus 9.6 and later), which has some of its control
+    fields: the object of the model if only radiant systems of this zone use it, or a copy for the zone (named
+    '<zone> ACCIS <design object>') if radiant systems of other zones use it too."""
+    if 'Design_Object' not in obj.fieldnames:
+        return None
+    name = str(obj.Design_Object or '').strip()
+    design_type = f'{_object_type(obj)}:Design'
+    design = next((d for d in try_objects(model.idf, design_type) if d.Name.upper() == name.upper()), None)
+    if design is None or design_zones.get(name.upper()) == {zone.upper()}:
+        return design
+    key = (name.upper(), zone.upper())
+    if key not in copies:
+        copy = model.idf.copyidfobject(design)
+        copy.Name = f'{zone} ACCIS {design.Name}'
+        copies[key] = copy
+        model.log(f'Added - {copy.Name} {design_type}, a copy of {design.Name} for {zone}')
+    obj.Design_Object = copies[key].Name
+    return copies[key]
+
+
+def set_radiant_setpoints(model: AccimModel) -> None:
+    """Make the radiant systems, ventilated slabs and cooling panels of the occupied zones follow the setpoints of
+    their zones (``existing_hvac_radiant_setpoints=True``, the default with temperature setpoints).
+
+    These objects heat or cool with setpoint schedules of their own, not with the thermostats of the zones. Each one
+    in an occupied zone (the zone of a cooling panel is that of the zone equipment list that has it) gets the setpoint
+    schedules of its zone (AHST_Sch_<zone> for heating and ACST_Sch_<zone> for cooling, which the EMS actuates) in
+    the fields of the setpoints that it has in the model (so the modes in which it works do not change), and the
+    operative temperature as its control temperature (OperativeTemperatureSetpoint for the high temperature radiant
+    systems with one of the control types '...Setpoint'), except the cooling panels:
+
+    - ZoneHVAC:LowTemperatureRadiant:VariableFlow: the heating and cooling control temperatures (in its design object,
+      ZoneHVAC:LowTemperatureRadiant:VariableFlow:Design, since EnergyPlus 9.6), with its throttling ranges.
+    - ZoneHVAC:LowTemperatureRadiant:ConstantFlow and ZoneHVAC:VentilatedSlab: the high and low control temperatures
+      of each mode are both its setpoint, so that it works with the highest (heating) or lowest (cooling) water or
+      air temperature beyond the setpoint, and stops within the setpoints.
+    - ZoneHVAC:LowTemperatureRadiant:Electric and ZoneHVAC:HighTemperatureRadiant: the heating setpoint, with its
+      throttling range.
+    - ZoneHVAC:CoolingPanel:RadiantConvective:Water: the cooling control temperature; in a zone with a thermostat, the
+      control type ZoneTotalLoad, so that it follows the thermostat (which controls the operative temperature with
+      ``existing_hvac_operative_temperature_control``), because with the operative temperature as its control
+      temperature EnergyPlus reported plant flow errors (in its example file 5ZoneCoolingPanelBaseboard); in a zone
+      without a thermostat, it keeps its control temperature. The panels whose control type is ZoneTotalLoad or
+      ZoneConvectiveLoad already follow the thermostat, and do not change.
+
+    A design object that radiant systems of several zones share is copied for each occupied zone. The objects of the
+    zones without occupants do not change, and a warning lists those whose zone accim cannot find (cooling panels in
+    no zone equipment list). The zones whose radiant systems follow the setpoints are in ``model.radiant_zones``.
+    """
+    idf = model.idf
+    occupied = {zone.upper(): (zone, ems_name) for zone, ems_name in zip(model.ems_zones, model.ems_names)}
+    equipment_zones = _equipment_zones(idf)
+    thermostat_zones = _thermostat_zones(idf)
+    systems = list(_radiant_systems(idf))
+    design_zones: Dict[str, set] = {}
+    for obj in systems:
+        if 'Design_Object' in obj.fieldnames:
+            zone = _radiant_zone(obj, equipment_zones) or ''
+            design_zones.setdefault(str(obj.Design_Object or '').strip().upper(), set()).add(zone.upper())
+    existing = {s.Name for s in idf.idfobjects['Schedule:Compact']}
+    copies: Dict[Tuple[str, str], object] = {}
+    unknown = []
+    for obj in systems:
+        zone = _radiant_zone(obj, equipment_zones)
+        if zone is None:
+            unknown.append(f'{_object_type(obj)} {_object_name(obj)}')
+            continue
+        if zone.upper() not in occupied:
+            continue
+        zone, ems_name = occupied[zone.upper()]
+        heating_fields, cooling_fields, control_field = _RADIANT_FIELDS[obj.key.upper()]
+        holders = [obj]
+        design = _design_object(model, obj, zone, design_zones, copies)
+        if design is not None:
+            holders.append(design)
+        for fields, schedule, value in ((heating_fields, f'AHST_Sch_{ems_name}', 20),
+                                        (cooling_fields, f'ACST_Sch_{ems_name}', 24)):
+            for field in fields:
+                holder = next((h for h in holders if field in h.fieldnames), None)
+                if holder is None or not str(getattr(holder, field) or '').strip():
+                    continue
+                _add_schedule(model, existing, schedule, value)
+                setattr(holder, field, schedule)
+        holder = next((h for h in holders if control_field in h.fieldnames), None)
+        if holder is not None:
+            current = str(getattr(holder, control_field) or '').strip().upper()
+            if obj.key.upper() != _COOLING_PANEL:
+                setattr(holder, control_field,
+                        'OperativeTemperatureSetpoint' if current.endswith('SETPOINT') else 'OperativeTemperature')
+            elif zone.upper() in thermostat_zones:
+                # The operative temperature control of the panels made EnergyPlus report plant flow errors (in the
+                # example file 5ZoneCoolingPanelBaseboard), so they follow the thermostat
+                setattr(holder, control_field, 'ZoneTotalLoad')
+        model.log(f'The {_object_type(obj)} {_object_name(obj)} follows the setpoints of {zone}, with the operative '
+                  f'temperature')
+        if zone not in model.radiant_zones:
+            model.radiant_zones.append(zone)
+    if unknown:
+        warnings.warn(
+            f'accim cannot find the zones of the HVAC objects {_listed(unknown)} of the model {_model_label(model)} '
+            f'(they are in no zone equipment list), so they do not follow the setpoints of accim.',
+            stacklevel=3,
+        )
 
 
 def _add_node(idf, connections, field: str, node: str, node_list: str) -> None:

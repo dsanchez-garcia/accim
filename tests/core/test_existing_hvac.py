@@ -1,6 +1,6 @@
 """Tests for the existing HVAC systems (ScriptType 'ex_ac' and 'ex_mm'): the thermostats that control the operative
-temperature of the occupied zones, their availability, their outdoor temperature limits and the backup ideal loads air
-systems (the arguments ``existing_hvac_*``), and the values of the schedules.
+temperature of the occupied zones, their radiant systems, their availability, their outdoor temperature limits and the
+backup ideal loads air systems (the arguments ``existing_hvac_*``), and the values of the schedules.
 
 The adaptive setpoints are setpoints of the operative temperature, but the thermostats of EnergyPlus control the air
 temperature unless a ZoneControl:Thermostat:OperativeTemperature object makes them control the operative temperature,
@@ -12,7 +12,10 @@ missing). In a year in Seville, the sample OSM office (air temperature thermosta
 occupied) had 53 to 77 % of its occupied hours within the setpoints; with operative temperature control, 86 to 93 %;
 and also always available, 100 %. The sample models of DesignBuilder already controlled the operative temperature
 (without it, 31 to 79 %). The backup ideal loads air systems supply what the existing HVAC systems cannot (the cooling
-of the model with radiators, the limits of the VAV terminals of the example file 5ZoneAirCooled...).
+of the model with radiators, the limits of the VAV terminals of the example file 5ZoneAirCooled...). The radiant
+systems, ventilated slabs and cooling panels followed setpoint schedules of their own, not the adaptive setpoints:
+since 2026-11-03 they follow them (in a year in Seville, the hydronic radiant floors of the example file
+RadLoHydrHeatCoolAuto keep 99.5 to 100 % of the occupied hours within the setpoints, against 65 to 82 % before).
 """
 import lzma
 import subprocess
@@ -278,18 +281,18 @@ def test_the_plant_operation_schemes_with_one_scheme_follow_the_availability(tmp
     assert (two.Control_Scheme_1_Schedule_Name, two.Control_Scheme_2_Schedule_Name) == ('Summer only', 'On 24/7')
 
 
-def test_the_hvac_objects_with_setpoint_schedules_of_their_own_get_a_warning(tmp_path):
+def test_without_radiant_setpoints_the_hvac_objects_with_setpoints_of_their_own_get_a_warning(tmp_path):
     idf = _model(tmp_path, 'exptac')
     idf.newidfobject('ZoneHVAC:LowTemperatureRadiant:Electric', Name='Radiant floor', Zone_Name='Block1:Zone1')
     # The cooling panels with the control type of the load of the zone follow its thermostat
     idf.newidfobject('ZoneHVAC:CoolingPanel:RadiantConvective:Water', Name='Panel', Control_Type='ZoneTotalLoad')
 
-    _, messages = _add(idf)
+    _, messages = _add(idf, existing_hvac_radiant_setpoints=False)
 
     message = next(m for m in messages if 'setpoint schedules of their own' in m)
     assert "'ZoneHVAC:LowTemperatureRadiant:Electric Radiant floor'" in message
     assert 'Panel' not in message
-    assert 'AHST_Sch_<zone>' in message
+    assert 'existing_hvac_radiant_setpoints=True' in message
 
 
 def test_no_warnings_for_the_hvac_systems_that_are_always_available_and_without_limits(tmp_path):
@@ -458,3 +461,180 @@ def test_the_backup_keeps_the_operative_temperature_of_a_zone_without_cooling_eq
     for zone in ('BLOCK1:ZONE1', 'BLOCK1:ZONE2'):
         assert exceedances[False, zone] > 2
         assert exceedances[True, zone] < 0.2
+
+
+# ----------------------------------------------------------------------------------------------------------
+# Radiant systems, ventilated slabs and cooling panels (existing_hvac_radiant_setpoints)
+# ----------------------------------------------------------------------------------------------------------
+
+EXAMPLES = default_energyplus_folder('25.1') / 'ExampleFiles'
+needs_examples = pytest.mark.skipif(not EXAMPLES.exists(), reason='needs the example files of EnergyPlus 25.1')
+HEATING_HIGH_LOW = ['Heating_High_Control_Temperature_Schedule_Name', 'Heating_Low_Control_Temperature_Schedule_Name']
+COOLING_HIGH_LOW = ['Cooling_High_Control_Temperature_Schedule_Name', 'Cooling_Low_Control_Temperature_Schedule_Name']
+
+
+def _example(tmp_path, name):
+    """An example file of EnergyPlus 25.1."""
+    from besos.eppy_funcs import get_building
+
+    path = tmp_path / name
+    path.write_bytes((EXAMPLES / name).read_bytes())
+    return get_building(str(path))
+
+
+def _holders(idf, obj):
+    """A radiant system and its design object (low temperature radiant systems of EnergyPlus 9.6 and later)."""
+    if 'Design_Object' not in obj.fieldnames:
+        return [obj]
+    return [obj, _by_name(idf, f'{obj.key}:Design', obj.Design_Object)]
+
+
+def _field(idf, obj, field):
+    return next(getattr(h, field) for h in _holders(idf, obj) if field in h.fieldnames)
+
+
+@needs_examples
+@pytest.mark.parametrize('name, object_type, heating, cooling, control', [
+    ('RadLoHydrHeatCoolAuto.idf', 'ZoneHVAC:LowTemperatureRadiant:VariableFlow',
+     ['Heating_Control_Temperature_Schedule_Name'], ['Cooling_Control_Temperature_Schedule_Name'], 'OperativeTemperature'),
+    ('RadLoTempCFloHeatCool.idf', 'ZoneHVAC:LowTemperatureRadiant:ConstantFlow', HEATING_HIGH_LOW, COOLING_HIGH_LOW,
+     'OperativeTemperature'),
+    ('RadLoTempElecTermReheat.idf', 'ZoneHVAC:LowTemperatureRadiant:Electric',
+     ['Heating_Setpoint_Temperature_Schedule_Name'], [], 'OperativeTemperature'),
+    ('RadHiTempElecTermReheat.idf', 'ZoneHVAC:HighTemperatureRadiant', ['Heating_Setpoint_Temperature_Schedule_Name'], [],
+     'OperativeTemperature'),
+    ('VentilatedSlab.idf', 'ZoneHVAC:VentilatedSlab', HEATING_HIGH_LOW, COOLING_HIGH_LOW, 'OperativeTemperature'),
+    # The panels follow the thermostat (with the operative temperature as control temperature, EnergyPlus reported
+    # plant flow errors in this model)
+    ('5ZoneCoolingPanelBaseboard.idf', 'ZoneHVAC:CoolingPanel:RadiantConvective:Water', [],
+     ['Cooling_Control_Temperature_Schedule_Name'], 'ZoneTotalLoad'),
+])
+def test_the_radiant_systems_follow_the_setpoints_of_their_zones(tmp_path, name, object_type, heating, cooling, control):
+    idf = _example(tmp_path, name)
+
+    model, messages = _add(idf)
+
+    ems_names = {zone.upper(): ems_name for zone, ems_name in zip(model.ems_zones, model.ems_names)}
+    systems = list(idf.idfobjects[object_type])
+    assert systems
+    for obj in systems:
+        # The cooling panel of the example is in the equipment list of SPACE2-1
+        zone = obj.Zone_Name if 'Zone_Name' in obj.fieldnames else 'SPACE2-1'
+        ems_name = ems_names[zone.upper()]
+        assert [_field(idf, obj, f) for f in heating] == [f'AHST_Sch_{ems_name}'] * len(heating)
+        assert [_field(idf, obj, f) for f in cooling] == [f'ACST_Sch_{ems_name}'] * len(cooling)
+        control_field = 'Control_Type' if 'Control_Type' in obj.fieldnames else 'Temperature_Control_Type'
+        assert _field(idf, obj, control_field) == control
+        assert zone.upper() in {z.upper() for z in model.radiant_zones}
+    assert not [m for m in messages if 'setpoint schedules of their own' in m or 'have no thermostat' in m]
+
+
+@needs_examples
+def test_without_radiant_setpoints_the_radiant_systems_do_not_change(tmp_path):
+    idf = _example(tmp_path, 'RadLoHydrHeatCoolAuto.idf')
+    designs = [d.obj[:] for d in idf.idfobjects['ZoneHVAC:LowTemperatureRadiant:VariableFlow:Design']]
+
+    model, messages = _add(idf, existing_hvac_radiant_setpoints=False)
+
+    assert [d.obj for d in idf.idfobjects['ZoneHVAC:LowTemperatureRadiant:VariableFlow:Design']] == designs
+    assert model.radiant_zones == []
+    assert any('setpoint schedules of their own' in m for m in messages)
+
+
+@needs_examples
+def test_a_design_object_shared_by_several_zones_is_copied_for_each_zone(tmp_path):
+    idf = _example(tmp_path, 'RadLoHydrHeatCoolAuto.idf')
+    shared = 'West Zone Radiant Floor Design'
+    for floor in idf.idfobjects['ZoneHVAC:LowTemperatureRadiant:VariableFlow']:
+        floor.Design_Object = shared
+    original = _by_name(idf, 'ZoneHVAC:LowTemperatureRadiant:VariableFlow:Design', shared).obj[:]
+
+    model, _ = _add(idf)
+
+    # The copies are named after the zones as the model names them ('East Zone' is the zone 'EAST ZONE')
+    zones = {zone.upper(): (zone, ems_name) for zone, ems_name in zip(model.ems_zones, model.ems_names)}
+    for floor in idf.idfobjects['ZoneHVAC:LowTemperatureRadiant:VariableFlow']:
+        zone, ems_name = zones[floor.Zone_Name.upper()]
+        assert floor.Design_Object == f'{zone} ACCIS {shared}'
+        design = _by_name(idf, 'ZoneHVAC:LowTemperatureRadiant:VariableFlow:Design', floor.Design_Object)
+        assert design.Heating_Control_Temperature_Schedule_Name == f'AHST_Sch_{ems_name}'
+    # The design object of the model, which no radiant system uses now, does not change
+    assert _by_name(idf, 'ZoneHVAC:LowTemperatureRadiant:VariableFlow:Design', shared).obj == original
+
+
+@needs_examples
+def test_the_radiant_systems_keep_the_modes_in_which_they_work(tmp_path):
+    idf = _example(tmp_path, 'RadLoHydrHeatCoolAuto.idf')
+    design = _by_name(idf, 'ZoneHVAC:LowTemperatureRadiant:VariableFlow:Design', 'East Zone Radiant Floor Design')
+    # A radiant system that only heats
+    design.Cooling_Control_Temperature_Schedule_Name = ''
+
+    _add(idf)
+
+    assert design.Heating_Control_Temperature_Schedule_Name == 'AHST_Sch_EAST_ZONE'
+    assert design.Cooling_Control_Temperature_Schedule_Name == ''
+
+
+@needs_examples
+def test_the_cooling_panels_without_a_thermostat_keep_their_control_temperature(tmp_path):
+    idf = _example(tmp_path, '5ZoneCoolingPanelBaseboard.idf')
+    idf.removeidfobject(_by_name(idf, 'ZoneControl:Thermostat', 'SPACE2-1 Control'))
+
+    _add(idf)
+
+    panel = idf.idfobjects['ZoneHVAC:CoolingPanel:RadiantConvective:Water'][0]
+    assert (panel.Control_Type, panel.Cooling_Control_Temperature_Schedule_Name) == (
+        'MeanAirTemperature', 'ACST_Sch_SPACE2_1')
+
+
+@needs_examples
+def test_the_cooling_panels_in_no_zone_equipment_list_get_a_warning(tmp_path):
+    idf = _example(tmp_path, '5ZoneCoolingPanelBaseboard.idf')
+    panel = idf.idfobjects['ZoneHVAC:CoolingPanel:RadiantConvective:Water'][0]
+    panel.Name = 'Panel without zone'
+
+    _, messages = _add(idf)
+
+    assert any("'ZoneHVAC:CoolingPanel:RadiantConvective:Water Panel without zone'" in m
+               and 'cannot find the zones' in m for m in messages)
+    assert panel.Cooling_Control_Temperature_Schedule_Name == 'Clg-SetP-Sch'
+
+
+@needs_examples
+@pytest.mark.skipif(_energyplus_25_1() is None or not SAMPLE_EPW.exists(),
+                    reason='needs EnergyPlus 25.1 and the sample EPW of the repository')
+def test_the_radiant_floors_keep_the_operative_temperature_above_the_heating_setpoint(tmp_path):
+    """The example file RadLoHydrHeatCoolAuto (hydronic radiant floors that heat and cool), three days of January in
+    Seville: with the setpoints of the model, the operative temperature is up to 4 K below the adaptive heating
+    setpoint; following the setpoints of accim, it is not below it."""
+    from accim.sim.accis import add_accis_to_idf
+
+    deficits = {}
+    for radiant_setpoints in (False, True):
+        idf = _example(tmp_path, 'RadLoHydrHeatCoolAuto.idf')
+        add_accis_to_idf(idf, script_type='ex_ac', output_type='standard', output_frequencies=['hourly'],
+                         keep_existing_outputs=False, setpoint_type='temperature', verbose=False,
+                         existing_hvac_radiant_setpoints=radiant_setpoints)
+        for run_period in idf.idfobjects['RunPeriod'][1:]:
+            idf.removeidfobject(run_period)
+        run_period = idf.idfobjects['RunPeriod'][0]
+        run_period.Begin_Month, run_period.Begin_Day_of_Month, run_period.End_Month, run_period.End_Day_of_Month = (
+            1, 1, 1, 3)
+        idf.idfobjects['SimulationControl'][0].Run_Simulation_for_Sizing_Periods = 'No'
+        folder = tmp_path / f'radiant_{radiant_setpoints}'
+        folder.mkdir()
+        idf.saveas(str(folder / 'model.idf'))
+        result = subprocess.run([str(_energyplus_25_1()), '-d', str(folder), '-p', 'run', '-s', 'C', '-r',
+                                 '-w', str(SAMPLE_EPW), str(folder / 'model.idf')], capture_output=True, text=True)
+        assert result.returncode == 0, result.stdout[-3000:]
+        assert '** Severe  **' not in (folder / 'run.err').read_text(errors='replace')
+        results = pd.read_csv(folder / 'run.csv')
+        for zone, ems_name in (('WEST ZONE', 'West_Zone'), ('EAST ZONE', 'EAST_ZONE'), ('NORTH ZONE', 'NORTH_ZONE')):
+            occupied = results[f'EMS:Occupied Hours_{ems_name} [H](Hourly)'] > 0
+            operative = results[f'{zone}:Zone Operative Temperature [C](Hourly)']
+            setpoint = results[f'EMS:Adaptive Heating Setpoint Temperature_No Tolerance_{ems_name} [C](Hourly)']
+            deficits[radiant_setpoints, zone] = (setpoint - operative)[occupied].max()
+
+    for zone in ('WEST ZONE', 'EAST ZONE', 'NORTH ZONE'):
+        assert deficits[False, zone] > 2
+        assert deficits[True, zone] < 0.1
