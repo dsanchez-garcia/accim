@@ -129,7 +129,7 @@ print(f"  Parámetros disponibles ({len(available)}): {available}")
 parametric.set_parameters(
     accis_params_dict={
         # EN16798 cat. I + ASHRAE55 80 % (comfort_mode 3); el plan descarta cada norma con la categoría de la otra.
-        # ESP CTE (comfort_standard 0) no entraría: sampling_full_set la descarta cuando el plan tiene category o comfort_mode.
+        # ESP CTE (comfort_standard 0) entraría con la primera categoría y el primer modo del plan (no depende de ellos).
         'comfort_standard': [1, 2],
         'category': [1, 80],
         'comfort_mode': [3],

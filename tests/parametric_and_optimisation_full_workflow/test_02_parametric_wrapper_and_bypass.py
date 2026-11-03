@@ -82,7 +82,7 @@ wrapper_sim.set_output_readers(df_output_meter=df_meters_problem)
 
 # Parámetros
 # EN16798 cat. I + ASHRAE55 80 % (comfort_mode 3 del wrapper); el plan descarta cada norma con la categoría de la otra.
-# ESP CTE (comfort_standard 0) no entraría: sampling_full_set la descarta cuando el plan tiene category (no depende de ella).
+# ESP CTE (comfort_standard 0) entraría una vez, con la primera categoría del plan (no depende de ella).
 wrapper_sim.set_parameters(accis_params_dict={'comfort_standard': [1, 2], 'category': [1, 80]})
 wrapper_sim.sampling_full_set()
 wrapper_sim.set_problem()

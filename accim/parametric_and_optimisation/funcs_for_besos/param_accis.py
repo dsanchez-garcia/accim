@@ -32,6 +32,7 @@ result = <module>()
 """
 
 import besos.IDF_class
+import pandas as pd
 
 from accim.sim.ems.inputs import input_programs, read_inputs, set_inputs
 
@@ -79,6 +80,10 @@ CUSTOM_MODEL_VARIABLES = {
     'custom_heating_upper_limit': ('CustAST_AHSTaul', 'AHSTaul'),
     'custom_heating_lower_limit': ('CustAST_AHSTall', 'AHSTall'),
 }
+#: The comfort standards whose setpoints do not depend on some parameters (ESP CTE: the category and the comfort mode;
+#: INT ISO7730: the comfort mode), so that drop_invalid_param_combinations keeps their rows only with the first value
+#: of these parameters in the plan
+_INDEPENDENT_OF = {0: ('category', 'comfort_mode'), 22: ('comfort_mode',)}
 
 
 def _set_inputs(idf, values: dict) -> None:
@@ -231,6 +236,12 @@ def get_valid_param_combinations():
 def drop_invalid_param_combinations(samples_df):
     """Filter sampled rows that violate ACCIS parameter compatibility rules.
 
+    The setpoints of ESP CTE (`comfort_standard` 0) depend neither on the category nor on the comfort mode, and those
+    of INT ISO7730 (22) not on the comfort mode, so a full set would simulate the same model once for each of their
+    values: their rows keep only the first value of these columns in the plan (one row for each combination of the
+    other parameters). Before accim 1.0.0, the rows of ESP CTE were dropped when the plan had `category` or
+    `comfort_mode`, and those of INT ISO7730 kept only `comfort_mode` 0.
+
     Parameters
     ----------
     samples_df : pandas.DataFrame
@@ -289,12 +300,24 @@ def drop_invalid_param_combinations(samples_df):
     }
     columns = {new: (old if old in samples_df.columns and new not in samples_df.columns else new)
                for new, old in legacy_names.items()}
+    # The first value of the columns of the category and the comfort mode in the plan, which the rows of the comfort
+    # standards whose setpoints do not depend on them keep
+    first = {name: pd.unique(samples_df[columns[name]])[0] for name in ('category', 'comfort_mode')
+             if columns[name] in samples_df.columns and len(samples_df) > 0}
+
+    def not_valid(name, position):
+        def rule(v):
+            standard = v('comfort_standard')
+            if name in _INDEPENDENT_OF.get(standard, ()):
+                return v(name) != first[name]
+            return v(name) not in valid_params[standard][position]
+        return rule
 
     # The rules that make a combination not valid: each one is checked if the plan has its columns (a missing column,
     # or a comfort_standard that is not in valid_params, such as 99, only skips that rule)
     rules = (
-        lambda v: v('category') not in valid_params[v('comfort_standard')][0],
-        lambda v: v('comfort_mode') not in valid_params[v('comfort_standard')][1],
+        not_valid('category', 0),
+        not_valid('comfort_mode', 1),
         lambda v: v('ventilation_control') != 0 and v('hvac_mode') == 0,
         lambda v: v('ventilation_setpoint_offset') != 0 and v('hvac_mode') == 0,
         lambda v: v('min_outdoor_temp_offset') != 0 and v('hvac_mode') == 0,

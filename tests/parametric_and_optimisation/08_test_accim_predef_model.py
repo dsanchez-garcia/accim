@@ -65,7 +65,8 @@ def test_accim_predef_models_static_comfort_standards():
     sim.set_parameters(accis_params_dict={'comfort_standard': [0, 22], 'category': [1, 2]})
     ts.set_meter_readers(sim)
     sim.set_problem()
-    # sampling_full_set descarta comfort_standard 0 cuando el plan tiene category (no depende de ella)
+    # sampling_full_set daría comfort_standard 0 solo con la primera categoría (no depende de ella); el plan custom
+    # simula cada norma con una categoría distinta
     sim.sampling_custom(ts.pd.DataFrame({'comfort_standard': [0, 22], 'category': [1, 2]}))
 
     results = sim.run_parametric_simulation(
