@@ -10,10 +10,11 @@ runs, so that the window opens quickly.
 """
 
 import os
-from typing import Any, List, Mapping
+from typing import Any, Dict, List, Mapping, Tuple
 
-__all__ = ['FIGURE_ANSWERS', 'RENAME_EPWS_ANSWERS', 'apply_apmv', 'make_figure', 'make_table', 'occupied_zones',
-           'parametric_study', 'rename_epws']
+__all__ = ['FIGURE_ANSWERS', 'RENAME_EPWS_ANSWERS', 'SESSION_FORMS', 'apply_apmv', 'make_figure', 'make_table',
+           'occupied_zones', 'open_session', 'open_table', 'parametric_study', 'rename_epws', 'save_session',
+           'save_table', 'table_format']
 
 #: The questions of rename_epw_files that the interface answers (the beginning of the question -> the answer): no
 #: amendments of the names of the cities and no exclusions. The others (a city or country that OpenStreetMap does not
@@ -28,6 +29,10 @@ FIGURE_ANSWERS = {
     'Do you want to rename the rows?': 'n',
     'Column names will be the subplot titles. Do you want to rename them?': 'n',
 }
+#: The name of the values of the forms (the working folder and the fields of each tab) among the objects of the session
+#: files of the interface; the others are the results of the tabs that have them: ``table`` (a Table),
+#: ``hours_within_setpoints`` (the table of the hours, with the minimum and the zones) and ``parametric_results``.
+SESSION_FORMS = 'gui_forms'
 
 
 def occupied_zones(idf: str, energyplus_version: str = 'auto') -> List[str]:
@@ -95,6 +100,59 @@ def make_table(arguments: Mapping[str, Any]):
     table = Table(**arguments['table'])
     table.format_table(type_of_table=arguments['type_of_table'])
     return table
+
+
+def table_format(table) -> Dict[str, Any]:
+    """The arguments of :meth:`Table.format_table` that gave the columns of a table (those of its last call, or all the
+    columns if it was not formatted), to make it again from the whole table: before each figure, whose data filter the
+    rows of the table, and after opening a table saved in Python."""
+    type_of_table = getattr(table, 'type_of_table', 'all')
+    if type_of_table == 'custom':
+        return dict(type_of_table='custom', custom_cols=list(getattr(table, 'custom_cols', None) or []))
+    return dict(type_of_table=type_of_table)
+
+
+def save_table(table, path: str) -> Tuple[str, str]:
+    """Save a table with :meth:`Table.save`: a pickle file, which :func:`open_table` reads, and a JSON file to read it.
+
+    :return: The paths of the two files.
+    """
+    return table.save(path)
+
+
+def open_table(path: str):
+    """A table saved with :meth:`Table.save` (in Python or by the interface), with the columns that it had."""
+    from accim.data.postprocessing.main import Table
+
+    table = Table.load(path)
+    table.format_table(**table_format(table))
+    return table
+
+
+def save_session(path: str, objects: Mapping[str, Any]) -> Tuple[str, str]:
+    """Save a session of the interface (the values of the forms, :data:`SESSION_FORMS`, and the results of the tabs)
+    with :func:`accim.utils.save_session`: a pickle file, which :func:`open_session` reads, and a JSON file to read it.
+
+    :return: The paths of the two files.
+    """
+    from accim.utils.session import save_session as save
+
+    return save(path, **objects)
+
+
+def open_session(path: str) -> Dict[str, Any]:
+    """The objects of a session saved by the interface (:func:`save_session`).
+
+    :raises ValueError: If the file is not a session of the interface.
+    """
+    from accim.utils.session import load_session
+
+    session = load_session(path)
+    if SESSION_FORMS not in session:
+        raise ValueError(f'{path} is a session saved in Python, with {", ".join(session)}, not by the interface. The '
+                         f'tables saved with Table.save open with "Open a table..." in the tab "6. Table and '
+                         f'figures".')
+    return session
 
 
 def make_figure(table, arguments: Mapping[str, Any]) -> str:

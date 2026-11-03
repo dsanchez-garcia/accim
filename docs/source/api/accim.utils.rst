@@ -36,6 +36,14 @@ accim.utils.people module
    :show-inheritance:
    :undoc-members:
 
+accim.utils.session module
+--------------------------
+
+.. automodule:: accim.utils.session
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
 accim.utils.verification module
 -------------------------------
 

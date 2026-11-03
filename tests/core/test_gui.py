@@ -5,7 +5,9 @@ The forms (accim.gui.forms) are tested without a display; the window (accim.gui.
 of a form, to check that they are complete: the interface cannot answer the questions of the prompt.
 """
 import builtins
+import copy
 import inspect
+import json
 import os
 import shutil
 from pathlib import Path
@@ -537,6 +539,59 @@ def test_the_parametric_simulation_accepts_the_arguments_of_the_existing_hvac_sy
                for name, default in forms.EXISTING_HVAC_DEFAULTS.items())
 
 
+def test_the_tasks_of_the_sessions(tmp_path, monkeypatch):
+    from accim.gui import tasks
+    from accim.utils import save_session
+
+    monkeypatch.chdir(tmp_path)
+    objects = {tasks.SESSION_FORMS: {'folder': str(tmp_path), 'run': {'processes': '3'}},
+               'parametric_results': pd.DataFrame({'custom_slope': [0.3], 'Heating:Electricity': [1.0]})}
+
+    paths = tasks.save_session(str(tmp_path / 'gui_session.pkl'), objects)
+
+    assert paths == (str(tmp_path / 'gui_session.pkl'), str(tmp_path / 'gui_session.json'))
+    session = tasks.open_session(paths[0])
+    assert session[tasks.SESSION_FORMS] == objects[tasks.SESSION_FORMS]
+    pd.testing.assert_frame_equal(session['parametric_results'], objects['parametric_results'])
+    # The sessions saved in Python are not those of the interface
+    save_session('python_session', csvs=['a.csv'])
+    with pytest.raises(ValueError, match='is a session saved in Python, with csvs, not by the interface'):
+        tasks.open_session(str(tmp_path / 'python_session.pkl'))
+
+
+def test_the_tasks_that_save_and_open_tables(monkeypatch):
+    import accim.data.postprocessing.main as postprocessing
+    from accim.gui import tasks
+
+    calls = []
+
+    class FakeTable:
+        type_of_table, custom_cols = 'custom', ['Cooling']
+
+        def save(self, path):
+            calls.append(('save', path))
+            return 'table.pkl', 'table.json'
+
+        def format_table(self, **kwargs):
+            calls.append(('format_table', kwargs))
+
+        @classmethod
+        def load(cls, path):
+            calls.append(('load', path))
+            return cls()
+
+    monkeypatch.setattr(postprocessing, 'Table', FakeTable)
+
+    assert tasks.save_table(FakeTable(), 'table.pkl') == ('table.pkl', 'table.json')
+    # The table that is opened gets the columns that it had (its rows may have been filtered by a figure)
+    assert isinstance(tasks.open_table('table.pkl'), FakeTable)
+    assert calls == [('save', 'table.pkl'), ('load', 'table.pkl'),
+                     ('format_table', {'type_of_table': 'custom', 'custom_cols': ['Cooling']})]
+    assert tasks.table_format(SimpleNamespace()) == {'type_of_table': 'all'}
+    assert tasks.table_format(SimpleNamespace(type_of_table='energy demand', custom_cols=[])) == {
+        'type_of_table': 'energy demand'}
+
+
 @needs_energyplus
 @pytest.mark.parametrize('script_type', ['vrf_ac', 'vrf_mm', 'ex_mm'])
 def test_add_accis_runs_with_the_arguments_of_the_form(tmp_path, monkeypatch, script_type):
@@ -822,3 +877,213 @@ def test_the_tab_of_the_parametric_study(app, tmp_path):
         forms.parametric_arguments(form)
     tab.show_results(pd.DataFrame({'custom_slope': [0.3, 0.4], 'Heating:Electricity': [1.0, 2.0]}))
     assert len(tab.tree.get_children()) == 2 and tab.count.get().startswith('2 simulations')
+
+# Sessions ------------------------------------------------------------------------------------------------------------
+
+def _synchronous(app):
+    """Run the tasks of the window at once, in the thread of the test (they run in another thread otherwise)."""
+    def run_task(title, folder, function, on_done=None, answers=None):
+        app.execute(title, folder, function, on_done, answers)
+        app.process_messages()
+        return True
+
+    app.run_task = run_task
+
+
+def _hours_summary(folder):
+    """The hours within the setpoints of two simulations: 100 % and 50 % of their occupied hours."""
+    folder.mkdir()
+    for name, within in (('a.csv', [1.0, 1.0]), ('b.csv', [1.0, 0.0])):
+        pd.DataFrame({'Date/Time': ['01/01 01:00:00', '01/01 02:00:00'],
+                      'EMS:Occupied Hours_ZONE1 [H](Hourly)': [1.0, 1.0],
+                      'EMS:Occupied Comfortable Hours_No Applicability_ZONE1 [H](Hourly)': within}).to_csv(
+            folder / name, index=False)
+    from accim.data.postprocessing.setpoint_hours import hours_within_setpoints
+
+    return hours_within_setpoints(str(folder))
+
+
+def test_the_menu_of_the_sessions(app):
+    assert app.menu.entrycget(0, 'label') == 'Session'
+    sessions = app.root.nametowidget(app.menu.entrycget(0, 'menu'))
+    assert [sessions.entrycget(index, 'label') for index in range(2)] == ['Open a session...', 'Save the session...']
+
+
+def test_a_session_of_the_window_is_saved_and_opened_again(app, tmp_path, monkeypatch):
+    import accim.gui.app as app_module
+
+    folder = tmp_path / 'work'
+    folder.mkdir()
+    for name in ('model.idf', 'other.idf', 'a.epw', 'b.epw'):
+        (folder / name).write_text('')
+    app.folder.set(str(folder))
+    _synchronous(app)
+    add, rename, hours, table_tab, parametric = app.add_accis, app.rename_epws, app.hours, app.table, app.parametric
+    # Values in the forms of all the tabs, and results in three of them
+    add.idf_list.selection_clear(0, 'end')
+    add.idf_list.selection_set(1)
+    add.vars['script_type'].set('ex_mm')
+    add.vars['category'].set('1 2')
+    add.vars['existing_hvac_ideal_loads_backup'].set(True)
+    add.frequencies['daily'].set(True)
+    add.hvac_modes[0].set(True)
+    add.standard_list.selection_set(2)
+    add.zone_name.set('Block1:Zone2')
+    add.zone_text.set('comfort_standard=2, category=80')
+    assert add.set_zone()
+    app.apmv.vars['output_idf'].set('model_aPMV_2.idf')
+    app.apmv.frequencies['monthly'].set(True)
+    rename.epw_list.selection_clear(0, 'end')
+    rename.epw_list.selection_set(1)
+    rename.cities.insert('1.0', 'b = Sevilla')
+    rename.delete_originals.set(True)
+    app.run.vars['processes'].set('3')
+    app.run.vars['only_accim_idfs'].set(False)
+    hours.zones.set('all')
+    hours.show(_hours_summary(tmp_path / 'hours'), 75)
+    table = SimpleNamespace(
+        df=pd.DataFrame({'ComfMod': ['CM_0', 'CM_3'], 'EPW': ['A', 'B'], 'Cooling (kWh/m2)': [1.0, 2.0],
+                         'RMOT (C)': [10.0, 20.0]}),
+        cols_for_multiindex=['ComfMod', 'EPW'], val_cols=['Cooling (kWh/m2)', 'RMOT (C)'],
+        suggested_vars_dict={'ComfMod': ['CM_0', 'CM_3'], 'EPW': ['A', 'B']}, frequency='runperiod')
+    table_tab.show_table(table)
+    table_tab.rows_list.selection_set(0)
+    table_tab.cols_list.selection_set(1)
+    table_tab.y_list.selection_set(0, 1)
+    table_tab.vars['data_on_x_axis'].set('RMOT (C)')
+    table_tab.vars['figname'].set('my_figure')
+    table_tab.levels['block'].set(True)
+    parametric.vars['parameters_type'].set('accim custom model')
+    parametric.vars['sampling'].set('lhs')
+    parametric.parameter_name.set('custom_slope')
+    parametric.parameter_values.set('0.2 to 0.6')
+    assert parametric.set_parameter()
+    parametric.epw_list.selection_clear(0, 'end')
+    parametric.epw_list.selection_set(1)
+    parametric.show_results(pd.DataFrame({'custom_slope': [0.3, 0.4], 'Heating:Electricity': [1.0, 2.0]}))
+    saved = {key: tab.state() for key, tab in app.tabs().items()}
+
+    monkeypatch.setattr(app_module.filedialog, 'asksaveasfilename', lambda **kwargs: str(tmp_path / 'session.pkl'))
+    assert app.save_session()
+
+    assert 'The session has been saved in' in app.log.get('1.0', 'end') and not app.errors
+    readable = json.loads((tmp_path / 'session.json').read_text(encoding='utf-8'))['objects']
+    assert sorted(readable) == ['gui_forms', 'hours_within_setpoints', 'parametric_results', 'table']
+    forms_json = readable['gui_forms']['value']
+    assert forms_json['folder'] == str(folder) and forms_json['run']['processes'] == '3'
+    assert forms_json['add_accis']['zone_arguments'] == [['Block1:Zone2', 'comfort_standard=2, category=80']]
+    assert readable['parametric_results']['value']['data'] == {'custom_slope': [0.3, 0.4],
+                                                               'Heating:Electricity': [1.0, 2.0]}
+
+    # Another session: other values, another folder and no results; and an EPW is no longer in the folder
+    add.vars['script_type'].set('vrf_ac')
+    add.zone_tree.delete(*add.zone_tree.get_children())
+    rename.cities.delete('1.0', 'end')
+    app.run.vars['processes'].set('1')
+    hours.clear()
+    table_tab.clear()
+    parametric.clear_results()
+    (folder / 'b.epw').unlink()
+    (tmp_path / 'other').mkdir()
+    app.folder.set(str(tmp_path / 'other'))
+    monkeypatch.setattr(app_module.filedialog, 'askopenfilename', lambda **kwargs: str(tmp_path / 'session.pkl'))
+
+    assert app.open_session()
+
+    assert app.folder.get() == str(folder) and not app.errors
+    expected = copy.deepcopy(saved)
+    expected['rename_epws']['epws'] = expected['parametric']['epws'] = []
+    assert {key: tab.state() for key, tab in app.tabs().items()} == expected
+    log = app.log.get('1.0', 'end')
+    assert 'EPWs of "3. Rename the EPWs": b.epw not found.' in log
+    assert 'EPWs of "7. Parametric study": b.epw not found.' in log
+    assert hours.result.get().startswith('1 of the 2 simulations reach 75') and not hours.export_button.instate(
+        ['disabled'])
+    assert table_tab.table is not None and len(table_tab.tree.get_children()) == 2
+    assert not table_tab.figure_button.instate(['disabled'])
+    assert parametric.results is not None and len(parametric.tree.get_children()) == 2
+
+
+def test_a_session_without_results_clears_those_of_the_window(app, tmp_path):
+    from accim.gui import tasks
+    from accim.utils import save_session
+
+    _synchronous(app)
+    app.parametric.show_results(pd.DataFrame({'custom_slope': [0.3]}))
+    app.table.show_table(SimpleNamespace(df=pd.DataFrame({'ComfMod': ['CM_0'], 'Cooling': [1.0]}),
+                                         cols_for_multiindex=['ComfMod'], val_cols=['Cooling'],
+                                         suggested_vars_dict={}))
+    save_session(tmp_path / 'empty', **{tasks.SESSION_FORMS: {'folder': str(tmp_path / 'missing')}})
+
+    assert app.open_session(str(tmp_path / 'empty.pkl'))
+
+    assert app.parametric.results is None and not app.parametric.tree.get_children()
+    assert app.table.table is None and app.table.save_button.instate(['disabled'])
+    assert f'The working folder of the session, {tmp_path / "missing"}, does not exist' in app.log.get('1.0', 'end')
+    # The sessions saved in Python are not those of the window
+    save_session(tmp_path / 'python', csvs=['a.csv'])
+    assert app.open_session(str(tmp_path / 'python.pkl')) and 'not by the interface' in app.errors[-1]
+
+
+def test_the_tab_of_table_saves_and_opens_tables(app, tmp_path, monkeypatch):
+    import accim.gui.app as app_module
+    from .test_table_methods import SAMPLE_CSVS, _sample_table
+
+    if len(SAMPLE_CSVS) != 4:
+        pytest.skip('needs the sample CSV files of the repository')
+    for csv in SAMPLE_CSVS:
+        shutil.copy(csv, tmp_path)
+    table = _sample_table(tmp_path)
+    table.format_table(type_of_table='custom', custom_cols=['Building_Total_Cooling Energy Demand'])
+    table.save(tmp_path / 'python_table')
+    app.folder.set(str(tmp_path))
+    _synchronous(app)
+    tab = app.table
+
+    assert tab.save_table() is False and app.errors[-1] == 'Make the table first.'
+    # A table saved in Python, with the columns that it had
+    monkeypatch.setattr(app_module.filedialog, 'askopenfilename', lambda **kwargs: str(tmp_path / 'python_table.pkl'))
+    assert tab.open_table()
+    opened = tab.table
+    assert opened.type_of_table == 'custom' and list(opened.df.columns) == opened.indexcols + opened.val_cols
+    assert tab.summary.get().startswith(f'Table of {tmp_path / "python_table.pkl"} (runperiod): 4 rows')
+    assert len(tab.tree.get_children()) == 4 and not tab.save_button.instate(['disabled'])
+    # Saved by the tab, with its JSON file
+    monkeypatch.setattr(app_module.filedialog, 'asksaveasfilename', lambda **kwargs: str(tmp_path / 'gui_table.pkl'))
+    assert tab.save_table()
+    assert json.loads((tmp_path / 'gui_table.json').read_text(encoding='utf-8'))['type_of_table'] == 'custom'
+    tab.clear()
+    assert tab.table is None and tab.save_button.instate(['disabled']) and tab.summary.get().startswith('4 CSV')
+    assert tab.open_table(str(tmp_path / 'gui_table.pkl'))
+    pd.testing.assert_frame_equal(tab.table.df, opened.df)
+    # Other files are not tables
+    pd.to_pickle(pd.DataFrame(), tmp_path / 'frame.pkl')
+    assert tab.open_table(str(tmp_path / 'frame.pkl')) and 'does not have a table saved with Table.save' in \
+        app.errors[-1]
+    assert tab.table is not None
+
+
+def test_the_files_of_the_window_can_have_relative_paths(app, tmp_path, monkeypatch):
+    from accim.gui import tasks
+
+    # The tasks run in the folder of the file: the relative paths are made absolute before
+    (tmp_path / 'sub').mkdir()
+    monkeypatch.chdir(tmp_path)
+    _synchronous(app)
+    app.run.vars['processes'].set('5')
+
+    assert app.save_session(os.path.join('sub', 'session.pkl'))
+    app.run.vars['processes'].set('1')
+    assert app.open_session(os.path.join('sub', 'session.pkl'))
+
+    assert not app.errors and (tmp_path / 'sub' / 'session.json').is_file()
+    assert app.run.vars['processes'].get() == '5' and Path(os.getcwd()) == tmp_path
+    paths = []
+    table = SimpleNamespace(df=pd.DataFrame({'ComfMod': ['CM_0'], 'Cooling': [1.0]}), cols_for_multiindex=['ComfMod'],
+                            val_cols=['Cooling'], suggested_vars_dict={},
+                            save=lambda path: paths.append(path) or (path, path))
+    app.table.show_table(table)
+    monkeypatch.setattr(tasks, 'open_table', lambda path: paths.append(path) or table)
+    assert app.table.save_table(os.path.join('sub', 'table.pkl'))
+    assert app.table.open_table(os.path.join('sub', 'table.pkl'))
+    assert paths == [str(tmp_path / 'sub' / 'table.pkl')] * 2 and not app.errors

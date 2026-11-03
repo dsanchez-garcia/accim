@@ -8,7 +8,9 @@ make tables and figures of the results with ``Table``, and run a basic parametri
 
 Open it with ``accim-gui`` (a command installed with accim) or ``python -m accim.gui``. Each task runs in a thread,
 one at a time, in the working folder, and what it prints appears in the log at the bottom of the window. The
-values of the forms are checked by :mod:`accim.gui.forms`, and the tasks run by :mod:`accim.gui.tasks`.
+values of the forms are checked by :mod:`accim.gui.forms`, and the tasks run by :mod:`accim.gui.tasks`. The menu
+*Session* saves the values of the forms and the results of the tabs in a session file (a pickle file, with a JSON file
+to read it; see :mod:`accim.utils.session`), and opens it again to resume the session.
 """
 
 import builtins
@@ -32,6 +34,9 @@ __all__ = ['AccimApp', 'main']
 DOCS_URL = 'https://accim.readthedocs.io/'
 #: The number of rows of a table shown in the window (the exported files have all of them)
 MAX_ROWS_SHOWN = 500
+#: The file types of the dialogs of the session files and of the files of the tables
+SESSION_FILE_TYPES = [('Sessions of accim (pickle files)', '*.pkl'), ('All files', '*.*')]
+TABLE_FILE_TYPES = [('Tables of accim (pickle files)', '*.pkl'), ('All files', '*.*')]
 
 
 class _QueueWriter:
@@ -133,6 +138,71 @@ class _Tab:
         ttk.Button(line, text='Browse...', command=browse).pack(side='left')
         if refresh:
             ttk.Button(line, text='Refresh', command=self.app.folder_changed).pack(side='left', padx=(6, 0))
+
+    def state(self) -> Dict[str, Any]:
+        """The values of the fields of the tab, for the session files (:meth:`AccimApp.save_session`)."""
+        return _variables_state(getattr(self, 'vars', {}))
+
+    def restore(self, state: Mapping[str, Any]) -> List[str]:
+        """Set the fields of the tab to the values of a session (those that it does not have keep theirs).
+
+        :return: The messages of the values that could not be restored (files that are not in the folder).
+        """
+        _restore_variables(getattr(self, 'vars', {}), state)
+        return []
+
+
+def _folder_of(path: str) -> str:
+    """The folder of a file, in which the task that writes or reads it runs."""
+    return os.path.dirname(os.path.abspath(path))
+
+
+def _variables_state(variables: Mapping[str, tk.Variable]) -> Dict[str, Any]:
+    """The values of the variables of the fields of a form, by name."""
+    return {name: variable.get() for name, variable in variables.items()}
+
+
+def _restore_variables(variables: Mapping[str, tk.Variable], values: Mapping[str, Any]) -> None:
+    """Set the variables of a form that ``values`` has (the others keep their values)."""
+    for name, variable in variables.items():
+        if name in values:
+            variable.set(bool(values[name]) if isinstance(variable, tk.BooleanVar) else values[name])
+
+
+def _checks_state(checks: Mapping[Any, tk.BooleanVar]) -> List[Any]:
+    """The checked options of a group of check buttons."""
+    return [option for option, variable in checks.items() if variable.get()]
+
+
+def _restore_checks(checks: Mapping[Any, tk.BooleanVar], checked) -> None:
+    for option, variable in checks.items():
+        variable.set(option in checked)
+
+
+def _select(listbox: tk.Listbox, items, what: str) -> List[str]:
+    """Select the items of a list that are in ``items`` (and no other).
+
+    :return: The message of the items that the list does not have, if any.
+    """
+    present = list(listbox.get(0, 'end'))
+    listbox.selection_clear(0, 'end')
+    for index, item in enumerate(present):
+        if item in items:
+            listbox.selection_set(index)
+    missing = [str(item) for item in items if item not in present]
+    return [f'{what}: {", ".join(missing)} not found.'] if missing else []
+
+
+def _file_messages(name: str, files, what: str) -> List[str]:
+    """The message of a file of a session that is not in the working folder, if it is not."""
+    return [f'{what}: {name} not found in the working folder.'] if name and name not in files else []
+
+
+def _set_rows(tree: ttk.Treeview, rows) -> None:
+    """Replace the rows of a table of the window."""
+    tree.delete(*tree.get_children())
+    for row in rows:
+        tree.insert('', 'end', values=tuple(row))
 
 
 def _grid_entry(parent, row: int, label: str, variable: tk.Variable, width: int = 18, column: int = 0) -> ttk.Entry:
@@ -549,6 +619,38 @@ class AddAccisTab(_Tab):
             values['comfort_standard'] = forms.ADD_ACCIS_DEFAULTS['comfort_standard']
         return values
 
+    def state(self) -> Dict[str, Any]:
+        state = super().state()
+        state.update(
+            idfs=_selected(self.idf_list),
+            output_frequencies=_checks_state(self.frequencies),
+            comfort_standard=self.selected_standards(),
+            hvac_mode=_checks_state(self.hvac_modes),
+            ventilation_control=_checks_state(self.ventilation_controls),
+            zone_arguments=self.zone_rows(),
+        )
+        return state
+
+    def restore(self, state: Mapping[str, Any]) -> List[str]:
+        messages = super().restore(state)
+        if 'idfs' in state:
+            messages += _select(self.idf_list, state['idfs'], 'Input IDFs of "1. Add the ACCIS"')
+        for name, checks in (('output_frequencies', self.frequencies), ('hvac_mode', self.hvac_modes),
+                             ('ventilation_control', self.ventilation_controls)):
+            if name in state:
+                _restore_checks(checks, state[name])
+        if 'comfort_standard' in state:
+            # A disabled list (with PMV setpoints) does not change its selection
+            self.standard_list.configure(state='normal')
+            self.standard_list.selection_clear(0, 'end')
+            for index, (number, _) in enumerate(self.standards):
+                if number in state['comfort_standard']:
+                    self.standard_list.selection_set(index)
+        if 'zone_arguments' in state:
+            _set_rows(self.zone_tree, state['zone_arguments'])
+        self.update_state()
+        return messages
+
     def _arguments(self) -> Optional[Dict[str, Any]]:
         try:
             arguments = forms.add_accis_arguments(self.form())
@@ -683,6 +785,18 @@ class ApmvTab(_Tab):
                       output_frequencies=[f for f, variable in self.frequencies.items() if variable.get()])
         return values
 
+    def state(self) -> Dict[str, Any]:
+        return dict(super().state(), output_frequencies=_checks_state(self.frequencies))
+
+    def restore(self, state: Mapping[str, Any]) -> List[str]:
+        messages = super().restore(state)
+        messages += _file_messages(self.vars['idf'].get(), forms.input_idfs(self.folder.get()),
+                                   'Input IDF of "2. aPMV setpoints"')
+        if 'output_frequencies' in state:
+            _restore_checks(self.frequencies, state['output_frequencies'])
+        self.update_state()
+        return messages
+
     def apply(self) -> bool:
         """Apply the aPMV setpoints to the input IDF and save it with the new name (in a thread)."""
         try:
@@ -742,6 +856,22 @@ class RenameEpwsTab(_Tab):
         """The values of the form, for :func:`accim.gui.forms.rename_epws_arguments`."""
         return dict(folder=self.folder.get(), epws=_selected(self.epw_list), cities=self.cities.get('1.0', 'end'),
                     countries=self.countries.get('1.0', 'end'), delete_originals=self.delete_originals.get())
+
+    def state(self) -> Dict[str, Any]:
+        return dict(epws=_selected(self.epw_list), cities=self.cities.get('1.0', 'end-1c'),
+                    countries=self.countries.get('1.0', 'end-1c'), delete_originals=self.delete_originals.get())
+
+    def restore(self, state: Mapping[str, Any]) -> List[str]:
+        messages = []
+        if 'epws' in state:
+            messages += _select(self.epw_list, state['epws'], 'EPWs of "3. Rename the EPWs"')
+        for name, text in (('cities', self.cities), ('countries', self.countries)):
+            if name in state:
+                text.delete('1.0', 'end')
+                text.insert('1.0', state[name])
+        if 'delete_originals' in state:
+            self.delete_originals.set(bool(state['delete_originals']))
+        return messages
 
     def rename(self) -> bool:
         """Rename the selected EPWs (in a thread)."""
@@ -803,6 +933,11 @@ class RunTab(_Tab):
         values['folder'] = self.folder.get()
         return values
 
+    def restore(self, state: Mapping[str, Any]) -> List[str]:
+        messages = super().restore(state)
+        self.preview()
+        return messages
+
     def preview(self) -> None:
         pairs = forms.simulations(self.folder.get(), self.vars['only_accim_idfs'].get())
         idfs = sorted({idf for idf, _ in pairs})
@@ -849,6 +984,10 @@ class HoursTab(_Tab):
     """The occupied hours within the setpoints of the simulations of a folder
     (:mod:`accim.data.postprocessing.setpoint_hours`)."""
 
+    #: The text of the tab before the percentages are computed
+    EXPLANATION = ('The occupied hours in which the operative temperature is within the setpoints, as a percentage of '
+                   'the occupied hours (from the EMS outputs of the hours of accim in the CSV files).')
+
     def __init__(self, app: 'AccimApp'):
         super().__init__(app, '5. Hours within the setpoints')
         body = self.body
@@ -857,6 +996,8 @@ class HoursTab(_Tab):
         self.minimum = tk.StringVar(value='90')
         self.zones = tk.StringVar(value='building')
         self.summary = None
+        #: The table of hours_within_setpoints shown, with the minimum and the zones (for the session files)
+        self.shown: Optional[Dict[str, Any]] = None
         self._folder_row(0, 'Working folder (CSV files of the simulations):')
         _grid_entry(body, 1, 'Minimum percentage of the occupied hours within the setpoints:', self.minimum,
                     width=8).grid(sticky='w')
@@ -866,9 +1007,7 @@ class HoursTab(_Tab):
         ttk.Button(buttons, text='Compute', command=self.compute).pack(side='left')
         self.export_button = ttk.Button(buttons, text='Export to CSV...', command=self.export, state='disabled')
         self.export_button.pack(side='left', padx=6)
-        self.result = tk.StringVar(value='The occupied hours in which the operative temperature is within the '
-                                         'setpoints, as a percentage of the occupied hours (from the EMS outputs of '
-                                         'the hours of accim in the CSV files).')
+        self.result = tk.StringVar(value=self.EXPLANATION)
         self.tree = _tree(body)
         self.tree.master.grid(row=4, column=0, columnspan=2, sticky='nsew')
         self.tree.tag_configure('below', foreground='firebrick')
@@ -891,15 +1030,18 @@ class HoursTab(_Tab):
         return self.app.run_task('Hours within the setpoints', self.folder.get(), task,
                                  on_done=lambda summary: self.show(summary, minimum))
 
-    def show(self, summary, minimum: float) -> None:
-        """Show the percentages of each simulation, and which ones reach the minimum."""
+    def show(self, summary, minimum: float, zones: Optional[str] = None) -> None:
+        """Show the percentages of each simulation, and which ones reach the minimum in the zones (those of the form
+        if None)."""
         from accim.data.postprocessing.setpoint_hours import filter_by_hours_within_setpoints
 
+        zones = self.zones.get() if zones is None else zones
         try:
-            kept = filter_by_hours_within_setpoints(summary, minimum, zones=self.zones.get())
+            kept = filter_by_hours_within_setpoints(summary, minimum, zones=zones)
         except ValueError as error:
             self.app.show_error('Hours within the setpoints', str(error))
             return
+        self.shown = {'summary': summary, 'minimum': minimum, 'zones': zones}
         summary = summary.copy()
         summary['Reaches the minimum'] = summary.index.isin(kept.index)
         columns = ['Source'] + [c for c in summary.columns if str(c).endswith('[%]')] + ['Reaches the minimum']
@@ -914,8 +1056,28 @@ class HoursTab(_Tab):
                       else ('' if row[c] != row[c] else f'{row[c]:.1f}') for c in columns]
             self.tree.insert('', 'end', values=values, tags=() if row['Reaches the minimum'] else ('below',))
         self.result.set(f'{len(kept)} of the {len(summary)} simulations reach {minimum} % of the occupied hours '
-                        f'within the setpoints ({self.zones.get()}).')
+                        f'within the setpoints ({zones}).')
         self.export_button.state(['!disabled'])
+
+    def clear(self) -> None:
+        """Remove the percentages shown."""
+        self.summary = self.shown = None
+        self.tree.delete(*self.tree.get_children())
+        self.tree.configure(columns=())
+        self.result.set(self.EXPLANATION)
+        self.export_button.state(['disabled'])
+
+    def state(self) -> Dict[str, Any]:
+        return dict(minimum=self.minimum.get(), zones=self.zones.get())
+
+    def restore(self, state: Mapping[str, Any], shown: Optional[Mapping[str, Any]] = None) -> List[str]:
+        """Set the fields of the tab, and show the percentages of the session (``shown``), if it has them."""
+        _restore_variables({'minimum': self.minimum, 'zones': self.zones}, state)
+        if shown is None:
+            self.clear()
+        else:
+            self.show(shown['summary'], shown['minimum'], shown['zones'])
+        return []
 
     def export(self) -> None:
         if self.summary is None:
@@ -947,7 +1109,6 @@ class TableTab(_Tab):
         self.levels = {level: tk.BooleanVar(value=level in defaults['level']) for level in ('block', 'building')}
         self.level_funcs = {func: tk.BooleanVar(value=func in defaults['level_agg_func']) for func in ('sum', 'mean')}
         self.table = None
-        self.table_type = defaults['type_of_table']
         self._folder_row(0, 'Working folder (CSV files of the simulations):', refresh=True)
 
         frame = ttk.LabelFrame(body, text='Table', padding=6)
@@ -983,8 +1144,15 @@ class TableTab(_Tab):
         ttk.Button(buttons, text='Make the table', command=self.make_table).pack(side='left')
         self.export_button = ttk.Button(buttons, text='Export the table...', command=self.export, state='disabled')
         self.export_button.pack(side='left', padx=6)
+        self.save_button = ttk.Button(buttons, text='Save the table...', command=self.save_table, state='disabled')
+        self.save_button.pack(side='left')
+        ttk.Button(buttons, text='Open a table...', command=self.open_table).pack(side='left', padx=6)
         self.summary = tk.StringVar(value='')
         ttk.Label(frame, textvariable=self.summary, wraplength=900).grid(row=9, column=0, columnspan=2, sticky='w')
+        ttk.Label(frame, text='"Save the table" saves it in a pickle file, which "Open a table" opens again without '
+                              'the CSV files (also the tables saved in Python with Table.save), and in a JSON file '
+                              'with the same name, to read it.', foreground='gray25', wraplength=900).grid(
+            row=10, column=0, columnspan=2, sticky='w')
 
         self.tree = _tree(body, height=8)
         self.tree.master.grid(row=2, column=0, sticky='nsew', pady=4)
@@ -1065,12 +1233,14 @@ class TableTab(_Tab):
         except forms.FormError as error:
             self.app.show_error('Table', str(error))
             return False
-        self.table_type = arguments['type_of_table']
         return self.app.run_task('Table', self.folder.get(), lambda: tasks.make_table(arguments),
                                  on_done=self.show_table)
 
-    def show_table(self, table) -> None:
-        """Show the table, and the columns that the figures can use."""
+    def show_table(self, table, source: str = '') -> None:
+        """Show the table, and the columns that the figures can use.
+
+        :param source: The file from which the table was opened, if it was.
+        """
         self.table = table
         df = table.df
         variables = list(getattr(table, 'cols_for_multiindex', []) or [])
@@ -1085,14 +1255,94 @@ class TableTab(_Tab):
         differing = '; '.join(f'{name}: {", ".join(str(v) for v in values)}'
                               for name, values in (getattr(table, 'suggested_vars_dict', {}) or {}).items())
         shown = f' (the first {MAX_ROWS_SHOWN} are shown)' if len(df) > MAX_ROWS_SHOWN else ''
-        self.summary.set(f'{len(df)} rows{shown} and {len(df.columns)} columns. The variables whose values differ '
-                         f'between the simulations: {differing or "none (the figures need at least two)"}.')
-        self.export_button.state(['!disabled'])
-        self.figure_button.state(['!disabled'])
+        opened = f'Table of {source} ({getattr(table, "frequency", "")}): ' if source else ''
+        self.summary.set(f'{opened}{len(df)} rows{shown} and {len(df.columns)} columns. The variables whose values '
+                         f'differ between the simulations: {differing or "none (the figures need at least two)"}.')
+        for button in (self.export_button, self.figure_button, self.save_button):
+            button.state(['!disabled'])
+
+    def clear(self) -> None:
+        """Forget the table (when a session without a table is opened)."""
+        self.table = None
+        self.tree.delete(*self.tree.get_children())
+        self.tree.configure(columns=())
+        for listbox in (self.rows_list, self.cols_list, self.y_list):
+            listbox.delete(0, 'end')
+        self.x_combo.configure(values=[])
+        for button in (self.export_button, self.figure_button, self.save_button):
+            button.state(['disabled'])
+        self.refresh()
 
     def export(self) -> None:
         if self.table is not None:
             _export_dataframe(self.app, self.table.df, self.folder.get(), 'accim_table.csv')
+
+    def save_table(self, path: Optional[str] = None) -> bool:
+        """Save the table in a pickle file and a JSON file with the same name (:meth:`Table.save`, in a thread).
+
+        :param path: The path of the pickle file; if None, a dialog asks for it.
+        """
+        if self.table is None:
+            self.app.show_error('Save the table', 'Make the table first.')
+            return False
+        if path is None:
+            path = filedialog.asksaveasfilename(
+                parent=self.app.root, defaultextension='.pkl', initialdir=self.folder.get(),
+                initialfile='accim_table.pkl', filetypes=TABLE_FILE_TYPES,
+                title='Save the table (a pickle file, and a JSON file with the same name to read it)')
+            if not path:
+                return False
+        # The task runs in the folder of the file, so a relative path would be read from there again
+        path = os.path.abspath(path)
+        table = self.table
+        return self.app.run_task('Save the table', _folder_of(path), lambda: tasks.save_table(table, path))
+
+    def open_table(self, path: Optional[str] = None) -> bool:
+        """Open a table saved by this tab or in Python with :meth:`Table.save` (in a thread).
+
+        :param path: The path of the pickle file; if None, a dialog asks for it.
+        """
+        if path is None:
+            path = filedialog.askopenfilename(parent=self.app.root, initialdir=self.folder.get(),
+                                              filetypes=TABLE_FILE_TYPES,
+                                              title='Open a table saved by this tab or with Table.save')
+            if not path:
+                return False
+        path = os.path.abspath(path)
+        return self.app.run_task('Open a table', _folder_of(path), lambda: tasks.open_table(path),
+                                 on_done=lambda table: self.show_table(table, source=path))
+
+    def state(self) -> Dict[str, Any]:
+        state = super().state()
+        state.update(
+            level=_checks_state(self.levels),
+            level_agg_func=_checks_state(self.level_funcs),
+            vars_to_gather_rows=_selected(self.rows_list),
+            vars_to_gather_cols=_selected(self.cols_list),
+            data_on_y_main_axis=_selected(self.y_list),
+        )
+        return state
+
+    def restore(self, state: Mapping[str, Any], table=None) -> List[str]:
+        """Set the fields of the tab, and show the table of the session (``table``), if it has one."""
+        messages = super().restore(state)
+        messages += _file_messages(self.vars['idf_path'].get(), forms.idf_files(self.folder.get()),
+                                   'IDF of "6. Table and figures"')
+        for name, checks in (('level', self.levels), ('level_agg_func', self.level_funcs)):
+            if name in state:
+                _restore_checks(checks, state[name])
+        if table is None:
+            self.clear()
+            return messages
+        x_axis = self.vars['data_on_x_axis'].get()
+        self.show_table(table)
+        for listbox, name in ((self.rows_list, 'vars_to_gather_rows'), (self.cols_list, 'vars_to_gather_cols'),
+                              (self.y_list, 'data_on_y_main_axis')):
+            messages += _select(listbox, state.get(name, []), f'Columns of the figure of "6. Table and figures" '
+                                                                f'({name})')
+        if x_axis in self.y_list.get(0, 'end'):
+            self.vars['data_on_x_axis'].set(x_axis)
+        return messages
 
     def make_figure(self) -> bool:
         """Make the figure of the table, save it in the folder and open it (in a thread)."""
@@ -1104,11 +1354,11 @@ class TableTab(_Tab):
         except forms.FormError as error:
             self.app.show_error('Figure', str(error))
             return False
-        table, table_type = self.table, self.table_type
+        table = self.table
 
         def task():
             # The figures filter the rows of the table: each one starts from the whole table
-            table.format_table(type_of_table=table_type)
+            table.format_table(**tasks.table_format(table))
             return tasks.make_figure(table, arguments)
 
         return self.app.run_task('Figure', self.folder.get(), task, on_done=_open_file,
@@ -1287,6 +1537,33 @@ class ParametricTab(_Tab):
         self.count.set(f'{len(results)} simulations; the results are also in the folder of the results.')
         self.export_button.state(['!disabled'])
 
+    def clear_results(self) -> None:
+        """Remove the results shown (when a session without results is opened)."""
+        self.results = None
+        self.tree.delete(*self.tree.get_children())
+        self.tree.configure(columns=())
+        self.count.set('')
+        self.export_button.state(['disabled'])
+
+    def state(self) -> Dict[str, Any]:
+        return dict(super().state(), epws=_selected(self.epw_list), parameters=self.parameter_rows())
+
+    def restore(self, state: Mapping[str, Any], results=None) -> List[str]:
+        """Set the fields of the tab, and show the results of the session (``results``), if it has them."""
+        messages = super().restore(state)
+        messages += _file_messages(self.vars['idf'].get(), forms.input_idfs(self.folder.get()),
+                                   'Input IDF of "7. Parametric study"')
+        if 'epws' in state:
+            messages += _select(self.epw_list, state['epws'], 'EPWs of "7. Parametric study"')
+        if 'parameters' in state:
+            _set_rows(self.parameter_tree, state['parameters'])
+        self.update_state()
+        if results is None:
+            self.clear_results()
+        else:
+            self.show_results(results)
+        return messages
+
     def export(self) -> None:
         if self.results is not None:
             _export_dataframe(self.app, self.results, self.folder.get(), 'accim_parametric_results.csv')
@@ -1303,6 +1580,9 @@ class AccimApp:
     :ivar hours: The tab of the occupied hours within the setpoints.
     :ivar table: The tab of the tables and figures of the results.
     :ivar parametric: The tab of the parametric study.
+
+    The menu *Session* saves the values of the forms and the results of the tabs in a session file
+    (:meth:`save_session`) and opens it again (:meth:`open_session`).
     """
 
     def __init__(self, root: Optional[tk.Tk] = None):
@@ -1314,6 +1594,12 @@ class AccimApp:
         self.busy = False
         #: The working folder of the tabs
         self.folder = tk.StringVar(value=os.getcwd())
+        self.menu = tk.Menu(self.root, tearoff=0)
+        session_menu = tk.Menu(self.menu, tearoff=0)
+        session_menu.add_command(label='Open a session...', command=self.open_session)
+        session_menu.add_command(label='Save the session...', command=self.save_session)
+        self.menu.add_cascade(label='Session', menu=session_menu)
+        self.root.configure(menu=self.menu)
         panes = ttk.PanedWindow(self.root, orient='vertical')
         panes.pack(fill='both', expand=True, padx=6, pady=6)
         self.notebook = ttk.Notebook(panes)
@@ -1347,6 +1633,81 @@ class AccimApp:
         self.run.preview()
         self.table.refresh()
         self.parametric.refresh()
+
+    # Sessions
+    def tabs(self) -> Dict[str, _Tab]:
+        """The tabs, by the names of their attributes (the keys of their forms in the session files)."""
+        return {'add_accis': self.add_accis, 'apmv': self.apmv, 'rename_epws': self.rename_epws, 'run': self.run,
+                'hours': self.hours, 'table': self.table, 'parametric': self.parametric}
+
+    def session_objects(self) -> Dict[str, Any]:
+        """The objects of the session file of the window: the values of the forms
+        (:data:`accim.gui.tasks.SESSION_FORMS`: the working folder and the fields of each tab) and the results of the
+        tabs that have them (``table``, ``hours_within_setpoints`` and ``parametric_results``)."""
+        forms_state = {'folder': self.folder.get(), **{key: tab.state() for key, tab in self.tabs().items()}}
+        objects: Dict[str, Any] = {tasks.SESSION_FORMS: forms_state}
+        if self.table.table is not None:
+            objects['table'] = self.table.table
+        if self.hours.shown is not None:
+            objects['hours_within_setpoints'] = self.hours.shown
+        if self.parametric.results is not None:
+            objects['parametric_results'] = self.parametric.results
+        return objects
+
+    def save_session(self, path: Optional[str] = None) -> bool:
+        """Save the session: the values of the forms and the results of the tabs, in a pickle file, which
+        :meth:`open_session` opens, and in a JSON file with the same name, to read it (in a thread).
+
+        :param path: The path of the pickle file; if None, a dialog asks for it.
+        """
+        if path is None:
+            path = filedialog.asksaveasfilename(
+                parent=self.root, defaultextension='.pkl', initialdir=self.folder.get(),
+                initialfile='accim_session.pkl', filetypes=SESSION_FILE_TYPES,
+                title='Save the session (a pickle file, and a JSON file with the same name to read it)')
+            if not path:
+                return False
+        # The task runs in the folder of the file, so a relative path would be read from there again
+        path = os.path.abspath(path)
+        objects = self.session_objects()
+        return self.run_task('Save the session', _folder_of(path), lambda: tasks.save_session(path, objects))
+
+    def open_session(self, path: Optional[str] = None) -> bool:
+        """Open a session saved by :meth:`save_session`, which replaces the values of the forms and the results of the
+        tabs (in a thread).
+
+        :param path: The path of the pickle file; if None, a dialog asks for it.
+        """
+        if path is None:
+            path = filedialog.askopenfilename(parent=self.root, initialdir=self.folder.get(),
+                                              filetypes=SESSION_FILE_TYPES, title='Open a session of accim')
+            if not path:
+                return False
+        path = os.path.abspath(path)
+        return self.run_task('Open a session', _folder_of(path), lambda: tasks.open_session(path),
+                             on_done=self.restore_session)
+
+    def restore_session(self, session: Mapping[str, Any]) -> None:
+        """Set the working folder, the fields of the tabs and their results to those of a session (the objects of
+        :func:`accim.gui.tasks.open_session`); the log shows the files of the session that are not in the folder."""
+        forms_state = session[tasks.SESSION_FORMS]
+        messages: List[str] = []
+        folder = forms_state.get('folder', '')
+        if folder and os.path.isdir(folder):
+            # The tabs list the files of the folder before their selections are restored
+            self.folder.set(folder)
+        elif folder:
+            messages.append(f'The working folder of the session, {folder}, does not exist: the tabs keep '
+                            f'{self.folder.get()}.')
+        results = {'table': session.get('table'), 'hours': session.get('hours_within_setpoints'),
+                   'parametric': session.get('parametric_results')}
+        for key, tab in self.tabs().items():
+            if key in results:
+                messages += tab.restore(forms_state.get(key, {}), results[key])
+            else:
+                messages += tab.restore(forms_state.get(key, {}))
+        self.log_text('The forms and the results of the session have been restored.\n'
+                      + ''.join(f'    {message}\n' for message in messages))
 
     # Dialogs (the tests replace them)
     def show_error(self, title: str, message: str) -> None:

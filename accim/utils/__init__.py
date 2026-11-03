@@ -14,6 +14,8 @@ which takes long to import):
 - :mod:`accim.utils.outputs`: the outputs available in a model, and the ESO files.
 - :mod:`accim.utils.verification`: verification of the simulations of the models of accim.
 - :mod:`accim.utils.workspace`: cleaning of the files that the simulations write.
+- :mod:`accim.utils.session`: sessions saved in a pickle file, to resume them, and in a JSON file, to read them
+  (``save_session`` and ``load_session``).
 
 All the functions can be imported from :mod:`accim.utils`, as in accim 0.x
 (for instance, ``from accim.utils import reduce_runtime``).
@@ -58,6 +60,8 @@ _SUBMODULES = {
     'verify_accim_simulation': 'verification',
     'AccimSimulationVerifier': 'verification',
     'WorkspaceArtifactCleaner': 'workspace',
+    'save_session': 'session',
+    'load_session': 'session',
 }
 #: Functions of besos that accim 0.x imported in this module, which some scripts import from it
 _BESOS_FUNCTIONS = {

@@ -4,7 +4,7 @@
 
 """A graphical user interface (GUI) for accim, in English: add the ACCIS or the aPMV setpoints to IDF files, rename the
 EPW files, run the simulations, measure the occupied hours within the setpoints, make tables and figures of the
-results and run a basic parametric study, without writing Python.
+results and run a basic parametric study, without writing Python; and save the session in a file, to resume it later.
 
 Open it with the command ``accim-gui``, installed with accim, or with ``python -m accim.gui``. It uses tkinter, which
 comes with Python on Windows and macOS (on Linux, it may need the package of the distribution, such as

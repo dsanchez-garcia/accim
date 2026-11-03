@@ -14,7 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-from typing import Union
+from typing import Tuple, Union
 
 from accim._deprecation import accepts_legacy_kwargs
 
@@ -360,6 +360,12 @@ class Table:
         method ``wrangled_table`` with ``reshaping='multiindex'``
     :ivar wrangled_df_pivoted: The resulting pandas DataFrame after calling the
         method ``wrangled_table`` with ``reshaping='pivot'``
+    :ivar arguments: A dictionary with the arguments with which the table was made.
+    :ivar type_of_table: The ``type_of_table`` of the last call to ``format_table`` (and ``custom_cols``, its
+        ``custom_cols``).
+
+    The method ``save`` saves the table in a pickle file, which ``Table.load`` reads to resume the session without
+    reading the CSV files again, and in a JSON file that can be read.
     """
 
     @accepts_legacy_kwargs({'name_export_rows_with_NaN': 'name_export_rows_with_nan'})
@@ -389,6 +395,11 @@ class Table:
         """
         Constructor method
         """
+        # The arguments of the table, which its JSON file shows (see save)
+        arguments = {name: value for name, value in locals().items() if name != 'self'}
+        import copy
+
+        self.arguments = copy.deepcopy(arguments)
         checkpoint = 0
 
         if datasets is None:
@@ -1738,6 +1749,105 @@ class Table:
 
         # todo pop up when process ends; by default True
 
+    #: The attributes of a table that its JSON file shows (see save), in this order
+    _JSON_ATTRIBUTES = (
+        'arguments', 'frequency', 'occupied_zone_list', 'hvac_zone_list', 'block_list', 'cols_for_multiindex',
+        'suggested_vars_dict', 'type_of_table', 'custom_cols', 'indexcols', 'val_cols', 'df',
+        'wrangled_df_pivoted', 'wrangled_df_unstacked', 'wrangled_df_stacked', 'wrangled_df_multiindex',
+    )
+
+    def _json_content(self) -> dict:
+        """The attributes of the table that its JSON file shows (see :meth:`save`), which :mod:`accim.utils.session`
+        converts to JSON."""
+        return {name: getattr(self, name) for name in self._JSON_ATTRIBUTES if hasattr(self, name)}
+
+    def save(self, filename: str = 'accim_table', json_max_rows: Union[int, None] = 1000) -> Tuple[str, str]:
+        """Save the table in a pickle file, to resume the session with :meth:`Table.load` without reading the CSV
+        files again, and in a JSON file, to read it::
+
+            dataset_runperiod.save('case_study_runperiod')
+            # ... in another session (for instance, after restarting the kernel of a notebook):
+            from accim.data.postprocessing.main import Table
+            dataset_runperiod = Table.load('case_study_runperiod.pkl')
+
+        - ``<filename>.pkl`` has the whole table: its DataFrames (``df``, ``df_backup`` and the tables of
+          :meth:`wrangled_table`) and its other attributes, so that its methods work after :meth:`load` as before.
+        - ``<filename>.json`` is a copy that people and other programs can read (it is not read back): the version of
+          accim, the date and the working folder, and the attributes of the table: ``arguments`` (those of Table),
+          ``frequency``, ``occupied_zone_list``, ``hvac_zone_list``, ``block_list``, ``cols_for_multiindex`` and
+          ``suggested_vars_dict`` (the variables whose values differ between the simulations, and their values),
+          ``type_of_table``, ``custom_cols``, ``indexcols`` and ``val_cols`` (those of :meth:`format_table`), ``df``
+          (the table as :meth:`format_table` left it) and the tables of :meth:`wrangled_table` (the names of their
+          columns of several levels joined with '['). Each of these tables shows its number of rows and the values of
+          its first rows: ``{'number_of_rows': ..., 'rows_shown': ..., 'data': {column: [values]}}``. The values that
+          JSON does not have are null (NaN) or texts ('Infinity').
+
+        To save several tables, or other objects, in one file, use :func:`accim.utils.save_session`.
+
+        :param filename: The name of the two files, without extension (``.pkl`` or ``.json`` are left out), in the
+            working folder or with a path. Existing files with these names are replaced.
+        :type filename: str
+        :param json_max_rows: The number of rows of each table that the JSON file shows (hourly tables of many
+            simulations have hundreds of thousands, which would make the JSON file large and slow to write); None
+            shows all of them. The pickle file always has all of them.
+        :type json_max_rows: int or None
+        :return: The paths of the pickle file and of the JSON file.
+        :rtype: tuple
+        """
+        import os
+
+        from accim.utils.session import (_check_json_max_rows, _file_paths, _json_value, _metadata, _rows_note,
+                                         _save_files)
+
+        if not hasattr(self, 'df'):
+            raise ValueError('This Table has no table to save: with concatenated_csv_name, it only writes the '
+                             'concatenated CSV file, which Table reads with source_concatenated_csv_filepath.')
+        _check_json_max_rows(json_max_rows)
+        pickle_name = os.path.basename(_file_paths(filename)[0])
+
+        def readable() -> dict:
+            return {
+                'description': f'Table of accim: a readable copy of the table of the pickle file {pickle_name}, '
+                               f'which Table.load reads to resume the session (this file is not read back). '
+                               f'{_rows_note(json_max_rows)}',
+                **_metadata(),
+                **_json_value(self, json_max_rows),
+            }
+
+        pickle_path, json_path = _save_files(self, readable, filename, {'table': self})
+        print(f'The table has been saved in {pickle_path} (Table.load resumes it) and in {json_path} (to read it).')
+        return pickle_path, json_path
+
+    @classmethod
+    def load(cls, pickle_path: str) -> 'Table':
+        """A table saved with :meth:`save`, to resume the session without reading the CSV files again: its methods
+        (:meth:`format_table`, :meth:`wrangled_table`, the figures...) work as before saving it::
+
+            from accim.data.postprocessing.main import Table
+            dataset_runperiod = Table.load('case_study_runperiod.pkl')
+
+        Open only the files that you or someone you trust saved: pickle files can run code when they are read.
+
+        :param pickle_path: The path of the pickle file (the extension ``.pkl`` can be left out).
+        :type pickle_path: str
+        :return: The table.
+        :raises FileNotFoundError: If the file does not exist.
+        :raises ValueError: If it is the JSON file, or a file without a table of :meth:`save` (the sessions of
+            :func:`accim.utils.save_session` are read with :func:`accim.utils.load_session`).
+        """
+        from accim.utils.session import _read_pickle
+
+        table, path = _read_pickle(pickle_path)
+        if not isinstance(table, Table):
+            hint = (' It is a session saved with save_session: open it with accim.utils.load_session (or, if the '
+                    'graphical user interface saved it, with "Open a session..." in its menu Session).'
+                    if isinstance(table, dict) and 'accim_session' in table else '')
+            raise ValueError(f'{path} does not have a table saved with Table.save.{hint}')
+        rows, columns = table.df.shape
+        print(f'The table has been loaded from {path}: {rows} rows and {columns} columns, with the frequency '
+              f'{table.frequency}.')
+        return table
+
     def gather_vars_query(
             self,
             vars_to_gather: list = None
@@ -1776,10 +1886,16 @@ class Table:
         """
         if custom_cols is None:
             custom_cols = []
+        # Once, since a generator or a map can only be read once
+        custom_cols = list(custom_cols)
         # if custom_rows is None:
         #     custom_rows = []
 
         self.df = self.df_backup
+        # The columns of the table, which the files of the table keep (see save), so that the graphical user interface
+        # can make the table again from the whole table before each figure: those of the call, once it succeeds (until
+        # then, the whole table)
+        self.type_of_table, self.custom_cols = 'all', []
 
         # self.split_epw_names = split_epw_names
 
@@ -1884,6 +2000,7 @@ class Table:
 
         if not (type_of_table == 'all'):
             self.df = self.df[self.indexcols + self.val_cols]
+        self.type_of_table, self.custom_cols = type_of_table, custom_cols
 
         checkpoint = 0
 
