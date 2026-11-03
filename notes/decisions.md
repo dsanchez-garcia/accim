@@ -11,6 +11,36 @@ Durable architectural/process decisions for this repository and its Obsidian
 vault. Newest first. Use [[templates/decision-record.md|the decision-record
 template]] to add a new entry.
 
+## 2026-11-03 — Tables and sessions are saved in a pickle file, to resume them, and a JSON file, to read them
+
+- **Status**: accepted (the author asked to save a pickle file that resumes the session of the classic workflow, as
+  in the research paper notebook, "as the parametric module already does", also in the GUI, with a readable JSON
+  file; he chose both `Table.save`/`Table.load` and `save_session`/`load_session`, and in the GUI the whole session
+  plus opening tables saved in Python)
+- **Context**: the results of `run_ep` stay in the CSV files, but the tables of `Table` were lost with the session,
+  and making them again reads every CSV file (an hourly table of only 4 sample CSV files takes about 9 s; one of the
+  20 of the case study, much longer). The GUI forgot its forms and results when closed.
+- **Decision**: two files with the same name: a pickle file (`pd.to_pickle`, as the parametric module), which
+  resumes the session, written first, and a JSON file only for reading (metadata first, strict JSON: NaN as `null`,
+  infinity as `"Infinity"`, `ensure_ascii=False`), never read back, in which each DataFrame shows its number of rows
+  and its first 1000 rows (`json_max_rows`; `None` for all): the whole JSON of the hourly table of the 4 sample CSV
+  files took 5.4 s and 70 MB (its pickle, 0.06 s), and the review of the change found 21.5 s, 292 MB and 0.5 GB of
+  memory for 24 simulations; with the limit, 0.11 s and 2.3 MB. `Table.save`/`Table.load` pickle the `Table` itself
+  (all its attributes, so that its methods work as before), with `Table._JSON_ATTRIBUTES` in the JSON (`df` as
+  `format_table` left it, not `df_backup`); `accim.utils.save_session(filename, /, *, json_max_rows=1000, **objects)`
+  pickles a dictionary with `accim_session` (format 1), the version, the date, the working folder and the objects,
+  and `load_session` returns the objects by name. Each file is written through a temporary one; an object that
+  pickle cannot save is named in the error. `Table` keeps `arguments` and the `type_of_table`/`custom_cols` of the
+  last successful `format_table` (`'all'` after one that fails), so that the GUI can make a table again from
+  `df_backup` before each figure. The GUI session (menu *Session*) is a `save_session` file with `gui_forms` (the
+  folder and the `state()` of each tab) and the results of the tabs 5, 6 and 7; opening it replaces the forms and
+  the results, and lists the files that are no longer in the folder.
+- **Consequences**: pickle files can run code when they are read, and need a pandas that reads those of the version
+  that saved them (documented); the pickle files of hourly tables of many simulations are large, as their CSV files.
+  A table saved in Python
+  opens in the tab *Table and figures*, and a session of the GUI loads in Python with `load_session`. Section 4.7.2
+  of [[../docs/source/4_detailed use.md]]; tests in `tests/core/test_session.py` and `tests/core/test_gui.py`.
+
 ## 2026-11-03 — The radiant systems, ventilated slabs and cooling panels follow the setpoints with `existing_hvac_radiant_setpoints`
 
 - **Status**: accepted (the author answered the TODO item on 2026-11-03: "yes, but as one or several True/False

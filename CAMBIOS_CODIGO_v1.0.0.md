@@ -67,6 +67,9 @@ Lo que ya está en otros documentos no se repite aquí:
   distintos en algunas zonas) o las consignas aPMV, renombrar los EPW, simular, medir las horas ocupadas
   dentro de las consignas, hacer tablas y figuras de los resultados y un estudio paramétrico básico sin
   escribir Python.
+- Las tablas de `Table` y los objetos de una sesión se guardan en un archivo pickle, para retomar la sesión,
+  y en un JSON, para leerlos (`Table.save` y `Table.load`, `accim.utils.save_session` y `load_session`); la
+  GUI guarda y abre así sus sesiones.
 
 **Tamaño** (líneas de Python, sin los archivos de ejemplo):
 
@@ -101,11 +104,11 @@ Lo que ya está en otros documentos no se repite aquí:
 | 0.8.2 | 1.0.0 |
 | --- | --- |
 | `accim/__init__.py`: importaba besos, dask y platypus y les aplicaba parches | Sin efectos: `__version__`, y los subpaquetes se importan al usarlos (`import accim` y luego `accim.utils...`). Los parches están en `accim/_besos_compat.py`, que aplica `accim.parametric_and_optimisation` |
-| `accim/utils.py` (3 350 líneas, importaba besos) | Paquete `accim/utils/`: `people`, `editing`, `accim_args`, `versions`, `outputs`, `verification` y `workspace`. Cada función se importa al usarla (`__getattr__` de PEP 562), así que `from accim.utils import reduce_runtime` sigue funcionando |
+| `accim/utils.py` (3 350 líneas, importaba besos) | Paquete `accim/utils/`: `people`, `editing`, `accim_args`, `versions`, `outputs`, `verification`, `workspace` y `session` (nuevo: las sesiones en archivos pickle y JSON). Cada función se importa al usarla (`__getattr__` de PEP 562), así que `from accim.utils import reduce_runtime` sigue funcionando |
 | — | `accim/energyplus.py`: las instalaciones de EnergyPlus (`find_energyplus`, `idd_path`, `read_idf_version` y la variable de entorno `ACCIM_ENERGYPLUS_DIR`) |
 | Constantes repartidas | `accim/constants.py` (`SUPPORTED_ENERGYPLUS_VERSIONS`...); `accim/lists.py` se mantiene por compatibilidad |
 | — | `accim/_deprecation.py`: el mecanismo de los nombres antiguos (sección 7) |
-| — | `accim/gui/`: la interfaz gráfica en inglés (orden `accim-gui`, con tkinter): `forms.py` (los campos de cada pestaña, sus valores por defecto y los argumentos de accim que dan, comprobados, sin tkinter), `tasks.py` (las tareas que llaman a accim con esos argumentos: las zonas ocupadas, las consignas aPMV, `rename_epw_files`, `Table` y sus figuras y el estudio paramétrico) y `app.py` (la ventana: siete pestañas con una carpeta de trabajo común; cada tarea en un hilo, con lo que imprime en el registro y sin preguntas en el prompt, salvo las que la tarea sabe responder) |
+| — | `accim/gui/`: la interfaz gráfica en inglés (orden `accim-gui`, con tkinter): `forms.py` (los campos de cada pestaña, sus valores por defecto y los argumentos de accim que dan, comprobados, sin tkinter), `tasks.py` (las tareas que llaman a accim con esos argumentos: las zonas ocupadas, las consignas aPMV, `rename_epw_files`, `Table` y sus figuras y el estudio paramétrico) y `app.py` (la ventana: siete pestañas con una carpeta de trabajo común; cada tarea en un hilo, con lo que imprime en el registro y sin preguntas en el prompt, salvo las que la tarea sabe responder; el menú *Session* guarda y abre la sesión: los valores de los formularios, que da el método `state` de cada pestaña y restaura `restore`, y los resultados de las pestañas 5, 6 y 7) |
 | `run/run.py` (`runEp`) | `run/run.py`: `run_ep`, con `backend='ems'` o `'api'`, y `simulation_name` |
 | `accim.data` | Igual, con `gen_csv_concatenated`, `preview_table_cols` y `name_export_rows_with_nan` (los nombres antiguos funcionan) |
 | `accim.parametric_and_optimisation` | Igual, con los nombres de los argumentos, atributos y parámetros de `accim.sim` (sección 7); cambian sus llamadas internas a `accim.sim` (y algunas correcciones, sección 10). Nuevo `_pareto.py` (la dominancia con restricciones) y, en `objectives.py`, `checked_sum_results`, `hours_outside_comfort` y `fraction_outside_comfort` |
@@ -313,12 +316,17 @@ EMS.
 ## 9. El resto del paquete
 
 - `accim.utils`: las mismas funciones, repartidas en submódulos, que se importan al usarlas. Las
-  funciones de besos que 0.x importaba en `accim.utils` (`get_building`...) siguen disponibles.
+  funciones de besos que 0.x importaba en `accim.utils` (`get_building`...) siguen disponibles. Nuevo
+  `session.py`: `save_session` guarda objetos con nombre en un pickle (para `load_session`) y después en un JSON
+  para leer (`_json_value` convierte las tablas, de las que muestra las primeras `json_max_rows` filas, los
+  DataFrames, los números de numpy...; NaN e infinito no existen en JSON), cada archivo a través de uno temporal.
 - `accim.energyplus`: busca las instalaciones de EnergyPlus (en su carpeta por defecto o en
   `ACCIM_ENERGYPLUS_DIR`), sus IDD y la versión de un IDF. Lo usan `load_idf`, `run_ep` y el backend de
   la API.
 - `accim.run`: `run_ep` con los dos backends, y `remove_files` (antes `removefiles`).
-- `accim.data`: la misma estructura, con nombres nuevos y alias.
+- `accim.data`: la misma estructura, con nombres nuevos y alias. `Table` guarda sus argumentos
+  (`arguments`) y los del último `format_table` (`type_of_table`, `custom_cols`), y tiene `save` y `load`
+  (los atributos del JSON están en `Table._JSON_ATTRIBUTES`).
 - `accim.parametric_and_optimisation`: su uso no cambia, salvo los nombres (los de `accim.sim`). Llama a `accis.add_accis_to_idf`,
   `accis.modify_accis` y `accim.sim.apmv` en vez de a los módulos de 0.x, y aplica los parches de besos
   (`_besos_compat`) al importarse.
@@ -427,7 +435,7 @@ Están en la sección 9.3 de la guía de migración y en `CHANGELOG.md`. En resu
 
 | Carpeta | Qué prueba | Cómo se ejecuta |
 | --- | --- | --- |
-| `tests/core` | `accim.sim`, el intérprete de Erl (`test_erl.py`), el backend de la API (`test_energyplus_api.py`, con simulaciones con los dos backends), la generación (`test_generation.py`), el *golden master* de los IDF de salida (`test_golden_master.py`), los nombres antiguos (`test_deprecation.py`), `accim.utils` (`test_utils_package.py`), el dimensionado (`test_sizing.py`)... | `python -m pytest tests/core tests/parametric_and_optimisation -q -p no:cacheprovider`. Cada test que necesita una versión de EnergyPlus se salta si no está instalada; `--update-golden` vuelve a escribir los archivos golden tras un cambio buscado |
+| `tests/core` | `accim.sim`, el intérprete de Erl (`test_erl.py`), el backend de la API (`test_energyplus_api.py`, con simulaciones con los dos backends), la generación (`test_generation.py`), el *golden master* de los IDF de salida (`test_golden_master.py`), los nombres antiguos (`test_deprecation.py`), `accim.utils` (`test_utils_package.py`), las sesiones guardadas (`test_session.py`), el dimensionado (`test_sizing.py`)... | `python -m pytest tests/core tests/parametric_and_optimisation -q -p no:cacheprovider`. Cada test que necesita una versión de EnergyPlus se salta si no está instalada; `--update-golden` vuelve a escribir los archivos golden tras un cambio buscado |
 | `tests/parametric_and_optimisation` (`test_*.py`) | El módulo paramétrico, sin EnergyPlus o con simulaciones cortas | Con la orden anterior |
 | `tests/parametric_and_optimisation` (`NN_test_*.py`) | Simulaciones reales con EnergyPlus 9.6 (87 tests) | Dándolos explícitamente, desde una carpeta de trabajo (ver su `README.md`) |
 | `tests/parametric_and_optimisation_full_workflow` | Flujos completos (5 scripts) | `python -m pytest <script> -s` desde su carpeta; si el script llega al final, pytest dice «no tests ran» |
@@ -457,4 +465,5 @@ Durante la refactorización se usaron dos herramientas que ahora están en el re
 | Renombrar un argumento | El argumento en las funciones, y el nombre antiguo en `arguments.LEGACY_ARGUMENT_NAMES` (o en la correspondencia de su módulo, sección 7); en el módulo paramétrico, también el parámetro (`params_dicts`) |
 | Añadir una función de Erl al backend de la API | `ems/erl.py`: `_FUNCTIONS`, la versión rápida en `_FAST_NAMESPACE` y la exacta en `_ExactEvaluator.function`, con un test en `tests/core/test_erl.py` |
 | Cambiar lo que pregunta `AddAccis` | `prompts.py`, y las transcripciones de `docs/source/4_detailed use.md` (ver `docs/README.md`, §5) |
+| Cambiar lo que guardan las sesiones | `utils/session.py` (`save_session`, `load_session` y la conversión a JSON), `Table._JSON_ATTRIBUTES`, `Table.save` y `Table.load` (`data/postprocessing/main.py`) y, en la GUI, los métodos `state` y `restore` de cada pestaña y `AccimApp.session_objects` y `restore_session` (`gui/app.py`) |
 | Cambiar a propósito los IDF de salida | Después del cambio, `python tests/core/golden_master/runner.py write CARPETA` y `compare CARPETA` para ver qué cambia, y `python -m pytest tests/core/test_golden_master.py --update-golden` para guardar los nuevos golden (ver `tests/core/golden_master/README.md`) |

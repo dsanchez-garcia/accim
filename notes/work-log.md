@@ -15,6 +15,14 @@ This log is a lightweight, session-scoped complement to the repository's
 existing tracking files — it does not replace them (see
 [[decisions.md#2026-09-13 — `notes/work-log.md` complements, not replaces, existing tracking files|the related decision]]).
 
+## 2026-11-03 — Sessions saved in a pickle file and a readable JSON file
+
+- **Objective**: The request of the author: save a pickle file that resumes the session of the classic workflow (as in the notebook of the research paper case study), as the parametric module does, also in the GUI, and a JSON file that people can read; he chose `Table.save`/`Table.load` and `save_session`/`load_session`, and in the GUI the whole session plus opening tables saved in Python.
+- **Affected files**: `accim/utils/session.py` (new), `accim/utils/__init__.py`, `accim/data/postprocessing/main.py` (`Table`), `accim/gui/` (`app.py`, `tasks.py`, `__init__.py`), `tests/core/test_session.py` (new), `tests/core/test_gui.py`, the notebook of the research paper case study and its page; [[../docs/source/4_detailed use.md]] (4.7.2, 4.10), [[../README.md]], [[../CHANGELOG.md]], [[../DEVLOG.md]], [[../TODO.md]], [[../CAMBIOS_CODIGO_v1.0.0.md]], [[decisions.md]].
+- **Finding or decision**: See [[decisions.md#2026-11-03 — Tables and sessions are saved in a pickle file, to resume them, and a JSON file, to read them|the decision]]: the pickle file resumes the session and is written first; the JSON file is only for reading, and shows at most 1000 rows of each table (`json_max_rows`), since the review found that the JSON of whole hourly tables cost seconds to minutes and hundreds of MB. The review also found that `format_table` recorded its arguments before its checks, and that the GUI resolved relative paths twice: both fixed.
+- **Validation**: 14 new tests of the sessions and 9 of the GUI; a GUI session reopened in a new window; the notebook ran end to end (2007 s) and its page was regenerated, with only the expected differences; 1249 tests of `tests/core` and `tests/parametric_and_optimisation` passed, and the documentation builds without new warnings; details in [[../DEVLOG.md]].
+- **Next step**: the review of the author; the release ([[../TODO.md]]).
+
 ## 2026-11-03 — The answers to the P2 items, EnergyPlus 26.1, and the EMS of 0.8.2 against 1.0.0
 
 - **Objective**: Apply the answers of the author to the five P2 items of [[../TODO.md]] (radiant systems with a True/False argument, the `existing_hvac_*` arguments in the GUI, ESP CTE in the full sets, his correction of CHN Yang, EnergyPlus 26.1), and show him an output IDF to see whether the EMS code changed since 0.x.

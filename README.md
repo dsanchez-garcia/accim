@@ -173,6 +173,8 @@ https://github.com/dsanchez-garcia/accim/blob/master/accim/sample_files/jupyter_
 
 To run it on your computer, copy the folder `jupyter_notebooks/Table` of the sample files to a working folder (see section 2.1.1).
 
+Since accim 1.0.0, the tables can be saved to resume the session later without reading the CSV files again: `table.save('name')` writes a pickle file, which `Table.load('name.pkl')` reads, and a JSON file that can be read; `save_session` and `load_session` of `accim.utils` do the same with several objects at once. See https://accim.readthedocs.io/en/master/4_detailed%20use.html#saving-sessions
+
 ### 2.2.5 Full example: from preparation of the input IDFs and EPWs, to simulation and data analysis and visualization
 
 You can see a Jupyter Notebook in the link below:  
@@ -222,7 +224,7 @@ You can apply aPMV setpoints to a building using the following function:
 
 ### 2.2.7 Graphical user interface
 
-Since accim 1.0.0, a graphical user interface, in English, adds the ACCIS (with different arguments for some zones if needed) or the aPMV setpoints to the IDF files of a folder, renames the EPW files, runs the simulations, measures the occupied hours within the setpoints, makes tables and figures of the results and runs a basic parametric study, without writing Python. Open it with the command:
+Since accim 1.0.0, a graphical user interface, in English, adds the ACCIS (with different arguments for some zones if needed) or the aPMV setpoints to the IDF files of a folder, renames the EPW files, runs the simulations, measures the occupied hours within the setpoints, makes tables and figures of the results and runs a basic parametric study, without writing Python; its sessions can be saved and opened again. Open it with the command:
 
     accim-gui
 

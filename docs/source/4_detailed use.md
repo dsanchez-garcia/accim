@@ -746,6 +746,33 @@ table = Table(datasets=list(kept['Source']), source_frequency='hourly', frequenc
 - It also takes a table with one row for each simulation and the sums of these outputs, such as the results of the parametric module (see {doc}`parametric_and_optimisation`, step 3), or the table of `Table` (`Table.df`, whose percentages are those of each row: a month, a day...), and returns it with the percentages.
 - `filter_by_hours_within_setpoints` takes the same results, or the table of `hours_within_setpoints`, and keeps the rows that reach `min_percentage` in the building (`zones='building'`, the default), in every occupied zone (`zones='all'`) or in the zones of a list.
 
+(saving-sessions)=
+### 4.7.2 Saving the tables to resume the session
+
+The CSV files of the simulations stay in the working folder, but the tables of `Table` are lost when the script ends or the kernel of the notebook restarts, and making them again reads all the CSV files, which takes a while with many hourly files. Since accim 1.0.0, they can be saved in files, to resume the session later without making them again:
+
+```python
+from accim.data.postprocessing.main import Table
+from accim.utils import load_session, save_session
+
+# One table: case_study_runperiod.pkl, which Table.load reads, and case_study_runperiod.json, to read it
+dataset_runperiod.save('case_study_runperiod')
+dataset_runperiod = Table.load('case_study_runperiod.pkl')
+
+# Several objects at once (tables, lists of files, arguments...): case_study.pkl and case_study.json
+save_session('case_study', dataset_runperiod=dataset_runperiod, dataset_hourly=dataset_hourly, csvs=csvs)
+session = load_session('case_study.pkl')  # a dictionary: {'dataset_runperiod': <Table>, ..., 'csvs': [...]}
+dataset_hourly = session['dataset_hourly']
+# globals().update(session) gives them all back as variables
+```
+
+- The pickle file (`.pkl`) has the objects as they were: the methods of a table (`format_table`, `wrangled_table`, the figures...) work after loading it as before saving it. Open only the pickle files that you or someone you trust saved, since pickle files can run code when they are read; they also need a version of pandas that can read the objects of the version that saved them. The pickle files of hourly tables of many simulations are large, as their CSV files.
+- The JSON file (`.json`), with the same name, is a copy to read with any text editor or with other programs; accim does not read it back. It has the version of accim, the date and the working folder, and, for each table, its arguments (`arguments`), its frequency, occupied zones and blocks, the variables whose values differ between the simulations and their values (`suggested_vars_dict`), the columns given by `format_table` (`type_of_table`, `custom_cols`, `indexcols`, `val_cols`), its rows (`df`, as it is after `format_table`) and the tables of `wrangled_table` (the names of their columns of several levels joined with `[`). Each of these tables, and each DataFrame of a session, shows its number of rows and the values of its first 1000 rows, as `{"number_of_rows": ..., "rows_shown": ..., "data": {column: [values]}}`: hourly tables of many simulations have hundreds of thousands of rows, which would make the JSON file large and slow to write. The argument `json_max_rows` of `save` and `save_session` changes this number (`None` shows all the rows); the pickle file always has all of them. The other objects of a session are written with their type: the lists, dictionaries, texts and numbers as they are (NaN as `null`, and infinity as `"Infinity"`), and other objects as their representation in Python.
+- The parametric module saves its results in the same way: each run writes them in CSV, Excel, pickle and JSON files, which `load_outputs_parametric` and `load_outputs_optimisation` read ({doc}`parametric_and_optimisation`).
+- The graphical user interface also saves its sessions and its tables in these files ({ref}`graphical-user-interface`).
+
+The notebook of the research paper case study (How-to Guides) saves and resumes its tables in this way.
+
 ## 4.8 Setpoints based on the adaptive predicted mean vote (aPMV)
 
 Besides adaptive setpoint temperatures, accim can apply setpoints based on the adaptive predicted mean vote (aPMV), which corrects the PMV for the adaptation of the occupants: aPMV = PMV / (1 + λ·PMV), where λ is the adaptive coefficient, with one value for the cooling season and another for the heating season. The thermostats keep the aPMV of each zone between the heating and cooling setpoints, instead of keeping the operative temperature between two temperatures.
@@ -815,7 +842,7 @@ The variables are those of the EMS programs (`controller.get(name, program)` rea
 (graphical-user-interface)=
 ## 4.10 Graphical user interface
 
-Since accim 1.0.0, a graphical user interface (GUI), in English, does the main steps without writing Python: add the ACCIS or the aPMV setpoints to the IDF files of a folder, rename the EPW files, run the simulations, measure the occupied hours within the setpoints, make tables and figures of the results, and run a basic parametric study. Open it with the command `accim-gui`, which is installed with accim, or with:
+Since accim 1.0.0, a graphical user interface (GUI), in English, does the main steps without writing Python: add the ACCIS or the aPMV setpoints to the IDF files of a folder, rename the EPW files, run the simulations, measure the occupied hours within the setpoints, make tables and figures of the results, and run a basic parametric study; and it saves the session, to resume it later. Open it with the command `accim-gui`, which is installed with accim, or with:
 
 ```
 python -m accim.gui
@@ -828,7 +855,9 @@ It uses tkinter, which comes with Python on Windows and macOS (on Linux, it may 
 3. **Rename the EPWs**: `rename_epw_files()` (section 4.5) on the selected EPWs of the folder; the cities and countries that OpenStreetMap does not give can be entered in the form.
 4. **Run the simulations**: `run_ep()` (section 4.6) with the IDFs and EPWs of the folder, with the EMS or the Python API backend (section 4.9), and `remove_files()`.
 5. **Hours within the setpoints**: the percentage of the occupied hours within the setpoints of each simulation, in each zone and in the building, from the CSV files of the folder ({ref}`hours-within-setpoints`), the simulations that reach a minimum percentage, and a CSV file with the table.
-6. **Table and figures**: `Table` (section 4.7) of the CSV files of the simulations of the folder, with its frequency, the totals of the blocks and of the building and the columns of the table, which can be exported to a CSV file; and its scatter plots and time plots, whose subplots group the simulations by the variables whose values differ between them (the comfort standard, the category, the EPW...), saved as PNG files in the folder.
+6. **Table and figures**: `Table` (section 4.7) of the CSV files of the simulations of the folder, with its frequency, the totals of the blocks and of the building and the columns of the table, which can be exported to a CSV file; and its scatter plots and time plots, whose subplots group the simulations by the variables whose values differ between them (the comfort standard, the category, the EPW...), saved as PNG files in the folder. *Save the table...* saves the table in a pickle file and a JSON file with the same name ({ref}`saving-sessions`), and *Open a table...* opens it again without the CSV files, as well as the tables saved in Python with `Table.save`, to make their figures.
 7. **Parametric study**: a basic `ParametricSimulation` ({doc}`parametric_and_optimisation`) of the predefined or the custom model of accim, on an input IDF of the folder and the selected EPWs (with the existing HVAC systems, `ex_ac`, and their options): the full set of the options of the parameters, or a Latin hypercube sample of their ranges (custom model); the results are the sums of some meters over the run period of each simulation.
 
-Each task runs in the background, one at a time, and what accim prints appears in the log at the bottom of the window (EnergyPlus writes its own messages in the console). The GUI does not ask anything in the prompt, so it gives all the arguments, and it checks them before running (for instance, that the lists of numbers are numbers); it only answers the questions of `rename_epw_files()` about amending or excluding EPWs (none), and those of the figures about renaming the rows and columns of the subplots (no). It does not cover the `custom` output type, different aPMV setpoints for each zone, the other figures of `Table` and the reshaping of its tables, nor the outputs, objectives, optimisations and plots of the parametric module: use Python for them. accim reads the IDFs with eppy, which keeps the IDD of the first EnergyPlus version that it reads in a session: to work with IDFs of another version, close the GUI and open it again.
+Each task runs in the background, one at a time, and what accim prints appears in the log at the bottom of the window (EnergyPlus writes its own messages in the console). The GUI does not ask anything in the prompt, so it gives all the arguments, and it checks them before running (for instance, that the lists of numbers are numbers); it only answers the questions of `rename_epw_files()` about amending or excluding EPWs (none), and those of the figures about renaming the rows and columns of the subplots (no). It does not cover the `custom` output type, different aPMV setpoints for each zone, the other figures of `Table` and the reshaping of its tables, nor the outputs, objectives, optimisations and plots of the parametric module: use Python for them.
+
+The menu **Session** saves the session (*Save the session...*): the working folder, the values of the forms of all the tabs, and the results of the tabs 5, 6 and 7 (the hours within the setpoints, the table and the results of the parametric study), in a pickle file and a JSON file with the same name, which shows these values and results ({ref}`saving-sessions`). *Open a session...* restores them, and lists in the log the files of the forms that are no longer in the working folder. accim reads the IDFs with eppy, which keeps the IDD of the first EnergyPlus version that it reads while the GUI is open: to work with IDFs of another version, save the session, close the GUI, open it again and open the session.
