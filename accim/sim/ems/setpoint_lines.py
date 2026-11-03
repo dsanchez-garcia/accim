@@ -432,7 +432,7 @@ endif
 endif
 if CAT==80
 if (PMOT >= AHSTall) && (PMOT <= AHSTaul)
-set AHST = PMOT*0.30+25.9+AHSTtol
+set AHST = PMOT*0.32+14.88+AHSTtol
 elseif PMOT < AHSTall
 set AHST = 19+AHSTtol
 elseif PMOT > AHSTaul
@@ -440,7 +440,7 @@ set AHST = 22+AHSTtol
 endif
 elseif CAT==90
 if (PMOT >= AHSTall) && (PMOT <= AHSTaul)
-set AHST = PMOT*0.30+23.6+AHSTtol
+set AHST = PMOT*0.31+17.14+AHSTtol
 elseif PMOT < AHSTall
 set AHST = 20+AHSTtol
 elseif PMOT > AHSTaul
