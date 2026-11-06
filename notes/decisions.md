@@ -11,6 +11,36 @@ Durable architectural/process decisions for this repository and its Obsidian
 vault. Newest first. Use [[templates/decision-record.md|the decision-record
 template]] to add a new entry.
 
+## 2026-11-06 — `accim.sim` reads, changes and writes the models with eppy, even where code of its own was faster
+
+- **Status**: accepted (the author asked for another restructuring of accim "using, when possible, eppy", mainly in
+  `accim.sim`, in a new branch `v1.1.0`, "as easy and simple to understand as possible"; then, that he prefers it
+  "more understandable even if a bit slower", and that eppy is better than besos whenever possible)
+- **Context**: the restructuring of 1.0.0 kept code of its own where eppy has methods: helpers
+  (`accim.sim.idf_tools`: `try_objects`, `remove_objects`, `copy_idf`, `idf_text`, the lines of the EMS programs
+  through `.obj`), lookups by name with lists, raw `.obj` slices, an `IdfWriter` that wrote the output IDFs from text
+  rendered once, and a parser of IDF text in the Python API backend; and `load_idf('auto')` read the models with
+  besos. eppy is slower where 1.0.0 had optimised: `EpBunch.__repr__` formats the comments of all the fields of the
+  IDD of each object, so saving each output IDF with eppy took 126 ms instead of 7 ms with the sample model.
+- **Decision**: eppy wherever it has the method, and besos only where its features are needed (the parametric
+  module; running EnergyPlus and reading the ESO in `accim.utils.outputs`). `load_idf` reads every model with eppy
+  (the version of its `Version` object, the IDD where accim finds it); `AddAccis` reads each file twice
+  (`input_idfs`, and the model that gets the ACCIS), keeps the text of each model (`IDF.idfstr`, since an eppy model
+  takes about 140 times the memory of its text) and saves each output IDF with `IDF.savecopy`, after
+  `generation.set_combination`; existence checks with `IDF.getobject` (case-insensitive, as EnergyPlus);
+  `removeallidfobjects`; `fieldvalues`/`key` instead of `.obj`; the API backend reads and changes the model with eppy
+  (`read_ems`, `prepare_for_api`) and saves it. Small helpers only where eppy has none: `ems.programs.add_program`
+  and `set_program_lines`, `ems.objects.add_sensor`, `hvac.schedules.add_compact_schedule`. `Table`, `chile_funcs`
+  and the functions of `accim.utils` that only read an IDF use `load_idf`.
+- **Consequences**: `AddAccis` is slower with many output IDFs (`AddAccis` with the 140 of the sample model: 17 s instead of about 6 s).
+  One EnergyPlus version per Python session for every reading of accim, also with `'auto'`, in `Table` and in
+  `run_simulation` (a clear `ValueError`; before, besos only warned). The output IDFs write some numbers as eppy does
+  (same values and results; the golden files of 19 configurations were written again), and `input_idfs` and
+  `output_idfs` are eppy objects, without the methods of besos. The internal helpers removed are listed in
+  [[../CHANGELOG.md]] and in section 9.4 of [[../docs/source/9_migration_guide.md]]; the guide for the maintainer is
+  [[../CAMBIOS_CODIGO_v1.1.0.md]]. Code that reads numeric fields must not use `value or ''`: eppy gives 0 as a
+  number (the bug of the outdoor temperature limits of 0 °C, fixed).
+
 ## 2026-11-03 — Tables and sessions are saved in a pickle file, to resume them, and a JSON file, to read them
 
 - **Status**: accepted (the author asked to save a pickle file that resumes the session of the classic workflow, as

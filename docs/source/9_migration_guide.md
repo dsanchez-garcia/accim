@@ -406,3 +406,29 @@ of each class of `accim.parametric_and_optimisation` and their results):
   names contain it), and those of the outputs that `add_building_averages` averages (the operative temperature,
   the
   hours...) also added up their building averages.
+
+## 9.4 Changes in accim 1.1.0
+
+accim 1.1.0 reads, changes and writes the models with eppy, whose methods replace code of accim, so that the code
+of `accim.sim` is easier to understand. The usage does not change. What you may notice:
+
+- **The models are IDF objects of eppy, not besos**: `load_idf()`, also with `energyplus_version='auto'`, reads the
+  models with eppy and the IDD of their EnergyPlus version, and so do `AddAccis` (`input_idfs` and `output_idfs`),
+  `Table`, the Python API backend and the functions of `accim.utils` that read an IDF file. The methods that besos
+  adds to its IDF objects (`view_model()`...) are not available on them; read the model with besos
+  (`besos.eppy_funcs.get_building()`) if you need them. The functions that receive an IDF object
+  (`add_accis_to_idf()`, `modify_accis()`, `apply_apmv_setpoints()`...) accept those of eppy and besos.
+- **One EnergyPlus version in each Python session**: eppy reads all the models of a Python session with one IDD,
+  so reading a model of another EnergyPlus version stops with a `ValueError` (eppy is already using the IDD...).
+  Use a new Python session (in a notebook, restart the kernel) for the models of each version, or update them to
+  the same version. Before, with `'auto'`, besos read the model with the IDD that it already had, and only warned.
+- **Numbers written as eppy writes them**: in the output IDFs of `AddAccis`, some numbers of the input model are
+  written in another way (`2.0` as `2`, `0.00000001` as `1e-08`), with the same values: the simulations give the
+  same results.
+- **Slower generation of the output IDFs**: eppy saves each output IDF whole (the 140 output IDFs of the sample
+  model of `test_generation.py` take about 17 s instead of 6 s).
+- Removed internal helpers: `accim.sim.idf_tools` (the methods of eppy replace them; `add_program()` and
+  `set_program_lines()` are in `accim.sim.ems.programs`), `accim.sim.generation.IdfWriter` (replaced by
+  `set_combination()` and eppy's `IDF.savecopy()`) and `parse_idf`, `read_idf`, `render_idf`, `objects_for_api` and
+  `IdfObject` of `accim.sim.energyplus_api` (replaced by `read_ems()` and `prepare_for_api()`, which take IDF objects
+  of eppy).

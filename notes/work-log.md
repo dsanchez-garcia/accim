@@ -15,6 +15,14 @@ This log is a lightweight, session-scoped complement to the repository's
 existing tracking files — it does not replace them (see
 [[decisions.md#2026-09-13 — `notes/work-log.md` complements, not replaces, existing tracking files|the related decision]]).
 
+## 2026-11-06 — `accim.sim` restructured around eppy (branch `v1.1.0`)
+
+- **Objective**: The request of the author: another restructuring of accim using eppy whenever possible, mainly in `accim.sim`, in a new branch `v1.1.0`, as easy and simple to understand as possible; then, understandable even if a bit slower, and eppy rather than besos whenever possible.
+- **Affected files**: `accim/sim/` (`accis.py`, `generation.py`, `model.py`, `people.py`, `outputs.py`, `apmv.py`, `chile_funcs.py`, `ems/`, `hvac/`, `energyplus_api/idf.py` and `runner.py`; `idf_tools.py` removed), `accim/utils/` (`people.py`, `editing.py`, `verification.py`, `accim_args.py`), `accim/data/postprocessing/main.py`, `tools/compare_backends.py`, 20 test files (new `test_chile_funcs.py`) and 19 golden files; [[../CHANGELOG.md]], [[../DEVLOG.md]], [[../CAMBIOS_CODIGO_v1.1.0.md]] (new), [[../docs/source/9_migration_guide.md]] (9.4), [[../docs/source/4_detailed use.md]], [[../docs/source/5_troubleshooting.md]], [[decisions.md]].
+- **Finding or decision**: See [[decisions.md#2026-11-06 — `accim.sim` reads, changes and writes the models with eppy, even where code of its own was faster|the decision]]. eppy reads the numeric fields as numbers (besos kept text): the output IDFs write some numbers in another way (same values, identical EnergyPlus results), and `str(value or '')` took a limit of 0 °C as an empty field (fixed). Saving each output IDF with eppy is about 18 times slower than the writer of 1.0.0 (`EpBunch.__repr__`): `AddAccis` with 140 output IDFs, about 6 s → 17 s.
+- **Validation**: 1277 tests of `tests/core` and `tests/parametric_and_optimisation` and the 87 numbered tests of the parametric module passed; golden master: only number formatting changed in 19 configurations (2926 fields), checked field by field and with simulations; both backends of the API give identical CSV files; details in [[../DEVLOG.md]].
+- **Next step**: the review of the author (committed and pushed to `v1.1.0` at his request); the release.
+
 ## 2026-11-03 — Release 1.0.0 (PyPI, GitHub, Read the Docs)
 
 - **Objective**: The request of the author: publish 1.0.0 on PyPI, make the GitHub release, move the changes to `master` and push them, and make sure that the notebook pages of Read the Docs show the results of every cell.

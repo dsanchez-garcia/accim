@@ -210,6 +210,8 @@ job.output_idfs.paths                                 # {'output IDF name': path
 
 The returned object keeps the arguments (`job.arguments`), the occupied zones and the windows of each input IDF (`job.occupied_zones`, `job.windows_and_doors`), and the output IDFs (`job.output_idfs`, a dictionary whose IDF objects are read when they are used). The order of the output IDFs and of the objects of each file does not change from one run to another, and the combinations of comfort standard and comfort mode without setpoints (for instance, the static comfort modes of the Chinese models) are skipped with a warning, instead of generating IDFs that EnergyPlus cannot run.
 
+accim reads, changes and writes the models with [eppy](https://eppy.readthedocs.io/) (the input IDFs, `job.input_idfs`, and the output IDFs are IDF objects of eppy). eppy reads each IDF with the IDD of its EnergyPlus version (with `energyplus_version='auto'`, that of its `Version` object), and it reads all the models of a Python session with the same IDD: to work with the models of another EnergyPlus version, use a new Python session (or restart the kernel of the notebook). `accim.sim.accis.load_idf()` reads an IDF file in the same way.
+
 Each argument is explained below:
 
 -   comfort_standard (ComfStand): refers to the thermal comfort standard or model to be applied. Enter any number from 0 to 22 or 99 to select the comfort standard or model to be used; you can see which model is each number in the table below. For example, if you enter ‘0 1 2 3’, you’ll get IDFs for CTE, EN16798-1, ASHRAE 55 and the local model developed by Rijal et al for Japanese dwellings. If you enter 99, that means you want to use some custom adaptive model. Therefore, you'll be asked to enter the slope, y-intercept among other parameters; in the function call, these are the arguments `custom_slope` (slope of the neutral temperature against the running mean outdoor temperature), `custom_intercept` (y-intercept), `custom_cooling_offset` and `custom_heating_offset` (offsets of the cooling and heating setpoints from the neutral temperature, positive and negative respectively), and `custom_cooling_upper_limit`, `custom_cooling_lower_limit`, `custom_heating_upper_limit` and `custom_heating_lower_limit` (upper and lower limits of the running mean outdoor temperature in which the adaptive cooling and heating setpoints are applicable). If you don’t enter any number, it’ll ask you to enter the numbers again.
@@ -777,13 +779,13 @@ The notebook of the research paper case study (How-to Guides) saves and resumes 
 
 Besides adaptive setpoint temperatures, accim can apply setpoints based on the adaptive predicted mean vote (aPMV), which corrects the PMV for the adaptation of the occupants: aPMV = PMV / (1 + λ·PMV), where λ is the adaptive coefficient, with one value for the cooling season and another for the heating season. The thermostats keep the aPMV of each zone between the heating and cooling setpoints, instead of keeping the operative temperature between two temperatures.
 
-The function `apply_apmv_setpoints()` of the module `accim.sim.apmv` (`accim.sim.apmv_setpoints` in accim 0.x, whose argument names, such as `adap_coeff_cooling` or `pmv_cooling_sp`, still work; see {doc}`9_migration_guide`) adds this control, with Energy Management System programs, to a besos or eppy IDF object. Each zone needs an HVAC system; `apply_apmv_setpoints()` adds the thermal comfort thermostats that control it, and `add_vrf_system()` adds a VRF system to the zones if the model has none:
+The function `apply_apmv_setpoints()` of the module `accim.sim.apmv` (`accim.sim.apmv_setpoints` in accim 0.x, whose argument names, such as `adap_coeff_cooling` or `pmv_cooling_sp`, still work; see {doc}`9_migration_guide`) adds this control, with Energy Management System programs, to an eppy or besos IDF object. Each zone needs an HVAC system; `apply_apmv_setpoints()` adds the thermal comfort thermostats that control it, and `add_vrf_system()` adds a VRF system to the zones if the model has none:
 
 ```python
-from besos import eppy_funcs as ef
+from accim.sim.accis import load_idf
 from accim.sim.apmv import add_vrf_system, apply_apmv_setpoints, set_pmv_input_parameters
 
-building = ef.get_building('TestModel.idf')
+building = load_idf('TestModel.idf')    # an IDF object of eppy
 add_vrf_system(building)
 apply_apmv_setpoints(
     building,
@@ -821,7 +823,7 @@ results = run.run_ep(only_accim_idfs=True, confirm=True, processes=4, backend='a
 [r.success for r in results]
 ```
 
-Each simulation runs in its own process (a Python process can only load the API of one EnergyPlus version), and the output files have the same names as with the EMS. `run_simulation()` runs a single model, and its hooks can read and change the variables of the programs during the simulation, for instance to test other controls with Python code:
+Each simulation runs in its own process (a Python process can only load the API of one EnergyPlus version), and the output files have the same names as with the EMS. `run_simulation()` runs a single model, which it reads with eppy (so, in a Python session, it runs the models of one EnergyPlus version), and its hooks can read and change the variables of the programs during the simulation, for instance to test other controls with Python code:
 
 ```python
 from accim.sim.energyplus_api import run_simulation

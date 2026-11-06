@@ -4,6 +4,10 @@ Guía para entender la reorganización del código de la rama `v1.0.0` respecto 
 `master`): qué hay en cada módulo, cómo encajan las piezas y dónde buscar lo que antes estaba en otro
 sitio. Está pensada para quien mantiene accim; no es documentación de uso.
 
+> Desde accim 1.1.0, `accim.sim` lee, cambia y escribe los modelos con los métodos de eppy: lo que esta guía dice de
+> `idf_tools`, de `IdfWriter`, de `load_idf` con besos y del analizador de IDF del backend de la API ha cambiado; ver
+> `CAMBIOS_CODIGO_v1.1.0.md`.
+
 Lo que ya está en otros documentos no se repite aquí:
 
 - `CHANGELOG.md` (sección Unreleased): los cambios que ve el usuario, con las correcciones.
