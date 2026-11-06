@@ -7,6 +7,7 @@
 from typing import Mapping
 
 from accim.sim.arguments import SUPPLY_AIR_TEMP_INPUT_METHODS
+from accim.sim.ems.objects import add_sensor
 from accim.sim.hvac import vrf_data
 from accim.sim.hvac.schedules import (
     ALWAYS_ON_SCHEDULE,
@@ -15,7 +16,6 @@ from accim.sim.hvac.schedules import (
     add_compact_schedule,
     add_radiative_fraction_schedule,
 )
-from accim.sim.idf_tools import remove_objects
 from accim.sim.model import AccimModel
 
 __all__ = [
@@ -66,7 +66,7 @@ def add_operative_temperature_thermostats(model: AccimModel) -> None:
     """Add a ZoneControl:Thermostat:OperativeTemperature object to each zone."""
     for zone in model.zones_orig:
         name = f'{zone} Thermostat'
-        if name in [t.Thermostat_Name for t in model.idf.idfobjects['ZoneControl:Thermostat:OperativeTemperature']]:
+        if model.idf.getobject('ZoneControl:Thermostat:OperativeTemperature', name) is not None:
             model.log(f'{name} already was in the model')
             continue
         model.idf.newidfobject('ZoneControl:Thermostat:OperativeTemperature', Thermostat_Name=name,
@@ -78,17 +78,12 @@ def add_operative_temperature_thermostats(model: AccimModel) -> None:
 def set_pmv_setpoints(model: AccimModel) -> None:
     """Control the zones with Fanger PMV setpoints (-0.5 and 0.5) instead of operative temperature."""
     idf = model.idf
-    remove_objects(idf, 'ZoneControl:Thermostat:OperativeTemperature')
+    idf.removeallidfobjects('ZoneControl:Thermostat:OperativeTemperature')
     for name, value in _FANGER_SETPOINTS.items():
-        if name in [s.Name for s in idf.idfobjects['Schedule:Compact']]:
-            model.log(f'{name} Schedule already was in the model')
-            continue
-        idf.newidfobject('Schedule:Compact', Name=name, Schedule_Type_Limits_Name='Any Number',
-                         Field_1='Through: 12/31', Field_2='For: AllDays', Field_3='Until: 24:00,' + value)
-        model.log(f'{name} Schedule has been added')
+        add_compact_schedule(model, name, 'Through: 12/31', 'For: AllDays', 'Until: 24:00,' + value)
     for zone in model.zones_orig:
         control = f'{zone} Comfort Control'
-        if control in [i.Name for i in idf.idfobjects['ZoneControl:Thermostat:ThermalComfort']]:
+        if idf.getobject('ZoneControl:Thermostat:ThermalComfort', control) is not None:
             model.log(f'{control} ZoneControl:Thermostat:ThermalComfort already was in the model')
         else:
             idf.newidfobject(
@@ -104,7 +99,7 @@ def set_pmv_setpoints(model: AccimModel) -> None:
             )
             model.log(f'{control} ZoneControl:Thermostat:ThermalComfort has been added')
         setpoint = f'{zone} Dual Comfort Setpoint'
-        if setpoint in [i.Name for i in idf.idfobjects['ThermostatSetpoint:ThermalComfort:Fanger:DualSetpoint']]:
+        if idf.getobject('ThermostatSetpoint:ThermalComfort:Fanger:DualSetpoint', setpoint) is not None:
             model.log(f'{setpoint} ThermostatSetpoint:ThermalComfort:Fanger:DualSetpoint already was in the model')
         else:
             idf.newidfobject(
@@ -136,7 +131,7 @@ def add_curves(model: AccimModel) -> None:
     """Add the performance curves of the VRF systems if they are not in the model."""
     for object_type, fields in vrf_data.CURVES:
         name = fields['Name']
-        if name in [c.Name for c in model.idf.idfobjects[object_type]]:
+        if model.idf.getobject(object_type, name) is not None:
             model.log(f'{name} {object_type} Object already was in the model')
             continue
         model.idf.newidfobject(object_type, **fields)
@@ -161,24 +156,25 @@ def add_vrf_objects(
         model.log(f'{system.Name} ZoneHVAC:IdealLoadsAirSystem Object has been removed')
     params = dict(vrf_eer=vrf_eer, vrf_cop=vrf_cop, vrf_availability_schedule=vrf_availability_schedule,
                   supply_air_temp_input_method=SUPPLY_AIR_TEMP_INPUT_METHODS[supply_air_temp_input_method])
+    # The fields of the outdoor temperature limits were renamed in EnergyPlus 22.2: a new object of this type, removed
+    # at once, has the names of the IDD of the model
+    probe = idf.newidfobject('AirConditioner:VariableRefrigerantFlow')
+    condenser_inlet = 'Minimum_Condenser_Inlet_Node_Temperature_in_Cooling_Mode' in probe.fieldnames
+    idf.removeidfobject(probe)
+    limits = vrf_data.OUTDOOR_UNIT_CONDENSER_INLET if condenser_inlet else vrf_data.OUTDOOR_UNIT_OUTDOOR_TEMPERATURE
 
     for zone in model.zones_orig:
         name = f'VRF Outdoor Unit_{zone}'
-        if name in [i.Heat_Pump_Name for i in idf.idfobjects['AirConditioner:VariableRefrigerantFlow']]:
+        # The first field of the outdoor units is their name (Heat Pump Name)
+        if idf.getobject('AirConditioner:VariableRefrigerantFlow', name) is not None:
             model.log(f'{name} AirConditioner:VariableRefrigerantFlow Object already was in the model')
             continue
-        # The names of the temperature limits changed in EnergyPlus 22.2
-        probe = idf.newidfobject('AirConditioner:VariableRefrigerantFlow')
-        condenser_inlet = 'Minimum_Condenser_Inlet_Node_Temperature_in_Cooling_Mode' in probe.fieldnames
-        idf.removeidfobject(probe)
-        limits = (vrf_data.OUTDOOR_UNIT_CONDENSER_INLET if condenser_inlet
-                  else vrf_data.OUTDOOR_UNIT_OUTDOOR_TEMPERATURE)
         idf.newidfobject('AirConditioner:VariableRefrigerantFlow',
                          **_fields(vrf_data.OUTDOOR_UNIT, zone, **params), **limits)
         model.log(f'{name} AirConditioner:VariableRefrigerantFlow Object has been added')
 
-    remove_objects(idf, 'OutdoorAir:NodeList')
-    remove_objects(idf, 'ZoneTerminalUnitList')
+    idf.removeallidfobjects('OutdoorAir:NodeList')
+    idf.removeallidfobjects('ZoneTerminalUnitList')
     for zone in model.zones_orig:
         idf.newidfobject('OutdoorAir:NodeList', **_fields(vrf_data.OUTDOOR_AIR_NODE_LIST, zone))
         model.log(f'VRF Outdoor Unit_{zone} Outdoor Air Node Object has been added')
@@ -204,7 +200,7 @@ def add_vrf_objects(
         ('Fan:ConstantVolume', (vrf_data.SUPPLY_FAN,), 'Fan:ConstantVolume Object'),
     ]
     for object_type, templates, message in per_zone:
-        remove_objects(idf, object_type)
+        idf.removeallidfobjects(object_type)
         for zone in model.zones_orig:
             for template in templates:
                 idf.newidfobject(object_type, **_fields(template, zone, **params))
@@ -219,7 +215,7 @@ def add_setpoint_schedules(model: AccimModel) -> None:
     for ems_name in model.ems_names:
         add_compact_schedule(model, f'AHST_Sch_{ems_name}', 'Through: 12/31', 'For: AllDays', 'Until: 24:00,20')
         add_compact_schedule(model, f'ACST_Sch_{ems_name}', 'Through: 12/31', 'For: AllDays', 'Until: 24:00,24')
-    remove_objects(idf, 'ThermostatSetpoint:DualSetpoint')
+    idf.removeallidfobjects('ThermostatSetpoint:DualSetpoint')
     for zone, ems_name in zip(model.ems_zones, model.ems_names):
         idf.newidfobject('ThermostatSetpoint:DualSetpoint', Name=f'{zone} Dual SP',
                          Heating_Setpoint_Temperature_Schedule_Name=f'AHST_Sch_{ems_name}',
@@ -249,30 +245,19 @@ def check_ventilation(model: AccimModel) -> None:
         surface.Venting_Availability_Schedule_Name = 'On'
 
 
-def _add_sensor(model: AccimModel, sensors: list, name: str, key: str, variable: str) -> None:
-    if name in sensors:
-        model.log(f'Not added - {name} Sensor')
-        return
-    model.idf.newidfobject('EnergyManagementSystem:Sensor', Name=name,
-                           OutputVariable_or_OutputMeter_Index_Key_Name=key,
-                           OutputVariable_or_OutputMeter_Name=variable)
-    model.log(f'Added - {name} Sensor')
-
-
 def add_coil_sensors(model: AccimModel) -> None:
     """Add the EMS sensors of the cooling and heating coils of the VRF system of each zone (and window)."""
-    sensors = [s.Name for s in model.idf.idfobjects['EnergyManagementSystem:Sensor']]
     for ems_name, zone in zip(model.ems_names, model.ems_zones):
-        _add_sensor(model, sensors, f'{ems_name}_CoolCoil', f'{zone} VRF Indoor Unit DX Cooling Coil',
-                    'Cooling Coil Total Cooling Rate')
-        _add_sensor(model, sensors, f'{ems_name}_HeatCoil', f'{zone} VRF Indoor Unit DX Heating Coil',
-                    'Heating Coil Heating Rate')
+        add_sensor(model, f'{ems_name}_CoolCoil', f'{zone} VRF Indoor Unit DX Cooling Coil',
+                   'Cooling Coil Total Cooling Rate')
+        add_sensor(model, f'{ems_name}_HeatCoil', f'{zone} VRF Indoor Unit DX Heating Coil',
+                   'Heating Coil Heating Rate')
     if model.script_type == 'vrf_mm':
         for window, zone in zip(model.windows, model.window_zones):
-            _add_sensor(model, sensors, f'{window}_CoolCoil', f'{zone} VRF Indoor Unit DX Cooling Coil',
-                        'Cooling Coil Total Cooling Rate')
-            _add_sensor(model, sensors, f'{window}_HeatCoil', f'{zone} VRF Indoor Unit DX Heating Coil',
-                        'Heating Coil Heating Rate')
+            add_sensor(model, f'{window}_CoolCoil', f'{zone} VRF Indoor Unit DX Cooling Coil',
+                       'Cooling Coil Total Cooling Rate')
+            add_sensor(model, f'{window}_HeatCoil', f'{zone} VRF Indoor Unit DX Heating Coil',
+                       'Heating Coil Heating Rate')
 
 
 def add_vrf_system(

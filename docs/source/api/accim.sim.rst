@@ -86,14 +86,6 @@ accim.sim.generation module
    :show-inheritance:
    :undoc-members:
 
-accim.sim.idf\_tools module
----------------------------
-
-.. automodule:: accim.sim.idf_tools
-   :members:
-   :show-inheritance:
-   :undoc-members:
-
 accim.sim.model module
 ----------------------
 

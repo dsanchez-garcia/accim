@@ -126,8 +126,8 @@ def verify_accim_simulation(
     # 2. READ ACCIM ARGS FROM IDF
     # ─────────────────────────────────────────────
     print(f"Reading IDF: {idf_path}")
-    from besos.eppy_funcs import get_building
-    building = get_building(idf_path)
+    from accim.sim.accis import load_idf
+    building = load_idf(idf_path)
 
     try:
         accim_args = get_accim_args_flattened(building)
@@ -1001,8 +1001,8 @@ class AccimSimulationVerifier:
         # 2. READ IDF — zone names, window names, EMS params
         # ─────────────────────────────────────────────────────────────────────────
         print(f"Reading IDF: {self.idf_path}")
-        from besos.eppy_funcs import get_building
-        building = get_building(self.idf_path)
+        from accim.sim.accis import load_idf
+        building = load_idf(self.idf_path)
 
         ems_zone_map: Dict[str, str] = {}
         for sc in building.idfobjects['EnergyManagementSystem:Sensor']:

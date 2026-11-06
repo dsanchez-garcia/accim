@@ -62,7 +62,7 @@ def test_get_idf_hierarchy_links_the_spaces_and_lists_of_a_model(tmp_path, capsy
 
 def test_get_idf_hierarchy_of_a_model_of_an_idd_without_spaces():
     # The classes of the IDD of EnergyPlus 9.4 that get_idf_hierarchy reads
-    zone_list = SimpleNamespace(Name='All Zones', obj=['ZoneList', 'All Zones', 'Block1:Zone1', 'Block1:Zone2'])
+    zone_list = SimpleNamespace(Name='All Zones', fieldvalues=['ZoneList', 'All Zones', 'Block1:Zone1', 'Block1:Zone2'])
     idf = SimpleNamespace(idfobjects=_ObjectClasses(
         ZONE=[SimpleNamespace(Name='Block1:Zone1'), SimpleNamespace(Name='Block1:Zone2')],
         ZONELIST=[zone_list],

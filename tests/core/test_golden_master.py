@@ -1,5 +1,5 @@
 """Golden master of the output IDFs of accim: 31 configurations of AddAccis, add_accis_to_idf, modify_accis,
-gen_outputs_df and the aPMV setpoints, compared object by object (in their order) with the outputs of accim 1.0.0.
+gen_outputs_df and the aPMV setpoints, compared object by object (in their order) with the outputs of accim 1.1.0.
 
 Each configuration runs in its own Python process (``golden_master/runner.py write``), because eppy reads all the
 models of a process with the IDD of the first one, and the configurations use EnergyPlus 25.1 and 26.2. The

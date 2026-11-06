@@ -153,7 +153,7 @@ def _value(text: str) -> Any:
 def read_inputs(program) -> Dict[str, Any]:
     """The values of the variables that a program sets with lines ``set <variable> = <number>``."""
     values = {}
-    for line in program.obj[2:]:
+    for line in program.fieldvalues[2:]:
         match = _SET_LINE.match(str(line))
         if match:
             values[match.group(1)] = _value(match.group(2))
@@ -170,7 +170,7 @@ def set_inputs(program, values: Mapping[str, Any]) -> List[str]:
     """
     wanted = {str(name).upper(): (name, value) for name, value in values.items()}
     found = set()
-    for number, line in enumerate(program.obj[2:], start=1):
+    for number, line in enumerate(program.fieldvalues[2:], start=1):
         match = _SET_LINE.match(str(line))
         if match and match.group(1).upper() in wanted:
             _, value = wanted[match.group(1).upper()]

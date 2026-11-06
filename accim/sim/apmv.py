@@ -17,6 +17,8 @@ from typing import Any, Dict, List, Optional, Sequence, Union
 import pandas as pd
 
 from accim._deprecation import accepts_legacy_kwargs
+from accim.sim.ems.programs import add_program
+from accim.sim.ems.setast import COOLING_SEASON_LINES
 from accim.sim.targets import resolve_targets, sanitize_ems_name
 from accim.utils.editing import transform_ddmm_to_int
 from accim.utils.people import get_people_definition, get_people_objects, is_people_instance
@@ -261,16 +263,13 @@ def _ensure_infrastructure(building: IDF, unique_zones: List[str], verbose: bool
     :param unique_zones: A list of RAW zone names (strings) derived from the targets.
     :param verbose: If True, prints success messages for created objects. Warnings are always printed.
     """
-    # Get list of existing schedules to avoid duplicates
-    sch_comp_objs = [i.Name for i in building.idfobjects['Schedule:Compact']]
-
     # 1. Create Schedules (Using RAW Zone Name)
     # These are the "dummy" schedules that EMS will overwrite (Actuate) at every timestep.
     # We create one for Heating (PMV_H_SP) and one for Cooling (PMV_C_SP).
     for i in ['PMV_H_SP', 'PMV_C_SP']:
         for zone in unique_zones:
             sch_name = f'{i}_{zone}'
-            if sch_name not in sch_comp_objs:
+            if building.getobject('Schedule:Compact', sch_name) is None:
                 building.newidfobject(
                     'Schedule:Compact',
                     Name=sch_name,
@@ -371,7 +370,7 @@ def _create_tc_thermostat(building: IDF, zone: str, verbose: bool):
 def _ensure_tc_control_schedule(building: IDF, zone: str, verbose: bool) -> str:
     """Ensure thermal comfort control schedule exists for a zone and return its name."""
     sch_name = f'Thermal Comfort Control Type Schedule Name {zone}'
-    if not any(s.Name == sch_name for s in building.idfobjects['Schedule:Compact']):
+    if building.getobject('Schedule:Compact', sch_name) is None:
         building.newidfobject(
             'Schedule:Compact',
             Name=sch_name,
@@ -395,15 +394,9 @@ def _update_fanger_object(building: IDF, obj_name: str, zone: str, verbose: bool
     :param zone: The RAW zone name used to find the correct schedules.
     :param verbose: If True, prints success messages.
     """
-    # Check if the object already exists
-    fanger_obj = None
-    for f in building.idfobjects['ThermostatSetpoint:ThermalComfort:Fanger:DualSetpoint']:
-        if f.Name == obj_name:
-            fanger_obj = f
-            break
-
-    # If not, create it
-    if not fanger_obj:
+    # Create the object if it is not in the model
+    fanger_obj = building.getobject('ThermostatSetpoint:ThermalComfort:Fanger:DualSetpoint', obj_name)
+    if fanger_obj is None:
         fanger_obj = building.newidfobject(
             'ThermostatSetpoint:ThermalComfort:Fanger:DualSetpoint',
             Name=obj_name
@@ -438,11 +431,8 @@ def _add_apmv_sensors(building: IDF, target_data: List[Dict], verbose: bool):
     :param target_data: List of target dictionaries resolved earlier.
     :param verbose: If True, prints success messages. Warnings are always printed.
     """
-    # Get existing sensors to avoid duplicates
-    sensornamelist = [s.Name for s in building.idfobjects['EnergyManagementSystem:Sensor']]
-
     def add_sensor(name, key, variable):
-        if name not in sensornamelist:
+        if building.getobject('EnergyManagementSystem:Sensor', name) is None:
             building.newidfobject(
                 'EnergyManagementSystem:Sensor',
                 Name=name,
@@ -482,8 +472,6 @@ def _add_apmv_actuators(building: IDF, target_data: List[Dict], verbose: bool):
     :param target_data: List of target dictionaries resolved earlier.
     :param verbose: If True, prints success messages. Warnings are always printed.
     """
-    actuatornamelist = [actuator.Name for actuator in building.idfobjects['EnergyManagementSystem:Actuator']]
-
     for target in target_data:
         suffix = target['ems_suffix']  # Sanitized name (e.g., "Space1_People1")
         zone = target['zone_name']  # Raw name (e.g., "Zone 1")
@@ -497,7 +485,7 @@ def _add_apmv_actuators(building: IDF, target_data: List[Dict], verbose: bool):
             # This schedule is named using the RAW Zone Name.
             sch_name = f'PMV_{i}_SP_{zone}'
 
-            if act_name not in actuatornamelist:
+            if building.getobject('EnergyManagementSystem:Actuator', act_name) is None:
                 building.newidfobject(
                     'EnergyManagementSystem:Actuator',
                     Name=act_name,
@@ -575,35 +563,21 @@ def _add_apmv_programs(building: IDF, suffixes: List[str], df_arguments: pd.Data
         weighted by their occupants (the simple average while the zone is unoccupied), as the
         PeopleAverage method of the Fanger thermostats.
     """
-    programlist = [p.Name for p in building.idfobjects['EnergyManagementSystem:Program']]
     instance_counts = instance_counts or {}
 
-    # --- PROGRAM 1: Initialize Season Dates ---
-    prog_name = 'set_cooling_season_input_data'
-    if prog_name not in programlist:
-        building.newidfobject('EnergyManagementSystem:Program', Name=prog_name,
-                              Program_Line_1=f'set CoolSeasonStart = {cool_start}',
-                              Program_Line_2=f'set CoolSeasonEnd = {cool_end}')
-        if verbose: print(f"Added Program: {prog_name}")
-    else:
-        warnings.warn(f"Program '{prog_name}' already exists. Skipping.")
+    def add(name: str, lines: Sequence[str]) -> None:
+        if building.getobject('EnergyManagementSystem:Program', name) is not None:
+            warnings.warn(f"Program '{name}' already exists. Skipping.")
+            return
+        add_program(building, name, lines)
+        if verbose:
+            print(f"Added Program: {name}")
 
-    # --- PROGRAM 2: Determine Current Season ---
-    prog_name = 'set_cooling_season'
-    if prog_name not in programlist:
-        building.newidfobject('EnergyManagementSystem:Program', Name=prog_name,
-                              Program_Line_1='if CoolSeasonEnd > CoolSeasonStart',  # Normal case (e.g., May to Sept)
-                              Program_Line_2='if (DayOfYear >= CoolSeasonStart) && (DayOfYear < CoolSeasonEnd)',
-                              Program_Line_3='set CoolingSeason = 1',
-                              Program_Line_4='else', Program_Line_5='set CoolingSeason = 0', Program_Line_6='endif',
-                              Program_Line_7='elseif CoolSeasonStart > CoolSeasonEnd',  # Cross-year case (e.g., Dec to Feb)
-                              Program_Line_8='if (DayOfYear >= CoolSeasonStart) || (DayOfYear < CoolSeasonEnd)',
-                              Program_Line_9='set CoolingSeason = 1',
-                              Program_Line_10='else', Program_Line_11='set CoolingSeason = 0', Program_Line_12='endif',
-                              Program_Line_13='endif')
-        if verbose: print(f"Added Program: {prog_name}")
-    else:
-        warnings.warn(f"Program '{prog_name}' already exists. Skipping.")
+    # --- PROGRAM 1: Initialize Season Dates ---
+    add('set_cooling_season_input_data', [f'set CoolSeasonStart = {cool_start}', f'set CoolSeasonEnd = {cool_end}'])
+
+    # --- PROGRAM 2: Determine Current Season (also when it goes on into the next year, e.g., Dec to Feb) ---
+    add('set_cooling_season', COOLING_SEASON_LINES)
 
     # --- PER-TARGET PROGRAMS ---
     for suffix in suffixes:
@@ -612,141 +586,107 @@ def _add_apmv_programs(building: IDF, suffixes: List[str], df_arguments: pd.Data
             row_idx = df_arguments[df_arguments['underscore_zonename'] == suffix].index[0]
         except IndexError:
             continue  # Skip if data not found
+        row = df_arguments.loc[row_idx]
 
-        # --- PROGRAM 3: Initialize Zone Parameters ---
-        prog_name = f'set_zone_input_data_{suffix}'
-        if prog_name not in programlist:
-            # The EMS variables keep the names of the arguments in accim 0.x
-            row = df_arguments.loc[row_idx]
-            building.newidfobject(
-                'EnergyManagementSystem:Program', Name=prog_name,
-                Program_Line_1=f'set adap_coeff_cooling_{suffix} = {row["adaptive_coefficient_cooling"]}',
-                Program_Line_2=f'set adap_coeff_heating_{suffix} = {row["adaptive_coefficient_heating"]}',
-                Program_Line_3=f'set pmv_cooling_sp_{suffix} = {row["pmv_cooling_setpoint"]}',
-                Program_Line_4=f'set pmv_heating_sp_{suffix} = {row["pmv_heating_setpoint"]}',
-                Program_Line_5=f'set tolerance_cooling_sp_cooling_season_{suffix} = '
-                               f'{row["cooling_setpoint_tolerance_cooling_season"]}',
-                Program_Line_6=f'set tolerance_cooling_sp_heating_season_{suffix} = '
-                               f'{row["cooling_setpoint_tolerance_heating_season"]}',
-                Program_Line_7=f'set tolerance_heating_sp_cooling_season_{suffix} = '
-                               f'{row["heating_setpoint_tolerance_cooling_season"]}',
-                Program_Line_8=f'set tolerance_heating_sp_heating_season_{suffix} = '
-                               f'{row["heating_setpoint_tolerance_heating_season"]}')
-            if verbose: print(f"Added Program: {prog_name}")
-        else:
-            warnings.warn(f"Program '{prog_name}' already exists. Skipping.")
+        # --- PROGRAM 3: Initialize Zone Parameters (the EMS variables keep the names of the arguments in accim 0.x) ---
+        add(f'set_zone_input_data_{suffix}', [
+            f'set adap_coeff_cooling_{suffix} = {row["adaptive_coefficient_cooling"]}',
+            f'set adap_coeff_heating_{suffix} = {row["adaptive_coefficient_heating"]}',
+            f'set pmv_cooling_sp_{suffix} = {row["pmv_cooling_setpoint"]}',
+            f'set pmv_heating_sp_{suffix} = {row["pmv_heating_setpoint"]}',
+            f'set tolerance_cooling_sp_cooling_season_{suffix} = {row["cooling_setpoint_tolerance_cooling_season"]}',
+            f'set tolerance_cooling_sp_heating_season_{suffix} = {row["cooling_setpoint_tolerance_heating_season"]}',
+            f'set tolerance_heating_sp_cooling_season_{suffix} = {row["heating_setpoint_tolerance_cooling_season"]}',
+            f'set tolerance_heating_sp_heating_season_{suffix} = {row["heating_setpoint_tolerance_heating_season"]}',
+        ])
 
         # --- PROGRAM 4: Apply aPMV Logic (The Core Logic) ---
-        prog_name = f'apply_aPMV_{suffix}'
-        if prog_name not in programlist:
-            act_h = f'PMV_H_SP_act_{suffix}'  # Actuator for Heating Schedule
-            act_c = f'PMV_C_SP_act_{suffix}'  # Actuator for Cooling Schedule
-
-            building.newidfobject('EnergyManagementSystem:Program', Name=prog_name,
-                                  # 1. Select coefficients based on season
-                                  Program_Line_1='if CoolingSeason == 1',
-                                  Program_Line_2=f'set adap_coeff_{suffix} = adap_coeff_cooling_{suffix}',
-                                  Program_Line_3=f'set tolerance_cooling_sp_{suffix} = tolerance_cooling_sp_cooling_season_{suffix}',
-                                  Program_Line_4=f'set tolerance_heating_sp_{suffix} = tolerance_heating_sp_cooling_season_{suffix}',
-                                  Program_Line_5='elseif CoolingSeason == 0',
-                                  Program_Line_6=f'set adap_coeff_{suffix} = adap_coeff_heating_{suffix}',
-                                  Program_Line_7=f'set tolerance_cooling_sp_{suffix} = tolerance_cooling_sp_heating_season_{suffix}',
-                                  Program_Line_8=f'set tolerance_heating_sp_{suffix} = tolerance_heating_sp_heating_season_{suffix}',
-                                  Program_Line_9='endif',
-
-                                  # 2. aPMV setpoints: pmv_heating_sp and pmv_cooling_sp are targets on the aPMV scale
-                                  Program_Line_10=f'set aPMV_H_SP_noTol_{suffix} = pmv_heating_sp_{suffix}',
-                                  Program_Line_11=f'set aPMV_C_SP_noTol_{suffix} = pmv_cooling_sp_{suffix}',
-
-                                  # 3. Apply Tolerance
-                                  Program_Line_12=f'set aPMV_H_SP_{suffix} = aPMV_H_SP_noTol_{suffix}+tolerance_heating_sp_{suffix}',
-                                  Program_Line_13=f'set aPMV_C_SP_{suffix} = aPMV_C_SP_noTol_{suffix}+tolerance_cooling_sp_{suffix}',
-
-                                  # 4. Actuate Schedules (Only if occupied). The Fanger thermostat controls PMV, so each
-                                  # aPMV setpoint is converted with the inverse aPMV formula, PMV = aPMV/(1 - lambda*aPMV),
-                                  # i.e. the PMV whose aPMV = PMV/(1 + lambda*PMV) equals the setpoint.
-                                  Program_Line_14=f'if People_Occupant_Count_{suffix} > 0',
-                                  # Heating Logic
-                                  Program_Line_15=f'if aPMV_H_SP_{suffix} < 0',
-                                  Program_Line_16=f'set {act_h} = aPMV_H_SP_{suffix}/(1-adap_coeff_{suffix}*aPMV_H_SP_{suffix})',
-                                  Program_Line_17='else',
-                                  Program_Line_18=f'set {act_h} = 0',
-                                  Program_Line_19='endif',
-
-                                  # Cooling Logic
-                                  Program_Line_20=f'if aPMV_C_SP_{suffix} > 0',
-                                  Program_Line_21=f'set {act_c} = aPMV_C_SP_{suffix}/(1-adap_coeff_{suffix}*aPMV_C_SP_{suffix})',
-                                  Program_Line_22='else',
-                                  Program_Line_23=f'set {act_c} = 0',
-                                  Program_Line_24='endif',
-
-                                  # 5. Unoccupied Logic
-                                  Program_Line_25='else',
-                                  Program_Line_26=f'set {act_h} = -100',
-                                  Program_Line_27=f'set {act_c} = 100',
-                                  Program_Line_28='endif')
-            if verbose: print(f"Added Program: {prog_name}")
-        else:
-            warnings.warn(f"Program '{prog_name}' already exists. Skipping.")
+        act_h = f'PMV_H_SP_act_{suffix}'  # Actuator for Heating Schedule
+        act_c = f'PMV_C_SP_act_{suffix}'  # Actuator for Cooling Schedule
+        add(f'apply_aPMV_{suffix}', [
+            # 1. Select coefficients based on season
+            'if CoolingSeason == 1',
+            f'set adap_coeff_{suffix} = adap_coeff_cooling_{suffix}',
+            f'set tolerance_cooling_sp_{suffix} = tolerance_cooling_sp_cooling_season_{suffix}',
+            f'set tolerance_heating_sp_{suffix} = tolerance_heating_sp_cooling_season_{suffix}',
+            'elseif CoolingSeason == 0',
+            f'set adap_coeff_{suffix} = adap_coeff_heating_{suffix}',
+            f'set tolerance_cooling_sp_{suffix} = tolerance_cooling_sp_heating_season_{suffix}',
+            f'set tolerance_heating_sp_{suffix} = tolerance_heating_sp_heating_season_{suffix}',
+            'endif',
+            # 2. aPMV setpoints: pmv_heating_sp and pmv_cooling_sp are targets on the aPMV scale
+            f'set aPMV_H_SP_noTol_{suffix} = pmv_heating_sp_{suffix}',
+            f'set aPMV_C_SP_noTol_{suffix} = pmv_cooling_sp_{suffix}',
+            # 3. Apply Tolerance
+            f'set aPMV_H_SP_{suffix} = aPMV_H_SP_noTol_{suffix}+tolerance_heating_sp_{suffix}',
+            f'set aPMV_C_SP_{suffix} = aPMV_C_SP_noTol_{suffix}+tolerance_cooling_sp_{suffix}',
+            # 4. Actuate Schedules (Only if occupied). The Fanger thermostat controls PMV, so each aPMV setpoint is
+            # converted with the inverse aPMV formula, PMV = aPMV/(1 - lambda*aPMV), i.e. the PMV whose
+            # aPMV = PMV/(1 + lambda*PMV) equals the setpoint.
+            f'if People_Occupant_Count_{suffix} > 0',
+            # Heating Logic
+            f'if aPMV_H_SP_{suffix} < 0',
+            f'set {act_h} = aPMV_H_SP_{suffix}/(1-adap_coeff_{suffix}*aPMV_H_SP_{suffix})',
+            'else',
+            f'set {act_h} = 0',
+            'endif',
+            # Cooling Logic
+            f'if aPMV_C_SP_{suffix} > 0',
+            f'set {act_c} = aPMV_C_SP_{suffix}/(1-adap_coeff_{suffix}*aPMV_C_SP_{suffix})',
+            'else',
+            f'set {act_c} = 0',
+            'endif',
+            # 5. Unoccupied Logic
+            'else',
+            f'set {act_h} = -100',
+            f'set {act_c} = 100',
+            'endif',
+        ])
 
         # --- PROGRAM 5a: PMV of a zone with several occupant instances ---
         if suffix in instance_counts:
-            prog_name = f'average_PMV_{suffix}'
-            if prog_name not in programlist:
-                n_instances = instance_counts[suffix]
-                lines = [f'set PMV_wsum_{suffix} = 0', f'set Occ_sum_{suffix} = 0', f'set PMV_sum_{suffix} = 0']
-                for n in range(1, n_instances + 1):
-                    lines += [
-                        f'set PMV_wsum_{suffix} = PMV_wsum_{suffix} + PMV_{suffix}_{n}*People_Occupant_Count_{suffix}_{n}',
-                        f'set Occ_sum_{suffix} = Occ_sum_{suffix} + People_Occupant_Count_{suffix}_{n}',
-                        f'set PMV_sum_{suffix} = PMV_sum_{suffix} + PMV_{suffix}_{n}',
-                    ]
+            n_instances = instance_counts[suffix]
+            lines = [f'set PMV_wsum_{suffix} = 0', f'set Occ_sum_{suffix} = 0', f'set PMV_sum_{suffix} = 0']
+            for n in range(1, n_instances + 1):
                 lines += [
-                    f'if Occ_sum_{suffix} > 0',
-                    f'set PMV_{suffix} = PMV_wsum_{suffix}/Occ_sum_{suffix}',
-                    'else',
-                    f'set PMV_{suffix} = PMV_sum_{suffix}/{n_instances}',
-                    'endif',
+                    f'set PMV_wsum_{suffix} = PMV_wsum_{suffix} + PMV_{suffix}_{n}*People_Occupant_Count_{suffix}_{n}',
+                    f'set Occ_sum_{suffix} = Occ_sum_{suffix} + People_Occupant_Count_{suffix}_{n}',
+                    f'set PMV_sum_{suffix} = PMV_sum_{suffix} + PMV_{suffix}_{n}',
                 ]
-                building.newidfobject('EnergyManagementSystem:Program', Name=prog_name,
-                                      **{f'Program_Line_{i}': line for i, line in enumerate(lines, start=1)})
-                if verbose: print(f"Added Program: {prog_name}")
-            else:
-                warnings.warn(f"Program '{prog_name}' already exists. Skipping.")
+            lines += [
+                f'if Occ_sum_{suffix} > 0',
+                f'set PMV_{suffix} = PMV_wsum_{suffix}/Occ_sum_{suffix}',
+                'else',
+                f'set PMV_{suffix} = PMV_sum_{suffix}/{n_instances}',
+                'endif',
+            ]
+            add(f'average_PMV_{suffix}', lines)
 
         # --- PROGRAM 5: Monitor aPMV ---
-        prog_name = f'monitor_aPMV_{suffix}'
-        if prog_name not in programlist:
-            building.newidfobject('EnergyManagementSystem:Program', Name=prog_name,
-                                  Program_Line_1=f'set aPMV_{suffix} = PMV_{suffix}/(1+adap_coeff_{suffix}*PMV_{suffix})')
-            if verbose: print(f"Added Program: {prog_name}")
-        else:
-            warnings.warn(f"Program '{prog_name}' already exists. Skipping.")
+        add(f'monitor_aPMV_{suffix}', [f'set aPMV_{suffix} = PMV_{suffix}/(1+adap_coeff_{suffix}*PMV_{suffix})'])
 
         # --- PROGRAM 6: Count Comfort Hours ---
-        prog_name = f'count_aPMV_comfort_hours_{suffix}'
-        if prog_name not in programlist:
-            building.newidfobject('EnergyManagementSystem:Program', Name=prog_name,
-                                  Program_Line_1=f'if aPMV_{suffix} < aPMV_H_SP_noTol_{suffix}',
-                                  Program_Line_2=f'set comfhour_{suffix} = 0',
-                                  Program_Line_3=f'set discomfhour_cold_{suffix} = 1*ZoneTimeStep',
-                                  Program_Line_4=f'set discomfhour_heat_{suffix} = 0',
-                                  Program_Line_5=f'elseif aPMV_{suffix} > aPMV_C_SP_noTol_{suffix}',
-                                  Program_Line_6=f'set comfhour_{suffix} = 0',
-                                  Program_Line_7=f'set discomfhour_cold_{suffix} = 0',
-                                  Program_Line_8=f'set discomfhour_heat_{suffix} = 1*ZoneTimeStep',
-                                  Program_Line_9='else',
-                                  Program_Line_10=f'set comfhour_{suffix} = 1*ZoneTimeStep',
-                                  Program_Line_11=f'set discomfhour_cold_{suffix} = 0',
-                                  Program_Line_12=f'set discomfhour_heat_{suffix} = 0',
-                                  Program_Line_13='endif',
-                                  Program_Line_14=f'if People_Occupant_Count_{suffix} > 0',
-                                  Program_Line_15=f'set occupied_hour_{suffix} = 1*ZoneTimeStep',
-                                  Program_Line_16='else', Program_Line_17=f'set occupied_hour_{suffix} = 0', Program_Line_18='endif',
-                                  Program_Line_19=f'set discomfhour_{suffix} = discomfhour_cold_{suffix} + discomfhour_heat_{suffix}')
-            if verbose: print(f"Added Program: {prog_name}")
-        else:
-            warnings.warn(f"Program '{prog_name}' already exists. Skipping.")
+        add(f'count_aPMV_comfort_hours_{suffix}', [
+            f'if aPMV_{suffix} < aPMV_H_SP_noTol_{suffix}',
+            f'set comfhour_{suffix} = 0',
+            f'set discomfhour_cold_{suffix} = 1*ZoneTimeStep',
+            f'set discomfhour_heat_{suffix} = 0',
+            f'elseif aPMV_{suffix} > aPMV_C_SP_noTol_{suffix}',
+            f'set comfhour_{suffix} = 0',
+            f'set discomfhour_cold_{suffix} = 0',
+            f'set discomfhour_heat_{suffix} = 1*ZoneTimeStep',
+            'else',
+            f'set comfhour_{suffix} = 1*ZoneTimeStep',
+            f'set discomfhour_cold_{suffix} = 0',
+            f'set discomfhour_heat_{suffix} = 0',
+            'endif',
+            f'if People_Occupant_Count_{suffix} > 0',
+            f'set occupied_hour_{suffix} = 1*ZoneTimeStep',
+            'else',
+            f'set occupied_hour_{suffix} = 0',
+            'endif',
+            f'set discomfhour_{suffix} = discomfhour_cold_{suffix} + discomfhour_heat_{suffix}',
+        ])
 
 
 def _apmv_program_names(suffixes: List[str], instance_counts: Optional[Dict[str, int]] = None) -> List[str]:
@@ -796,8 +736,6 @@ def _add_apmv_outputs(building: IDF, output_frequencies: Sequence[str], other_pm
     :param unique_zones: List of RAW zone names for Schedule outputs.
     :param verbose: If True, prints success messages. Warnings are always printed.
     """
-    outputvariablelist = [v.Name for v in building.idfobjects['EnergyManagementSystem:OutputVariable']]
-
     # 1. Define EMS Output Variables (Mapping internal vars to output names)
     EMSOutputVariableZone_dict = {
         'Adaptive Coefficient': ['adap_coeff', '', 'Averaged'],
@@ -816,7 +754,7 @@ def _add_apmv_outputs(building: IDF, output_frequencies: Sequence[str], other_pm
     for key, val in EMSOutputVariableZone_dict.items():
         for suffix in suffixes:
             out_name = f'{key}_{suffix}'
-            if out_name not in outputvariablelist:
+            if building.getobject('EnergyManagementSystem:OutputVariable', out_name) is None:
                 building.newidfobject('EnergyManagementSystem:OutputVariable', Name=out_name,
                                       EMS_Variable_Name=f'{val[0]}_{suffix}', Type_of_Data_in_Variable=val[2],
                                       Update_Frequency='ZoneTimestep', Units=val[1])
@@ -1043,10 +981,8 @@ def set_zones_always_occupied(building: IDF, verbose: bool = True):
     :param building: The BESOS/eppy IDF object.
     :param verbose: If True, prints success messages. Warnings are always printed.
     """
-    sch_comp_objs = [i.Name for i in building.idfobjects['schedule:compact']]
-
     # Create 'On' schedule if missing
-    if 'On' not in sch_comp_objs:
+    if building.getobject('Schedule:Compact', 'On') is None:
         building.newidfobject(
             'Schedule:Compact',
             Name='On',
@@ -1238,8 +1174,6 @@ def set_pmv_input_parameters(
         for people_name in t['people_names']:
             people_to_keys.setdefault(people_name.strip().upper(), []).append(t['df_key'])
 
-    sch_comp_objs = [s.Name for s in building.idfobjects['Schedule:Compact']]
-
     # 3. Iterate over People and People:Instance objects
     for people in get_people_objects(building):
         p_name = people.Name
@@ -1268,58 +1202,25 @@ def set_pmv_input_parameters(
 
         # Sanitized name for schedules
         p_name_san = _sanitize_ems_name(p_name)
+
+        # --- C. Apply Changes (Only if value is not None): a schedule with the value of each parameter ---
+        parameters = [
+            (act_val, 'Act', 'Activity_Level_Schedule_Name', f"Set Activity for '{p_name}': {act_val} W/person"),
+            (clo_val, 'Clo', 'Clothing_Insulation_Schedule_Name', f"Set Clothing for '{p_name}': {clo_val} clo"),
+            (vel_val, 'Vel', 'Air_Velocity_Schedule_Name', f"Set Air Velocity for '{p_name}': {vel_val} m/s"),
+            (eff_val, 'Eff', 'Work_Efficiency_Schedule_Name', f"Set Work Efficiency for '{p_name}': {eff_val}"),
+        ]
         any_modified = False
-
-        # --- C. Apply Changes (Only if value is not None) ---
-
-        # 1. Activity Level
-        if act_val is not None:
-            sch_name = f"Sch_Act_{p_name_san}"
-            if sch_name not in sch_comp_objs:
+        for value, short_name, field, message in parameters:
+            if value is None:
+                continue
+            sch_name = f'Sch_{short_name}_{p_name_san}'
+            if building.getobject('Schedule:Compact', sch_name) is None:
                 building.newidfobject('Schedule:Compact', Name=sch_name, Schedule_Type_Limits_Name="Any Number",
-                                      Field_1='Through: 12/31', Field_2='For: AllDays', Field_3=f'Until: 24:00,{act_val}')
-                sch_comp_objs.append(sch_name)
-                if verbose: print(f"Set Activity for '{p_name}': {act_val} W/person")
-
-            people.Activity_Level_Schedule_Name = sch_name
-            any_modified = True
-
-        # 2. Clothing Insulation
-        if clo_val is not None:
-            sch_name = f"Sch_Clo_{p_name_san}"
-            if sch_name not in sch_comp_objs:
-                building.newidfobject('Schedule:Compact', Name=sch_name, Schedule_Type_Limits_Name="Any Number",
-                                      Field_1='Through: 12/31', Field_2='For: AllDays', Field_3=f'Until: 24:00,{clo_val}')
-                sch_comp_objs.append(sch_name)
-                if verbose: print(f"Set Clothing for '{p_name}': {clo_val} clo")
-
-            # people.Clothing_Insulation_Calculation_Method = 'Schedule'
-            # people.Clothing_Insulation_Calculation_Method_Schedule_Name = sch_name
-            people.Clothing_Insulation_Schedule_Name = sch_name  # Some versions use this field
-            any_modified = True
-
-        # 3. Air Velocity
-        if vel_val is not None:
-            sch_name = f"Sch_Vel_{p_name_san}"
-            if sch_name not in sch_comp_objs:
-                building.newidfobject('Schedule:Compact', Name=sch_name, Schedule_Type_Limits_Name="Any Number",
-                                      Field_1='Through: 12/31', Field_2='For: AllDays', Field_3=f'Until: 24:00,{vel_val}')
-                sch_comp_objs.append(sch_name)
-                if verbose: print(f"Set Air Velocity for '{p_name}': {vel_val} m/s")
-
-            people.Air_Velocity_Schedule_Name = sch_name
-            any_modified = True
-
-        # 4. Work Efficiency
-        if eff_val is not None:
-            sch_name = f"Sch_Eff_{p_name_san}"
-            if sch_name not in sch_comp_objs:
-                building.newidfobject('Schedule:Compact', Name=sch_name, Schedule_Type_Limits_Name="Any Number",
-                                      Field_1='Through: 12/31', Field_2='For: AllDays', Field_3=f'Until: 24:00,{eff_val}')
-                sch_comp_objs.append(sch_name)
-                if verbose: print(f"Set Work Efficiency for '{p_name}': {eff_val}")
-
-            people.Work_Efficiency_Schedule_Name = sch_name
+                                      Field_1='Through: 12/31', Field_2='For: AllDays', Field_3=f'Until: 24:00,{value}')
+                if verbose:
+                    print(message)
+            setattr(people, field, sch_name)
             any_modified = True
 
         # --- D. Ensure Fanger Model ---

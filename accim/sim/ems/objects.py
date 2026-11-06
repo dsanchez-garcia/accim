@@ -4,8 +4,7 @@
 
 """EMS variables, sensors, actuators and output variables of ACCIS."""
 
-from accim.sim.ems.programs import zone_variables
-from accim.sim.idf_tools import remove_objects, try_objects
+from accim.sim.ems.programs import add_program, zone_variables
 from accim.sim.model import AccimModel
 
 __all__ = [
@@ -16,6 +15,7 @@ __all__ = [
     'add_global_variables',
     'add_internal_variables',
     'add_output_variables',
+    'add_sensor',
     'add_sensors',
 ]
 
@@ -110,8 +110,9 @@ _OUTPUTS_TO_AVERAGE = {
 }
 
 
-def _new_output_variable(model: AccimModel, existing, name: str, variable: str, data_type: str, units: str) -> None:
-    if name in existing:
+def _add_output_variable(model: AccimModel, name: str, variable: str, data_type: str, units: str) -> None:
+    """Add an EMS output variable unless the model has one with that name."""
+    if model.idf.getobject('EnergyManagementSystem:OutputVariable', name) is not None:
         model.log(f'Not added - {name} Output Variable')
         return
     model.idf.newidfobject('EnergyManagementSystem:OutputVariable', Name=name, EMS_Variable_Name=variable,
@@ -122,24 +123,23 @@ def _new_output_variable(model: AccimModel, existing, name: str, variable: str, 
 
 def add_output_variables(model: AccimModel) -> None:
     """Add the EMS output variables of ACCIS that the model does not have yet."""
-    existing = [v.Name for v in model.idf.idfobjects['EnergyManagementSystem:OutputVariable']]
     averaged = dict(_AVERAGED_OUTPUT_VARIABLES)
     if model.is_mixed_mode:
         averaged.update(_AVERAGED_OUTPUT_VARIABLES_MIXED_MODE)
     for name, (variable, units) in averaged.items():
-        _new_output_variable(model, existing, name, variable, 'Averaged', units)
+        _add_output_variable(model, name, variable, 'Averaged', units)
     for name, (variable, units, data_type) in ZONE_OUTPUT_VARIABLES.items():
         for zone in model.ems_names:
-            _new_output_variable(model, existing, f'{name}_{zone}', f'{variable}_{zone}', data_type, units)
+            _add_output_variable(model, f'{name}_{zone}', f'{variable}_{zone}', data_type, units)
     if model.is_mixed_mode:
         for zone in model.ems_names:
-            _new_output_variable(model, existing, f'Ventilation Hours_{zone}', f'VentHours_{zone}', 'Summed', 'H')
+            _add_output_variable(model, f'Ventilation Hours_{zone}', f'VentHours_{zone}', 'Summed', 'H')
     setpoints = dict(ZONE_SETPOINT_OUTPUT_VARIABLES)
     if model.is_mixed_mode:
         setpoints.update(_ZONE_SETPOINT_OUTPUT_VARIABLES_MIXED_MODE)
     for name, (variable, units) in setpoints.items():
         for zone in model.ems_names:
-            _new_output_variable(model, existing, f'{name}_{zone}', f'{variable}_{zone}', 'Averaged', units)
+            _add_output_variable(model, f'{name}_{zone}', f'{variable}_{zone}', 'Averaged', units)
 
 
 def _new_global_variables(model: AccimModel, names) -> None:
@@ -149,7 +149,7 @@ def _new_global_variables(model: AccimModel, names) -> None:
 
 def add_global_variables(model: AccimModel) -> None:
     """Replace the EMS global variables of the model with those of ACCIS."""
-    remove_objects(model.idf, 'ENERGYMANAGEMENTSYSTEM:GLOBALVARIABLE')
+    model.idf.removeallidfobjects('EnergyManagementSystem:GlobalVariable')
     _new_global_variables(model, _GLOBAL_VARIABLES)
     for zone in model.ems_names:
         _new_global_variables(model, [f'{name}_{zone}' for name in _ZONE_GLOBAL_VARIABLES])
@@ -164,7 +164,7 @@ def add_global_variables(model: AccimModel) -> None:
 
 def add_internal_variables(model: AccimModel) -> None:
     """Replace the EMS internal variables of the model with the floor area and volume of each zone."""
-    remove_objects(model.idf, 'ENERGYMANAGEMENTSYSTEM:INTERNALVARIABLE')
+    model.idf.removeallidfobjects('EnergyManagementSystem:InternalVariable')
     for name, zone in zip(model.ems_names, model.ems_zones):
         for prefix, data_type in (('ZFA_', 'Zone Floor Area'), ('ZAV_', 'Zone Air Volume')):
             model.idf.newidfobject('EnergyManagementSystem:InternalVariable', Name=prefix + name,
@@ -172,8 +172,9 @@ def add_internal_variables(model: AccimModel) -> None:
     model.log('Internal variables objects have been added')
 
 
-def _new_sensor(model: AccimModel, existing, name: str, key: str, variable: str) -> None:
-    if name in existing:
+def add_sensor(model: AccimModel, name: str, key: str, variable: str) -> None:
+    """Add an EMS sensor of an output variable unless the model has one with that name."""
+    if model.idf.getobject('EnergyManagementSystem:Sensor', name) is not None:
         model.log(f'Not added - {name} Sensor')
         return
     model.idf.newidfobject('EnergyManagementSystem:Sensor', Name=name,
@@ -184,25 +185,24 @@ def _new_sensor(model: AccimModel, existing, name: str, key: str, variable: str)
 
 def add_sensors(model: AccimModel) -> None:
     """Add the EMS sensors of ACCIS that the model does not have yet."""
-    existing = [s.Name for s in model.idf.idfobjects['EnergyManagementSystem:Sensor']]
     # The running mean outdoor temperatures of the comfort models of the occupants of the first target
     key = model.ems_keys[0]
-    _new_sensor(model, existing, 'RMOT', key,
-                'Zone Thermal Comfort CEN 15251 Adaptive Model Running Average Outdoor Air Temperature')
-    _new_sensor(model, existing, 'PMOT', key,
-                'Zone Thermal Comfort ASHRAE 55 Adaptive Model Running Average Outdoor Air Temperature')
+    add_sensor(model, 'RMOT', key,
+               'Zone Thermal Comfort CEN 15251 Adaptive Model Running Average Outdoor Air Temperature')
+    add_sensor(model, 'PMOT', key,
+               'Zone Thermal Comfort ASHRAE 55 Adaptive Model Running Average Outdoor Air Temperature')
     for name, occupancy_key, variable in zip(model.ems_names, model.occupancy_keys, model.occupancy_variables):
-        _new_sensor(model, existing, f'Occ_count_{name}', occupancy_key, variable)
+        add_sensor(model, f'Occ_count_{name}', occupancy_key, variable)
     for name, zone in zip(model.ems_names, model.ems_zones):
-        _new_sensor(model, existing, f'{name}_OpT', zone, 'Zone Operative Temperature')
+        add_sensor(model, f'{name}_OpT', zone, 'Zone Operative Temperature')
         if model.is_mixed_mode:
-            _new_sensor(model, existing, f'{name}_WindSpeed', zone, 'Zone Outdoor Air Wind Speed')
-            _new_sensor(model, existing, f'{name}_OutT', zone, 'Zone Outdoor Air Drybulb Temperature')
+            add_sensor(model, f'{name}_WindSpeed', zone, 'Zone Outdoor Air Wind Speed')
+            add_sensor(model, f'{name}_OutT', zone, 'Zone Outdoor Air Drybulb Temperature')
     if model.is_mixed_mode:
         for window, zone in zip(model.windows, model.window_zones):
-            _new_sensor(model, existing, f'{window}_OpT', zone, 'Zone Operative Temperature')
-            _new_sensor(model, existing, f'{window}_WindSpeed', zone, 'Zone Outdoor Air Wind Speed')
-            _new_sensor(model, existing, f'{window}_OutT', zone, 'Zone Outdoor Air Drybulb Temperature')
+            add_sensor(model, f'{window}_OpT', zone, 'Zone Operative Temperature')
+            add_sensor(model, f'{window}_WindSpeed', zone, 'Zone Outdoor Air Wind Speed')
+            add_sensor(model, f'{window}_OutT', zone, 'Zone Outdoor Air Drybulb Temperature')
             # The occupancy of the target of the zone of the window
             occupancy_key, variable = f'People {zone}', 'People Occupant Count'
             for target_zone, target_key, target_variable in zip(model.ems_zones, model.occupancy_keys,
@@ -210,13 +210,13 @@ def add_sensors(model: AccimModel) -> None:
                 if target_zone.lower() == zone.lower():
                     occupancy_key, variable = target_key, target_variable
                     break
-            _new_sensor(model, existing, f'{window}_Occ_count', occupancy_key, variable)
-    _new_sensor(model, existing, 'OutT', 'Environment', 'Site Outdoor Air Drybulb Temperature')
+            add_sensor(model, f'{window}_Occ_count', occupancy_key, variable)
+    add_sensor(model, 'OutT', 'Environment', 'Site Outdoor Air Drybulb Temperature')
 
 
-def _new_actuator(model: AccimModel, existing, name: str, component: str, component_type: str,
-                  control_type: str) -> None:
-    if name in existing:
+def _add_actuator(model: AccimModel, name: str, component: str, component_type: str, control_type: str) -> None:
+    """Add an EMS actuator unless the model has one with that name."""
+    if model.idf.getobject('EnergyManagementSystem:Actuator', name) is not None:
         model.log(f'Not added - {name} Actuator')
         return
     model.idf.newidfobject('EnergyManagementSystem:Actuator', Name=name, Actuated_Component_Unique_Name=component,
@@ -226,19 +226,18 @@ def _new_actuator(model: AccimModel, existing, name: str, component: str, compon
 
 def add_actuators(model: AccimModel) -> None:
     """Add the EMS actuators of the setpoint schedules of each zone and, in mixed mode, of the windows."""
-    existing = [a.Name for a in model.idf.idfobjects['EnergyManagementSystem:Actuator']]
     for name in model.ems_names:
         for setpoint in ('AHST', 'ACST'):
-            _new_actuator(model, existing, f'{setpoint}_Act_{name}', f'{setpoint}_Sch_{name}', 'Schedule:Compact',
+            _add_actuator(model, f'{setpoint}_Act_{name}', f'{setpoint}_Sch_{name}', 'Schedule:Compact',
                           'Schedule Value')
     if model.is_mixed_mode:
         for window, window_orig in zip(model.windows, model.windows_orig):
             if model.natural_ventilation_type == 'Scheduled':
-                _new_actuator(model, existing, f'{window}_VentOpenFact', model.scheduled_ventilation[window_orig],
+                _add_actuator(model, f'{window}_VentOpenFact', model.scheduled_ventilation[window_orig],
                               'Schedule:Constant', 'Schedule Value')
             else:
-                _new_actuator(model, existing, f'{window}_VentOpenFact', window_orig,
-                              'AirFlow Network Window/Door Opening', 'Venting Opening Factor')
+                _add_actuator(model, f'{window}_VentOpenFact', window_orig, 'AirFlow Network Window/Door Opening',
+                              'Venting Opening Factor')
 
 
 def _add_average(model: AccimModel, global_variables, key: str, terms, output_name: str, data_type: str,
@@ -251,23 +250,21 @@ def _add_average(model: AccimModel, global_variables, key: str, terms, output_na
         idf.newidfobject('EnergyManagementSystem:GlobalVariable', Erl_Variable_1_Name=variable)
         model.log(f'Added - {variable} GlobalVariable')
     program = f'Make{variable}'
-    if program in [m.Name for m in idf.idfobjects['EnergyManagementSystem:ProgramCallingManager']]:
+    if idf.getobject('EnergyManagementSystem:ProgramCallingManager', program) is not None:
         model.log(f'Not added - {program} ProgramCallingManager')
     else:
         idf.newidfobject('EnergyManagementSystem:ProgramCallingManager', Name=program,
                          EnergyPlus_Model_Calling_Point='BeginTimestepBeforePredictor', Program_Name_1=program)
         model.log(f'Added - {program} ProgramCallingManager')
-    if program in [p.Name for p in idf.idfobjects['EnergyManagementSystem:Program']]:
+    if idf.getobject('EnergyManagementSystem:Program', program) is not None:
         model.log(f'Not added - {program} Program')
     else:
-        idf.newidfobject('EnergyManagementSystem:Program', Name=program,
-                         Program_Line_1=f'set {variable}Num = ' + '+'.join(terms),
-                         Program_Line_2=f'set {variable}Den = ' + str(len(terms)),
-                         Program_Line_3=f'set {variable} = {variable}Num/{variable}Den')
+        add_program(idf, program, [f'set {variable}Num = ' + '+'.join(terms), f'set {variable}Den = {len(terms)}',
+                                   f'set {variable} = {variable}Num/{variable}Den'])
         model.log(f'Added - {program} Program')
     if output_name is None:
         return
-    if output_name in [v.Name for v in idf.idfobjects['EnergyManagementSystem:OutputVariable']]:
+    if idf.getobject('EnergyManagementSystem:OutputVariable', output_name) is not None:
         model.log(f'Not added - {output_name} EMS OutputVariable')
     else:
         idf.newidfobject('EnergyManagementSystem:OutputVariable', Name=output_name, EMS_Variable_Name=variable,
@@ -278,8 +275,7 @@ def _add_average(model: AccimModel, global_variables, key: str, terms, output_na
 def add_building_averages(model: AccimModel) -> None:
     """Add the building averages of the hours of each zone and of some outputs (argument add_building_averages)."""
     idf = model.idf
-    names = [name for obj in idf.idfobjects['EnergyManagementSystem:GlobalVariable'] for name in obj.obj
-             if 'energymanagementsystem' not in name.lower()]
+    names = [name for obj in idf.idfobjects['EnergyManagementSystem:GlobalVariable'] for name in obj.fieldvalues[1:]]
     for key in _HOURS_TO_AVERAGE:
         terms = [name for name in names if name.split('_')[0].lower() == key.lower()]
         if not terms:
@@ -290,7 +286,7 @@ def add_building_averages(model: AccimModel) -> None:
         for output in outputs:
             _add_average_output(model, output, key)
     for output, (suffix, key, units, data_type) in _OUTPUTS_TO_AVERAGE.items():
-        if output.startswith('AFN') and not try_objects(idf, 'AirflowNetwork:SimulationControl'):
+        if output.startswith('AFN') and not idf.idfobjects['AirflowNetwork:SimulationControl']:
             # EnergyPlus stops if a sensor reads an output variable that the model does not have
             model.log(f'Not added - building average of {output} (the model has no AirflowNetwork)')
             continue
@@ -323,7 +319,7 @@ def add_building_averages(model: AccimModel) -> None:
 
 def _add_average_output(model: AccimModel, output: str, key: str) -> None:
     name = f'{output}_Building_Average'
-    if name in [v.Name for v in model.idf.idfobjects['EnergyManagementSystem:OutputVariable']]:
+    if model.idf.getobject('EnergyManagementSystem:OutputVariable', name) is not None:
         model.log(f'Not added - {name} EMS OutputVariable')
         return
     model.idf.newidfobject('EnergyManagementSystem:OutputVariable', Name=name, EMS_Variable_Name=f'{key}BuildAvg',

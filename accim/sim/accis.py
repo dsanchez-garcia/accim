@@ -13,7 +13,6 @@ The ACCIS is an EnergyManagementSystem script that applies adaptive setpoint tem
 """
 
 import os
-import re
 import warnings
 from io import StringIO
 from pathlib import Path
@@ -24,7 +23,7 @@ import pandas as pd
 from accim import __version__
 from accim._deprecation import rename_legacy_kwargs, warn_deprecated
 from accim.constants import SUPPORTED_ENERGYPLUS_VERSIONS
-from accim.energyplus import idd_path, read_idf_version, unsupported_version_message
+from accim.energyplus import find_energyplus, idd_path, read_idf_version, unsupported_version_message
 from accim.sim import prompts
 from accim.sim.arguments import (
     LEGACY_ARGUMENT_NAMES,
@@ -49,17 +48,17 @@ from accim.sim.ems.inputs import (
     set_inputs,
     zone_names,
 )
+from accim.sim.ems.programs import add_program, set_program_lines
 from accim.sim.ems.setast import MODULAR_COMFORT_MODES, depends_on_comfort_mode, master_program_lines, subprograms
 from accim.sim.generation import (
     GenerationArguments,
-    IdfWriter,
     OutputIdfs,
     combinations,
     output_name,
+    set_combination,
     zone_arguments_errors,
     zone_input_arguments,
 )
-from accim.sim.idf_tools import add_program, copy_idf, idf_text, replace_program_lines, set_program_lines
 from accim.sim.model import AccimModel
 from accim.sim.outputs import OUTPUT_DATAFRAME_COLUMNS, enable_sizing_calculations, output_variables_dataframe
 from accim.sim.targets import resolve_targets
@@ -135,67 +134,35 @@ def _amend_designbuilder_version(path: Union[str, os.PathLike]) -> None:
             file.write(data.replace(b'Version, 9.4.0.002', b'Version, 9.4'))
 
 
-def _set_idd(idf_class, path: str) -> None:
-    """Set the IDD of eppy, which can only read the models of one EnergyPlus version in a Python session."""
-    current = idf_class.iddname
-    if current is None:
-        idf_class.setiddname(path)
-    elif Path(current).resolve() != Path(path).resolve():
-        raise ValueError(
-            f'eppy is already using the IDD {current} in this Python session, and it cannot read the models of '
-            f'other EnergyPlus versions (whose IDD is {path}). Use a new Python session for them.'
-        )
-
-
-def _idd_version(idd: str) -> Optional[str]:
-    """The EnergyPlus version of an IDD file ('25.1'), from its first line ('!IDD_Version 25.1.0'), or None."""
-    try:
-        with open(idd, encoding='latin-1') as file:
-            first_line = file.readline()
-    except OSError:
-        return None
-    match = re.match(r'\s*!IDD_Version\s+(\d+)\.(\d+)', first_line)
-    return f'{match[1]}.{match[2]}' if match else None
-
-
-def _check_besos_idd(path: Union[str, os.PathLike]) -> None:
-    """besos reads the models with the IDD of the first model that it read in the Python session: with a model of
-    another EnergyPlus version, it only warns, and objects of the model can be lost (the People:Instance objects of
-    EnergyPlus 26.2, for instance). Stop instead, as with an explicit ``energyplus_version``."""
-    import besos.eppy_funcs
-
-    current = getattr(getattr(besos.eppy_funcs, 'IDF', None), 'iddname', None)
-    loaded = _idd_version(current) if current else None
-    if loaded is None:
-        return
-    try:
-        version = read_idf_version(path)
-    except ValueError:
-        return
-    if version != loaded:
-        raise ValueError(
-            f'besos is already using the IDD of EnergyPlus {loaded} ({current}) in this Python session, and it '
-            f'cannot read {os.path.basename(os.fspath(path))}, a model of EnergyPlus {version}. Use a new Python '
-            f'session for the models of other EnergyPlus versions (or update the model to EnergyPlus {loaded}).'
-        )
-
-
 def load_idf(path: Union[str, os.PathLike], energyplus_version: str = 'auto'):
-    """Read an IDF file: with besos (which finds the IDD of its version) if ``energyplus_version`` is 'auto',
-    or with eppy and the IDD of ``energyplus_version`` otherwise.
+    """Read an IDF file with eppy, with the IDD of its EnergyPlus version.
+
+    eppy reads all the models of a Python session with the IDD of the first one, so the models of other EnergyPlus
+    versions need a new Python session.
 
     :param path: The path of the IDF file.
-    :param energyplus_version: 'auto' or an EnergyPlus version, such as '25.1'.
-    :raises ValueError: If the Python session already reads the models of another EnergyPlus version (eppy can only
-        use one IDD in a session).
+    :param energyplus_version: 'auto' to take the version of the Version object of the file, or an EnergyPlus version,
+        such as '25.1'.
+    :return: The IDF object of eppy.
+    :raises ValueError: If eppy already reads the models of another EnergyPlus version in this Python session.
+    :raises FileNotFoundError: If that EnergyPlus version is not installed (its IDD is needed).
     """
-    _amend_designbuilder_version(path)
-    if normalise_energyplus_version(energyplus_version) == 'auto':
-        from besos.eppy_funcs import get_building
-        _check_besos_idd(path)
-        return get_building(str(path))
     from eppy.modeleditor import IDF
-    _set_idd(IDF, idd_path(energyplus_version))
+
+    _amend_designbuilder_version(path)
+    version = normalise_energyplus_version(energyplus_version)
+    if version == 'auto':
+        version = read_idf_version(path)
+    idd = idd_path(version)
+    if IDF.getiddname() is None:
+        find_energyplus(version)  # FileNotFoundError, with the folders where accim looks for it, if not installed
+        IDF.setiddname(idd)
+    elif Path(IDF.getiddname()).resolve() != Path(idd).resolve():
+        raise ValueError(
+            f'eppy is already using the IDD {IDF.getiddname()} in this Python session, and it cannot read '
+            f'{os.path.basename(os.fspath(path))}, a model of EnergyPlus {version} (whose IDD is {idd}). Use a new '
+            f'Python session for the models of other EnergyPlus versions.'
+        )
     return IDF(str(path))
 
 
@@ -549,22 +516,20 @@ class AddAccis:
         models = []
         not_working = []
         dataframes = []
-        idf_class = None
         found_zones = set()
         for file in files:
             stem = file[:-len('.idf')]
             self._log(_START_MODEL, 'Starting with file:', stem)
-            idf0 = load_idf(file, energyplus_version)
-            idf_class = type(idf0)
-            self._log(f'IDD location is: {idf0.iddname}')
-            version = _idf_version(idf0)
+            # eppy reads the file twice: the input model, which does not change, and the model with the ACCIS
+            self.input_idfs[stem] = load_idf(file, energyplus_version)
+            idf = load_idf(file, energyplus_version)
+            self._log(f'IDD location is: {idf.iddname}')
+            version = _idf_version(idf)
             _check_version(version)
             if self.arguments['energyplus_version'] == 'auto':
                 self.arguments['energyplus_version'] = version
-            idf = copy_idf(idf0)
             model = AccimModel(idf, script_type, setpoint_type, verbose=verbose,
                                hvac_zone_map=hvac_zone_map, name=stem)
-            self.input_idfs[stem] = idf0
             self.occupied_zones[stem] = model.occupied_zones
             self.occupied_zones_original_name[stem] = model.occupied_zones_orig
             if model.is_mixed_mode:
@@ -593,8 +558,8 @@ class AddAccis:
             if make_outputs_dataframe:
                 dataframes.append(output_variables_dataframe(idf, file=stem))
             enable_sizing_calculations(model)
-            # The text of the model is kept instead of the model, which needs much more memory
-            models.append((stem, idf_text(idf)))
+            # The text of the model (as eppy writes it) is kept instead of the model, which needs much more memory
+            models.append((stem, idf.idfstr()))
             self._log('Ending with file:', stem, _END_MODEL)
 
         missing_zones = [key for key in checked_zone_arguments if key not in found_zones]
@@ -628,9 +593,9 @@ class AddAccis:
         self.arguments.update({k: v for k, v in vars(generation).items()})
         self.arguments.update(verbose=verbose, confirm=confirm, zone_arguments=zone_arguments)
 
-        paths = self._write_output_idfs(models, generation, setpoint_type, confirm, idf_class,
-                                        is_mixed_mode(script_type))
-        self.output_idfs = OutputIdfs(paths, idf_class)
+        paths = self._write_output_idfs(models, generation, setpoint_type, confirm, is_mixed_mode(script_type))
+        from eppy.modeleditor import IDF
+        self.output_idfs = OutputIdfs(paths, IDF)
         self._log(_END_OUTPUTS)
 
     def _log(self, *lines) -> None:
@@ -666,7 +631,10 @@ class AddAccis:
                              'standard, category and comfort mode of each of these zones):\n' + '\n'.join(errors))
 
     def _write_output_idfs(self, models, generation: GenerationArguments, setpoint_type: str, confirm,
-                           idf_class, mixed_mode: bool) -> Dict[str, str]:
+                           mixed_mode: bool) -> Dict[str, str]:
+        """Write the output IDFs: for each combination, eppy saves the model with the arguments of the combination."""
+        from eppy.modeleditor import IDF
+
         combos = list(combinations(generation, setpoint_type))
         self._check_zone_arguments(models, generation, combos, mixed_mode)
         names = [output_name(stem, c, generation.name_suffix) for stem, _ in models for c in combos]
@@ -678,11 +646,12 @@ class AddAccis:
             return paths
         self._log('Generating the following output IDF files:')
         for stem, text in models:
-            writer = IdfWriter(idf_class(StringIO(text)), generation, setpoint_type, self.zone_arguments.get(stem))
+            idf = IDF(StringIO(text))
             for combination in combos:
                 path = output_name(stem, combination, generation.name_suffix)
                 self._log(path)
-                writer.write(path, combination)
+                set_combination(idf, generation, combination, self.zone_arguments.get(stem))
+                idf.savecopy(path)
                 paths[os.path.basename(path)] = os.path.abspath(path)
         return paths
 
@@ -912,11 +881,13 @@ def _modify_accis_of_earlier_versions(
             setattr(programs['SetInputData'], f'Program_Line_{number}', f'set {name} = {value}')
 
     programs['SetComfTemp'].Program_Line_2 = f'set ComfTemp = PMOT*{custom_slope}+{custom_intercept}'
-    set_program_lines(programs['SetAppLimits'], [
-        f'set ACSTaul = {custom_cooling_upper_limit}', f'set ACSTall = {custom_cooling_lower_limit}',
-        f'set AHSTaul = {custom_heating_upper_limit}', f'set AHSTall = {custom_heating_lower_limit}'], first=2)
-    replace_program_lines(programs['SetAST'], [f'set SetpointAcc = {setpoint_accuracy}', f'set m = {custom_slope}',
-                                               f'set n = {custom_intercept}', 'run SetAST_Master'])
+    app_limits = programs['SetAppLimits']
+    app_limits.Program_Line_2 = f'set ACSTaul = {custom_cooling_upper_limit}'
+    app_limits.Program_Line_3 = f'set ACSTall = {custom_cooling_lower_limit}'
+    app_limits.Program_Line_4 = f'set AHSTaul = {custom_heating_upper_limit}'
+    app_limits.Program_Line_5 = f'set AHSTall = {custom_heating_lower_limit}'
+    set_program_lines(programs['SetAST'], [f'set SetpointAcc = {setpoint_accuracy}', f'set m = {custom_slope}',
+                                           f'set n = {custom_intercept}', 'run SetAST_Master'])
     # The models of accim before 0.8 have no SetAST_Master
     if 'SetAST_Master' not in programs:
         add_program(idf, 'SetAST_Master', master_program_lines())
@@ -928,14 +899,14 @@ def _modify_accis_of_earlier_versions(
         static = [cs for cs in MODULAR_COMFORT_MODES if not depends_on_comfort_mode(cs)]
         for name, lines in subprograms(static).items():
             if name in programs:
-                replace_program_lines(programs[name], lines)
+                set_program_lines(programs[name], lines)
     if 'SetVOFinputData' in programs:
-        set_program_lines(programs['SetVOFinputData'], [
-            f'set MaxTempDiffVOF = {opening_factor_max_temp_diff}',
-            f'set MinTempDiffVOF = {opening_factor_min_temp_diff}',
-            f'set MultiplierVOF = {min_opening_factor}'])
-    set_program_lines(programs['ApplyCAT'], [f'set CATcoolOffset = {category_cooling_offset}',
-                                             f'set CATheatOffset = {category_heating_offset}'])
-    set_program_lines(programs['ApplyCAT'], [f'set ACSToffset = {custom_cooling_offset} + {category_cooling_offset}',
-                                             f'set AHSToffset = {custom_heating_offset} + {category_heating_offset}'],
-                      first=4)
+        vof_input_data = programs['SetVOFinputData']
+        vof_input_data.Program_Line_1 = f'set MaxTempDiffVOF = {opening_factor_max_temp_diff}'
+        vof_input_data.Program_Line_2 = f'set MinTempDiffVOF = {opening_factor_min_temp_diff}'
+        vof_input_data.Program_Line_3 = f'set MultiplierVOF = {min_opening_factor}'
+    apply_cat = programs['ApplyCAT']
+    apply_cat.Program_Line_1 = f'set CATcoolOffset = {category_cooling_offset}'
+    apply_cat.Program_Line_2 = f'set CATheatOffset = {category_heating_offset}'
+    apply_cat.Program_Line_4 = f'set ACSToffset = {custom_cooling_offset} + {category_cooling_offset}'
+    apply_cat.Program_Line_5 = f'set AHSToffset = {custom_heating_offset} + {category_heating_offset}'

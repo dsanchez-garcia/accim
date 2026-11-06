@@ -15,7 +15,6 @@ import copy
 from pathlib import Path
 from types import SimpleNamespace
 
-import besos.eppy_funcs
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
@@ -23,6 +22,7 @@ import numpy as np
 import pytest
 from matplotlib.lines import Line2D
 
+import accim.sim.accis
 from accim.data.postprocessing.main import Table
 
 REPO = Path(__file__).resolve().parents[2]
@@ -80,7 +80,7 @@ def sample_folder(tmp_path_factory):
 def _hourly_table(folder):
     with pytest.MonkeyPatch.context() as monkeypatch:
         monkeypatch.chdir(folder)
-        monkeypatch.setattr(besos.eppy_funcs, 'get_building', lambda idf_path: _sample_building())
+        monkeypatch.setattr(accim.sim.accis, 'load_idf', lambda idf_path: _sample_building())
         return Table(
             datasets=[csv.name for csv in SAMPLE_CSVS], source_frequency='hourly', frequency='hourly',
             frequency_agg_func='sum', standard_outputs=True, level=['building'], level_agg_func=['sum', 'mean'],

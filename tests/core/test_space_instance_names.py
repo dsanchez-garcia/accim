@@ -46,6 +46,9 @@ class _ObjectClasses(dict):
     def __getitem__(self, key):
         return super().__getitem__(key.upper())
 
+    def get(self, key, default=None):
+        return super().get(key.upper(), default)
+
 
 class _FakeIDF:
     """A minimal IDF of EnergyPlus 26.2 with the classes that accim reads to resolve the occupant instances."""
@@ -68,6 +71,11 @@ class _FakeIDF:
         self.idfobjects[key].append(obj)
         return obj
 
+    def getobject(self, key, name):
+        """As eppy: the object of a class with a name, in any case, or None."""
+        return next((obj for obj in self.idfobjects[key] if str(getattr(obj, 'Name', '')).upper() == name.upper()),
+                    None)
+
 
 def _zone(name):
     return _Obj(key='ZONE', Name=name)
@@ -78,7 +86,7 @@ def _space(name, zone):
 
 
 def _list(key, name, members):
-    return _Obj(key=key, Name=name, obj=[key, name] + list(members))
+    return _Obj(key=key, Name=name, fieldvalues=[key, name] + list(members))
 
 
 def _people(name, target):

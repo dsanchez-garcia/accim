@@ -1,12 +1,14 @@
 """Tests for accim.sim.energyplus_api, the backend that runs the EMS programs of the models in Python through
 the API of EnergyPlus (pyenergyplus), and for run_ep(backend='api').
 
-The unit tests use a fake API that records what the controller does at each calling point. The last test
-runs an output IDF of AddAccis with both backends (EnergyPlus 25.1) and checks that the results are the same.
+The unit tests use a fake API that records what the controller does at each calling point, with models read by eppy
+(EnergyPlus 25.1). The last tests run models with both backends (EnergyPlus 25.1) and check that the results are the
+same.
 """
 import math
 import shutil
 import subprocess
+import tempfile
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -15,15 +17,15 @@ import pytest
 
 from accim.energyplus import find_energyplus
 from accim.run import run
+from accim.sim.accis import load_idf
 from accim.sim.ems.erl import ErlRuntimeError
+from accim.sim.ems.programs import set_program_lines
 from accim.sim.energyplus_api import (
     MINIMUM_API_VERSION,
     ErlController,
     load_energyplus_api,
-    objects_for_api,
-    parse_idf,
+    prepare_for_api,
     read_ems,
-    render_idf,
     run_simulations,
 )
 
@@ -58,17 +60,18 @@ Schedule:Constant, Heating Schedule, , 20;
 """
 
 
-def test_parse_and_render_idf():
-    objects = parse_idf(MODEL)
-
-    sensor = [o for o in objects if o.key == 'ENERGYMANAGEMENTSYSTEM:SENSOR'][0]
-    assert sensor.fields == ['T_out', 'Environment', 'Site Outdoor Air Drybulb Temperature']
-    assert sensor.field(5) == ''
-    assert parse_idf(render_idf(objects)) == objects
+def _idf(text=MODEL):
+    """The IDF object of eppy of a model of EnergyPlus 25.1."""
+    if find_energyplus('25.1', required=False) is None:
+        pytest.skip('needs EnergyPlus 25.1 (its IDD)')
+    with tempfile.TemporaryDirectory() as folder:
+        path = Path(folder) / 'model.idf'
+        path.write_text(text, encoding='latin-1')
+        return load_idf(path)
 
 
 def test_read_ems():
-    ems = read_ems(parse_idf(MODEL))
+    ems = read_ems(_idf())
 
     assert ems.version == '25.1'
     assert ems.sensors == [('T_OUT', 'Environment', 'Site Outdoor Air Drybulb Temperature')]
@@ -83,6 +86,11 @@ def test_read_ems():
     assert ems.has_programs and not ems.unsupported
 
 
+def _output_variables(idf):
+    """The values of the fields of the EMS output variables of a model (after the type), by name."""
+    return {o.Name: o.fieldvalues[1:] for o in idf.idfobjects['EnergyManagementSystem:OutputVariable']}
+
+
 def test_output_variables_of_programs_report_the_global_variables_of_the_same_name():
     # As FindEMSVariable of EnergyPlus: in the scope of a program, a name is the global variable, the sensor, the
     # actuator or the built-in variable of that name, if there is one, and otherwise a local variable of the program
@@ -92,35 +100,36 @@ EnergyManagementSystem:OutputVariable, Outdoor In SetSP, T_out, Averaged, ZoneTi
 EnergyManagementSystem:OutputVariable, Hour In SetSP, CurrentTime, Averaged, ZoneTimestep, SetSP, ;
 EnergyManagementSystem:OutputVariable, Actuator In SetSP, Heating_SP, Averaged, ZoneTimestep, SetSP, C;
 '''
-    ems = read_ems(parse_idf(model))
-    objects = {o.fields[0]: o.fields for o in objects_for_api(parse_idf(model))
-               if o.key == 'ENERGYMANAGEMENTSYSTEM:OUTPUTVARIABLE'}
+    idf = _idf(model)
+    ems = prepare_for_api(idf)
+    outputs = _output_variables(idf)
 
     assert ems.reported_variables == [
         ('ACCIMAPI_SETSP_LOCAL', 'LOCAL', 'SETSP'), ('HEATING_SP', 'HEATING_SP', ''), ('OFFSET', 'OFFSET', ''),
         ('T_OUT', 'T_OUT', ''), ('CURRENTTIME', 'CURRENTTIME', '')]
-    assert objects['Offset In SetSP'] == ['Offset In SetSP', 'Offset', 'Averaged', 'ZoneTimestep', '', 'C']
-    assert objects['Outdoor In SetSP'][1] == 'T_out'
-    assert objects['Hour In SetSP'][1] == 'CurrentTime'
-    assert objects['Actuator In SetSP'][1] == 'Heating_SP'
+    assert outputs['Offset In SetSP'] == ['Offset In SetSP', 'Offset', 'Averaged', 'ZoneTimestep', '', 'C']
+    assert outputs['Outdoor In SetSP'][1] == 'T_out'
+    assert outputs['Hour In SetSP'][1] == 'CurrentTime'
+    assert outputs['Actuator In SetSP'][1] == 'Heating_SP'
     assert ems.added_global_variables() == ['ACCIMAPI_SETSP_LOCAL', 'HEATING_SP']
 
 
-def test_objects_for_api_remove_the_programs_and_actuators():
-    objects = objects_for_api(parse_idf(MODEL))
+def test_prepare_for_api_removes_the_programs_and_actuators():
+    idf = _idf()
 
-    keys = [o.key for o in objects]
-    for key in ('ENERGYMANAGEMENTSYSTEM:PROGRAM', 'ENERGYMANAGEMENTSYSTEM:PROGRAMCALLINGMANAGER',
-                'ENERGYMANAGEMENTSYSTEM:ACTUATOR'):
-        assert key not in keys
-    assert 'ENERGYMANAGEMENTSYSTEM:SENSOR' in keys
-    outputs = {o.fields[0]: o.fields for o in objects if o.key == 'ENERGYMANAGEMENTSYSTEM:OUTPUTVARIABLE'}
+    prepare_for_api(idf)
+
+    for object_type in ('EnergyManagementSystem:Program', 'EnergyManagementSystem:ProgramCallingManager',
+                        'EnergyManagementSystem:Actuator'):
+        assert not idf.idfobjects[object_type]
+    assert idf.idfobjects['EnergyManagementSystem:Sensor']
+    outputs = _output_variables(idf)
     # The variables of programs are reported through new global variables, and the actuators through global
     # variables with their names
     assert outputs['Setpoint Local'] == ['Setpoint Local', 'ACCIMAPI_SETSP_LOCAL', 'Averaged', 'ZoneTimestep', '', 'C']
     assert outputs['Heating Setpoint'][1] == 'Heating_SP'
-    assert objects[-1].type == 'EnergyManagementSystem:GlobalVariable'
-    assert objects[-1].fields == ['ACCIMAPI_SETSP_LOCAL', 'HEATING_SP']
+    added = idf.idfobjects['EnergyManagementSystem:GlobalVariable'][-1]
+    assert added.fieldvalues[1:] == ['ACCIMAPI_SETSP_LOCAL', 'HEATING_SP']
 
 
 class _FakeFunctions:
@@ -211,7 +220,7 @@ class _FakeAPI:
 
 
 def _controller(model=MODEL, **kwargs):
-    controller = ErlController(read_ems(parse_idf(model)), **kwargs)
+    controller = ErlController(read_ems(_idf(model)), **kwargs)
     api = _FakeAPI()
     controller.register(api, 'state')
     return controller, api
@@ -333,7 +342,7 @@ def test_messages_of_the_programs_go_to_the_error_file():
 ])
 def test_unsupported_models(extra, error, message):
     with pytest.raises(error, match=message):
-        ErlController(read_ems(parse_idf(MODEL + extra)))
+        ErlController(read_ems(_idf(MODEL + extra)))
 
 
 @pytest.mark.parametrize('version', ['9.4', '24.1'])
@@ -423,11 +432,12 @@ def test_the_ems_and_api_backends_give_the_same_results(tmp_path, monkeypatch, z
              verbose=False, zone_arguments=zone_arguments)
     output_idf = sorted(tmp_path.glob('TestModel[[]*.idf'))[0]
     # Three days of July, after the sizing of the design days
-    objects = parse_idf(output_idf.read_bytes().decode('latin-1'))
-    run_period = [o for o in objects if o.key == 'RUNPERIOD'][0]
-    run_period.fields[1:7] = ['7', '1', '2002', '7', '3', '2002']
+    idf = load_idf(output_idf)
+    run_period = idf.idfobjects['RunPeriod'][0]
+    run_period.Begin_Month, run_period.Begin_Day_of_Month, run_period.Begin_Year = 7, 1, 2002
+    run_period.End_Month, run_period.End_Day_of_Month, run_period.End_Year = 7, 3, 2002
     model = tmp_path / 'model.idf'
-    model.write_bytes(render_idf(objects).encode('latin-1'))
+    idf.saveas(str(model))
 
     energyplus = _energyplus_with_api('25.1') / 'energyplus.exe'
     ems = subprocess.run([str(energyplus), '-d', str(tmp_path / 'ems'), '-p', 'run', '-s', 'C', '-r', '-x',
@@ -464,16 +474,16 @@ def test_integer_actuators_are_set_as_with_the_ems(tmp_path):
     # The status of a window shading control is an integer actuator. The example of EnergyPlus sets it to 6 (interior
     # blind on); with 6.6, the EMS sets 6 (std::floor), and the API alone would set 7 (exterior blind on)
     folder, idf, epw = _shading_example()
-    objects = parse_idf(idf.read_bytes().decode('latin-1'))
-    program = [o for o in objects if o.key == 'ENERGYMANAGEMENTSYSTEM:PROGRAM'
-               and o.fields[0].upper() == 'SET_SHADE_CONTROL_STATE'][0]
+    example = load_idf(idf)
+    program = example.getobject('EnergyManagementSystem:Program', 'SET_SHADE_CONTROL_STATE')
     line = 'Set Zn001_Wall001_Win001_Shading_Deploy_Status = Shade_Status_Interior_Blind_On'
-    program.fields = [field + ' + 0.6' if field == line else field for field in program.fields]
-    assert sum(field.endswith(' + 0.6') for field in program.fields) == 2
-    run_period = [o for o in objects if o.key == 'RUNPERIOD'][0]
-    run_period.fields[1:7] = ['7', '1', '', '7', '3', '']
+    set_program_lines(program, [value + ' + 0.6' if value == line else value for value in program.fieldvalues[2:]])
+    assert sum(value.endswith(' + 0.6') for value in program.fieldvalues[2:]) == 2
+    run_period = example.idfobjects['RunPeriod'][0]
+    run_period.Begin_Month, run_period.Begin_Day_of_Month, run_period.Begin_Year = 7, 1, ''
+    run_period.End_Month, run_period.End_Day_of_Month, run_period.End_Year = 7, 3, ''
     model = tmp_path / 'model.idf'
-    model.write_bytes(render_idf(objects).encode('latin-1'))
+    example.saveas(str(model))
 
     ems = subprocess.run([str(folder / 'energyplus.exe'), '-d', str(tmp_path / 'ems'), '-p', 'run', '-s', 'C', '-r',
                           '-x', '-w', str(epw), str(model)], capture_output=True, text=True)

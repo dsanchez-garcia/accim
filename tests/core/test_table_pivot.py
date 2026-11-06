@@ -17,10 +17,10 @@ the IDF that Table reads.
 import builtins
 from types import SimpleNamespace
 
-import besos.eppy_funcs
 import pandas as pd
 import pytest
 
+import accim.sim.accis
 from accim.data.postprocessing.main import Table
 
 pytestmark = pytest.mark.filterwarnings('ignore::pandas.errors.PerformanceWarning')
@@ -90,7 +90,7 @@ def _table(tmp_path, monkeypatch, files=None, frequency='runperiod'):
         lines += [','.join([date, *(str(v[hour]) for v in values)]) for hour, date in enumerate(DATES)]
         (tmp_path / name).write_text('\n'.join(lines) + '\n', encoding='utf-8')
     monkeypatch.chdir(tmp_path)
-    monkeypatch.setattr(besos.eppy_funcs, 'get_building', lambda idf_path: _building())
+    monkeypatch.setattr(accim.sim.accis, 'load_idf', lambda idf_path: _building())
     table = Table(
         datasets=sorted(files), source_frequency='hourly', frequency=frequency, frequency_agg_func='sum',
         standard_outputs=True, level=['building'], level_agg_func=['sum'], level_excluded_zones=[],

@@ -29,7 +29,6 @@ import pytest
 from accim.energyplus import default_energyplus_folder, find_energyplus
 from accim.sim.hvac import existing
 from accim.sim.hvac.schedules import is_always_on, schedule_values
-from accim.sim.idf_tools import idf_text
 
 REPO = Path(__file__).resolve().parents[2]
 INPUTS = REPO / 'tests' / 'core' / 'golden_master' / 'inputs'
@@ -161,7 +160,7 @@ def test_the_models_whose_thermostats_already_control_the_operative_temperature_
     for control in (True, False):
         idf = _model(tmp_path, name)
         _add(idf, script_type='ex_mm', existing_hvac_operative_temperature_control=control)
-        texts.append(idf_text(idf))
+        texts.append(idf.idfstr())
 
     assert texts[0] == texts[1]
 
@@ -345,6 +344,18 @@ def test_the_widened_limits_respect_the_bounds_of_the_idd_and_the_wider_limits(t
     assert vrf.Maximum_Outdoor_Drybulb_Temperature_for_Defrost_Operation == 5
     # -25 C is wider than -20 C
     assert coil.Minimum_Outdoor_DryBulb_Temperature_for_Compressor_Operation == -25
+
+
+def test_a_limit_of_0_is_not_the_default_of_the_idd(tmp_path):
+    # eppy gives the numbers of a model as numbers, and a limit of 0 C was taken as an empty field (the default of the
+    # IDD, -25 C), which is wider than -20 C
+    idf = _model(tmp_path, 'exptac')
+    coil = idf.newidfobject('Coil:Cooling:DX:SingleSpeed', Name='Coil',
+                            Minimum_Outdoor_DryBulb_Temperature_for_Compressor_Operation=0)
+
+    existing.widen_outdoor_temperature_limits(SimpleNamespace(idf=idf, log=lambda *lines: None))
+
+    assert coil.Minimum_Outdoor_DryBulb_Temperature_for_Compressor_Operation == -20
 
 
 # ----------------------------------------------------------------------------------------------------------

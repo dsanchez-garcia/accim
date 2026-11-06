@@ -18,9 +18,9 @@ import shutil
 from pathlib import Path
 from types import SimpleNamespace
 
-import besos.eppy_funcs
 import pytest
 
+import accim.sim.accis
 from accim.data.postprocessing.main import Table
 
 from ._golden import check_golden
@@ -74,7 +74,7 @@ def sample_folder(tmp_path_factory):
 def _sample_table(folder, frequency):
     with pytest.MonkeyPatch.context() as monkeypatch:
         monkeypatch.chdir(folder)
-        monkeypatch.setattr(besos.eppy_funcs, 'get_building', lambda idf_path: _sample_building())
+        monkeypatch.setattr(accim.sim.accis, 'load_idf', lambda idf_path: _sample_building())
         return Table(
             datasets=[csv.name for csv in SAMPLE_CSVS], source_frequency='hourly', frequency=frequency,
             frequency_agg_func='sum', standard_outputs=True, level=['building'], level_agg_func=['sum', 'mean'],

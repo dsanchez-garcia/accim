@@ -76,7 +76,7 @@ def get_accim_args(idf_object: IDF) -> dict:
     # }
     # return accim_args
 
-    # Remove the first two lines and the last line with an empty string
+    # The values of the fields of a program: its type, its name and its lines
     def program_to_dict(program):
         program = program[2:]
 
@@ -100,7 +100,7 @@ def get_accim_args(idf_object: IDF) -> dict:
     zone_programs = input_programs(idf_object)
     if zone_programs:
         for program in zone_programs.values():
-            programs.update({program.Name: program_to_dict(program.obj)})
+            programs.update({program.Name: program_to_dict(program.fieldvalues)})
         return programs
     try:
         for p in ['SetInputData', 'SetVOFinputData']:
@@ -109,10 +109,10 @@ def get_accim_args(idf_object: IDF) -> dict:
             if p == 'SetVOFinputData' and not matches:
                 # Only the models with natural ventilation (mixed mode) have SetVOFinputData
                 continue
-            data = matches[0].obj
+            data = matches[0].fieldvalues
             programs.update({p: program_to_dict(data)})
 
-        setast = [i for i in idf_object.idfobjects['EnergyManagementSystem:Program'] if i.Name.lower() == 'setast'.lower()][0].obj[:3]
+        setast = [i for i in idf_object.idfobjects['EnergyManagementSystem:Program'] if i.Name.lower() == 'setast'.lower()][0].fieldvalues[:3]
         programs.update({'SetAST': program_to_dict(setast)})
 
         applycat = [i for i in idf_object.idfobjects['EnergyManagementSystem:Program'] if i.Name.lower() == 'applycat'][0]
@@ -135,7 +135,7 @@ def get_accim_args(idf_object: IDF) -> dict:
     except IndexError:
         ems_programs = [i for i in idf_object.idfobjects['EnergyManagementSystem:Program'] if 'set_zone_input_data' in i.Name.lower()]
         for p in ems_programs:
-            programs.update({p.Name: program_to_dict(p.obj)})
+            programs.update({p.Name: program_to_dict(p.fieldvalues)})
 
     return programs
 

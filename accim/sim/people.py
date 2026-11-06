@@ -4,7 +4,6 @@
 
 """Thermal comfort models of the occupants (People, and People:Definition in EnergyPlus 26.2)."""
 
-from accim.sim.idf_tools import try_objects
 from accim.sim.model import AccimModel
 from accim.utils.people import get_people_definition
 
@@ -35,7 +34,8 @@ def set_comfort_models(model: AccimModel) -> None:
             setattr(people, field, comfort_model)
 
     definitions = []
-    for instance in try_objects(idf, 'PEOPLE:INSTANCE'):
+    # The People:Instance objects exist since EnergyPlus 26.2 (the keys of idfobjects are in capitals)
+    for instance in idf.idfobjects.get('PEOPLE:INSTANCE', []):
         definition = get_people_definition(idf, instance)
         if definition is None:
             raise ValueError(

@@ -77,11 +77,8 @@ def get_people_definition(idf: IDF, people_instance: Any) -> Optional[Any]:
     Returns:
         Optional[Any]: The People:Definition object, or None if the model has none with that name.
     """
-    definition_name = str(people_instance.People_Definition_Name).strip().upper()
-    for definition in idf.idfobjects['PEOPLE:DEFINITION']:
-        if str(definition.Name).strip().upper() == definition_name:
-            return definition
-    return None
+    definition_name = str(people_instance.People_Definition_Name).strip()
+    return idf.getobject('PEOPLE:DEFINITION', definition_name)
 
 
 # Classes of heat transfer surfaces with a 'Space Name' field. In a zone with Space objects, EnergyPlus
@@ -209,8 +206,8 @@ def get_people_instances(idf: IDF) -> List[Dict[str, Any]]:
     zone_lists = {_get_field(zl, 'Name').upper(): zl for zl in _get_objects_if_in_idd(idf, 'ZoneList')}
 
     def list_members(list_obj: Any) -> List[str]:
-        # The members of a ZoneList or SpaceList are its fields after the name
-        return [str(m).strip() for m in list_obj.obj[2:] if str(m).strip()]
+        # The members of a ZoneList or SpaceList are the values of its fields after the name
+        return [str(m).strip() for m in list_obj.fieldvalues[2:] if str(m).strip()]
 
     def zone_spaces(zone_name: str) -> List[Tuple[str, str]]:
         # (space, kind) of each space of a zone. The default space keeps the zone name as written where the
@@ -429,15 +426,15 @@ def get_idf_hierarchy(idf: IDF) -> Dict[str, Any]:
 
     # Process ZoneList
     for z_list in idf.idfobjects['ZONELIST']:
-        # In eppy/besos, the .obj property is a list: ['ZoneList', 'Name', 'Member1', 'Member2'...]
+        # In eppy, the values of the fields are a list: ['ZoneList', 'Name', 'Member1', 'Member2'...]
         # Slicing from index 2 ([2:]) retrieves all members dynamically, regardless of list length.
-        members: List[str] = [m for m in z_list.obj[2:]]
+        members: List[str] = [m for m in z_list.fieldvalues[2:]]
         hierarchy["groups"]["zone_lists"][z_list.Name] = members
 
     # Process SpaceList
     for s_list in _get_objects_if_in_idd(idf, 'SPACELIST'):
         # Same logic applied to SpaceLists
-        members: List[str] = [m for m in s_list.obj[2:]]
+        members: List[str] = [m for m in s_list.fieldvalues[2:]]
         hierarchy["groups"]["space_lists"][s_list.Name] = members
 
     return hierarchy
@@ -532,10 +529,10 @@ def get_idf_hierarchy_with_people(idf: IDF) -> Dict[str, Any]:
 
     # --- STEP 3: PROCESS LISTS ---
     for sl in _get_objects_if_in_idd(idf, 'SpaceList'):
-        hierarchy["groups"]["space_lists"][sl.Name] = [m for m in sl.obj[2:]]
+        hierarchy["groups"]["space_lists"][sl.Name] = [m for m in sl.fieldvalues[2:]]
 
     for zl in _get_objects_if_in_idd(idf, 'ZoneList'):
-        hierarchy["groups"]["zone_lists"][zl.Name] = [m for m in zl.obj[2:]]
+        hierarchy["groups"]["zone_lists"][zl.Name] = [m for m in zl.fieldvalues[2:]]
 
     # --- STEP 4: PROCESS PEOPLE AND PEOPLE:INSTANCE (Inject into Space Dicts) ---
     # Each instance that EnergyPlus creates for a People object is in one space
@@ -572,9 +569,9 @@ def get_spaces_from_spacelist(idf: IDF, spacelist_name: str) -> List[str]:
 
         # Check if this is the list we are looking for
         if s_list.Name.upper() == target_name_upper:
-            # In eppy/besos, .obj is a list: ['SpaceList', 'Name', 'Space1', 'Space2'...]
+            # In eppy, the values of the fields are a list: ['SpaceList', 'Name', 'Space1', 'Space2'...]
             # Slicing from index 2 ([2:]) retrieves only the members (the spaces).
-            members = [space_name for space_name in s_list.obj[2:]]
+            members = [space_name for space_name in s_list.fieldvalues[2:]]
 
             return members
 

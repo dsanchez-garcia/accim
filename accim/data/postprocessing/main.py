@@ -105,7 +105,7 @@ def _occupied_zones(building, columns: list, spacelists: bool):
     is given back ('Space_1_Occupants' becomes 'SPACE 1_OCCUPANTS', and 'Floor_1_Residential_Living_Occupants'
     does not change).
 
-    :param building: The model, read with besos.
+    :param building: The model, read with eppy (:func:`accim.sim.accis.load_idf`).
     :param columns: The names of the columns, in uppercase.
     :param spacelists: True if the model has SpaceLists.
     :return: A dictionary {name of the zone in uppercase: name of the zone in Table}, in the order Table
@@ -413,7 +413,7 @@ class Table:
 
         import pandas as pd
         import glob
-        from besos.eppy_funcs import get_building
+        from accim.sim.accis import load_idf
 
         self.frequency = frequency
         self.normalised_energy_units = normalised_energy_units
@@ -942,8 +942,7 @@ class Table:
                 "Table needs idf_path, the path of one of the IDFs of the simulations, to find the zones of the "
                 "building: Table(..., idf_path='path/to/model.idf')."
             )
-        building = get_building(idf_path)
-        # building = get_building('OSM_SmallOffice_exHVAC.idf')
+        building = load_idf(idf_path)
 
         allzones = [i.Name for i in building.idfobjects['ZONE']]
 

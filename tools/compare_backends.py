@@ -22,22 +22,21 @@ from pathlib import Path
 import pandas as pd
 
 from accim.energyplus import find_energyplus, read_idf_version
-from accim.sim.energyplus_api import parse_idf, render_idf, run_simulation
+from accim.sim.accis import load_idf
+from accim.sim.energyplus_api import run_simulation
 
 
 def shorten_run_period(idf, out, start, days):
     """A copy of the model in ``out`` whose RunPeriod objects cover ``days`` days from ``start`` (month/day)."""
-    objects = parse_idf(Path(idf).read_bytes().decode('latin-1'))
+    model = load_idf(idf)
     month, day = (int(x) for x in start.split('/'))
     begin = datetime.date(2001, month, day)
     end = begin + datetime.timedelta(days=days - 1)
-    for obj in objects:
-        if obj.key == 'RUNPERIOD':
-            obj.fields.extend([''] * (7 - len(obj.fields)))
-            # Name, Begin Month, Begin Day of Month, Begin Year, End Month, End Day of Month, End Year
-            obj.fields[1:7] = [str(begin.month), str(begin.day), '', str(end.month), str(end.day), '']
+    for run_period in model.idfobjects['RunPeriod']:
+        run_period.Begin_Month, run_period.Begin_Day_of_Month, run_period.Begin_Year = begin.month, begin.day, ''
+        run_period.End_Month, run_period.End_Day_of_Month, run_period.End_Year = end.month, end.day, ''
     path = Path(out) / 'model.idf'
-    path.write_bytes(render_idf(objects).encode('latin-1'))
+    model.saveas(str(path))
     return path
 
 

@@ -23,7 +23,7 @@ during the simulation::
 """
 
 from accim.sim.energyplus_api.controller import CALLING_POINTS, ErlController
-from accim.sim.energyplus_api.idf import EmsDefinition, objects_for_api, parse_idf, read_ems, read_idf, render_idf
+from accim.sim.energyplus_api.idf import EmsDefinition, prepare_for_api, read_ems
 from accim.sim.energyplus_api.runner import SimulationResult, run_simulation, run_simulations
 from accim.sim.energyplus_api.runtime import MINIMUM_API_VERSION, load_energyplus_api
 
@@ -34,11 +34,8 @@ __all__ = [
     'MINIMUM_API_VERSION',
     'SimulationResult',
     'load_energyplus_api',
-    'objects_for_api',
-    'parse_idf',
+    'prepare_for_api',
     'read_ems',
-    'read_idf',
-    'render_idf',
     'run_simulation',
     'run_simulations',
 ]

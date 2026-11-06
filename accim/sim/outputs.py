@@ -10,7 +10,6 @@ from typing import Iterable, Optional
 
 import pandas as pd
 
-from accim.sim.idf_tools import remove_objects
 from accim.sim.model import AccimModel
 
 __all__ = [
@@ -94,7 +93,7 @@ def _add_ideal_loads_backup_outputs(model: AccimModel, frequency: str) -> None:
 def remove_existing_outputs(model: AccimModel) -> None:
     """Remove the Output:Variable, Output:Meter and Output:EnvironmentalImpactFactors objects."""
     for object_type in ('Output:EnvironmentalImpactFactors', 'Output:Meter', 'Output:Variable'):
-        remove_objects(model.idf, object_type)
+        model.idf.removeallidfobjects(object_type)
 
 
 def add_simplified_outputs(model: AccimModel, frequencies: Iterable[str]) -> None:
@@ -217,7 +216,7 @@ def take_output_dataframe(model: AccimModel, df_outputs: pd.DataFrame, file: Opt
         df_outputs = df_outputs.rename(columns={'frequency': 'reporting_frequency'})
     if file is not None:
         df_outputs = df_outputs[df_outputs['file'].str.contains(file, regex=False)]
-    remove_objects(model.idf, 'Output:Variable')
+    model.idf.removeallidfobjects('Output:Variable')
     for row in df_outputs.itertuples(index=False):
         model.idf.newidfobject('Output:Variable', Key_Value=row.key_value, Variable_Name=row.variable_name,
                                Reporting_Frequency=row.reporting_frequency.capitalize(),

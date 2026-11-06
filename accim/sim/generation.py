@@ -4,15 +4,12 @@
 
 """Output IDFs of :class:`accim.sim.accis.AddAccis`: one for each combination of the arguments.
 
-All the output IDFs of an input IDF share every object but the EMS programs SetInputData_<zone>, with the arguments
-of each zone (those of the combination, or those of ``zone_arguments`` for some zones). The text of the other objects
-is written once, and only those programs are written for each output IDF, which gives the files that eppy would
-save, faster.
+All the output IDFs of an input IDF are the same model, with the ACCIS, and only differ in the EMS programs
+SetInputData_<zone>, with the arguments of each zone (those of the combination, or those of ``zone_arguments`` for
+some zones). :func:`set_combination` sets them in the model, which eppy then saves as each output IDF.
 """
 
 import math
-import os
-import platform
 import warnings
 from collections.abc import Mapping
 from dataclasses import dataclass, field
@@ -22,12 +19,12 @@ import numpy as np
 
 from accim.sim.arguments import as_list, to_day_of_year
 from accim.sim.ems.inputs import input_lines, input_programs, input_values
+from accim.sim.ems.programs import set_program_lines
 from accim.sim.ems.setast import has_setpoints
-from accim.sim.idf_tools import replace_program_lines
 from accim.sim.standards import COMFORT_STANDARDS
 
-__all__ = ['Combination', 'GenerationArguments', 'IdfWriter', 'OutputIdfs', 'combinations', 'output_name',
-           'zone_arguments_errors']
+__all__ = ['Combination', 'GenerationArguments', 'OutputIdfs', 'combinations', 'output_name', 'set_combination',
+           'zone_arguments_errors', 'zone_input_arguments']
 
 Number = Union[int, float]
 _STATIC_MODES = (0.1, 0.2, 0.3, 0.4, 0.5, 1.1, 1.2, 1.3, 1.4, 1.5)
@@ -213,12 +210,6 @@ def output_name(stem: str, combination: Combination, name_suffix: str = '') -> s
             f'[AT_{round(c.setpoint_tolerance, 2)}{suffix}.idf')
 
 
-def _save_text(text: str) -> bytes:
-    """The bytes that eppy writes for the text of an IDF (IDF.save with the default line endings)."""
-    text = f'!- {platform.system()} Line endings \n' + text
-    return os.linesep.join(text.splitlines()).encode('latin-1')
-
-
 def zone_input_arguments(args: GenerationArguments, combination: Combination,
                          zone_arguments: Optional[Mapping[str, Any]] = None) -> Dict[str, Any]:
     """The arguments of a zone in the output IDF of a combination, as those of
@@ -285,61 +276,27 @@ def zone_arguments_errors(arguments: Mapping[str, Any], mixed_mode: bool) -> Lis
     return errors
 
 
-class IdfWriter:
-    """Writes the output IDFs of a model, with the programs SetInputData_<zone> of each combination.
+def set_combination(idf, args: GenerationArguments, combination: Combination,
+                    zone_arguments: Optional[Mapping[str, Mapping[str, Any]]] = None) -> None:
+    """Set the arguments of the output IDF of a combination in the programs SetInputData_<zone> of a model.
 
-    :param idf: The model, with the EMS programs of ACCIS.
+    :param idf: The model, with the EMS programs of the ACCIS.
     :param args: The arguments of the output IDFs.
-    :param setpoint_type: 'temperature' or 'pmv'.
+    :param combination: The combination of the output IDF.
     :param zone_arguments: The arguments of some zones, which are the same in all the output IDFs,
         ``{zone name in the EMS objects: {argument: value}}`` (see :func:`zone_input_arguments`).
     """
-
-    def __init__(self, idf, args: GenerationArguments, setpoint_type: str = 'temperature',
-                 zone_arguments: Optional[Mapping[str, Mapping[str, Any]]] = None):
-        self.idf = idf
-        self.args = args
-        self.setpoint_type = setpoint_type
-        self.zone_arguments = dict(zone_arguments or {})
-        self.programs = input_programs(idf)
-        # The models in mixed mode have the program SetVST and the inputs of the venting opening factor
-        self.mixed_mode = any(p.Name.upper() == 'SETVST' for p in idf.idfobjects['EnergyManagementSystem:Program'])
-        mutable = {id(p) for p in self.programs.values()}
-        self._parts: List[Union[str, object]] = []
-        static: List[str] = []
-        for object_type in idf.model.dtls:
-            for obj in idf.idfobjects[object_type]:
-                if id(obj) in mutable:
-                    self._parts.append(''.join(static))
-                    self._parts.append(obj)
-                    static = []
-                else:
-                    static.append(obj.__repr__())
-        self._parts.append(''.join(static))
-
-    def _set_lines(self, combination: Combination) -> None:
-        a = self.args
+    # The models in mixed mode have the program SetVST, and the inputs of the venting opening factor
+    mixed_mode = idf.getobject('EnergyManagementSystem:Program', 'SetVST') is not None
+    for zone, program in input_programs(idf).items():
         if combination.is_pmv:
             # The Fanger thermostats control the zones: the inputs keep their default values, except HVACmode
-            values = input_values(dict(hvac_mode=0, opening_factor_max_temp_diff=a.opening_factor_max_temp_diff,
-                                       opening_factor_min_temp_diff=a.opening_factor_min_temp_diff,
-                                       min_opening_factor=a.min_opening_factor))
-            for program in self.programs.values():
-                replace_program_lines(program, input_lines(values, self.mixed_mode))
-            return
-        for zone, program in self.programs.items():
-            arguments = zone_input_arguments(a, combination, self.zone_arguments.get(zone))
-            replace_program_lines(program, input_lines(input_values(arguments), self.mixed_mode))
-
-    def text(self, combination: Combination) -> str:
-        """The text of the output IDF of a combination (as eppy's IDF.idfstr)."""
-        self._set_lines(combination)
-        return ''.join(part if isinstance(part, str) else part.__repr__() for part in self._parts)
-
-    def write(self, path: Union[str, os.PathLike], combination: Combination) -> None:
-        """Write the output IDF of a combination."""
-        with open(path, 'wb') as file:
-            file.write(_save_text(self.text(combination)))
+            arguments = dict(hvac_mode=0, opening_factor_max_temp_diff=args.opening_factor_max_temp_diff,
+                             opening_factor_min_temp_diff=args.opening_factor_min_temp_diff,
+                             min_opening_factor=args.min_opening_factor)
+        else:
+            arguments = zone_input_arguments(args, combination, (zone_arguments or {}).get(zone))
+        set_program_lines(program, input_lines(input_values(arguments), mixed_mode))
 
 
 class OutputIdfs(Mapping):

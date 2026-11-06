@@ -2,27 +2,25 @@
 # Copyright (C) 2021-2026 Daniel Sánchez-García
 # Distributed under the GNU General Public License v3 or later.
 
-"""The EMS objects of an IDF file, and the IDF that the Python API of EnergyPlus runs without them.
+"""The EMS objects of a model, and the model that the Python API of EnergyPlus runs without them.
 
-The Python API backend runs the EMS programs in Python, so the IDF that EnergyPlus runs has no
-programs, subroutines, program calling managers or actuators (EnergyPlus would set the actuators
-after each calling point, overwriting the values of the API). The sensors, internal variables,
-global variables and output variables stay: EnergyPlus resets the variables of the sensors at each
-new environment, as it does with the EMS, and reports the global variables, which the controller
-updates.
+The Python API backend runs the EMS programs in Python, so the model that EnergyPlus runs has no programs,
+subroutines, program calling managers or actuators (EnergyPlus would set the actuators after each calling point,
+overwriting the values of the API). The sensors, internal variables, global variables and output variables stay:
+EnergyPlus resets the variables of the sensors at each new environment, as it does with the EMS, and reports the
+global variables, which the controller updates.
+
+The models are IDF objects of eppy (see :func:`accim.sim.accis.load_idf`).
 """
 
-import os
-import re
 from dataclasses import dataclass, field
-from typing import Dict, List, Set, Tuple, Union
+from typing import Dict, List, Set, Tuple
 
 from accim.sim.ems.erl import BUILT_IN_VARIABLES
 
-__all__ = ['EmsDefinition', 'IdfObject', 'UNSUPPORTED_EMS_OBJECTS', 'objects_for_api', 'parse_idf', 'read_ems',
-           'read_idf', 'render_idf']
+__all__ = ['EmsDefinition', 'UNSUPPORTED_EMS_OBJECTS', 'prepare_for_api', 'read_ems']
 
-#: EMS objects that the Python API backend does not support
+#: EMS objects that the Python API backend does not support (with all the ExternalInterface objects)
 UNSUPPORTED_EMS_OBJECTS = (
     'ENERGYMANAGEMENTSYSTEM:TRENDVARIABLE',
     'ENERGYMANAGEMENTSYSTEM:CURVEORTABLEINDEXVARIABLE',
@@ -30,63 +28,15 @@ UNSUPPORTED_EMS_OBJECTS = (
     'EXTERNALINTERFACE',
     'PYTHONPLUGIN:INSTANCE',
 )
-#: EMS objects that the Python API backend runs in Python, which are removed from the IDF
+#: EMS objects that the Python API backend runs in Python, which are removed from the model
 _CONTROL_OBJECTS = (
-    'ENERGYMANAGEMENTSYSTEM:PROGRAM',
-    'ENERGYMANAGEMENTSYSTEM:SUBROUTINE',
-    'ENERGYMANAGEMENTSYSTEM:PROGRAMCALLINGMANAGER',
-    'ENERGYMANAGEMENTSYSTEM:ACTUATOR',
+    'EnergyManagementSystem:Program',
+    'EnergyManagementSystem:Subroutine',
+    'EnergyManagementSystem:ProgramCallingManager',
+    'EnergyManagementSystem:Actuator',
 )
-#: The EMS output variables, and the index of their field 'EMS Program or Subroutine Name'
-_OUTPUT_VARIABLES = {
-    'ENERGYMANAGEMENTSYSTEM:OUTPUTVARIABLE': 4,
-    'ENERGYMANAGEMENTSYSTEM:METEREDOUTPUTVARIABLE': 3,
-}
-_COMMENT = re.compile(r'!.*')
-
-
-@dataclass
-class IdfObject:
-    """An object of an IDF file: its class and its fields (without comments)."""
-
-    type: str
-    fields: List[str]
-
-    @property
-    def key(self) -> str:
-        """The class in upper case."""
-        return self.type.upper()
-
-    def field(self, index: int) -> str:
-        """The field ``index`` (0 is the first field after the class), or '' if the object has fewer fields."""
-        return self.fields[index] if index < len(self.fields) else ''
-
-
-def parse_idf(text: str) -> List[IdfObject]:
-    """The objects of the text of an IDF file."""
-    text = _COMMENT.sub('', text)
-    objects = []
-    for block in text.split(';'):
-        if not block.strip():
-            continue
-        fields = [f.strip() for f in block.split(',')]
-        objects.append(IdfObject(fields[0], fields[1:]))
-    return objects
-
-
-def read_idf(path: Union[str, os.PathLike]) -> List[IdfObject]:
-    """The objects of an IDF file."""
-    with open(path, 'rb') as file:
-        return parse_idf(file.read().decode('latin-1'))
-
-
-def render_idf(objects: List[IdfObject]) -> str:
-    """The text of an IDF file with the objects."""
-    parts = []
-    for obj in objects:
-        fields = [obj.type] + obj.fields
-        parts.append(',\n    '.join(fields) + ';\n')
-    return '\n'.join(parts)
+#: The EMS output variables, which report an EMS variable (that of a program, if it has one)
+_OUTPUT_VARIABLES = ('EnergyManagementSystem:OutputVariable', 'EnergyManagementSystem:MeteredOutputVariable')
 
 
 @dataclass
@@ -105,6 +55,7 @@ class EmsDefinition:
         that the API runs) are reported through new global variables. An output variable that names a program
         reports the global variable of that name, if there is one, as in EnergyPlus.
     :ivar unsupported: The classes of the objects that the backend does not support.
+    :ivar version: The EnergyPlus version of the model ('25.1').
     """
 
     sensors: List[Tuple[str, str, str]] = field(default_factory=list)
@@ -145,60 +96,63 @@ class EmsDefinition:
         return bool(self.calling_managers)
 
 
-def read_ems(objects: List[IdfObject]) -> EmsDefinition:
-    """The EMS objects of a model, and its EnergyPlus version."""
+def read_ems(idf) -> EmsDefinition:
+    """The EMS objects of a model (an IDF object of eppy), and its EnergyPlus version."""
     ems = EmsDefinition()
-    outputs = []
-    for obj in objects:
-        key = obj.key
-        if key == 'VERSION':
-            parts = obj.field(0).split('.')
-            ems.version = '.'.join(parts[:2])
-        elif key == 'ENERGYMANAGEMENTSYSTEM:SENSOR':
-            ems.sensors.append((obj.field(0).upper(), obj.field(1), obj.field(2)))
-        elif key == 'ENERGYMANAGEMENTSYSTEM:ACTUATOR':
-            ems.actuators.append((obj.field(0).upper(), obj.field(1), obj.field(2), obj.field(3)))
-        elif key == 'ENERGYMANAGEMENTSYSTEM:INTERNALVARIABLE':
-            ems.internal_variables.append((obj.field(0).upper(), obj.field(1), obj.field(2)))
-        elif key == 'ENERGYMANAGEMENTSYSTEM:GLOBALVARIABLE':
-            ems.global_variables.extend(name.upper() for name in obj.fields if name)
-        elif key in ('ENERGYMANAGEMENTSYSTEM:PROGRAM', 'ENERGYMANAGEMENTSYSTEM:SUBROUTINE'):
-            ems.programs[obj.field(0).upper()] = obj.fields[1:]
-        elif key == 'ENERGYMANAGEMENTSYSTEM:PROGRAMCALLINGMANAGER':
-            ems.calling_managers.append((obj.field(0), obj.field(1).replace(' ', '').upper(),
-                                         [name.upper() for name in obj.fields[2:] if name]))
-        elif key in _OUTPUT_VARIABLES:
-            outputs.append((obj.field(1), obj.field(_OUTPUT_VARIABLES[key])))
-        elif key in UNSUPPORTED_EMS_OBJECTS or key.startswith('EXTERNALINTERFACE'):
-            ems.unsupported.append(obj.type)
-    # The scope of the reported variables needs all the global variables, which may come after the output variables
-    for variable, program in outputs:
-        name, program = ems.reported_name(variable, program)
-        if (name, variable.upper(), program) not in ems.reported_variables:
-            ems.reported_variables.append((name, variable.upper(), program))
+    for version in idf.idfobjects['Version']:
+        ems.version = '.'.join(str(version.Version_Identifier).split('.')[:2])
+    for sensor in idf.idfobjects['EnergyManagementSystem:Sensor']:
+        ems.sensors.append((sensor.Name.upper(), sensor.OutputVariable_or_OutputMeter_Index_Key_Name,
+                            sensor.OutputVariable_or_OutputMeter_Name))
+    for actuator in idf.idfobjects['EnergyManagementSystem:Actuator']:
+        ems.actuators.append((actuator.Name.upper(), actuator.Actuated_Component_Unique_Name,
+                              actuator.Actuated_Component_Type, actuator.Actuated_Component_Control_Type))
+    for variable in idf.idfobjects['EnergyManagementSystem:InternalVariable']:
+        ems.internal_variables.append((variable.Name.upper(), variable.Internal_Data_Index_Key_Name,
+                                       variable.Internal_Data_Type))
+    for variables in idf.idfobjects['EnergyManagementSystem:GlobalVariable']:
+        # The names of the variables are the values of all its fields
+        ems.global_variables.extend(str(name).upper() for name in variables.fieldvalues[1:] if name)
+    for object_type in ('EnergyManagementSystem:Program', 'EnergyManagementSystem:Subroutine'):
+        for program in idf.idfobjects[object_type]:
+            # The lines are the values of the fields after the name
+            ems.programs[program.Name.upper()] = [str(line) for line in program.fieldvalues[2:]]
+    for manager in idf.idfobjects['EnergyManagementSystem:ProgramCallingManager']:
+        # The programs are the values of the fields after the calling point
+        ems.calling_managers.append((manager.Name, manager.EnergyPlus_Model_Calling_Point.replace(' ', '').upper(),
+                                     [str(name).upper() for name in manager.fieldvalues[3:] if name]))
+    for object_type in idf.idfobjects:
+        if object_type.upper() in UNSUPPORTED_EMS_OBJECTS or object_type.upper().startswith('EXTERNALINTERFACE'):
+            ems.unsupported.extend(object_type for _ in idf.idfobjects[object_type])
+    # The scope of the reported variables needs all the global variables
+    for object_type in _OUTPUT_VARIABLES:
+        for output in idf.idfobjects[object_type]:
+            name, program = ems.reported_name(output.EMS_Variable_Name, output.EMS_Program_or_Subroutine_Name)
+            if (name, output.EMS_Variable_Name.upper(), program) not in ems.reported_variables:
+                ems.reported_variables.append((name, output.EMS_Variable_Name.upper(), program))
     return ems
 
 
-def objects_for_api(objects: List[IdfObject]) -> List[IdfObject]:
-    """The objects of the IDF that the Python API runs: those of the model without the EMS programs, subroutines,
-    program calling managers and actuators, and with global variables for the EMS output variables of actuators
-    and variables of programs."""
-    ems = read_ems(objects)
-    result = []
-    for obj in objects:
-        if obj.key in _CONTROL_OBJECTS:
-            continue
-        if obj.key in _OUTPUT_VARIABLES and obj.field(_OUTPUT_VARIABLES[obj.key]):
-            # The programs are not in the IDF: the output variable reports a global variable
-            fields = list(obj.fields)
-            program_field = _OUTPUT_VARIABLES[obj.key]
-            name, program = ems.reported_name(obj.field(1), obj.field(program_field))
+def prepare_for_api(idf) -> EmsDefinition:
+    """Make a model (an IDF object of eppy) the one that the Python API runs, and return its EMS objects.
+
+    The EMS programs, subroutines, program calling managers and actuators are removed, and the EMS output variables
+    of actuators and of variables of programs report new global variables, which the controller updates.
+    """
+    ems = read_ems(idf)
+    for object_type in _CONTROL_OBJECTS:
+        idf.removeallidfobjects(object_type)
+    for object_type in _OUTPUT_VARIABLES:
+        for output in idf.idfobjects[object_type]:
+            if not output.EMS_Program_or_Subroutine_Name:
+                continue
+            # The programs are not in the model: the output variable reports a global variable
+            name, program = ems.reported_name(output.EMS_Variable_Name, output.EMS_Program_or_Subroutine_Name)
             if program:
-                fields[1] = name
-            fields[program_field] = ''
-            obj = IdfObject(obj.type, fields)
-        result.append(obj)
+                output.EMS_Variable_Name = name
+            output.EMS_Program_or_Subroutine_Name = ''
     added = ems.added_global_variables()
     if added:
-        result.append(IdfObject('EnergyManagementSystem:GlobalVariable', added))
-    return result
+        idf.newidfobject('EnergyManagementSystem:GlobalVariable',
+                         **{f'Erl_Variable_{number}_Name': name for number, name in enumerate(added, start=1)})
+    return ems

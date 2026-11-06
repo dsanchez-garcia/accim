@@ -20,20 +20,21 @@ after (``ACST_<zone>``...), together with the setpoints of the zone (``roundedAC
 outputs. A model whose zones have the same arguments gives the same setpoints as with the programs of accim 0.x.
 """
 
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, Iterable, List, Optional, Tuple
 
 from accim.sim.ems import program_lines as pl
 from accim.sim.ems.inputs import INPUT_PROGRAM_PREFIX, RUN_PROGRAM_PREFIX, input_lines
 from accim.sim.ems.setast import master_program_lines, subprograms
-from accim.sim.idf_tools import add_program
 from accim.sim.model import AccimModel
 
 __all__ = [
     'ZONE_RESULT_VARIABLES',
     'ZONE_STATE_VARIABLES',
     'accis_programs',
+    'add_program',
     'add_program_calling_managers',
     'add_programs',
+    'set_program_lines',
     'windows_by_zone',
     'zone_variables',
 ]
@@ -55,6 +56,19 @@ _CALLED_PREFIXES = ('SetGeoVar', RUN_PROGRAM_PREFIX)
 #: Programs that initialise variables once, at the beginning of each environment.
 _NEW_ENVIRONMENT_PROGRAMS = ('InitASTvariables',)
 _WINDOW_PROGRAM_PREFIXES = ('SetMyVOF_', 'SetWindowOperation_')
+
+
+def add_program(idf, name: str, lines: Iterable[str]):
+    """Add an EMS program with its lines (the fields Program_Line_1, Program_Line_2... of eppy)."""
+    fields = {f'Program_Line_{number}': line for number, line in enumerate(lines, start=1)}
+    return idf.newidfobject('EnergyManagementSystem:Program', Name=name, **fields)
+
+
+def set_program_lines(program, lines: Iterable[str]) -> None:
+    """Replace the lines of an EMS program, which are the values of its fields after its name."""
+    del program.fieldvalues[2:]
+    for number, line in enumerate(lines, start=1):
+        program[f'Program_Line_{number}'] = line
 
 
 def zone_variables(mixed_mode: bool) -> Tuple[str, ...]:
@@ -136,15 +150,15 @@ def accis_programs(model: AccimModel) -> List[Tuple[str, List[str]]]:
 
 def add_programs(model: AccimModel) -> None:
     """Add the EMS programs of ACCIS that the model does not have yet."""
-    existing = {p.Name for p in model.idf.idfobjects['EnergyManagementSystem:Program']}
-    master_existed = 'SetAST_Master' in existing
+    idf = model.idf
+    # SetAST, its master program and subprograms are added together
+    master_existed = idf.getobject('EnergyManagementSystem:Program', 'SetAST_Master') is not None
     for name, lines in accis_programs(model):
-        # SetAST, its master program and subprograms are added together
         is_setast = name in ('SetAST', 'SetAST_Master') or name.startswith('SetAST_CS')
-        if (is_setast and master_existed) or name in existing:
+        if (is_setast and master_existed) or idf.getobject('EnergyManagementSystem:Program', name) is not None:
             model.log(f'Not added - {name} Program')
             continue
-        add_program(model.idf, name, lines)
+        add_program(idf, name, lines)
         model.log(f'Added - {name} Program')
 
 
@@ -179,7 +193,7 @@ def add_program_calling_managers(model: AccimModel) -> None:
     programs = [p.Name for p in idf.idfobjects['EnergyManagementSystem:Program'] if p.Name.upper() in called_programs]
     managers = list(idf.idfobjects['EnergyManagementSystem:ProgramCallingManager'])
     manager_names = {m.Name.upper() for m in managers}
-    called = {str(value).upper() for m in managers for value in m.obj[3:] if value}
+    called = {str(value).upper() for m in managers for value in m.fieldvalues[3:] if value}
     for name in sorted(programs, key=_priority):
         if name.upper() in manager_names or name.upper() in called:
             model.log(f'Not added - {name} Program Calling Manager')

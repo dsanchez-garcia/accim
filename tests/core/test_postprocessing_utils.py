@@ -9,10 +9,10 @@ import shutil
 from pathlib import Path
 from types import SimpleNamespace
 
-import besos.eppy_funcs
 import pandas as pd
 import pytest
 
+import accim.sim.accis
 from accim.data.postprocessing.main import Table
 from accim.data.postprocessing.utils import gen_csv_concatenated, genCSVconcatenated, preview_table_cols, \
     preview_Table_cols
@@ -100,7 +100,7 @@ def test_gen_csv_concatenated_gives_the_table_of_all_the_results(tmp_path, monke
     # The whole year, so that Table writes no file of rows not correctly aggregated
     names = _copy_results(tmp_path, hours=None)
     monkeypatch.chdir(tmp_path)
-    monkeypatch.setattr(besos.eppy_funcs, 'get_building', lambda idf_path: _sample_building())
+    monkeypatch.setattr(accim.sim.accis, 'load_idf', lambda idf_path: _sample_building())
 
     # Two parts: three results and one
     gen_csv_concatenated(datasets=names, source_frequency='hourly', frequency='runperiod',

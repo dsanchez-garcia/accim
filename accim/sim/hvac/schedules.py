@@ -7,7 +7,6 @@ and of the existing HVAC systems, and the values of the schedules of a model."""
 
 from typing import Dict, Iterable, Optional, Set
 
-from accim.sim.idf_tools import try_objects
 from accim.sim.model import AccimModel
 
 __all__ = [
@@ -36,7 +35,7 @@ _DESIGN_DAYS = {'SUMMERDESIGNDAY', 'WINTERDESIGNDAY'}
 
 def add_compact_schedule(model: AccimModel, name: str, *fields: str, type_limits: str = 'Any Number') -> None:
     """Add a Schedule:Compact object with its fields, unless the model has one with that name."""
-    if name in [s.Name for s in model.idf.idfobjects['Schedule:Compact']]:
+    if model.idf.getobject('Schedule:Compact', name) is not None:
         model.log(f'{name} Schedule already was in the model')
         return
     numbered = {f'Field_{n}': value for n, value in enumerate(fields, start=1)}
@@ -53,7 +52,7 @@ def add_radiative_fraction_schedule(model: AccimModel) -> None:
 
 
 def _schedules(idf, types: Iterable[str]) -> Dict[str, object]:
-    return {obj.Name.upper(): obj for object_type in types for obj in try_objects(idf, object_type)}
+    return {obj.Name.upper(): obj for object_type in types for obj in idf.idfobjects[object_type]}
 
 
 def _number(value) -> Optional[float]:
@@ -70,13 +69,14 @@ def _day_values(idf, names: Iterable[str]) -> Optional[Set[float]]:
         day = days.get(str(name).strip().upper())
         if day is None:
             return None
-        kind = day.obj[0].upper()
+        # The values of the fields are [type, name, type limits, ...]
+        kind = day.key.upper()
         if kind == 'SCHEDULE:DAY:HOURLY':
-            fields = day.obj[3:]
+            fields = day.fieldvalues[3:]
         elif kind == 'SCHEDULE:DAY:INTERVAL':
-            fields = day.obj[5::2]
+            fields = day.fieldvalues[5::2]
         else:
-            fields = day.obj[5:]
+            fields = day.fieldvalues[5:]
         numbers = [_number(f) for f in fields if str(f).strip() != '']
         if None in numbers:
             return None
@@ -92,11 +92,12 @@ def _week_day_names(idf, names: Iterable[str]) -> Optional[Set[str]]:
         week = weeks.get(str(name).strip().upper())
         if week is None:
             return None
-        if week.obj[0].upper() == 'SCHEDULE:WEEK:DAILY':
+        values = week.fieldvalues
+        if week.key.upper() == 'SCHEDULE:WEEK:DAILY':
             # Sunday to Saturday and Holiday, and the custom days, which special days can use (not the design days)
-            days.update(str(d) for d in week.obj[2:10] + week.obj[12:14] if str(d).strip())
+            days.update(str(d) for d in values[2:10] + values[12:14] if str(d).strip())
             continue
-        for day_types, day in zip(week.obj[2::2], week.obj[3::2]):
+        for day_types, day in zip(values[2::2], values[3::2]):
             types = str(day_types).upper().replace('FOR:', '').split()
             if not set(types) <= _DESIGN_DAYS:
                 days.add(str(day))
@@ -133,14 +134,15 @@ def schedule_values(idf, name: str) -> Optional[Set[float]]:
     schedule = _schedules(idf, _SCHEDULE_TYPES).get(str(name).strip().upper())
     if schedule is None:
         return None
-    kind = schedule.obj[0].upper()
+    # The values of the fields are [type, name, type limits, ...]
+    kind, values = schedule.key.upper(), schedule.fieldvalues
     if kind == 'SCHEDULE:CONSTANT':
-        value = _number(schedule.obj[3]) if len(schedule.obj) > 3 else 0.0
+        value = _number(values[3]) if len(values) > 3 else 0.0
         return None if value is None else {value}
     if kind == 'SCHEDULE:COMPACT':
-        return _compact_values(schedule.obj[3:])
+        return _compact_values(values[3:])
     if kind == 'SCHEDULE:YEAR':
-        days = _week_day_names(idf, [w for w in schedule.obj[3::5] if str(w).strip()])
+        days = _week_day_names(idf, [w for w in values[3::5] if str(w).strip()])
         return None if days is None else _day_values(idf, days)
     return None
 

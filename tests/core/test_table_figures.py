@@ -12,10 +12,10 @@ The CSV files have the names of the columns that accim and EnergyPlus give the o
 import builtins
 from pathlib import Path
 
-import besos.eppy_funcs
 import matplotlib.pyplot as plt
 import pytest
 
+import accim.sim.accis
 from accim.gui import forms, tasks
 
 from .test_table_columns import DESIGNBUILDER, _outputs
@@ -35,7 +35,7 @@ def simulations(tmp_path, monkeypatch):
             lines.append(','.join([f' 01/01  0{hour + 1}:00:00', *(str(v[hour] + offset) for v in columns.values())]))
         (tmp_path / name).write_text('\n'.join(lines) + '\n', encoding='utf-8')
     monkeypatch.chdir(tmp_path)
-    monkeypatch.setattr(besos.eppy_funcs, 'get_building', lambda idf_path: DESIGNBUILDER['building'])
+    monkeypatch.setattr(accim.sim.accis, 'load_idf', lambda idf_path: DESIGNBUILDER['building'])
 
     def answer(prompt=''):
         question = str(prompt).strip()

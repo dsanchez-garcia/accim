@@ -28,9 +28,9 @@ fake IDF replaces the IDF that Table reads.
 """
 from types import SimpleNamespace
 
-import besos.eppy_funcs
 import pytest
 
+import accim.sim.accis
 from accim.data.postprocessing.main import Table
 from accim.sim.targets import resolve_targets, sanitize_ems_name
 
@@ -70,7 +70,7 @@ def _openstudio_model(zones, spaces, space_type, people):
     return _FakeIDF(
         *[obj for zone in zones for obj in _zone(zone)],
         *[_Obj(key='SPACE', Name=space, Zone_Name=zone, Space_Type=space_type) for zone, space in zip(zones, spaces)],
-        _Obj(key='SPACELIST', Name=space_type, obj=['SPACELIST', space_type, *spaces]),
+        _Obj(key='SPACELIST', Name=space_type, fieldvalues=['SPACELIST', space_type, *spaces]),
         _Obj(key='PEOPLE', Name=people, Zone_or_ZoneList_or_Space_or_SpaceList_Name=space_type),
     )
 
@@ -162,7 +162,7 @@ def _table(tmp_path, monkeypatch, model, extra_columns=None, csv_name=CSV_NAME, 
         lines.append(','.join([f' 01/01  0{hour + 1}:00:00', *(str(v[hour]) for v in columns.values())]))
     (tmp_path / csv_name).write_text('\n'.join(lines) + '\n', encoding='utf-8')
     monkeypatch.chdir(tmp_path)
-    monkeypatch.setattr(besos.eppy_funcs, 'get_building', lambda idf_path: model['building'])
+    monkeypatch.setattr(accim.sim.accis, 'load_idf', lambda idf_path: model['building'])
     arguments = dict(
         datasets=[csv_name], source_frequency='hourly', frequency='hourly', frequency_agg_func='sum',
         standard_outputs=True, level=['block', 'building'], level_agg_func=['sum', 'mean'], level_excluded_zones=[],

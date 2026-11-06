@@ -47,18 +47,19 @@ EN16798_II = dict(comfort_standard=1, category=2, comfort_mode=3)
 # Inputs -------------------------------------------------------------------------------------------------------
 
 class _Program:
-    """An EMS program as eppy has it: the fields in ``obj``, and its lines as attributes Program_Line_<n>."""
+    """An EMS program as eppy has it: the values of its fields in ``fieldvalues``, and its lines as attributes
+    Program_Line_<n>."""
 
     def __init__(self, name, lines):
-        self.__dict__['obj'] = ['EnergyManagementSystem:Program', name, *lines]
+        self.__dict__['fieldvalues'] = ['EnergyManagementSystem:Program', name, *lines]
 
     @property
     def Name(self):  # noqa: N802 (the field of eppy)
-        return self.obj[1]
+        return self.fieldvalues[1]
 
     def __setattr__(self, name, value):
         number = int(name.rsplit('_', 1)[1])
-        self.obj[1 + number] = value
+        self.fieldvalues[1 + number] = value
 
 
 def test_the_inputs_of_a_zone_are_all_the_arguments_of_the_accis():

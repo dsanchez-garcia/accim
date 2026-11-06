@@ -22,9 +22,9 @@ values. A fake IDF replaces the IDF that Table reads.
 """
 from types import SimpleNamespace
 
-import besos.eppy_funcs
 import pytest
 
+import accim.sim.accis
 from accim.data.postprocessing.main import Table
 from accim.sim.targets import resolve_targets
 from accim.utils import get_people_instances
@@ -68,7 +68,7 @@ def _space(name, zone, space_type=''):
 
 
 def _space_list(name, spaces):
-    return _Obj(key='SPACELIST', Name=name, obj=['SPACELIST', name, *spaces])
+    return _Obj(key='SPACELIST', Name=name, fieldvalues=['SPACELIST', name, *spaces])
 
 
 def _people(name, target):
@@ -133,7 +133,7 @@ def _table(tmp_path, monkeypatch, building, ems_suffixes, instances, **kwargs):
         lines.append(','.join([f' 01/01  0{hour + 1}:00:00', *(str(v[hour]) for v in columns.values())]))
     (tmp_path / CSV_NAME).write_text('\n'.join(lines) + '\n', encoding='utf-8')
     monkeypatch.chdir(tmp_path)
-    monkeypatch.setattr(besos.eppy_funcs, 'get_building', lambda idf_path: building)
+    monkeypatch.setattr(accim.sim.accis, 'load_idf', lambda idf_path: building)
     arguments = dict(
         datasets=[CSV_NAME], source_frequency='hourly', frequency='hourly', frequency_agg_func='sum',
         standard_outputs=True, level=['block', 'building'], level_agg_func=['sum', 'mean'], level_excluded_zones=[],

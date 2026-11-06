@@ -17,6 +17,7 @@ from typing import Dict, Iterable, List, Optional, Sequence, Tuple, Union
 from accim.sim.ems.setpoint_lines import ROUNDING, SETPOINT_LINES
 
 __all__ = [
+    'COOLING_SEASON_LINES',
     'MODULAR_COMFORT_MODES',
     'depends_on_comfort_mode',
     'get_setpoint_lines',
@@ -57,6 +58,23 @@ MODULAR_COMFORT_MODES: Dict[int, List[Number]] = {
 }
 _CHUNK_SIZE = 3
 _SETPOINT = re.compile(r'^set (ACST|AHST) = ', re.IGNORECASE)
+#: The Erl lines that set CoolingSeason (1 in the cooling season, from CoolSeasonStart to the day before CoolSeasonEnd,
+#: which can be in the next year; 0 otherwise). SetAST_Master and the aPMV setpoints run them.
+COOLING_SEASON_LINES = (
+    'if CoolSeasonEnd > CoolSeasonStart',
+    'if (DayOfYear >= CoolSeasonStart) && (DayOfYear < CoolSeasonEnd)',
+    'set CoolingSeason = 1',
+    'else',
+    'set CoolingSeason = 0',
+    'endif',
+    'elseif CoolSeasonStart > CoolSeasonEnd',
+    'if (DayOfYear >= CoolSeasonStart) || (DayOfYear < CoolSeasonEnd)',
+    'set CoolingSeason = 1',
+    'else',
+    'set CoolingSeason = 0',
+    'endif',
+    'endif',
+)
 
 
 def _own_lines(comfort_standard: int, comfort_mode: Number) -> Tuple[str, ...]:
@@ -86,19 +104,7 @@ def master_program_lines() -> List[str]:
     lines = [
         '! SetAST_Master - Evaluates Season and Routes to ComfStand-specific SetAST subprograms',
         '! Season calculation logic',
-        'if CoolSeasonEnd > CoolSeasonStart',
-        'if (DayOfYear >= CoolSeasonStart) && (DayOfYear < CoolSeasonEnd)',
-        'set CoolingSeason = 1',
-        'else',
-        'set CoolingSeason = 0',
-        'endif',
-        'elseif CoolSeasonStart > CoolSeasonEnd',
-        'if (DayOfYear >= CoolSeasonStart) || (DayOfYear < CoolSeasonEnd)',
-        'set CoolingSeason = 1',
-        'else',
-        'set CoolingSeason = 0',
-        'endif',
-        'endif',
+        *COOLING_SEASON_LINES,
     ]
     for comfort_standard, comfort_modes in MODULAR_COMFORT_MODES.items():
         lines.append(f'if (ComfStand == {comfort_standard})')

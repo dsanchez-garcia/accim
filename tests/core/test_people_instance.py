@@ -40,6 +40,9 @@ class _ObjectClasses(dict):
     def __getitem__(self, key):
         return super().__getitem__(key.upper())
 
+    def get(self, key, default=None):
+        return super().get(key.upper(), default)
+
 
 class _FakeIDF:
     """A minimal IDF of EnergyPlus 26.2 with the object classes that accim reads for the occupants."""
@@ -57,6 +60,10 @@ class _FakeIDF:
         self.idfobjects[key].append(obj)
         return obj
 
+    def getobject(self, key, name):
+        """As eppy: the object of a class with a name, in any case, or None."""
+        return next((obj for obj in self.idfobjects[key] if obj.Name.upper() == name.upper()), None)
+
 
 def _zone(name):
     return _Obj(key='ZONE', Name=name)
@@ -64,7 +71,7 @@ def _zone(name):
 
 def _zonelist(name, zones):
     fields = {f'Zone_{n}_Name': z for n, z in enumerate(zones, start=1)}
-    return _Obj(key='ZONELIST', Name=name, obj=['ZoneList', name] + zones, **fields)
+    return _Obj(key='ZONELIST', Name=name, fieldvalues=['ZoneList', name] + zones, **fields)
 
 
 def _space(name, zone):
@@ -73,7 +80,7 @@ def _space(name, zone):
 
 def _spacelist(name, spaces):
     fields = {f'Space_{n}_Name': s for n, s in enumerate(spaces, start=1)}
-    return _Obj(key='SPACELIST', Name=name, obj=['SpaceList', name] + spaces, **fields)
+    return _Obj(key='SPACELIST', Name=name, fieldvalues=['SpaceList', name] + spaces, **fields)
 
 
 def _definition(name, **fields):

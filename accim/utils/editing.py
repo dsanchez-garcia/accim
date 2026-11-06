@@ -63,8 +63,8 @@ def modify_timesteps_path(idfpath: str, timesteps: int):
         Allowable values include 1, 2, 3, 4, 5, 6, 10, 12, 15, 20, 30, and 60
     :type timesteps: int
     """
-    from besos.eppy_funcs import get_building
-    building = get_building(idfpath)
+    from accim.sim.accis import load_idf
+    building = load_idf(idfpath)
     modify_timesteps(idf_object=building, timesteps=timesteps)
     building.save()
 
@@ -103,8 +103,8 @@ def set_occupancy_to_always_path(idfpath: str):
     :param idfpath: the path to the idf
     :type idfpath: str
     """
-    from besos.eppy_funcs import get_building
-    building = get_building(idfpath)
+    from accim.sim.accis import load_idf
+    building = load_idf(idfpath)
     set_occupancy_to_always(idf_object=building)
     building.save()
 
@@ -506,8 +506,8 @@ def set_operative_temp_control(idf_path: str = None, idf_object=None):
         raise ValueError("Either idf_path or idf_object must be provided.")
 
     if idf_path is not None:
-        from besos.eppy_funcs import get_building
-        building = get_building(idf_path)
+        from accim.sim.accis import load_idf
+        building = load_idf(idf_path)
     else:
         building = idf_object
 

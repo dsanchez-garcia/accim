@@ -47,6 +47,7 @@ import re
 import warnings
 from typing import Dict, Iterator, List, Mapping, Optional, Tuple
 
+from accim.sim.ems.objects import add_sensor
 from accim.sim.hvac.schedules import (
     ALWAYS_ON_SCHEDULE,
     DUAL_SETPOINT_CONTROL_SCHEDULE,
@@ -55,7 +56,6 @@ from accim.sim.hvac.schedules import (
     add_radiative_fraction_schedule,
     is_always_on,
 )
-from accim.sim.idf_tools import try_objects
 from accim.sim.model import AccimModel
 from accim.sim.outputs import _model_label
 
@@ -155,14 +155,9 @@ _LIMIT_FIELD = re.compile(r'^(Minimum|Maximum)_(Outdoor|Condenser_Inlet_Node)_\w
 _NOT_LIMIT_WORDS = ('Crankcase', 'Defrost', 'Heat_Recovery', 'Schedule', 'Wet')
 
 
-def _add_schedule(model: AccimModel, existing: set, name: str, value: int) -> None:
-    if name in existing:
-        model.log(f'{name} Schedule already was in the model')
-        return
-    model.idf.newidfobject('Schedule:Compact', Name=name, Schedule_Type_Limits_Name='Any Number',
-                           Field_1='Through: 12/31', Field_2='For: AllDays', Field_3=f'Until: 24:00,{value}')
-    existing.add(name)
-    model.log(f'{name} Schedule has been added')
+def _add_setpoint_schedule(model: AccimModel, name: str, value: int) -> None:
+    """Add a setpoint schedule of a zone (AHST_Sch_<zone> or ACST_Sch_<zone>), which the EMS actuates."""
+    add_compact_schedule(model, name, 'Through: 12/31', 'For: AllDays', f'Until: 24:00,{value}')
 
 
 def add_setpoint_schedules(model: AccimModel) -> None:
@@ -173,15 +168,14 @@ def add_setpoint_schedules(model: AccimModel) -> None:
     Only the setpoint object of the first control of each thermostat gets them, and the thermostats keep controlling
     the air temperature, with their control type schedules."""
     idf = model.idf
-    existing = {s.Name for s in idf.idfobjects['Schedule:Compact']}
     for group in model.thermostat_groups:
         if not group.setpoint_names:
             continue
         for ems_name in group.ems_names:
             if group.setpoint_type in ('ThermostatSetpoint:DualSetpoint', 'ThermostatSetpoint:SingleHeating'):
-                _add_schedule(model, existing, f'AHST_Sch_{ems_name}', 20)
+                _add_setpoint_schedule(model, f'AHST_Sch_{ems_name}', 20)
             if group.setpoint_type in ('ThermostatSetpoint:DualSetpoint', 'ThermostatSetpoint:SingleCooling'):
-                _add_schedule(model, existing, f'ACST_Sch_{ems_name}', 24)
+                _add_setpoint_schedule(model, f'ACST_Sch_{ems_name}', 24)
 
     for group in model.thermostat_groups:
         setpoints = idf.idfobjects[group.setpoint_type]
@@ -286,9 +280,7 @@ def set_operative_temperature_thermostats(model: AccimModel) -> None:
     """
     idf = model.idf
     occupied = {zone.upper(): (zone, ems_name) for zone, ems_name in zip(model.ems_zones, model.ems_names)}
-    zone_lists = {z.Name.upper(): [str(name).strip().upper() for name in z.obj[2:]]
-                  for z in try_objects(idf, 'ZoneList')}
-    existing = {s.Name for s in idf.idfobjects['Schedule:Compact']}
+    zone_lists = _zone_lists(idf)
     controlled = set()
     for thermostat in list(idf.idfobjects['ZoneControl:Thermostat']):
         key = thermostat.Zone_or_ZoneList_Name.upper()
@@ -302,8 +294,8 @@ def set_operative_temperature_thermostats(model: AccimModel) -> None:
                     f'Give each zone its own thermostat.')
             continue
         zone, ems_name = occupied[key]
-        _add_schedule(model, existing, f'AHST_Sch_{ems_name}', 20)
-        _add_schedule(model, existing, f'ACST_Sch_{ems_name}', 24)
+        _add_setpoint_schedule(model, f'AHST_Sch_{ems_name}', 20)
+        _add_setpoint_schedule(model, f'ACST_Sch_{ems_name}', 24)
         dual = _own_dual_setpoint(model, thermostat, zone)
         dual.Heating_Setpoint_Temperature_Schedule_Name = f'AHST_Sch_{ems_name}'
         dual.Cooling_Setpoint_Temperature_Schedule_Name = f'ACST_Sch_{ems_name}'
@@ -322,8 +314,8 @@ def set_operative_temperature_thermostats(model: AccimModel) -> None:
         if zone.upper() not in controlled:
             if zone.upper() not in radiant:
                 missing.append(zone)
-            _add_schedule(model, existing, f'AHST_Sch_{ems_name}', 20)
-            _add_schedule(model, existing, f'ACST_Sch_{ems_name}', 24)
+            _add_setpoint_schedule(model, f'AHST_Sch_{ems_name}', 20)
+            _add_setpoint_schedule(model, f'ACST_Sch_{ems_name}', 24)
     if missing:
         warnings.warn(
             f'The occupied zones {missing} of the model {_model_label(model)} have no thermostat '
@@ -357,13 +349,13 @@ def _objects_with_availability_managers(idf) -> Iterator:
 
 def _schedule_names(idf) -> set:
     return {s.Name.upper() for object_type in ('Schedule:Year', 'Schedule:Compact', 'Schedule:Constant',
-                                               'Schedule:File') for s in try_objects(idf, object_type)}
+                                               'Schedule:File') for s in idf.idfobjects[object_type]}
 
 
 def _single_operation_schemes(idf) -> Iterator[Tuple[object, str]]:
     """The plant and condenser operation schemes objects with one scheme, and the field of its schedule."""
     for object_type in _OPERATION_SCHEMES:
-        for schemes in try_objects(idf, object_type):
+        for schemes in idf.idfobjects[object_type]:
             fields = [f'Control_Scheme_{number}_Schedule_Name' for number in range(1, 9)
                       if str(getattr(schemes, f'Control_Scheme_{number}_Object_Type', '') or '').strip()]
             if len(fields) == 1:
@@ -414,15 +406,13 @@ def make_available(model: AccimModel, schedule: str) -> None:
             model.log(f'Modified - {_object_type(schemes)} {schemes.Name}: schedule of the operation scheme {schedule}')
     managed = list(_objects_with_availability_managers(idf))
     if any(obj.key.upper() in _LOOPS for obj in managed):
-        manager = next((m for m in idf.idfobjects['AvailabilityManager:Scheduled']
-                        if m.Name.upper() == AVAILABILITY_MANAGER.upper()), None)
+        manager = idf.getobject('AvailabilityManager:Scheduled', AVAILABILITY_MANAGER)
         if manager is None:
             idf.newidfobject('AvailabilityManager:Scheduled', Name=AVAILABILITY_MANAGER, Schedule_Name=schedule)
             model.log(f'Added - {AVAILABILITY_MANAGER} AvailabilityManager:Scheduled, with the schedule {schedule}')
         else:
             manager.Schedule_Name = schedule
-        if AVAILABILITY_MANAGER_LIST.upper() not in {lst.Name.upper() for lst in
-                                                     idf.idfobjects['AvailabilityManagerAssignmentList']}:
+        if idf.getobject('AvailabilityManagerAssignmentList', AVAILABILITY_MANAGER_LIST) is None:
             idf.newidfobject('AvailabilityManagerAssignmentList', Name=AVAILABILITY_MANAGER_LIST,
                              Availability_Manager_1_Object_Type='AvailabilityManager:Scheduled',
                              Availability_Manager_1_Name=AVAILABILITY_MANAGER)
@@ -456,29 +446,29 @@ def availability_warning(model: AccimModel) -> Optional[str]:
     for name in names:
         if is_always_on(idf, name) is not True:
             schedules[name] = schedules.get(name, 0) + 1
-    lists = {lst.Name.upper(): lst for lst in try_objects(idf, 'AvailabilityManagerAssignmentList')}
     used = dict.fromkeys(str(obj.Availability_Manager_List_Name).strip().upper()
                          for obj in _objects_with_availability_managers(idf))
     managers: List[str] = []
     for list_name in used:
-        lst = lists.get(list_name)
+        lst = idf.getobject('AvailabilityManagerAssignmentList', list_name)
         if lst is None:
             continue
-        for object_type, name in zip(lst.obj[2::2], lst.obj[3::2]):
+        # The values of the fields of the list are [type, name, manager 1 type, manager 1 name, ...]
+        values = lst.fieldvalues
+        for object_type, name in zip(values[2::2], values[3::2]):
             kind = str(object_type).upper()
             if kind not in _SWITCHING_OFF_MANAGERS:
                 continue
             field = _SWITCHING_OFF_MANAGERS[kind]
             if field is not None:
-                manager = next((m for m in try_objects(idf, str(object_type))
-                                if m.Name.upper() == str(name).upper()), None)
+                manager = idf.getobject(kind, str(name))
                 if manager is None or is_always_on(idf, getattr(manager, field)) is True:
                     continue
             label = f'{object_type} {name}'
             if label not in managers:
                 managers.append(label)
     managers += [f'AvailabilityManager:HybridVentilation {m.Name}'
-                 for m in try_objects(idf, 'AvailabilityManager:HybridVentilation')]
+                 for m in idf.idfobjects['AvailabilityManager:HybridVentilation']]
     if not schedules and not managers:
         return None
     reasons = []
@@ -512,7 +502,11 @@ def _outdoor_temperature_limits(idf) -> Iterator[Tuple[object, str, float, float
                 if not _LIMIT_FIELD.match(field) or any(word in field for word in _NOT_LIMIT_WORDS):
                     continue
                 idd = obj.getfieldidd(field)
-                value = str(getattr(obj, field, '') or '').strip() or (idd.get('default') or [''])[0]
+                # eppy gives the numbers as numbers (strings with besos), and '' for an empty field, whose value is the
+                # default of the IDD
+                value = getattr(obj, field, '')
+                if str(value).strip() == '':
+                    value = (idd.get('default') or [''])[0]
                 try:
                     current = float(value)
                 except ValueError:
@@ -536,7 +530,8 @@ def _outdoor_temperature_limits(idf) -> Iterator[Tuple[object, str, float, float
 
 
 def _object_name(obj) -> str:
-    return str(obj.obj[1]) if len(obj.obj) > 1 else ''
+    """The name of an object: its first field (Name, Heat_Pump_Name...)."""
+    return str(obj.fieldvalues[1]) if len(obj.fieldvalues) > 1 else ''
 
 
 def _object_type(obj) -> str:
@@ -621,10 +616,9 @@ def warn_own_setpoints(model: AccimModel) -> None:
 
 def _equipment_zones(idf) -> Dict[Tuple[str, str], str]:
     """The zone of each zone HVAC equipment of the zone equipment lists: {(type, name) in capitals: zone}."""
-    lists = {e.Name.upper(): e for e in idf.idfobjects['ZoneHVAC:EquipmentList']}
     zones: Dict[Tuple[str, str], str] = {}
     for connections in idf.idfobjects['ZoneHVAC:EquipmentConnections']:
-        equipment = lists.get(str(connections.Zone_Conditioning_Equipment_List_Name).strip().upper())
+        equipment = idf.getobject('ZoneHVAC:EquipmentList', connections.Zone_Conditioning_Equipment_List_Name)
         number = 1
         while equipment is not None and f'Zone_Equipment_{number}_Object_Type' in equipment.fieldnames:
             object_type = str(getattr(equipment, f'Zone_Equipment_{number}_Object_Type') or '').strip()
@@ -644,10 +638,15 @@ def _radiant_zone(obj, equipment_zones: Mapping[Tuple[str, str], str]) -> Option
     return equipment_zones.get((obj.key.upper(), _object_name(obj).upper()))
 
 
+def _zone_lists(idf) -> Dict[str, List[str]]:
+    """The zones of each ZoneList (in capitals): the values of its fields after its name."""
+    return {z.Name.upper(): [str(name).strip().upper() for name in z.fieldvalues[2:] if str(name).strip()]
+            for z in idf.idfobjects['ZoneList']}
+
+
 def _thermostat_zones(idf) -> set:
     """The zones (in capitals) with a thermostat (ZoneControl:Thermostat), also through a ZoneList."""
-    zone_lists = {z.Name.upper(): [str(name).strip().upper() for name in z.obj[2:] if str(name).strip()]
-                  for z in try_objects(idf, 'ZoneList')}
+    zone_lists = _zone_lists(idf)
     zones = set()
     for thermostat in idf.idfobjects['ZoneControl:Thermostat']:
         key = str(thermostat.Zone_or_ZoneList_Name).strip().upper()
@@ -663,7 +662,7 @@ def _design_object(model: AccimModel, obj, zone: str, design_zones: Mapping[str,
         return None
     name = str(obj.Design_Object or '').strip()
     design_type = f'{_object_type(obj)}:Design'
-    design = next((d for d in try_objects(model.idf, design_type) if d.Name.upper() == name.upper()), None)
+    design = model.idf.getobject(design_type, name)
     if design is None or design_zones.get(name.upper()) == {zone.upper()}:
         return design
     key = (name.upper(), zone.upper())
@@ -715,7 +714,6 @@ def set_radiant_setpoints(model: AccimModel) -> None:
         if 'Design_Object' in obj.fieldnames:
             zone = _radiant_zone(obj, equipment_zones) or ''
             design_zones.setdefault(str(obj.Design_Object or '').strip().upper(), set()).add(zone.upper())
-    existing = {s.Name for s in idf.idfobjects['Schedule:Compact']}
     copies: Dict[Tuple[str, str], object] = {}
     unknown = []
     for obj in systems:
@@ -737,7 +735,7 @@ def set_radiant_setpoints(model: AccimModel) -> None:
                 holder = next((h for h in holders if field in h.fieldnames), None)
                 if holder is None or not str(getattr(holder, field) or '').strip():
                     continue
-                _add_schedule(model, existing, schedule, value)
+                _add_setpoint_schedule(model, schedule, value)
                 setattr(holder, field, schedule)
         holder = next((h for h in holders if control_field in h.fieldnames), None)
         if holder is not None:
@@ -768,11 +766,12 @@ def _add_node(idf, connections, field: str, node: str, node_list: str) -> None:
     if not current:
         setattr(connections, field, node)
         return
-    nodes = next((n for n in idf.idfobjects['NodeList'] if n.Name.upper() == current.upper()), None)
+    nodes = idf.getobject('NodeList', current)
     if nodes is None:
         nodes = idf.newidfobject('NodeList', Name=node_list, Node_1_Name=current)
         setattr(connections, field, node_list)
-    names = [str(name).strip() for name in nodes.obj[2:] if str(name).strip()]
+    # The nodes of the NodeList are the values of its fields after its name
+    names = [str(name).strip() for name in nodes.fieldvalues[2:] if str(name).strip()]
     setattr(nodes, f'Node_{len(names) + 1}_Name', node)
 
 
@@ -794,19 +793,17 @@ def add_ideal_loads_backups(model: AccimModel) -> None:
     backup.
     """
     idf = model.idf
-    connections = {c.Zone_Name.upper(): c for c in idf.idfobjects['ZoneHVAC:EquipmentConnections']}
-    equipment_lists = {e.Name.upper(): e for e in idf.idfobjects['ZoneHVAC:EquipmentList']}
-    ideal_loads = {i.Name.upper() for i in idf.idfobjects['ZoneHVAC:IdealLoadsAirSystem']}
     missing = []
     for zone in dict.fromkeys(model.ems_zones):
-        zone_connections = connections.get(zone.upper())
-        equipment = None if zone_connections is None else equipment_lists.get(
-            str(zone_connections.Zone_Conditioning_Equipment_List_Name).strip().upper())
+        # The ZoneHVAC:EquipmentConnections object of the zone (its first field is the zone) and its equipment list
+        zone_connections = idf.getobject('ZoneHVAC:EquipmentConnections', zone)
+        equipment = None if zone_connections is None else idf.getobject(
+            'ZoneHVAC:EquipmentList', zone_connections.Zone_Conditioning_Equipment_List_Name)
         if equipment is None:
             missing.append(zone)
             continue
         name = f'{zone} {IDEAL_LOADS_BACKUP}'
-        if name.upper() in ideal_loads:
+        if idf.getobject('ZoneHVAC:IdealLoadsAirSystem', name) is not None:
             model.log(f'{name} ZoneHVAC:IdealLoadsAirSystem already was in the model')
             continue
         supply, exhaust = f'{name} Supply Inlet', f'{name} Exhaust Outlet'
@@ -844,14 +841,5 @@ def add_load_sensors(model: AccimModel) -> None:
     """Add the EMS sensors of the load to the setpoints of the zone of each occupied zone (``<zone>_LoadToSetpoint``)
     and of each window or door (``<window>_LoadToSetpoint``), which the programs ApplyAST_<zone> and
     SetWindowOperation_<window> read (ScriptType 'ex_mm')."""
-    existing = {s.Name.upper() for s in model.idf.idfobjects['EnergyManagementSystem:Sensor']}
     for name, zone in [*zip(model.ems_names, model.ems_zones), *zip(model.windows, model.window_zones)]:
-        sensor = f'{name}_LoadToSetpoint'
-        if sensor.upper() in existing:
-            model.log(f'Not added - {sensor} Sensor')
-            continue
-        model.idf.newidfobject('EnergyManagementSystem:Sensor', Name=sensor,
-                               OutputVariable_or_OutputMeter_Index_Key_Name=zone,
-                               OutputVariable_or_OutputMeter_Name=LOAD_TO_SETPOINT_OUTPUT)
-        existing.add(sensor.upper())
-        model.log(f'Added - {sensor} Sensor')
+        add_sensor(model, f'{name}_LoadToSetpoint', zone, LOAD_TO_SETPOINT_OUTPUT)

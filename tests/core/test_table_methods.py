@@ -10,10 +10,10 @@ import shutil
 from pathlib import Path
 from types import SimpleNamespace
 
-import besos.eppy_funcs
 import pandas as pd
 import pytest
 
+import accim.sim.accis
 from accim.data.postprocessing.main import Table
 
 REPO = Path(__file__).resolve().parents[2]
@@ -70,7 +70,7 @@ def _sample_table(folder, **kwargs):
     arguments.update(kwargs)
     with pytest.MonkeyPatch.context() as monkeypatch:
         monkeypatch.chdir(folder)
-        monkeypatch.setattr(besos.eppy_funcs, 'get_building', lambda idf_path: _sample_building())
+        monkeypatch.setattr(accim.sim.accis, 'load_idf', lambda idf_path: _sample_building())
         return Table(**arguments)
 
 
@@ -199,7 +199,7 @@ def test_concatenated_csv_gives_the_same_table(tmp_path, monthly, monkeypatch):
     assert not hasattr(written, 'df')
     assert sorted(p.name for p in tmp_path.iterdir()) == sorted([csv.name for csv in SAMPLE_CSVS] + [name])
     monkeypatch.chdir(tmp_path)
-    monkeypatch.setattr(besos.eppy_funcs, 'get_building', lambda idf_path: _sample_building())
+    monkeypatch.setattr(accim.sim.accis, 'load_idf', lambda idf_path: _sample_building())
     table = Table(source_concatenated_csv_filepath=name, level=['building'], level_agg_func=['sum', 'mean'],
                   level_excluded_zones=[], split_epw_names=True, idf_path='TestModel.idf')
 

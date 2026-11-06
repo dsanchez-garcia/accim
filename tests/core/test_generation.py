@@ -1,8 +1,8 @@
 """Tests for accim.sim.generation: the combinations of arguments of AddAccis and its output IDFs.
 
 AddAccis writes one output IDF for each combination of comfort standard, category, comfort mode, HVAC mode,
-ventilation control... Only the programs SetInputData_<zone> change between them, so IdfWriter renders the other
-objects once and writes the files that eppy would save, byte for byte.
+ventilation control... Only the programs SetInputData_<zone> change between them: set_combination sets them in the
+model, which eppy then saves as each output IDF.
 """
 import os
 import shutil
@@ -13,7 +13,14 @@ from pathlib import Path
 
 import pytest
 
-from accim.sim.generation import Combination, GenerationArguments, IdfWriter, OutputIdfs, combinations, output_name
+from accim.sim.generation import (
+    Combination,
+    GenerationArguments,
+    OutputIdfs,
+    combinations,
+    output_name,
+    set_combination,
+)
 
 REPO = Path(__file__).resolve().parents[2]
 SAMPLE_IDF = (REPO / 'accim' / 'sample_files' / 'sample IDFs' / 'input_IDFs'
@@ -142,8 +149,9 @@ def test_output_idfs_are_read_when_they_are_used(monkeypatch):
 
 @pytest.mark.skipif(not (IDD_25_1.exists() and SAMPLE_IDF.exists()),
                     reason='needs EnergyPlus 25.1 and the sample IDF of the repository')
-def test_idf_writer_writes_the_files_of_eppy(tmp_path):
+def test_set_combination_sets_the_arguments_of_each_zone(tmp_path):
     from accim.sim.accis import add_accis_to_idf, load_idf
+    from accim.sim.ems.inputs import input_programs, read_inputs
 
     shutil.copy(SAMPLE_IDF, tmp_path / 'model.idf')
     idf = load_idf(tmp_path / 'model.idf', 'auto')
@@ -151,23 +159,25 @@ def test_idf_writer_writes_the_files_of_eppy(tmp_path):
                      output_type='standard', output_frequencies=['hourly'], keep_existing_outputs=False,
                      setpoint_type='temperature', verbose=False)
     args = GenerationArguments(comfort_standard=[1, 99], category=[3], comfort_mode=[3], hvac_mode=[0, 2], ventilation_control=[0],
-                               custom_slope=0.31, custom_intercept=17.8)
-    writer = IdfWriter(idf, args)
+                               custom_slope=0.31, custom_intercept=17.8, min_outdoor_temp_offset=[3])
     combos = list(combinations(args))
-    assert len(combos) == 4
+    assert [(c.comfort_standard, c.hvac_mode) for c in combos] == [(1, 0), (1, 2), (99, 0), (99, 2)]
 
-    for n, combination in enumerate(combos):
-        writer.write(tmp_path / f'writer_{n}.idf', combination)
-        # The programs of the combination are those of the model, so eppy saves the same file
-        idf.saveas(str(tmp_path / f'eppy_{n}.idf'))
-        assert (tmp_path / f'writer_{n}.idf').read_bytes() == (tmp_path / f'eppy_{n}.idf').read_bytes()
+    for combination in combos:
+        set_combination(idf, args, combination)
+        for program in input_programs(idf).values():
+            values = read_inputs(program)
+            assert (values['ComfStand'], values['HVACmode'], values['m'], values['MultiplierVOF']) == (
+                combination.comfort_standard, combination.hvac_mode, 0.31, 0.25)
+            # With HVACmode 0, the ventilation arguments are those of no ventilation
+            assert values['MinOToffset'] == (7 if combination.hvac_mode == 0 else 3)
 
     programs = {p.Name: p for p in idf.idfobjects['EnergyManagementSystem:Program']}
     for zone in ['Block1_Zone1', 'Block1_Zone2']:
-        lines = list(programs[f'SetInputData_{zone}'].obj[2:])
+        lines = list(programs[f'SetInputData_{zone}'].fieldvalues[2:])
         assert lines[0] == 'set ComfStand = 99'
         assert {'set m = 0.31', 'set CATcoolOffset = 0', 'set MultiplierVOF = 0.25'} <= set(lines)
-    assert list(programs['SetAST'].obj[2:]) == ['run SetAST_Master']
+    assert list(programs['SetAST'].fieldvalues[2:]) == ['run SetAST_Master']
 
 
 @pytest.mark.skipif(not (IDD_25_1.exists() and SAMPLE_IDF.exists()),

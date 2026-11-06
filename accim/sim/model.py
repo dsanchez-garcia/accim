@@ -8,7 +8,6 @@ from dataclasses import dataclass, field
 from typing import Dict, List, Optional
 
 from accim.sim.arguments import MIXED_MODE_SCRIPT_TYPES
-from accim.sim.idf_tools import try_objects
 from accim.sim.targets import Target, resolve_targets
 from accim.utils.people import get_people_objects
 
@@ -136,11 +135,12 @@ class AccimModel:
         # The occupancy of a zone with several occupant instances is the 'Zone People Occupant Count' of the zone
         self.occupancy_keys = [t.occupancy_key for t in self.targets]
         self.occupancy_variables = [t.occupancy_variable for t in self.targets]
-        self.uses_spaces = len(try_objects(self.idf, 'SPACELIST')) > 0 or len(try_objects(self.idf, 'SPACE')) > 0
+        # The Space and SpaceList objects exist since EnergyPlus 9.6 (the keys of idfobjects are in capitals)
+        self.uses_spaces = bool(self.idf.idfobjects.get('SPACELIST')) or bool(self.idf.idfobjects.get('SPACE'))
 
     def _scan_windows(self) -> None:
         idf = self.idf
-        if not any(stl.Name.lower() == 'fractional' for stl in idf.idfobjects['ScheduleTypeLimits']):
+        if idf.getobject('ScheduleTypeLimits', 'Fractional') is None:
             idf.newidfobject('ScheduleTypeLimits', Name='Fractional', Lower_Limit_Value=0, Upper_Limit_Value=1,
                              Numeric_Type='Continuous', Unit_Type='dimensionless')
         if len(idf.idfobjects['AirflowNetwork:SimulationControl']) > 0:
@@ -158,11 +158,10 @@ class AccimModel:
         # Without an AirflowNetwork, the ventilation objects of each zone open through a new schedule,
         # as a virtual window '<zone>_Win'
         self.natural_ventilation_type = 'Scheduled'
-        schedules = idf.idfobjects['Schedule:Constant']
 
         def ventilation_schedule(zone):
             name = f'Vent_Sch_{zone}'
-            if not any(s.Name == name for s in schedules):
+            if idf.getobject('Schedule:Constant', name) is None:
                 idf.newidfobject('Schedule:Constant', Name=name, Schedule_Type_Limits_Name='Fractional',
                                  Hourly_Value=0)
             return name
@@ -195,7 +194,7 @@ class AccimModel:
                 return ems_name
         if ':' in zone_name:
             return zone_upper.replace(':', '_')
-        spaces = [s.Name.upper() for s in try_objects(self.idf, 'SPACE') if s.Zone_Name.upper() == zone_upper]
+        spaces = [s.Name.upper() for s in self.idf.idfobjects.get('SPACE', []) if s.Zone_Name.upper() == zone_upper]
         return spaces[0] if spaces else zone_upper.replace(':', '_').replace(' ', '_')
 
     def _scan_thermostats(self) -> None:

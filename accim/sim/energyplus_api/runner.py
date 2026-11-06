@@ -14,8 +14,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable, List, Mapping, Optional, Sequence, Tuple, Union
 
+from accim.energyplus import read_idf_version
 from accim.sim.energyplus_api.controller import ErlController, Hook
-from accim.sim.energyplus_api.idf import objects_for_api, read_ems, read_idf, render_idf
+from accim.sim.energyplus_api.idf import prepare_for_api
 from accim.sim.energyplus_api.runtime import load_energyplus_api
 
 __all__ = ['SimulationResult', 'run_simulation', 'run_simulations']
@@ -78,6 +79,9 @@ def run_simulation(
     in the callbacks of the API, with the rules of the EMS of EnergyPlus, so the results are those of the
     EMS. The other objects of the model (and the IDF file) do not change. The EnergyPlus version is that
     of the model, which must be 24.2 or later (:data:`~accim.sim.energyplus_api.runtime.MINIMUM_API_VERSION`).
+    eppy reads the model with the IDD of its version (see :func:`accim.sim.accis.load_idf`), so in a Python session
+    this function can only run the models of one EnergyPlus version (:func:`run_simulations` runs each simulation in
+    its own process).
 
     :param idf: The path of the IDF.
     :param epw: The path of the EPW (None to simulate the design days only).
@@ -99,12 +103,13 @@ def run_simulation(
         error; False to return it in the result.
     :raises RuntimeError: If the simulation fails and ``raise_errors`` is True.
     """
+    from accim.sim.accis import load_idf
+
     idf = Path(idf).resolve()
-    objects = read_idf(idf)
-    ems = read_ems(objects)
-    if not ems.version:
-        raise ValueError(f'The EnergyPlus version of {idf} could not be read (the file has no Version object).')
-    api = load_energyplus_api(ems.version)
+    version = read_idf_version(idf)
+    api = load_energyplus_api(version)
+    model = load_idf(idf, version)
+    ems = prepare_for_api(model)
     controller = ErlController(ems, before_programs=before_programs, after_programs=after_programs)
     output_directory = Path(output_directory).resolve() if output_directory is not None else idf.parent
     output_directory.mkdir(parents=True, exist_ok=True)
@@ -113,9 +118,9 @@ def run_simulation(
     with tempfile.TemporaryDirectory(prefix='accim_api_') as folder:
         # Each simulation runs in its own folder (ExpandObjects and ReadVarsESO write files with fixed names
         # there), and then its output files are moved to the output directory
-        model = Path(folder) / 'model' / 'in.idf'
-        model.parent.mkdir()
-        model.write_bytes(render_idf(objects_for_api(objects)).encode('latin-1'))
+        model_file = Path(folder) / 'model' / 'in.idf'
+        model_file.parent.mkdir()
+        model.saveas(str(model_file))
         run_folder = Path(folder) / 'output'
         run_folder.mkdir()
         args = ['-d', str(run_folder), '-p', output_prefix, '-s', output_suffix]
@@ -129,7 +134,7 @@ def run_simulation(
             args.append('-D')
         if epw is not None:
             args += ['-w', str(Path(epw).resolve())]
-        args.append(str(model))
+        args.append(str(model_file))
         state = api.state_manager.new_state()
         working_directory = os.getcwd()
         try:

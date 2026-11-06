@@ -1,17 +1,20 @@
 # Golden master of the output IDFs
 
 `tests/core/test_golden_master.py` checks that the output IDFs of accim do not change by accident: it runs 31
-configurations and compares their outputs, object by object and in their order, with the outputs of accim 1.0.0
-stored in `golden/`. 29 of them are the configurations with which accim 1.0.0 was checked against accim 0.8.2 (the
-migration guide, section 9.3, lists the differences); `b21` and `b22` came later, with the arguments of the existing
-HVAC systems (`existing_hvac_*`).
+configurations and compares their outputs, object by object and in their order, with the outputs stored in
+`golden/`, those of accim 1.1.0. 29 of them are the configurations with which accim 1.0.0 was checked against accim
+0.8.2 (the migration guide, section 9.3, lists the differences); `b21` and `b22` came later, with the arguments of the
+existing HVAC systems (`existing_hvac_*`). Since accim 1.1.0, `AddAccis` reads the models with eppy instead of besos,
+and eppy writes some numbers of the input models in another way (`2.0` as `2`, `0.00000001` as `1e-08`), with the
+same values: the golden files of the 19 `AddAccis` configurations whose numbers changed were written again then,
+after checking that only these numbers changed and that EnergyPlus gives the same results (`b02`, `b11` and `b17`).
 
 | File | What it holds |
 | --- | --- |
 | `configs.py` | The configurations: 22 of `AddAccis` (`b01` to `b22`: all the script types, every comfort standard, category and comfort mode, PMV control, the existing HVAC systems (with the thermostats of the model in `b21`, and always available, with wider outdoor temperature limits and with backup ideal loads air systems in `b22`), OpenStudio models, EnergyPlus 25.1 and 26.2, `People:Instance`, `output_take_dataframe`, tolerance ranges...) and 9 of the in-memory functions (`s01` to `s09`: `add_accis_to_idf`, `modify_accis`, `gen_outputs_df` and the aPMV setpoints). With accim 0.8.2, `b10` gives no output IDF (its HVAC system has two kinds of heating coils). |
 | `runner.py` | Runs a configuration and writes the canonical text of its outputs; also a command-line tool (below). |
 | `inputs/` | The input models, compressed (`.idf.xz`): sample IDFs of `accim/sample_files/sample IDFs/input_IDFs`, updated to EnergyPlus 25.1 or 26.2 with `accim.utils.update_idf_version` (see `configs.INPUT_MODELS`); `vrf2zones262inst` has a `People:Definition` and a `People:Instance` object instead of each `People` object. |
-| `golden/` | The canonical outputs of accim 1.0.0, one `.txt.xz` file for each configuration (about 0.4 MB in all). |
+| `golden/` | The canonical outputs of accim 1.1.0, one `.txt.xz` file for each configuration (about 0.4 MB in all). |
 
 The canonical text of a configuration has each output file under a line `### <file name>`; the objects of an IDF
 keep their order, with one field per line, without the comments and the spaces of the file.
@@ -69,4 +72,5 @@ control of the existing HVAC systems, the configurations with the OSM office and
 `s04` and `b22`) also differ in its thermostats, which accim 0.x left controlling the air temperature. With
 `--legacy`, the arguments of the existing HVAC systems (`existing_hvac_*`), which accim 0.x does not have, are left
 out: `b21` is then the same configuration as `b11`, and its output with accim 0.x differs from its golden file only as
-that of `b11` did before the operative temperature control.
+that of `b11` did before the operative temperature control. Since accim 1.1.0, the outputs of `AddAccis` of
+accim 0.8.2 and 1.0.0 also differ in the numbers that eppy writes in another way (see above).
