@@ -15,6 +15,28 @@ This log is a lightweight, session-scoped complement to the repository's
 existing tracking files — it does not replace them (see
 [[decisions.md#2026-09-13 — `notes/work-log.md` complements, not replaces, existing tracking files|the related decision]]).
 
+## 2026-11-07 — The answers of the author: `vrf_mm` on the design days, and the EMS code of the comfort standards (branch `v1.1.0`)
+
+- **Objective**: The answers of the author to the two open questions of [[questions.md]]: option (a) for the design
+  days of `vrf_mm` (the rule of `ex_mm`) and option 1 for the EMS code of the comfort standards of each output IDF
+  (implemented on 2026-11-06).
+- **Affected files**: `accim/sim/ems/program_lines.py`, `accim/sim/ems/objects.py`, `accim/sim/build.py`,
+  `accim/sim/hvac/existing.py`, `accim/sim/hvac/schedules.py`; `tests/core/test_existing_hvac_mixed_mode.py`,
+  `tests/core/test_hour_counters.py`, the 12 golden files of `vrf_mm`; [[../CHANGELOG.md]], [[../DEVLOG.md]],
+  [[../docs/source/4_detailed use.md]], [[../docs/source/9_migration_guide.md]], [[../CAMBIOS_CODIGO_v1.1.0.md]],
+  [[decisions.md]], [[questions.md]].
+- **Finding or decision**: See [[decisions.md#2026-11-07 — Mixed mode air-conditions the zones on the design days with `vrf_mm` too|the decision]];
+  that of 2026-11-06 on the EMS code is accepted, with no change. With the sample model (no occupants on its winter
+  design day), `vrf_mm` sized the VRF systems for heating design loads of 0 (EnergyPlus warned); now 1.9 and 2.2 kW,
+  and the cooling design loads, and so the VRF systems, are about 6 % lower (no pull-down after the hours without
+  occupants).
+- **Validation**: the Erl test of the design days and a new test of the sensor and the lines, with `ex_mm` and
+  `vrf_mm` (both fail with `vrf_mm` without the change); golden master: only the 12 configurations of `vrf_mm` change,
+  only with added lines; the sizing periods of the sample model with EnergyPlus 25.1, before and after;
+  `tests/core` and `tests/parametric_and_optimisation`: 1317 passed.
+- **Next step**: committed and pushed to `v1.1.0` at the request of the author; before the release, the How-to pages
+  of [[../TODO.md]].
+
 ## 2026-11-07 — `ex_ac` and `ex_mm` with the example files of EnergyPlus (branch `v1.1.0`)
 
 - **Objective**: The request of the author: test `ex_mm` and `ex_ac` with many IDFs with different HVAC systems, so

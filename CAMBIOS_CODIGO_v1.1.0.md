@@ -220,13 +220,19 @@ fallaron, como mucho dos por tipo de fallo, los de ventilación natural y los qu
 - `_scan_windows` avisa de lo que quita y de las zonas ocupadas sin ventanas; `_add_window` da a cada ventana un nombre
   EMS válido y único (`sanitize_ems_name`; antes `SPACE1-1_Win_OpT` era un nombre EMS inválido y EnergyPlus se paraba).
 
-**`ex_mm` en los días de diseño** (`program_lines._DESIGN_DAY_ZONE` y `_DESIGN_DAY_WINDOW`, al final de
-`APPLY_AST_MIXED_MODE_EXISTING_HVAC` y `SET_WINDOW_OPERATION_EXISTING_HVAC`; `existing.add_design_day_sensor` y
+**El modo mixto en los días de diseño** (`program_lines._DESIGN_DAY_ZONE` y `_DESIGN_DAY_WINDOW`, al final de las
+variantes de modo mixto de `ApplyAST_<zona>` y `SetWindowOperation_<ventana>`; `ems.objects.add_design_day_sensor` y
 `schedules.add_design_day_schedule`): con el sensor `DesignDay` del horario `ACCIS Design Days` (1 en los días de tipo
 `SummerDesignDay` y `WinterDesignDay`), las zonas se climatizan con las ventanas cerradas, haya ocupantes o no. Las
 líneas van al final de los programas y no envuelven el cuerpo en otro `IF`, porque EnergyPlus no admite más de 5
-niveles de `IF` anidados y el de las ventanas ya tiene 5. Sin esto, los sistemas se dimensionaban sin carga en los días
-de diseño sin ocupantes (casi siempre el de invierno), y EnergyPlus se paraba.
+niveles de `IF` anidados y el de las ventanas ya tiene 5. Sin esto, con `ex_mm` los sistemas se dimensionaban sin
+carga en los días de diseño sin ocupantes (casi siempre el de invierno), y EnergyPlus se paraba. Primero fue solo para
+`ex_mm`; después el autor eligió (2026-11-07) la misma regla para `vrf_mm`, así que la función del sensor pasó de
+`hvac/existing.py` a `ems/objects.py`, y `build.py` la llama en modo mixto. Con el modelo de ejemplo `TestModel` (sin
+ocupantes el día de diseño de invierno) y `vrf_mm`, la carga de calefacción de diseño de sus dos zonas pasa de 0
+(EnergyPlus avisaba de ello) a 1,9 y 2,2 kW, y la de refrigeración baja en torno a un 6 % (antes las zonas flotaban
+sin ocupantes, y el pico incluía la recuperación al llegar estos), así que sus VRF salen en torno a un 6 % más
+pequeños.
 
 **Termostatos** (`model.py`, `hvac/existing.py`):
 
@@ -303,3 +309,8 @@ Un `ZoneVentilation:WindandStackOpenArea` no ventila si el viento le llega por d
   de diseño con el intérprete de Erl). Golden master: cambian las configuraciones de `ex_mm` (los días de diseño), `b13`
   y `b15` (sin los horarios de 1 °C de los límites de la ventilación de la vivienda de OpenStudio) y `b22` (las
   NodeLists del respaldo); nada más, comprobado línea a línea.
+- `vrf_mm` en los días de diseño: la prueba de Erl de los días de diseño y una nueva, que comprueba el sensor
+  `DesignDay`, su horario y las líneas de los programas, se hacen con `ex_mm` y con `vrf_mm`; las dos fallan con
+  `vrf_mm` si se quitan las líneas o el sensor (comprobado). `test_hour_counters.py` da valor al sensor `DesignDay`
+  (0), como a los demás sensores. Golden master: cambian las 12 configuraciones de `vrf_mm`, solo con líneas añadidas
+  (el sensor, el horario y las líneas de los días de diseño de cada zona y ventana), comprobado línea a línea.

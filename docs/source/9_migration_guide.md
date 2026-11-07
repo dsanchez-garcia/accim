@@ -461,9 +461,11 @@ that 1.1.0 fixes; some change the output IDFs or the results:
   with the windows). With an
   AirflowNetwork whose `AirflowNetwork Control` is `MultizoneWithDistributionOnlyDuringFanOperation`, the windows
   are its `ZoneVentilation` objects, which EnergyPlus simulates, not its AirflowNetwork openings.
-- **`ex_mm` on the design days**: the zones are air-conditioned with the windows closed, whether they are occupied
-  or not (the sensor `DesignDay` and the schedule `ACCIS Design Days` in the output IDFs), so the autosized HVAC
-  systems are sized for the setpoints: they were sized for no load on the design days without occupants.
+- **Mixed mode (`vrf_mm` and `ex_mm`) on the design days**: the zones are air-conditioned with the windows closed,
+  whether they are occupied or not (the sensor `DesignDay` and the schedule `ACCIS Design Days` in the output IDFs),
+  so the autosized HVAC systems are sized for the setpoints: they were sized for no load on the design days without
+  occupants, and without the timesteps with the windows open. So the sizes of the HVAC systems, and the results, can
+  change: with `vrf_mm`, the VRF systems of the sample model are about 6 % smaller.
 - **The thermostats of ZoneLists** are split into one thermostat per zone instead of stopping accim with a
   `ValueError`. With `existing_hvac_operative_temperature_control=True`, the thermal comfort thermostats (PMV of
   Fanger) of the occupied zones are removed, and their staged thermostats get the setpoint schedules of the zones.

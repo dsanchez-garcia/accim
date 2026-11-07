@@ -11,6 +11,24 @@ Durable architectural/process decisions for this repository and its Obsidian
 vault. Newest first. Use [[templates/decision-record.md|the decision-record
 template]] to add a new entry.
 
+## 2026-11-07 — Mixed mode air-conditions the zones on the design days with `vrf_mm` too
+
+- **Status**: accepted (option (a) of the question of [[questions.md]], chosen by the author on 2026-11-07)
+- **Context**: since the decision below (of the same day), `ex_mm` air-conditions the zones on the design days with the
+  windows closed, occupied or not: its HVAC systems were off on the design days without occupants, and EnergyPlus
+  sized them for no load. `vrf_mm` had the same rule (the HVAC systems off without occupants and while the windows are
+  open) and autosized VRF systems, but it was left as it was, as an open question, since the request was about `ex_ac`
+  and `ex_mm`.
+- **Decision**: the same rule for `vrf_mm`: its programs `ApplyAST_<zone>` and `SetWindowOperation_<window>` end with
+  the lines of the design days, and the sensor `DesignDay` is added in mixed mode (`ems.objects.add_design_day_sensor`,
+  moved from `hvac/existing.py`).
+- **Consequences**: the output IDFs of `vrf_mm` change (the 12 configurations of `vrf_mm` of the golden master, only
+  with added lines), and so the sizes of its VRF systems: with the sample model, whose winter design day has no
+  occupants, the heating design loads of its two zones go from 0 (EnergyPlus warned that they were zero) to 1.9 and
+  2.2 kW, and the cooling design loads, and so the VRF systems, are about 6 % lower, since the peak no longer includes
+  the pull-down after the hours without occupants. Section 4.1 of [[../docs/source/4_detailed use.md]], section 9.4 of
+  [[../docs/source/9_migration_guide.md]] and section 8 of [[../CAMBIOS_CODIGO_v1.1.0.md]].
+
 ## 2026-11-07 — In mixed mode accim takes the whole control of the windows it opens, and `ex_mm` air-conditions the zones on the design days
 
 - **Status**: proposed (done in the branch `v1.1.0` while the author asked to work autonomously: "quiero que pruebes
@@ -40,15 +58,17 @@ template]] to add a new entry.
   `existing_hvac_operative_temperature_control=True`, the PMV thermostats of the occupied zones are removed and the
   staged thermostats get the setpoint schedules of their zones (with `False`, warnings).
 - **Consequences**: the output IDFs of `ex_mm` change (design days), and those of `vrf_mm` and `ex_mm` with
-  `ZoneVentilation` objects with limits or fans (golden master `b13` and `b15`). The rule of the design days is not
-  applied to `vrf_mm` (open question in [[questions.md]]). The sizing periods of the type
-  `SizingPeriod:WeatherFileDays` are not detected as design days. Sections 4.1, 4.1.1 and 4.1.2 of
-  [[../docs/source/4_detailed use.md]], section 9.4 of [[../docs/source/9_migration_guide.md]], section 8 of
+  `ZoneVentilation` objects with limits or fans (golden master `b13` and `b15`). The rule of the design days was not
+  applied to `vrf_mm`; the author chose to apply it too (see
+  [[#2026-11-07 — Mixed mode air-conditions the zones on the design days with `vrf_mm` too|the decision above]]). The
+  sizing periods of the type `SizingPeriod:WeatherFileDays` are not detected as design days. Sections 4.1, 4.1.1 and
+  4.1.2 of [[../docs/source/4_detailed use.md]], section 9.4 of [[../docs/source/9_migration_guide.md]], section 8 of
   [[../CAMBIOS_CODIGO_v1.1.0.md]].
 
 ## 2026-11-06 — Each output IDF of `AddAccis` only has the EMS code of the comfort standards of its zones, and the EMS programs are indented
 
-- **Status**: proposed (implemented in the branch `v1.1.0` for the review of the author, who asked whether the EMS
+- **Status**: accepted (option 1, the recommendation, chosen by the author on 2026-11-07 for the question of
+  [[questions.md]]; implemented before in the branch `v1.1.0` for his review: he had asked whether the EMS
   code could be indented, "de forma que se pueda ver claramente dónde empiezan y terminan los bloques
   if-elif-else-endif", and what I thought of "añadir únicamente el EMS program para las consignas especificadas, en
   lugar de añadir todas las líneas de todos los posibles comfort_standard"; he was not available to choose among the
