@@ -187,15 +187,35 @@ def test_an_adaptive_comfort_model_of_energyplus_is_removed_from_the_operative_t
     assert {control.Adaptive_Comfort_Model_Type for control in idf.idfobjects[OPERATIVE_TEMPERATURE]} == {'None'}
 
 
-def test_a_thermostat_of_a_zone_list_with_occupied_zones_is_rejected(tmp_path):
+def test_a_thermostat_of_a_zone_list_with_occupied_zones_is_split_for_each_zone(tmp_path):
+    """Until 2026-11-07 accim stopped with a ValueError; now each zone of the list gets a thermostat of its own, named
+    as EnergyPlus names them ('<zone> <thermostat>'), with copies of the objects that name the thermostat."""
     idf = _model(tmp_path, 'exptac')
     thermostats = list(idf.idfobjects['ZoneControl:Thermostat'])
     idf.newidfobject('ZoneList', Name='Both zones', Zone_1_Name='Block1:Zone1', Zone_2_Name='Block1:Zone2')
     thermostats[0].Zone_or_ZoneList_Name = 'Both zones'
+    name = thermostats[0].Name
     idf.removeidfobject(thermostats[1])
+    for control in list(idf.idfobjects[OPERATIVE_TEMPERATURE]):
+        if control.Thermostat_Name != name:
+            idf.removeidfobject(control)
+    idf.newidfobject('DemandManager:Thermostats', Name='Demand', Thermostat_1_Name=name)
 
-    with pytest.raises(ValueError, match='ZoneList Both zones'):
-        _add(idf)
+    model, messages = _add(idf)
+
+    assert not [m for m in messages if 'have no thermostat' in m]
+    split = {f'Block1:Zone1 {name}', f'Block1:Zone2 {name}'}
+    assert {t.Name for t in idf.idfobjects['ZoneControl:Thermostat']} == split
+    assert {t.Zone_or_ZoneList_Name for t in idf.idfobjects['ZoneControl:Thermostat']} == {'Block1:Zone1',
+                                                                                             'Block1:Zone2'}
+    assert {c.Thermostat_Name for c in idf.idfobjects[OPERATIVE_TEMPERATURE]} == split
+    demand = idf.idfobjects['DemandManager:Thermostats'][0]
+    assert {demand.Thermostat_1_Name, demand.Thermostat_2_Name} == split
+    # Each zone controls its operative temperature with its own setpoints
+    for thermostat in idf.idfobjects['ZoneControl:Thermostat']:
+        dual = _by_name(idf, 'ThermostatSetpoint:DualSetpoint', thermostat.Control_1_Name)
+        ems_name = thermostat.Zone_or_ZoneList_Name.replace(':', '_')
+        assert dual.Heating_Setpoint_Temperature_Schedule_Name == f'AHST_Sch_{ems_name}'
 
 
 def test_the_occupied_zones_without_a_thermostat_get_their_setpoint_schedules_and_a_warning(tmp_path):
@@ -209,6 +229,22 @@ def test_the_occupied_zones_without_a_thermostat_get_their_setpoint_schedules_an
     assert any("['Block1:Zone2']" in m and 'have no thermostat' in m for m in messages)
     # The EMS actuates them
     assert {'AHST_Sch_Block1_Zone2', 'ACST_Sch_Block1_Zone2'} <= {s.Name for s in idf.idfobjects['Schedule:Compact']}
+
+
+def test_without_operative_temperature_control_all_the_occupied_zones_get_their_setpoint_schedules(tmp_path):
+    """With existing_hvac_operative_temperature_control=False, accim only added the schedules of the setpoint objects of
+    the thermostats, so EnergyPlus stopped with the zones without a thermostat or with a single setpoint ('Actuator
+    AHST_ACT_... not found': the example file HeatPumpVSAS)."""
+    idf = _model(tmp_path, 'exptac')
+    idf.removeidfobject(_by_name(idf, 'ZoneControl:Thermostat', 'Block1:Zone2 Thermostat'))
+    idf.removeidfobject(next(c for c in idf.idfobjects[OPERATIVE_TEMPERATURE]
+                             if c.Thermostat_Name == 'Block1:Zone2 Thermostat'))
+
+    _add(idf, existing_hvac_operative_temperature_control=False)
+
+    schedules = {s.Name for s in idf.idfobjects['Schedule:Compact']}
+    assert {'AHST_Sch_Block1_Zone1', 'ACST_Sch_Block1_Zone1', 'AHST_Sch_Block1_Zone2', 'ACST_Sch_Block1_Zone2'} <= \
+        schedules
 
 
 # ----------------------------------------------------------------------------------------------------------
@@ -649,3 +685,168 @@ def test_the_radiant_floors_keep_the_operative_temperature_above_the_heating_set
     for zone in ('WEST ZONE', 'EAST ZONE', 'NORTH ZONE'):
         assert deficits[False, zone] > 2
         assert deficits[True, zone] < 0.1
+
+
+# ----------------------------------------------------------------------------------------------------------
+# Example files of EnergyPlus with other HVAC systems (campaign of 2026-11-07: 'ex_ac' and 'ex_mm' with 618 example
+# files; see DEVLOG.md)
+# ----------------------------------------------------------------------------------------------------------
+
+@needs_examples
+def test_the_ems_of_the_model_keeps_its_global_and_internal_variables(tmp_path):
+    """accim replaced the EMS global and internal variables of the model with its own, and EnergyPlus stopped with the
+    EMS of the model (33 of the example files: 'EMS variable not found among global variables', or its programs
+    divided by internal variables that no longer existed)."""
+    idf = _example(tmp_path, 'EMSWindowShadeControl.idf')
+    def names(object_type):
+        return {str(v).upper() for o in idf.idfobjects[object_type] for v in o.fieldvalues[1:] if str(v).strip()}
+    globals_before = names('EnergyManagementSystem:GlobalVariable')
+    internals_before = {o.Name.upper() for o in idf.idfobjects['EnergyManagementSystem:InternalVariable']}
+    assert globals_before
+
+    model, _ = _add(idf)
+
+    assert globals_before <= names('EnergyManagementSystem:GlobalVariable')
+    assert {'ACST', 'AHST', 'COMFSTAND'} <= names('EnergyManagementSystem:GlobalVariable')
+    internals = {o.Name.upper() for o in idf.idfobjects['EnergyManagementSystem:InternalVariable']}
+    assert internals_before <= internals
+    assert {f'ZFA_{model.ems_names[0]}'.upper(), f'ZAV_{model.ems_names[0]}'.upper()} <= internals
+
+
+@needs_examples
+def test_the_backup_does_not_change_the_node_lists_of_the_model(tmp_path):
+    """The backup added its inlet node to the NodeList of the zone, which a SetpointManager:SingleZone:Cooling also
+    used as its zone inlet node, and EnergyPlus stopped ('a Nodelist may not be valid in this context')."""
+    idf = _example(tmp_path, 'FurnaceWithDXSystemRHcontrol.idf')
+    original = {n.Name: [str(v) for v in n.fieldvalues[2:]] for n in idf.idfobjects['NodeList']}
+
+    _add(idf, existing_hvac_ideal_loads_backup=True)
+
+    for name, nodes in original.items():
+        assert [str(v) for v in _by_name(idf, 'NodeList', name).fieldvalues[2:]] == nodes
+    connections = _by_name(idf, 'ZoneHVAC:EquipmentConnections', 'EAST ZONE')
+    assert connections.Zone_Air_Inlet_Node_or_NodeList_Name == 'EAST ZONE ACCIS Inlet Nodes'
+    inlets = [str(v) for v in _by_name(idf, 'NodeList', 'EAST ZONE ACCIS Inlet Nodes').fieldvalues[2:]]
+    assert inlets == original['Zone2Inlets'] + [f'EAST ZONE {existing.IDEAL_LOADS_BACKUP} Supply Inlet']
+
+
+@needs_examples
+@pytest.mark.parametrize('name, reason', [
+    ('AirflowNetwork_MultiZone_SmallOffice.idf', 'with its air distribution system'),
+    ('RoomAirflowNetwork.idf', 'use the RoomAir model AirflowNetwork'),
+])
+def test_no_backup_where_energyplus_needs_all_the_equipment_in_the_airflow_network(tmp_path, name, reason):
+    """EnergyPlus stopped: the nodes of the backups were not AirflowNetwork:Distribution:Node objects, or the backups
+    were not in the RoomAir:Node:AirflowNetwork:HVACEquipment objects of their zones."""
+    idf = _example(tmp_path, name)
+
+    model, messages = _add(idf, existing_hvac_ideal_loads_backup=True)
+
+    assert any(reason in m and 'no backup' in m for m in messages)
+    if name.startswith('RoomAir'):
+        assert 'NORTH_ZONE ACCIS Backup Ideal Loads' not in model.ideal_loads_backups
+    else:
+        assert model.ideal_loads_backups == []
+
+
+@needs_examples
+def test_the_availability_schedule_works_with_the_vrf_systems_of_the_model(tmp_path):
+    """The AirConditioner:VariableRefrigerantFlow objects have no field Name (but Heat Pump Name), and
+    existing_hvac_availability_schedule stopped with a BadEPFieldError."""
+    idf = _example(tmp_path, 'VariableRefrigerantFlow_5Zone.idf')
+
+    _add(idf, existing_hvac_availability_schedule='On 24/7')
+
+    assert {o.Availability_Schedule_Name for o in idf.idfobjects['AirConditioner:VariableRefrigerantFlow']} == {
+        'On 24/7'}
+
+
+@needs_examples
+def test_addaccis_expands_the_hvac_templates(tmp_path, monkeypatch):
+    """EnergyPlus expands the HVACTemplate objects when it runs, so accim did not find their thermostats: the output
+    IDFs kept the setpoints of the templates. AddAccis expands them first (ExpandObjects)."""
+    from accim.sim.accis import AddAccis, add_accis_to_idf
+
+    name = 'HVACTemplate-5ZonePTAC.idf'
+    (tmp_path / name).write_bytes((EXAMPLES / name).read_bytes())
+    monkeypatch.chdir(tmp_path)
+    accis = AddAccis(idfs=[name], script_type='ex_ac', output_type='simplified', output_frequencies=['hourly'],
+                     keep_existing_outputs=False, setpoint_type='temperature', comfort_standard=[1], category=[2],
+                     comfort_mode=[3], confirm=True, verbose=False)
+
+    output = accis.output_idfs[next(iter(accis.output_idfs))]
+    assert not [key for key in output.idfobjects if key.upper().startswith('HVACTEMPLATE:') and output.idfobjects[key]]
+    thermostats = output.idfobjects['ZoneControl:Thermostat']
+    assert len(thermostats) == 5
+    duals = [_by_name(output, 'ThermostatSetpoint:DualSetpoint', t.Control_1_Name) for t in thermostats]
+    schedules = {dual.Cooling_Setpoint_Temperature_Schedule_Name for dual in duals}
+    assert len(schedules) == 5 and all(s.startswith('ACST_Sch_SPACE') for s in schedules)
+    # add_accis_to_idf cannot expand an IDF object
+    with pytest.raises(ValueError, match='HVACTemplate objects'):
+        add_accis_to_idf(_example(tmp_path, name), script_type='ex_ac', **ARGUMENTS)
+
+
+@needs_examples
+@pytest.mark.skipif(_energyplus_25_1() is None or not SAMPLE_EPW.exists(),
+                    reason='needs EnergyPlus 25.1 and the sample EPW of the repository')
+def test_ex_mm_sizes_the_hvac_systems_on_the_design_days_without_occupants(tmp_path):
+    """The example file House-2FurnaceAC-SequentialLoad (furnaces), whose zones have no occupants on the winter design
+    day: with 'ex_mm', the HVAC systems were off on that day, EnergyPlus sized them for no load and stopped ('air flow
+    less than ...'). On the design days, the zones are now air-conditioned with the windows closed."""
+    from accim.sim.accis import add_accis_to_idf
+
+    idf = _example(tmp_path, 'House-2FurnaceAC-SequentialLoad.idf')
+    zones = [z.Name for z in idf.idfobjects['Zone']]
+    vent = idf.newidfobject('ZoneVentilation:WindandStackOpenArea', Name='Window', Opening_Area=1,
+                            Height_Difference=1)
+    setattr(vent, vent.fieldnames[2], 'LIVING ZONE' if 'LIVING ZONE' in zones else zones[0])
+    add_accis_to_idf(idf, script_type='ex_mm', **ARGUMENTS)
+    for run_period in idf.idfobjects['RunPeriod'][1:]:
+        idf.removeidfobject(run_period)
+    run_period = idf.idfobjects['RunPeriod'][0]
+    run_period.Begin_Month, run_period.Begin_Day_of_Month, run_period.End_Month, run_period.End_Day_of_Month = (
+        1, 1, 1, 2)
+    folder = tmp_path / 'run'
+    folder.mkdir()
+    idf.saveas(str(folder / 'model.idf'))
+    result = subprocess.run([str(_energyplus_25_1()), '-d', str(folder), '-p', 'run', '-s', 'C', '-r',
+                             '-w', str(SAMPLE_EPW), str(folder / 'model.idf')], capture_output=True, text=True)
+    errors = (folder / 'run.err').read_text(errors='replace')
+    assert result.returncode == 0 and 'EnergyPlus Completed Successfully' in errors, errors[-3000:]
+    assert 'has air flow less than' not in errors
+
+
+@needs_examples
+def test_the_thermal_comfort_thermostats_of_the_occupied_zones_are_removed(tmp_path):
+    """EnergyPlus controlled the zone with the PMV of Fanger (ZoneControl:Thermostat:ThermalComfort) instead of the
+    setpoints of accim while its control type schedule was not 0 (7 % of the occupied time within the setpoints with
+    all the options), and crashed with 'ex_ac'."""
+    idf = _example(tmp_path, 'FurnaceWithDXSystemComfortControl.idf')
+
+    _, messages = _add(idf)
+
+    assert not idf.idfobjects['ZoneControl:Thermostat:ThermalComfort']
+    assert any("'Zone 2 Comfort Control'" in m and 'have been removed' in m for m in messages)
+    # Without the operative temperature control, they stay, with a warning
+    idf = _example(tmp_path, 'FurnaceWithDXSystemComfortControl.idf')
+    _, messages = _add(idf, existing_hvac_operative_temperature_control=False)
+    assert idf.idfobjects['ZoneControl:Thermostat:ThermalComfort']
+    assert any("'Zone 2 Comfort Control'" in m and 'PMV of Fanger' in m for m in messages)
+
+
+@needs_examples
+def test_the_staged_thermostats_follow_the_setpoints_of_their_zones(tmp_path):
+    """The multispeed heat pump of the example file MultiSpeedHP_StagedThermostat heats and cools with the stages of a
+    staged thermostat of a ZoneList, from its own setpoint schedules: the zone followed the setpoints of accim 0 to
+    0.6 % of the time. Each zone now has its own staged thermostat, with the setpoint schedules of the zone."""
+    idf = _example(tmp_path, 'MultiSpeedHP_StagedThermostat.idf')
+
+    model, _ = _add(idf)
+
+    staged = {s.Zone_or_ZoneList_Name: s for s in idf.idfobjects['ZoneControl:Thermostat:StagedDualSetpoint']}
+    assert set(staged) == set(model.ems_zones)
+    for zone, ems_name in zip(model.ems_zones, model.ems_names):
+        assert staged[zone].Name == f'{zone} ZoneThermostat'
+        assert staged[zone].Heating_Temperature_Setpoint_Schedule_Name == f'AHST_Sch_{ems_name}'
+        assert staged[zone].Cooling_Temperature_Setpoint_Base_Schedule_Name == f'ACST_Sch_{ems_name}'
+

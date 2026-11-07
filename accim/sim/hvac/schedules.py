@@ -11,9 +11,11 @@ from accim.sim.model import AccimModel
 
 __all__ = [
     'ALWAYS_ON_SCHEDULE',
+    'DESIGN_DAY_SCHEDULE',
     'DUAL_SETPOINT_CONTROL_SCHEDULE',
     'RADIATIVE_FRACTION_SCHEDULE',
     'add_compact_schedule',
+    'add_design_day_schedule',
     'add_radiative_fraction_schedule',
     'is_always_on',
     'schedule_values',
@@ -27,6 +29,9 @@ DUAL_SETPOINT_CONTROL_SCHEDULE = 'Control type schedule: Always 4'
 #: Operative Temperature', but 0 (the air temperature) on the design days, so that the sizing calculations size the
 #: HVAC systems for the air temperature, as without operative temperature control.
 RADIATIVE_FRACTION_SCHEDULE = 'TypOperativeTempControlSch'
+#: The schedule that is 1 on the design days (the day types SummerDesignDay and WinterDesignDay) and 0 on the other
+#: days, which the EMS of the existing HVAC systems in mixed mode reads (sensor DesignDay).
+DESIGN_DAY_SCHEDULE = 'ACCIS Design Days'
 
 #: The schedules that other objects refer to (one namespace in EnergyPlus).
 _SCHEDULE_TYPES = ('Schedule:Year', 'Schedule:Compact', 'Schedule:Constant', 'Schedule:File')
@@ -49,6 +54,12 @@ def add_radiative_fraction_schedule(model: AccimModel) -> None:
     add_compact_schedule(model, RADIATIVE_FRACTION_SCHEDULE, 'Through: 12/31',
                          'For: SummerDesignDay WinterDesignDay', 'Until: 24:00,0', 'For: AllOtherDays',
                          'Until: 24:00, 0.5', type_limits='Temperature')
+
+
+def add_design_day_schedule(model: AccimModel) -> None:
+    """Add the schedule of the design days (:data:`DESIGN_DAY_SCHEDULE`) if the model does not have it."""
+    add_compact_schedule(model, DESIGN_DAY_SCHEDULE, 'Through: 12/31', 'For: SummerDesignDay WinterDesignDay',
+                         'Until: 24:00,1', 'For: AllOtherDays', 'Until: 24:00,0')
 
 
 def _schedules(idf, types: Iterable[str]) -> Dict[str, object]:

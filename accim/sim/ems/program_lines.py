@@ -773,10 +773,30 @@ endif
 endif
 endif
 """
+#: With the existing HVAC systems (ScriptType 'ex_mm'), on the design days (DesignDay, a sensor of the schedule
+#: 'ACCIS Design Days', 1 on the days of the types SummerDesignDay and WinterDesignDay), the zones are air-conditioned
+#: as with full air-conditioning, with the windows closed, whether they are occupied or not: otherwise the HVAC systems
+#: are off on the design days without occupants (often the winter design day), and EnergyPlus sizes them for no load
+#: (it then stops, or they cannot heat or cool). At the end of the programs, without nesting the blocks IF deeper:
+#: EnergyPlus allows 5 levels of nested IF blocks (IfDepthAllowed), and the mixed mode bodies already have 5.
+_DESIGN_DAY_ZONE = """
+if DesignDay == 1
+set VentHours_{zone} = 0
+set ACST_Act_{zone} = roundedACST
+set AHST_Act_{zone} = roundedAHST
+endif
+"""
+_DESIGN_DAY_WINDOW = """
+if DesignDay == 1
+set {window}_VentOpenFact = 0
+endif
+"""
+
 #: Setpoints and ventilation of a zone in mixed mode, with the VRF systems of accim.
 APPLY_AST_MIXED_MODE = _join(_HVAC_OFF_FROM_COILS.replace('{name}', '{zone}'), _APPLY_AST_MIXED_MODE_BODY)
-#: The same with the existing HVAC systems (ScriptType 'ex_mm').
-APPLY_AST_MIXED_MODE_EXISTING_HVAC = _join(_HVAC_OFF_FROM_LOAD.replace('{name}', '{zone}'), _APPLY_AST_MIXED_MODE_BODY)
+#: The same with the existing HVAC systems (ScriptType 'ex_mm'), air-conditioned on the design days.
+APPLY_AST_MIXED_MODE_EXISTING_HVAC = _join(_HVAC_OFF_FROM_LOAD.replace('{name}', '{zone}'), _APPLY_AST_MIXED_MODE_BODY,
+                                           _DESIGN_DAY_ZONE)
 
 #: Venting opening factor of a window or door.
 SET_MY_VOF = _lines("""
@@ -890,9 +910,9 @@ endif
 """
 #: Opening of a window or door in mixed mode, with the VRF systems of accim.
 SET_WINDOW_OPERATION = _join(_HVAC_OFF_FROM_COILS.replace('{name}', '{window}'), _SET_WINDOW_OPERATION_BODY)
-#: The same with the existing HVAC systems (ScriptType 'ex_mm').
+#: The same with the existing HVAC systems (ScriptType 'ex_mm'), closed on the design days.
 SET_WINDOW_OPERATION_EXISTING_HVAC = _join(_HVAC_OFF_FROM_LOAD.replace('{name}', '{window}'),
-                                           _SET_WINDOW_OPERATION_BODY)
+                                           _SET_WINDOW_OPERATION_BODY, _DESIGN_DAY_WINDOW)
 
 #: Setpoints of a zone with full air-conditioning.
 APPLY_AST_AIR_CONDITIONED = _lines("""

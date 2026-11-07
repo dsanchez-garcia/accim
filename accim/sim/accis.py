@@ -13,6 +13,7 @@ The ACCIS is an EnergyManagementSystem script that applies adaptive setpoint tem
 """
 
 import os
+import tempfile
 import warnings
 from io import StringIO
 from pathlib import Path
@@ -23,7 +24,13 @@ import pandas as pd
 from accim import __version__
 from accim._deprecation import rename_legacy_kwargs, warn_deprecated
 from accim.constants import SUPPORTED_ENERGYPLUS_VERSIONS
-from accim.energyplus import find_energyplus, idd_path, read_idf_version, unsupported_version_message
+from accim.energyplus import (
+    expand_objects,
+    find_energyplus,
+    idd_path,
+    read_idf_version,
+    unsupported_version_message,
+)
 from accim.sim import prompts
 from accim.sim.arguments import (
     LEGACY_ARGUMENT_NAMES,
@@ -66,7 +73,7 @@ from accim.sim.generation import (
     zone_arguments_errors,
     zone_input_arguments,
 )
-from accim.sim.model import AccimModel
+from accim.sim.model import AccimModel, hvac_template_types
 from accim.sim.outputs import OUTPUT_DATAFRAME_COLUMNS, enable_sizing_calculations, output_variables_dataframe
 from accim.sim.targets import resolve_targets
 
@@ -533,10 +540,19 @@ class AddAccis:
             self._log(_START_MODEL, 'Starting with file:', stem)
             # eppy reads the file twice: the input model, which does not change, and the model with the ACCIS
             self.input_idfs[stem] = load_idf(file, energyplus_version)
-            idf = load_idf(file, energyplus_version)
-            self._log(f'IDD location is: {idf.iddname}')
-            version = _idf_version(idf)
+            version = _idf_version(self.input_idfs[stem])
             _check_version(version)
+            templates = hvac_template_types(self.input_idfs[stem])
+            if templates:
+                # The thermostats and HVAC objects of the HVACTemplate objects exist only once they are expanded
+                with tempfile.TemporaryDirectory() as folder:
+                    expanded = expand_objects(file, os.path.join(folder, 'expanded.idf'), version=version)
+                    idf = load_idf(expanded, energyplus_version)
+                self._log(f'The HVACTemplate objects of {stem} ({", ".join(templates)}) have been expanded with '
+                          f'ExpandObjects: the output IDFs have the HVAC objects they stand for.')
+            else:
+                idf = load_idf(file, energyplus_version)
+            self._log(f'IDD location is: {idf.iddname}')
             if self.arguments['energyplus_version'] == 'auto':
                 self.arguments['energyplus_version'] = version
             model = AccimModel(idf, script_type, setpoint_type, verbose=verbose,

@@ -142,31 +142,49 @@ def add_output_variables(model: AccimModel) -> None:
             _add_output_variable(model, f'{name}_{zone}', f'{variable}_{zone}', 'Averaged', units)
 
 
-def _new_global_variables(model: AccimModel, names) -> None:
+def _declared_global_variables(idf) -> set:
+    """The names (in capitals) of the EMS global variables that the model declares."""
+    return {str(name).strip().upper() for obj in idf.idfobjects['EnergyManagementSystem:GlobalVariable']
+            for name in obj.fieldvalues[1:] if str(name).strip()}
+
+
+def _new_global_variables(model: AccimModel, names, declared: set) -> None:
+    """Declare the EMS global variables that are not declared yet, in one object."""
+    names = [name for name in names if name.upper() not in declared]
+    if not names:
+        return
+    declared.update(name.upper() for name in names)
     fields = {f'Erl_Variable_{n}_Name': name for n, name in enumerate(names, start=1)}
     model.idf.newidfobject('EnergyManagementSystem:GlobalVariable', **fields)
 
 
 def add_global_variables(model: AccimModel) -> None:
-    """Replace the EMS global variables of the model with those of ACCIS."""
-    model.idf.removeallidfobjects('EnergyManagementSystem:GlobalVariable')
-    _new_global_variables(model, _GLOBAL_VARIABLES)
+    """Add the EMS global variables of ACCIS that the model does not declare yet.
+
+    Those of the model stay, since its own EMS programs (or EMS output variables) may use them."""
+    declared = _declared_global_variables(model.idf)
+    _new_global_variables(model, _GLOBAL_VARIABLES, declared)
     for zone in model.ems_names:
-        _new_global_variables(model, [f'{name}_{zone}' for name in _ZONE_GLOBAL_VARIABLES])
+        _new_global_variables(model, [f'{name}_{zone}' for name in _ZONE_GLOBAL_VARIABLES], declared)
     if model.is_mixed_mode:
-        _new_global_variables(model, _GLOBAL_VARIABLES_MIXED_MODE)
+        _new_global_variables(model, _GLOBAL_VARIABLES_MIXED_MODE, declared)
         for zone in model.ems_names:
-            _new_global_variables(model, [f'{name}_{zone}' for name in _ZONE_GLOBAL_VARIABLES_MIXED_MODE])
+            _new_global_variables(model, [f'{name}_{zone}' for name in _ZONE_GLOBAL_VARIABLES_MIXED_MODE], declared)
         for window in model.windows:
-            _new_global_variables(model, [f'{window}_MyVOF'])
+            _new_global_variables(model, [f'{window}_MyVOF'], declared)
     model.log('Global variables objects have been added')
 
 
 def add_internal_variables(model: AccimModel) -> None:
-    """Replace the EMS internal variables of the model with the floor area and volume of each zone."""
-    model.idf.removeallidfobjects('EnergyManagementSystem:InternalVariable')
+    """Add the EMS internal variables of the floor area and volume of each zone (ZFA_<zone>, ZAV_<zone>) that the
+    model does not have yet.
+
+    Those of the model stay, since its own EMS programs may use them."""
     for name, zone in zip(model.ems_names, model.ems_zones):
         for prefix, data_type in (('ZFA_', 'Zone Floor Area'), ('ZAV_', 'Zone Air Volume')):
+            if model.idf.getobject('EnergyManagementSystem:InternalVariable', prefix + name) is not None:
+                model.log(f'Not added - {prefix + name} Internal Variable')
+                continue
             model.idf.newidfobject('EnergyManagementSystem:InternalVariable', Name=prefix + name,
                                    Internal_Data_Index_Key_Name=zone, Internal_Data_Type=data_type)
     model.log('Internal variables objects have been added')

@@ -50,9 +50,11 @@ from typing import Dict, Iterator, List, Mapping, Optional, Tuple
 from accim.sim.ems.objects import add_sensor
 from accim.sim.hvac.schedules import (
     ALWAYS_ON_SCHEDULE,
+    DESIGN_DAY_SCHEDULE,
     DUAL_SETPOINT_CONTROL_SCHEDULE,
     RADIATIVE_FRACTION_SCHEDULE,
     add_compact_schedule,
+    add_design_day_schedule,
     add_radiative_fraction_schedule,
     is_always_on,
 )
@@ -65,6 +67,7 @@ __all__ = [
     'IDEAL_LOADS_BACKUP',
     'LOAD_TO_SETPOINT_OUTPUT',
     'OUTDOOR_TEMPERATURE_LIMITS',
+    'add_design_day_sensor',
     'add_ideal_loads_backups',
     'add_load_sensors',
     'add_setpoint_schedules',
@@ -72,8 +75,11 @@ __all__ = [
     'make_available',
     'outdoor_temperature_limits_warning',
     'own_setpoints_warning',
+    'own_thermal_comfort_warning',
+    'remove_thermal_comfort_thermostats',
     'set_operative_temperature_thermostats',
     'set_radiant_setpoints',
+    'set_staged_thermostat_setpoints',
     'warn_availability',
     'warn_outdoor_temperature_limits',
     'warn_own_setpoints',
@@ -189,6 +195,12 @@ def add_setpoint_schedules(model: AccimModel) -> None:
                     setpoint.Heating_Setpoint_Temperature_Schedule_Name = f'AHST_Sch_{ems_name}'
                     setpoint.Cooling_Setpoint_Temperature_Schedule_Name = f'ACST_Sch_{ems_name}'
 
+    # The EMS actuates the setpoint schedules of all the occupied zones: without them (zones without a thermostat, or
+    # with a single heating or cooling setpoint), EnergyPlus stopped ('Actuator ... not found')
+    for ems_name in model.ems_names:
+        _add_setpoint_schedule(model, f'AHST_Sch_{ems_name}', 20)
+        _add_setpoint_schedule(model, f'ACST_Sch_{ems_name}', 24)
+
 
 def _controls(thermostat) -> List[Tuple[str, str]]:
     """The object type and name of each control of a ZoneControl:Thermostat object."""
@@ -255,6 +267,103 @@ def _control_operative_temperature(model: AccimModel, thermostat) -> None:
                       f'{adaptive} replaced with None, so that the setpoints are those of accim')
 
 
+_THERMAL_COMFORT = 'ZoneControl:Thermostat:ThermalComfort'
+_STAGED = 'ZoneControl:Thermostat:StagedDualSetpoint'
+
+
+def set_staged_thermostat_setpoints(model: AccimModel) -> List[str]:
+    """Give the staged thermostats (ZoneControl:Thermostat:StagedDualSetpoint) of the occupied zones the setpoint
+    schedules of their zones (AHST_Sch_<zone> as the heating setpoint, ACST_Sch_<zone> as the base of the cooling
+    setpoint), which the EMS actuates; return their names.
+
+    The multispeed and unitary systems with staged control heat and cool with the stages of these thermostats, from
+    their own setpoint schedules (of the air temperature), not with the ZoneControl:Thermostat objects of the zones, so
+    they kept the setpoints of the model (the example file MultiSpeedHP_StagedThermostat of EnergyPlus). Their
+    throttling ranges and stage offsets do not change. Those of ZoneLists are not changed (with a warning)."""
+    occupied = {zone.upper(): (zone, ems_name) for zone, ems_name in zip(model.ems_zones, model.ems_names)}
+    zone_lists = _zone_lists(model.idf)
+    changed, skipped = [], []
+    for staged in model.idf.idfobjects[_STAGED]:
+        key = str(staged.fieldvalues[2]).strip().upper()
+        if key not in occupied:
+            if any(zone in occupied for zone in zone_lists.get(key, [])):
+                skipped.append(str(staged.Name))
+            continue
+        zone, ems_name = occupied[key]
+        _add_setpoint_schedule(model, f'AHST_Sch_{ems_name}', 20)
+        _add_setpoint_schedule(model, f'ACST_Sch_{ems_name}', 24)
+        staged.Heating_Temperature_Setpoint_Schedule_Name = f'AHST_Sch_{ems_name}'
+        staged.Cooling_Temperature_Setpoint_Base_Schedule_Name = f'ACST_Sch_{ems_name}'
+        changed.append(str(staged.Name))
+        model.log(f'The {_STAGED} {staged.Name} follows the setpoints of {zone}')
+    if skipped:
+        warnings.warn(
+            f'The {_STAGED} objects {_listed(skipped)} of the model {_model_label(model)} control the zones of '
+            f'ZoneLists with occupied zones, so they keep their own setpoints: give each zone its own staged '
+            f'thermostat.',
+            stacklevel=4)
+    return changed
+
+
+def _thermal_comfort_controls(model: AccimModel) -> Tuple[list, list]:
+    """The thermal comfort thermostats (ZoneControl:Thermostat:ThermalComfort, Fanger PMV) of the occupied zones:
+    those whose zones are all occupied, and those of ZoneLists with occupied and unoccupied zones."""
+    occupied = {zone.upper() for zone in model.ems_zones}
+    zone_lists = _zone_lists(model.idf)
+    whole, partial = [], []
+    for control in model.idf.idfobjects[_THERMAL_COMFORT]:
+        # The values of the object are [type, name, zone or ZoneList, ...]
+        key = str(control.fieldvalues[2]).strip().upper()
+        zones = zone_lists.get(key, [key])
+        if all(zone in occupied for zone in zones):
+            whole.append(control)
+        elif any(zone in occupied for zone in zones):
+            partial.append(control)
+    return whole, partial
+
+
+def remove_thermal_comfort_thermostats(model: AccimModel) -> List[str]:
+    """Remove the thermal comfort thermostats (ZoneControl:Thermostat:ThermalComfort, whose setpoints are values of
+    the PMV of Fanger) of the occupied zones, which EnergyPlus uses instead of their temperature thermostats while
+    their control type schedules are not 0, so that the zones do not follow the setpoints of accim (with
+    ``existing_hvac_operative_temperature_control=True``); return their names. Those of ZoneLists with zones without
+    occupants stay, with a warning."""
+    whole, partial = _thermal_comfort_controls(model)
+    for control in whole:
+        model.idf.removeidfobject(control)
+        model.log(f'Removed - {control.Name} {_THERMAL_COMFORT}, so that its zones follow the setpoints of accim')
+    if whole:
+        warnings.warn(
+            f'The {_THERMAL_COMFORT} objects {_listed([str(c.Name) for c in whole])} of the model '
+            f'{_model_label(model)} have been removed: EnergyPlus would control their zones with the PMV of Fanger '
+            f'instead of the setpoints of accim.', stacklevel=4)
+    if partial:
+        warnings.warn(own_thermal_comfort_warning(model, partial), stacklevel=4)
+    return [str(c.Name) for c in whole]
+
+
+def own_thermal_comfort_warning(model: AccimModel, controls=None) -> Optional[str]:
+    """The warning about the thermal comfort thermostats of the occupied zones (see
+    :func:`remove_thermal_comfort_thermostats`), or None if they have none."""
+    if controls is None:
+        whole, partial = _thermal_comfort_controls(model)
+        controls = whole + partial
+    occupied = {zone.upper() for zone in model.ems_zones}
+    staged = [str(s.Name) for s in model.idf.idfobjects[_STAGED] if str(s.fieldvalues[2]).strip().upper() in occupied]
+    messages = []
+    if controls:
+        messages.append(f'the {_THERMAL_COMFORT} objects {_listed([str(c.Name) for c in controls])} control '
+                        f'occupied zones with the PMV of Fanger while their control type schedules are not 0 (True '
+                        f'removes those whose zones are all occupied)')
+    if staged:
+        messages.append(f'the {_STAGED} objects {_listed(staged)} keep their own setpoint schedules (True gives them '
+                        f'those of their zones)')
+    if not messages:
+        return None
+    return (f'The thermostats of the model {_model_label(model)} do not follow the setpoints of accim: '
+            f'{"; ".join(messages)}. See existing_hvac_operative_temperature_control.')
+
+
 def set_operative_temperature_thermostats(model: AccimModel) -> None:
     """Make the thermostat of each occupied zone control the operative temperature of the zone between its setpoints
     at all times, as the thermostats of the VRF systems (``existing_hvac_operative_temperature_control=True``).
@@ -273,25 +382,18 @@ def set_operative_temperature_thermostats(model: AccimModel) -> None:
 
     The thermostats of the zones without occupants do not change. A warning lists the occupied zones without a
     thermostat (and without radiant systems that follow the setpoints, see :func:`set_radiant_setpoints`, which runs
-    before), whose operative temperature accim cannot keep between the setpoints.
-
-    :raises ValueError: If the thermostat of an occupied zone controls the zones of a ZoneList: accim needs a
-        thermostat for each occupied zone.
+    before), whose operative temperature accim cannot keep between the setpoints. The thermal comfort thermostats
+    (Fanger PMV) of the occupied zones are removed (see :func:`remove_thermal_comfort_thermostats`), and their staged
+    thermostats get their setpoint schedules (see :func:`set_staged_thermostat_setpoints`). The thermostats of the
+    ZoneLists with occupied zones were already replaced with one thermostat per zone when accim scanned the model
+    (:class:`accim.sim.model.AccimModel`).
     """
     idf = model.idf
     occupied = {zone.upper(): (zone, ems_name) for zone, ems_name in zip(model.ems_zones, model.ems_names)}
-    zone_lists = _zone_lists(idf)
     controlled = set()
     for thermostat in list(idf.idfobjects['ZoneControl:Thermostat']):
         key = thermostat.Zone_or_ZoneList_Name.upper()
         if key not in occupied:
-            listed = [occupied[zone][0] for zone in zone_lists.get(key, []) if zone in occupied]
-            if listed:
-                raise ValueError(
-                    f'The thermostat {thermostat.Name} of the model {_model_label(model)} controls the zones of the '
-                    f'ZoneList {thermostat.Zone_or_ZoneList_Name}, including the occupied zones {listed}: accim needs '
-                    f'a ZoneControl:Thermostat object for each occupied zone, to control it with its own setpoints. '
-                    f'Give each zone its own thermostat.')
             continue
         zone, ems_name = occupied[key]
         _add_setpoint_schedule(model, f'AHST_Sch_{ems_name}', 20)
@@ -323,6 +425,8 @@ def set_operative_temperature_thermostats(model: AccimModel) -> None:
             f'cannot keep their operative temperature between them.',
             stacklevel=3,
         )
+    remove_thermal_comfort_thermostats(model)
+    set_staged_thermostat_setpoints(model)
 
 
 def _availability_objects(idf) -> Iterator:
@@ -399,11 +503,12 @@ def make_available(model: AccimModel, schedule: str) -> None:
     for obj in _availability_objects(idf):
         if obj.Availability_Schedule_Name != schedule:
             obj.Availability_Schedule_Name = schedule
-            model.log(f'Modified - {_object_type(obj)} {obj.Name}: availability schedule {schedule}')
+            model.log(f'Modified - {_object_type(obj)} {_object_name(obj)}: availability schedule {schedule}')
     for schemes, field in list(_single_operation_schemes(idf)):
         if getattr(schemes, field) != schedule:
             setattr(schemes, field, schedule)
-            model.log(f'Modified - {_object_type(schemes)} {schemes.Name}: schedule of the operation scheme {schedule}')
+            model.log(f'Modified - {_object_type(schemes)} {_object_name(schemes)}: schedule of the operation scheme '
+                      f'{schedule}')
     managed = list(_objects_with_availability_managers(idf))
     if any(obj.key.upper() in _LOOPS for obj in managed):
         manager = idf.getobject('AvailabilityManager:Scheduled', AVAILABILITY_MANAGER)
@@ -419,10 +524,11 @@ def make_available(model: AccimModel, schedule: str) -> None:
     for obj in managed:
         if obj.key.upper() in _LOOPS:
             obj.Availability_Manager_List_Name = AVAILABILITY_MANAGER_LIST
-            model.log(f'Modified - {_object_type(obj)} {obj.Name}: availability managers {AVAILABILITY_MANAGER_LIST}')
+            model.log(f'Modified - {_object_type(obj)} {_object_name(obj)}: availability managers '
+                      f'{AVAILABILITY_MANAGER_LIST}')
         else:
             obj.Availability_Manager_List_Name = ''
-            model.log(f'Modified - {_object_type(obj)} {obj.Name}: no availability managers')
+            model.log(f'Modified - {_object_type(obj)} {_object_name(obj)}: no availability managers')
 
 
 def _listed(names: List[str]) -> str:
@@ -760,19 +866,36 @@ def set_radiant_setpoints(model: AccimModel) -> None:
 
 
 def _add_node(idf, connections, field: str, node: str, node_list: str) -> None:
-    """Add a node to the inlet or exhaust nodes of a zone (field of its ZoneHVAC:EquipmentConnections object): to its
-    NodeList, or to a new NodeList with the node it had."""
+    """Add a node to the inlet or exhaust nodes of a zone (field of its ZoneHVAC:EquipmentConnections object).
+
+    The zone gets a NodeList of accim (``node_list``) with the nodes it had and the new one. A NodeList of the model
+    does not change, since other objects can use it as a node (the zone inlet node of a SetpointManager:SingleZone:*
+    object, for instance, which takes only a NodeList with one node)."""
     current = str(getattr(connections, field) or '').strip()
     if not current:
         setattr(connections, field, node)
         return
     nodes = idf.getobject('NodeList', current)
-    if nodes is None:
-        nodes = idf.newidfobject('NodeList', Name=node_list, Node_1_Name=current)
+    # The nodes of a NodeList are the values of its fields after its name
+    names = [str(name).strip() for name in nodes.fieldvalues[2:] if str(name).strip()] if nodes is not None \
+        else [current]
+    if nodes is None or current.upper() != node_list.upper():
+        nodes = idf.newidfobject('NodeList', Name=node_list)
+        for number, name in enumerate(names, start=1):
+            setattr(nodes, f'Node_{number}_Name', name)
         setattr(connections, field, node_list)
-    # The nodes of the NodeList are the values of its fields after its name
-    names = [str(name).strip() for name in nodes.fieldvalues[2:] if str(name).strip()]
-    setattr(nodes, f'Node_{len(names) + 1}_Name', node)
+    if node.upper() not in {name.upper() for name in names}:
+        setattr(nodes, f'Node_{len(names) + 1}_Name', node)
+
+
+def _airflow_network_distribution(idf) -> Optional[str]:
+    """The AirflowNetwork Control of a model that simulates an AirflowNetwork with its air distribution system
+    (MultizoneWithDistribution or MultizoneWithDistributionOnlyDuringFanOperation), or None."""
+    for control in idf.idfobjects['AirflowNetwork:SimulationControl']:
+        value = str(getattr(control, 'AirflowNetwork_Control', '') or '').strip()
+        if value.upper().startswith('MULTIZONEWITHDISTRIBUTION'):
+            return value
+    return None
 
 
 def add_ideal_loads_backups(model: AccimModel) -> None:
@@ -790,11 +913,32 @@ def add_ideal_loads_backups(model: AccimModel) -> None:
     Rate' of the backups to the output types 'simplified' and 'standard'.
 
     A warning lists the occupied zones without zone HVAC equipment (ZoneHVAC:EquipmentConnections), which get no
-    backup.
+    backup. The models that simulate an AirflowNetwork with its air distribution system get no backup either, with a
+    warning: EnergyPlus needs all the air nodes of their zones in the AirflowNetwork (it stops otherwise: '... is not
+    defined as an AirflowNetwork:Distribution:Node object'); nor do the zones of the RoomAir model AirflowNetwork (their
+    RoomAir:Node:AirflowNetwork:HVACEquipment objects must have all their equipment).
     """
     idf = model.idf
+    distribution = _airflow_network_distribution(idf)
+    if distribution is not None:
+        warnings.warn(
+            f'The model {_model_label(model)} simulates an AirflowNetwork with its air distribution system '
+            f'({distribution}), which needs all the air nodes of the zones in the AirflowNetwork, so accim adds no '
+            f'backup ideal loads air system to it (existing_hvac_ideal_loads_backup).',
+            stacklevel=3,
+        )
+        return
     missing = []
+    # The zones of the RoomAir model AirflowNetwork need all their equipment in the objects
+    # RoomAir:Node:AirflowNetwork:HVACEquipment (EnergyPlus stops otherwise); the values of RoomAirModelType are
+    # [type, name, zone, modeling type, ...]
+    room_air = {str(obj.fieldvalues[2]).strip().upper() for obj in idf.idfobjects['RoomAirModelType']
+                if len(obj.fieldvalues) > 3 and str(obj.fieldvalues[3]).strip().upper() == 'AIRFLOWNETWORK'}
+    skipped = []
     for zone in dict.fromkeys(model.ems_zones):
+        if zone.upper() in room_air:
+            skipped.append(zone)
+            continue
         # The ZoneHVAC:EquipmentConnections object of the zone (its first field is the zone) and its equipment list
         zone_connections = idf.getobject('ZoneHVAC:EquipmentConnections', zone)
         equipment = None if zone_connections is None else idf.getobject(
@@ -835,6 +979,13 @@ def add_ideal_loads_backups(model: AccimModel) -> None:
             f'(ZoneHVAC:EquipmentConnections), so accim adds no backup ideal loads air system to them.',
             stacklevel=3,
         )
+    if skipped:
+        warnings.warn(
+            f'The occupied zones {skipped} of the model {_model_label(model)} use the RoomAir model AirflowNetwork, '
+            f'whose RoomAir:Node:AirflowNetwork:HVACEquipment objects must have all the equipment of the zone, so '
+            f'accim adds no backup ideal loads air system to them.',
+            stacklevel=3,
+        )
 
 
 def add_load_sensors(model: AccimModel) -> None:
@@ -843,3 +994,13 @@ def add_load_sensors(model: AccimModel) -> None:
     SetWindowOperation_<window> read (ScriptType 'ex_mm')."""
     for name, zone in [*zip(model.ems_names, model.ems_zones), *zip(model.windows, model.window_zones)]:
         add_sensor(model, f'{name}_LoadToSetpoint', zone, LOAD_TO_SETPOINT_OUTPUT)
+
+
+def add_design_day_sensor(model: AccimModel) -> None:
+    """Add the EMS sensor DesignDay, the value of the schedule of the design days (1 on the days of the types
+    SummerDesignDay and WinterDesignDay, see :data:`accim.sim.hvac.schedules.DESIGN_DAY_SCHEDULE`), which the programs
+    ApplyAST_<zone> and SetWindowOperation_<window> read (ScriptType 'ex_mm'): on the design days, the zones are
+    air-conditioned with the windows closed, so that EnergyPlus sizes the HVAC systems for the setpoints, also on the
+    design days without occupants."""
+    add_design_day_schedule(model)
+    add_sensor(model, 'DesignDay', DESIGN_DAY_SCHEDULE, 'Schedule Value')

@@ -20,6 +20,7 @@ from accim.sim.ems.erl import ErlProgramSet, variables_in_programs
 from accim.sim.ems.inputs import input_lines, input_values
 from accim.sim.ems.programs import accis_programs
 from accim.sim.hvac.existing import LOAD_TO_SETPOINT_OUTPUT
+from accim.sim.hvac.schedules import DESIGN_DAY_SCHEDULE
 
 REPO = Path(__file__).resolve().parents[2]
 RADIATORS = REPO / 'tests' / 'core' / 'golden_master' / 'inputs' / 'exrad.idf.xz'
@@ -61,7 +62,7 @@ def _programs():
     return erl
 
 
-def _timestep(erl, load):
+def _timestep(erl, load, design_day=0.0, occupants=1.0):
     # A running mean outdoor temperature of 20 °C: setpoints of 28.3 and 21.5 °C, a ventilation setpoint of 25.4 °C
     # (the comfort temperature) and a minimum outdoor temperature of 14.5 °C. The zone, at 27 °C and occupied, is
     # warmer than the outdoor air, at 20 °C: the windows open if the HVAC system is off
@@ -69,7 +70,7 @@ def _timestep(erl, load):
         for suffix, value in (('_OpT', 27.0), ('_OutT', 20.0), ('_WindSpeed', 1.0), ('_LoadToSetpoint', load)):
             erl.set(name + suffix, value)
     for name, value in dict(RMOT=20.0, PMOT=20.0, DayOfYear=180.0, CurrentTime=12.0, ZoneTimeStep=TIMESTEP,
-                            Occ_count_Zone1=1.0, Zone1_Win_Occ_count=1.0).items():
+                            Occ_count_Zone1=occupants, Zone1_Win_Occ_count=occupants, DesignDay=design_day).items():
         erl.set(name, value)
     erl.run('RunACCIS_Zone1')
     return erl.get(f'{WINDOW}_VentOpenFact'), erl.get('VentHours_Zone1')
@@ -85,6 +86,22 @@ def test_the_windows_open_only_when_the_thermostat_asks_for_no_load():
     assert _timestep(erl, load=0.0) == (1, TIMESTEP)
     # The thermostat asks for heating: the windows close
     assert _timestep(erl, load=200.0) == (0, 0)
+
+
+def test_on_the_design_days_the_zones_are_air_conditioned_with_the_windows_closed():
+    """On the design days (DesignDay 1), the setpoints apply also without occupants, and the windows stay closed: with
+    the HVAC systems off on the design days without occupants (often the winter design day), EnergyPlus sized them
+    for no load, and stopped (the furnaces of the example files House-2FurnaceAC-*: 'air flow less than ...')."""
+    erl = _programs()
+
+    # Not a design day: without occupants, the HVAC system is off
+    assert _timestep(erl, load=0.0, occupants=0.0) == (0, 0)
+    assert (erl.get('ACST_Act_Zone1'), erl.get('AHST_Act_Zone1')) == (100, -100)
+    # A design day: the setpoints apply, with or without occupants, and the windows stay closed
+    for occupants in (0.0, 1.0):
+        assert _timestep(erl, load=0.0, design_day=1.0, occupants=occupants) == (0, 0)
+        assert erl.get('ACST_Act_Zone1') == pytest.approx(28.3, abs=1e-3)
+        assert erl.get('AHST_Act_Zone1') == pytest.approx(21.5, abs=1e-3)
 
 
 @pytest.fixture
@@ -112,6 +129,13 @@ def test_ex_mm_reads_the_load_of_the_zone_of_each_zone_and_window(radiators):
         sensor = sensors[f'{name}_LoadToSetpoint']
         assert sensor.OutputVariable_or_OutputMeter_Index_Key_Name == zone
         assert sensor.OutputVariable_or_OutputMeter_Name == LOAD_TO_SETPOINT_OUTPUT
+    # The design days, from a schedule that is 1 on the days of the types SummerDesignDay and WinterDesignDay
+    design_day = sensors['DesignDay']
+    assert design_day.OutputVariable_or_OutputMeter_Index_Key_Name == DESIGN_DAY_SCHEDULE
+    assert design_day.OutputVariable_or_OutputMeter_Name == 'Schedule Value'
+    schedule = [s for s in radiators.idfobjects['Schedule:Compact'] if s.Name == DESIGN_DAY_SCHEDULE][0]
+    assert [str(v) for v in schedule.obj[3:]] == ['Through: 12/31', 'For: SummerDesignDay WinterDesignDay',
+                                                  'Until: 24:00,1', 'For: AllOtherDays', 'Until: 24:00,0']
 
 
 @needs_energyplus

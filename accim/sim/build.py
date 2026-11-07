@@ -5,6 +5,7 @@
 """The steps that add the ACCIS to a model, shared by :class:`accim.sim.accis.AddAccis` (files) and
 :func:`accim.sim.accis.add_accis_to_idf` (IDF objects)."""
 
+import warnings
 from typing import Callable, Iterable, Optional
 
 import pandas as pd
@@ -79,6 +80,9 @@ def add_accis_objects(
             existing.set_operative_temperature_thermostats(model)
         else:
             existing.add_setpoint_schedules(model)
+            message = existing.own_thermal_comfort_warning(model)
+            if message is not None and model.setpoint_type == 'temperature':
+                warnings.warn(message, stacklevel=3)
         if existing_hvac_availability_schedule is None:
             existing.warn_availability(model)
         else:
@@ -100,6 +104,7 @@ def add_accis_objects(
         vrf.add_coil_sensors(model)
     elif model.script_type == 'ex_mm':
         existing.add_load_sensors(model)
+        existing.add_design_day_sensor(model)
     add_program_calling_managers(model)
     if add_building_averages:
         ems_objects.add_building_averages(model)
