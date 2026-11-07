@@ -18,18 +18,25 @@ que quien conozca eppy pueda leer `accim.sim` sin aprender nada más. Cuando epp
 prefiere eppy (decisión del autor: "prefiero que sea más entendible aunque sea un poco más lento"); y se usa eppy en vez
 de besos siempre que se puede.
 
-**Lo que no cambia.** El uso, los argumentos, los programas EMS y los objetos y valores de los IDF de salida.
+**Lo que no cambia.** El uso, los argumentos y los resultados de las simulaciones. Los IDF de salida tienen los mismos
+objetos y valores, salvo en los programas EMS (sección 7) y en lo que corrigieron las pruebas de los sistemas HVAC
+existentes con los archivos de ejemplo de EnergyPlus (sección 8).
 
 **Lo que cambia.**
 
 - Lectura: `load_idf` lee todos los modelos con eppy, también con `energyplus_version='auto'` (antes, con besos).
 - Escritura: eppy guarda cada IDF de salida entero (`IDF.savecopy`). Es más lento que el `IdfWriter` de 1.0.0, que
   escribía una sola vez el texto de los objetos que no cambian: AddAccis con los 140 IDF de salida del modelo de
-  ejemplo tarda unos 17 s en vez de unos 6 s.
+  ejemplo tarda unos 16 s en vez de unos 5 s.
 - Edición: `getobject`, `removeallidfobjects`, `fieldvalues`... en vez de listas de nombres y de `.obj`.
 - Algunos números del modelo de entrada se escriben como los escribe eppy (`2.0` como `2`), con los mismos valores:
   eppy lee los campos numéricos como números y besos los dejaba como texto.
 - El backend de la API de Python lee y cambia el modelo con eppy, en vez de con un analizador de texto propio.
+- Los programas EMS de los IDF de salida solo tienen el código de los estándares de confort de sus zonas, y las líneas
+  de todos los programas EMS van sangradas dentro de los bloques `IF` y `WHILE` (sección 7).
+- `ex_ac` y `ex_mm` funcionan con cualquier sistema HVAC de los archivos de ejemplo de EnergyPlus cuyo modelo original
+  funcione, y en modo mixto las ventanas se abren y se cierran cuando lo decide el EMS, con AirflowNetwork o con
+  ventilación por horario (sección 8).
 
 ## 2. De las utilidades de accim a los métodos de eppy
 
@@ -90,9 +97,11 @@ Los pasos de `CAMBIOS_CODIGO_v1.0.0.md` (sección 4) siguen, con estos cambios:
 1. Para cada IDF de entrada, `load_idf` lo lee dos veces con eppy: `input_idfs[nombre]`, que no cambia, y el modelo al
    que se añade el ACCIS (antes, una copia hecha a partir del texto).
 2. Se guarda el texto del modelo con el ACCIS: `idf.idfstr()`.
-3. `_write_output_idfs`: eppy lee ese texto (`IDF(StringIO(texto))`) y, para cada combinación,
-   `generation.set_combination` escribe los argumentos de cada zona en su programa `SetInputData_<zona>` (los de la
-   combinación, o los de `zone_arguments`) y `idf.savecopy(ruta)` guarda el IDF de salida.
+3. `_write_output_idfs`: eppy lee ese texto (`IDF(StringIO(texto))`), `indent_programs` vuelve a sangrar los
+   programas (eppy quita los espacios al leer) y, para cada combinación, `generation.set_combination` escribe los
+   argumentos de cada zona en su programa `SetInputData_<zona>` (los de la combinación, o los de `zone_arguments`),
+   `set_comfort_standard_code` deja en los programas solo el código de los estándares de confort de las zonas y
+   `idf.savecopy(ruta)` guarda el IDF de salida.
 4. `output_idfs` lee cada IDF de salida con eppy cuando se pide.
 
 ## 5. El backend de la API de Python
@@ -114,12 +123,183 @@ simulación en su propio proceso. El controlador (`controller.py`) y el intérpr
 - `hvac/vrf.py`: el objeto de prueba que da los nombres de los límites de temperatura del IDD se crea una vez, no una
   vez por zona.
 
-## 7. Pruebas
+## 7. El código EMS de los estándares de confort y la sangría
 
-- Golden master: 19 configuraciones de `AddAccis`, que leían los modelos con besos, cambian solo en la forma de
-  escribir los números (2926 campos: `2.0` → `2`, `0.00000001` → `1e-08`, `-0` → `0`...); EnergyPlus da resultados
-  idénticos con los IDF de salida de antes y de ahora (`b02`, `b11` y `b17`). Los archivos se escribieron de nuevo.
-- Nuevas: `test_chile_funcs.py`, `test_load_idf_versions.py::test_load_idf_reads_the_models_with_eppy` y
-  `test_existing_hvac.py::test_a_limit_of_0_is_not_the_default_of_the_idd`.
+**Por qué.** El autor preguntó si el código EMS de los IDF generados podía tener sangría, para ver dónde empiezan y
+terminan los bloques `if`-`elseif`-`else`-`endif`, y qué tal sería añadir solo el código de los estándares de confort
+elegidos. Un IDF de salida del modelo de ejemplo con dos zonas en modo mixto tenía 78 programas con 6851 líneas
+(645 kB), 5166 de ellas en los subprogramas de los 24 estándares; ahora tiene 34 programas con 1393 líneas (357 kB).
+
+**Sangría.** `ems.programs.indent_lines(líneas)` pone 4 espacios (`INDENTATION`) por cada bloque `IF` o `WHILE` que
+contiene la línea; la palabra clave es lo que va antes del primer espacio, como en EnergyPlus. Quita antes los
+espacios que tuviera la línea, así que se puede aplicar varias veces. `add_program` y `set_program_lines` sangran lo
+que escriben. eppy quita los espacios del principio de los campos al leer un IDF, así que `indent_programs(idf)`
+vuelve a sangrar todos los programas y subrutinas de un modelo: lo llaman `AddAccis`, después de leer otra vez el
+texto del modelo, y `modify_accis`, porque sus modelos suelen venir de un archivo. EnergyPlus quita los espacios de
+cada línea (los mismos resultados con 9.4, 9.6, 25.1 y 26.2), y el intérprete de Erl de accim (`ems/erl.py`) también.
+
+**El código de los estándares de confort.** Dependen del estándar de confort SetComfTemp, SetAppLimits, ApplyCAT y
+CountHours_<zona> (cada uno es una cadena `if ComfStand == ... elseif ... else ... endif`), SetAST_Master (un
+`if (ComfStand == n)` por estándar, que ejecuta sus subprogramas) y los subprogramas `SetAST_CS<n>_<trozo>`.
+
+- `program_lines.for_comfort_standards(líneas, estándares)` deja las ramas de esos estándares de una cadena: cada
+  condición nombra solo los estándares pedidos, y la rama `else` pasa a ser un `elseif` con los estándares pedidos que
+  no nombra ninguna condición. Si ninguno tiene rama, no quedan líneas. Da un `ValueError` si las líneas no son una
+  cadena sobre `ComfStand`, para que una cadena con otra forma no se recorte mal sin avisar.
+- `setast.master_program_lines(estándares)` y `setast.subprograms(estándares)` (antes `comf_stands`) dan
+  SetAST_Master y los subprogramas de esos estándares; `setast.subprogram_comfort_standards(idf)`, los estándares
+  cuyos subprogramas tiene un modelo.
+- `programs.set_comfort_standard_code(idf, estándares)` escribe en un modelo el código de esos estándares (el de todos
+  con `None`). Escribe las líneas de SetComfTemp, SetAppLimits, ApplyCAT, CountHours_<zona> y SetAST_Master a partir
+  de las de `program_lines` y `setast`, no de las del modelo, para poder volver a añadir estándares; quita todos los
+  subprogramas y añade los de esos estándares, al final de los programas. Un programa que no tiene nada que hacer con
+  esos estándares (SetComfTemp y ApplyCAT con ESP CTE e INT ISO7730, que no usan ni la temperatura de confort ni los
+  desfases de las categorías) queda con una sola línea `return`: EnergyPlus no admite un programa sin líneas
+  (`\min-fields 2`), y quitarlo obligaría a quitar también su `run` de RunACCIS_<zona>.
+- `AddAccis` llama a `set_comfort_standard_code(idf, zone_comfort_standards(idf))` antes de guardar cada IDF de salida
+  (`inputs.zone_comfort_standards` lee `ComfStand` de los programas `SetInputData_<zona>`). Como el mismo modelo sirve
+  para todas las combinaciones, la función tiene que poder volver a añadir lo que quitó para la combinación anterior.
+- `add_accis_to_idf` no cambia: sus modelos tienen el código de todos los estándares, porque el módulo paramétrico
+  cambia `ComfStand` en cada muestra (`param_accis.modify_ComfStand`, en `SetInputData_<zona>`).
+- `modify_accis` añade el código de los estándares de las zonas que el modelo no tiene, y no quita nada: un modelo con
+  el código de todos los estándares lo sigue teniendo. `param_accis.modify_ComfStand`, que el módulo paramétrico usa en
+  cada muestra, hace lo mismo con el estándar que pone (por ejemplo, con un IDF de salida y `bypass_add_accis=True`).
+  Las dos usan `programs.add_comfort_standard_code(idf, estándares)`.
+
+**Lo que se pierde.** En un IDF de salida, el estándar de confort ya no se puede cambiar a mano en
+`SetInputData_<zona>`: EnergyPlus se para ("used in expression has not been initialized"), porque nada fija las
+temperaturas de consigna de un estándar sin su código. Con `modify_accis` sí se puede. La categoría, el modo de
+confort y los demás argumentos se pueden seguir cambiando a mano.
+
+## 8. Los sistemas HVAC existentes con los archivos de ejemplo de EnergyPlus
+
+**Por qué.** El autor pidió probar `ex_mm` y `ex_ac` con muchos IDF, existentes o modificados, con distintos sistemas
+HVAC, para comprobar que funcionan con cualquiera siempre que el modelo original funcione, teniendo en cuenta que en
+`ex_mm` la ventilación puede ser por horario o con AirflowNetwork, y que las ventanas deben abrirse y cerrarse cuando
+haga falta para trabajar en modo mixto.
+
+**Cómo.** Un script (fuera del repositorio, en la carpeta de la sesión) preparó cada archivo de ejemplo de EnergyPlus
+25.1 con personas (631; los 13 más grandes se dejaron fuera): sus archivos externos, tres periodos de simulación en
+Sevilla y unas salidas; lo simuló, y si funcionaba, generó con `AddAccis` las variantes `ex_ac`, `ex_mm` (con
+ventilación natural añadida a las zonas que no tenían) y las dos con todos los argumentos `existing_hvac_*`, las
+simuló y midió los errores, si los termostatos siguen las consignas de accim, el tiempo ocupado dentro de las
+consignas y, en modo mixto, si EnergyPlus abre las ventanas que abre el EMS y solo esas. La primera vez (588 modelos
+que funcionaban, 10 días por periodo) se probó el código de antes; la segunda, 170 modelos elegidos (los que
+fallaron, como mucho dos por tipo de fallo, los de ventilación natural y los que cubren cada tipo de objeto HVAC), con
+5 días por periodo, para que tardara menos.
+
+**Las ventanas del modo mixto** (`accim/sim/windows.py`, nuevo; `AccimModel._scan_windows` y `_add_window` en
+`model.py`):
+
+- `uses_airflow_network(idf)`: las ventanas son las del AirflowNetwork solo si simula los flujos multizona
+  (`MultizoneWithoutDistribution` o `MultizoneWithDistribution`); con `NoMultizoneOrDistribution` (antes se tomaba
+  como AirflowNetwork) y `MultizoneWithDistributionOnlyDuringFanOperation`, EnergyPlus simula los objetos
+  `ZoneVentilation`.
+- `afn_openings(idf, zonas)`: las ventanas, puertas y puertas de vidrio de superficies exteriores
+  (`exterior_subsurface_zones`) de las zonas ocupadas cuyo `AirflowNetwork:MultiZone:Surface` tiene una apertura
+  (`OPENING_COMPONENTS`), sea cual sea su nombre. Antes solo las de DesignBuilder (`..._Win`, `..._Door`, con la zona
+  antes del primer `_`), y las puertas interiores de DesignBuilder se abrían como ventanas.
+- `control_ventilation_objects(idf, zonas, horario, log, taken)`: los `ZoneVentilation:WindandStackOpenArea` y los
+  `ZoneVentilation:DesignFlowRate` de tipo `Natural` (`is_natural_ventilation`; los ventiladores `Exhaust`, `Intake` y
+  `Balanced` no son ventanas) de las zonas ocupadas, también de espacios, ZoneLists y SpaceLists (estos se sustituyen
+  por un objeto por zona o espacio); la zona se lee del tercer campo, porque su nombre cambia con la versión (antes,
+  `Zone_or_Space_Name`, que no tienen los `DesignFlowRate` ni los IDD antiguos: `BadEPFieldError`). `_take_control`
+  les pone el horario de la zona y quita sus límites (`VENTILATION_LIMITS`): el EMS decide cuándo ventilan, y los
+  límites dejaban cerradas las ventanas que el EMS abría.
+- `release_occupant_ventilation_controls(idf, superficies)` quita los controles de ventilación por ocupantes de las
+  ventanas, que anulan el EMS: el campo de la superficie, y el de su zona (`AirflowNetwork:MultiZone:Zone`), que
+  EnergyPlus da a todas las ventanas y puertas de la zona sin uno propio, sea cual sea su modo de control (comprobado en
+  `AirflowNetwork/src/Solver.cpp` de 25.1): se quita de la zona y se pone en las demás ventanas y puertas de la zona
+  (`subsurface_zones`), como las puertas interiores. `remove_hybrid_ventilation_managers(idf)` quita los
+  `AvailabilityManager:HybridVentilation` si accim controla ventanas (actúan sobre las ventanas del AirflowNetwork o
+  sobre todos los `ZoneVentilation` de las zonas de su bucle de aire, no solo el que nombran), salvo si el
+  AirflowNetwork simula la distribución de aire con las ventanas (`simulates_air_distribution_with_windows`): sin ellos
+  EnergyPlus se paraba al abrir ventanas con los ventiladores en marcha. `_scan_windows` avisa también de los
+  actuadores EMS del modelo sobre las ventanas que controla accim y de `MultizoneWithDistributionOnlyDuringFanOperation`
+  (EnergyPlus solo simula los `ZoneVentilation` con los ventiladores parados).
+- `_scan_windows` avisa de lo que quita y de las zonas ocupadas sin ventanas; `_add_window` da a cada ventana un nombre
+  EMS válido y único (`sanitize_ems_name`; antes `SPACE1-1_Win_OpT` era un nombre EMS inválido y EnergyPlus se paraba).
+
+**`ex_mm` en los días de diseño** (`program_lines._DESIGN_DAY_ZONE` y `_DESIGN_DAY_WINDOW`, al final de
+`APPLY_AST_MIXED_MODE_EXISTING_HVAC` y `SET_WINDOW_OPERATION_EXISTING_HVAC`; `existing.add_design_day_sensor` y
+`schedules.add_design_day_schedule`): con el sensor `DesignDay` del horario `ACCIS Design Days` (1 en los días de tipo
+`SummerDesignDay` y `WinterDesignDay`), las zonas se climatizan con las ventanas cerradas, haya ocupantes o no. Las
+líneas van al final de los programas y no envuelven el cuerpo en otro `IF`, porque EnergyPlus no admite más de 5
+niveles de `IF` anidados y el de las ventanas ya tiene 5. Sin esto, los sistemas se dimensionaban sin carga en los días
+de diseño sin ocupantes (casi siempre el de invierno), y EnergyPlus se paraba.
+
+**Termostatos** (`model.py`, `hvac/existing.py`):
+
+- `AccimModel._split_zone_list_thermostats` sustituye los termostatos (y los escalonados) de ZoneLists con zonas
+  ocupadas por uno por zona (`<zona> <termostato>`), con copias de los objetos que los nombran (`_THERMOSTAT_REFERENCES`)
+  y los `DemandManager:Thermostats` actualizados (`_replace_thermostat`). Antes, `ValueError`.
+- `AccimModel._check_hvac_templates` para con un `ValueError` si el modelo tiene objetos `HVACTemplate`;
+  `AddAccis` los expande antes con `accim.energyplus.expand_objects` (ExpandObjects, con el IDD en su carpeta de
+  trabajo, en una carpeta temporal), y `hvac_template_types` los encuentra.
+- Con `existing_hvac_operative_temperature_control=True`, `remove_thermal_comfort_thermostats` quita los termostatos
+  de confort (PMV de Fanger) de las zonas ocupadas y `set_staged_thermostat_setpoints` da a los escalonados los
+  horarios de consigna de su zona; con `False`, `own_thermal_comfort_warning` avisa (en `build.py`).
+
+**Otras correcciones.**
+
+- `ems/objects.py`: `add_global_variables` y `add_internal_variables` añaden las de ACCIS que faltan y dejan las del
+  modelo (antes las sustituían, y el EMS del modelo dejaba de funcionar).
+- `existing._add_node`: la zona recibe una NodeList de accim (`<zona> ACCIS Inlet Nodes`) con sus nodos y el del
+  respaldo, y la NodeList del modelo no cambia (la usaban como nodo los `SetpointManager:SingleZone:*`).
+  `add_ideal_loads_backups` no añade respaldos con distribución de aire del AirflowNetwork
+  (`_airflow_network_distribution`) ni en las zonas del modelo RoomAir AirflowNetwork.
+- `existing.make_available` escribe en el registro `_object_name(obj)` en vez de `obj.Name`, que no tienen los
+  `AirConditioner:VariableRefrigerantFlow` (`Heat_Pump_Name`).
+- `existing.add_setpoint_schedules` (con `existing_hvac_operative_temperature_control=False`) añade los horarios de
+  consigna de todas las zonas ocupadas, como el camino de `True`: el EMS los actúa, y EnergyPlus se paraba con las zonas
+  sin termostato o con una sola consigna (`HeatPumpVSAS`).
+
+**Lo que queda del modelo o de EnergyPlus.** EnergyPlus 25.1 y 25.2 se cierran (violación de acceso) con los
+archivos de ejemplo `ZoneCoupledKivaConvection*` (Kiva y algoritmo de convección adaptativo, `CalcClearRoof` en un suelo
+de Kiva) con el control de la temperatura operativa; con `existing_hvac_operative_temperature_control=False` simulan.
+EnergyPlus 25.1 se cierra a veces (3 de cada 5 ejecuciones del mismo archivo) con `HeatPumpVSAS` cuando la fracción
+radiante del termostato de temperatura operativa viene de un horario (`Scheduled`, aunque sea siempre 0,5); con
+`Constant`, o con EnergyPlus 25.2 (convertido con su programa de transición), nunca: es un error de 25.1, y accim
+mantiene su horario `TypOperativeTempControlSch`. Con muchas simulaciones en paralelo, EnergyPlus también se cerró a
+veces con archivos que simulan bien solos (memoria). Las zonas sin termostato (los sistemas
+unitarios controlados desde otra zona) no siguen las consignas, con un aviso; algunos errores graves que no paran la
+simulación aparecen con las consignas de accim (convergencia del precalentamiento, controladores de baterías de agua).
+Un `ZoneVentilation:WindandStackOpenArea` no ventila si el viento le llega por detrás y su diferencia de alturas es 0
+(EnergyPlus 25.1 le da efectividad 0), aunque el EMS lo abra.
+
+## 9. Pruebas
+
+- Golden master (eppy): 19 configuraciones de `AddAccis`, que leían los modelos con besos, cambiaron solo en la forma
+  de escribir los números (2926 campos: `2.0` → `2`, `0.00000001` → `1e-08`, `-0` → `0`...); EnergyPlus da resultados
+  idénticos con los IDF de salida de antes y de ahora (`b02`, `b11` y `b17`).
+- Golden master (código de los estándares): cambian las 22 configuraciones de `AddAccis`. En sus 424 IDF de salida, un
+  script comprobó que los demás objetos son idénticos, que solo se quitan subprogramas de estándares que no usan las
+  zonas (18434) y que SetComfTemp, SetAppLimits, ApplyCAT, CountHours_<zona> y SetAST_Master son los de antes
+  recortados con `for_comfort_standards`. Las 9 configuraciones de las funciones sobre objetos IDF no cambian (la
+  comparación no tiene en cuenta los espacios). EnergyPlus da los mismos resultados (CSV idénticos) con 19 IDF de
+    salida de antes y de ahora: 13 del golden master (ESP CTE, CHN, AUS, MEX, INT ISO7730, modo mixto, PMV, sistemas
+    existentes, oficina y vivienda de OpenStudio, y tres de 26.2, dos con `People:Instance`), uno de INT EN16798 en
+    modo mixto, los dos de una prueba con `zone_arguments` (estándares 0 y 13, 1 y 13), el modelo personalizado con
+    coeficientes válidos y los modelos de 9.4 y 9.6. Con los coeficientes por defecto, el modelo personalizado se para
+    en el dimensionado, antes y ahora.
+- Nuevas: `test_chile_funcs.py`, `test_load_idf_versions.py::test_load_idf_reads_the_models_with_eppy`,
+  `test_existing_hvac.py::test_a_limit_of_0_is_not_the_default_of_the_idd` y `test_comfort_standard_code.py`: la
+  sangría, las cadenas, y los programas con el código de un estándar, ejecutados con el intérprete de Erl, que dan lo
+  mismo que con el de todos para cada estándar, categoría y modo de confort, en 36 pasos de tiempo con RMOT y PMOT
+  distintos (la prueba falla si se olvida la rama `else` o si un estándar de PMOT usa la rama de RMOT: comprobado);
+  un estándar sin su código para EnergyPlus; dos zonas con estándares distintos; `modify_accis` y `modify_ComfStand`.
 - Las pruebas del backend de la API leen sus modelos con eppy (necesitan EnergyPlus 25.1, su IDD), y las de `Table`
-  sustituyen `load_idf` en lugar de `get_building` de besos.
+  sustituyen `load_idf` en lugar de `get_building` de besos. Las que comparan líneas de programas con bloques las
+  comparan sangradas (`indent_lines`).
+
+- Pruebas de los sistemas HVAC existentes y de las ventanas: `test_mixed_mode_windows.py` (nuevo: las ventanas del
+  AirflowNetwork por sus superficies, los nombres EMS, `MultizoneWithDistributionOnlyDuringFanOperation`, solo la
+  ventilación natural y sin límites, las ZoneLists, los gestores de ventilación híbrida, los controles por ocupantes, y
+  dos simulaciones en las que EnergyPlus abre las ventanas que abre el EMS y solo esas: las del AirflowNetwork del modelo
+  de ejemplo con PTAC, paso a paso, y las de la vivienda de OpenStudio, cuya primera ventana no ventilaba nunca);
+  `test_existing_hvac.py` (los termostatos de ZoneLists, el EMS del modelo, las NodeLists y los casos sin respaldo,
+  los VRF con disponibilidad, las plantillas HVAC, los termostatos de confort y escalonados, y una simulación de
+  `ex_mm` que dimensiona los generadores de aire caliente (furnaces) de `House-2FurnaceAC-SequentialLoad`); `test_existing_hvac_mixed_mode.py` (los días
+  de diseño con el intérprete de Erl). Golden master: cambian las configuraciones de `ex_mm` (los días de diseño), `b13`
+  y `b15` (sin los horarios de 1 °C de los límites de la ventilación de la vivienda de OpenStudio) y `b22` (las
+  NodeLists del respaldo); nada más, comprobado línea a línea.

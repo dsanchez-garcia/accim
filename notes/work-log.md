@@ -15,6 +15,37 @@ This log is a lightweight, session-scoped complement to the repository's
 existing tracking files — it does not replace them (see
 [[decisions.md#2026-09-13 — `notes/work-log.md` complements, not replaces, existing tracking files|the related decision]]).
 
+## 2026-11-07 — `ex_ac` and `ex_mm` with the example files of EnergyPlus (branch `v1.1.0`)
+
+- **Objective**: The request of the author: test `ex_mm` and `ex_ac` with many IDFs with different HVAC systems, so
+  that they work with any model whose original simulates, with scheduled or AirflowNetwork natural ventilation in
+  `ex_mm`, and windows that open and close when needed in mixed mode; later, to reduce the number or the length of the
+  simulations (the first campaign took hours).
+- **Affected files**: `accim/sim/windows.py` (new), `accim/sim/model.py`, `accim/sim/hvac/existing.py`,
+  `accim/sim/hvac/schedules.py`, `accim/sim/ems/objects.py`, `accim/sim/ems/program_lines.py`, `accim/sim/build.py`,
+  `accim/sim/accis.py`, `accim/energyplus.py`; `tests/core/test_mixed_mode_windows.py` (new), `test_existing_hvac.py`,
+  `test_existing_hvac_mixed_mode.py`, golden files (`ex_mm`, `b13`, `b15`, `b22`); [[../CHANGELOG.md]],
+  [[../DEVLOG.md]], [[../docs/source/4_detailed use.md]], [[../docs/source/9_migration_guide.md]],
+  `docs/source/api/accim.sim.rst`, [[../CAMBIOS_CODIGO_v1.1.0.md]], [[decisions.md]], [[questions.md]].
+- **Finding or decision**: See [[decisions.md#2026-11-07 — In mixed mode accim takes the whole control of the windows it opens, and `ex_mm` air-conditions the zones on the design days|the decision]].
+  Besides the windows and the design days: accim replaced the EMS global and internal variables of the models (33
+  example files stopped), the backup broke NodeLists and AirflowNetwork distribution models, `ZoneVentilation:DesignFlowRate`
+  gave a `BadEPFieldError`, the VRF systems failed with the availability schedule, and `HVACTemplate` models kept their
+  setpoints (now expanded by `AddAccis`). EnergyPlus 25.1 crashes with the Kiva examples with operative temperature
+  control (not accim).
+- **Validation**: baseline with the code before (618 example files, 4 variants); after the fixes, 170 selected models
+  with 5-day periods (see [[../DEVLOG.md]]); new tests; the golden master changes only where expected (checked line by
+  line); `python -m pytest tests/core tests/parametric_and_optimisation -q -p no:cacheprovider`: 1314 passed.
+- **Next step**: the review of the author; the open question on `vrf_mm` and the design days.
+
+## 2026-11-06 — EMS programs: only the code of the comfort standards of each output IDF, and indented lines (branch `v1.1.0`)
+
+- **Objective**: The questions of the author: could the EMS code of the generated IDFs be indented, to see where each block `if`-`elseif`-`else`-`endif` begins and ends, and what about adding only the EMS code of the comfort standards chosen instead of that of all of them. He was not available to choose, so the recommended option was implemented for his review ([[questions.md#2026-11-06 — Keep only the EMS code of the comfort standards of each output IDF of `AddAccis`?|the open question]]).
+- **Affected files**: `accim/sim/ems/` (`programs.py`, `program_lines.py`, `setast.py`, `inputs.py`), `accim/sim/accis.py`, `accim/parametric_and_optimisation/funcs_for_besos/param_accis.py`, `tests/core/test_comfort_standard_code.py` (new) and three other tests, the 22 golden files of `AddAccis`, [[../CHANGELOG.md]], [[../docs/source/9_migration_guide.md]], [[../docs/source/4_detailed use.md]], [[../CAMBIOS_CODIGO_v1.1.0.md]], [[../DEVLOG.md]], [[../TODO.md]], the source notebook `full_example_IBPSA`.
+- **Finding or decision**: See [[decisions.md#2026-11-06 — Each output IDF of `AddAccis` only has the EMS code of the comfort standards of its zones, and the EMS programs are indented|the decision]]. eppy removes the spaces at the beginning of the fields when it reads an IDF, so `AddAccis` and `modify_accis` indent the programs again; EnergyPlus ignores them. An output IDF of the sample model goes from 78 programs with 6851 lines (645 KB) to 34 with 1393 lines (357 KB); the comfort standard of an output IDF is then changed with `modify_accis` (or `modify_ComfStand`), which add its code.
+- **Validation**: the Erl compiler gives the same variables with the code of each comfort standard as with that of all of them (every category and comfort mode); 424 output IDFs of the golden master checked object by object; identical EnergyPlus results for 19 pairs of output IDFs (9.4, 9.6, 25.1, 26.2); the test suites and the documentation build (see [[../DEVLOG.md]]).
+- **Next step**: the review of the author; regenerate the How-to pages `full_example_IBPSA` and `using_apmv_setpoints` before the release ([[../TODO.md]]).
+
 ## 2026-11-06 — `accim.sim` restructured around eppy (branch `v1.1.0`)
 
 - **Objective**: The request of the author: another restructuring of accim using eppy whenever possible, mainly in `accim.sim`, in a new branch `v1.1.0`, as easy and simple to understand as possible; then, understandable even if a bit slower, and eppy rather than besos whenever possible.

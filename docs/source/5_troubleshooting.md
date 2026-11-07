@@ -108,6 +108,12 @@ EnergyPlus stops in this way when the path of one of its output files reaches 26
 
 ---
 
+EnergyPlus closes without an error (exit code -1073741819, an access violation, and an empty `.err` file) with an output IDF of `ex_ac` or `ex_mm` whose input model simulates
+
+EnergyPlus crashed in this way with operative temperature thermostats, which accim adds with `existing_hvac_operative_temperature_control=True`, in three cases found with the example files of EnergyPlus: with EnergyPlus 25.1, at random (3 of 5 runs of the same file), when the radiative fraction of the thermostat comes from a schedule (`HeatPumpVSAS`), which EnergyPlus 25.2 does not do; and with EnergyPlus 25.1 and 25.2, always, with a Kiva foundation and the adaptive convection algorithm (`ZoneCoupledKivaConvection` and `ZoneCoupledKivaConvectionAdaptiveSmallOffice`). Update the model to a later version of EnergyPlus, or use `existing_hvac_operative_temperature_control=False`, with which the thermostats control the air temperature. Many simulations at the same time can also crash EnergyPlus in this way, when the computer runs out of memory: run fewer at a time (the argument `processes` of `run_ep`).
+
+---
+
 ## 5.2 General recommendations
 
 When you install Python on Windows, tick the option ‘Add python.exe to PATH’ (‘Add Python to PATH’ in older installers). Otherwise, the terminal won’t be able to find python and pip, and you won’t be able to use accim from it.

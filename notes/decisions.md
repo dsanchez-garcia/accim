@@ -11,6 +11,73 @@ Durable architectural/process decisions for this repository and its Obsidian
 vault. Newest first. Use [[templates/decision-record.md|the decision-record
 template]] to add a new entry.
 
+## 2026-11-07 — In mixed mode accim takes the whole control of the windows it opens, and `ex_mm` air-conditions the zones on the design days
+
+- **Status**: proposed (done in the branch `v1.1.0` while the author asked to work autonomously: "quiero que pruebes
+  distintos idfs [...] con distintos HVAC system para comprobar que funciona en cualquiera", "en el ex_mm puede haber
+  ventilación scheduled o con airflow network" and "las ventanas se deben poder abrir y cerrar cuando sea necesario
+  para trabajar en modo mixto"; he may revise it)
+- **Context**: `ex_ac` and `ex_mm` were run with 618 example files of EnergyPlus 25.1 (see [[../DEVLOG.md]],
+  2026-11-07). In mixed mode, accim only found the AirflowNetwork windows named as in DesignBuilder; it took the fans of
+  the `ZoneVentilation:DesignFlowRate` objects as windows; it kept the limits of the `ZoneVentilation` objects, which
+  kept closed the windows that the EMS opened (the first window of the OSM residential model of the golden master never
+  ventilated: its maximum indoor temperature was a schedule of 1 °C); and the occupant ventilation controls and hybrid
+  ventilation managers of the models overrode the EMS. With `ex_mm`, the HVAC systems were off on the design days
+  without occupants, so EnergyPlus sized them for no load (it stopped with the furnaces of `House-2FurnaceAC-*`).
+  Thermostats of ZoneLists stopped accim, and thermal comfort (PMV) and staged thermostats kept the zones away from
+  the setpoints.
+- **Decision**: the windows of mixed mode are found by what EnergyPlus simulates (`accim.sim.windows`): the exterior
+  windows, doors and glass doors with AirflowNetwork openings when the AirflowNetwork simulates the multizone
+  airflows, otherwise the natural ventilation `ZoneVentilation` objects (also of spaces and lists, split for each
+  zone). accim takes their whole control: their own limits are removed, and the occupant ventilation controls of these
+  windows (also that of their zones, which is given to the other openings of the zones) and, when accim controls
+  windows, the hybrid ventilation managers (which act on all the ventilation objects of the zones of their air loops)
+  are removed with a warning, except the hybrid ventilation managers of an AirflowNetwork that simulates the air
+  distribution system together with the windows (`MultizoneWithDistribution`), which stay so that the air loops are off
+  while the windows are open (EnergyPlus stopped without them). With `ex_mm`,
+  the design days (day types `SummerDesignDay` and `WinterDesignDay`, sensor `DesignDay`) are air-conditioned with the
+  windows closed, occupied or not. The thermostats of ZoneLists are split per zone; with
+  `existing_hvac_operative_temperature_control=True`, the PMV thermostats of the occupied zones are removed and the
+  staged thermostats get the setpoint schedules of their zones (with `False`, warnings).
+- **Consequences**: the output IDFs of `ex_mm` change (design days), and those of `vrf_mm` and `ex_mm` with
+  `ZoneVentilation` objects with limits or fans (golden master `b13` and `b15`). The rule of the design days is not
+  applied to `vrf_mm` (open question in [[questions.md]]). The sizing periods of the type
+  `SizingPeriod:WeatherFileDays` are not detected as design days. Sections 4.1, 4.1.1 and 4.1.2 of
+  [[../docs/source/4_detailed use.md]], section 9.4 of [[../docs/source/9_migration_guide.md]], section 8 of
+  [[../CAMBIOS_CODIGO_v1.1.0.md]].
+
+## 2026-11-06 — Each output IDF of `AddAccis` only has the EMS code of the comfort standards of its zones, and the EMS programs are indented
+
+- **Status**: proposed (implemented in the branch `v1.1.0` for the review of the author, who asked whether the EMS
+  code could be indented, "de forma que se pueda ver claramente dónde empiezan y terminan los bloques
+  if-elif-else-endif", and what I thought of "añadir únicamente el EMS program para las consignas especificadas, en
+  lugar de añadir todas las líneas de todos los posibles comfort_standard"; he was not available to choose among the
+  options below, so the recommended one was implemented)
+- **Context**: the models had the code of the 24 comfort standards in `SetComfTemp`, `SetAppLimits`, `ApplyCAT`,
+  `CountHours_<zone>`, `SetAST_Master` and the subprograms `SetAST_CS<n>_<chunk>`, so that the comfort standard of a
+  zone could be changed in its program `SetInputData_<zone>`: the parametric module does it in each sample, and
+  `AddAccis` writes all its output IDFs from one model. An output IDF of the sample model with two zones had 78
+  programs with 6851 lines (645 KB), 5166 of them in the subprograms. The lines had no indentation, and eppy removes
+  the spaces at the beginning of the fields when it reads an IDF.
+- **Decision**: of the options (1) the code of the comfort standards of each output IDF in all the programs that
+  depend on the comfort standard, (2) only in the subprograms and `SetAST_Master` (less code, but `SetComfTemp`,
+  `SetAppLimits` and `ApplyCAT` would still have every comfort standard) and (3) the code of all of them, as before,
+  option 1. `AddAccis` writes in each output IDF the code of the comfort standards of its zones
+  (`ems.programs.set_comfort_standard_code`, with the chains cut by `ems.program_lines.for_comfort_standards`);
+  `add_accis_to_idf` keeps the code of all of them (the parametric module needs it); `modify_accis`, and
+  `modify_ComfStand` of the parametric module, add the code that a model lacks and remove none. A program without code
+  for the comfort standards of the model only returns
+  (EnergyPlus needs a line). The lines are indented with 4 spaces for each block `IF` or `WHILE`: `add_program` and
+  `set_program_lines` indent what they write, and `AddAccis` and `modify_accis` indent all the programs and subroutines
+  of the model (`indent_programs`).
+- **Consequences**: the comfort standard of an output IDF can only be changed with `modify_accis` (by hand,
+  EnergyPlus stops); the category, the comfort mode and the other inputs can still be changed by hand. The output
+  IDFs are about half as large (357 KB, 34 programs with 1393 lines) and give the same results (the Erl compiler of
+  accim with every comfort standard, category and comfort mode; 19 pairs of output IDFs in EnergyPlus 9.4, 9.6, 25.1
+  and 26.2), and `AddAccis` takes about the same time. The golden files of the 22 configurations of `AddAccis` were
+  written again. Details in section 7 of [[../CAMBIOS_CODIGO_v1.1.0.md]], in [[../CHANGELOG.md]] and in section 9.4
+  of [[../docs/source/9_migration_guide.md]].
+
 ## 2026-11-06 — `accim.sim` reads, changes and writes the models with eppy, even where code of its own was faster
 
 - **Status**: accepted (the author asked for another restructuring of accim "using, when possible, eppy", mainly in

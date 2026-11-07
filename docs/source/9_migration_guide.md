@@ -410,7 +410,21 @@ of each class of `accim.parametric_and_optimisation` and their results):
 ## 9.4 Changes in accim 1.1.0
 
 accim 1.1.0 reads, changes and writes the models with eppy, whose methods replace code of accim, so that the code
-of `accim.sim` is easier to understand. The usage does not change. What you may notice:
+of `accim.sim` is easier to understand, and its output IDFs are easier to read. The usage does not change, except
+for the comfort standard of the output IDFs (see below). What you may notice:
+
+- **Only the EMS code of the comfort standards of each output IDF**: the output IDFs of `AddAccis` only have the
+  code of the comfort standards of their zones in the EMS programs that depend on it (`SetComfTemp`,
+  `SetAppLimits`, `ApplyCAT`, `CountHours_<zone>`, `SetAST_Master` and the subprograms `SetAST_CS<n>_<chunk>`),
+  instead of that of the 24 comfort standards, and give the same results (an output IDF of the sample model with two
+  zones goes from 645 to 357 KB). To change the comfort standard of an output IDF, use `modify_accis()`, which adds
+  the code of the comfort standards that it sets: if you change it by hand in the programs `SetInputData_<zone>`,
+  EnergyPlus stops, because the setpoints of a comfort standard without its code are not set. The category, the
+  comfort mode and the other arguments can still be changed by hand. The models of `add_accis_to_idf()`, and those
+  of the parametric module, keep the code of all the comfort standards (with an output IDF of `AddAccis` and
+  `bypass_add_accis=True`, the parametric module adds the code of the comfort standards of its samples).
+- **Indented EMS programs**: the lines of the EMS programs are indented inside the blocks `IF` and `WHILE`, so
+  that it can be seen where each block begins and ends. EnergyPlus ignores these spaces.
 
 - **The models are IDF objects of eppy, not besos**: `load_idf()`, also with `energyplus_version='auto'`, reads the
   models with eppy and the IDD of their EnergyPlus version, and so do `AddAccis` (`input_idfs` and `output_idfs`),
@@ -426,9 +440,40 @@ of `accim.sim` is easier to understand. The usage does not change. What you may 
   written in another way (`2.0` as `2`, `0.00000001` as `1e-08`), with the same values: the simulations give the
   same results.
 - **Slower generation of the output IDFs**: eppy saves each output IDF whole (the 140 output IDFs of the sample
-  model of `test_generation.py` take about 17 s instead of 6 s).
+  model of `test_generation.py` take about 16 s instead of 5 s).
 - Removed internal helpers: `accim.sim.idf_tools` (the methods of eppy replace them; `add_program()` and
   `set_program_lines()` are in `accim.sim.ems.programs`), `accim.sim.generation.IdfWriter` (replaced by
   `set_combination()` and eppy's `IDF.savecopy()`) and `parse_idf`, `read_idf`, `render_idf`, `objects_for_api` and
   `IdfObject` of `accim.sim.energyplus_api` (replaced by `read_ems()` and `prepare_for_api()`, which take IDF objects
   of eppy).
+
+Tests of the existing HVAC systems (`ex_ac` and `ex_mm`) with 618 example files of EnergyPlus 25.1 found problems
+that 1.1.0 fixes; some change the output IDFs or the results:
+
+- **The windows of mixed mode** (`vrf_mm` and `ex_mm`, section 4.1.2 of the detailed use): accim finds the windows of
+  any AirflowNetwork, not only those named as in DesignBuilder (the doors between zones are no longer opened by the
+  EMS); the `ZoneVentilation:DesignFlowRate` objects of the types `Exhaust`, `Intake` and `Balanced` (fans) are no
+  longer taken as windows; the `ZoneVentilation` objects of ZoneLists and SpaceLists are split for each zone, and
+  their own limits (indoor and outdoor temperatures, delta temperature, wind speed) are removed, so the windows
+  ventilate whenever the EMS opens them (the first window of the OSM residential model never ventilated before);
+  the occupant ventilation controls of the windows and the hybrid ventilation managers are removed when accim
+  controls windows (except the managers of an AirflowNetwork that simulates the air distribution system together
+  with the windows). With an
+  AirflowNetwork whose `AirflowNetwork Control` is `MultizoneWithDistributionOnlyDuringFanOperation`, the windows
+  are its `ZoneVentilation` objects, which EnergyPlus simulates, not its AirflowNetwork openings.
+- **`ex_mm` on the design days**: the zones are air-conditioned with the windows closed, whether they are occupied
+  or not (the sensor `DesignDay` and the schedule `ACCIS Design Days` in the output IDFs), so the autosized HVAC
+  systems are sized for the setpoints: they were sized for no load on the design days without occupants.
+- **The thermostats of ZoneLists** are split into one thermostat per zone instead of stopping accim with a
+  `ValueError`. With `existing_hvac_operative_temperature_control=True`, the thermal comfort thermostats (PMV of
+  Fanger) of the occupied zones are removed, and their staged thermostats get the setpoint schedules of the zones.
+- **The models with `HVACTemplate` objects**: `AddAccis` expands them (ExpandObjects), so its output IDFs have the
+  HVAC objects of the templates instead; `add_accis_to_idf()` stops with a `ValueError` for them with the existing
+  HVAC systems (expand the file first with `accim.energyplus.expand_objects()`).
+- **The EMS of the models works**: accim keeps their EMS global and internal variables (it replaced them, and
+  EnergyPlus stopped).
+- **`existing_hvac_operative_temperature_control=False`**: all the occupied zones get their setpoint schedules, so
+  EnergyPlus no longer stops with the zones without a thermostat or with a single setpoint.
+- **The backup ideal loads air systems** (`existing_hvac_ideal_loads_backup=True`) have NodeLists of their own for
+  the inlet and exhaust nodes of the zones, and are not added to the models whose AirflowNetwork simulates the air
+  distribution system, nor to the zones of the RoomAir model AirflowNetwork.

@@ -134,6 +134,14 @@ accim.sim.targets module
    :show-inheritance:
    :undoc-members:
 
+accim.sim.windows module
+------------------------
+
+.. automodule:: accim.sim.windows
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
 Module contents
 ---------------
 
