@@ -52,7 +52,7 @@ def _programs(mixed_mode=False, **arguments):
 def _timestep(erl, operative=24.0, occupants=1.0, outdoor=20.0):
     for name, value in dict(RMOT=outdoor, PMOT=outdoor, DayOfYear=180.0, CurrentTime=12.0, ZoneTimeStep=TIMESTEP,
                             Zone1_OpT=operative, Occ_count_Zone1=occupants, Zone1_CoolCoil=0.0, Zone1_HeatCoil=0.0,
-                            Zone1_WindSpeed=1.0, Zone1_OutT=outdoor).items():
+                            Zone1_WindSpeed=1.0, Zone1_OutT=outdoor, DesignDay=0.0).items():
         erl.set(name, value)
     erl.run('RunACCIS_Zone1')
     return {name: erl.get(f'{name}_Zone1') for name in

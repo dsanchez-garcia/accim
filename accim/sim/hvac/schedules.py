@@ -30,7 +30,7 @@ DUAL_SETPOINT_CONTROL_SCHEDULE = 'Control type schedule: Always 4'
 #: HVAC systems for the air temperature, as without operative temperature control.
 RADIATIVE_FRACTION_SCHEDULE = 'TypOperativeTempControlSch'
 #: The schedule that is 1 on the design days (the day types SummerDesignDay and WinterDesignDay) and 0 on the other
-#: days, which the EMS of the existing HVAC systems in mixed mode reads (sensor DesignDay).
+#: days, which the EMS of mixed mode reads (sensor DesignDay).
 DESIGN_DAY_SCHEDULE = 'ACCIS Design Days'
 
 #: The schedules that other objects refer to (one namespace in EnergyPlus).

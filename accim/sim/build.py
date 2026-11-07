@@ -104,7 +104,8 @@ def add_accis_objects(
         vrf.add_coil_sensors(model)
     elif model.script_type == 'ex_mm':
         existing.add_load_sensors(model)
-        existing.add_design_day_sensor(model)
+    if model.is_mixed_mode:
+        ems_objects.add_design_day_sensor(model)
     add_program_calling_managers(model)
     if add_building_averages:
         ems_objects.add_building_averages(model)

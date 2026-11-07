@@ -50,11 +50,9 @@ from typing import Dict, Iterator, List, Mapping, Optional, Tuple
 from accim.sim.ems.objects import add_sensor
 from accim.sim.hvac.schedules import (
     ALWAYS_ON_SCHEDULE,
-    DESIGN_DAY_SCHEDULE,
     DUAL_SETPOINT_CONTROL_SCHEDULE,
     RADIATIVE_FRACTION_SCHEDULE,
     add_compact_schedule,
-    add_design_day_schedule,
     add_radiative_fraction_schedule,
     is_always_on,
 )
@@ -67,7 +65,6 @@ __all__ = [
     'IDEAL_LOADS_BACKUP',
     'LOAD_TO_SETPOINT_OUTPUT',
     'OUTDOOR_TEMPERATURE_LIMITS',
-    'add_design_day_sensor',
     'add_ideal_loads_backups',
     'add_load_sensors',
     'add_setpoint_schedules',
@@ -994,13 +991,3 @@ def add_load_sensors(model: AccimModel) -> None:
     SetWindowOperation_<window> read (ScriptType 'ex_mm')."""
     for name, zone in [*zip(model.ems_names, model.ems_zones), *zip(model.windows, model.window_zones)]:
         add_sensor(model, f'{name}_LoadToSetpoint', zone, LOAD_TO_SETPOINT_OUTPUT)
-
-
-def add_design_day_sensor(model: AccimModel) -> None:
-    """Add the EMS sensor DesignDay, the value of the schedule of the design days (1 on the days of the types
-    SummerDesignDay and WinterDesignDay, see :data:`accim.sim.hvac.schedules.DESIGN_DAY_SCHEDULE`), which the programs
-    ApplyAST_<zone> and SetWindowOperation_<window> read (ScriptType 'ex_mm'): on the design days, the zones are
-    air-conditioned with the windows closed, so that EnergyPlus sizes the HVAC systems for the setpoints, also on the
-    design days without occupants."""
-    add_design_day_schedule(model)
-    add_sensor(model, 'DesignDay', DESIGN_DAY_SCHEDULE, 'Schedule Value')

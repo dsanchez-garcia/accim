@@ -5,6 +5,7 @@
 """EMS variables, sensors, actuators and output variables of ACCIS."""
 
 from accim.sim.ems.programs import add_program, zone_variables
+from accim.sim.hvac.schedules import DESIGN_DAY_SCHEDULE, add_design_day_schedule
 from accim.sim.model import AccimModel
 
 __all__ = [
@@ -12,6 +13,7 @@ __all__ = [
     'ZONE_SETPOINT_OUTPUT_VARIABLES',
     'add_actuators',
     'add_building_averages',
+    'add_design_day_sensor',
     'add_global_variables',
     'add_internal_variables',
     'add_output_variables',
@@ -230,6 +232,16 @@ def add_sensors(model: AccimModel) -> None:
                     break
             add_sensor(model, f'{window}_Occ_count', occupancy_key, variable)
     add_sensor(model, 'OutT', 'Environment', 'Site Outdoor Air Drybulb Temperature')
+
+
+def add_design_day_sensor(model: AccimModel) -> None:
+    """Add the EMS sensor DesignDay, the value of the schedule of the design days (1 on the days of the types
+    SummerDesignDay and WinterDesignDay, see :data:`accim.sim.hvac.schedules.DESIGN_DAY_SCHEDULE`), which the programs
+    ApplyAST_<zone> and SetWindowOperation_<window> of mixed mode read (ScriptTypes 'vrf_mm' and 'ex_mm'): on the
+    design days, the zones are air-conditioned with the windows closed, so that EnergyPlus sizes the HVAC systems for
+    the setpoints, also on the design days without occupants."""
+    add_design_day_schedule(model)
+    add_sensor(model, 'DesignDay', DESIGN_DAY_SCHEDULE, 'Schedule Value')
 
 
 def _add_actuator(model: AccimModel, name: str, component: str, component_type: str, control_type: str) -> None:
