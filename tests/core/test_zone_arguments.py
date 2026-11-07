@@ -29,6 +29,7 @@ from accim.sim.ems.inputs import (
     zone_names,
 )
 from accim.sim.ems.programs import accis_programs
+from accim.sim.ems.setast import subprogram_comfort_standards
 from accim.sim.generation import Combination, GenerationArguments, zone_arguments_errors, zone_input_arguments
 
 REPO = Path(__file__).resolve().parents[2]
@@ -346,6 +347,10 @@ def test_add_accis_gives_the_same_arguments_to_a_zone_in_all_the_output_idfs(tmp
         # The zone of zone_arguments, with the ventilation arguments of HVACmode 0
         assert [inputs['Block1_Zone2'][v] for v in ('ComfStand', 'CAT', 'HVACmode', 'MinOToffset', 'm', 'n')] == \
                [99, 80, 0, 7, 0.3, 18]
+        # Each output IDF has the EMS code of the comfort standards of its zones only, indented
+        assert subprogram_comfort_standards(job.output_idfs[name]) == {comfort_standard, 99}
+        text = Path(job.output_idfs.paths[name]).read_text(encoding='latin-1')
+        assert '\n    if ComfStand == 99,' in text and '\n        set ComfTemp = PMOT*m+n,' in text
 
 
 @needs_energyplus

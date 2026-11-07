@@ -18,22 +18,35 @@ the variables of the zone that is running (ComfStand, ACST...). Some of these va
 timestep to the next, so RunACCIS_<zone> restores those of the zone before running these programs and stores them
 after (``ACST_<zone>``...), together with the setpoints of the zone (``roundedACST_<zone>``...), which are its
 outputs. A model whose zones have the same arguments gives the same setpoints as with the programs of accim 0.x.
+
+The programs SetComfTemp, SetAppLimits, ApplyCAT, CountHours_<zone> and SetAST_Master, and the subprograms of
+SetAST, have the code of every comfort standard, so that the comfort standard of a zone can be changed in its program
+SetInputData_<zone> (as the parametric module does). The output IDFs of :class:`accim.sim.accis.AddAccis` only have
+the code of the comfort standards of their zones (:func:`set_comfort_standard_code`); the functions that set the
+comfort standard add its code if the model does not have it (:func:`add_comfort_standard_code`).
+
+The lines of the programs are indented inside the blocks IF and WHILE (:func:`indent_lines`).
 """
 
 from typing import Dict, Iterable, List, Optional, Tuple
 
 from accim.sim.ems import program_lines as pl
 from accim.sim.ems.inputs import INPUT_PROGRAM_PREFIX, RUN_PROGRAM_PREFIX, input_lines
-from accim.sim.ems.setast import master_program_lines, subprograms
+from accim.sim.ems.setast import master_program_lines, subprogram_comfort_standards, subprograms
 from accim.sim.model import AccimModel
 
 __all__ = [
+    'INDENTATION',
     'ZONE_RESULT_VARIABLES',
     'ZONE_STATE_VARIABLES',
     'accis_programs',
+    'add_comfort_standard_code',
     'add_program',
     'add_program_calling_managers',
     'add_programs',
+    'indent_lines',
+    'indent_programs',
+    'set_comfort_standard_code',
     'set_program_lines',
     'windows_by_zone',
     'zone_variables',
@@ -56,19 +69,108 @@ _CALLED_PREFIXES = ('SetGeoVar', RUN_PROGRAM_PREFIX)
 #: Programs that initialise variables once, at the beginning of each environment.
 _NEW_ENVIRONMENT_PROGRAMS = ('InitASTvariables',)
 _WINDOW_PROGRAM_PREFIXES = ('SetMyVOF_', 'SetWindowOperation_')
+#: The spaces before a line of an EMS program for each block IF or WHILE that contains it.
+INDENTATION = '    '
+_OPENING_KEYWORDS = ('IF', 'ELSEIF', 'ELSE', 'WHILE')
+_CLOSING_KEYWORDS = ('ELSEIF', 'ELSE', 'ENDIF', 'ENDWHILE')
+#: The programs whose lines are a chain ``if ComfStand == ... endif`` (and CountHours_<zone>, of each zone).
+_COMFORT_STANDARD_PROGRAMS = {'SetComfTemp': pl.SET_COMF_TEMP, 'SetAppLimits': pl.SET_APP_LIMITS,
+                              'ApplyCAT': pl.APPLY_CAT}
+_COUNT_HOURS_PREFIX = 'CountHours_'
+
+
+def indent_lines(lines: Iterable[str]) -> List[str]:
+    """The lines of an EMS program, indented inside the blocks IF ... ELSEIF ... ELSE ... ENDIF and
+    WHILE ... ENDWHILE.
+
+    EnergyPlus ignores the spaces at the beginning of each line: they only show where each block begins and ends.
+    """
+    indented = []
+    level = 0
+    for line in lines:
+        line = str(line).strip()
+        keyword = line.split(' ', 1)[0].upper()
+        if keyword in _CLOSING_KEYWORDS:
+            level = max(level - 1, 0)
+        indented.append(INDENTATION * level + line)
+        if keyword in _OPENING_KEYWORDS:
+            level += 1
+    return indented
 
 
 def add_program(idf, name: str, lines: Iterable[str]):
-    """Add an EMS program with its lines (the fields Program_Line_1, Program_Line_2... of eppy)."""
-    fields = {f'Program_Line_{number}': line for number, line in enumerate(lines, start=1)}
+    """Add an EMS program with its lines (the fields Program_Line_1, Program_Line_2... of eppy), indented."""
+    fields = {f'Program_Line_{number}': line for number, line in enumerate(indent_lines(lines), start=1)}
     return idf.newidfobject('EnergyManagementSystem:Program', Name=name, **fields)
 
 
 def set_program_lines(program, lines: Iterable[str]) -> None:
-    """Replace the lines of an EMS program, which are the values of its fields after its name."""
+    """Replace the lines of an EMS program, which are the values of its fields after its name, indented."""
     del program.fieldvalues[2:]
-    for number, line in enumerate(lines, start=1):
+    for number, line in enumerate(indent_lines(lines), start=1):
         program[f'Program_Line_{number}'] = line
+
+
+def indent_programs(idf) -> None:
+    """Indent the lines of all the EMS programs and subroutines of a model.
+
+    eppy removes the spaces at the beginning of the fields when it reads an IDF, so the programs of a model read from
+    a file have no indentation.
+    """
+    for object_type in ('EnergyManagementSystem:Program', 'EnergyManagementSystem:Subroutine'):
+        for program in idf.idfobjects[object_type]:
+            program.fieldvalues[2:] = indent_lines(program.fieldvalues[2:])
+
+
+def set_comfort_standard_code(idf, comfort_standards: Optional[Iterable[int]] = None) -> None:
+    """Write in the EMS programs of ACCIS of a model the code of some comfort standards only (of all of them with
+    None).
+
+    These are the programs that depend on the comfort standard: SetComfTemp, SetAppLimits, ApplyCAT and
+    CountHours_<zone> keep their branches of these comfort standards (see
+    :func:`accim.sim.ems.program_lines.for_comfort_standards`), SetAST_Master runs their subprograms, and the model has
+    the subprograms SetAST_CS<n>_<chunk> of these comfort standards only (at the end of its programs). A program that
+    has nothing to do for these comfort standards only returns (SetComfTemp and ApplyCAT with ESP CTE and INT ISO7730,
+    which use neither the comfort temperature nor the offsets of the categories). With these comfort standards, the
+    programs do the same as with the code of all of them; with another one, they do not set its setpoints, and
+    EnergyPlus stops.
+    """
+    if comfort_standards is not None:
+        # The models can have them as numbers with decimals (set ComfStand = 1.0)
+        comfort_standards = {int(n) for n in comfort_standards}
+
+    def lines_for(lines) -> List[str]:
+        if comfort_standards is None:
+            return list(lines)
+        return pl.for_comfort_standards(lines, comfort_standards) or ['return']
+
+    programs = idf.idfobjects['EnergyManagementSystem:Program']
+    for name, lines in _COMFORT_STANDARD_PROGRAMS.items():
+        program = idf.getobject('EnergyManagementSystem:Program', name)
+        if program is not None:
+            set_program_lines(program, lines_for(lines))
+    for program in programs:
+        if program.Name.upper().startswith(_COUNT_HOURS_PREFIX.upper()):
+            zone = program.Name[len(_COUNT_HOURS_PREFIX):]
+            set_program_lines(program, lines_for(pl.format_lines(pl.COUNT_HOURS, zone=zone)))
+    master = idf.getobject('EnergyManagementSystem:Program', 'SetAST_Master')
+    if master is None:
+        return
+    set_program_lines(master, master_program_lines(comfort_standards))
+    for program in [p for p in programs if p.Name.upper().startswith('SETAST_CS')]:
+        idf.removeidfobject(program)
+    for name, lines in subprograms(comfort_standards).items():
+        add_program(idf, name, lines)
+
+
+def add_comfort_standard_code(idf, comfort_standards: Iterable[int]) -> None:
+    """Add to the EMS programs of ACCIS of a model the code of some comfort standards, if it does not have it (the
+    output IDFs of :class:`accim.sim.accis.AddAccis` only have that of the comfort standards of their zones), and keep
+    that of the others (see :func:`set_comfort_standard_code`)."""
+    with_code = subprogram_comfort_standards(idf)
+    wanted = {int(n) for n in comfort_standards}
+    if not wanted <= with_code:
+        set_comfort_standard_code(idf, with_code | wanted)
 
 
 def zone_variables(mixed_mode: bool) -> Tuple[str, ...]:
@@ -111,7 +213,8 @@ def _init_program_lines(zones: List[str]) -> List[str]:
 
 
 def accis_programs(model: AccimModel) -> List[Tuple[str, List[str]]]:
-    """Name and lines of the EMS programs of ACCIS for a model, in the order accim adds them.
+    """Name and lines of the EMS programs of ACCIS for a model, in the order accim adds them, with the code of all the
+    comfort standards.
 
     The programs SetAST_Master and SetAST_CS<n>_<chunk> are subprograms, which SetAST runs. SetInputData_<zone> has
     the default arguments of :func:`accim.sim.accis.add_accis_to_idf`.

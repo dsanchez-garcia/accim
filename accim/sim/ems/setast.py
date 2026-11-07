@@ -12,7 +12,7 @@ and INT ISO7730) set them whatever ComfMod is.
 """
 
 import re
-from typing import Dict, Iterable, List, Optional, Sequence, Tuple, Union
+from typing import Dict, Iterable, List, Optional, Sequence, Set, Tuple, Union
 
 from accim.sim.ems.setpoint_lines import ROUNDING, SETPOINT_LINES
 
@@ -23,6 +23,7 @@ __all__ = [
     'get_setpoint_lines',
     'has_setpoints',
     'master_program_lines',
+    'subprogram_comfort_standards',
     'subprograms',
 ]
 
@@ -58,6 +59,7 @@ MODULAR_COMFORT_MODES: Dict[int, List[Number]] = {
 }
 _CHUNK_SIZE = 3
 _SETPOINT = re.compile(r'^set (ACST|AHST) = ', re.IGNORECASE)
+_SUBPROGRAM_NAME = re.compile(r'^SetAST_CS(\d+)_\d+$', re.IGNORECASE)
 #: The Erl lines that set CoolingSeason (1 in the cooling season, from CoolSeasonStart to the day before CoolSeasonEnd,
 #: which can be in the next year; 0 otherwise). SetAST_Master and the aPMV setpoints run them.
 COOLING_SEASON_LINES = (
@@ -99,14 +101,18 @@ def _chunks(values: Sequence) -> List[Sequence]:
     return [values[i:i + _CHUNK_SIZE] for i in range(0, len(values), _CHUNK_SIZE)]
 
 
-def master_program_lines() -> List[str]:
-    """Lines of SetAST_Master: the cooling season and the subprograms of the comfort standard."""
+def master_program_lines(comfort_standards: Optional[Iterable[int]] = None) -> List[str]:
+    """Lines of SetAST_Master: the cooling season and the subprograms of the comfort standard (of some comfort
+    standards only, or of all of them by default)."""
+    selected = MODULAR_COMFORT_MODES if comfort_standards is None else set(comfort_standards)
     lines = [
         '! SetAST_Master - Evaluates Season and Routes to ComfStand-specific SetAST subprograms',
         '! Season calculation logic',
         *COOLING_SEASON_LINES,
     ]
     for comfort_standard, comfort_modes in MODULAR_COMFORT_MODES.items():
+        if comfort_standard not in selected:
+            continue
         lines.append(f'if (ComfStand == {comfort_standard})')
         lines.extend(f'run SetAST_CS{comfort_standard}_{n}' for n in range(len(_chunks(comfort_modes))))
         lines.append('endif')
@@ -144,9 +150,9 @@ def depends_on_comfort_mode(comfort_standard: int) -> bool:
     return [mode for stand, mode in SETPOINT_LINES if stand == comfort_standard] != [None]
 
 
-def subprograms(comf_stands: Optional[Iterable[int]] = None) -> Dict[str, List[str]]:
+def subprograms(comfort_standards: Optional[Iterable[int]] = None) -> Dict[str, List[str]]:
     """Name and lines of each subprogram ``SetAST_CS<ComfStand>_<chunk>`` (of all the comfort standards, by default)."""
-    selected = MODULAR_COMFORT_MODES if comf_stands is None else set(comf_stands)
+    selected = MODULAR_COMFORT_MODES if comfort_standards is None else set(comfort_standards)
     programs = {}
     for comfort_standard, comfort_modes in MODULAR_COMFORT_MODES.items():
         if comfort_standard not in selected:
@@ -154,3 +160,9 @@ def subprograms(comf_stands: Optional[Iterable[int]] = None) -> Dict[str, List[s
         for chunk, chunk_mods in enumerate(_chunks(comfort_modes)):
             programs[f'SetAST_CS{comfort_standard}_{chunk}'] = _subprogram_lines(comfort_standard, chunk, chunk_mods)
     return programs
+
+
+def subprogram_comfort_standards(idf) -> Set[int]:
+    """The comfort standards whose subprograms ``SetAST_CS<ComfStand>_<chunk>`` a model has."""
+    names = (program.Name for program in idf.idfobjects['EnergyManagementSystem:Program'])
+    return {int(match.group(1)) for name in names if (match := _SUBPROGRAM_NAME.match(name))}

@@ -29,6 +29,7 @@ import pytest
 
 from accim.sim.apmv import _resolve_targets, apply_apmv_setpoints, set_pmv_input_parameters
 from accim.sim.ems.objects import add_sensors
+from accim.sim.ems.programs import indent_lines
 from accim.sim.model import AccimModel
 from accim.utils import get_idf_hierarchy_with_people, get_people_hierarchy, get_people_names_for_ems
 
@@ -375,7 +376,7 @@ def test_apmv_ems_of_a_zone_with_several_instances():
     assert 'average_PMV_Space_2_People_Block1_Zone2' not in programs
     average = programs['average_PMV_Block1_Zone1']
     n_lines = sum(1 for field in vars(average) if field.startswith('Program_Line_'))
-    assert [getattr(average, f'Program_Line_{n}') for n in range(1, n_lines + 1)] == [
+    assert [getattr(average, f'Program_Line_{n}') for n in range(1, n_lines + 1)] == indent_lines([
         'set PMV_wsum_Block1_Zone1 = 0', 'set Occ_sum_Block1_Zone1 = 0', 'set PMV_sum_Block1_Zone1 = 0',
         'set PMV_wsum_Block1_Zone1 = PMV_wsum_Block1_Zone1 + PMV_Block1_Zone1_1*People_Occupant_Count_Block1_Zone1_1',
         'set Occ_sum_Block1_Zone1 = Occ_sum_Block1_Zone1 + People_Occupant_Count_Block1_Zone1_1',
@@ -388,7 +389,7 @@ def test_apmv_ems_of_a_zone_with_several_instances():
         'else',
         'set PMV_Block1_Zone1 = PMV_sum_Block1_Zone1/2',
         'endif',
-    ]
+    ])
     # The PMV of the zone is calculated before the aPMV that uses it
     calling_order = [pcm.Program_Name_1 for pcm in idf.idfobjects['EnergyManagementSystem:ProgramCallingManager']]
     assert calling_order.index('average_PMV_Block1_Zone1') < calling_order.index('monitor_aPMV_Block1_Zone1')

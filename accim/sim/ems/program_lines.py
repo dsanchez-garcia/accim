@@ -10,9 +10,14 @@ The lines of the programs of each zone and window contain ``{zone}`` and ``{wind
 :func:`format_lines` replaces with the names of the zone or window in the EMS objects. The programs without them
 (SetComfTemp, SetAppLimits, ApplyCAT, SetAST, SetASTnoTol and SetVST) are run by the program RunACCIS_<zone> of each
 zone, after its inputs.
+
+SetComfTemp, SetAppLimits, ApplyCAT and CountHours_<zone> are a chain ``if ComfStand == ... elseif ... endif`` with a
+branch for each comfort standard (or group of them); :func:`for_comfort_standards` leaves out the branches of the
+comfort standards that a model does not use.
 """
 
-from typing import Tuple
+import re
+from typing import Iterable, List, Tuple
 
 __all__ = [
     'SET_COMF_TEMP',
@@ -30,8 +35,11 @@ __all__ = [
     'SET_WINDOW_OPERATION',
     'SET_WINDOW_OPERATION_EXISTING_HVAC',
     'APPLY_AST_AIR_CONDITIONED',
+    'for_comfort_standards',
     'format_lines',
 ]
+
+_COMFORT_STANDARD = re.compile(r'\(?\s*ComfStand\s*==\s*(\d+)\s*\)?', re.IGNORECASE)
 
 
 def _lines(text: str) -> Tuple[str, ...]:
@@ -50,6 +58,68 @@ def format_lines(lines: Tuple[str, ...], zone: str = None, window: str = None) -
         result = [line.replace('{zone}', zone) for line in result]
     if window is not None:
         result = [line.replace('{window}', window) for line in result]
+    return result
+
+
+def _comfort_standards_of(condition: str) -> List[int]:
+    """The comfort standards of a condition such as ``ComfStand == 2 || (ComfStand == 12)``."""
+    matches = [_COMFORT_STANDARD.fullmatch(part.strip()) for part in condition.split('||')]
+    if not all(matches):
+        raise ValueError(f'The condition {condition!r} is not a condition on ComfStand only.')
+    return [int(match.group(1)) for match in matches]
+
+
+def for_comfort_standards(lines: Iterable[str], comfort_standards: Iterable[int]) -> List[str]:
+    """The lines of a program that is a chain ``if ComfStand == ... elseif ComfStand == ... else ... endif``, with the
+    branches of some comfort standards only.
+
+    The conditions of the branches only name these comfort standards, and the branch ``else`` becomes a branch
+    ``elseif`` of those that no condition names. For the comfort standards given, the lines do the same as the whole
+    chain. If none of them has a branch, there are no lines.
+    """
+    wanted = set(comfort_standards)
+    # The condition (None for else) and lines of each branch
+    branches = []
+    depth = 0
+    for line in lines:
+        keyword, _, condition = line.strip().partition(' ')
+        keyword = keyword.upper()
+        if depth == 0:
+            if keyword != 'IF' or branches:
+                raise ValueError('The lines are not one chain if ... endif.')
+            branches.append((condition, []))
+            depth = 1
+        elif depth == 1 and keyword in ('ELSEIF', 'ELSE'):
+            branches.append((condition if keyword == 'ELSEIF' else None, []))
+        elif depth == 1 and keyword == 'ENDIF':
+            depth = 0
+        else:
+            if keyword in ('IF', 'WHILE'):
+                depth += 1
+            elif keyword in ('ENDIF', 'ENDWHILE'):
+                depth -= 1
+            branches[-1][1].append(line)
+    if depth != 0:
+        raise ValueError('The chain if ... endif is not closed.')
+    # As in the EMS, each comfort standard runs the first branch that names it, or the branch else if none does
+    named = set()
+    kept = []
+    for condition, body in branches:
+        if condition is None:
+            standards = sorted(wanted - named)
+        else:
+            standards = [n for n in _comfort_standards_of(condition) if n not in named]
+            named.update(standards)
+            standards = [n for n in standards if n in wanted]
+        if standards:
+            kept.append((standards, body))
+    result = []
+    for number, (standards, body) in enumerate(kept):
+        keyword = 'if' if number == 0 else 'elseif'
+        result.append(f"{keyword} {' || '.join(f'ComfStand == {n}' for n in standards)}")
+        result.extend(body)
+    if kept:
+        result.append('endif')
     return result
 
 

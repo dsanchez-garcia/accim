@@ -20,7 +20,7 @@ from accim.parametric_and_optimisation.funcs_for_besos import param_accis
 from accim.sim import accis, accis_single_idf, accis_single_idf_funcs
 from accim.sim.ems.inputs import input_programs, read_inputs
 from accim.sim.ems.setast import get_setpoint_lines, subprograms
-from accim.sim.ems.programs import set_program_lines
+from accim.sim.ems.programs import indent_lines, set_program_lines
 
 REPO = Path(__file__).resolve().parents[2]
 SAMPLE_IDF = (REPO / 'accim' / 'sample_files' / 'jupyter_notebooks' / 'parametric_and_optimisation_examples'
@@ -171,7 +171,7 @@ def test_modify_accis_updates_the_subprograms_of_esp_cte_and_int_iso7730_of_earl
     accis.modify_accis(building, comfort_standard=0, comfort_mode=3)
 
     for name, lines in subprograms([0, 22]).items():
-        assert _program_lines(building, name) == lines
+        assert _program_lines(building, name) == indent_lines(lines)
         assert not any('ComfMod ==' in line for line in lines)
     assert {name: _program_lines(building, name) for name in others} == others
     assert _program_lines(building, 'SetInputData')[:3] == ['set ComfStand = 0', 'set CAT = 3', 'set ComfMod = 3']

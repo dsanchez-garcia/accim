@@ -16,7 +16,7 @@ argument of :func:`accim.sim.accis.modify_accis` that sets each one.
 import re
 from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Any, Dict, Iterable, List, Optional, Sequence, Union
+from typing import Any, Dict, Iterable, List, Optional, Sequence, Set, Union
 
 from accim.sim.arguments import LEGACY_ARGUMENT_NAMES, to_day_of_year
 
@@ -33,6 +33,7 @@ __all__ = [
     'read_inputs',
     'resolve_zone_arguments',
     'set_inputs',
+    'zone_comfort_standards',
     'zone_names',
 ]
 
@@ -158,6 +159,11 @@ def read_inputs(program) -> Dict[str, Any]:
         if match:
             values[match.group(1)] = _value(match.group(2))
     return values
+
+
+def zone_comfort_standards(idf) -> Set[int]:
+    """The comfort standards of the zones of a model (ComfStand in their programs SetInputData_<zone>)."""
+    return {read_inputs(program)['ComfStand'] for program in input_programs(idf).values()}
 
 
 def set_inputs(program, values: Mapping[str, Any]) -> List[str]:

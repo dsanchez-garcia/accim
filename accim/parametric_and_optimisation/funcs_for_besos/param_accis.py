@@ -35,6 +35,7 @@ import besos.IDF_class
 import pandas as pd
 
 from accim.sim.ems.inputs import input_programs, read_inputs, set_inputs
+from accim.sim.ems.programs import add_comfort_standard_code
 
 #: The program, line and variable of each input of the ACCIS in the models of earlier versions of accim, which have
 #: one program SetInputData for all the zones and other inputs in SetAST, ApplyCAT, SetAppLimits and
@@ -347,6 +348,9 @@ def drop_invalid_param_combinations(samples_df):
 
 def modify_ComfStand(idf: besos.IDF_class, value: int):
     """Modifies the ComfStand argument to match the entered value.
+
+    The model gets the EMS code of this comfort standard if it does not have it (the output IDFs of ``AddAccis`` only
+    have that of the comfort standards of their zones).
     
     :param idf: The eppy or besos IDF class instance.
     :param value: The value to be applied in the argument.
@@ -361,6 +365,8 @@ def modify_ComfStand(idf: besos.IDF_class, value: int):
     result = modify_ComfStand(idf=..., value=...)
     """
     _set_inputs(idf, {'ComfStand': value})
+    if input_programs(idf):
+        add_comfort_standard_code(idf, [value])
 
 
 def modify_CustAST_ACSTaul(idf: besos.IDF_class, value: float):

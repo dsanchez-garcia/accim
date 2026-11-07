@@ -46,9 +46,16 @@ from accim.sim.ems.inputs import (
     input_values,
     resolve_zone_arguments,
     set_inputs,
+    zone_comfort_standards,
     zone_names,
 )
-from accim.sim.ems.programs import add_program, set_program_lines
+from accim.sim.ems.programs import (
+    add_comfort_standard_code,
+    add_program,
+    indent_programs,
+    set_comfort_standard_code,
+    set_program_lines,
+)
 from accim.sim.ems.setast import MODULAR_COMFORT_MODES, depends_on_comfort_mode, master_program_lines, subprograms
 from accim.sim.generation import (
     GenerationArguments,
@@ -270,6 +277,10 @@ class AddAccis:
     The input IDFs are those given in ``idfs`` or, by default, all the IDF files in the working folder
     (except the output IDFs, whose names contain '['). The output IDFs are written next to them, with
     names that give their arguments, such as ``Model[CS_INT EN16798[CA_1[CM_3[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf``.
+
+    Each output IDF only has the EMS code of the comfort standards of its zones (its comfort standard, and those of
+    ``zone_arguments``), so its comfort standard can only be changed with :func:`modify_accis`, which adds the code of
+    the new one. The lines of the EMS programs are indented inside the blocks IF and WHILE.
 
     The missing arguments are asked: those of the models if ``script_type``, ``output_type``,
     ``output_frequencies``, ``keep_existing_outputs``, ``setpoint_type`` or (with VRF systems)
@@ -632,7 +643,8 @@ class AddAccis:
 
     def _write_output_idfs(self, models, generation: GenerationArguments, setpoint_type: str, confirm,
                            mixed_mode: bool) -> Dict[str, str]:
-        """Write the output IDFs: for each combination, eppy saves the model with the arguments of the combination."""
+        """Write the output IDFs: for each combination, eppy saves the model with the arguments of the combination
+        and the EMS code of the comfort standards of its zones only."""
         from eppy.modeleditor import IDF
 
         combos = list(combinations(generation, setpoint_type))
@@ -647,10 +659,13 @@ class AddAccis:
         self._log('Generating the following output IDF files:')
         for stem, text in models:
             idf = IDF(StringIO(text))
+            # eppy has removed the indentation of the program lines when it has read them
+            indent_programs(idf)
             for combination in combos:
                 path = output_name(stem, combination, generation.name_suffix)
                 self._log(path)
                 set_combination(idf, generation, combination, self.zone_arguments.get(stem))
+                set_comfort_standard_code(idf, zone_comfort_standards(idf))
                 idf.savecopy(path)
                 paths[os.path.basename(path)] = os.path.abspath(path)
         return paths
@@ -696,10 +711,10 @@ def add_accis_to_idf(
 
     The arguments of the ACCIS (comfort standard, category, HVAC mode...) are those of :func:`modify_accis`
     (by default, ComfStand 1, CAT 1, ComfMod 2, HVACmode 2 and VentCtrl 0, in all the zones), which can change
-    them later, also for each zone. The arguments are those of :class:`AddAccis`. With the VRF systems
-    (``script_type`` 'vrf_ac' and 'vrf_mm'), which are autosized, the zone, system and plant sizing calculations of
-    the model are enabled, as :class:`AddAccis` does; with the existing HVAC systems, the sizing calculations do not
-    change.
+    them later, also for each zone: the model has the EMS code of all the comfort standards. The arguments are those
+    of :class:`AddAccis`. With the VRF systems (``script_type`` 'vrf_ac' and 'vrf_mm'), which are autosized, the zone,
+    system and plant sizing calculations of the model are enabled, as :class:`AddAccis` does; with the existing HVAC
+    systems, the sizing calculations do not change.
 
     :param idf: The IDF object.
     :param energyplus_version: The EnergyPlus version of the model; None or 'auto' to take that of its IDD.
@@ -803,7 +818,10 @@ def modify_accis(
     Each zone has its arguments in the EMS program SetInputData_<zone>. The comfort standard, category, comfort
     mode, HVAC mode and ventilation control that are None keep their values. The setpoints are set in each timestep
     by the subprograms of the comfort standard (SetAST_Master), so these arguments can also be changed later in
-    the programs SetInputData_<zone>.
+    the programs SetInputData_<zone>, except the comfort standard in the output IDFs of :class:`AddAccis`, which only
+    have the EMS code of the comfort standards of their zones: this function adds that of the comfort standards that
+    it sets (the models of :func:`add_accis_to_idf` have that of all of them). The lines of the EMS programs of the
+    model are indented inside the blocks IF and WHILE.
 
     The models of earlier versions of accim, which have one program SetInputData for all the zones, can only have
     the same arguments in all the zones, and they get the subprograms of this version where they behave
@@ -839,6 +857,7 @@ def modify_accis(
                              'all the zones (program SetInputData). To give the arguments of each zone, add the ACCIS '
                              'with this version of accim to the model without it.')
         _modify_accis_of_earlier_versions(idf, programs, **arguments)
+        indent_programs(idf)
         return
     missing = [n for n in ('SetAST', 'ApplyCAT', 'SetComfTemp', 'SetAppLimits') if n not in programs]
     if missing:
@@ -851,6 +870,8 @@ def modify_accis(
         resolved = resolve_zone_arguments(zones, zone_names(resolve_targets(idf), list(zone_programs)))
     for zone, program in zone_programs.items():
         set_inputs(program, input_values(dict(arguments, **resolved.get(zone, {}))))
+    add_comfort_standard_code(idf, zone_comfort_standards(idf))
+    indent_programs(idf)
 
 
 def _modify_accis_of_earlier_versions(
