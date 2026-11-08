@@ -15,6 +15,26 @@ This log is a lightweight, session-scoped complement to the repository's
 existing tracking files — it does not replace them (see
 [[decisions.md#2026-09-13 — `notes/work-log.md` complements, not replaces, existing tracking files|the related decision]]).
 
+## 2026-11-08 — A2: one engine for the setpoints based on indices derived from the PMV (branch `v1.2.0`)
+
+- **Objective**: The request of the author: "vamos a añadir una serie de nuevas funcionalidades a accim; quiero que lo
+  hagas en una nueva rama v1.2.0" (he first wrote v1.3.0, then "me refería a la v1.2.0"), those of his file
+  `notes/PROPUESTAS_MEJORAS_post_1.1.0_v01.md` (not in git), "empezamos con el bloque A". He chose the P1 proposals
+  (A2, A1 and A5, in this order), one commit for each pushed to GitHub, the ePMV of the proposal (the expectancy
+  factor only in the cooling season and on the cooling setpoint) and its optional metabolic correction.
+- **Affected files**: `accim/sim/pmv_index.py` (new), `accim/sim/apmv.py`, `accim/sim/__init__.py`,
+  `accim/parametric_and_optimisation/funcs_for_besos/param_apmv.py`, `tests/core/test_pmv_index.py` (new),
+  [[../docs/source/4_detailed use.md]] (4.8, 4.9), `docs/source/api/accim.sim.rst`, [[../CHANGELOG.md]],
+  [[../DEVLOG.md]], [[../CAMBIOS_CODIGO_v1.2.0.md]] (new), [[decisions.md]].
+- **Finding or decision**: See
+  [[decisions.md#2026-11-08 — The setpoints based on indices derived from the PMV share one engine, with the Erl of each index in a registry|the decision]].
+  The index of each zone is calculated from the PMV of the previous timestep. With the thermal comfort thermostats,
+  the two backends give the same setpoints but results of EnergyPlus that differ by rounding (about 1e-10 °C), already
+  with 1.1.0.
+- **Validation**: the golden master (the aPMV unchanged); 8 new tests; `tests/core` and
+  `tests/parametric_and_optimisation`: 1395 passed (one fixed: 'λ' in a printed text); the documentation build.
+- **Next step**: A1, the ePMV setpoints.
+
 ## 2026-11-08 — Release 1.1.0 (PyPI, GitHub, Read the Docs)
 
 - **Objective**: The request of the author: "quiero publicar en github, pypi, y actualizar readthedocs con la v1.1.0".

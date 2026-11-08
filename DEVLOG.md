@@ -36,6 +36,23 @@ Recommended flow: track active work in `TODO.md`, move completed outcomes to `DE
 ## Entries
 
 ### 2026-11-08
+#### [done] One engine for the setpoints based on indices derived from the PMV (A2), and the PMV setpoints (branch `v1.2.0`)
+- Context: The author asked for the new functions of his file of proposals after 1.1.0 (`notes/PROPUESTAS_MEJORAS_post_1.1.0_v01.md`, block A: comfort indices derived from the PMV) in a new branch `v1.2.0`; he chose its P1 proposals, in the order A2, A1, A5, with one commit for each, pushed to GitHub. A2 first: one engine, so that the ePMV of A1 does not copy the code of the aPMV.
+- Changes:
+  - `accim/sim/pmv_index.py` (new): `apply_pmv_index_setpoints(building, index, index_parameters, ...)` and the registry `PMV_INDICES` of `PmvIndex` objects (`'apmv'` and `'pmv'`) with what depends on the index: its name in the EMS objects, its parameters by zone, the coefficient of each season, the inverse (the PMV setpoint of the thermostat) and the monitor (the index of the zone). The infrastructure, sensors, actuators, global variables, programs, calling managers and outputs of `apmv.py` moved there with the same code, except the names of the functions and the lines that depend on the index; `arguments_table` is the generic `generate_df_from_args`. A model has the setpoints of one index only (`ValueError`).
+  - `accim/sim/apmv.py`: `apply_apmv_setpoints` calls the engine (the same signature, defaults and names of accim 0.x); new `apply_pmv_setpoints` (the index `'pmv'`: no coefficient and no monitor, since the index of the zone is its PMV sensor); `generate_df_from_args` calls `arguments_table`.
+  - `accim/parametric_and_optimisation/funcs_for_besos/param_apmv.py`: `_set_input_line` finds the lines of `set_zone_input_data_<zone>` by the names of their variables (before, the modifiers wrote the lines 1 to 4, which are other lines in the models of other indices); `_get_apmv_program_targets`, no longer used, removed.
+  - Docs: sections 4.8 (the PMV setpoints, the engine, the index of each zone calculated from the PMV of the previous timestep) and 4.9 (the backends with the thermal comfort thermostats) of the detailed use, `docs/source/api/accim.sim.rst` (`accim.sim.pmv_index`), the docstring of `accim.sim`; `CHANGELOG.md`; `CAMBIOS_CODIGO_v1.2.0.md` (new); `notes/decisions.md`.
+- Findings:
+  - The aPMV of each zone and the hours within the setpoints are calculated at `BeginTimestepBeforePredictor`, from the PMV of the previous timestep: in a simulation, the PMV that the EMS reports in each timestep is the PMV of EnergyPlus of the previous one.
+  - With the thermal comfort thermostats, the EMS and API backends give the same setpoints and EMS variables, but the results of EnergyPlus differ by rounding errors: 2.9e-10 °C in the zone temperatures and 7e-4 J in the meters, in three days of July of the sample model with two zones and VRF systems. It already happened with accim 1.1.0 and the aPMV (a worktree of `master` gives the same maximum difference as the branch); with the models of `AddAccis`, the CSV files are identical. Its cause, inside EnergyPlus, was not looked for.
+- Files: `accim/sim/pmv_index.py`, `accim/sim/apmv.py`, `accim/sim/__init__.py`, `accim/parametric_and_optimisation/funcs_for_besos/param_apmv.py`, `tests/core/test_pmv_index.py`, `docs/source/4_detailed use.md`, `docs/source/api/accim.sim.rst`, `CHANGELOG.md`, `CAMBIOS_CODIGO_v1.2.0.md`, `DEVLOG.md`, `notes/decisions.md`, `notes/work-log.md`.
+- Verification:
+  - Golden master: `s07` and `s08` (the aPMV) do not change, nor do the other 33 configurations.
+  - `tests/core/test_pmv_index.py` (new, 8 tests): the registry and the check of the parameters; `apply_apmv_setpoints` writes the same model as the engine; the EMS objects of the PMV setpoints; the PMV setpoints are those of the aPMV with adaptive coefficients of 0 (the programs run with the Erl interpreter of accim, in both seasons, with and without occupants); two indices in a model; the modifiers of the parametric module; three days of July with both backends of EnergyPlus 25.1 (setpoints, schedules and hours identical, the rest within a relative tolerance of 1e-6).
+  - `python -m pytest tests/core tests/parametric_and_optimisation -q -p no:cacheprovider`: 1394 passed and 1 failed, the check of the texts that cp1252 lacks ('λ' in the description of the aPMV, replaced); then it passed. The modified files parse as Python 3.9.
+- Next step: A1, the ePMV setpoints.
+
 #### [done] Release 1.1.0
 - Context: The author asked "quiero publicar en github, pypi, y actualizar readthedocs con la v1.1.0", after the tutorials that show the functions of 1.1.0 (entry below).
 - Changes:

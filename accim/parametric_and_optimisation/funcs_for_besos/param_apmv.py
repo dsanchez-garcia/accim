@@ -17,8 +17,10 @@
 """Helpers to modify APMV EMS program lines across all zones.
 
 These functions locate ``set_zone_input_data_*`` EMS programs in an IDF and
-rewrite selected ``Program_Line_*`` assignments for adaptive coefficients and
-PMV setpoints.
+rewrite the lines that set the adaptive coefficients and the PMV setpoints,
+found by the names of their variables, so that the PMV setpoints can be changed
+in the models with the setpoints of any index derived from the PMV
+(:mod:`accim.sim.pmv_index`).
 
 Usage
 -----
@@ -31,37 +33,9 @@ change_adaptive_coeff_all_zones(idf, 0.3)
 change_pmv_setpoint_all_zones(idf, 0.5)
 """
 
+import re
+
 import besos
-
-
-def _get_apmv_program_targets(idf: besos.IDF_class):
-    """Collect target suffixes detected in ``set_zone_input_data_*`` programs.
-
-    Parameters
-    ----------
-    idf : besos.IDF_class
-        IDF object containing EMS Program objects.
-
-    Returns
-    -------
-    list[str]
-        Suffixes extracted from matching program names.
-
-    Usage
-    -----
-    Used internally to iterate all APMV zone targets before modifying lines.
-
-    Examples
-    --------
-    targets = _get_apmv_program_targets(idf)
-    """
-    prefix = 'set_zone_input_data_'
-    targets = []
-    for program in idf.idfobjects['EnergyManagementSystem:Program']:
-        name = getattr(program, 'Name', '')
-        if name.lower().startswith(prefix):
-            targets.append(name[len(prefix):])
-    return targets
 
 
 def _get_apmv_input_programs_by_target(idf: besos.IDF_class):
@@ -94,6 +68,33 @@ def _get_apmv_input_programs_by_target(idf: besos.IDF_class):
     return programs
 
 
+def _set_input_line(program, variable: str, value) -> None:
+    """Replace the line ``set <variable> = ...`` of a ``set_zone_input_data_*`` program.
+
+    Parameters
+    ----------
+    program : Any
+        EMS program object (eppy).
+    variable : str
+        Name of the EMS variable (e.g. ``adap_coeff_cooling_Block1_Zone1``).
+    value : float
+        Value assigned to the variable.
+
+    Raises
+    ------
+    ValueError
+        If the program has no line that sets the variable (for instance, the
+        adaptive coefficients of a model without aPMV setpoints).
+    """
+    pattern = re.compile(rf'^\s*set\s+{re.escape(variable)}\s*=', re.IGNORECASE)
+    for number, line in enumerate(program.fieldvalues[2:], start=1):
+        if pattern.match(str(line)):
+            program[f'Program_Line_{number}'] = f'set {variable} = {value}'
+            return
+    raise ValueError(f'The EMS program {program.Name} has no line "set {variable} = ...": the model does not have '
+                     f'the setpoints that this parameter changes.')
+
+
 def change_adaptive_coeff_all_zones(idf: besos.IDF_class, value: float):
     """Set both adaptive coefficients for all detected APMV zone programs.
 
@@ -119,22 +120,10 @@ def change_adaptive_coeff_all_zones(idf: besos.IDF_class, value: float):
     --------
     change_adaptive_coeff_all_zones(idf, 0.4)
     """
-    ppl_temp = _get_apmv_program_targets(idf)
-    programs_by_target = _get_apmv_input_programs_by_target(idf)
+    for zonename, program in _get_apmv_input_programs_by_target(idf).items():
+        _set_input_line(program, f'adap_coeff_cooling_{zonename}', value)
+        _set_input_line(program, f'adap_coeff_heating_{zonename}', value)
 
-    for zonename in ppl_temp:
-        program = programs_by_target.get(zonename)
-        if program is None:
-            continue
-        program.Program_Line_1 = f'set adap_coeff_cooling_{zonename} = {value}'
-        program.Program_Line_2 = f'set adap_coeff_heating_{zonename} = {value}'
-        # program.Program_Line_3 = f'set pmv_cooling_sp_{zonename} = {value}'
-        # program.Program_Line_4 = f'set pmv_heating_sp_{zonename} = {value}'
-        # program.Program_Line_5 = f'set tolerance_cooling_sp_cooling_season_{zonename} = {value}'
-        # program.Program_Line_6 = f'set tolerance_cooling_sp_heating_season_{zonename} = {value}'
-        # program.Program_Line_7 = f'set tolerance_heating_sp_cooling_season_{zonename} = {value}'
-        # program.Program_Line_8 = f'set tolerance_heating_sp_heating_season_{zonename} = {value}'
-    return
 
 def change_adaptive_coeff_cooling_all_zones(idf: besos.IDF_class, value: float):
     """Set cooling adaptive coefficient for all detected APMV zone programs.
@@ -159,22 +148,9 @@ def change_adaptive_coeff_cooling_all_zones(idf: besos.IDF_class, value: float):
     --------
     change_adaptive_coeff_cooling_all_zones(idf, 0.35)
     """
-    ppl_temp = _get_apmv_program_targets(idf)
-    programs_by_target = _get_apmv_input_programs_by_target(idf)
+    for zonename, program in _get_apmv_input_programs_by_target(idf).items():
+        _set_input_line(program, f'adap_coeff_cooling_{zonename}', value)
 
-    for zonename in ppl_temp:
-        program = programs_by_target.get(zonename)
-        if program is None:
-            continue
-        program.Program_Line_1 = f'set adap_coeff_cooling_{zonename} = {value}'
-        # program.Program_Line_2 = f'set adap_coeff_heating_{zonename} = {value}'
-        # program.Program_Line_3 = f'set pmv_cooling_sp_{zonename} = {value}'
-        # program.Program_Line_4 = f'set pmv_heating_sp_{zonename} = {value}'
-        # program.Program_Line_5 = f'set tolerance_cooling_sp_cooling_season_{zonename} = {value}'
-        # program.Program_Line_6 = f'set tolerance_cooling_sp_heating_season_{zonename} = {value}'
-        # program.Program_Line_7 = f'set tolerance_heating_sp_cooling_season_{zonename} = {value}'
-        # program.Program_Line_8 = f'set tolerance_heating_sp_heating_season_{zonename} = {value}'
-    return
 
 def change_adaptive_coeff_heating_all_zones(idf: besos.IDF_class, value: float):
     """Set heating adaptive coefficient for all detected APMV zone programs.
@@ -199,22 +175,9 @@ def change_adaptive_coeff_heating_all_zones(idf: besos.IDF_class, value: float):
     --------
     change_adaptive_coeff_heating_all_zones(idf, 0.25)
     """
-    ppl_temp = _get_apmv_program_targets(idf)
-    programs_by_target = _get_apmv_input_programs_by_target(idf)
+    for zonename, program in _get_apmv_input_programs_by_target(idf).items():
+        _set_input_line(program, f'adap_coeff_heating_{zonename}', value)
 
-    for zonename in ppl_temp:
-        program = programs_by_target.get(zonename)
-        if program is None:
-            continue
-        # program.Program_Line_1 = f'set adap_coeff_cooling_{zonename} = {value}'
-        program.Program_Line_2 = f'set adap_coeff_heating_{zonename} = {value}'
-        # program.Program_Line_3 = f'set pmv_cooling_sp_{zonename} = {value}'
-        # program.Program_Line_4 = f'set pmv_heating_sp_{zonename} = {value}'
-        # program.Program_Line_5 = f'set tolerance_cooling_sp_cooling_season_{zonename} = {value}'
-        # program.Program_Line_6 = f'set tolerance_cooling_sp_heating_season_{zonename} = {value}'
-        # program.Program_Line_7 = f'set tolerance_heating_sp_cooling_season_{zonename} = {value}'
-        # program.Program_Line_8 = f'set tolerance_heating_sp_heating_season_{zonename} = {value}'
-    return
 
 def change_pmv_setpoint_all_zones(idf: besos.IDF_class, value: float):
     """Set symmetric PMV cooling/heating setpoints for all zone programs.
@@ -240,22 +203,10 @@ def change_pmv_setpoint_all_zones(idf: besos.IDF_class, value: float):
     --------
     change_pmv_setpoint_all_zones(idf, 0.6)
     """
-    ppl_temp = _get_apmv_program_targets(idf)
-    programs_by_target = _get_apmv_input_programs_by_target(idf)
+    for zonename, program in _get_apmv_input_programs_by_target(idf).items():
+        _set_input_line(program, f'pmv_cooling_sp_{zonename}', value)
+        _set_input_line(program, f'pmv_heating_sp_{zonename}', -value)
 
-    for zonename in ppl_temp:
-        program = programs_by_target.get(zonename)
-        if program is None:
-            continue
-        # program.Program_Line_1 = f'set adap_coeff_cooling_{zonename} = {value}'
-        # program.Program_Line_2 = f'set adap_coeff_heating_{zonename} = {value}'
-        program.Program_Line_3 = f'set pmv_cooling_sp_{zonename} = {value}'
-        program.Program_Line_4 = f'set pmv_heating_sp_{zonename} = {-value}'
-        # program.Program_Line_5 = f'set tolerance_cooling_sp_cooling_season_{zonename} = {value}'
-        # program.Program_Line_6 = f'set tolerance_cooling_sp_heating_season_{zonename} = {value}'
-        # program.Program_Line_7 = f'set tolerance_heating_sp_cooling_season_{zonename} = {value}'
-        # program.Program_Line_8 = f'set tolerance_heating_sp_heating_season_{zonename} = {value}'
-    return
 
 def change_pmv_cooling_setpoint_all_zones(idf: besos.IDF_class, value: float):
     """Set PMV cooling setpoint for all detected APMV zone programs.
@@ -280,22 +231,9 @@ def change_pmv_cooling_setpoint_all_zones(idf: besos.IDF_class, value: float):
     --------
     change_pmv_cooling_setpoint_all_zones(idf, 0.7)
     """
-    ppl_temp = _get_apmv_program_targets(idf)
-    programs_by_target = _get_apmv_input_programs_by_target(idf)
+    for zonename, program in _get_apmv_input_programs_by_target(idf).items():
+        _set_input_line(program, f'pmv_cooling_sp_{zonename}', value)
 
-    for zonename in ppl_temp:
-        program = programs_by_target.get(zonename)
-        if program is None:
-            continue
-        # program.Program_Line_1 = f'set adap_coeff_cooling_{zonename} = {value}'
-        # program.Program_Line_2 = f'set adap_coeff_heating_{zonename} = {value}'
-        program.Program_Line_3 = f'set pmv_cooling_sp_{zonename} = {value}'
-        # program.Program_Line_4 = f'set pmv_heating_sp_{zonename} = {value}'
-        # program.Program_Line_5 = f'set tolerance_cooling_sp_cooling_season_{zonename} = {value}'
-        # program.Program_Line_6 = f'set tolerance_cooling_sp_heating_season_{zonename} = {value}'
-        # program.Program_Line_7 = f'set tolerance_heating_sp_cooling_season_{zonename} = {value}'
-        # program.Program_Line_8 = f'set tolerance_heating_sp_heating_season_{zonename} = {value}'
-    return
 
 def change_pmv_heating_setpoint_all_zones(idf: besos.IDF_class, value: float):
     """Set PMV heating setpoint for all detected APMV zone programs.
@@ -320,19 +258,5 @@ def change_pmv_heating_setpoint_all_zones(idf: besos.IDF_class, value: float):
     --------
     change_pmv_heating_setpoint_all_zones(idf, -0.7)
     """
-    ppl_temp = _get_apmv_program_targets(idf)
-    programs_by_target = _get_apmv_input_programs_by_target(idf)
-
-    for zonename in ppl_temp:
-        program = programs_by_target.get(zonename)
-        if program is None:
-            continue
-        # program.Program_Line_1 = f'set adap_coeff_cooling_{zonename} = {value}'
-        # program.Program_Line_2 = f'set adap_coeff_heating_{zonename} = {value}'
-        # program.Program_Line_3 = f'set pmv_cooling_sp_{zonename} = {value}'
-        program.Program_Line_4 = f'set pmv_heating_sp_{zonename} = {value}'
-        # program.Program_Line_5 = f'set tolerance_cooling_sp_cooling_season_{zonename} = {value}'
-        # program.Program_Line_6 = f'set tolerance_cooling_sp_heating_season_{zonename} = {value}'
-        # program.Program_Line_7 = f'set tolerance_heating_sp_cooling_season_{zonename} = {value}'
-        # program.Program_Line_8 = f'set tolerance_heating_sp_heating_season_{zonename} = {value}'
-    return
+    for zonename, program in _get_apmv_input_programs_by_target(idf).items():
+        _set_input_line(program, f'pmv_heating_sp_{zonename}', value)

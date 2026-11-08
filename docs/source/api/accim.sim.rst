@@ -110,6 +110,14 @@ accim.sim.people module
    :show-inheritance:
    :undoc-members:
 
+accim.sim.pmv\_index module
+---------------------------
+
+.. automodule:: accim.sim.pmv_index
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
 accim.sim.prompts module
 ------------------------
 

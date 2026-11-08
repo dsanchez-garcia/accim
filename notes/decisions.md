@@ -11,6 +11,28 @@ Durable architectural/process decisions for this repository and its Obsidian
 vault. Newest first. Use [[templates/decision-record.md|the decision-record
 template]] to add a new entry.
 
+## 2026-11-08 — The setpoints based on indices derived from the PMV share one engine, with the Erl of each index in a registry
+
+- **Status**: accepted (proposal A2 of the author's file of proposals after 1.1.0,
+  `notes/PROPUESTAS_MEJORAS_post_1.1.0_v01.md`; the author chose the P1 proposals of its block A for the branch
+  `v1.2.0`: A2, A1 and A5)
+- **Context**: the aPMV setpoints (`apply_apmv_setpoints`), the ePMV setpoints of A1 and setpoints of the PMV itself
+  need the same thermostats (Fanger, dual setpoint), sensors, actuators, averaged PMV of the zones with several
+  occupant instances and hour counters; a function per index would copy about 600 lines of `accim/sim/apmv.py` for
+  each one.
+- **Decision**: `accim/sim/pmv_index.py` has the engine, `apply_pmv_index_setpoints(building, index,
+  index_parameters, ...)`, moved from `apmv.py` with the same code, and a registry `PMV_INDICES` of `PmvIndex`
+  objects with what depends on the index: its name in the EMS objects (`apply_<name>_<zone>`, `<name>_<zone>`...),
+  its parameters by zone (lines of `set_zone_input_data_<zone>`), the coefficient of each season, the inverse (the
+  PMV setpoint of the thermostat from the setpoint of the index) and the monitor (the index of the zone; none for the
+  PMV, whose index is the sensor `PMV_<zone>`). `apply_apmv_setpoints` and the new `apply_pmv_setpoints` are thin
+  wrappers in `accim.sim.apmv`, the module that users import; the output IDFs of the aPMV do not change (golden
+  master). A model has the setpoints of one index only (`ValueError`), and the modifiers of the parametric module
+  (`param_apmv`) find the lines by the names of their variables, since their positions depend on the index.
+- **Consequences**: a new index is an entry of `PMV_INDICES` (a few Erl lines) and a wrapper with its arguments.
+  The EMS variables of the aPMV keep the names of accim 0.x (`adap_coeff_cooling_<zone>`...). Section 2 of
+  [[../CAMBIOS_CODIGO_v1.2.0.md]], section 4.8 of [[../docs/source/4_detailed use.md]].
+
 ## 2026-11-08 — The GUI gives fields for the arguments of each zone and asks for the confirmation of AddAccis after the estimated size
 
 - **Status**: accepted (the author asked to review whether the GUI was up to date with the code, "no he visto ninguna

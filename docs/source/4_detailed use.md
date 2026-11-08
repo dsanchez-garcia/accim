@@ -839,9 +839,9 @@ dataset_hourly = session['dataset_hourly']
 
 The notebook of the research paper case study (How-to Guides) saves and resumes its tables in this way.
 
-## 4.8 Setpoints based on the adaptive predicted mean vote (aPMV)
+## 4.8 Setpoints based on the predicted mean vote (PMV) and the adaptive PMV (aPMV)
 
-Besides adaptive setpoint temperatures, accim can apply setpoints based on the adaptive predicted mean vote (aPMV), which corrects the PMV for the adaptation of the occupants: aPMV = PMV / (1 + λ·PMV), where λ is the adaptive coefficient, with one value for the cooling season and another for the heating season. The thermostats keep the aPMV of each zone between the heating and cooling setpoints, instead of keeping the operative temperature between two temperatures.
+Besides adaptive setpoint temperatures, accim can apply setpoints based on the predicted mean vote (PMV) of Fanger and on indices derived from it. The adaptive predicted mean vote (aPMV) corrects the PMV for the adaptation of the occupants: aPMV = PMV / (1 + λ·PMV), where λ is the adaptive coefficient, with one value for the cooling season and another for the heating season. The thermostats keep the aPMV of each zone between the heating and cooling setpoints, instead of keeping the operative temperature between two temperatures.
 
 The function `apply_apmv_setpoints()` of the module `accim.sim.apmv` (`accim.sim.apmv_setpoints` in accim 0.x, whose argument names, such as `adap_coeff_cooling` or `pmv_cooling_sp`, still work; see {doc}`9_migration_guide`) adds this control, with Energy Management System programs, to an eppy or besos IDF object. Each zone needs an HVAC system; `apply_apmv_setpoints()` adds the thermal comfort thermostats that control it, and `add_vrf_system()` adds a VRF system to the zones if the model has none:
 
@@ -871,13 +871,24 @@ building.saveas('TestModel_aPMV.idf')
 - The tolerances widen or narrow the setpoints: by default, the heating setpoint is raised by 0.1 and the cooling setpoint is lowered by 0.1, in both seasons.
 - The PMV depends on the inputs of the People objects (activity level, clothing insulation, air velocity and work efficiency), which do not affect temperature setpoints but do affect aPMV setpoints. `set_pmv_input_parameters()` sets them for all the People objects, or for each zone with dictionaries. In models of EnergyPlus 26.2 with `People:Instance` objects, these inputs are in the `People:Instance` objects, and the Fanger model in their `People:Definition` objects.
 - The cooling season is given by dates: for a location in the southern hemisphere, swap them.
+- The aPMV of each zone (the output `aPMV_<zone>`) and the hours within the setpoints are calculated at the beginning of each timestep, from the last PMV that EnergyPlus has calculated, that of the previous timestep.
+
+Since accim 1.2.0, `apply_pmv_setpoints()` applies setpoints based on the PMV itself, such as those of the categories of ISO 7730 and EN 16798-1 (−0.2 and 0.2, −0.5 and 0.5, −0.7 and 0.7). It takes the arguments of `apply_apmv_setpoints()` except the adaptive coefficients, and its setpoints are those of `apply_apmv_setpoints()` with adaptive coefficients of 0, with EMS objects named after the PMV: the programs `apply_PMV_<zone>` and `count_PMV_comfort_hours_<zone>`, and the outputs `PMV_<zone>` (the PMV of the zone), `PMV Heating Setpoint_<zone>`, `PMV Cooling Setpoint_<zone>`... and the hours within the setpoints.
+
+```python
+from accim.sim.apmv import apply_pmv_setpoints
+
+apply_pmv_setpoints(building, pmv_cooling_setpoint=0.5, pmv_heating_setpoint=-0.5)   # category II
+```
+
+Both functions call `apply_pmv_index_setpoints()` of the module `accim.sim.pmv_index`, with the index `'apmv'` or `'pmv'` and the parameters of the index in `index_parameters` (for instance, `{'adaptive_coefficient_cooling': 0.293}`). The indices share the thermostats and the EMS programs; only the lines that convert the setpoints of the index into the PMV setpoints of the thermostats (the inverse of the index) and those that calculate the index of each zone depend on the index (`PMV_INDICES`). A model has the setpoints of one index only: the functions stop with a `ValueError` if it has those of another one.
 
 You can see a Jupyter Notebook in the How-to Guides section of this documentation: {doc}`jupyter_notebooks/example_apmv_setpoints_paper/using_apmv_setpoints`. Parametric studies and optimisations of these setpoints are explained in {doc}`parametric_and_optimisation`.
 
 (python-api-backend)=
 ## 4.9 Running the simulations with the Python API of EnergyPlus
 
-The output IDFs of accim control the setpoints with Energy Management System (EMS) programs, which EnergyPlus runs with its EMS. Since accim 1.0.0, they can also run in Python, through the Python API of EnergyPlus (the package `pyenergyplus` of each installation, EnergyPlus 24.2 or later): EnergyPlus runs the model without the EMS programs and actuators, and accim runs the programs in the callbacks of the API with the rules of the EMS (the order of the operators, the values Null and uninitialised, the errors, the variables reset at each new environment...). The results are the same as with the EMS: the tests of accim run the same model with both backends and compare their CSV files, which are identical.
+The output IDFs of accim control the setpoints with Energy Management System (EMS) programs, which EnergyPlus runs with its EMS. Since accim 1.0.0, they can also run in Python, through the Python API of EnergyPlus (the package `pyenergyplus` of each installation, EnergyPlus 24.2 or later): EnergyPlus runs the model without the EMS programs and actuators, and accim runs the programs in the callbacks of the API with the rules of the EMS (the order of the operators, the values Null and uninitialised, the errors, the variables reset at each new environment...). The results are the same as with the EMS: the tests of accim run the same model with both backends and compare their CSV files, which are identical. With the thermal comfort thermostats of the setpoints based on the PMV (section 4.8), the setpoints and the variables of the programs are identical, but the results of EnergyPlus differ by rounding errors (less than 1e-9 °C in the zone temperatures of the tests), as they did with accim 1.1.0.
 
 To run the simulations of a folder with the API, use the argument `backend` of `run_ep()`:
 

@@ -6,7 +6,8 @@
 
 - :mod:`accim.sim.accis`: :class:`~accim.sim.accis.AddAccis` (IDF files) and
   :func:`~accim.sim.accis.add_accis_to_idf` (IDF objects).
-- :mod:`accim.sim.apmv`: setpoints based on the adaptive predicted mean vote (aPMV).
+- :mod:`accim.sim.apmv`: setpoints based on the adaptive predicted mean vote (aPMV) and the PMV.
+- :mod:`accim.sim.pmv_index`: the engine of the setpoints based on indices derived from the PMV.
 - :mod:`accim.sim.energyplus_api`: runs the ACCIS with the Python API of EnergyPlus instead of its EMS.
 
 The modules are imported when they are first used, so that ``import accim.sim`` is fast.
