@@ -24,6 +24,7 @@ __all__ = [
     'has_setpoints',
     'master_program_lines',
     'subprogram_comfort_standards',
+    'subprogram_name',
     'subprograms',
 ]
 
@@ -160,6 +161,14 @@ def subprograms(comfort_standards: Optional[Iterable[int]] = None) -> Dict[str, 
         for chunk, chunk_mods in enumerate(_chunks(comfort_modes)):
             programs[f'SetAST_CS{comfort_standard}_{chunk}'] = _subprogram_lines(comfort_standard, chunk, chunk_mods)
     return programs
+
+
+def subprogram_name(comfort_standard: int, comfort_mode: Number) -> str:
+    """The name of the subprogram ``SetAST_CS<ComfStand>_<chunk>`` with the setpoints of a comfort mode (the first one
+    for the comfort standards whose setpoints do not depend on the comfort mode)."""
+    comfort_modes = MODULAR_COMFORT_MODES[comfort_standard]
+    chunk = comfort_modes.index(comfort_mode) // _CHUNK_SIZE if comfort_mode in comfort_modes else 0
+    return f'SetAST_CS{comfort_standard}_{chunk}'
 
 
 def subprogram_comfort_standards(idf) -> Set[int]:
