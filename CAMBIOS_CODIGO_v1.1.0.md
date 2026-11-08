@@ -171,6 +171,19 @@ CountHours_<zona> (cada uno es una cadena `if ComfStand == ... elseif ... else .
 temperaturas de consigna de un estándar sin su código. Con `modify_accis` sí se puede. La categoría, el modo de
 confort y los demás argumentos se pueden seguir cambiando a mano.
 
+**Ver el código antes de añadir el ACCIS** (2026-11-07, a petición del autor: conocer la lógica de las consignas y qué
+pasa fuera de los límites de aplicabilidad antes de usar accim). `utils/ems_code.py` (nuevo):
+`get_setpoint_ems_code(comfort_standard, category, comfort_mode, ...)` da el código de las consignas como texto, y
+`print_setpoint_ems_code(...)` lo imprime; las dos se importan de `accim.utils` y tienen los argumentos de
+`modify_accis`, con un valor cada uno. Arma el código con las mismas funciones que escriben los IDF de salida y en el
+orden en que lo ejecuta RunACCIS_<zona>: las entradas de las consignas (`input_values`, solo esas, y las del modelo
+personalizado con `ComfStand` 99), SetAppLimits, ApplyCAT y SetComfTemp (`for_comfort_standards`, o `return`),
+SetAST, SetAST_Master (`master_program_lines`), las consignas del modo de confort con su redondeo
+(`get_setpoint_lines`; `setast.subprogram_name`, nuevo, da el subprograma que las tiene) o, sin modo de confort, los
+subprogramas enteros, y SetASTnoTol; todo sangrado con `indent_lines`, y con comentarios (`!`) que dicen el estándar,
+la categoría, el modo y qué es cada variable. Rechaza con `ValueError` lo que `AddAccis` no genera: un estándar que no
+existe, una categoría que no es del estándar y un modo sin consignas.
+
 ## 8. Los sistemas HVAC existentes con los archivos de ejemplo de EnergyPlus
 
 **Por qué.** El autor pidió probar `ex_mm` y `ex_ac` con muchos IDF, existentes o modificados, con distintos sistemas
@@ -314,3 +327,7 @@ Un `ZoneVentilation:WindandStackOpenArea` no ventila si el viento le llega por d
   `vrf_mm` si se quitan las líneas o el sensor (comprobado). `test_hour_counters.py` da valor al sensor `DesignDay`
   (0), como a los demás sensores. Golden master: cambian las 12 configuraciones de `vrf_mm`, solo con líneas añadidas
   (el sensor, el horario y las líneas de los días de diseño de cada zona y ventana), comprobado línea a línea.
+- `test_ems_code.py` (nuevo): el código de las consignas de un estándar, categoría y modo de confort; cada sección es
+  la que escriben las funciones de los IDF de salida, y las líneas de cada modo de confort de cada estándar son las de
+  su rama en su subprograma; sin categoría ni modo, todos; los estándares estáticos (`return`); las entradas del modelo
+  personalizado; los argumentos que no dan consignas.

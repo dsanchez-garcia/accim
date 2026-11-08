@@ -15,6 +15,25 @@ This log is a lightweight, session-scoped complement to the repository's
 existing tracking files — it does not replace them (see
 [[decisions.md#2026-09-13 — `notes/work-log.md` complements, not replaces, existing tracking files|the related decision]]).
 
+## 2026-11-07 — The EMS code of the setpoints before adding the ACCIS, the How-to pages, and the indentation (branch `v1.1.0`)
+
+- **Objective**: The requests of the author: a helper to read the EMS code of the setpoints before using accim
+  (which setpoints apply, and what happens out of the applicability limits); the pending task of [[../TODO.md]] (the
+  How-to pages that show EMS programs); and an example of the indentation of the EMS code of a generated IDF.
+- **Affected files**: `accim/utils/ems_code.py` (new), `accim/utils/__init__.py`, `accim/sim/ems/setast.py`;
+  `tests/core/test_ems_code.py` (new); the pages `full_example_IBPSA` and `using_apmv_setpoints` of
+  `docs/source/jupyter_notebooks/`; [[../CHANGELOG.md]], [[../DEVLOG.md]], [[../docs/source/4_detailed use.md]] (4.3),
+  `docs/source/api/accim.utils.rst`, [[../CAMBIOS_CODIGO_v1.1.0.md]], [[../TODO.md]].
+- **Finding or decision**: `accim.utils.print_setpoint_ems_code(comfort_standard, category, comfort_mode, ...)`
+  prints the code of the output IDFs, built with the functions that write them, in the order in which it runs. The
+  results of the full example of the How-to pages change slightly, only because of the design days of `vrf_mm`: run
+  with the code of `a235b1c9`, they are those of the pages of 1.0.0. In an output IDF of `AddAccis`, the 34 programs
+  are indented, and the same IDF without indentation only differs in spaces.
+- **Validation**: 33 new tests; the pages compared with those of 1.0.0 (section 7.4 of [[../docs/README.md]]) and
+  with a run of `a235b1c9`; the documentation build (the same warnings); `tests/core` and
+  `tests/parametric_and_optimisation`: 1352 passed.
+- **Next step**: committed and pushed to `v1.1.0` at the request of the author; his review.
+
 ## 2026-11-07 — The answers of the author: `vrf_mm` on the design days, and the EMS code of the comfort standards (branch `v1.1.0`)
 
 - **Objective**: The answers of the author to the two open questions of [[questions.md]]: option (a) for the design

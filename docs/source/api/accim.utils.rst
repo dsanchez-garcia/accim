@@ -20,6 +20,14 @@ accim.utils.editing module
    :show-inheritance:
    :undoc-members:
 
+accim.utils.ems\_code module
+----------------------------
+
+.. automodule:: accim.utils.ems_code
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
 accim.utils.outputs module
 --------------------------
 

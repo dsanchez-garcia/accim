@@ -20,11 +20,6 @@ Active short-term tasks.
 
 ## Backlog
 
-- [ ] [P1][todo] Regenerate the How-to pages that show EMS programs before releasing 1.1.0
-  - Context: Since 1.1.0, each output IDF of `AddAccis` only has the EMS code of the comfort standards of its zones, and the lines of the EMS programs are indented. The executed copies of `full_example_IBPSA` (which lists the 78 EMS programs of an output IDF of 1.0.0) and `using_apmv_setpoints` (which prints the program `apply_aPMV_<zone>` without indentation) still show 1.0.0; their sources in `accim/sample_files/jupyter_notebooks/` are up to date.
-  - Definition of done: Both pages regenerated with `docs/prepare_howto_notebooks.py run` and `export` (`docs/README.md`, section 7.2).
-  - References: `DEVLOG.md` (2026-11-06, EMS code of the comfort standards).
-
 - [ ] [P1][blocked] Define backlog priority rules
   - Context: Standardize entry criteria for new tasks. Blocked on the approval of the author.
   - Proposal (2026-10-31): `P0`: it stops users or a release now (a crash or wrong results in a published version, lost data, a security problem); it goes before anything else. `P1`: needed for the next release, or wrong behaviour that has a workaround, failing tests, or documentation that misleads. `P2`: improvements, refactors, reviews and tasks without a date. When in doubt, the lower priority; raise it when a user is affected.

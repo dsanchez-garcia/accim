@@ -364,6 +364,35 @@ Depending on the arguments comfort_standard, category and comfort_mode, cooling 
 
 ![full_table.png](images/full_table.png)
 
+To see how the ACCIS calculates the setpoints of a comfort standard, category and comfort mode before adding it to a model (which setpoints apply, and what they are out of the applicability limits), print their EMS code with `print_setpoint_ems_code` (`get_setpoint_ems_code` gives it as text). They take the arguments of `modify_accis`, with one value each:
+
+```python
+>>> from accim.utils import print_setpoint_ems_code
+>>> print_setpoint_ems_code(comfort_standard=1, category=2, comfort_mode=3)
+```
+
+The code is that of the output IDFs, indented, in the order in which the program `RunACCIS_<zone>` of each zone runs it in each timestep: the inputs of the zone (`SetInputData_<zone>`), the applicability limits (`SetAppLimits`), the offsets of the category (`ApplyCAT`), the comfort temperature (`SetComfTemp`), the cooling season (`SetAST_Master`), the setpoints of the comfort mode with their rounding (its lines in the subprogram `SetAST_CS<n>_<chunk>`) and the setpoints without tolerance (`SetASTnoTol`), with comments that explain the variables. For INT EN16798, category II and comfort mode 3, the setpoints are these: out of the applicability limits (a running mean outdoor temperature of 10 to 30 °C), they keep the value that they have at the limit.
+
+```text
+! --- SetAST_CS1_1, its lines for ComfMod == 3: the setpoints, and their rounding ---
+if (RMOT >= ACSTall) && (RMOT <= ACSTaul)
+    set ACST = RMOT*0.33+18.8+ACSToffset+ACSTtol
+elseif RMOT < ACSTall
+    set ACST = ACSTall*0.33+18.8+ACSToffset+ACSTtol
+elseif RMOT > ACSTaul
+    set ACST = ACSTaul*0.33+18.8+ACSToffset+ACSTtol
+endif
+if (RMOT >= AHSTall) && (RMOT <= AHSTaul)
+    set AHST = RMOT*0.33+18.8+AHSToffset+AHSTtol
+elseif RMOT < AHSTall
+    set AHST = AHSTall*0.33+18.8+AHSToffset+AHSTtol
+elseif RMOT > AHSTaul
+    set AHST = AHSTaul*0.33+18.8+AHSToffset+AHSTtol
+endif
+```
+
+Without `category` or `comfort_mode`, the code covers all of them (the offsets of every category, and the subprograms of the comfort standard, whole). The combinations that give no setpoints raise a `ValueError`, as in `AddAccis`.
+
 ## 4.4 Putting it into practice: Adaptive setpoint temperatures step by step
 
 You can see a Jupyter Notebook in the How-to Guides section of this documentation: {doc}`jupyter_notebooks/addAccis/using_addAccis`. To run it on your computer, copy the folder `jupyter_notebooks/addAccis` of the sample files to a working folder (see {ref}`running-example-notebooks`).
