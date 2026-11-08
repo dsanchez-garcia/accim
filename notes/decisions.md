@@ -11,6 +11,35 @@ Durable architectural/process decisions for this repository and its Obsidian
 vault. Newest first. Use [[templates/decision-record.md|the decision-record
 template]] to add a new entry.
 
+## 2026-11-08 — The GUI gives fields for the arguments of each zone and asks for the confirmation of AddAccis after the estimated size
+
+- **Status**: accepted (the author asked to review whether the GUI was up to date with the code, "no he visto ninguna
+  opción para especificar la configuración de accis (comfort standard, etc) por zona", and then to work
+  autonomously)
+- **Context**: the table of `zone_arguments` existed since 2026-11-02, but at the end of the tab *Add the ACCIS*
+  (y = 1122 of 1497 px, with 600 px visible), below the existing HVAC systems and the tolerances, and with a single
+  free-text field of pairs `name=value`; the author did not find it. The functions of 1.1.0 (the EMS code of the
+  setpoints, the size of the results, which `AddAccis` prints before writing the output IDFs so that other outputs can
+  be chosen) and some arguments (`vrf_*`, the offsets of the category, `setpoint_accuracy`, `debug_ems`, the
+  dictionaries of `apply_apmv_setpoints`, the zones of `filter_by_hours_within_setpoints`) were not in the GUI, which
+  asked for the confirmation before running `AddAccis` with `confirm=True`.
+- **Decision**: a table of the zones shared by *Add the ACCIS* and *aPMV setpoints* (`_ZoneTable` in
+  `accim/gui/app.py`): the zone (from *Find the occupied zones*, or typed), a field for each main argument (comfort
+  standard, category, comfort mode, HVAC mode and ventilation control; the adaptive coefficients and aPMV setpoints)
+  and the others as pairs `name=value`; the rows keep the text of the arguments, so the session files do not change.
+  The table of `zone_arguments` goes right below the comfort models, and the buttons of the two tabs stay at the
+  bottom. The forms check each zone with every output IDF (`forms.zone_arguments_problems`, with the functions of
+  `accim.sim.generation` that `AddAccis` uses). The window runs `AddAccis` with `confirm=None` and answers its
+  question with a dialog that shows what it printed (the number of output IDFs and the estimated size of their
+  results): a task can now ask the user through `AccimApp.ask_from_task`, and the answers of `_no_prompts` can be
+  functions of the question and of what the task printed. The zones of the aPMV setpoints are given by their names
+  and get the keys of their targets in the task (`tasks.apmv_target_keys`); an unknown zone stops it, since
+  `apply_apmv_setpoints` only warns.
+- **Consequences**: `accim/gui/forms.py`, `tasks.py` and `app.py`; tests in `tests/core/test_gui.py`; section 4.10 of
+  [[../docs/source/4_detailed use.md]]. Still in Python only: the `custom` output type, `modify_accis()`, the other
+  figures and the reshaping of `Table`, and the aPMV setpoints, outputs, objectives, optimisations and plots of the
+  parametric module.
+
 ## 2026-11-08 — The size of the results is estimated from the outputs of the models, and AddAccis prints it before writing the output IDFs
 
 - **Status**: proposed (implemented in the branch `v1.1.0` at the request of the author, "añadir función o método
@@ -315,7 +344,9 @@ template]] to add a new entry.
     `rename_epw_files` about amending or excluding EPWs, and those of the figures of `Table` about renaming the rows and
     columns of the subplots); any other question stops it with an error.
 - **Consequences**: No new dependency. Still in Python only: the `custom` output type, different aPMV setpoints for
-  each zone, the other figures and the reshaping of `Table`, and the outputs, objectives, optimisations and plots of
+  each zone (in the GUI since
+  [[#2026-11-08 — The GUI gives fields for the arguments of each zone and asks for the confirmation of AddAccis after the estimated size|2026-11-08]]),
+  the other figures and the reshaping of `Table`, and the outputs, objectives, optimisations and plots of
   the parametric module. eppy keeps one IDD per process, so IDFs of different EnergyPlus versions need a new session
   of the GUI.
 

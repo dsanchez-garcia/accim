@@ -224,7 +224,7 @@ You can apply aPMV setpoints to a building using the following function:
 
 ### 2.2.7 Graphical user interface
 
-Since accim 1.0.0, a graphical user interface, in English, adds the ACCIS (with different arguments for some zones if needed) or the aPMV setpoints to the IDF files of a folder, renames the EPW files, runs the simulations, measures the occupied hours within the setpoints, makes tables and figures of the results and runs a basic parametric study, without writing Python; its sessions can be saved and opened again. Open it with the command:
+Since accim 1.0.0, a graphical user interface, in English, adds the ACCIS (with different arguments for some zones if needed) or the aPMV setpoints (also different for some zones) to the IDF files of a folder, shows the EMS code of the setpoints, renames the EPW files, estimates the size of the results and runs the simulations, measures the occupied hours within the setpoints, makes tables and figures of the results and runs a basic parametric study, without writing Python; its sessions can be saved and opened again. Open it with the command:
 
     accim-gui
 

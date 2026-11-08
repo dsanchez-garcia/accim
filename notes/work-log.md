@@ -15,6 +15,46 @@ This log is a lightweight, session-scoped complement to the repository's
 existing tracking files — it does not replace them (see
 [[decisions.md#2026-09-13 — `notes/work-log.md` complements, not replaces, existing tracking files|the related decision]]).
 
+## 2026-11-08 — The GUI reviewed against 1.1.0: the arguments of each zone, the EMS code, the size of the results
+
+- **Objective**: The request of the author: review whether the GUI is up to date with the code ("no he visto ninguna
+  opción para especificar la configuración de accis (comfort standard, etc) por zona"), working autonomously.
+- **Affected files**: `accim/gui/forms.py`, `tasks.py` and `app.py`, `tests/core/test_gui.py`,
+  [[../docs/source/4_detailed use.md]] (4.10), [[../README.md]], [[../CHANGELOG.md]], [[../DEVLOG.md]],
+  [[decisions.md]].
+- **Finding or decision**: See
+  [[decisions.md#2026-11-08 — The GUI gives fields for the arguments of each zone and asks for the confirmation of AddAccis after the estimated size|the decision]].
+  The table of the zones existed, but at the end of the tab 1, out of view; the functions of 1.1.0 and some
+  arguments were missing (the list is in [[../DEVLOG.md]]). Scripts that drive the window and run `run_ep` on Windows
+  need `if __name__ == '__main__':`, since its processes re-run the main module (`accim-gui` and `python -m accim.gui`
+  have it). ImageGrab only captures the desktop from the process of the agent: `PrintWindow` of the Win32 API renders
+  the window.
+- **Validation**: 109 tests of the GUI (24 new); screenshots of the tabs; a run through the window with EnergyPlus
+  25.1 (zones, `AddAccis` with the confirmation after the estimate, the EMS code, the size of the results, `run_ep`,
+  the hours, a parametric study with the eppy building), with no error; the documentation build.
+- **Next step**: the review of the author (committed and pushed to `master` at his request).
+
+## 2026-11-08 — `__version__` is 1.1.0 on `master` (in development); the stale editable installs of accim
+
+- **Objective**: The requests of the author: open the GUI (the command `accim-gui` needed `pip install -e .`), then
+  "hay que actualizar la versión a 1.1.0", only the number: `## [Unreleased]` of [[../CHANGELOG.md]] stays until the
+  release, since the work on the GUI goes on.
+- **Affected files**: `accim/__init__.py`, `tests/core/test_deprecation.py` (`test_version`),
+  [[../docs/source/4_detailed use.md]] (the two headers of the transcriptions, §5 of [[../docs/README.md]]),
+  [[../packaging/README.md]] (§4.2 names `test_version`), [[../DEVLOG.md]]; outside the repository, the editable
+  install of accim in the local Python 3.14.
+- **Finding or decision**: The other mentions of 1.0.0 are historical and stay. The local Python had three editable
+  installs (0.7.6, 0.7.8 and, after `pip install -e .`, 1.0.0; pip reported `Successfully installed accim-0.7.6`)
+  because the local `PYTHONPATH` ends with `;`: Python takes the empty entry as the current folder, which pip keeps in
+  `sys.path` (it only removes `sys.path[0]`), so `pip install -e .` from the root of the repository took the
+  `accim.egg-info` of the repository for the installed accim, and left the previous install in site-packages. The old
+  ones were uninstalled, with the consent of the author, and accim was reinstalled from another folder
+  (`pip install -e D:\Python\accim`), which replaced 1.0.0 with 1.1.0.
+- **Validation**: `test_deprecation.py`, `test_addaccis_banner.py` and `test_session.py`: 36 passed;
+  `importlib.metadata.version('accim')` and `accim.__version__`: 1.1.0; `accim-gui.exe` in the Scripts folder.
+- **Next step**: the work on the GUI; at the release, only the CHANGELOG and the commit `Release v1.1.0` remain of
+  §4.2 of [[../packaging/README.md]].
+
 ## 2026-11-08 — `v1.1.0` merged into `master` and pushed; the work goes on in `master`
 
 - **Objective**: The requests of the author: move the changes of `v1.1.0` to `master` and push them; then commit this
