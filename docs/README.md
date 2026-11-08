@@ -199,9 +199,9 @@ How-to Guides:
 
 | Página | Copia ejecutada, en `docs/source/jupyter_notebooks/` | Fuente, en `accim/sample_files/jupyter_notebooks/` | Tiempo |
 |---|---|---|---|
-| Using AddAccis() | `addAccis/using_addAccis.ipynb` | `addAccis/` | 1 min |
+| Using AddAccis() | `addAccis/using_addAccis.ipynb` | `addAccis/` | 1-2 min |
 | Using rename_epw_files() | `rename_epw_files/using_rename_epw_files.ipynb` | `rename_epw_files/` | < 2 min |
-| Using run_ep() | `runEp/using_runEp.ipynb` | `runEp/` | < 2 min |
+| Using run_ep() | `runEp/using_runEp.ipynb` | `runEp/` | 3-4 min (two simulations) |
 | Using the class Table() | `Table/using_Table.ipynb` | `Table/` | 2 min |
 | Full example (IBPSA) | `full_example_IBPSA/full_example_IBPSA.ipynb` | `full_example_IBPSA/` | 6 min |
 | Research paper case study | `research_paper_case_study/research_paper_case_study.ipynb` | `research_paper_case_study_v0-7-3/` | 27 min |

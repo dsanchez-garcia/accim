@@ -138,6 +138,11 @@ Once you run this code, you will be asked to enter some information at the termi
         confirm=bool, # True to confirm automatically the generation of IDFs; if omitted, you'll be asked to confirm in command prompt. For instance: confirm=True,
     )
 
+Since accim 1.1.0, `AddAccis()` prints the estimated size of the results of the simulations of the output IDFs before writing them (also kept in its attribute `results_size`), so that other outputs can be chosen, and each output IDF only has the EMS code of the comfort standards of its zones: `accim.sim.accis.modify_accis()` changes the arguments of an output IDF, also its comfort standard. To read the EMS code with which the ACCIS calculates the setpoints of a comfort standard, category and comfort mode before adding it to a model (which setpoints apply, and what they are out of the applicability limits), see https://accim.readthedocs.io/en/master/4_detailed%20use.html#setpoint-ems-code
+
+    from accim.utils import print_setpoint_ems_code
+    print_setpoint_ems_code(comfort_standard=1, category=2, comfort_mode=3)
+
 You can see a Jupyter Notebook in the link below:  
 https://github.com/dsanchez-garcia/accim/blob/master/accim/sample_files/jupyter_notebooks/addAccis/using_addAccis.ipynb  
 
@@ -165,6 +170,11 @@ The function `run_ep` (`runEp` before accim 1.0.0) runs each IDF of the working 
 With `backend='api'`, the EMS programs of the output IDFs run in Python through the Python API of EnergyPlus (EnergyPlus 24.2 or later), with the same results as the EMS of EnergyPlus; Python functions can then read and change the variables of the programs during the simulation (`accim.sim.energyplus_api`). See https://accim.readthedocs.io/en/master/4_detailed%20use.html#python-api-backend
 
     results = run.run_ep(only_accim_idfs=True, confirm=True, processes=2, backend='api')
+
+Since accim 1.1.0, `estimate_results_size` gives the size of the results of the simulations of the IDFs and EPWs of the working folder before running them, estimated from the outputs of the IDFs in a few seconds, or measured in a simulation with `simulate=True`. See https://accim.readthedocs.io/en/master/4_detailed%20use.html#running-simulations
+
+    from accim.run import estimate_results_size
+    estimate_results_size(only_accim_idfs=True)
 
 ### 2.2.4 Functions and methods for data analysis; making figures and tables
 

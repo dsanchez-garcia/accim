@@ -356,6 +356,7 @@ The arguments of `modify_accis` that are `None` (`comfort_standard`, `category`,
 
 In the output IDFs, each zone has all its arguments in the Energy Management System program `SetInputData_<zone>`, and its program `RunACCIS_<zone>` runs it, and then the programs that calculate and apply the setpoints of the zone (`SetAppLimits`, `ApplyCAT`, `SetComfTemp`, `SetAST`...). You can edit the arguments of a zone in its program `SetInputData_<zone>`, except the comfort standard: each output IDF of `AddAccis` only has the EMS code of the comfort standards of its zones (in `SetComfTemp`, `SetAppLimits`, `ApplyCAT`, `CountHours_<zone>`, `SetAST_Master` and the subprograms `SetAST_CS<n>_<chunk>`), so EnergyPlus stops with a comfort standard without its code. Change it with `modify_accis`, which adds the code of the comfort standards that it sets; the models of `add_accis_to_idf` have the code of all of them. The lines of the EMS programs are indented inside the blocks `IF` and `WHILE`, which EnergyPlus ignores. Besides the outputs of the whole model (`Comfort Temperature`, `Adaptive Cooling Setpoint Temperature`...), which have the values of the last zone (those of every zone if all the zones have the same arguments), the setpoints of each zone are reported as `Comfort Temperature_<zone>`, `Adaptive Cooling Setpoint Temperature_<zone>`, `Adaptive Heating Setpoint Temperature_<zone>`, their values without tolerance and, in mixed mode, `Ventilation Setpoint Temperature_<zone>` and `Minimum Outdoor Temperature for ventilation_<zone>`.
 
+(setpoint-ems-code)=
 ## 4.3 Full list of setpoint temperatures
 
 Depending on the arguments comfort_standard, category and comfort_mode, cooling and heating setpoint temperatures will be the following:
@@ -708,6 +709,7 @@ To run it on your computer, copy the folder `jupyter_notebooks/rename_epw_files`
 
 `rename_epw_files` takes the country and city from the coordinates of each EPW file, which needs an internet connection (it uses the package `geopy`, installed with accim), unless `rename_city_dict` and `country_to_city_dict` give them.
 
+(running-simulations)=
 ## 4.6 Running simulations
 
 You can see a Jupyter Notebook in the How-to Guides section of this documentation: {doc}`jupyter_notebooks/runEp/using_runEp`.

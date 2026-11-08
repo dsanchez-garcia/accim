@@ -15,6 +15,7 @@ import pytest
 REPO = Path(__file__).resolve().parents[2]
 PAGES = sorted((REPO / 'docs' / 'source' / 'jupyter_notebooks').rglob('*.ipynb'))
 EXPORT_SCRIPT = REPO / 'docs' / 'prepare_parametric_notebooks.py'
+HOWTO_EXPORT_SCRIPT = REPO / 'docs' / 'prepare_howto_notebooks.py'
 WIDGET_VIEW = 'application/vnd.jupyter.widget-view+json'
 
 
@@ -27,9 +28,9 @@ def _outputs(page):
     ]
 
 
-def _export_module():
+def _export_module(script=EXPORT_SCRIPT):
     pytest.importorskip('numpy')
-    spec = importlib.util.spec_from_file_location('prepare_parametric_notebooks', EXPORT_SCRIPT)
+    spec = importlib.util.spec_from_file_location(script.stem, script)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
@@ -72,3 +73,18 @@ def test_the_export_drops_the_views_of_widgets():
     assert cleaned[0] == log
     assert len(cleaned) == 2
     assert cleaned[1]['data'] == {'text/html': '<b>Done</b>', 'text/plain': 'Done'}
+
+
+@pytest.mark.skipif(not HOWTO_EXPORT_SCRIPT.exists(), reason='needs the scripts of the documentation')
+def test_the_export_does_not_shorten_the_outputs_that_it_joins():
+    # Joined, these two outputs have 100 lines: the export of the How-to Guides joined them and then shortened them,
+    # which hid the size of the results and the confirmation of AddAccis() in the page of using_addAccis
+    export = _export_module(HOWTO_EXPORT_SCRIPT)
+    log = {'output_type': 'stream', 'name': 'stdout', 'text': ''.join(f'output IDF {i}\n' for i in range(60))}
+    question = {'output_type': 'stream', 'name': 'stdout', 'text': ''.join(f'question {i}: y\n' for i in range(40))}
+
+    joined = export._merge_streams([log, question])
+
+    assert ''.join(output['text'] for output in joined) == log['text'] + question['text']
+    assert not [output for output in joined
+                if 'not shown in the documentation' in export.parametric._clean_stream(output['text'])]

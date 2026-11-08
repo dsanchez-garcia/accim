@@ -15,6 +15,26 @@ This log is a lightweight, session-scoped complement to the repository's
 existing tracking files — it does not replace them (see
 [[decisions.md#2026-09-13 — `notes/work-log.md` complements, not replaces, existing tracking files|the related decision]]).
 
+## 2026-11-08 — The tutorials show the functions of 1.1.0; the How-to pages generated again
+
+- **Objective**: The request of the author: "quiero que los tutoriales (al menos, uno de ellos) muestren las nuevas
+  funcionalidades que hemos implementado", before publishing 1.1.0 (the release has its own entry).
+- **Affected files**: the source notebooks `using_addAccis`, `using_runEp` and `full_example_IBPSA` (in
+  `accim/sample_files/jupyter_notebooks/`), their pages and that of `research_paper_case_study`,
+  [[../docs/source/3_quick tutorial.md]] (3.1.3), [[../docs/source/4_detailed use.md]] (two labels),
+  [[../README.md]], `docs/prepare_howto_notebooks.py`, `tests/core/test_docs_notebook_pages.py`, [[../docs/README.md]],
+  [[../CHANGELOG.md]], [[../DEVLOG.md]].
+- **Finding or decision**: *Using AddAccis()* shows `results_size`, the EMS code of the comfort standard of an output
+  IDF only, `print_setpoint_ems_code()`/`get_setpoint_ems_code()` (new 2.3) and `modify_accis()` (new 2.4); *Using
+  run_ep()* shows `estimate_results_size()` without and with simulation (23.3 and 21.9 MB; the files, 21.9 MB). The
+  export of the How-to pages shortened a joined output of exactly 100 line breaks (an off-by-one between
+  `_merge_streams` and `_clean_stream`), which hid the size and the confirmation of `AddAccis()`: fixed, with a test.
+  The research paper case study changes slightly with 1.1.0 (Shimla, `Ind_Adap_MM`: 89.67 to 89.59 kWh/m2).
+- **Validation**: the four notebooks ran without problems; the pages compared cell by cell with the previous ones;
+  `test_docs_notebook_pages.py` (25 passed; the new test fails before the fix); the documentation build (the same 59
+  lines of warnings); `tests/core` and `tests/parametric_and_optimisation`: 1386 passed.
+- **Next step**: the release of 1.1.0 ([[../packaging/README.md]]).
+
 ## 2026-11-08 — The GUI reviewed against 1.1.0: the arguments of each zone, the EMS code, the size of the results
 
 - **Objective**: The request of the author: review whether the GUI is up to date with the code ("no he visto ninguna

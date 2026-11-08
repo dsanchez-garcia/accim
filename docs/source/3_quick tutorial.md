@@ -44,13 +44,34 @@ Each valid combination of values gives an output IDF: categories I, II and III o
 
 The arguments that are not given take their default values. Section {ref}`setting-up-the-target-idfs` lists all the arguments, with their values and defaults, and explains the names of the output IDFs.
 
+### 3.1.3 Before generating the IDFs: the setpoints and the size of the results
+
+Before generating many output IDFs, it is worth knowing how the ACCIS calculates the setpoints of the comfort models you choose, and how much disk space the results of their simulations will take.
+
+`print_setpoint_ems_code()` prints the EMS code with which the ACCIS calculates the setpoints of a comfort standard, category and comfort mode: which setpoints apply, and what they are out of the applicability limits of the comfort model. It is the code of the output IDFs, with comments that explain the variables. For instance, for EN 16798-1, category II and adaptive setpoints horizontally extended out of the applicability limits:
+
+```python
+from accim.utils import print_setpoint_ems_code
+print_setpoint_ems_code(comfort_standard=1, category=2, comfort_mode=3)
+```
+
+The outputs of the output IDFs decide the size of the results of their simulations. Before writing the output IDFs, `AddAccis()` prints the estimated size of the results of each simulation and of all the output IDFs with each EPW (in the example of section 3.1.2, about 31 MB for each simulation, that is, about 310 MB for the 10 output IDFs with each EPW), so that you can choose other outputs, and keeps it in its attribute `results_size`. Before running the simulations, `estimate_results_size()` estimates it for the IDFs and EPWs of the working folder, or measures it in a simulation (`simulate=True`):
+
+```python
+from accim.run import estimate_results_size
+estimate_results_size(only_accim_idfs=True)
+```
+
+The How-to Guides {doc}`jupyter_notebooks/addAccis/using_addAccis` and {doc}`jupyter_notebooks/runEp/using_runEp` show both, and sections {ref}`setpoint-ems-code` and {ref}`running-simulations` explain them.
+
 ## 3.2 Other uses
 
 Although the main use of accim is the implementation of adaptive setpoint temperatures, there are some functions, classes and methods that allow to roughly automate the whole process consisting of preparation of the epw and idf files, the simulation runs and the data analysis:
 
 - setpoints based on the adaptive predicted mean vote (`accim.sim.apmv`): {doc}`jupyter_notebooks/example_apmv_setpoints_paper/using_apmv_setpoints`;
 - renaming EPW files for the data analysis (`accim.data.preprocessing.rename_epw_files`): {doc}`jupyter_notebooks/rename_epw_files/using_rename_epw_files`;
-- running the simulations (`accim.run.run_ep`), with the Energy Management System of EnergyPlus or through its Python API: {doc}`jupyter_notebooks/runEp/using_runEp` and {ref}`python-api-backend`;
+- changing the arguments of the ACCIS of an output IDF, also its comfort standard (`accim.sim.accis.modify_accis`): {doc}`jupyter_notebooks/addAccis/using_addAccis`;
+- running the simulations (`accim.run.run_ep`), with the Energy Management System of EnergyPlus or through its Python API, and estimating the size of their results before running them (`accim.run.estimate_results_size`): {doc}`jupyter_notebooks/runEp/using_runEp` and {ref}`python-api-backend`;
 - tables and figures of the results (`accim.data.postprocessing.main.Table`): {doc}`jupyter_notebooks/Table/using_Table`;
 - parametric simulation and optimisation (`accim.parametric_and_optimisation`): {doc}`parametric_and_optimisation`.
 

@@ -218,8 +218,9 @@ def _merge_streams(outputs):
     """Join consecutive outputs of the same stream while the result is not a long log.
 
     Each question answered in ``run`` ends a stream output, so a cell with questions has many
-    short outputs. They are joined up to the length from which ``export`` shortens logs, so the
-    questions and answers are kept, and long logs are still shortened.
+    short outputs. They are joined while the result is shorter than the logs that ``export``
+    shortens (more than ``LONG_STREAM_LINES`` lines, counting the empty line after the last line
+    break), so the questions and answers are kept, and long logs are still shortened.
     """
     def text(output):
         return output['text'] if isinstance(output['text'], str) else ''.join(output['text'])
@@ -229,7 +230,7 @@ def _merge_streams(outputs):
         previous = merged[-1] if merged else None
         if (output.get('output_type') == 'stream' and previous is not None
                 and previous.get('output_type') == 'stream' and previous.get('name') == output.get('name')
-                and (text(previous) + text(output)).count('\n') <= parametric.LONG_STREAM_LINES):
+                and (text(previous) + text(output)).count('\n') < parametric.LONG_STREAM_LINES):
             merged[-1] = {**previous, 'text': text(previous) + text(output)}
         else:
             merged.append(output)
