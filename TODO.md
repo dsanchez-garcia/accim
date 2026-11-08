@@ -20,6 +20,11 @@ Active short-term tasks.
 
 ## Backlog
 
+- [ ] [P1][blocked] Activate the version `v1.1.0` in Read the Docs
+  - Context: 1.1.0 is published on PyPI and GitHub (2026-11-08), and `latest` and `master` show 1.1.0. Read the Docs created the version `v1.1.0` of the tag (slug `v1.1.0`, commit `33f2cae8`), but it is inactive (`/en/v1.1.0/` gives 404), and activating it needs the session of the author: Versions, `v1.1.0`, Edit, Active, Update version (`docs/README.md` §2). Blocked on the author.
+  - Definition of done: `https://accim.readthedocs.io/en/v1.1.0/` says "accim 1.1.0 documentation", with its PDF and EPUB; `docs/README.md` §2 lists the active tags up to `v1.1.0`.
+  - References: `packaging/README.md` §4.10, `docs/README.md` §2.
+
 - [ ] [P1][blocked] Define backlog priority rules
   - Context: Standardize entry criteria for new tasks. Blocked on the approval of the author.
   - Proposal (2026-10-31): `P0`: it stops users or a release now (a crash or wrong results in a published version, lost data, a security problem); it goes before anything else. `P1`: needed for the next release, or wrong behaviour that has a workaround, failing tests, or documentation that misleads. `P2`: improvements, refactors, reviews and tasks without a date. When in doubt, the lower priority; raise it when a user is affected.

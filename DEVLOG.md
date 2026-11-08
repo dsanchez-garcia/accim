@@ -36,6 +36,20 @@ Recommended flow: track active work in `TODO.md`, move completed outcomes to `DE
 ## Entries
 
 ### 2026-11-08
+#### [done] Release 1.1.0
+- Context: The author asked "quiero publicar en github, pypi, y actualizar readthedocs con la v1.1.0", after the tutorials that show the functions of 1.1.0 (entry below).
+- Changes:
+  - Release commit `33f2cae8` (`Release v1.1.0`): the section 1.1.0 of `CHANGELOG.md`, dated 2026-11-08, with an empty `[Unreleased]` above it and the link references; its introduction said that the simulations give the same results, and now gives the exception of mixed mode (the design days). `__version__` was already 1.1.0.
+  - The branch `v1.1.0` (`ff024aab`, contained in `master`) deleted locally (`git branch -d`) and on GitHub before pushing the tag: Read the Docs removed its inactive version `v1.1.0` (of the branch) within seconds, and the tag got the slug `v1.1.0`.
+  - `dist_build_package.bat`: accim wheel 0.6 MB and sdist 0.6 MB, accim-samples wheel 21.4 MB (133 files); `release.py check`, with `twine check --strict`, passed. `release.py upload` to TestPyPI and then to PyPI; `master` and only the tag pushed. GitHub release "Version v1.1.0", with the three files of `dist/` and notes in the order of 0.8.2 and 1.0.0: installation; what 1.1.0 brings, with links to the two tutorials, and how to upgrade; what changes in the usage (`modify_accis` for the comfort standard of an output IDF, and one EnergyPlus version in each Python session); the results that change; the v0.8.0 release; the documentation; and the section 1.1.0 of the changelog.
+  - Read the Docs: the builds 35733306 (`latest`) and 35733307 (`master`) at `33f2cae8` passed. The version `v1.1.0` of the tag exists, but it is inactive: its activation needs the session of the author (`TODO.md`).
+- Files: `CHANGELOG.md`, `TODO.md`, `DEVLOG.md`, `notes/work-log.md`.
+- Verification:
+  - `python -m pytest tests/core tests/parametric_and_optimisation -q -p no:cacheprovider`: 1386 passed in 13 min 49 s (the package of the release; the commit of the tutorials only changed, besides the notebooks, the export of the pages, whose tests pass).
+  - Three new venvs (Python 3.14), outside the repository and with `PYTHONPATH` empty (the local one has an empty entry, the current folder): the local wheels; TestPyPI (`accim` and `accim-samples` with `--no-deps`, and their dependencies from PyPI; the three files of TestPyPI have the SHA-256 of the local ones); and PyPI, without the cache of pip. In all of them `pip check` passed (eppy 0.6.7, besos 2.2.3, pandas 3.1.1, numpy 2.5.4, PuLP 3.3.2), accim 1.1.0 was imported from the venv, with 133 sample files and the imports of the guide. With the local wheels and with PyPI, a smoke test (in the session folder, not in the repository): `get_setpoint_ems_code`, `AddAccis` with the sample `TestModel` (`results_size`), `modify_accis` on its output IDF (it adds `SetAST_CS2_*`), `estimate_results_size`, and one day of simulation of the two output IDFs with EnergyPlus 25.1 with both backends: 0 severe errors, identical CSV files.
+  - Read the Docs: `/en/latest/` says "accim 1.1.0 documentation", and its pages *Using AddAccis()* (sections 2.3 and 2.4, the estimate and the banner of 1.1.0), *Using run_ep()* and the Quick tutorial (3.1.3) have the new content; the builds have the same 30 warnings as those of `e1d19f0f`, and their LaTeX commands exit with 0.
+- Next step: the author activates `v1.1.0` in Read the Docs (`TODO.md`); then `docs/README.md` §2 lists the active tags up to `v1.1.0`.
+
 #### [done] The tutorials show the functions of 1.1.0, and the How-to pages generated again with 1.1.0
 - Context: The author asked: "quiero que los tutoriales (al menos, uno de ellos) muestren las nuevas funcionalidades que hemos implementado", and to publish 1.1.0 on GitHub, PyPI and Read the Docs (the release has its own entry). None of the tutorials used `print_setpoint_ems_code`, `get_setpoint_ems_code`, `estimate_results_size`, `results_size` or `modify_accis`, and the pages of `using_addAccis`, `using_runEp`, `full_example_IBPSA` and `research_paper_case_study` printed the banner of 1.0.0.
 - Changes:

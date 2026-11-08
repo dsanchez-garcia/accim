@@ -15,6 +15,21 @@ This log is a lightweight, session-scoped complement to the repository's
 existing tracking files — it does not replace them (see
 [[decisions.md#2026-09-13 — `notes/work-log.md` complements, not replaces, existing tracking files|the related decision]]).
 
+## 2026-11-08 — Release 1.1.0 (PyPI, GitHub, Read the Docs)
+
+- **Objective**: The request of the author: "quiero publicar en github, pypi, y actualizar readthedocs con la v1.1.0".
+- **Affected files**: [[../CHANGELOG.md]] (the release commit `33f2cae8`), [[../TODO.md]], [[../DEVLOG.md]]; the branch
+  `v1.1.0` deleted (local and GitHub), the tag `v1.1.0`, the GitHub release, PyPI and TestPyPI.
+- **Finding or decision**: As §4 of [[../packaging/README.md]]. Deleting the branch `v1.1.0` before pushing the tag
+  let Read the Docs give the tag the slug `v1.1.0`. The new version of Read the Docs is inactive, and only the author
+  can activate it (his session): the one step left, in [[../TODO.md]]. The local `PYTHONPATH` has an empty entry (the
+  current folder), so the tests of the installed wheels ran with `PYTHONPATH` empty.
+- **Validation**: 1386 tests; the local wheels, TestPyPI and PyPI in new venvs (`pip check`, 133 sample files, and with
+  the local wheels and PyPI a smoke test of the functions of 1.1.0 and one day of simulation with both backends:
+  identical CSV files); the builds of `latest` and `master` passed, with the same 30 warnings, and `/en/latest/`
+  shows 1.1.0 and the new tutorials. Details in [[../DEVLOG.md]].
+- **Next step**: the author activates `v1.1.0` in Read the Docs ([[../TODO.md]]).
+
 ## 2026-11-08 — The tutorials show the functions of 1.1.0; the How-to pages generated again
 
 - **Objective**: The request of the author: "quiero que los tutoriales (al menos, uno de ellos) muestren las nuevas
