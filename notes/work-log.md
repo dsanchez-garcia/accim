@@ -15,6 +15,26 @@ This log is a lightweight, session-scoped complement to the repository's
 existing tracking files — it does not replace them (see
 [[decisions.md#2026-09-13 — `notes/work-log.md` complements, not replaces, existing tracking files|the related decision]]).
 
+## 2026-11-08 — `v1.1.0` merged into `master` and pushed; the work goes on in `master`
+
+- **Objective**: The requests of the author: move the changes of `v1.1.0` to `master` and push them; then commit this
+  entry, push it and go on working in `master`.
+- **Affected files**: none in the tree: `master`, local and on GitHub, moved from `73f958b5` (the log of the 1.0.0
+  release) to `bb98ede5`, the commit of `v1.1.0`.
+- **Finding or decision**: `master` was an ancestor of `v1.1.0` (12 commits behind), so it was fast-forwarded
+  (`git fetch . v1.1.0:master`), with no merge commit, as `v1.0.0` on 2026-11-01. Unlike §4.8 of
+  [[../packaging/README.md]], `master` was pushed before the release, because the author asked for it: `latest` (the
+  default version of Read the Docs) and `master` now show the changes of 1.1.0, which is not on PyPI yet, under the
+  title of 1.0.0 (`__version__`). Before the push, the Python files of `accim` were checked statically against Python
+  3.9, that of Read the Docs (the local Python is 3.14, so the local build of the documentation cannot see it): syntax,
+  `X | Y` evaluated at run time, f-strings of 3.12 and imports of 3.10+; nothing found.
+- **Validation**: `git ls-remote origin`: `master` and `v1.1.0` at `bb98ede5`; the builds 35730336 (`latest`) and
+  35730337 (`master`) of Read the Docs passed, with the same number of Sphinx warnings (30) as the previous builds and
+  no failed import; the API reference of `latest` shows `estimate_results_size` and `print_setpoint_ems_code`.
+- **Next step**: the work goes on in `master`, at the request of the author (`v1.1.0` stays, equal to `master` with
+  this entry); at the release, delete the branch `v1.1.0` (local and on GitHub) before pushing the tag `v1.1.0` (§4.5
+  of [[../packaging/README.md]]).
+
 ## 2026-11-08 — The size of the results of the simulations, before running them (branch `v1.1.0`)
 
 - **Objective**: The request of the author: estimate the weight of the results of the simulations of `run_ep`, like
