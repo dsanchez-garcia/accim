@@ -24,6 +24,7 @@ __all__ = [
     'ADD_ACCIS_DEFAULTS',
     'APMV_DEFAULTS',
     'APMV_SETPOINT_FIELDS',
+    'APMV_ZONE_FIELDS',
     'BACKENDS',
     'CUSTOM_MODEL_FIELDS',
     'CUSTOM_MODEL_PARAMETERS',
@@ -52,31 +53,44 @@ __all__ = [
     'TABLE_FREQUENCIES',
     'TABLE_TYPES',
     'VENTILATION_CONTROLS',
+    'VRF_AVAILABILITY',
     'ZONE_ARGUMENTS',
+    'ZONE_FIELDS',
     'add_accis_arguments',
     'apmv_arguments',
+    'apmv_zone_row_text',
+    'apmv_zone_setpoints',
     'categories_hint',
     'comfort_modes_hint',
     'comfort_standard_choices',
     'epw_files',
     'existing_hvac_arguments',
     'figure_arguments',
+    'hours_zones',
     'idf_files',
     'input_idfs',
     'output_idf_count',
     'parametric_arguments',
     'parametric_simulation_count',
+    'parse_apmv_zone_setpoints',
     'parse_mapping',
     'parse_number',
     'parse_numbers',
     'parse_parameter_values',
     'parse_zone_arguments',
     'rename_epws_arguments',
+    'results_size_arguments',
     'run_ep_arguments',
+    'setpoint_ems_code_calls',
     'simulation_csvs',
     'simulations',
+    'split_apmv_zone_setpoints',
+    'split_zone_arguments',
     'table_arguments',
     'zone_arguments',
+    'zone_arguments_problems',
+    'zone_field_choices',
+    'zone_row_text',
 ]
 
 Number = Union[int, float]
@@ -123,6 +137,11 @@ EXISTING_HVAC_OPTIONS = {
 }
 #: The suggested availability schedules of the existing HVAC systems ('' keeps the availability of the model).
 EXISTING_HVAC_AVAILABILITY = ('', 'On 24/7')
+#: The suggested availability schedules of the VRF systems of accim (any schedule of the model can be typed).
+VRF_AVAILABILITY = ('On 24/7',)
+#: The arguments of a zone that have a field of their own in the table of the zones of the window (the others are
+#: written as pairs name=value).
+ZONE_FIELDS = ('comfort_standard', 'category', 'comfort_mode', 'hvac_mode', 'ventilation_control')
 #: The initial values of the options of the existing HVAC systems (the defaults of AddAccis; the availability schedule
 #: '' is None).
 EXISTING_HVAC_DEFAULTS = {
@@ -136,15 +155,22 @@ EXISTING_HVAC_DEFAULTS = {
 ADD_ACCIS_DEFAULTS = {
     'script_type': 'vrf_mm',
     'supply_air_temp_input_method': 'temperature difference',
+    'vrf_availability_schedule': 'On 24/7',
+    'vrf_eer': '2',
+    'vrf_cop': '2.1',
     'setpoint_type': 'temperature',
     'energyplus_version': 'auto',
     'output_type': 'standard',
     'output_frequencies': ['hourly'],
     'keep_existing_outputs': False,
     'add_building_averages': False,
+    'debug_ems': False,
     'comfort_standard': [1],
     'category': '3',
     'comfort_mode': '3',
+    'category_cooling_offset': '0',
+    'category_heating_offset': '0',
+    'setpoint_accuracy': '10000',
     'cooling_season_start': '121',
     'cooling_season_end': '274',
     'hvac_mode': [2],
@@ -162,8 +188,9 @@ ADD_ACCIS_DEFAULTS = {
     **{name: default for name, (_, default) in CUSTOM_MODEL_FIELDS.items()},
     **EXISTING_HVAC_DEFAULTS,
 }
-#: The initial values of the form of run_ep.
-RUN_DEFAULTS = {'only_accim_idfs': True, 'processes': '2', 'energyplus_version': 'auto', 'backend': 'ems'}
+#: The initial values of the form of run_ep (``simulate``: estimate the size of the results with a simulation).
+RUN_DEFAULTS = {'only_accim_idfs': True, 'processes': '2', 'energyplus_version': 'auto', 'backend': 'ems',
+                'simulate': False}
 
 #: The setpoints of the aPMV (the arguments of apply_apmv_setpoints): argument -> label.
 APMV_SETPOINT_FIELDS = {
@@ -176,6 +203,10 @@ APMV_SETPOINT_FIELDS = {
     'heating_setpoint_tolerance_cooling_season': 'Tolerance of the heating setpoint, cooling season',
     'heating_setpoint_tolerance_heating_season': 'Tolerance of the heating setpoint, heating season',
 }
+#: The aPMV setpoints that have a field of their own in the table of the zones of the window (the tolerances are
+#: written as pairs name=value).
+APMV_ZONE_FIELDS = ('adaptive_coefficient_cooling', 'adaptive_coefficient_heating', 'pmv_cooling_setpoint',
+                    'pmv_heating_setpoint')
 #: The inputs of the PMV of the People objects (the arguments of set_pmv_input_parameters): argument -> label.
 PMV_INPUT_FIELDS = {
     'activity_level': 'Activity level (W/person)',
@@ -404,14 +435,16 @@ def _folder(form: Mapping[str, Any], what: str) -> str:
     return folder
 
 
-def parse_zone_arguments(text: Any, zone: str = '') -> Dict[str, Any]:
-    """The arguments of a zone, from a text such as ``'comfort_standard=2, category=80, hvac_mode=0'``: pairs
-    ``name=value`` separated by commas, semicolons or new lines, with the arguments of
-    :func:`accim.sim.accis.modify_accis` (one value each; the dates of the cooling season can be 'dd/mm').
+def _pairs(text: Any, label: str, allowed: Iterable[str], what: str) -> Dict[str, Any]:
+    """The arguments of a text of pairs ``name=value`` separated by commas, semicolons or new lines, one value each
+    (the dates of the cooling season can be 'dd/mm').
 
-    :raises FormError: If an argument is not one of a zone, is repeated, or its value is not valid.
+    :param label: The name of the field, for the messages.
+    :param allowed: The names of the arguments that the text can have.
+    :param what: What these arguments are, for the messages ('an argument of a zone').
+    :raises FormError: If an argument is not one of ``allowed``, is repeated, or its value is not valid.
     """
-    label = f'zone_arguments of {zone!r}' if zone else 'zone_arguments'
+    allowed = tuple(allowed)
     arguments: Dict[str, Any] = {}
     for item in re.split(r'[,;\n]+', str(text)):
         item = item.strip()
@@ -420,14 +453,107 @@ def parse_zone_arguments(text: Any, zone: str = '') -> Dict[str, Any]:
         if '=' not in item:
             raise FormError(f'{label}: write each argument as name=value, not {item!r}.')
         name, value = (part.strip() for part in item.split('=', 1))
-        if name not in ZONE_ARGUMENTS:
-            raise FormError(f'{label}: {name!r} is not an argument of a zone (they are {", ".join(ZONE_ARGUMENTS)}).')
+        if name not in allowed:
+            raise FormError(f'{label}: {name!r} is not {what} (they are {", ".join(allowed)}).')
         if name in arguments:
             raise FormError(f'{label}: {name} is given twice.')
         arguments[name] = _day_value(value, name) if name in _DAY_ARGUMENTS else _number(value, f'{label}: {name}')
     if not arguments:
         raise FormError(f'{label}: give at least one argument (name=value).')
     return arguments
+
+
+def _pairs_text(arguments: Mapping[str, Any]) -> str:
+    """The text of some arguments, as :func:`_pairs` reads it."""
+    return ', '.join(f'{name}={value}' for name, value in arguments.items())
+
+
+def _field_value(text: Any) -> str:
+    """The value of a field of a table of the zones: its text, without the description of the choice ('2 = INT
+    ASHRAE55' is '2')."""
+    return str(text if text is not None else '').split(' = ', 1)[0].strip()
+
+
+def parse_zone_arguments(text: Any, zone: str = '') -> Dict[str, Any]:
+    """The arguments of a zone, from a text such as ``'comfort_standard=2, category=80, hvac_mode=0'``: pairs
+    ``name=value`` separated by commas, semicolons or new lines, with the arguments of
+    :func:`accim.sim.accis.modify_accis` (one value each; the dates of the cooling season can be 'dd/mm').
+
+    :raises FormError: If an argument is not one of a zone, is repeated, or its value is not valid.
+    """
+    label = f'zone_arguments of {zone!r}' if zone else 'zone_arguments'
+    return _pairs(text, label, ZONE_ARGUMENTS, 'an argument of a zone')
+
+
+def zone_field_choices(name: str, comfort_standard: Any = '') -> List[str]:
+    """The choices of a field of the table of the zones of AddAccis (:data:`ZONE_FIELDS`), after an empty one (the
+    value of each output IDF): the comfort standards ('2 = INT ASHRAE55'); the categories or comfort modes of the
+    comfort standard of the zone (those of all the comfort standards, without it); the HVAC modes and the ventilation
+    controls ('2 = Mixed mode').
+
+    :param comfort_standard: The comfort standard of the zone, for the categories and comfort modes ('' for all).
+    """
+    if name == 'comfort_standard':
+        values = [title for _, title in comfort_standard_choices()]
+    elif name in ('category', 'comfort_mode'):
+        number = _field_value(comfort_standard)
+        standards = ([COMFORT_STANDARDS[int(number)]] if number.isdigit() and int(number) in COMFORT_STANDARDS
+                     else list(COMFORT_STANDARDS.values()))
+        found: List[Number] = []
+        for standard in standards:
+            found += [value for value in getattr(standard, 'categories' if name == 'category' else 'comfort_modes')
+                      if value not in found]
+        values = [str(value) for value in sorted(found)]
+    elif name == 'hvac_mode':
+        values = [f'{mode} = {label}' for mode, label in HVAC_MODES.items()]
+    elif name == 'ventilation_control':
+        values = [f'{control} = {label}' for control, label in VENTILATION_CONTROLS.items()]
+    else:
+        raise KeyError(f'{name!r} is not a field of the table of the zones ({", ".join(ZONE_FIELDS)}).')
+    return [''] + values
+
+
+def _choice_text(name: str, value: Any) -> str:
+    """The text of a value in its field of the table of the zones, with the description of the choice."""
+    if name == 'comfort_standard' and value in COMFORT_STANDARDS:
+        return COMFORT_STANDARDS[value].title
+    if name == 'hvac_mode' and value in HVAC_MODES:
+        return f'{value} = {HVAC_MODES[value]}'
+    if name == 'ventilation_control' and value in VENTILATION_CONTROLS:
+        return f'{value} = {VENTILATION_CONTROLS[value]}'
+    return str(value)
+
+
+def _row_text(fields: Mapping[str, Any], other: Any, field_names: Iterable[str], parse, zone: str) -> str:
+    pairs = [f'{name}={_field_value(fields.get(name))}' for name in field_names if _field_value(fields.get(name))]
+    other = str(other or '').strip()
+    return _pairs_text(parse(', '.join(pairs + ([other] if other else [])), zone))
+
+
+def _split_row(text: Any, field_names: Iterable[str], parse, zone: str) -> Tuple[Dict[str, str], str]:
+    arguments = parse(text, zone)
+    fields = {name: _choice_text(name, arguments.pop(name)) if name in arguments else '' for name in field_names}
+    return fields, _pairs_text(arguments)
+
+
+def zone_row_text(fields: Mapping[str, Any], other: Any = '', zone: str = '') -> str:
+    """The text of the arguments of a zone (as :func:`parse_zone_arguments` reads it) from the fields of the table of
+    the zones of the window: those of :data:`ZONE_FIELDS` (empty: the value of each output IDF; the choices can keep
+    their descriptions, such as '2 = INT ASHRAE55') and the other arguments, as pairs name=value.
+
+    :raises FormError: If an argument is not valid, or it is in a field and in the other arguments.
+    """
+    return _row_text(fields, other, ZONE_FIELDS, parse_zone_arguments, zone)
+
+
+def split_zone_arguments(text: Any, zone: str = '') -> Tuple[Dict[str, str], str]:
+    """The fields of the table of the zones (those of :data:`ZONE_FIELDS`, with the descriptions of the choices) and
+    the other arguments (pairs name=value) of the text of the arguments of a zone: the reverse of
+    :func:`zone_row_text`.
+
+    :raises FormError: If the text is not valid.
+    """
+    return _split_row(text, ZONE_FIELDS, parse_zone_arguments, zone)
 
 
 def zone_arguments(rows: Iterable[Tuple[str, str]]) -> Dict[str, Dict[str, Any]]:
@@ -451,6 +577,19 @@ def zone_arguments(rows: Iterable[Tuple[str, str]]) -> Dict[str, Dict[str, Any]]
     return result
 
 
+def _schedule(text: Any, name: str, empty: str) -> str:
+    """The name of a schedule of a field (empty if the field is), without the characters that EnergyPlus does not
+    accept in names.
+
+    :param empty: What an empty field means, for the message.
+    """
+    schedule = str(text or '').strip()
+    if re.search(r'[,;!]', schedule):
+        raise FormError(f'{name}: enter the name of a schedule of the model, or On 24/7, without commas, semicolons '
+                        f'or exclamation marks ({empty}).')
+    return schedule
+
+
 def existing_hvac_arguments(form: Mapping[str, Any]) -> Dict[str, Any]:
     """The arguments of the existing HVAC systems (those of :data:`EXISTING_HVAC_DEFAULTS`) from the values of a form:
     the booleans of :data:`EXISTING_HVAC_OPTIONS` and ``existing_hvac_availability_schedule``, the name of a schedule
@@ -458,10 +597,8 @@ def existing_hvac_arguments(form: Mapping[str, Any]) -> Dict[str, Any]:
 
     :raises FormError: If the name of the schedule has a character that EnergyPlus does not accept in names.
     """
-    schedule = str(form.get('existing_hvac_availability_schedule', '') or '').strip()
-    if re.search(r'[,;!]', schedule):
-        raise FormError('existing_hvac_availability_schedule: enter the name of a schedule of the model, or On 24/7, '
-                        'without commas, semicolons or exclamation marks (empty: the availability of the model).')
+    schedule = _schedule(form.get('existing_hvac_availability_schedule', ''), 'existing_hvac_availability_schedule',
+                         'empty: the availability of the model')
     arguments = {name: bool(form.get(name, EXISTING_HVAC_DEFAULTS[name])) for name in EXISTING_HVAC_OPTIONS}
     arguments['existing_hvac_availability_schedule'] = schedule or None
     return arguments
@@ -474,14 +611,16 @@ def add_accis_arguments(form: Mapping[str, Any]) -> Dict[str, Any]:
         choices (``script_type``, ``supply_air_temp_input_method``, ``setpoint_type``, ``energyplus_version``,
         ``output_type``), the lists of the checked boxes or selected items (``output_frequencies``,
         ``comfort_standard``, ``hvac_mode``, ``ventilation_control``), the booleans (``keep_existing_outputs``,
-        ``add_building_averages`` and those of :data:`EXISTING_HVAC_OPTIONS`), the texts of the other fields (lists
-        of numbers separated by commas or spaces, or numbers, and ``existing_hvac_availability_schedule``), as in
-        :data:`ADD_ACCIS_DEFAULTS`, and ``zone_arguments``, the rows of the table of the zones (see
-        :func:`zone_arguments`; none by default).
+        ``add_building_averages``, ``debug_ems`` and those of :data:`EXISTING_HVAC_OPTIONS`), the texts of the other
+        fields (lists of numbers separated by commas or spaces, or numbers, ``vrf_availability_schedule`` and
+        ``existing_hvac_availability_schedule``), as in :data:`ADD_ACCIS_DEFAULTS`, and ``zone_arguments``, the rows
+        of the table of the zones (see :func:`zone_arguments`; none by default).
     :return: The keyword arguments of AddAccis, with all the arguments that it would otherwise ask in the prompt,
-        ``confirm=True`` and ``idfs`` (the names of the selected input IDFs, to run in the folder); with the existing
-        HVAC systems ('ex_ac' and 'ex_mm'), also their arguments (:func:`existing_hvac_arguments`).
-    :raises FormError: If a value is missing or not valid.
+        ``confirm=True`` and ``idfs`` (the names of the selected input IDFs, to run in the folder); with the VRF
+        systems ('vrf_ac' and 'vrf_mm'), also their availability schedule, EER and COP; with the existing HVAC
+        systems ('ex_ac' and 'ex_mm'), their arguments (:func:`existing_hvac_arguments`).
+    :raises FormError: If a value is missing or not valid, or the arguments of a zone give no setpoints in some
+        output IDFs (:func:`zone_arguments_problems`).
     """
     _folder(form, 'the input IDFs')
     idfs = list(form.get('idfs') or [])
@@ -503,10 +642,18 @@ def add_accis_arguments(form: Mapping[str, Any]) -> Dict[str, Any]:
         energyplus_version=_choice(form, 'energyplus_version', ENERGYPLUS_VERSIONS),
         setpoint_type=setpoint_type,
         add_building_averages=bool(form.get('add_building_averages')),
+        debug_ems=bool(form.get('debug_ems')),
         name_suffix=str(form.get('name_suffix', '')).strip(),
         confirm=True,
         verbose=True,
     )
+    if script_type.startswith('vrf'):
+        schedule = _schedule(form.get('vrf_availability_schedule', ADD_ACCIS_DEFAULTS['vrf_availability_schedule']),
+                             'vrf_availability_schedule', 'On 24/7: always available')
+        if not schedule:
+            raise FormError('vrf_availability_schedule: enter the name of a schedule of the model, or On 24/7.')
+        arguments.update(vrf_availability_schedule=schedule,
+                         **{name: _positive(form, name) for name in ('vrf_eer', 'vrf_cop')})
     comfort_standard = [int(number) for number in form.get('comfort_standard') or []]
     if not comfort_standard:
         raise FormError('comfort_standard: select at least one comfort standard.')
@@ -514,6 +661,9 @@ def add_accis_arguments(form: Mapping[str, Any]) -> Dict[str, Any]:
         comfort_standard=comfort_standard,
         category=parse_numbers(form.get('category', ''), 'category'),
         comfort_mode=parse_numbers(form.get('comfort_mode', ''), 'comfort_mode'),
+        **{name: parse_number(form.get(name, ADD_ACCIS_DEFAULTS[name]), name)
+           for name in ('category_cooling_offset', 'category_heating_offset')},
+        setpoint_accuracy=_positive(form, 'setpoint_accuracy'),
         cooling_season_start=_day(form, 'cooling_season_start'),
         cooling_season_end=_day(form, 'cooling_season_end'),
     )
@@ -546,32 +696,157 @@ def add_accis_arguments(form: Mapping[str, Any]) -> Dict[str, Any]:
             raise FormError('zone_arguments: the arguments of each zone need the adaptive setpoint temperatures '
                             '(setpoint_type temperature).')
         arguments['zone_arguments'] = zones
+        problems = zone_arguments_problems(arguments)
+        if problems:
+            raise FormError('zone_arguments: the arguments of some zones give no setpoints in some output IDFs (give '
+                            'the comfort standard, category and comfort mode of each of these zones, and the HVAC '
+                            'mode and ventilation control of mixed mode only with vrf_mm and ex_mm):\n'
+                            + '\n'.join(problems))
     if script_type.startswith('ex'):
         arguments.update(existing_hvac_arguments(form))
     return arguments
 
 
-#: The arguments of AddAccis that give the output IDFs of each input IDF.
-_GENERATION_ARGUMENTS = (
-    'comfort_standard', 'category', 'comfort_mode', 'hvac_mode', 'ventilation_control', 'ventilation_setpoint_offset',
-    'min_outdoor_temp_offset', 'max_wind_speed', 'setpoint_tolerance_start', 'setpoint_tolerance_end',
-    'setpoint_tolerance_step', 'cooling_season_start', 'cooling_season_end',
-)
+def _positive(form: Mapping[str, Any], name: str) -> Number:
+    """A number greater than 0 of a field (its default of :data:`ADD_ACCIS_DEFAULTS` if the form does not have it)."""
+    number = parse_number(form.get(name, ADD_ACCIS_DEFAULTS.get(name, '')), name)
+    if number <= 0:
+        raise FormError(f'{name}: enter a number greater than 0.')
+    return number
+
+
+def _generation(arguments: Mapping[str, Any]):
+    """The arguments of the output IDFs (:class:`accim.sim.generation.GenerationArguments`) of AddAccis with these
+    arguments (those of :func:`add_accis_arguments`), as AddAccis makes them."""
+    import dataclasses
+
+    from accim.sim.generation import GenerationArguments
+
+    names = {item.name for item in dataclasses.fields(GenerationArguments)}
+    kwargs = {name: value for name, value in arguments.items() if name in names}
+    if arguments['script_type'] in MIXED_MODE_SCRIPT_TYPES:
+        return GenerationArguments(**kwargs)
+    return GenerationArguments.air_conditioned(**kwargs)
+
+
+def _combinations(arguments: Mapping[str, Any], generation) -> list:
+    from accim.sim.generation import combinations
+
+    with warnings.catch_warnings():
+        warnings.simplefilter('ignore')
+        return list(combinations(generation, arguments['setpoint_type']))
 
 
 def output_idf_count(arguments: Mapping[str, Any]) -> int:
     """The number of output IDFs that AddAccis writes for each input IDF with these arguments (those of
     :func:`add_accis_arguments`), without the combinations that have no setpoints."""
-    from accim.sim.generation import GenerationArguments, combinations
+    return len(_combinations(arguments, _generation(arguments)))
 
-    kwargs = {name: arguments[name] for name in _GENERATION_ARGUMENTS if name in arguments}
-    if arguments['script_type'] in MIXED_MODE_SCRIPT_TYPES:
-        generation = GenerationArguments(**kwargs)
-    else:
-        generation = GenerationArguments.air_conditioned(**kwargs)
-    with warnings.catch_warnings():
-        warnings.simplefilter('ignore')
-        return sum(1 for _ in combinations(generation, arguments['setpoint_type']))
+
+def zone_arguments_problems(arguments: Mapping[str, Any]) -> List[str]:
+    """The zones of ``zone_arguments`` whose arguments give no setpoints in some output IDFs, as AddAccis checks them
+    before writing the output IDFs (for instance, a zone with another comfort standard and the categories of the
+    output IDFs, which that comfort standard does not have): one message for each zone and reason, with the number
+    of output IDFs and the name of the first one (with 'model' as the name of the input IDF).
+
+    :param arguments: The arguments of AddAccis (those of :func:`add_accis_arguments`).
+    """
+    from accim.sim.generation import output_name, zone_arguments_errors, zone_input_arguments
+
+    zones = arguments.get('zone_arguments') or {}
+    if not zones:
+        return []
+    generation = _generation(arguments)
+    combinations = _combinations(arguments, generation)
+    mixed_mode = arguments['script_type'] in MIXED_MODE_SCRIPT_TYPES
+    problems = []
+    for zone, zone_input in zones.items():
+        found: Dict[str, List[str]] = {}
+        for combination in combinations:
+            reasons = zone_arguments_errors(zone_input_arguments(generation, combination, zone_input), mixed_mode)
+            if reasons:
+                found.setdefault('; '.join(reasons), []).append(
+                    output_name('model', combination, generation.name_suffix))
+        for reasons, names in found.items():
+            count = f'{len(names)} output IDF{"" if len(names) == 1 else "s"}'
+            problems.append(f'{zone}: {reasons} (in {count}, such as {names[0]})')
+    return problems
+
+
+def _single(values: List[Number], standard, attribute: str) -> Union[Number, None]:
+    """The value of a list of the form for a comfort standard, if it has only one of its values (any value, if the
+    comfort standard has none); otherwise None (all of them)."""
+    allowed = getattr(standard, attribute) if standard is not None else {}
+    valid = [value for value in values if not allowed or value in allowed]
+    return valid[0] if len(valid) == 1 else None
+
+
+#: The arguments of :func:`accim.utils.get_setpoint_ems_code` other than the comfort standard, category and comfort
+#: mode, which a zone of the table of the zones can give.
+_EMS_CODE_ARGUMENTS = ('setpoint_tolerance', 'setpoint_accuracy', 'cooling_season_start', 'cooling_season_end',
+                       'category_cooling_offset', 'category_heating_offset', *CUSTOM_MODEL_FIELDS)
+
+
+def setpoint_ems_code_calls(form: Mapping[str, Any]) -> List[Tuple[str, Dict[str, Any]]]:
+    """The calls of :func:`accim.utils.get_setpoint_ems_code` that show the EMS code of the setpoints of the form of
+    AddAccis (the input IDFs are not needed): one for each selected comfort standard, with the category and the
+    comfort mode of the form if it has only one of them for that comfort standard (otherwise None: the code of all of
+    them), and one for each zone of the table of the zones with its own comfort standard (with its category and
+    comfort mode, or those of the form).
+
+    :return: The title and the keyword arguments of each call.
+    :raises FormError: If a value is missing or not valid, or the setpoints are not the adaptive setpoint
+        temperatures.
+    """
+    if _choice(form, 'setpoint_type', SETPOINT_TYPES) != 'temperature':
+        raise FormError('setpoint_type: the EMS code of the setpoints is that of the adaptive setpoint temperatures; '
+                        'the PMV-based setpoints are those of the thermostats of EnergyPlus.')
+    standards = [int(number) for number in form.get('comfort_standard') or []]
+    if not standards:
+        raise FormError('comfort_standard: select at least one comfort standard.')
+    categories = parse_numbers(form.get('category', ''), 'category')
+    comfort_modes = parse_numbers(form.get('comfort_mode', ''), 'comfort_mode')
+    zones = zone_arguments(form.get('zone_arguments') or [])
+    common: Dict[str, Any] = dict(
+        setpoint_tolerance=parse_number(form.get('setpoint_tolerance_start', ''), 'setpoint_tolerance_start'),
+        setpoint_accuracy=_positive(form, 'setpoint_accuracy'),
+        cooling_season_start=_day(form, 'cooling_season_start'),
+        cooling_season_end=_day(form, 'cooling_season_end'),
+        **{name: parse_number(form.get(name, ADD_ACCIS_DEFAULTS[name]), name)
+           for name in ('category_cooling_offset', 'category_heating_offset')},
+    )
+    if 99 in standards or any(values.get('comfort_standard') == 99 for values in zones.values()):
+        common.update({name: parse_number(form.get(name, ''), name) for name in CUSTOM_MODEL_FIELDS})
+
+    def call(title: str, number: int, category, comfort_mode, extra: Mapping[str, Any]) -> Tuple[str, Dict[str, Any]]:
+        if number == 0:
+            # ESP CTE has neither categories nor comfort modes
+            category = comfort_mode = None
+        kwargs = dict(common, comfort_standard=number, category=category, comfort_mode=comfort_mode, **extra)
+        if number != 99:
+            for name in CUSTOM_MODEL_FIELDS:
+                kwargs.pop(name, None)
+        described = ', '.join(f'{name.replace("_", " ")} {"(all)" if kwargs[name] is None else kwargs[name]}'
+                              for name in ('category', 'comfort_mode'))
+        return f'{title}: {described}', kwargs
+
+    calls = []
+    for number in standards:
+        standard = COMFORT_STANDARDS.get(number)
+        calls.append(call(standard.title if standard else str(number), number,
+                          _single(categories, standard, 'categories'),
+                          _single(comfort_modes, standard, 'comfort_modes'), {}))
+    for zone, values in zones.items():
+        if 'comfort_standard' not in values:
+            continue
+        number = values['comfort_standard']
+        standard = COMFORT_STANDARDS.get(number)
+        category = values.get('category', _single(categories, standard, 'categories'))
+        comfort_mode = values.get('comfort_mode', _single(comfort_modes, standard, 'comfort_modes'))
+        extra = {name: value for name, value in values.items() if name in _EMS_CODE_ARGUMENTS}
+        calls.append(call(f'Zone {zone}, {standard.title if standard else number}', number, category, comfort_mode,
+                          extra))
+    return calls
 
 
 def run_ep_arguments(form: Mapping[str, Any]) -> Dict[str, Any]:
@@ -597,6 +872,18 @@ def _processes(form: Mapping[str, Any]) -> int:
     return processes
 
 
+def results_size_arguments(form: Mapping[str, Any]) -> Dict[str, Any]:
+    """The arguments of :func:`accim.run.estimate_results_size` from the values of the form of run_ep (``folder``,
+    ``only_accim_idfs``, ``processes`` and ``simulate``: True to measure the size in a simulation of an IDF of each
+    group with the same outputs).
+
+    :raises FormError: If a value is missing or not valid.
+    """
+    _folder(form, 'the IDFs and EPWs')
+    return dict(simulate=bool(form.get('simulate')), only_accim_idfs=bool(form.get('only_accim_idfs')),
+                processes=_processes(form))
+
+
 def simulations(folder: Union[str, os.PathLike], only_accim_idfs: bool) -> List[Tuple[str, str]]:
     """The simulations that :func:`accim.run.run_ep` runs in a folder: (IDF, EPW) for each IDF (only the output IDFs
     of accim, with '[' in the name, if ``only_accim_idfs``) and each EPW."""
@@ -615,16 +902,87 @@ def _file_of_folder(form: Mapping[str, Any], name: str, choices: Iterable[str], 
     return value
 
 
+def parse_apmv_zone_setpoints(text: Any, zone: str = '') -> Dict[str, Number]:
+    """The aPMV setpoints of a zone, from a text such as ``'pmv_cooling_setpoint=0.7, pmv_heating_setpoint=-0.7'``:
+    pairs ``name=value`` separated by commas, semicolons or new lines, with the names of :data:`APMV_SETPOINT_FIELDS`.
+
+    :raises FormError: If a name is not one of them, is repeated, or its value is not a number.
+    """
+    label = f'zone_setpoints of {zone!r}' if zone else 'zone_setpoints'
+    return _pairs(text, label, APMV_SETPOINT_FIELDS, 'an aPMV setpoint of a zone')
+
+
+def apmv_zone_row_text(fields: Mapping[str, Any], other: Any = '', zone: str = '') -> str:
+    """The text of the aPMV setpoints of a zone (as :func:`parse_apmv_zone_setpoints` reads it) from the fields of the
+    table of the zones of the window (those of :data:`APMV_ZONE_FIELDS`; empty: the value of all the zones) and the
+    other setpoints (the tolerances), as pairs name=value.
+
+    :raises FormError: If a value is not valid, or it is in a field and in the other setpoints.
+    """
+    return _row_text(fields, other, APMV_ZONE_FIELDS, parse_apmv_zone_setpoints, zone)
+
+
+def split_apmv_zone_setpoints(text: Any, zone: str = '') -> Tuple[Dict[str, str], str]:
+    """The fields of the table of the zones of the aPMV setpoints (:data:`APMV_ZONE_FIELDS`) and the other setpoints
+    of the text of a zone: the reverse of :func:`apmv_zone_row_text`."""
+    return _split_row(text, APMV_ZONE_FIELDS, parse_apmv_zone_setpoints, zone)
+
+
+def apmv_zone_setpoints(rows: Iterable[Tuple[str, str]]) -> Dict[str, Dict[str, Number]]:
+    """The aPMV setpoints of some zones from the rows of their table: (zone, text of its setpoints, as in
+    :func:`parse_apmv_zone_setpoints`), by zone.
+
+    :raises FormError: If a zone is missing or repeated, or its setpoints are not valid.
+    """
+    result: Dict[str, Dict[str, Number]] = {}
+    for zone, text in rows:
+        zone = str(zone).strip()
+        if not zone:
+            raise FormError('zone_setpoints: a row has no zone.')
+        if zone.upper() in (name.upper() for name in result):
+            raise FormError(f'zone_setpoints: the zone {zone!r} is given twice.')
+        result[zone] = parse_apmv_zone_setpoints(text, zone)
+    return result
+
+
+def _zone_values(zones: Mapping[str, Mapping[str, Number]]) -> Dict[str, Dict[str, Number]]:
+    """The setpoints that some zones change, each one as a dictionary {zone: value} (in the order of
+    :data:`APMV_SETPOINT_FIELDS`)."""
+    values = {name: {zone: setpoints[name] for zone, setpoints in zones.items() if name in setpoints}
+              for name in APMV_SETPOINT_FIELDS}
+    return {name: by_zone for name, by_zone in values.items() if by_zone}
+
+
+def hours_zones(text: Any) -> Union[str, List[str]]:
+    """The argument ``zones`` of :func:`accim.data.postprocessing.setpoint_hours.filter_by_hours_within_setpoints`
+    from its field: 'building' (the percentage of the whole building), 'all' (that of every zone), or the zones,
+    separated by commas.
+
+    :raises FormError: If the field is empty.
+    """
+    text = str(text).strip()
+    if text.lower() in ('building', 'all'):
+        return text.lower()
+    zones = [zone.strip() for zone in re.split(r'[,;\n]+', text) if zone.strip()]
+    if not zones:
+        raise FormError('zones: enter building, all, or the zones separated by commas.')
+    return zones
+
+
 def apmv_arguments(form: Mapping[str, Any]) -> Dict[str, Any]:
     """The arguments of the aPMV setpoints (:mod:`accim.sim.apmv`) from the values of their form (as in
-    :data:`APMV_DEFAULTS`, with ``folder``).
+    :data:`APMV_DEFAULTS`, with ``folder``, and ``zone_setpoints``, the rows of the table of the zones with other
+    setpoints, see :func:`apmv_zone_setpoints`; none by default).
 
     :return: ``idf`` and ``output_idf`` (the names of the input IDF and of the IDF to write, by default
         '<input IDF>_aPMV.idf'), ``energyplus_version``, ``add_vrf_system`` and ``supply_air_temp_input_method``
         (:func:`accim.sim.apmv.add_vrf_system`), ``always_occupied``
         (:func:`accim.sim.apmv.set_zones_always_occupied`), ``apmv`` (the keyword arguments of
-        :func:`accim.sim.apmv.apply_apmv_setpoints`) and ``pmv_inputs`` (those of
-        :func:`accim.sim.apmv.set_pmv_input_parameters` that are given; empty to keep those of the model).
+        :func:`accim.sim.apmv.apply_apmv_setpoints`: each setpoint that some zones of the table change is a
+        dictionary ``{zone: value}``, with the value of the form as its ``default_*`` argument, for the other zones;
+        :func:`accim.gui.tasks.apply_apmv` gives these dictionaries the keys of the zones in the model) and
+        ``pmv_inputs`` (those of :func:`accim.sim.apmv.set_pmv_input_parameters` that are given; empty to keep those
+        of the model).
     :raises FormError: If a value is missing or not valid.
     """
     folder = _folder(form, 'the input IDF')
@@ -645,6 +1003,9 @@ def apmv_arguments(form: Mapping[str, Any]) -> Dict[str, Any]:
                 verbose=True)
     pmv_inputs = {name: parse_number(form.get(name), name) for name in PMV_INPUT_FIELDS
                   if str(form.get(name, '')).strip()}
+    for name, values in _zone_values(apmv_zone_setpoints(form.get('zone_setpoints') or [])).items():
+        apmv[f'default_{name}'] = apmv[name]
+        apmv[name] = values
     return dict(
         idf=idf,
         output_idf=output_idf,

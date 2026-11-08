@@ -54,12 +54,21 @@ def test_arguments_of_the_default_form(tmp_path):
         idfs=['model.idf'], script_type='vrf_mm', supply_air_temp_input_method='temperature difference',
         output_type='standard', output_frequencies=['hourly'], keep_existing_outputs=False,
         make_outputs_dataframe=False, energyplus_version='auto', setpoint_type='temperature',
-        add_building_averages=False, name_suffix='', confirm=True, verbose=True, comfort_standard=[1], category=[3],
-        comfort_mode=[3], cooling_season_start=121, cooling_season_end=274, hvac_mode=[2], ventilation_control=[0],
+        add_building_averages=False, debug_ems=False, name_suffix='', confirm=True, verbose=True,
+        vrf_availability_schedule='On 24/7', vrf_eer=2, vrf_cop=2.1, comfort_standard=[1], category=[3],
+        comfort_mode=[3], category_cooling_offset=0, category_heating_offset=0, setpoint_accuracy=10000,
+        cooling_season_start=121, cooling_season_end=274, hvac_mode=[2], ventilation_control=[0],
         ventilation_setpoint_offset=[0], min_outdoor_temp_offset=[50], max_wind_speed=[50],
         opening_factor_max_temp_diff=6, opening_factor_min_temp_diff=1, min_opening_factor=0.25,
         setpoint_tolerance_start=0.1, setpoint_tolerance_end=0.1, setpoint_tolerance_step=0.1)
     assert forms.output_idf_count(arguments) == 1
+    # The defaults of the form are those of AddAccis
+    from accim.sim.accis import AddAccis
+
+    parameters = inspect.signature(AddAccis).parameters
+    for name in ('vrf_availability_schedule', 'vrf_eer', 'vrf_cop', 'category_cooling_offset',
+                 'category_heating_offset', 'setpoint_accuracy', 'debug_ems', 'add_building_averages'):
+        assert arguments[name] == parameters[name].default, name
 
 
 def test_arguments_that_depend_on_the_script_type_and_the_comfort_standards(tmp_path):
@@ -121,6 +130,12 @@ def test_number_of_output_idfs(tmp_path):
     (dict(cooling_season_end='31/13'), 'cooling_season_end must be a date'),
     (dict(script_type='vrf'), 'script_type: choose one of'),
     (dict(comfort_standard=[99], custom_intercept=''), 'custom_intercept: enter a number'),
+    (dict(vrf_eer='0'), 'vrf_eer: enter a number greater than 0'),
+    (dict(vrf_cop='-1'), 'vrf_cop: enter a number greater than 0'),
+    (dict(vrf_availability_schedule=' '), 'vrf_availability_schedule: enter the name of a schedule'),
+    (dict(vrf_availability_schedule='On; 24/7'), 'vrf_availability_schedule: enter the name of a schedule'),
+    (dict(setpoint_accuracy='0'), 'setpoint_accuracy: enter a number greater than 0'),
+    (dict(category_cooling_offset='x'), "category_cooling_offset: 'x' is not a number"),
 ])
 def test_wrong_values_of_the_form(tmp_path, values, message):
     with pytest.raises(FormError, match=message):
@@ -152,6 +167,42 @@ def test_arguments_of_run_ep(tmp_path):
             forms.run_ep_arguments(dict(form, processes=processes))
     with pytest.raises(FormError, match='backend: choose one of'):
         forms.run_ep_arguments(dict(form, backend='eppy'))
+
+
+def test_arguments_of_the_size_of_the_results(tmp_path):
+    from accim.run import estimate_results_size
+
+    form = dict(forms.RUN_DEFAULTS, folder=str(tmp_path))
+
+    assert forms.results_size_arguments(form) == dict(simulate=False, only_accim_idfs=True, processes=2)
+    assert forms.results_size_arguments(dict(form, simulate=True, only_accim_idfs=False)) == dict(
+        simulate=True, only_accim_idfs=False, processes=2)
+    assert inspect.signature(estimate_results_size).parameters['simulate'].default is False
+    with pytest.raises(FormError, match='processes'):
+        forms.results_size_arguments(dict(form, processes='0'))
+
+
+def test_the_task_of_the_size_of_the_results(monkeypatch):
+    import accim.run
+    from accim.gui import tasks
+
+    table = pd.DataFrame({'idf': ['a.idf', 'b.idf'], 'simulations': [2, 2], 'total_mb': [60.0, 60.0],
+                          'total_kept_mb': [50.0, 50.0]})
+    received = []
+    monkeypatch.setattr(accim.run, 'estimate_results_size', lambda **kwargs: received.append(kwargs) or table)
+
+    result, sentence = tasks.results_size(dict(simulate=False, only_accim_idfs=True, processes=2))
+
+    assert result is table and received == [dict(simulate=False, only_accim_idfs=True, processes=2)]
+    assert sentence == ('The results of the 2 IDFs with the 2 EPWs of the folder (estimated from their outputs): '
+                        '120.0 MB, 100.0 MB after "Remove the simulation files".')
+
+
+def test_the_zones_of_the_hours_within_the_setpoints():
+    assert forms.hours_zones(' Building ') == 'building' and forms.hours_zones('all') == 'all'
+    assert forms.hours_zones('Zone1, zone2;') == ['Zone1', 'zone2']
+    with pytest.raises(FormError, match='enter building, all, or the zones'):
+        forms.hours_zones(' , ')
 
 
 def test_hints_of_the_categories_and_comfort_modes():
@@ -189,6 +240,87 @@ def test_wrong_arguments_of_a_zone(tmp_path, rows, message):
 def test_the_arguments_of_each_zone_need_temperature_setpoints(tmp_path):
     with pytest.raises(FormError, match='need the adaptive setpoint temperatures'):
         forms.add_accis_arguments(_form(tmp_path, setpoint_type='pmv', zone_arguments=[('Zone1', 'category=80')]))
+
+
+def test_the_other_arguments_of_add_accis(tmp_path):
+    arguments = forms.add_accis_arguments(_form(
+        tmp_path, vrf_availability_schedule=' Office Hours ', vrf_eer='3.2', vrf_cop='4', category_cooling_offset='0.5',
+        category_heating_offset='-0.5', setpoint_accuracy='2', debug_ems=True))
+
+    assert {name: arguments[name] for name in ('vrf_availability_schedule', 'vrf_eer', 'vrf_cop',
+                                               'category_cooling_offset', 'category_heating_offset',
+                                               'setpoint_accuracy', 'debug_ems')} == dict(
+        vrf_availability_schedule='Office Hours', vrf_eer=3.2, vrf_cop=4, category_cooling_offset=0.5,
+        category_heating_offset=-0.5, setpoint_accuracy=2, debug_ems=True)
+    # The VRF systems only with their script types
+    arguments = forms.add_accis_arguments(_form(tmp_path, script_type='ex_ac', vrf_eer='0'))
+    assert not any(name.startswith('vrf_') for name in arguments)
+
+
+def test_the_fields_of_the_table_of_the_zones():
+    fields = {'comfort_standard': '2 = INT ASHRAE55', 'category': '80', 'comfort_mode': '',
+              'hvac_mode': '0 = Full air-conditioning', 'ventilation_control': ''}
+
+    text = forms.zone_row_text(fields, ' cooling_season_start=01/06 ', 'Zone1')
+
+    assert text == 'comfort_standard=2, category=80, hvac_mode=0, cooling_season_start=01/06'
+    assert forms.split_zone_arguments(text) == (fields, 'cooling_season_start=01/06')
+    assert forms.zone_row_text({}, 'comfort_mode=3') == 'comfort_mode=3'
+    with pytest.raises(FormError, match='category is given twice'):
+        forms.zone_row_text({'category': '80'}, 'category=90')
+    with pytest.raises(FormError, match='give at least one argument'):
+        forms.zone_row_text({'category': ''}, '')
+    # The choices: the categories and comfort modes of the comfort standard of the zone, or of all of them
+    assert forms.zone_field_choices('category', '2 = INT ASHRAE55') == ['', '80', '90']
+    assert forms.zone_field_choices('comfort_mode', '22') == ['', '0']
+    assert forms.zone_field_choices('category')[:4] == ['', '1', '2', '3']
+    assert forms.zone_field_choices('comfort_standard')[:2] == ['', '0 = ESP CTE']
+    assert forms.zone_field_choices('hvac_mode') == ['', '0 = Full air-conditioning', '1 = Natural ventilation only',
+                                                     '2 = Mixed mode']
+    with pytest.raises(KeyError):
+        forms.zone_field_choices('setpoint_tolerance')
+
+
+def test_the_arguments_of_the_zones_are_checked_with_the_output_idfs(tmp_path):
+    # ASHRAE 55 has no category 3, the category of the output IDF
+    with pytest.raises(FormError, match=r'Zone1: category 3 is not a category of comfort_standard 2 \(valid: \[80, '
+                                        r'90\]\) \(in 1 output IDF, such as model\[CS_INT EN16798\[CA_3'):
+        forms.add_accis_arguments(_form(tmp_path, zone_arguments=[('Zone1', 'comfort_standard=2')]))
+    arguments = forms.add_accis_arguments(_form(tmp_path, category='1 2 3',
+                                                zone_arguments=[('Zone1', 'comfort_standard=2, category=80')]))
+    assert forms.zone_arguments_problems(arguments) == []
+    assert forms.zone_arguments_problems(forms.add_accis_arguments(_form(tmp_path))) == []
+    # The arguments of mixed mode only with vrf_mm and ex_mm
+    with pytest.raises(FormError, match='hvac_mode 2 is not valid with this script type'):
+        forms.add_accis_arguments(_form(tmp_path, script_type='vrf_ac', zone_arguments=[('Zone1', 'hvac_mode=2')]))
+    # The same problem in several output IDFs is given once
+    arguments = forms.add_accis_arguments(_form(tmp_path, setpoint_tolerance_end='0.3'))
+    problems = forms.zone_arguments_problems(dict(arguments, zone_arguments={'Zone1': {'comfort_standard': 2}}))
+    assert len(problems) == 1 and '(in 3 output IDFs, such as model[CS_INT EN16798[CA_3[CM_3' in problems[0]
+
+
+def test_the_ems_code_of_the_setpoints_of_the_form(tmp_path):
+    from accim.gui import tasks
+
+    form = _form(tmp_path, comfort_standard=[0, 2, 99], category='3 80', comfort_mode='3',
+                 zone_arguments=[('Zone1', 'comfort_standard=1, category=2'), ('Zone2', 'setpoint_tolerance=0.2')])
+
+    calls = forms.setpoint_ems_code_calls(form)
+
+    # The category and comfort mode of the form if a comfort standard has only one of them; otherwise all
+    assert [title for title, _ in calls] == [
+        '0 = ESP CTE: category (all), comfort mode (all)', '2 = INT ASHRAE55: category 80, comfort mode 3',
+        '99 = CUSTOM: category (all), comfort mode 3', 'Zone Zone1, 1 = INT EN16798: category 2, comfort mode 3']
+    kwargs = dict(calls)
+    assert kwargs['99 = CUSTOM: category (all), comfort mode 3']['custom_slope'] == 0.31
+    ashrae = kwargs['2 = INT ASHRAE55: category 80, comfort mode 3']
+    assert 'custom_slope' not in ashrae and ashrae['setpoint_tolerance'] == 0.1 and ashrae['setpoint_accuracy'] == 10000
+    text = tasks.setpoint_ems_code(calls)
+    assert all(title in text for title, _ in calls) and 'ComfStand' in text
+    assert '! No EMS code: comfort_standard 21 has no setpoints with comfort_mode 0' in tasks.setpoint_ems_code(
+        [('CHL', dict(comfort_standard=21, category=80, comfort_mode=0))])
+    with pytest.raises(FormError, match='the EMS code of the setpoints is that of the adaptive setpoint temperatures'):
+        forms.setpoint_ems_code_calls(_form(tmp_path, setpoint_type='pmv'))
 
 
 def _apmv_form(folder, **values):
@@ -235,6 +367,32 @@ def test_wrong_arguments_of_the_apmv_setpoints(tmp_path, values, message):
     (tmp_path / 'model.idf').write_text('')
     with pytest.raises(FormError, match=message):
         forms.apmv_arguments(_apmv_form(tmp_path, **values))
+
+
+def test_the_apmv_setpoints_of_each_zone(tmp_path):
+    (tmp_path / 'model.idf').write_text('')
+    rows = [('Block1:Zone1', 'pmv_cooling_setpoint=0.7, cooling_setpoint_tolerance_cooling_season=-0.2'),
+            ('Block1:Zone2', 'adaptive_coefficient_cooling=0.3')]
+
+    apmv = forms.apmv_arguments(_apmv_form(tmp_path, zone_setpoints=rows))['apmv']
+
+    # The setpoints that some zones change are dictionaries, with the value of the form for the other zones
+    assert apmv['pmv_cooling_setpoint'] == {'Block1:Zone1': 0.7} and apmv['default_pmv_cooling_setpoint'] == 0.5
+    assert apmv['cooling_setpoint_tolerance_cooling_season'] == {'Block1:Zone1': -0.2}
+    assert apmv['default_cooling_setpoint_tolerance_cooling_season'] == -0.1
+    assert apmv['adaptive_coefficient_cooling'] == {'Block1:Zone2': 0.3}
+    assert apmv['default_adaptive_coefficient_cooling'] == 0.293
+    assert apmv['pmv_heating_setpoint'] == -0.5 and 'default_pmv_heating_setpoint' not in apmv
+    fields = {'adaptive_coefficient_cooling': '', 'adaptive_coefficient_heating': '', 'pmv_cooling_setpoint': '0.7',
+              'pmv_heating_setpoint': ''}
+    text = forms.apmv_zone_row_text(fields, 'cooling_setpoint_tolerance_cooling_season=-0.2')
+    assert text == rows[0][1]
+    assert forms.split_apmv_zone_setpoints(text) == (fields, 'cooling_setpoint_tolerance_cooling_season=-0.2')
+    with pytest.raises(FormError, match="'activity_level' is not an aPMV setpoint of a zone"):
+        forms.apmv_arguments(_apmv_form(tmp_path, zone_setpoints=[('Z', 'activity_level=100')]))
+    with pytest.raises(FormError, match="the zone 'z' is given twice"):
+        forms.apmv_arguments(_apmv_form(tmp_path, zone_setpoints=[('Z', 'pmv_cooling_setpoint=1'),
+                                                                  ('z', 'pmv_cooling_setpoint=1')]))
 
 
 def test_arguments_of_rename_epw_files(tmp_path):
@@ -428,6 +586,39 @@ def test_the_apmv_setpoints_of_the_form_on_the_sample_model(tmp_path, monkeypatc
     assert tasks.apply_apmv(forms.apmv_arguments(_apmv_form(tmp_path))) == 'model_aPMV.idf'
     text = (tmp_path / 'model_aPMV.idf').read_text(encoding='latin-1')
     assert 'apply_aPMV_' in text and 'set_zone_input_data_' in text
+
+
+def test_the_zones_of_the_apmv_setpoints_get_their_keys_in_the_model(monkeypatch):
+    from accim.gui import tasks
+    from accim.sim import targets
+
+    monkeypatch.setattr(targets, 'resolve_targets', lambda building: [
+        SimpleNamespace(zone_name='Zone1', df_key='Zone1'), SimpleNamespace(zone_name='Zone2', df_key='Space2 People2')])
+
+    # By the name of the zone or its key, in any case
+    assert tasks.apmv_target_keys('BUILDING', {'pmv_cooling_setpoint': {'zone1': 0.7, 'ZONE2': 0.6},
+                                               'adaptive_coefficient_cooling': {'space2 people2': 0.3}}) == {
+        'pmv_cooling_setpoint': {'Zone1': 0.7, 'Space2 People2': 0.6},
+        'adaptive_coefficient_cooling': {'Space2 People2': 0.3}}
+    with pytest.raises(ValueError, match='Zone3 is not an occupied zone of model.idf: they are Zone1, Zone2'):
+        tasks.apmv_target_keys('BUILDING', {'pmv_cooling_setpoint': {'Zone3': 0.7}}, 'model.idf')
+
+
+@needs_energyplus
+def test_the_apmv_setpoints_of_each_zone_on_the_sample_model(tmp_path, monkeypatch):
+    import re
+
+    from accim.gui import tasks
+
+    shutil.copy(SAMPLE_IDF, tmp_path / 'model.idf')
+    monkeypatch.chdir(tmp_path)
+
+    tasks.apply_apmv(forms.apmv_arguments(_apmv_form(tmp_path, zone_setpoints=[('block1:zone1',
+                                                                                'pmv_cooling_setpoint=0.7')])))
+
+    text = (tmp_path / 'model_aPMV.idf').read_text(encoding='latin-1')
+    assert sorted(re.findall(r'set pmv_cooling_sp_(\w+) = ([-\d.]+)', text)) == [('Block1_Zone1', '0.7'),
+                                                                                  ('Block1_Zone2', '0.5')]
 
 
 def test_the_task_of_rename_epw_files(tmp_path, monkeypatch):
@@ -766,6 +957,171 @@ def test_the_table_of_the_arguments_of_each_zone(app, tmp_path):
     assert tab.find_zones() is False and app.errors[-1] == 'Select an input IDF first.'
 
 
+def test_the_fields_of_the_table_of_the_zones_in_the_window(app, tmp_path):
+    (tmp_path / 'model.idf').write_text('')
+    app.folder.set(str(tmp_path))
+    tab = app.add_accis
+    table = tab.zone_table
+
+    table.zone.set('Block1:Zone1')
+    table.vars['comfort_standard'].set('2 = INT ASHRAE55')
+    # The categories and comfort modes are those of the comfort standard of the zone
+    assert list(table.fields['category'].cget('values')) == ['', '80', '90']
+    table.vars['category'].set('80')
+    table.vars['comfort_mode'].set('3')
+    table.other.set('setpoint_tolerance=0.25')
+    assert tab.set_zone()
+    assert tab.zone_rows() == [('Block1:Zone1', 'comfort_standard=2, category=80, comfort_mode=3, '
+                                                'setpoint_tolerance=0.25')]
+    # Selecting a row fills the fields
+    table.clear_fields()
+    tab.zone_tree.selection_set(tab.zone_tree.get_children()[0])
+    table._selected()
+    assert table.vars['comfort_standard'].get() == '2 = INT ASHRAE55' and table.vars['category'].get() == '80'
+    assert table.other.get() == 'setpoint_tolerance=0.25'
+    table.other.set('category=90')
+    assert not tab.set_zone() and 'category is given twice' in app.errors[-1]
+    # The HVAC mode and the ventilation control only in mixed mode, and they are not given otherwise
+    tab.vars['script_type'].set('vrf_ac')
+    assert table.fields['hvac_mode'].instate(['disabled']) and not table.fields['category'].instate(['disabled'])
+    table.other.set('')
+    table.vars['hvac_mode'].set('2 = Mixed mode')
+    assert tab.set_zone() and 'hvac_mode' not in tab.zone_rows()[0][1]
+    # Preview checks the zones with the output IDFs
+    tab.vars['script_type'].set('vrf_mm')
+    table.set_rows([('Block1:Zone1', 'comfort_standard=2')])
+    tab.preview()
+    assert 'category 3 is not a category of comfort_standard 2' in app.errors[-1]
+    # The button of the comfort models shows the table of the zones
+    tab.zone_button.invoke()
+
+
+def test_add_accis_asks_after_the_estimated_size_of_the_results(app, tmp_path, monkeypatch):
+    from accim.sim import accis
+
+    (tmp_path / 'model.idf').write_text('')
+    app.folder.set(str(tmp_path))
+    _synchronous(app)
+    received, questions, answers = [], [], [True, False]
+
+    class FakeAddAccis:
+        def __init__(self, **kwargs):
+            received.append(kwargs)
+            print('The list of output IDFs is going to be:\nmodel[CS_INT EN16798.idf')
+            print('And the total number of output IDFs is going to be 1')
+            print('The estimated size of the results of each simulation of the output IDFs, from their outputs '
+                  '(without simulating them):\n    model (1 output IDF): 30.0 MB per simulation')
+            written = input('Do you still want to run ACCIS? [y/n]: ') == 'y'
+            self.output_idfs = {'model[CS_INT EN16798.idf': 'path'} if written else {}
+
+    monkeypatch.setattr(accis, 'AddAccis', FakeAddAccis)
+    app.ask_yes_no = lambda title, message: questions.append(message) or answers.pop(0)
+
+    assert app.add_accis.add()
+
+    # The window asks after AddAccis has printed the estimated size of the results
+    assert received[0]['confirm'] is None and len(questions) == 1
+    assert questions[0].startswith('And the total number of output IDFs is going to be 1\nThe estimated size')
+    assert '30.0 MB per simulation' in questions[0]
+    assert questions[0].endswith(f'Write the output IDFs in {tmp_path}?')
+    assert app.infos == ['1 output IDFs have been written.']
+    # The answer no writes nothing
+    assert app.add_accis.add()
+    log = app.log.get('1.0', 'end')
+    assert len(app.infos) == 1 and 'No output IDF has been written.' in log
+    assert 'Do you still want to run ACCIS? [y/n]: n' in log
+
+
+def test_a_task_asks_in_the_window_and_waits_for_the_answer(app):
+    import threading
+
+    app.answers = [True]
+    results = []
+    thread = threading.Thread(target=lambda: results.append(app.ask_from_task('Question', 'Go on?')))
+    thread.start()
+    for _ in range(500):
+        app.process_messages()
+        thread.join(0.01)
+        if not thread.is_alive():
+            break
+
+    assert results == [True] and app.answers == []
+
+
+def test_the_question_before_writing_the_output_idfs():
+    pytest.importorskip('tkinter')
+    from accim.gui.app import _write_question
+
+    printed = ('Starting with file:\nAnd the total number of output IDFs is going to be 2\nThe estimated size:\n'
+               '    m (2 output IDFs): 30 MB\n')
+    assert _write_question(printed, 'C:/work', 2) == ('And the total number of output IDFs is going to be 2\nThe '
+                                                     'estimated size:\n    m (2 output IDFs): 30 MB\n\nWrite the '
+                                                     'output IDFs in C:/work?')
+    assert _write_question('', 'C:/work', 3) == ('AddAccis is going to write 3 output IDFs.\n\nWrite the output IDFs '
+                                                 'in C:/work?')
+    many = 'And the total number of output IDFs is going to be 1\n' + '\n'.join(f'line {i}' for i in range(50))
+    assert _write_question(many, 'C:/work', 1).splitlines()[30] == '... (see the log)'
+
+
+def test_the_ems_code_of_the_setpoints_in_a_window(app, tmp_path):
+    app.folder.set(str(tmp_path))
+    _synchronous(app)
+    tab = app.add_accis
+
+    assert tab.show_ems_code()
+
+    window = tab.ems_code_window
+    assert '1 = INT EN16798: category 3, comfort mode 3' in window.text.get('1.0', 'end')
+    assert window.save(str(tmp_path / 'code.txt'))
+    assert (tmp_path / 'code.txt').read_text(encoding='utf-8') == window.content and 'ComfStand' in window.content
+    window.window.destroy()
+    tab.vars['setpoint_type'].set('pmv')
+    assert tab.ems_code_button.instate(['disabled'])
+    assert tab.show_ems_code() is False and 'adaptive setpoint temperatures' in app.errors[-1]
+
+
+def test_the_size_of_the_results_in_the_window(app, tmp_path, monkeypatch):
+    from accim.gui import tasks
+
+    app.folder.set(str(tmp_path))
+    _synchronous(app)
+    received = []
+    monkeypatch.setattr(tasks, 'results_size', lambda arguments: received.append(arguments) or (None, 'About 30 MB.'))
+    app.run.vars['simulate'].set(True)
+
+    assert app.run.estimate_size()
+
+    assert received == [dict(simulate=True, only_accim_idfs=True, processes=2)]
+    assert app.run.size.get() == 'About 30 MB.'
+    # Another folder or other IDFs forget it
+    app.folder_changed()
+    assert app.run.size.get() == ''
+
+
+def test_the_hours_within_the_setpoints_of_some_zones(app, tmp_path):
+    summary = _hours_summary(tmp_path / 'hours')
+
+    app.hours.zones.set('zone1')
+    app.hours.show(summary, 75)
+
+    assert app.hours.result.get().startswith('1 of the 2 simulations reach 75') and '(zone1)' in app.hours.result.get()
+    assert app.hours.shown['zones'] == ['zone1']
+    app.hours.zones.set(' , ')
+    app.hours.show(summary, 75)
+    assert 'enter building, all, or the zones' in app.errors[-1]
+
+
+def test_the_window_explains_the_energyplus_version_of_eppy(app, tmp_path):
+    def task():
+        raise ValueError('eppy is already using the IDD ... Use a new Python session for the models of other '
+                         'EnergyPlus versions.')
+
+    app.execute('Task', str(tmp_path), task)
+    app.process_messages()
+
+    assert 'save the session, close the window, open it again and open the session' in app.errors[-1]
+
+
 def test_the_tab_of_the_apmv_setpoints(app, tmp_path):
     (tmp_path / 'model.idf').write_text('')
     app.folder.set(str(tmp_path))
@@ -778,6 +1134,21 @@ def test_the_tab_of_the_apmv_setpoints(app, tmp_path):
     assert tab.supply_air.instate(['disabled'])
     tab.vars['pmv_cooling_setpoint'].set('x')
     assert tab.apply() is False and "'x' is not a number" in app.errors[-1]
+    tab.vars['pmv_cooling_setpoint'].set('0.5')
+    # The setpoints of some zones
+    tab.zone_table.zone.set('Block1:Zone1')
+    tab.zone_table.vars['pmv_cooling_setpoint'].set('0.7')
+    tab.zone_table.other.set('cooling_setpoint_tolerance_cooling_season=-0.2')
+    assert tab.zone_table.set_zone()
+    assert tab.state()['zone_setpoints'] == [('Block1:Zone1', 'pmv_cooling_setpoint=0.7, '
+                                                              'cooling_setpoint_tolerance_cooling_season=-0.2')]
+    arguments = forms.apmv_arguments(tab.form())
+    assert arguments['apmv']['pmv_cooling_setpoint'] == {'Block1:Zone1': 0.7}
+    assert arguments['apmv']['default_pmv_cooling_setpoint'] == 0.5
+    tab.zone_table.other.set('activity_level=100')
+    assert not tab.zone_table.set_zone() and "'activity_level' is not an aPMV setpoint of a zone" in app.errors[-1]
+    tab.vars['idf'].set('')
+    assert tab.find_zones() is False and app.errors[-1] == 'Choose the input IDF first.'
 
 
 def test_the_tab_of_rename_epw_files(app, tmp_path, monkeypatch):
@@ -933,6 +1304,9 @@ def test_a_session_of_the_window_is_saved_and_opened_again(app, tmp_path, monkey
     assert add.set_zone()
     app.apmv.vars['output_idf'].set('model_aPMV_2.idf')
     app.apmv.frequencies['monthly'].set(True)
+    app.apmv.zone_table.zone.set('Block1:Zone1')
+    app.apmv.zone_table.vars['pmv_cooling_setpoint'].set('0.7')
+    assert app.apmv.zone_table.set_zone()
     rename.epw_list.selection_clear(0, 'end')
     rename.epw_list.selection_set(1)
     rename.cities.insert('1.0', 'b = Sevilla')
@@ -972,12 +1346,14 @@ def test_a_session_of_the_window_is_saved_and_opened_again(app, tmp_path, monkey
     forms_json = readable['gui_forms']['value']
     assert forms_json['folder'] == str(folder) and forms_json['run']['processes'] == '3'
     assert forms_json['add_accis']['zone_arguments'] == [['Block1:Zone2', 'comfort_standard=2, category=80']]
+    assert forms_json['apmv']['zone_setpoints'] == [['Block1:Zone1', 'pmv_cooling_setpoint=0.7']]
     assert readable['parametric_results']['value']['data'] == {'custom_slope': [0.3, 0.4],
                                                                'Heating:Electricity': [1.0, 2.0]}
 
     # Another session: other values, another folder and no results; and an EPW is no longer in the folder
     add.vars['script_type'].set('vrf_ac')
     add.zone_tree.delete(*add.zone_tree.get_children())
+    app.apmv.zone_table.set_rows([])
     rename.cities.delete('1.0', 'end')
     app.run.vars['processes'].set('1')
     hours.clear()

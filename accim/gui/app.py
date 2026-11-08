@@ -3,14 +3,16 @@
 # Distributed under the GNU General Public License v3 or later.
 
 """The graphical user interface of accim, with tkinter: add the ACCIS (with the arguments of each zone) or the aPMV
-setpoints to IDF files, rename the EPW files, run the simulations, measure the occupied hours within the setpoints,
-make tables and figures of the results with ``Table``, and run a basic parametric study.
+setpoints (with the setpoints of each zone) to IDF files, read the EMS code of the setpoints, rename the EPW files,
+estimate the size of the results and run the simulations, measure the occupied hours within the setpoints, make tables
+and figures of the results with ``Table``, and run a basic parametric study.
 
 Open it with ``accim-gui`` (a command installed with accim) or ``python -m accim.gui``. Each task runs in a thread,
-one at a time, in the working folder, and what it prints appears in the log at the bottom of the window. The
-values of the forms are checked by :mod:`accim.gui.forms`, and the tasks run by :mod:`accim.gui.tasks`. The menu
-*Session* saves the values of the forms and the results of the tabs in a session file (a pickle file, with a JSON file
-to read it; see :mod:`accim.utils.session`), and opens it again to resume the session.
+one at a time, in the working folder, and what it prints appears in the log at the bottom of the window; when a task
+asks a question that the window knows (such as the confirmation of AddAccis after the estimated size of the results),
+the window asks it in a dialog. The values of the forms are checked by :mod:`accim.gui.forms`, and the tasks run by
+:mod:`accim.gui.tasks`. The menu *Session* saves the values of the forms and the results of the tabs in a session file
+(a pickle file, with a JSON file to read it; see :mod:`accim.utils.session`), and opens it again to resume the session.
 """
 
 import builtins
@@ -24,7 +26,7 @@ import tkinter as tk
 import traceback
 from tkinter import filedialog, messagebox, ttk
 from tkinter.scrolledtext import ScrolledText
-from typing import Any, Callable, Dict, List, Mapping, Optional, Tuple
+from typing import Any, Callable, Dict, Iterable, List, Mapping, Optional, Tuple
 
 from accim import __version__
 from accim.gui import forms, tasks
@@ -37,34 +39,48 @@ MAX_ROWS_SHOWN = 500
 #: The file types of the dialogs of the session files and of the files of the tables
 SESSION_FILE_TYPES = [('Sessions of accim (pickle files)', '*.pkl'), ('All files', '*.*')]
 TABLE_FILE_TYPES = [('Tables of accim (pickle files)', '*.pkl'), ('All files', '*.*')]
+#: The beginning of the question of AddAccis before it writes the output IDFs, which the window asks in a dialog
+ADD_ACCIS_QUESTION = 'Do you still want to run ACCIS?'
+#: The lines of the output of AddAccis that the dialog of its question shows, at most
+MAX_QUESTION_LINES = 30
 
 
 class _QueueWriter:
-    """A text stream that puts what is written into a queue (the output of a task, for the log)."""
+    """A text stream that puts what is written into a queue (the output of a task, for the log), and keeps it
+    (:meth:`text`), for the questions that the window asks during the task."""
 
     def __init__(self, messages: queue.Queue):
         self.messages = messages
+        self._written: List[str] = []
 
     def write(self, text: str) -> int:
         if text:
             self.messages.put(('text', text))
+            self._written.append(text)
         return len(text)
 
     def flush(self) -> None:
         pass
 
+    def text(self) -> str:
+        """What the task has printed."""
+        return ''.join(self._written)
+
 
 @contextlib.contextmanager
-def _no_prompts(answers: Optional[Mapping[str, str]] = None):
+def _no_prompts(answers: Optional[Mapping[str, Any]] = None, printed: Optional[Callable[[], str]] = None):
     """The interface cannot answer the questions of the prompt: ``input()`` raises an error instead of waiting, except
     for the questions that begin with a key of ``answers``, which get its value (printed after the question, as if it
-    was typed)."""
+    was typed). A value can also be a function of the question and of what the task has printed (``printed()``) that
+    returns the answer, for instance after asking the user in a dialog (:meth:`AccimApp.ask_from_task`)."""
     original = builtins.input
 
     def refuse(prompt: str = '') -> str:
         question = str(prompt).strip()
         for beginning, answer in (answers or {}).items():
             if question.startswith(beginning):
+                if callable(answer):
+                    answer = answer(question, printed() if printed is not None else '')
                 print(f'{prompt}{answer}')
                 return answer
         raise RuntimeError(f'accim asked in the prompt {question!r}, which the graphical interface cannot answer: '
@@ -75,6 +91,17 @@ def _no_prompts(answers: Optional[Mapping[str, str]] = None):
         yield
     finally:
         builtins.input = original
+
+
+def _write_question(printed: str, folder: str, total: int) -> str:
+    """The question of the window before AddAccis writes the output IDFs: their number and the estimated size of the
+    results of their simulations, as AddAccis has printed them (from 'And the total number of output IDFs' on)."""
+    start = printed.rfind('And the total number of output IDFs')
+    lines = [line for line in printed[start:].strip().splitlines() if line.strip()] if start >= 0 else []
+    if len(lines) > MAX_QUESTION_LINES:
+        lines = lines[:MAX_QUESTION_LINES] + ['... (see the log)']
+    summary = '\n'.join(lines) if lines else f'AddAccis is going to write {total} output IDFs.'
+    return f'{summary}\n\nWrite the output IDFs in {folder}?'
 
 
 def _open_file(path: str) -> None:
@@ -109,15 +136,35 @@ class _ScrollableFrame(ttk.Frame):
     def _wheel(self, event) -> None:
         self.canvas.yview_scroll(int(-event.delta / 120), 'units')
 
+    def see(self, widget) -> None:
+        """Scroll the content so that a widget of it is at the top."""
+        self.update_idletasks()
+        height = self.content.winfo_height()
+        if height > 0:
+            offset = widget.winfo_rooty() - self.content.winfo_rooty()
+            self.canvas.yview_moveto(max(0.0, offset / height))
+
 
 class _Tab:
-    """A tab of the notebook; the folder is that of the whole window."""
+    """A tab of the notebook; the folder is that of the whole window.
 
-    def __init__(self, app: 'AccimApp', title: str, scrollable: bool = False):
+    :param scrollable: True for a tab whose content scrolls vertically (``self.scroll``).
+    :param bar: True for a bar of buttons below the content that scrolls, always visible (``self.bar``).
+    """
+
+    def __init__(self, app: 'AccimApp', title: str, scrollable: bool = False, bar: bool = False):
         self.app = app
+        self.scroll: Optional[_ScrollableFrame] = None
+        self.bar: Optional[ttk.Frame] = None
         if scrollable:
-            self.frame = _ScrollableFrame(app.notebook)
-            self.body = self.frame.content
+            self.frame = ttk.Frame(app.notebook)
+            if bar:
+                self.bar = ttk.Frame(self.frame, padding=(8, 4, 8, 6))
+                self.bar.pack(side='bottom', fill='x')
+                ttk.Separator(self.frame, orient='horizontal').pack(side='bottom', fill='x')
+            self.scroll = _ScrollableFrame(self.frame)
+            self.scroll.pack(fill='both', expand=True)
+            self.body = self.scroll.content
         else:
             self.frame = ttk.Frame(app.notebook, padding=8)
             self.body = self.frame
@@ -334,24 +381,212 @@ def _export_dataframe(app: 'AccimApp', df, folder: str, name: str) -> None:
     app.log_text(f'\nThe table has been saved in {path}\n')
 
 
+class _ZoneTable:
+    """The table of the arguments of some zones of a tab: a row for each zone, with the text of its arguments (pairs
+    name=value), and the fields to edit them: the zone (one of the occupied zones of the input IDF, which *Find the
+    occupied zones* lists, or typed), a field for each main argument (empty: the value of the form) and the other
+    arguments, as pairs name=value. Selecting a row fills the fields with its arguments.
+
+    :param frame: The frame of the table, placed in the tab.
+    :param fields: The fields of the main arguments: (argument, label, choices; None for a text field). The fields
+        with choices can also be typed.
+    :param compose: The text of a row from the values of the fields, the other arguments and the zone, checked
+        (:func:`accim.gui.forms.zone_row_text`).
+    :param split: The values of the fields and the other arguments of the text of a row
+        (:func:`accim.gui.forms.split_zone_arguments`).
+    :param find_zones: What *Find the occupied zones* does.
+    :param title: The title of the dialogs of the errors.
+    :param name: The name of the argument of the table, for the messages ('zone_arguments').
+    :param hint: The explanation below the fields.
+    :param what: What the arguments are, in the heading of the table and the label of the other ones ('arguments').
+    """
+
+    def __init__(self, app: 'AccimApp', frame, fields, compose: Callable, split: Callable,
+                 find_zones: Callable[[], Any], title: str, name: str, hint: str, what: str = 'arguments'):
+        self.app = app
+        self.compose, self.split, self.title, self.name = compose, split, title, name
+        self._disabled: set = set()
+        frame.columnconfigure(1, weight=1)
+        self.tree = ttk.Treeview(frame, columns=('zone', 'arguments'), show='headings', height=4)
+        self.tree.heading('zone', text='Zone')
+        self.tree.heading('arguments', text=what.capitalize())
+        self.tree.column('zone', width=220, stretch=False)
+        self.tree.column('arguments', width=700)
+        self.tree.grid(row=0, column=0, columnspan=3, sticky='ew')
+        self.tree.bind('<<TreeviewSelect>>', lambda event: self._selected())
+        self.zone = tk.StringVar(value='')
+        ttk.Label(frame, text='Zone:').grid(row=1, column=0, sticky='w', padx=(0, 6), pady=(6, 2))
+        self.zone_combo = ttk.Combobox(frame, textvariable=self.zone, values=[], width=40)
+        self.zone_combo.grid(row=1, column=1, sticky='w', pady=(6, 2))
+        self.find_button = ttk.Button(frame, text='Find the occupied zones', command=find_zones)
+        self.find_button.grid(row=1, column=2, sticky='e', padx=(6, 0), pady=(6, 2))
+        grid = ttk.Frame(frame)
+        grid.grid(row=2, column=0, columnspan=3, sticky='ew')
+        grid.columnconfigure(1, weight=1)
+        grid.columnconfigure(3, weight=1)
+        self.vars: Dict[str, tk.StringVar] = {}
+        self.fields: Dict[str, Any] = {}
+        for index, (argument, label, choices) in enumerate(fields):
+            row, column = divmod(index, 2)
+            ttk.Label(grid, text=label).grid(row=row, column=2 * column, sticky='w',
+                                             padx=(0 if column == 0 else 18, 6), pady=2)
+            variable = tk.StringVar(value='')
+            if choices is None:
+                widget = ttk.Entry(grid, textvariable=variable, width=14)
+            else:
+                widget = ttk.Combobox(grid, textvariable=variable, values=list(choices), width=36)
+            widget.grid(row=row, column=2 * column + 1, sticky='ew', pady=2)
+            self.vars[argument] = variable
+            self.fields[argument] = widget
+        self.other = tk.StringVar(value='')
+        ttk.Label(frame, text=f'Other {what}:').grid(row=3, column=0, sticky='w', padx=(0, 6), pady=2)
+        self.other_entry = ttk.Entry(frame, textvariable=self.other)
+        self.other_entry.grid(row=3, column=1, columnspan=2, sticky='ew', pady=2)
+        ttk.Label(frame, text=hint, wraplength=1050, foreground='gray25').grid(row=4, column=0, columnspan=3,
+                                                                              sticky='w')
+        buttons = ttk.Frame(frame)
+        buttons.grid(row=5, column=0, columnspan=3, sticky='w', pady=(4, 0))
+        self.set_button = ttk.Button(buttons, text='Set the zone', command=self.set_zone)
+        self.set_button.pack(side='left')
+        self.remove_button = ttk.Button(buttons, text='Remove the selected zones', command=self.remove_zones)
+        self.remove_button.pack(side='left', padx=6)
+        self.clear_button = ttk.Button(buttons, text='Clear the fields', command=self.clear_fields)
+        self.clear_button.pack(side='left')
+
+    def rows(self) -> List[Tuple[str, str]]:
+        """The rows of the table: (zone, text of its arguments)."""
+        return [tuple(str(value) for value in self.tree.item(item, 'values')) for item in self.tree.get_children()]
+
+    def set_rows(self, rows) -> None:
+        _set_rows(self.tree, rows)
+
+    def values(self) -> Dict[str, str]:
+        """The values of the fields that are enabled."""
+        return {argument: variable.get() for argument, variable in self.vars.items() if argument not in self._disabled}
+
+    def _selected(self) -> None:
+        """Fill the fields with the arguments of the selected row."""
+        selection = self.tree.selection()
+        if not selection:
+            return
+        zone, text = (str(value) for value in self.tree.item(selection[0], 'values'))
+        self.zone.set(zone)
+        try:
+            fields, other = self.split(text, zone)
+        except forms.FormError:
+            fields, other = {}, text
+        for argument, variable in self.vars.items():
+            variable.set(fields.get(argument, ''))
+        self.other.set(other)
+
+    def set_zone(self) -> bool:
+        """Add the zone of the fields to the table, or replace its arguments."""
+        zone = self.zone.get().strip()
+        try:
+            if not zone:
+                raise forms.FormError(f'{self.name}: choose or enter the zone.')
+            text = self.compose(self.values(), self.other.get(), zone)
+        except forms.FormError as error:
+            self.app.show_error(self.title, str(error))
+            return False
+        for item in self.tree.get_children():
+            if str(self.tree.item(item, 'values')[0]).upper() == zone.upper():
+                self.tree.item(item, values=(zone, text))
+                return True
+        self.tree.insert('', 'end', values=(zone, text))
+        return True
+
+    def remove_zones(self) -> None:
+        for item in self.tree.selection():
+            self.tree.delete(item)
+
+    def clear_fields(self) -> None:
+        for variable in self.vars.values():
+            variable.set('')
+        self.other.set('')
+
+    def set_zones(self, zones: List[str]) -> None:
+        """The occupied zones, as the choices of the field of the zone."""
+        self.zone_combo.configure(values=list(zones))
+        if zones and not self.zone.get():
+            self.zone.set(zones[0])
+
+    def set_state(self, enabled: bool, disabled: Iterable[str] = ()) -> None:
+        """Enable the table and its fields (except those of ``disabled``, which are not given), or disable them. The
+        zone and the fields with choices can also be typed, so they are not read-only."""
+        self._disabled = set(disabled) if enabled else set(self.fields)
+        for argument, widget in self.fields.items():
+            on = argument not in self._disabled
+            if isinstance(widget, ttk.Combobox):
+                widget.configure(state='normal' if on else 'disabled')
+            else:
+                widget.state(['!disabled'] if on else ['disabled'])
+        self.zone_combo.configure(state='normal' if enabled else 'disabled')
+        _set_state([self.find_button, self.other_entry, self.set_button, self.remove_button, self.clear_button],
+                   enabled)
+
+
+class _TextWindow:
+    """A window with a text that can be saved in a file (the EMS code of the setpoints)."""
+
+    def __init__(self, app: 'AccimApp', title: str, text: str, folder: str, filename: str):
+        self.app = app
+        self.content, self.folder, self.filename = text, folder, filename
+        self.window = tk.Toplevel(app.root)
+        self.window.title(title)
+        self.window.geometry('1000x700')
+        buttons = ttk.Frame(self.window, padding=6)
+        buttons.pack(side='bottom', fill='x')
+        ttk.Button(buttons, text='Save as...', command=self.save).pack(side='left')
+        ttk.Button(buttons, text='Close', command=self.window.destroy).pack(side='right')
+        frame = ttk.Frame(self.window)
+        frame.pack(fill='both', expand=True)
+        frame.columnconfigure(0, weight=1)
+        frame.rowconfigure(0, weight=1)
+        self.text = tk.Text(frame, wrap='none', font=('Consolas', 9))
+        vertical = ttk.Scrollbar(frame, orient='vertical', command=self.text.yview)
+        horizontal = ttk.Scrollbar(frame, orient='horizontal', command=self.text.xview)
+        self.text.configure(yscrollcommand=vertical.set, xscrollcommand=horizontal.set)
+        self.text.grid(row=0, column=0, sticky='nsew')
+        vertical.grid(row=0, column=1, sticky='ns')
+        horizontal.grid(row=1, column=0, sticky='ew')
+        self.text.insert('1.0', text)
+        self.text.configure(state='disabled')
+
+    def save(self, path: Optional[str] = None) -> bool:
+        """Save the text in a file (chosen in a dialog if ``path`` is None)."""
+        if path is None:
+            path = filedialog.asksaveasfilename(parent=self.window, defaultextension='.txt', initialdir=self.folder,
+                                                initialfile=self.filename,
+                                                filetypes=[('Text files', '*.txt'), ('All files', '*.*')])
+            if not path:
+                return False
+        with open(path, 'w', encoding='utf-8') as file:
+            file.write(self.content)
+        self.app.log_text(f'\nThe text has been saved in {path}\n')
+        return True
+
+
 class AddAccisTab(_Tab):
     """Add the ACCIS to the IDF files of a folder (:class:`accim.sim.accis.AddAccis`)."""
 
     def __init__(self, app: 'AccimApp'):
-        super().__init__(app, '1. Add the ACCIS', scrollable=True)
+        super().__init__(app, '1. Add the ACCIS', scrollable=True, bar=True)
         defaults = forms.ADD_ACCIS_DEFAULTS
         body = self.body
         body.columnconfigure(0, weight=1)
         body.columnconfigure(1, weight=1)
         self.vars: Dict[str, tk.Variable] = {}
-        for name in ('script_type', 'supply_air_temp_input_method', 'setpoint_type', 'energyplus_version',
-                     'output_type', 'category', 'comfort_mode', 'cooling_season_start', 'cooling_season_end',
+        for name in ('script_type', 'supply_air_temp_input_method', 'vrf_availability_schedule', 'vrf_eer', 'vrf_cop',
+                     'setpoint_type', 'energyplus_version', 'output_type', 'category', 'comfort_mode',
+                     'category_cooling_offset', 'category_heating_offset', 'setpoint_accuracy',
+                     'cooling_season_start', 'cooling_season_end',
                      'ventilation_setpoint_offset', 'min_outdoor_temp_offset', 'max_wind_speed',
                      'opening_factor_max_temp_diff', 'opening_factor_min_temp_diff', 'min_opening_factor',
                      'setpoint_tolerance_start', 'setpoint_tolerance_end', 'setpoint_tolerance_step', 'name_suffix',
                      *forms.CUSTOM_MODEL_FIELDS):
             self.vars[name] = tk.StringVar(value=defaults[name])
-        for name in ('keep_existing_outputs', 'add_building_averages', *forms.EXISTING_HVAC_OPTIONS):
+        for name in ('keep_existing_outputs', 'add_building_averages', 'debug_ems', *forms.EXISTING_HVAC_OPTIONS):
             self.vars[name] = tk.BooleanVar(value=defaults[name])
         self.vars['existing_hvac_availability_schedule'] = tk.StringVar(
             value=defaults['existing_hvac_availability_schedule'])
@@ -361,23 +596,26 @@ class AddAccisTab(_Tab):
         self.ventilation_controls = {c: tk.BooleanVar(value=c in defaults['ventilation_control'])
                                      for c in forms.VENTILATION_CONTROLS}
         self.standards = forms.comfort_standard_choices()
+        #: The window of the last EMS code of the setpoints shown
+        self.ems_code_window: Optional[_TextWindow] = None
 
         self._folder_row(0, 'Working folder (input IDFs):', refresh=True)
         self._idf_frame(body).grid(row=1, column=0, columnspan=2, sticky='ew', pady=4)
         self._model_frame(body).grid(row=2, column=0, sticky='nsew', padx=(0, 6), pady=4)
         self._comfort_frame(body).grid(row=2, column=1, sticky='nsew', pady=4)
-        self._mixed_mode_frame(body).grid(row=3, column=0, sticky='nsew', padx=(0, 6), pady=4)
-        self._custom_frame(body).grid(row=3, column=1, sticky='nsew', pady=4)
-        self._existing_hvac_frame(body).grid(row=4, column=0, columnspan=2, sticky='ew', pady=4)
-        self._tolerance_frame(body).grid(row=5, column=0, columnspan=2, sticky='ew', pady=4)
-        self._zone_frame(body).grid(row=6, column=0, columnspan=2, sticky='ew', pady=4)
-        buttons = ttk.Frame(body)
-        buttons.grid(row=7, column=0, columnspan=2, sticky='ew', pady=(6, 0))
-        ttk.Button(buttons, text='Preview', command=self.preview).pack(side='left')
-        self.add_button = ttk.Button(buttons, text='Add the ACCIS', command=self.add)
+        self.zone_frame = self._zone_frame(body)
+        self.zone_frame.grid(row=3, column=0, columnspan=2, sticky='ew', pady=4)
+        self._mixed_mode_frame(body).grid(row=4, column=0, sticky='nsew', padx=(0, 6), pady=4)
+        self._custom_frame(body).grid(row=4, column=1, sticky='nsew', pady=4)
+        self._existing_hvac_frame(body).grid(row=5, column=0, columnspan=2, sticky='ew', pady=4)
+        self._tolerance_frame(body).grid(row=6, column=0, columnspan=2, sticky='ew', pady=4)
+        ttk.Button(self.bar, text='Preview', command=self.preview).pack(side='left')
+        self.ems_code_button = ttk.Button(self.bar, text='EMS code of the setpoints...', command=self.show_ems_code)
+        self.ems_code_button.pack(side='left', padx=(6, 0))
+        self.add_button = ttk.Button(self.bar, text='Add the ACCIS', command=self.add)
         self.add_button.pack(side='left', padx=6)
         self.count = tk.StringVar(value='')
-        ttk.Label(buttons, textvariable=self.count).pack(side='left', padx=6)
+        ttk.Label(self.bar, textvariable=self.count).pack(side='left', padx=6)
         self.vars['script_type'].trace_add('write', lambda *args: self.update_state())
         self.vars['setpoint_type'].trace_add('write', lambda *args: self.update_state())
         self.update_state()
@@ -394,27 +632,46 @@ class AddAccisTab(_Tab):
         self.script_description.grid(row=1, column=0, columnspan=2, sticky='w', pady=(0, 4))
         self.supply_air = _grid_combo(frame, 2, 'Supply air temperature input:',
                                       self.vars['supply_air_temp_input_method'], forms.SUPPLY_AIR_TEMP_INPUT_METHODS)
-        _grid_combo(frame, 3, 'Setpoint type:', self.vars['setpoint_type'], forms.SETPOINT_TYPES)
-        _grid_combo(frame, 4, 'EnergyPlus version:', self.vars['energyplus_version'], forms.ENERGYPLUS_VERSIONS)
-        _grid_combo(frame, 5, 'Outputs:', self.vars['output_type'], forms.OUTPUT_TYPES)
-        ttk.Label(frame, text='Output frequencies:').grid(row=6, column=0, sticky='nw', pady=2)
+        ttk.Label(frame, text='Availability schedule of the VRF systems:').grid(row=3, column=0, sticky='w',
+                                                                                 padx=(0, 6), pady=2)
+        # Any schedule of the model can be typed, so the field is not read-only
+        self.vrf_schedule_combo = ttk.Combobox(frame, textvariable=self.vars['vrf_availability_schedule'],
+                                               values=list(forms.VRF_AVAILABILITY), width=24)
+        self.vrf_schedule_combo.grid(row=3, column=1, sticky='ew', pady=2)
+        efficiency = ttk.Frame(frame)
+        efficiency.grid(row=4, column=1, sticky='w')
+        ttk.Label(frame, text='Efficiency of the VRF systems:').grid(row=4, column=0, sticky='w', padx=(0, 6), pady=2)
+        self.vrf_widgets = [_grid_entry(efficiency, 0, 'EER', self.vars['vrf_eer'], width=6),
+                            _grid_entry(efficiency, 0, 'COP', self.vars['vrf_cop'], width=6, column=2)]
+        efficiency.columnconfigure(2, pad=12)
+        _grid_combo(frame, 5, 'Setpoint type:', self.vars['setpoint_type'], forms.SETPOINT_TYPES)
+        _grid_combo(frame, 6, 'EnergyPlus version:', self.vars['energyplus_version'], forms.ENERGYPLUS_VERSIONS)
+        _grid_combo(frame, 7, 'Outputs:', self.vars['output_type'], forms.OUTPUT_TYPES)
+        ttk.Label(frame, text='Output frequencies:').grid(row=8, column=0, sticky='nw', pady=2)
         checks = ttk.Frame(frame)
-        checks.grid(row=6, column=1, sticky='w')
+        checks.grid(row=8, column=1, sticky='w')
         for column, (frequency, variable) in enumerate(self.frequencies.items()):
             ttk.Checkbutton(checks, text=frequency, variable=variable).grid(row=column // 3, column=column % 3,
                                                                            sticky='w', padx=(0, 6))
         ttk.Checkbutton(frame, text='Keep the outputs of the input IDFs',
-                        variable=self.vars['keep_existing_outputs']).grid(row=7, column=0, columnspan=2, sticky='w')
+                        variable=self.vars['keep_existing_outputs']).grid(row=9, column=0, columnspan=2, sticky='w')
         ttk.Checkbutton(frame, text='Building averages of the hour counters (add_building_averages)',
-                        variable=self.vars['add_building_averages']).grid(row=8, column=0, columnspan=2, sticky='w')
+                        variable=self.vars['add_building_averages']).grid(row=10, column=0, columnspan=2, sticky='w')
+        ttk.Checkbutton(frame, text='EDD file of the EMS, to check its programs (debug_ems)',
+                        variable=self.vars['debug_ems']).grid(row=11, column=0, columnspan=2, sticky='w')
         return frame
 
     def _comfort_frame(self, parent) -> ttk.LabelFrame:
         frame = ttk.LabelFrame(parent, text='Comfort models (adaptive setpoints)', padding=6)
         frame.columnconfigure(1, weight=1)
         self.comfort_widgets: List[Any] = []
-        ttk.Label(frame, text='Comfort standards (select one or more):').grid(row=0, column=0, columnspan=2,
-                                                                             sticky='w', pady=2)
+        header = ttk.Frame(frame)
+        header.grid(row=0, column=0, columnspan=2, sticky='ew', pady=2)
+        ttk.Label(header, text='Comfort standards (select one or more):').pack(side='left')
+        self.zone_button = ttk.Button(header, text='Other values for some zones...',
+                                      command=lambda: self.scroll.see(self.zone_frame))
+        self.zone_button.pack(side='right')
+        self.comfort_widgets.append(self.zone_button)
         lines = ttk.Frame(frame)
         lines.grid(row=1, column=0, columnspan=2, sticky='ew', pady=(0, 4))
         lines.columnconfigure(0, weight=1)
@@ -438,6 +695,11 @@ class AddAccisTab(_Tab):
         self.comfort_widgets.append(_grid_entry(frame, 6, 'Cooling season from (dd/mm or day):',
                                                 self.vars['cooling_season_start']))
         self.comfort_widgets.append(_grid_entry(frame, 7, 'to (dd/mm or day):', self.vars['cooling_season_end']))
+        self.comfort_widgets.append(_grid_entry(frame, 8, 'Offset of the category, cooling (°C):',
+                                                self.vars['category_cooling_offset']))
+        self.comfort_widgets.append(_grid_entry(frame, 9, 'heating (°C):', self.vars['category_heating_offset']))
+        self.comfort_widgets.append(_grid_entry(frame, 10, 'Accuracy of the setpoints (2: half degrees; 10000: none):',
+                                                self.vars['setpoint_accuracy']))
         return frame
 
     def _mixed_mode_frame(self, parent) -> ttk.LabelFrame:
@@ -494,38 +756,35 @@ class AddAccisTab(_Tab):
         return frame
 
     def _zone_frame(self, parent) -> ttk.LabelFrame:
-        frame = ttk.LabelFrame(parent, text='Arguments of some zones (zone_arguments): the other zones have those '
-                                            'above', padding=6)
-        frame.columnconfigure(1, weight=1)
-        self.zone_tree = ttk.Treeview(frame, columns=('zone', 'arguments'), show='headings', height=4)
-        self.zone_tree.heading('zone', text='Zone')
-        self.zone_tree.heading('arguments', text='Arguments')
-        self.zone_tree.column('zone', width=200, stretch=False)
-        self.zone_tree.column('arguments', width=560)
-        self.zone_tree.grid(row=0, column=0, columnspan=3, sticky='ew')
-        self.zone_tree.bind('<<TreeviewSelect>>', lambda event: self._zone_selected())
-        self.zone_name = tk.StringVar(value='')
-        self.zone_text = tk.StringVar(value='')
-        ttk.Label(frame, text='Zone:').grid(row=1, column=0, sticky='w', pady=2)
-        self.zone_combo = ttk.Combobox(frame, textvariable=self.zone_name, values=[], width=32)
-        self.zone_combo.grid(row=1, column=1, sticky='w', pady=2)
-        find = ttk.Button(frame, text='Find the occupied zones', command=self.find_zones)
-        find.grid(row=1, column=2, sticky='w', padx=6)
-        ttk.Label(frame, text='Arguments:').grid(row=2, column=0, sticky='w', pady=2)
-        text = ttk.Entry(frame, textvariable=self.zone_text)
-        text.grid(row=2, column=1, columnspan=2, sticky='ew', pady=2)
-        ttk.Label(frame, text='Pairs name=value separated by commas, for instance comfort_standard=2, category=80, '
-                              'comfort_mode=3, hvac_mode=0. The arguments of a zone: '
-                              + ', '.join(forms.ZONE_ARGUMENTS) + '.',
-                  wraplength=780, foreground='gray25').grid(row=3, column=0, columnspan=3, sticky='w')
-        buttons = ttk.Frame(frame)
-        buttons.grid(row=4, column=0, columnspan=3, sticky='w', pady=(4, 0))
-        set_button = ttk.Button(buttons, text='Set the zone', command=self.set_zone)
-        set_button.pack(side='left')
-        remove_button = ttk.Button(buttons, text='Remove the selected zones', command=self.remove_zones)
-        remove_button.pack(side='left', padx=6)
-        self.zone_widgets = [find, text, set_button, remove_button]
+        frame = ttk.LabelFrame(parent, text='Arguments of each zone (zone_arguments): other comfort standards, '
+                                            'categories, comfort modes... for some zones; the other zones have those '
+                                            'of the form', padding=6)
+        fields = [('comfort_standard', 'Comfort standard:', forms.zone_field_choices('comfort_standard')),
+                  ('hvac_mode', 'HVAC mode (mixed mode):', forms.zone_field_choices('hvac_mode')),
+                  ('category', 'Category:', forms.zone_field_choices('category')),
+                  ('ventilation_control', 'Ventilation control (mixed mode):',
+                   forms.zone_field_choices('ventilation_control')),
+                  ('comfort_mode', 'Comfort mode:', forms.zone_field_choices('comfort_mode'))]
+        hint = ('Empty fields take the values of each output IDF: with another comfort standard, give its category '
+                'and comfort mode too (the lists show those of the comfort standard of the zone). Other arguments: '
+                'pairs name=value separated by commas, for instance setpoint_tolerance=0.25, '
+                'cooling_season_start=01/06; the arguments of a zone are ' + ', '.join(forms.ZONE_ARGUMENTS)
+                + '. Preview checks that each zone has setpoints in all the output IDFs.')
+        self.zone_table = _ZoneTable(self.app, frame, fields, forms.zone_row_text, forms.split_zone_arguments,
+                                     self.find_zones, 'Arguments of a zone', 'zone_arguments', hint)
+        self.zone_table.vars['comfort_standard'].trace_add('write', lambda *args: self._zone_standard_changed())
+        # The names of the table of the zones of earlier versions of the window
+        self.zone_tree = self.zone_table.tree
+        self.zone_name = self.zone_table.zone
+        self.zone_text = self.zone_table.other
+        self.zone_combo = self.zone_table.zone_combo
         return frame
+
+    def _zone_standard_changed(self) -> None:
+        """The categories and comfort modes of the comfort standard of the zone, as the choices of their fields."""
+        standard = self.zone_table.vars['comfort_standard'].get()
+        for name in ('category', 'comfort_mode'):
+            self.zone_table.fields[name].configure(values=forms.zone_field_choices(name, standard))
 
     def selected_standards(self) -> List[int]:
         return [self.standards[index][0] for index in self.standard_list.curselection()]
@@ -538,15 +797,18 @@ class AddAccisTab(_Tab):
         """Enable the fields that apply to the script type, the setpoint type and the comfort standards."""
         script_type = self.vars['script_type'].get()
         self.script_description.configure(text=forms.SCRIPT_TYPES.get(script_type, ''))
-        _set_state([self.supply_air], script_type.startswith('vrf'))
-        _set_state(self.mixed_mode_widgets, script_type in forms.MIXED_MODE_SCRIPT_TYPES)
+        vrf = script_type.startswith('vrf')
+        mixed_mode = script_type in forms.MIXED_MODE_SCRIPT_TYPES
+        _set_state([self.supply_air, *self.vrf_widgets], vrf)
+        # Any schedule of the model can be typed, so the field is not read-only
+        self.vrf_schedule_combo.configure(state='normal' if vrf else 'disabled')
+        _set_state(self.mixed_mode_widgets, mixed_mode)
         temperature = self.vars['setpoint_type'].get() == 'temperature'
         _set_existing_hvac_state(self.existing_hvac_widgets, self.existing_hvac_temperature_widgets,
                                  self.availability_combo, script_type.startswith('ex'), temperature)
         _set_state(self.comfort_widgets, temperature)
-        _set_state(self.zone_widgets, temperature)
-        # The zone can also be typed, so its field is not read-only
-        self.zone_combo.configure(state='normal' if temperature else 'disabled')
+        _set_state([self.ems_code_button], temperature)
+        self.zone_table.set_state(temperature, () if mixed_mode else ('hvac_mode', 'ventilation_control'))
         standards = self.selected_standards() if temperature else []
         _set_state(self.custom_widgets, 99 in standards)
         self.categories.configure(text=forms.categories_hint(standards))
@@ -554,36 +816,14 @@ class AddAccisTab(_Tab):
 
     def zone_rows(self) -> List[Tuple[str, str]]:
         """The rows of the table of the zones: (zone, text of its arguments)."""
-        return [tuple(str(value) for value in self.zone_tree.item(item, 'values'))
-                for item in self.zone_tree.get_children()]
-
-    def _zone_selected(self) -> None:
-        selection = self.zone_tree.selection()
-        if selection:
-            zone, text = self.zone_tree.item(selection[0], 'values')
-            self.zone_name.set(zone)
-            self.zone_text.set(text)
+        return self.zone_table.rows()
 
     def set_zone(self) -> bool:
         """Add the zone of the fields to the table, or replace its arguments."""
-        zone, text = self.zone_name.get().strip(), self.zone_text.get().strip()
-        try:
-            if not zone:
-                raise forms.FormError('zone_arguments: choose or enter the zone.')
-            forms.parse_zone_arguments(text, zone)
-        except forms.FormError as error:
-            self.app.show_error('Arguments of a zone', str(error))
-            return False
-        for item in self.zone_tree.get_children():
-            if str(self.zone_tree.item(item, 'values')[0]).upper() == zone.upper():
-                self.zone_tree.item(item, values=(zone, text))
-                return True
-        self.zone_tree.insert('', 'end', values=(zone, text))
-        return True
+        return self.zone_table.set_zone()
 
     def remove_zones(self) -> None:
-        for item in self.zone_tree.selection():
-            self.zone_tree.delete(item)
+        self.zone_table.remove_zones()
 
     def find_zones(self) -> bool:
         """List the occupied zones of the first selected input IDF in the field of the zone (in a thread)."""
@@ -594,9 +834,7 @@ class AddAccisTab(_Tab):
         version = self.vars['energyplus_version'].get()
 
         def done(zones):
-            self.zone_combo.configure(values=zones)
-            if zones and not self.zone_name.get():
-                self.zone_name.set(zones[0])
+            self.zone_table.set_zones(zones)
             self.app.log_text(f'The occupied zones of {idfs[0]} are: {", ".join(zones)}\n')
 
         return self.app.run_task('Find the occupied zones', self.folder.get(),
@@ -670,10 +908,13 @@ class AddAccisTab(_Tab):
             return
         total = arguments.pop('_total')
         self.app.log_text(f'\nAddAccis in {self.folder.get()} would write {total} output IDFs, with:\n'
-                          + ''.join(f'    {name} = {value!r}\n' for name, value in arguments.items()))
+                          + ''.join(f'    {name} = {value!r}\n' for name, value in arguments.items())
+                          + 'Add the ACCIS shows the estimated size of the results of their simulations before '
+                            'writing them.\n')
 
     def add(self) -> bool:
-        """Add the ACCIS to the selected IDFs, in the folder (in a thread)."""
+        """Add the ACCIS to the selected IDFs, in the folder (in a thread): AddAccis prepares the models and prints the
+        estimated size of the results of the output IDFs, and the window asks whether to write them."""
         arguments = self._arguments()
         if arguments is None:
             return False
@@ -682,8 +923,12 @@ class AddAccisTab(_Tab):
             self.app.show_error('Add the ACCIS', 'These arguments give no output IDF: check the comfort standards, '
                                                  'categories and comfort modes.')
             return False
-        if not self.app.ask_yes_no('Add the ACCIS', f'Write {total} output IDFs in {self.folder.get()}?'):
-            return False
+        folder = self.folder.get()
+        # AddAccis asks before writing the output IDFs, after printing the estimated size of their results
+        arguments['confirm'] = None
+
+        def confirm(question: str, printed: str) -> str:
+            return 'y' if self.app.ask_from_task('Add the ACCIS', _write_question(printed, folder, total)) else 'n'
 
         def task():
             from accim.sim.accis import AddAccis
@@ -692,9 +937,30 @@ class AddAccisTab(_Tab):
 
         def done(written):
             self.app.folder_changed()
-            self.app.show_info('Add the ACCIS', f'{written} output IDFs have been written.')
+            if written:
+                self.app.show_info('Add the ACCIS', f'{written} output IDFs have been written.')
+            else:
+                self.app.log_text('No output IDF has been written.\n')
 
-        return self.app.run_task('Add the ACCIS', self.folder.get(), task, on_done=done)
+        return self.app.run_task('Add the ACCIS', folder, task, on_done=done, answers={ADD_ACCIS_QUESTION: confirm})
+
+    def show_ems_code(self) -> bool:
+        """Show the EMS code with which the ACCIS calculates the setpoints of the comfort standards, categories and
+        comfort modes of the form, and of the zones of the table with other comfort standards, in a window (the code
+        is made in a thread)."""
+        try:
+            calls = forms.setpoint_ems_code_calls(self.form())
+        except forms.FormError as error:
+            self.app.show_error('EMS code of the setpoints', str(error))
+            return False
+        folder = self.folder.get() if os.path.isdir(self.folder.get()) else os.getcwd()
+
+        def done(text):
+            self.ems_code_window = _TextWindow(self.app, 'EMS code of the setpoints', text, folder,
+                                               'accim_setpoint_ems_code.txt')
+
+        return self.app.run_task('EMS code of the setpoints', folder, lambda: tasks.setpoint_ems_code(calls),
+                                 on_done=done)
 
 
 class ApmvTab(_Tab):
@@ -702,7 +968,7 @@ class ApmvTab(_Tab):
     (:mod:`accim.sim.apmv`)."""
 
     def __init__(self, app: 'AccimApp'):
-        super().__init__(app, '2. aPMV setpoints', scrollable=True)
+        super().__init__(app, '2. aPMV setpoints', scrollable=True, bar=True)
         defaults = forms.APMV_DEFAULTS
         body = self.body
         body.columnconfigure(0, weight=1)
@@ -741,7 +1007,8 @@ class ApmvTab(_Tab):
                         variable=self.vars['other_pmv_related_outputs']).grid(row=7, column=0, columnspan=2,
                                                                               sticky='w')
 
-        setpoints = ttk.LabelFrame(body, text='aPMV setpoints (the same in all the zones)', padding=6)
+        setpoints = ttk.LabelFrame(body, text='aPMV setpoints (of all the zones, except those of the table below)',
+                                   padding=6)
         setpoints.grid(row=1, column=1, sticky='nsew', pady=4)
         setpoints.columnconfigure(1, weight=1)
         for row, (name, label) in enumerate(forms.APMV_SETPOINT_FIELDS.items()):
@@ -757,14 +1024,23 @@ class ApmvTab(_Tab):
             _grid_entry(pmv, index // 2, f'{label}:', self.vars[name], width=10, column=(index % 2) * 2)
         pmv.columnconfigure(2, pad=24)
 
-        buttons = ttk.Frame(body)
-        buttons.grid(row=3, column=0, columnspan=2, sticky='w', pady=6)
-        ttk.Button(buttons, text='Apply the aPMV setpoints', command=self.apply).pack(side='left')
+        zones = ttk.LabelFrame(body, text='aPMV setpoints of each zone: other setpoints for some zones', padding=6)
+        zones.grid(row=3, column=0, columnspan=2, sticky='ew', pady=4)
+        tolerances = [name for name in forms.APMV_SETPOINT_FIELDS if name not in forms.APMV_ZONE_FIELDS]
+        hint = ('Empty fields take the values above. Other setpoints: pairs name=value separated by commas, such as '
+                'cooling_setpoint_tolerance_cooling_season=-0.2 (' + ', '.join(tolerances) + '). The zones are the '
+                'occupied zones of the input IDF.')
+        self.zone_table = _ZoneTable(
+            self.app, zones, [(name, f'{forms.APMV_SETPOINT_FIELDS[name]}:', None) for name in forms.APMV_ZONE_FIELDS],
+            forms.apmv_zone_row_text, forms.split_apmv_zone_setpoints, self.find_zones, 'aPMV setpoints of a zone',
+            'zone_setpoints', hint, what='setpoints')
+
+        ttk.Button(self.bar, text='Apply the aPMV setpoints', command=self.apply).pack(side='left')
         ttk.Label(body, text='The aPMV corrects the PMV for the adaptation of the occupants: aPMV = PMV / (1 + λ·PMV), '
                              'with one λ for the cooling season and another for the heating season. The thermostats '
-                             'keep the aPMV of each zone between the heating and cooling setpoints. Different values '
-                             'for each zone need Python (section 4.8 of the documentation). To simulate the new IDF '
-                             'in the tab "4. Run the simulations", uncheck "Only the output IDFs of accim".',
+                             'keep the aPMV of each zone between the heating and cooling setpoints (section 4.8 of '
+                             'the documentation). To simulate the new IDF in the tab "4. Run the simulations", '
+                             'uncheck "Only the output IDFs of accim".',
                   foreground='gray25', wraplength=900).grid(row=4, column=0, columnspan=2, sticky='w')
         self.update_state()
 
@@ -782,11 +1058,28 @@ class ApmvTab(_Tab):
         """The values of the form, for :func:`accim.gui.forms.apmv_arguments`."""
         values: Dict[str, Any] = {name: variable.get() for name, variable in self.vars.items()}
         values.update(folder=self.folder.get(),
-                      output_frequencies=[f for f, variable in self.frequencies.items() if variable.get()])
+                      output_frequencies=[f for f, variable in self.frequencies.items() if variable.get()],
+                      zone_setpoints=self.zone_table.rows())
         return values
 
+    def find_zones(self) -> bool:
+        """List the occupied zones of the input IDF in the field of the zone (in a thread)."""
+        idf = self.vars['idf'].get()
+        if not idf:
+            self.app.show_error('Find the occupied zones', 'Choose the input IDF first.')
+            return False
+        version = self.vars['energyplus_version'].get()
+
+        def done(zones):
+            self.zone_table.set_zones(zones)
+            self.app.log_text(f'The occupied zones of {idf} are: {", ".join(zones)}\n')
+
+        return self.app.run_task('Find the occupied zones', self.folder.get(),
+                                 lambda: tasks.occupied_zones(idf, version), on_done=done)
+
     def state(self) -> Dict[str, Any]:
-        return dict(super().state(), output_frequencies=_checks_state(self.frequencies))
+        return dict(super().state(), output_frequencies=_checks_state(self.frequencies),
+                    zone_setpoints=self.zone_table.rows())
 
     def restore(self, state: Mapping[str, Any]) -> List[str]:
         messages = super().restore(state)
@@ -794,6 +1087,8 @@ class ApmvTab(_Tab):
                                    'Input IDF of "2. aPMV setpoints"')
         if 'output_frequencies' in state:
             _restore_checks(self.frequencies, state['output_frequencies'])
+        if 'zone_setpoints' in state:
+            self.zone_table.set_rows(state['zone_setpoints'])
         self.update_state()
         return messages
 
@@ -902,10 +1197,11 @@ class RunTab(_Tab):
             'processes': tk.StringVar(value=defaults['processes']),
             'energyplus_version': tk.StringVar(value=defaults['energyplus_version']),
             'backend': tk.StringVar(value=defaults['backend']),
+            'simulate': tk.BooleanVar(value=defaults['simulate']),
         }
         self._folder_row(0, 'Working folder (IDFs and EPWs):', refresh=True)
         self.only_accim_idfs_check = ttk.Checkbutton(body, text="Only the output IDFs of accim (with '[' in the name)",
-                                                     variable=self.vars['only_accim_idfs'], command=self.preview)
+                                                     variable=self.vars['only_accim_idfs'], command=self.refresh)
         self.only_accim_idfs_check.grid(row=1, column=0, columnspan=2, sticky='w', pady=2)
         ttk.Label(body, text='Simulations at the same time:').grid(row=2, column=0, sticky='w', pady=2)
         ttk.Spinbox(body, from_=1, to=max(os.cpu_count() or 1, 1), textvariable=self.vars['processes'],
@@ -919,13 +1215,21 @@ class RunTab(_Tab):
         buttons = ttk.Frame(body)
         buttons.grid(row=6, column=0, columnspan=2, sticky='w', pady=6)
         ttk.Button(buttons, text='Preview', command=self.preview).pack(side='left')
-        ttk.Button(buttons, text='Run the simulations', command=self.run).pack(side='left', padx=6)
-        ttk.Button(buttons, text='Remove the simulation files', command=self.remove_files).pack(side='left')
+        ttk.Button(buttons, text='Estimate the size of the results', command=self.estimate_size).pack(side='left',
+                                                                                                     padx=6)
+        ttk.Button(buttons, text='Run the simulations', command=self.run).pack(side='left')
+        ttk.Button(buttons, text='Remove the simulation files', command=self.remove_files).pack(side='left', padx=6)
+        ttk.Checkbutton(body, text='Measure the size of the results in a simulation of an IDF of each group with the '
+                                   'same outputs, with the first EPW (slower; otherwise, it is estimated from the '
+                                   'outputs of the IDFs in a few seconds)',
+                        variable=self.vars['simulate']).grid(row=7, column=0, columnspan=2, sticky='w')
         self.count = tk.StringVar(value='')
-        ttk.Label(body, textvariable=self.count).grid(row=7, column=0, columnspan=2, sticky='w')
+        ttk.Label(body, textvariable=self.count).grid(row=8, column=0, columnspan=2, sticky='w', pady=(6, 0))
+        self.size = tk.StringVar(value='')
+        ttk.Label(body, textvariable=self.size, wraplength=900).grid(row=9, column=0, columnspan=2, sticky='w')
         ttk.Label(body, text='Each simulation is named "IDF name[EPW name"; its CSV files are written in the '
                              'folder. "Remove the simulation files" keeps the IDF, EPW, CSV and ESO files.',
-                  foreground='gray25', wraplength=700).grid(row=8, column=0, columnspan=2, sticky='w', pady=(6, 0))
+                  foreground='gray25', wraplength=700).grid(row=10, column=0, columnspan=2, sticky='w', pady=(6, 0))
 
     def form(self) -> Dict[str, Any]:
         """The values of the form, for :func:`accim.gui.forms.run_ep_arguments`."""
@@ -935,7 +1239,7 @@ class RunTab(_Tab):
 
     def restore(self, state: Mapping[str, Any]) -> List[str]:
         messages = super().restore(state)
-        self.preview()
+        self.refresh()
         return messages
 
     def preview(self) -> None:
@@ -943,6 +1247,27 @@ class RunTab(_Tab):
         idfs = sorted({idf for idf, _ in pairs})
         epws = sorted({epw for _, epw in pairs})
         self.count.set(f'{len(idfs)} IDFs and {len(epws)} EPWs: {len(pairs)} simulations')
+
+    def refresh(self) -> None:
+        """Count the simulations of the folder again, and forget the size of the results of other simulations."""
+        self.size.set('')
+        self.preview()
+
+    def estimate_size(self) -> bool:
+        """Estimate the size of the results of the simulations of the folder (in a thread), as
+        :func:`accim.run.estimate_results_size`; it prints the size of each simulation in the log."""
+        try:
+            arguments = forms.results_size_arguments(self.form())
+        except forms.FormError as error:
+            self.app.show_error('Size of the results', str(error))
+            return False
+
+        def done(result):
+            _, sentence = result
+            self.size.set(sentence)
+
+        return self.app.run_task('Size of the results', self.folder.get(), lambda: tasks.results_size(arguments),
+                                 on_done=done)
 
     def run(self) -> bool:
         """Run the simulations of the folder (in a thread)."""
@@ -1001,7 +1326,11 @@ class HoursTab(_Tab):
         self._folder_row(0, 'Working folder (CSV files of the simulations):')
         _grid_entry(body, 1, 'Minimum percentage of the occupied hours within the setpoints:', self.minimum,
                     width=8).grid(sticky='w')
-        _grid_combo(body, 2, 'Reached by:', self.zones, ('building', 'all'), width=10).grid(sticky='w')
+        zones = _grid_combo(body, 2, 'Reached by (building, all, or the zones separated by commas):', self.zones,
+                            ('building', 'all'), width=40)
+        # Some zones can be typed, so the field is not read-only
+        zones.configure(state='normal')
+        zones.grid(sticky='w')
         buttons = ttk.Frame(body)
         buttons.grid(row=3, column=0, columnspan=2, sticky='w', pady=6)
         ttk.Button(buttons, text='Compute', command=self.compute).pack(side='left')
@@ -1030,13 +1359,13 @@ class HoursTab(_Tab):
         return self.app.run_task('Hours within the setpoints', self.folder.get(), task,
                                  on_done=lambda summary: self.show(summary, minimum))
 
-    def show(self, summary, minimum: float, zones: Optional[str] = None) -> None:
+    def show(self, summary, minimum: float, zones: Optional[Any] = None) -> None:
         """Show the percentages of each simulation, and which ones reach the minimum in the zones (those of the form
-        if None)."""
+        if None: 'building', 'all' or a list of zones)."""
         from accim.data.postprocessing.setpoint_hours import filter_by_hours_within_setpoints
 
-        zones = self.zones.get() if zones is None else zones
         try:
+            zones = forms.hours_zones(self.zones.get()) if zones is None else zones
             kept = filter_by_hours_within_setpoints(summary, minimum, zones=zones)
         except ValueError as error:
             self.app.show_error('Hours within the setpoints', str(error))
@@ -1055,8 +1384,9 @@ class HoursTab(_Tab):
             values = [row[c] if c == 'Source' else ('yes' if row[c] else 'no') if c == 'Reaches the minimum'
                       else ('' if row[c] != row[c] else f'{row[c]:.1f}') for c in columns]
             self.tree.insert('', 'end', values=values, tags=() if row['Reaches the minimum'] else ('below',))
+        where = zones if isinstance(zones, str) else ', '.join(zones)
         self.result.set(f'{len(kept)} of the {len(summary)} simulations reach {minimum} % of the occupied hours '
-                        f'within the setpoints ({zones}).')
+                        f'within the setpoints ({where}).')
         self.export_button.state(['!disabled'])
 
     def clear(self) -> None:
@@ -1630,7 +1960,7 @@ class AccimApp:
         self.add_accis.refresh_idfs()
         self.apmv.refresh()
         self.rename_epws.refresh()
-        self.run.preview()
+        self.run.refresh()
         self.table.refresh()
         self.parametric.refresh()
 
@@ -1719,6 +2049,18 @@ class AccimApp:
     def ask_yes_no(self, title: str, message: str) -> bool:
         return messagebox.askyesno(title, message, parent=self.root)
 
+    def ask_from_task(self, title: str, message: str) -> bool:
+        """Ask a question with the answers yes and no from a task, in its thread: the window asks it in a dialog
+        (:meth:`ask_yes_no`, in the thread of tkinter) while the task waits for the answer. In the thread of the
+        window (as when the tests run a task there), the dialog opens directly."""
+        if threading.current_thread() is threading.main_thread():
+            return bool(self.ask_yes_no(title, message))
+        answer: Dict[str, bool] = {}
+        event = threading.Event()
+        self.messages.put(('ask', title, message, answer, event))
+        event.wait()
+        return answer.get('yes', False)
+
     def log_text(self, text: str) -> None:
         self.log.configure(state='normal')
         self.log.insert('end', text)
@@ -1737,11 +2079,12 @@ class AccimApp:
 
     def run_task(self, title: str, folder: str, function: Callable[[], Any],
                  on_done: Optional[Callable[[Any], None]] = None,
-                 answers: Optional[Mapping[str, str]] = None) -> bool:
+                 answers: Optional[Mapping[str, Any]] = None) -> bool:
         """Run a task in a thread, in a folder; its output goes to the log, and ``on_done(result)`` runs when it ends.
 
         :param answers: The answers to the questions of the prompt that the task asks (the beginning of each question
-            -> its answer); the other questions stop the task with an error.
+            -> its answer, or a function of the question and of what the task has printed that returns it); the other
+            questions stop the task with an error.
         :return: False if another task is running.
         """
         if self.busy:
@@ -1757,13 +2100,14 @@ class AccimApp:
 
     def execute(self, title: str, folder: str, function: Callable[[], Any],
                 on_done: Optional[Callable[[Any], None]] = None,
-                answers: Optional[Mapping[str, str]] = None) -> None:
+                answers: Optional[Mapping[str, Any]] = None) -> None:
         """Run a task in the current thread: in its folder, with what it prints, and its end, in the queue of
         messages, which :meth:`process_messages` shows."""
         writer = _QueueWriter(self.messages)
         cwd = os.getcwd()
         try:
-            with contextlib.redirect_stdout(writer), contextlib.redirect_stderr(writer), _no_prompts(answers):
+            with contextlib.redirect_stdout(writer), contextlib.redirect_stderr(writer), \
+                    _no_prompts(answers, writer.text):
                 os.chdir(folder)
                 result = function()
         except Exception as error:  # noqa: BLE001 (any error of the task is shown)
@@ -1774,12 +2118,18 @@ class AccimApp:
             os.chdir(cwd)
 
     def process_messages(self) -> None:
-        """Show the output of the task and its end (in the thread of tkinter)."""
+        """Show the output of the task, the questions that it asks and its end (in the thread of tkinter)."""
         try:
             while True:
                 message = self.messages.get_nowait()
                 if message[0] == 'text':
                     self.log_text(message[1])
+                elif message[0] == 'ask':
+                    _, title, text, answer, event = message
+                    try:
+                        answer['yes'] = bool(self.ask_yes_no(title, text))
+                    finally:
+                        event.set()
                 elif message[0] == 'done':
                     _, title, result, on_done = message
                     self.set_busy(False, f'{title}: done.')
@@ -1790,7 +2140,12 @@ class AccimApp:
                     _, title, error, details = message
                     self.set_busy(False, f'{title}: failed.')
                     self.log_text(details)
-                    self.show_error(title, f'{title} failed:\n\n{error}')
+                    text = f'{title} failed:\n\n{error}'
+                    if isinstance(error, ValueError) and 'new Python session' in str(error):
+                        text += ('\n\nThe window reads the IDFs with the IDD of the first EnergyPlus version that it '
+                                 'has read: to work with the IDFs of another version, save the session, close the '
+                                 'window, open it again and open the session.')
+                    self.show_error(title, text)
         except queue.Empty:
             pass
 
