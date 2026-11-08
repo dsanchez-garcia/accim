@@ -34,7 +34,7 @@ def _stub_load_idf(path, energyplus_version='auto'):
 
 
 def test_version():
-    assert accim.__version__ == '1.0.0'
+    assert accim.__version__ == '1.1.0'
 
 
 def test_importing_accim_has_no_side_effects():

@@ -15,7 +15,7 @@ https://accim.readthedocs.io/.
 - :mod:`accim.gui`: a graphical user interface for the first three (command ``accim-gui``).
 """
 
-__version__ = '1.0.0'
+__version__ = '1.1.0'
 
 #: The subpackages and modules that ``import accim`` makes available as attributes (``accim.utils``...), which are
 #: imported when they are first used, so that importing accim is fast and has no side effects

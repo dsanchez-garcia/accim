@@ -94,7 +94,9 @@ Los otros `.bat` de la raíz no intervienen: `dist_build_docs.bat` compila la do
 
 ### 4.2 Commit de la versión
 
-1. Cambia `__version__` en `accim/__init__.py`.
+1. Cambia `__version__` en `accim/__init__.py` y el número que comprueba `test_version`, en
+   `tests/core/test_deprecation.py`, si no lo están ya (la 1.1.0 se puso en `master` antes de
+   publicarla, el 08/11/2026).
 2. En `CHANGELOG.md`, convierte lo que hay bajo `## [Unreleased]` en `## [X.Y.Z] - AAAA-MM-DD`,
    deja encima un `## [Unreleased]` vacío y actualiza los enlaces del final:
 
