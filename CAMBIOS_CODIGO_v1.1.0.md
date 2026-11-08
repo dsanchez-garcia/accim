@@ -37,6 +37,8 @@ existentes con los archivos de ejemplo de EnergyPlus (sección 8).
 - `ex_ac` y `ex_mm` funcionan con cualquier sistema HVAC de los archivos de ejemplo de EnergyPlus cuyo modelo original
   funcione, y en modo mixto las ventanas se abren y se cierran cuando lo decide el EMS, con AirflowNetwork o con
   ventilación por horario (sección 8).
+- El tamaño de los resultados de las simulaciones se puede estimar antes de simularlas, sin simulación o con una, y
+  `AddAccis` lo imprime antes de escribir los IDF de salida (sección 9).
 
 ## 2. De las utilidades de accim a los métodos de eppy
 
@@ -286,7 +288,55 @@ simulación aparecen con las consignas de accim (convergencia del precalentamien
 Un `ZoneVentilation:WindandStackOpenArea` no ventila si el viento le llega por detrás y su diferencia de alturas es 0
 (EnergyPlus 25.1 le da efectividad 0), aunque el EMS lo abra.
 
-## 9. Pruebas
+## 9. El tamaño de los resultados de las simulaciones
+
+**Por qué.** El autor pidió poder estimar el peso de los resultados de las simulaciones de `run_ep`, como la
+estimación del módulo paramétrico (la memoria de las tablas horarias de `get_hourly_df_parametric`), sin simulación o,
+de forma más exacta, con simulación, a elección del usuario; y conocerlo también al generar los IDF, para decidir los
+outputs. Un IDF de salida del modelo de ejemplo con los outputs estándar horarios escribe unos 30 MB en cada
+simulación (ESO 16,3 MB, CSV 11,3 MB, MTR y Meter.csv 2,0 MB, otros 0,5 MB): 140 IDF de salida con 6 EPW son unos
+25 GB.
+
+**Sin simulación** (`sim/results_size.py`, nuevo: `estimate_simulation_size(idf)`, que devuelve un `SimulationSize`
+con los bytes de cada archivo). El ESO y el CSV son más del 90 % de los resultados, y su tamaño es el de sus valores:
+las series que piden los objetos `Output:Variable` y `Output:Meter` (cada clave de cada variable, en cada frecuencia),
+por las veces que se escribe cada serie, por los bytes de cada valor. Esos bytes salen de los archivos de EnergyPlus
+25.1 (con los finales de línea de Windows): en el ESO, una línea de unos 16,6 bytes por valor horario o de paso de
+tiempo, 52 a 68 bytes por valor diario, mensual o del periodo (con el mínimo y el máximo), y una línea de 39 bytes por
+marca de tiempo; en el CSV, una fila por marca de tiempo de la frecuencia más frecuente (las demás van en las mismas
+filas), con una coma por columna, y unos 10,5 bytes por valor. Detalles medidos con simulaciones: el ESO tiene los días
+de diseño si se simulan, y el CSV también salvo con `OutputControl:Files` y `Output CSV` (que pone `AddAccis`), con el
+que EnergyPlus escribe el CSV solo con los periodos de simulación; los `Output:Meter` van al ESO y al MTR, y los
+`MeterFileOnly`, solo al MTR; el SQL tiene unos 20 bytes por valor y, con `SimpleAndTabular`, las tablas. Las claves de
+`*` se cuentan con los objetos que informan de cada variable (`_keys`: zonas para `Zone ...`, objetos People para
+`Zone Thermal Comfort ...`, baterías, unidades VRF, superficies del AirflowNetwork con aberturas, bucles de planta,
+nodos —los nombres distintos de los campos de nodos, con las `NodeList` desplegadas—...); las variables EMS tienen una
+clave; las que no conoce cuentan como una, y lo dicen las notas. Tres casos que salieron al calibrar: accim pide la
+demanda de climatización del edificio con su nombre antiguo y el nuevo (EnergyPlus 9.4 lo cambió), y solo existe uno;
+los contadores `District...` no existen sin objetos de calor o frío urbano ni cargas ideales; y la temperatura operativa
+del termostato solo la dan las zonas con termostato.
+
+Calibración y validación (con scripts fuera del repositorio): 9 simulaciones de calibración (el modelo de ejemplo con
+los outputs de `AddAccis` en todas las frecuencias, 5ZoneAirCooled con los suyos y con los de `ex_ac`, con días de
+diseño y con SQLite) dan totales dentro de ±8 %; 7 archivos de ejemplo de EnergyPlus que no se usaron para calibrar,
+dentro de ±10 % los de más de 5 MB, y dentro de ±45 % los de 1 MB o menos, en los que pesan más los otros archivos
+(EIO, tablas...), estimados de forma más tosca.
+
+**Con simulación** (`run/results_size.py`, nuevo: `estimate_results_size(simulate=..., only_accim_idfs=..., idfs=...,
+epws=..., processes=..., verbose=...)`). Agrupa los IDF por el texto de los objetos que deciden los archivos de salida
+y por el número de objetos de cada tipo (`_outputs_signature`, sin los programas EMS, en los que se diferencian los IDF
+de salida de un modelo): eppy tarda unos 0,7 s en leer cada IDF de salida, y leer el texto, unos milisegundos. De cada
+grupo lee con eppy un IDF y lo estima, o con `simulate=True` lo simula con el primer EPW como lo hace `run_ep`
+(EnergyPlus con `-r -x -s C -p 'IDF[EPW'`), en una carpeta temporal y con esa carpeta como carpeta de trabajo, porque
+ReadVarsESO escribe allí archivos con nombres fijos, y mide sus archivos; si la simulación falla, avisa y usa la
+estimación. Imprime el tamaño de cada simulación y el total, y devuelve una tabla con una fila por IDF.
+
+**`AddAccis`** estima el tamaño de cada modelo después de añadirle los outputs (`_estimate_results_size`, que avisa en
+vez de parar si no puede), y lo imprime antes de preguntar si escribe los IDF de salida, para poder elegir otros
+outputs; también lo guarda en `results_size`. `add_accis_to_idf` no lo imprime (el módulo paramétrico lo llama en cada
+muestra).
+
+## 10. Pruebas
 
 - Golden master (eppy): 19 configuraciones de `AddAccis`, que leían los modelos con besos, cambiaron solo en la forma
   de escribir los números (2926 campos: `2.0` → `2`, `0.00000001` → `1e-08`, `-0` → `0`...); EnergyPlus da resultados
@@ -331,3 +381,9 @@ Un `ZoneVentilation:WindandStackOpenArea` no ventila si el viento le llega por d
   la que escriben las funciones de los IDF de salida, y las líneas de cada modo de confort de cada estándar son las de
   su rama en su subprograma; sin categoría ni modo, todos; los estándares estáticos (`return`); las entradas del modelo
   personalizado; los argumentos que no dan consignas.
+- `test_results_size.py` (nuevo): las series de un modelo pequeño (claves de `*`, el nombre antiguo de la demanda del
+  edificio, los contadores `District...`, la variable EMS, la desconocida en las notas), los días de diseño en el ESO y
+  en el CSV, el año bisiesto, el SQL y las notas; los grupos de IDF; los errores y la estimación si falla la simulación;
+  una simulación de enero de un IDF de salida del modelo de ejemplo, cuya estimación queda dentro del 15 % de los
+  archivos ESO y CSV (falla si se cambian los bytes de los valores horarios: comprobado), sin dejar archivos en la
+  carpeta; y `AddAccis`, que imprime la estimación antes de preguntar.

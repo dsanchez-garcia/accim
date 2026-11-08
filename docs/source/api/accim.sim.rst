@@ -118,6 +118,14 @@ accim.sim.prompts module
    :show-inheritance:
    :undoc-members:
 
+accim.sim.results\_size module
+------------------------------
+
+.. automodule:: accim.sim.results_size
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
 accim.sim.standards module
 --------------------------
 

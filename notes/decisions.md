@@ -11,6 +11,34 @@ Durable architectural/process decisions for this repository and its Obsidian
 vault. Newest first. Use [[templates/decision-record.md|the decision-record
 template]] to add a new entry.
 
+## 2026-11-08 — The size of the results is estimated from the outputs of the models, and AddAccis prints it before writing the output IDFs
+
+- **Status**: proposed (implemented in the branch `v1.1.0` at the request of the author, "añadir función o método
+  para estimar el peso de los resultados de simulación, de forma similar al existente en parametric_and_optimisation,
+  pero que funcione con el módulo run; me gustaría que se pudiera estimar sin simulación, o de forma más exacta, con
+  simulación, y que el usuario lo pueda elegir", and "también estaría bien conocer el peso estimado cuando se genera
+  el idf, para poder decidir sobre los outputs"; the details are for his review)
+- **Context**: `run_ep` writes about 30 MB in each simulation of a standard hourly output IDF of the sample model, so
+  140 output IDFs with 6 EPWs take about 25 GB. The estimate of the parametric module is the memory of the hourly
+  tables (`get_hourly_df_parametric`), not the size of the files. Reading an output IDF with eppy takes about 0.7 s.
+- **Decision**: the size is the disk space of the files of the simulations (the memory to read the values of the CSV
+  files, at 8 bytes each as in the parametric module, is also given). Without simulation
+  (`accim.sim.results_size.estimate_simulation_size`), it counts the values that the outputs of the model report and
+  the times they are reported, with the bytes of each value measured in the files of EnergyPlus 25.1; with
+  simulation (`accim.run.estimate_results_size(simulate=True)`), it runs one simulation of each group of IDFs with the
+  same outputs, as `run_ep` runs it, in a temporary folder, and measures its files. The groups are made from the text
+  of the IDFs (their output objects and the number of objects of each type), not with eppy, only to compare them
+  (an exception to [[#2026-11-06 — `accim.sim` reads, changes and writes the models with eppy, even where code of its own was faster|reading the models with eppy]]:
+  eppy would take more than a minute for 140 output IDFs); the representative of each group is read with eppy.
+  `AddAccis` prints the estimate of each model before asking whether to write the output IDFs, and keeps it in
+  `results_size`; `add_accis_to_idf` does not print it (the parametric module calls it for each sample).
+- **Consequences**: the estimate is approximate: within 10 % of the files for results of more than 5 MB in 16
+  simulations (9 of calibration, 7 of validation with example files of EnergyPlus), within 45 % for smaller ones,
+  and short for the variables whose keys it does not know (counted as one, and named in its notes) or reported at each
+  HVAC timestep. The bytes per value were measured with EnergyPlus 25.1 on Windows (line ends of two bytes); other
+  versions write the same formats. Sections 4.1, 4.4 and 4.6 of [[../docs/source/4_detailed use.md]], section 9 of
+  [[../CAMBIOS_CODIGO_v1.1.0.md]].
+
 ## 2026-11-07 — Mixed mode air-conditions the zones on the design days with `vrf_mm` too
 
 - **Status**: accepted (option (a) of the question of [[questions.md]], chosen by the author on 2026-11-07)

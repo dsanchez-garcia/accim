@@ -425,6 +425,10 @@ for the comfort standard of the output IDFs (see below). What you may notice:
   `bypass_add_accis=True`, the parametric module adds the code of the comfort standards of its samples).
 - **Indented EMS programs**: the lines of the EMS programs are indented inside the blocks `IF` and `WHILE`, so
   that it can be seen where each block begins and ends. EnergyPlus ignores these spaces.
+- **The estimated size of the results**: before asking whether to write the output IDFs, `AddAccis` prints the
+  estimated size of the results of their simulations (each simulation, and all the output IDFs with one EPW), which
+  depends on their outputs, and keeps it in its attribute `results_size`; `accim.run.estimate_results_size()` gives it
+  for the IDFs and EPWs of a folder, also measured in a simulation (section 4.6 of the detailed use).
 
 - **The models are IDF objects of eppy, not besos**: `load_idf()`, also with `energyplus_version='auto'`, reads the
   models with eppy and the IDD of their EnergyPlus version, and so do `AddAccis` (`input_idfs` and `output_idfs`),

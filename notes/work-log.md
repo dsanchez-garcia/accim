@@ -15,6 +15,25 @@ This log is a lightweight, session-scoped complement to the repository's
 existing tracking files — it does not replace them (see
 [[decisions.md#2026-09-13 — `notes/work-log.md` complements, not replaces, existing tracking files|the related decision]]).
 
+## 2026-11-08 — The size of the results of the simulations, before running them (branch `v1.1.0`)
+
+- **Objective**: The request of the author: estimate the weight of the results of the simulations of `run_ep`, like
+  the estimate of the parametric module, without simulation or, more exactly, with simulation, as the user chooses;
+  and know it when the output IDFs are generated, to choose their outputs.
+- **Affected files**: `accim/sim/results_size.py` (new), `accim/run/results_size.py` (new), `accim/run/__init__.py`,
+  `accim/run/run.py`, `accim/sim/accis.py`; `tests/core/test_results_size.py` (new); [[../CHANGELOG.md]],
+  [[../DEVLOG.md]], [[../docs/source/4_detailed use.md]] (4.1, 4.4, 4.6), [[../docs/source/9_migration_guide.md]],
+  `docs/source/api/accim.run.rst` and `accim.sim.rst`, [[../CAMBIOS_CODIGO_v1.1.0.md]] (section 9), [[decisions.md]].
+- **Finding or decision**: See [[decisions.md#2026-11-08 — The size of the results is estimated from the outputs of the models, and AddAccis prints it before writing the output IDFs|the decision]].
+  The ESO and CSV files are 90 to 95 % of the results, and their size is that of their values: about 30 MB for each
+  simulation of a standard hourly output IDF of the sample model (25 GB for 140 output IDFs and 6 EPWs). The estimate
+  without simulation counts the values that the outputs report, with the bytes measured in the files of EnergyPlus 25.1;
+  `estimate_results_size(simulate=True)` simulates one IDF of each group with the same outputs, as `run_ep`.
+- **Validation**: 16 simulations (9 of calibration, 7 of example files of EnergyPlus): within 10 % for the results of
+  more than 5 MB; 10 new tests, one of them against a simulation; `tests/core` and `tests/parametric_and_optimisation`:
+  1362 passed; the documentation build (the same warnings).
+- **Next step**: committed and pushed to `v1.1.0` at the request of the author; his review.
+
 ## 2026-11-07 — The EMS code of the setpoints before adding the ACCIS, the How-to pages, and the indentation (branch `v1.1.0`)
 
 - **Objective**: The requests of the author: a helper to read the EMS code of the setpoints before using accim

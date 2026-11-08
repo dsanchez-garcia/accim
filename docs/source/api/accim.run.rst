@@ -4,6 +4,14 @@ accim.run package
 Submodules
 ----------
 
+accim.run.results\_size module
+------------------------------
+
+.. automodule:: accim.run.results_size
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
 accim.run.run module
 --------------------
 

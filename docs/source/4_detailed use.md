@@ -97,7 +97,7 @@ where:
 *   supply_air_temp_input_method (SupplyAirTempInputMethod) can be ‘supply air temperature’ or ‘temperature difference’, and it is the supply air temperature input method for the VRF systems.
 *   keep_existing_outputs (Do you want to keep the existing outputs): existing outputs in the IDF can be kept if entered ‘true’. Otherwise, if entered ‘false’, they will be removed for clarity purposes at results stage.
 *   output_type (Output type) can be ‘standard’, ‘detailed’, ‘simplified’ or ‘custom’ and it refers to the simulation results: ‘standard’ means that results will contain the full selection relevant to accim;‘detailed’ is mainly used for testing the software tool; ‘simplified’ means that results are just going to be the hourly operative temperature and VRF consumption of each zone, mainly used when you need the results not to be heavy files, because you are going to run a lot of simulations and capacity is limited; and finally, ‘custom’ allows the user to specify the outputs to be kept or removed by entering them in the python console.
-*   output_frequencies (Output frequencies) can be timestep, hourly, daily, monthly and/or runperiod, and these must be entered separated by space. It will add the specified output type (standard or simplified) in all entered frequencies.
+*   output_frequencies (Output frequencies) can be timestep, hourly, daily, monthly and/or runperiod, and these must be entered separated by space. It will add the specified output type (standard or simplified) in all entered frequencies. The outputs decide the size of the results of the simulations: before writing the output IDFs, accim prints its estimate for each simulation and for all the output IDFs (section 4.4), so that you can choose other outputs; `accim.run.estimate_results_size()` estimates or measures it for the IDFs and EPWs of a folder (section 4.6).
 *   make_outputs_dataframe (Do you want to generate a dataframe): a pandas DataFrame instance can be created containing all Output:Variable objects. This allows the user to filter the DataFrame as needed, so that it only contains the needed Output:Variable objects, and then it can be entered in the argument `outputs_dataframe`
 *   energyplus_version (EnergyPlus version) can be ‘auto’ or a version from ‘9.1’ to ‘26.2’. With ‘auto’ (the default when the arguments are given in the function call), accim reads the version of each IDF and uses the IDD file of that version of EnergyPlus, which must be installed in its default path (for instance, “C:\EnergyPlusV26-2-0” for an IDF of EnergyPlus 26.2). If you enter a version, for instance ‘9.1’, accim will look for the E+9.1.0 IDD file in path “C:\EnergyPlusV9-1-0”, or in the folder given by the environment variable `ACCIM_ENERGYPLUS_DIR` if it has that version.
 *   setpoint_type (Temperature Control method) can be ‘temperature’ or ‘temp’, or ‘pmv’. If ‘temp’ is used, the setpoint will be the operative temperature, otherwise if ‘pmv’ is used, the setpoint will be the PMV index.
@@ -638,7 +638,7 @@ Enter the ASTtol value steps (if omitted, will be 0.1):
           Are you sure the number is correct? [y or [] / n]:
 ```
 
-Afterwards, ACCIS will let us know which the output IDFs are going to be, the total number of them and will ask for our confirmation to proceed:
+Afterwards, ACCIS will let us know which the output IDFs are going to be, the total number of them, and the estimated size of the results of their simulations, and will ask for our confirmation to proceed:
 
 ```
 The list of output IDFs is going to be:
@@ -663,10 +663,14 @@ TestModel[CS_IND IMAC C NV[CA_90[CM_0.0[HM_2[VC_3[VO_0.0[MT_50.0[MW_50.0[AT_0.1[
 TestModel[CS_IND IMAC C NV[CA_90[CM_3.0[HM_2[VC_2[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf
 TestModel[CS_IND IMAC C NV[CA_90[CM_3.0[HM_2[VC_3[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf
 And the total number of output IDFs is going to be 20
+The estimated size of the results of each simulation of the output IDFs, from their outputs (without simulating them):
+    TestModel (20 output IDFs): 31.2 MB (ESO 16.4 MB, CSV 12.2 MB, MTR and Meter.csv 2.0 MB, other files 630.0 kB); 110 values every hour, 110 every run period
+With each EPW, the 20 output IDFs: 625.0 MB (571.7 MB after accim.run.remove_files(), which keeps the ESO and CSV files).
+The outputs decide it (output_type, output_frequencies, outputs_dataframe); accim.run.estimate_results_size(simulate=True) measures it in a simulation of an output IDF.
 Do you still want to run ACCIS? [y/n]: y
 ```
 
-If we entered `n`, the whole process would shut down. Otherwise, if we entered ‘y’, the generation of output IDF files would start, and ACCIS would print on screen each output IDF name as it generates it. As you can see, we are going to use the EN16798-1, ASHRAE 55 and IMAC Commercial for naturally ventilated buildings, categories 2 and 3 for EN16798, 90% acceptability levels for ASHRAE 55, 85 and 90% acceptability levels for IMAC C NV, all with comfort_mode 0 (with static setpoint temperatures) and 3 (with adaptive setpoint temperatures when the model is applicable, otherwise horizontally extending the adaptive setpoint temperatures), Mixed Mode, and we just went ahead with the remaining default values.
+If we entered `n`, the whole process would shut down. Otherwise, if we entered ‘y’, the generation of output IDF files would start, and ACCIS would print on screen each output IDF name as it generates it. The estimated size helps to choose the outputs before generating the output IDFs: with 6 EPWs, these 20 output IDFs would write about 3.7 GB, and with `output_type='simplified'` (the operative temperature and the coil rates of each zone, 6 values every hour) 2.7 MB per simulation, about 320 MB; it is also in the attribute `results_size` of `AddAccis` (a row for each input IDF, in MB). It is estimated from the outputs of each model, without simulating it (within about 10 % for results of more than 5 MB in the simulations of its calibration), and section 4.6 explains how to measure it with a simulation. As you can see, we are going to use the EN16798-1, ASHRAE 55 and IMAC Commercial for naturally ventilated buildings, categories 2 and 3 for EN16798, 90% acceptability levels for ASHRAE 55, 85 and 90% acceptability levels for IMAC C NV, all with comfort_mode 0 (with static setpoint temperatures) and 3 (with adaptive setpoint temperatures when the model is applicable, otherwise horizontally extending the adaptive setpoint temperatures), Mixed Mode, and we just went ahead with the remaining default values.
 
 ```
 Generating the following output IDF files:
@@ -730,6 +734,24 @@ run.run_ep(
 ```
 
 If you omit `only_accim_idfs`, `confirm` or `energyplus_version`, `run_ep()` asks for them in the prompt. Before running, it lists the IDFs, the EPWs and the simulations, and their number, and asks for your confirmation (unless `confirm=True`), because you might start thousands of simulations by mistake. `energyplus_version` is the version of the IDFs, from ‘9.1’ to ‘26.2’, or ‘auto’ to read it from the IDFs, which must then be of the same version; `processes` is 2 by default.
+
+Thousands of simulations can also fill the disk. Before running them, `estimate_results_size()` gives the size of their results, for the IDFs and EPWs of the working folder (or those of its arguments `idfs` and `epws`):
+
+```python
+from accim.run import estimate_results_size
+sizes = estimate_results_size(
+    simulate=False,        # False to estimate it from the outputs of the IDFs; True to measure it in a simulation
+    only_accim_idfs=True,  # as in run_ep(): True for the IDFs generated by accim, False for all
+)
+```
+
+```
+The size of the results of run_ep, estimated from the outputs of the IDFs, without simulating them (simulate=True measures them in a simulation):
+    TestModel[CS_IND IMAC C NV[CA_85[CM_0[HM_2[VC_2[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf and 19 other IDFs with the same outputs: 31.2 MB (ESO 16.4 MB, CSV 12.2 MB, MTR and Meter.csv 2.0 MB, other files 630.0 kB) each simulation; 110 values every hour, 110 every run period
+20 IDFs and 6 EPWs: 120 simulations, 3.7 GB (3.4 GB after accim.run.remove_files(), which keeps the ESO and CSV files); 1.9 GB of memory to read the values of their CSV files (8 bytes each).
+```
+
+Without simulation (the default, in a few seconds), the size of the files of each simulation is estimated from the outputs of its IDF: the values that its `Output:Variable` and `Output:Meter` objects report (each key of each variable, counted from the objects of the model when the key is `*`, at each frequency), the times they are reported in its run periods (and sizing periods, if it simulates them), and the bytes of each value in each file, measured with EnergyPlus 25.1. In 16 simulations of output IDFs of accim and of example files of EnergyPlus, it was within 10 % of the files for results of more than 5 MB (within 45 % for smaller ones, where the other files, estimated more roughly, are a larger part); it notes what it cannot count, such as the keys of variables it does not know (counted as one) or the EDD file of `debug_ems=True`. With `simulate=True`, it runs a simulation of the IDF with the first EPW, as `run_ep()` runs it, in a temporary folder, and measures its files: it takes as long as that simulation, but gives the size of the results of that IDF and EPW (other EPWs give about the same). In both cases, the IDFs whose output objects are the same (all the output IDFs of a model of `AddAccis`, which differ in the arguments of the ACCIS) are taken as a group, and only one of them is read or simulated. `estimate_results_size()` returns a table with a row for each IDF: the number of its simulations, how the size was found (`'estimate'` or `'simulation'`), the size in MB of each file of each simulation (`eso_mb`, `csv_mb`, `mtr_mb`, `meter_csv_mb`, `sql_mb`, `other_mb`) and of the whole simulation (`simulation_mb`), that of the files that `remove_files()` keeps (`kept_mb`), the memory to read the values of its CSV file (`csv_memory_mb`, 8 bytes each, as the estimate of the hourly tables of the parametric module) and the size of all its simulations (`total_mb`, `total_kept_mb`). `AddAccis` prints the same estimate before writing the output IDFs (section 4.4), so that you can choose other outputs.
 
 Afterwards, you’ll see the calculations progress, and you’ll get the usual simulation files of each simulation: `.audit`, `.eio`, `.err`, `.eso`, `.csv`, `Table.csv`, `Table.htm` and so on, all of them named `IDF name[EPW name`. You might need to keep these in order to debug some error, or any other reason, but if you only need the CSV files with the hourly results, you can run the `remove_files()` function (`removefiles()` in accim 0.x):
 
