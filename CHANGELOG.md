@@ -7,7 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-Version 1.1.0: `accim.sim` restructured around eppy, so that its code is easier to understand: accim reads, changes and writes the models with the methods of eppy instead of code of its own, and no longer reads them with besos. The output IDFs of `AddAccis` are also easier to read: they only have the EMS code of the comfort standards of their zones, and the lines of their EMS programs are indented. The usage does not change, except that the comfort standard of an output IDF is changed with `modify_accis()`; the simulations give the same results, and some numbers are written as eppy writes them (see Changed).
+## [1.1.0] - 2026-11-08
+
+Version 1.1.0: `accim.sim` restructured around eppy, so that its code is easier to understand: accim reads, changes and writes the models with the methods of eppy instead of code of its own, and no longer reads them with besos. The output IDFs of `AddAccis` are also easier to read: they only have the EMS code of the comfort standards of their zones, and the lines of their EMS programs are indented. The usage does not change, except that the comfort standard of an output IDF is changed with `modify_accis()`; the simulations give the same results, except in mixed mode (`vrf_mm` and `ex_mm`), whose zones are now air-conditioned on the design days, and some numbers are written as eppy writes them (see Changed).
 
 ### Added
 - **The existing HVAC systems tested with the example files of EnergyPlus**: `ex_ac` and `ex_mm` were run with 618 example files of EnergyPlus 25.1 with their HVAC systems (VAV, PTAC, fan coils, furnaces, heat pumps, VRF, radiant systems, chilled beams, dual ducts, AirflowNetwork and scheduled natural ventilation...), with and without the `existing_hvac_*` arguments, and their results checked; the problems found are fixed below (see `DEVLOG.md`).
@@ -614,7 +616,8 @@ Version 1.0.0: a refactoring of the package to the conventions of Python (PEP 8)
 A detailed changelog for versions prior to 0.7.5 was not formally maintained in this file.
 
 ---
-[Unreleased]: https://github.com/dsanchez-garcia/accim/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/dsanchez-garcia/accim/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/dsanchez-garcia/accim/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/dsanchez-garcia/accim/compare/v0.8.2...v1.0.0
 [0.8.2]: https://github.com/dsanchez-garcia/accim/compare/v0.8.1...v0.8.2
 [0.8.1]: https://github.com/dsanchez-garcia/accim/compare/v0.8.0...v0.8.1
