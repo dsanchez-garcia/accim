@@ -75,6 +75,7 @@ from accim.sim.generation import (
 )
 from accim.sim.model import AccimModel, hvac_template_types
 from accim.sim.outputs import OUTPUT_DATAFRAME_COLUMNS, enable_sizing_calculations, output_variables_dataframe
+from accim.sim.results_size import SIZE_COLUMNS, SimulationSize, estimate_simulation_size, format_size
 from accim.sim.targets import resolve_targets
 
 __all__ = ['AddAccis', 'add_accis_to_idf', 'addAccis', 'gen_outputs_df', 'load_idf', 'modify_accis']
@@ -243,6 +244,63 @@ def _to_confirmation(value: Any) -> bool:
     if isinstance(value, str):
         return value.lower() in ('y', 'yes', 'true')
     return bool(value)
+
+
+#: The columns of ``AddAccis.results_size``: a row for each input IDF.
+_RESULTS_SIZE_COLUMNS = ['idf', 'output_idfs'] + SIZE_COLUMNS + ['total_mb', 'total_kept_mb']
+
+
+def _plural(number: int, noun: str) -> str:
+    return f'{number} {noun}{"" if number == 1 else "s"}'
+
+
+def _estimate_results_size(idf, stem: str) -> Optional[SimulationSize]:
+    """The estimated size of the results of a simulation of an output IDF of a model, or None (with a warning) if it
+    cannot be estimated, which does not stop AddAccis."""
+    try:
+        return estimate_simulation_size(idf)
+    except Exception as error:  # noqa: BLE001 (an estimate must not stop the generation of the output IDFs)
+        warnings.warn(f'The size of the results of the output IDFs of {stem} could not be estimated: '
+                      f'{type(error).__name__}: {error}', stacklevel=3)
+        return None
+
+
+def _results_size_table(sizes: Dict[str, Optional[SimulationSize]], output_idfs: int) -> pd.DataFrame:
+    """A row for each input IDF: the estimated size of the results of a simulation of one of its output IDFs, and
+    of all of them with one EPW."""
+    rows = []
+    for stem, size in sizes.items():
+        if size is None:
+            continue
+        megabytes = size.megabytes()
+        rows.append({'idf': stem, 'output_idfs': output_idfs, **megabytes,
+                     'total_mb': megabytes['simulation_mb'] * output_idfs,
+                     'total_kept_mb': megabytes['kept_mb'] * output_idfs})
+    return pd.DataFrame(rows, columns=_RESULTS_SIZE_COLUMNS)
+
+
+def _results_size_message(sizes: Dict[str, Optional[SimulationSize]], output_idfs: int) -> str:
+    """The estimated size of the results of the output IDFs, to choose the outputs before writing them."""
+    lines = ['The estimated size of the results of each simulation of the output IDFs, from their outputs (without '
+             'simulating them):']
+    total = kept = 0.0
+    notes = []
+    for stem, size in sizes.items():
+        if size is None:
+            continue
+        series = size.describe_series()
+        lines.append(f'    {stem} ({_plural(output_idfs, "output IDF")}): {size.describe()}'
+                     f'{f"; {series}" if series else ""}')
+        notes += [f'{stem}: {note}' for note in size.notes]
+        total += size.total * output_idfs
+        kept += size.kept * output_idfs
+    count = output_idfs * sum(size is not None for size in sizes.values())
+    lines.append(f'With each EPW, {"the " if count > 1 else ""}{_plural(count, "output IDF")}: {format_size(total)} '
+                 f'({format_size(kept)} after accim.run.remove_files(), which keeps the ESO and CSV files).')
+    lines += [f'Note, {note}.' for note in notes]
+    lines.append('The outputs decide it (output_type, output_frequencies, outputs_dataframe); '
+                 'accim.run.estimate_results_size(simulate=True) measures it in a simulation of an output IDF.')
+    return '\n'.join(lines)
 
 
 def _check_existing_hvac_arguments(operative_temperature_control: Any, availability_schedule: Any,
@@ -420,6 +478,15 @@ class AddAccis:
     :ivar output_idfs: The output IDFs, {'output IDF file name': IDF object} (each one is read when it is used;
         ``output_idfs.paths`` has their paths).
     :ivar df_outputs: The DataFrame of Output:Variable objects (argument ``make_outputs_dataframe``).
+    :ivar results_size: The size of the results of the simulations of the output IDFs, estimated from their outputs
+        without simulating them (:func:`accim.sim.results_size.estimate_simulation_size`), which AddAccis prints
+        before writing the output IDFs, so that other outputs can be chosen: a row for each input IDF, with the size of
+        each file of a simulation of one of its output IDFs in MB ('eso_mb', 'csv_mb', 'mtr_mb', 'meter_csv_mb',
+        'sql_mb', 'other_mb'), that of the whole simulation ('simulation_mb'), that of the files that
+        :func:`accim.run.remove_files` keeps ('kept_mb'), the memory to read the values of its CSV file
+        ('csv_memory_mb') and the size of the simulations of all its output IDFs with one EPW ('total_mb',
+        'total_kept_mb'). :func:`accim.run.estimate_results_size` estimates or measures the size of the results of the
+        output IDFs and EPWs of a folder.
     """
 
     def __init__(
@@ -530,11 +597,13 @@ class AddAccis:
         self.windows_and_doors: Dict[str, List[str]] = {}
         self.windows_and_doors_original_name: Dict[str, List[str]] = {}
         self.zone_arguments: Dict[str, Dict[str, Dict[str, Any]]] = {}
+        self.results_size = pd.DataFrame(columns=_RESULTS_SIZE_COLUMNS)
 
         models = []
         not_working = []
         dataframes = []
         found_zones = set()
+        sizes: Dict[str, Optional[SimulationSize]] = {}
         for file in files:
             stem = file[:-len('.idf')]
             self._log(_START_MODEL, 'Starting with file:', stem)
@@ -585,6 +654,7 @@ class AddAccis:
             if make_outputs_dataframe:
                 dataframes.append(output_variables_dataframe(idf, file=stem))
             enable_sizing_calculations(model)
+            sizes[stem] = _estimate_results_size(idf, stem)
             # The text of the model (as eppy writes it) is kept instead of the model, which needs much more memory
             models.append((stem, idf.idfstr()))
             self._log('Ending with file:', stem, _END_MODEL)
@@ -620,7 +690,7 @@ class AddAccis:
         self.arguments.update({k: v for k, v in vars(generation).items()})
         self.arguments.update(verbose=verbose, confirm=confirm, zone_arguments=zone_arguments)
 
-        paths = self._write_output_idfs(models, generation, setpoint_type, confirm, is_mixed_mode(script_type))
+        paths = self._write_output_idfs(models, generation, setpoint_type, confirm, is_mixed_mode(script_type), sizes)
         from eppy.modeleditor import IDF
         self.output_idfs = OutputIdfs(paths, IDF)
         self._log(_END_OUTPUTS)
@@ -658,7 +728,7 @@ class AddAccis:
                              'standard, category and comfort mode of each of these zones):\n' + '\n'.join(errors))
 
     def _write_output_idfs(self, models, generation: GenerationArguments, setpoint_type: str, confirm,
-                           mixed_mode: bool) -> Dict[str, str]:
+                           mixed_mode: bool, sizes: Dict[str, Optional[SimulationSize]]) -> Dict[str, str]:
         """Write the output IDFs: for each combination, eppy saves the model with the arguments of the combination
         and the EMS code of the comfort standards of its zones only."""
         from eppy.modeleditor import IDF
@@ -668,6 +738,10 @@ class AddAccis:
         names = [output_name(stem, c, generation.name_suffix) for stem, _ in models for c in combos]
         self._log('The list of output IDFs is going to be:', *names,
                   f'And the total number of output IDFs is going to be {len(names)}')
+        # Before the confirmation, so that other outputs can be chosen
+        self.results_size = _results_size_table(sizes, len(combos))
+        if combos and any(size is not None for size in sizes.values()):
+            print(_results_size_message(sizes, len(combos)))
         paths: Dict[str, str] = {}
         if not _to_confirmation(confirm):
             self._log('IDF generation has been shut down')

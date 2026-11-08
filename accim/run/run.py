@@ -146,6 +146,8 @@ def run_ep(
         them in Python through the API of EnergyPlus (EnergyPlus 24.2 or later), with the same results.
     :return: With ``backend='api'``, the results of the simulations
         (:class:`accim.sim.energyplus_api.SimulationResult`); otherwise, None.
+
+    :func:`accim.run.estimate_results_size` estimates the size of the results before running them.
     """
     if backend not in BACKENDS:
         raise ValueError(f'{backend!r} is not a valid backend. Valid values: {list(BACKENDS)}.')
