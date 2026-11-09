@@ -14,7 +14,9 @@ that control thermal comfort dynamically. This module also has the functions tha
 setpoints (:func:`add_vrf_system`, :func:`set_pmv_input_parameters`...).
 """
 
+import numbers
 import warnings
+from datetime import date, timedelta
 from typing import Any, Dict, List, Optional, Sequence, Union
 
 import pandas as pd
@@ -23,6 +25,7 @@ from accim._deprecation import accepts_legacy_kwargs
 from accim.sim.pmv_index import (_resolve_targets, apply_pmv_index_setpoints, arguments_table,
                                  metabolic_correction_names)
 from accim.sim.targets import sanitize_ems_name
+from accim.utils.editing import transform_ddmm_to_int
 from accim.utils.people import get_people_definition, get_people_objects, is_people_instance
 
 __all__ = [
@@ -75,6 +78,12 @@ _LEGACY_SETPOINT_ARGUMENTS = {old: new for old, new in _LEGACY_ARGUMENTS.items()
                               if old.startswith(('adap_coeff', 'pmv_', 'tolerance_'))}
 #: Decorator: the function also accepts the names of its arguments in accim 0.x
 _accepts_legacy_arguments = accepts_legacy_kwargs(_LEGACY_ARGUMENTS)
+
+#: The clothing insulation of set_pmv_input_parameters for the dynamic clothing model of ASHRAE 55 (the method
+#: DynamicClothingModelASHRAE55 of the field Clothing Insulation Calculation Method of the People objects)
+_DYNAMIC_CLOTHING = 'dynamic_ashrae55'
+#: The keys of the dictionaries of set_pmv_input_parameters with a value for each season
+_SEASONS = ('heating_season', 'cooling_season')
 
 
 # ==============================================================================
@@ -583,63 +592,162 @@ def add_ems_debug_output(building: IDF, verbose: bool = True):
         warnings.warn("Output:EnergyManagementSystem object already exists. Skipping creation.")
 
 
+def _day_of_year(name: str, value: Union[float, str]) -> int:
+    """A day of the cooling season as a day of the year (1 to 366); 'dd/mm' as in the setpoints ('01/05' is 121)."""
+    message = f"{name} must be a day of the year (1 to 366) or a date 'dd/mm', not {value!r}."
+    try:
+        day = transform_ddmm_to_int(value) if isinstance(value, str) else value
+    except (ValueError, IndexError):
+        raise ValueError(message) from None
+    if isinstance(day, bool) or not isinstance(day, numbers.Real) or day != int(day) or not 1 <= day <= 366:
+        raise ValueError(message)
+    return int(day)
+
+
+def _seasonal_schedule_fields(heating: Any, cooling: Any, start: int, end: int) -> List[str]:
+    """
+    The fields of a Schedule:Compact object (after its type limits) with the value of the heating season and that of
+    the cooling season, which goes from the day ``start`` to the day before ``end``, also when it goes on into the next
+    year (``start > end``), as in the EMS program set_cooling_season of the PMV-based setpoints. The days are converted
+    to dates with a year that is not a leap year, as the dates 'dd/mm' of the setpoints.
+    """
+    if start < end:
+        periods = [(start - 1, heating), (end - 1, cooling), (365, heating)]
+    else:
+        periods = [(end - 1, cooling), (start - 1, heating), (365, cooling)]
+    fields = []
+    last = 0
+    for last_day, value in periods:
+        last_day = min(last_day, 365)
+        if last_day <= last:
+            continue
+        day = date(2007, 1, 1) + timedelta(days=last_day - 1)
+        fields += [f'Through: {day.month}/{day.day}', 'For: AllDays', f'Until: 24:00,{value}']
+        last = last_day
+    return fields
+
+
+def _write_compact_schedule(building: IDF, name: str, fields: List[str]) -> None:
+    """Adds a Schedule:Compact object with these fields (after its type limits), replacing the one with this name."""
+    existing = building.getobject('Schedule:Compact', name)
+    if existing is not None:
+        building.removeidfobject(existing)
+    building.newidfobject('Schedule:Compact', Name=name, Schedule_Type_Limits_Name='Any Number',
+                          **{f'Field_{n}': field for n, field in enumerate(fields, start=1)})
+
+
 @_accepts_legacy_arguments
 def set_pmv_input_parameters(
         building: IDF,
-        activity_level: Optional[Union[float, Dict[str, float]]] = None,
-        clothing_insulation: Optional[Union[float, Dict[str, float]]] = None,
+        activity_level: Optional[Union[float, Dict[str, Any]]] = None,
+        clothing_insulation: Optional[Union[float, str, Dict[str, Any]]] = None,
         air_velocity: Optional[Union[float, Dict[str, float]]] = None,
         work_efficiency: Optional[Union[float, Dict[str, float]]] = None,
-        verbose: bool = True
+        verbose: bool = True,
+        *,
+        cooling_season_start: Union[float, str] = 121,
+        cooling_season_end: Union[float, str] = 274,
 ):
     """
     Modifies 'People' objects in the IDF to set the parameters that influence the PMV calculation.
 
-    It creates 'Schedule:Compact' objects for the specified parameters and assigns them
-    to the People objects. In models of EnergyPlus 26.2 with 'People:Instance' objects, the
-    schedules are assigned to the People:Instance objects, and the Fanger model is set in the
-    'People:Definition' objects they reference.
+    It writes a 'Schedule:Compact' object for each specified parameter of each People object (Sch_Act_<people>,
+    Sch_Clo_<people>, Sch_Vel_<people> and Sch_Eff_<people>), replacing the one of a previous call, and assigns it to
+    the People object. In models of EnergyPlus 26.2 with 'People:Instance' objects, the schedules are assigned to the
+    People:Instance objects, and the Fanger model is set in the 'People:Definition' objects they reference.
 
     IMPORTANT: If a parameter is set to None (default), it will NOT be modified in the IDF.
     This allows you to update only specific parameters (e.g., just air velocity) without
     overwriting existing schedules for activity or clothing.
 
+    Each parameter takes one value for all the targets, or a dictionary with a value for each target (the names of
+    :func:`get_available_target_names`). Since accim 1.2.0, a value of the activity level or of the clothing
+    insulation can also be a dictionary with a value for each season, such as
+    ``{'heating_season': 1.0, 'cooling_season': 0.5}``: the schedule has the value of the cooling season from
+    ``cooling_season_start`` to the day before ``cooling_season_end``, as the cooling season of the PMV-based setpoints
+    (:func:`apply_apmv_setpoints`...), so give them the same days, and that of the heating season the rest of the year.
+    The clothing insulation can also be ``'dynamic_ashrae55'``: the dynamic clothing model of ASHRAE 55 (the Clothing
+    Insulation Calculation Method DynamicClothingModelASHRAE55 of EnergyPlus), with which EnergyPlus calculates the
+    clothing insulation of each day from the outdoor air temperature at 6 a.m., instead of reading the clothing
+    insulation schedule. A number or a dictionary by season sets the method ClothingInsulationSchedule, the default of
+    EnergyPlus, if the People object had another one.
+
     :param building: The BESOS/eppy IDF object.
-    :param activity_level: Metabolic rate in W/person. If None, ignores this parameter.
-    :param clothing_insulation: Clothing insulation in clo units. If None, ignores this parameter.
+    :param activity_level: Metabolic rate in W/person, or a dictionary by season. If None, ignores this parameter.
+    :param clothing_insulation: Clothing insulation in clo units, a dictionary by season, or 'dynamic_ashrae55'. If
+        None, ignores this parameter.
     :param air_velocity: Air velocity in m/s. If None, ignores this parameter.
     :param work_efficiency: Work efficiency (0.0 - 1.0). If None, ignores this parameter.
     :param verbose: If True, prints created schedules to console.
+    :param cooling_season_start: The first day of the cooling season of the dictionaries by season: the day of the year
+        or 'dd/mm' (121, 1 May, by default, as in the setpoints).
+    :param cooling_season_end: The day after the last day of the cooling season of the dictionaries by season: the day
+        of the year or 'dd/mm' (274, 1 October, by default, as in the setpoints).
     :raises ValueError: If an activity level is given for a People object whose activity level has the metabolic
         correction of :func:`apply_epmv_setpoints`, which reads it from its schedule: set it before applying them.
+        Also, if a dictionary by season does not have the keys 'heating_season' and 'cooling_season' only, or has a
+        value that is not a number, if 'dynamic_ashrae55' is given for another parameter, or if the days of the
+        cooling season are not days of the year or are the same day.
     """
+    # 0. The cooling season of the values by season
+    season_start = _day_of_year('cooling_season_start', cooling_season_start)
+    season_end = _day_of_year('cooling_season_end', cooling_season_end)
+    if season_start == season_end:
+        raise ValueError('cooling_season_start and cooling_season_end must be different days: the cooling season goes '
+                         'from the first one to the day before the second one.')
 
     # 1. Resolve targets to map People objects to Data Keys
     target_data = _resolve_targets(building)
     df_keys = [t['df_key'] for t in target_data]
 
+    def by_season(arg_val):
+        # A dictionary by season, instead of a dictionary with a value for each target
+        return isinstance(arg_val, dict) and bool(arg_val) and set(arg_val) <= set(_SEASONS)
+
+    def normalize(value, arg_name):
+        # A value of the activity level or the clothing insulation for a target: None, a number,
+        # 'dynamic_ashrae55' or ('season', heating, cooling)
+        if isinstance(value, dict):
+            if set(value) != set(_SEASONS):
+                raise ValueError(f"A dictionary by season of {arg_name} must have the keys 'heating_season' and "
+                                 f"'cooling_season' only, not {list(value)}.")
+            wrong = {season: value[season] for season in _SEASONS
+                     if isinstance(value[season], bool) or not isinstance(value[season], numbers.Real)}
+            if wrong:
+                raise ValueError(f'The values of the dictionary by season of {arg_name} must be numbers: {wrong}.')
+            return ('season', value['heating_season'], value['cooling_season'])
+        if isinstance(value, str) and value.strip().lower() == _DYNAMIC_CLOTHING:
+            if arg_name != 'clothing_insulation':
+                raise ValueError(f"'{_DYNAMIC_CLOTHING}' (the dynamic clothing model of ASHRAE 55) is a value of "
+                                 f"clothing_insulation, not of {arg_name}.")
+            return _DYNAMIC_CLOTHING
+        return value
+
     # Helper to map input args (Float, Dict, or None) to a lookup dictionary
-    def map_arg_to_lookup(arg_val, arg_name):
+    def map_arg_to_lookup(arg_val, label, arg_name=None):
+        # arg_name: the name of the argument if it takes values by season ('dynamic_ashrae55' for the clothing)
         data = {}
         if arg_val is None:
             return data  # Empty dict will return None on .get()
 
-        if isinstance(arg_val, dict):
+        if isinstance(arg_val, dict) and not (arg_name and by_season(arg_val)):
             # Validate keys
             dropped = [k for k in arg_val if k not in df_keys]
             if dropped:
-                warnings.warn(f"Keys dropped from {arg_name}: {dropped}")
+                warnings.warn(f"Keys dropped from {label}: {dropped}")
 
             for k in df_keys:
-                data[k] = arg_val.get(k, None)  # None if key missing in user dict
+                value = arg_val.get(k, None)  # None if key missing in user dict
+                data[k] = normalize(value, arg_name) if arg_name and value is not None else value
         else:
-            # Apply single float value to all targets
+            # Apply single value to all targets
+            value = normalize(arg_val, arg_name) if arg_name else arg_val
             for k in df_keys:
-                data[k] = arg_val
+                data[k] = value
         return data
 
-    val_map_activity = map_arg_to_lookup(activity_level, 'activity')
-    val_map_clo = map_arg_to_lookup(clothing_insulation, 'clo')
+    val_map_activity = map_arg_to_lookup(activity_level, 'activity', 'activity_level')
+    val_map_clo = map_arg_to_lookup(clothing_insulation, 'clo', 'clothing_insulation')
     val_map_vel = map_arg_to_lookup(air_velocity, 'vel')
     val_map_eff = map_arg_to_lookup(work_efficiency, 'eff')
 
@@ -691,23 +799,41 @@ def set_pmv_input_parameters(
 
         # --- C. Apply Changes (Only if value is not None): a schedule with the value of each parameter ---
         parameters = [
-            (act_val, 'Act', 'Activity_Level_Schedule_Name', f"Set Activity for '{p_name}': {act_val} W/person"),
-            (clo_val, 'Clo', 'Clothing_Insulation_Schedule_Name', f"Set Clothing for '{p_name}': {clo_val} clo"),
-            (vel_val, 'Vel', 'Air_Velocity_Schedule_Name', f"Set Air Velocity for '{p_name}': {vel_val} m/s"),
-            (eff_val, 'Eff', 'Work_Efficiency_Schedule_Name', f"Set Work Efficiency for '{p_name}': {eff_val}"),
+            (act_val, 'Act', 'Activity_Level_Schedule_Name', 'Activity', ' W/person'),
+            (clo_val, 'Clo', 'Clothing_Insulation_Schedule_Name', 'Clothing', ' clo'),
+            (vel_val, 'Vel', 'Air_Velocity_Schedule_Name', 'Air Velocity', ' m/s'),
+            (eff_val, 'Eff', 'Work_Efficiency_Schedule_Name', 'Work Efficiency', ''),
         ]
         any_modified = False
-        for value, short_name, field, message in parameters:
+        for value, short_name, field, label, unit in parameters:
             if value is None:
                 continue
-            sch_name = f'Sch_{short_name}_{p_name_san}'
-            if building.getobject('Schedule:Compact', sch_name) is None:
-                building.newidfobject('Schedule:Compact', Name=sch_name, Schedule_Type_Limits_Name="Any Number",
-                                      Field_1='Through: 12/31', Field_2='For: AllDays', Field_3=f'Until: 24:00,{value}')
-                if verbose:
-                    print(message)
-            setattr(people, field, sch_name)
             any_modified = True
+            if isinstance(value, str) and value == _DYNAMIC_CLOTHING:
+                # EnergyPlus calculates the clothing insulation, and does not read the clothing insulation schedule
+                people.Clothing_Insulation_Calculation_Method = 'DynamicClothingModelASHRAE55'
+                if verbose:
+                    print(f"Set Clothing for '{p_name}': the dynamic clothing model of ASHRAE 55 "
+                          f"(DynamicClothingModelASHRAE55)")
+                continue
+            if isinstance(value, tuple):
+                _, heating, cooling = value
+                fields = _seasonal_schedule_fields(heating, cooling, season_start, season_end)
+                message = (f"Set {label} for '{p_name}': {heating}{unit} in the heating season and "
+                           f"{cooling}{unit} in the cooling season")
+            else:
+                fields = ['Through: 12/31', 'For: AllDays', f'Until: 24:00,{value}']
+                message = f"Set {label} for '{p_name}': {value}{unit}"
+            sch_name = f'Sch_{short_name}_{p_name_san}'
+            _write_compact_schedule(building, sch_name, fields)
+            setattr(people, field, sch_name)
+            if short_name == 'Clo':
+                # The clothing insulation schedule is only read with the method ClothingInsulationSchedule
+                method = str(getattr(people, 'Clothing_Insulation_Calculation_Method', '') or '').strip()
+                if method and method.lower() != 'clothinginsulationschedule':
+                    people.Clothing_Insulation_Calculation_Method = 'ClothingInsulationSchedule'
+            if verbose:
+                print(message)
 
         # --- D. Ensure Fanger Model ---
         # Only force Fanger if we actually touched this object

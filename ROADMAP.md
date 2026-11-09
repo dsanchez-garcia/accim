@@ -26,7 +26,7 @@ Mid- and long-term technical plan.
 - Objective: Consolidate a stable structure for technical tracking and planning.
 - Scope: Define rules across `DEVLOG.md`, `TODO.md`, `ROADMAP.md`, and `CHANGELOG.md`.
 - Exit criteria: A short usage guide agreed and applied across all four files.
-- Dependencies: Agreement on issue/PR reference format.
+- Dependencies: none left (the priorities and the format of the references to issues and pull requests were agreed on 2026-11-09, in the conventions of `TODO.md`).
 
 ### [R-02] Historical archiving policy
 - Horizon: Q4 2026

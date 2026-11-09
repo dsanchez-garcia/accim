@@ -653,6 +653,47 @@ def test_people_instances_simulate_as_people_with_apmv_setpoints_and_26_2(idf_26
     pd.testing.assert_frame_equal(_hourly_results(tmp_path / 'instances'), _hourly_results(tmp_path / 'people'))
 
 
+_CLOTHING_PEOPLE_AND_INSTANCES_SCRIPT = _PEOPLE_AND_INSTANCES_SCRIPT + """
+from accim.sim.apmv import set_pmv_input_parameters
+for folder in ['people', 'instances']:
+    os.chdir(root / folder)
+    building = get_building('TestModel.idf')
+    set_pmv_input_parameters(
+        building, activity_level={'heating_season': 120, 'cooling_season': 100},
+        clothing_insulation={'Block1:Zone1': 'dynamic_ashrae55',
+                             'Block1:Zone2': {'heating_season': 1.0, 'cooling_season': 0.5}},
+        verbose=False,
+    )
+    for variable in ('Zone Thermal Comfort Clothing Value', 'Schedule Value'):
+        building.newidfobject('Output:Variable', Key_Value='*', Variable_Name=variable, Reporting_Frequency='Hourly')
+    building.newidfobject('OutputControl:Files', Output_CSV='Yes', Output_MTR='Yes', Output_ESO='Yes')
+    simulate_1_summer_day(building)
+"""
+
+
+@needs_26_2
+def test_people_instances_with_the_clothing_by_season_and_the_dynamic_clothing_model_and_26_2(idf_26_2, tmp_path):
+    # A5: in EnergyPlus 26.2, the Clothing Insulation Calculation Method is a field of the People:Instance objects
+    _people_and_instances_folders(idf_26_2, tmp_path)
+
+    _run_in_new_process(_CLOTHING_PEOPLE_AND_INSTANCES_SCRIPT, tmp_path)
+
+    idfs = _simulated_idfs(tmp_path)
+    # The activity level, the clothing insulation calculation method and the clothing insulation schedule
+    instances = {fields[0]: (fields[4], fields[7], fields[9])
+                 for fields in _idf_objects(idfs['instances'], 'People:Instance')}
+    assert instances['People Block1:Zone1'][:2] == ('Sch_Act_People_Block1_Zone1', 'DynamicClothingModelASHRAE55')
+    assert instances['People Block1:Zone2'] == ('Sch_Act_People_Block1_Zone2', 'ClothingInsulationSchedule',
+                                                'Sch_Clo_People_Block1_Zone2')
+    results = _hourly_results(tmp_path / 'instances')
+    pd.testing.assert_frame_equal(results, _hourly_results(tmp_path / 'people'))
+    # 15 July, in the cooling season; EnergyPlus calculates the clothing insulation of the dynamic model after 6 a.m.
+    assert set(results['SCH_CLO_PEOPLE_BLOCK1_ZONE2:Schedule Value [](Hourly)']) == {0.5}
+    assert set(results['SCH_ACT_PEOPLE_BLOCK1_ZONE1:Schedule Value [](Hourly)']) == {100}
+    clothing = results['PEOPLE BLOCK1:ZONE1:Zone Thermal Comfort Clothing Value [clo](Hourly)'].iloc[7:]
+    assert clothing.nunique() == 1 and 0.46 <= clothing.iloc[0] <= 1.0
+
+
 # Models with Space objects, built from the sample model in models/: People assigned to a Space and to a
 # Zone of one space, to a Zone of two spaces (the floor of Block1:Zone1 split in two), and to a SpaceList
 # of the three spaces. addAccis and the aPMV setpoints (in the zone of two spaces) are simulated for one

@@ -2,8 +2,8 @@
 
 Guía de los cambios del código de la rama `v1.2.0` respecto a accim 1.1.0, para quien mantiene accim; no es
 documentación de uso. Recoge las propuestas del bloque A de `notes/PROPUESTAS_MEJORAS_post_1.1.0_v01.md` y `_v02.md`
-(índices de confort derivados del PMV; archivos del autor, fuera de git) que el autor pidió para esta versión: las P1,
-A2 y A1, en este orden; A5 queda pendiente.
+(índices de confort derivados del PMV; archivos del autor, en git desde el commit `e238dad`) que el autor pidió para
+esta versión: las P1, A2, A1 y A5, en este orden.
 
 Lo que ya está en otros documentos no se repite aquí:
 
@@ -19,8 +19,16 @@ Lo que ya está en otros documentos no se repite aquí:
   Los IDF del aPMV no cambian (sección 2).
 - **A1.** El ePMV de Fanger y Toftum (2002) es el tercer índice del motor (`'epmv'`), con `apply_epmv_setpoints`, su
   corrección del metabolismo opcional, el tipo de parámetros `'epmv setpoints'` del paramétrico y la pestaña de la GUI
-  para los tres índices (sección 3). El cuaderno How-to está escrito, pero sin ejecutar (`TODO.md`).
-- **A5** (vestimenta dinámica) queda pendiente, a petición del autor (`TODO.md`).
+  para los tres índices (sección 3). El cuaderno How-to está ejecutado, y su página, en las How-to Guides.
+- **A5.** `set_pmv_input_parameters` admite la actividad y la vestimenta por estación (una `Schedule:Compact` alineada
+  con la estación de refrigeración de las consignas) y el modelo dinámico de vestimenta de ASHRAE 55
+  (`'dynamic_ashrae55'`), y cada llamada escribe de nuevo sus schedules; `accim.sim.people.set_clothing_method` pone
+  cualquiera de los tres métodos de la vestimenta de EnergyPlus (sección 4).
+- Las categorías del PMV y la aproximación de la corrección del metabolismo se han comprobado en ISO 7730:2025 y
+  EN 16798-1:2019, y el modelo dinámico de vestimenta de A5, en Schiavon y Lee (2013) y ASHRAE 55-2020 (sección 6).
+- Lo que quedaba abierto se ha comprobado: el golden master y las pruebas de EnergyPlus 26.1 y 26.2, también la de A5
+  con `People:Instance` (sección 5); la corrección del metabolismo en `BeginZoneTimestepBeforeInitHeatBalance`
+  (sección 3); y dónde empiezan a diferir los dos backends con los termostatos de confort (sección 2).
 
 ## 2. El motor común de los índices derivados del PMV (A2)
 
@@ -67,8 +75,15 @@ el monitor.
 - Con los termostatos de confort térmico (Fanger), los dos backends dan las mismas consignas y variables EMS, pero los
   resultados de EnergyPlus difieren por redondeo: 2.9e-10 °C en la temperatura de las zonas y 7e-4 J en la energía en
   tres días. Ya pasaba en 1.1.0 con el aPMV (comprobado con un worktree de `master`: la misma diferencia máxima que en
-  la rama); con los modelos de `AddAccis`, los CSV son idénticos. No se ha buscado la causa dentro de EnergyPlus. La
-  sección 4.9 lo dice.
+  la rama); con los modelos de `AddAccis`, los CSV son idénticos. La sección 4.9 lo dice. Después (2026-11-09) se
+  localizó dónde empieza, con las consignas PMV en el modelo de dos zonas y las salidas de los días de calentamiento
+  (`Output:Diagnostics` con `ReportDuringWarmup`): el dimensionado es idéntico (el `.eio` solo difiere en la
+  convergencia del calentamiento), y la primera diferencia aparece el primer día de calentamiento del periodo (1 de
+  julio, de 7:20 a 7:30) en las temperaturas del aire de las dos zonas (en el decimocuarto decimal) y en la potencia de
+  refrigeración de la zona 1 (en el undécimo), mientras que en ese paso son idénticas las consignas PMV y las variables
+  EMS, las consignas de temperatura que calcula el termostato de confort, la temperatura radiante media, la humedad y
+  el PMV. Nace, pues, en la simulación de la climatización o del balance del aire de las zonas, no en el EMS, el PMV ni
+  el termostato; más dentro de EnergyPlus no se ha buscado.
 
 ## 3. El ePMV (A1)
 
@@ -119,14 +134,24 @@ llamadas, y antes de `_add_outputs`, que añade las `Output:Variable` de todas l
 - Las ganancias de los ocupantes (`People Total Heating Rate`) son exactamente ocupantes × actividad corregida del paso
   anterior: EnergyPlus calcula las ganancias internas antes de ese punto de llamada. El termostato (en el predictor) y el
   PMV del final del paso sí usan la actividad del paso. Se consideró hacerlo en
-  `BeginZoneTimestepBeforeInitHeatBalance` (antes de las ganancias), sin probarlo: la estación y el PMV medio de las
-  zonas con varias instancias llegarían con un paso de retraso; se dejó en el mismo punto que el resto, documentado.
+  `BeginZoneTimestepBeforeInitHeatBalance`, antes de las ganancias, y se dejó en el mismo punto que el resto, porque la
+  estación y el PMV medio de las zonas con varias instancias llegarían con un paso de retraso. Se probó después
+  (2026-11-09), cambiando el punto de llamada de los programas `correct_activity_<people>` (fuera del repositorio): las
+  ganancias son entonces exactamente ocupantes × actividad corregida del mismo paso, con el mismo PMV (el del paso
+  anterior), y el backend de la API admite ese punto (con diferencias de redondeo como las de la sección 2); pero la
+  estación llega con un paso de retraso: el primer paso del 1 de octubre aún tiene la corrección (factor 0,9586) con
+  e = 1. Las zonas de varias instancias no se probaron. En un año del modelo residencial del cuaderno, la diferencia es
+  despreciable: 9149,74 frente a 9149,70 kWh de climatización, el mismo PMV medio (0,539) y la misma temperatura
+  operativa media (26,15 °C). Se mantiene `BeginTimestepBeforePredictor`.
 - Las acciones sobre `Schedule:Year` funcionan (modelo residencial) y los dos backends dan lo mismo: idéntico en el
   modelo residencial; en el de dos zonas con VRF, las variables EMS y las schedules idénticas y el resto con diferencias
   de redondeo, como con el aPMV (sección 2).
-- La aproximación respecto a Fanger y Toftum, con el PMV de ISO 7730 (script aparte, no en el repositorio): con 1,2 met
-  y 0,5 clo, para un PMV de 1 sin corregir, ellos reducen la actividad un 6,7 % y la corrección converge a un 6,1 %
-  (PMV 0,914 frente a 0,906); con 1 met, 5,5 % (PMV 0,824 frente a 0,783).
+- La aproximación respecto a Fanger y Toftum, con el PMV del programa normativo de ISO 7730:2025 (anexo D, escrito en
+  Python fuera del repositorio; sección 6), la temperatura del aire igual a la radiante media, 0,1 m/s y 50 % de
+  humedad relativa: con 1,2 met y 0,5 clo, para un PMV de 1 sin corregir, ellos reducen la actividad un 6,7 % (PMV
+  0,905) y la corrección converge a un 6,1 % (PMV 0,914); con 1 met, 5,5 % (PMV 0,823 frente a 0,782). Entre 0,1 y
+  0,3 m/s y entre 40 y 70 % de humedad, las reducciones son las mismas y los PMV cambian en ±0,01; los valores que se
+  calcularon antes con otro script (0,914 frente a 0,906, y 0,824 frente a 0,783) están entre los de 40 y 50 %.
 
 **El paramétrico.** `params_dicts.epmv_setpoints_params` (`expectancy_factor` y los tres de las consignas) y el tipo de
 parámetros `'epmv setpoints'` en `SimulationBase`, que aplica `apply_epmv_setpoints` como `'apmv setpoints'` aplica
@@ -142,11 +167,74 @@ consignas. Un test comprueba que los diccionarios de `forms` coinciden con `PMV_
 
 **El cuaderno.** `accim/sample_files/jupyter_notebooks/example_epmv_setpoints/using_epmv_setpoints.ipynb`, con copias
 del modelo y el EPW del cuaderno del aPMV (1,7 MB más en `accim-samples`), registrado en
-`docs/prepare_howto_notebooks.py`. Sigue el estilo del del aPMV (besos para leer y simular) y no se ha ejecutado, a
-petición del autor; su página y sus enlaces quedan en `TODO.md`. `export` sin una copia ejecutada solo informa ("no
-executed copy").
+`docs/prepare_howto_notebooks.py`. Sigue el estilo del del aPMV (besos para leer y simular). Se escribió sin ejecutarlo,
+a petición del autor; después se ejecutó (unos 45 s con EnergyPlus 25.1: tres simulaciones anuales) y se exportó: su
+página está en el `toctree` de las How-to Guides, en la tabla de `2_installation.md` y en la de `docs/README.md`
+§7.1, y la enlazan la sección 4.8.1 y el Quick tutorial. Sus resultados confirman la conclusión: con el ePMV, la
+temperatura operativa media de la estación de refrigeración sube de 25,11 a 25,71 °C y la electricidad de la
+climatización baja de 10212 a 9588 kWh; con la corrección del metabolismo (un 3,6 % menos de actividad de media), 26,15
+°C y 9150 kWh, con el mismo PMV medio (0,54). Las temperaturas no salen en el cuaderno: se comprobaron repitiendo sus
+simulaciones aparte.
 
-## 4. Pruebas
+## 4. La actividad y la vestimenta por estación, y el modelo dinámico de vestimenta de ASHRAE 55 (A5)
+
+**Antes.** `set_pmv_input_parameters` escribía, para cada parámetro de cada `People`, una `Schedule:Compact` constante
+(`Sch_Act_<people>`, `Sch_Clo_<people>`, `Sch_Vel_<people>` y `Sch_Eff_<people>`), con un valor para todo el modelo o
+uno por zona. Si la schedule ya existía, la volvía a usar con su valor: una segunda llamada con otro valor no cambiaba
+nada.
+
+**Ahora.**
+
+- `activity_level` y `clothing_insulation` admiten también un diccionario por estación,
+  `{'heating_season': x, 'cooling_season': y}`, para todo el modelo o como valor de una zona en el diccionario por
+  zonas. Un diccionario cuyas claves son de las dos estaciones es por estación (tiene que tener las dos, con números:
+  si no, `ValueError`); cualquier otro es por zonas, como antes. `air_velocity` y `work_efficiency` no cambian.
+- La schedule por estación (`_seasonal_schedule_fields`) tiene el valor de refrigeración desde `cooling_season_start`
+  hasta el día anterior a `cooling_season_end`, como el programa `set_cooling_season` (`COOLING_SEASON_LINES`):
+  `Through: 4/30`, `Through: 9/30` y `Through: 12/31` con los días por defecto (121 y 274); si la estación pasa de un
+  año al siguiente (inicio mayor que fin), al revés. Los días se convierten en fechas con un año no bisiesto, como
+  `transform_ddmm_to_int`. `cooling_season_start` y `cooling_season_end` son argumentos solo por nombre, después de
+  `verbose`, para no cambiar el significado de las llamadas posicionales; `_day_of_year` los comprueba siempre (un día
+  de 1 a 366 o 'dd/mm', y distintos).
+- `clothing_insulation='dynamic_ashrae55'` (con mayúsculas o minúsculas) pone `DynamicClothingModelASHRAE55` en el
+  campo `Clothing Insulation Calculation Method` del `People` (o del `People:Instance` de EnergyPlus 26.2, que tiene ese
+  campo: comprobado en el IDD de la etiqueta `v26.2.0` de EnergyPlus; en las versiones anteriores, en los IDD de 9.4,
+  9.6, 25.1 y 25.2) y no toca su schedule de vestimenta, que EnergyPlus no lee con ese método. Un número o un
+  diccionario por estación vuelve a poner `ClothingInsulationSchedule` si el campo tenía otro método; con el campo
+  vacío o con `ClothingInsulationSchedule`, no lo toca, así que los modelos de antes no cambian.
+- Cada llamada escribe de nuevo las schedules de los parámetros que recibe (`_write_compact_schedule`: borra la del
+  mismo nombre y crea la nueva, al final de los `Schedule:Compact`). Es la corrección del fallo de antes.
+- La corrección del metabolismo copia la schedule de actividad tal como está, también la estacional.
+- `accim.sim.people.set_clothing_method(building, method, schedule=None, calculation_method_schedule=None)`, de la
+  propuesta, cuyo `schedule` no definía: el autor eligió (2026-11-09, la opción (b) de `notes/questions.md`) que
+  `schedule` sea la schedule de vestimenta (la de `ClothingInsulationSchedule`, y la de los periodos del método 1 de
+  `CalculationMethodSchedule`) y que `CalculationMethodSchedule` tenga otro argumento, que se llama como su campo del
+  IDD, `calculation_method_schedule` (obligatorio con ese método y solo con él). Pone el método en todos los `People`
+  (o `People:Instance`); antes de cambiar nada comprueba el método (`CLOTHING_METHODS`, con mayúsculas o
+  minúsculas), que las schedules estén en el modelo y que la del método tenga los valores 1 y 2 (`schedule_values` de
+  `accim.sim.hvac.schedules`, si puede leerla), y avisa de los `People` sin schedule de vestimenta con los métodos que
+  la leen. Con `DynamicClothingModelASHRAE55`, `schedule` es un error, porque EnergyPlus no la lee.
+- De la propuesta no se ha hecho `clothing_insulation` como función de la temperatura exterior (necesita E1, o un Erl
+  por tramos): `TODO.md`.
+
+**Lo que se vio al probarlo** (EnergyPlus 25.1, el modelo de ejemplo de dos zonas en Sevilla).
+
+- EnergyPlus aplica la schedule por estación en hora local, con el horario de verano del modelo (del último domingo de
+  marzo al último domingo de octubre): en la hora estándar de los resultados cambia a las 23:00 del día anterior,
+  mientras que el programa EMS de la estación, con `DayOfYear`, cambia a las 0:00. Cambian el mismo día; la diferencia
+  es esa hora.
+- Con el EPW de Sevilla, sin años bisiestos, una simulación de 2004 no tiene el 29 de febrero: el EMS cambia de estación
+  el 1 de mayo, como la schedule.
+- El modelo dinámico: EnergyPlus calcula la vestimenta de cada día con la temperatura exterior del primer paso de
+  tiempo después de las 6:00 (de 6:00 a 6:10, con seis pasos por hora) y las ecuaciones de ASHRAE 55 de la propuesta
+  (Schiavon y Lee, 2013; comprobadas en el artículo y en la norma, sección 6), y la mantiene hasta ese paso del día siguiente; antes del primero de cada periodo de
+  simulación, 0,75 clo. Comprobado en tres de los cuatro tramos (de −5 a 5 °C, de 5 a 26 °C y desde 26 °C; en los días
+  simulados de Sevilla no hubo menos de −5 °C).
+- La salida `Zone Thermal Comfort Clothing Value` solo da la vestimenta con el modelo dinámico: con la schedule, da 0.
+  Con `CalculationMethodSchedule` sí da la de la schedule en los periodos del método 1 (1 clo en enero, en la prueba),
+  y la del modelo dinámico en los del método 2 (julio).
+
+## 5. Pruebas
 
 - `tests/core/test_pmv_index.py` (A2): el registro y los parámetros de los índices; `apply_apmv_setpoints` escribe el
   mismo modelo que el motor; los objetos EMS de las consignas PMV; las consignas PMV son las del aPMV con coeficientes 0
@@ -163,4 +251,51 @@ executed copy").
   `test_legacy_names.py` deja fuera los parámetros posteriores a 1.0.0, que no tienen nombre de 0.x.
 - `tests/core/test_gui.py`: los argumentos del ePMV y del PMV, los errores, la coherencia con `PMV_INDICES`, la tarea
   (también con el modelo de ejemplo y la corrección) y los campos que la pestaña activa con cada índice.
+- `tests/core/test_pmv_input_parameters.py` (A5, 33 pruebas): los campos de los `People` y los valores de las schedules
+  los días 120, 121, 273, 274 y 275; la estación que pasa de un año a otro y la que empieza el 1 de enero o acaba el 31
+  de diciembre; el modelo dinámico y la vuelta a la schedule; las llamadas repetidas; los valores por zona; los errores,
+  sin cambiar el modelo; un `People` de dos zonas (el modelo residencial); la copia de la corrección del metabolismo;
+  `set_clothing_method` (cada método, sus schedules, los errores sin cambiar el modelo y el aviso); y tres simulaciones
+  con EnergyPlus 25.1: los valores de las schedules a mediodía de esos días, con el factor de expectativa del ePMV como
+  estación de las consignas; la vestimenta del modelo dinámico frente a las ecuaciones de ASHRAE 55 en tres días de
+  enero y tres de julio; y `CalculationMethodSchedule`, con la schedule de vestimenta en enero y el modelo dinámico en
+  julio.
+- `tests/core/test_people_instance.py`: los valores por estación, el modelo dinámico y `set_clothing_method` en los
+  `People:Instance` de EnergyPlus 26.2 (con el IDF simulado del archivo, que ahora tiene los campos del método de la
+  vestimenta).
+- `tests/core/test_energyplus_versions.py`: una prueba nueva con EnergyPlus 26.2, el modelo de ejemplo con `People` y
+  con `People:Definition` y `People:Instance`, con la vestimenta dinámica en una zona y la actividad y la vestimenta por
+  estación: los `People:Instance` tienen los campos de A5, EnergyPlus simula los dos modelos igual, y la vestimenta
+  dinámica es la misma en todas las horas que comprueba (de 8:00 a 24:00).
 - El golden master (`s07` y `s08`) comprueba que los IDF del aPMV no cambian.
+- El golden master y las pruebas de EnergyPlus 26.1 y 26.2 se ejecutaron (2026-11-09) en un ordenador sin esas
+  versiones, con los zip de NREL extraídos fuera del repositorio y enlazados (uniones de directorio) temporalmente en
+  `C:\EnergyPlusV26-1-0` y `C:\EnergyPlusV26-2-0`: 87 passed. Con `ACCIM_ENERGYPLUS_DIR` no basta: besos (la
+  configuración `s09` del golden master) y cuatro pruebas de `test_energyplus_versions.py` buscan EnergyPlus en su
+  carpeta por defecto.
+
+## 6. Lo comprobado en las normas y los artículos
+
+Comprobado en UNE-EN ISO 7730:2025, UNE-EN 16798-1:2020 (EN 16798-1:2019) y UNE-CEN/TR 16798-2:2019, que faltaban
+cuando se escribieron las propuestas (§9.2 de la v02), y en los textos de A5:
+
+- Las categorías del PMV que citan la sección 4.8 del uso detallado, el docstring de `apply_pmv_setpoints` y
+  `PMV_INDICES['pmv']` (−0,2 y 0,2; −0,5 y 0,5; −0,7 y 0,7) son las categorías I, II y III de la tabla A.1 de ISO
+  7730:2025 y de la tabla B.1 de EN 16798-1; las dos tienen además la IV (−1 y 1). ISO 7730:2025 llama I a III a las
+  categorías A, B y C de la edición de 2005, así que el cuaderno del ePMV ya no dice «category B of ISO 7730», sino
+  «category II of EN 16798-1 and ISO 7730»; se ejecutó y exportó de nuevo, con los mismos resultados.
+- La vestimenta del ejemplo de A5 (1 clo en la estación de calefacción y 0,5 en la de refrigeración) es la que suponen
+  EN 16798-1 (tabla B.2) e ISO 7730:2025 (A.4) para sus criterios de diseño; ISO 7730 pide estimar la vestimenta
+  teniendo en cuenta la estación del año (4.1). El aislamiento «dinámico» de ISO 7730 (C.2, ISO 9920: lo que lo reducen
+  el movimiento del cuerpo y el del aire) no es el modelo dinámico de vestimenta de ASHRAE 55 de A5.
+- El programa del PMV del anexo D de ISO 7730:2025, escrito en Python fuera del repositorio, reproduce la tabla D.1 con
+  diferencias de redondeo de 0,01 en tres de sus trece casos; con él se comprobó la aproximación de la sección 3.
+- CEN/TR 16798-2 no interviene en la 1.2.0. Su evaluación del confort a largo plazo, para las propuestas C2 y D1, está
+  en su apartado 8 y en su anexo D (informativo); la v02 de las propuestas la cita como anexo F.
+- El modelo dinámico de vestimenta de A5, en el artículo original (Schiavon y Lee, 2013, *Building and Environment* 59,
+  250-260, que también faltaba) y en ANSI/ASHRAE 55-2020: las ecuaciones de la propuesta, de la documentación y de las
+  pruebas son la ecuación 10 del artículo (§3.6) y las de la figura 5-1 de la norma (5.2.2.2 g y su apéndice
+  informativo, «Method 4»). La norma lo admite en edificios climatizados mecánicamente y avisa de que, al basarse en
+  estudios de campo, puede no valer para todas las culturas y tipos de ocupación (lo dice la sección 4.8 del uso
+  detallado); no se aplica a ocupantes con más de 1,5 clo (5.2.2.3). El artículo recuerda que las normas suponen 1 clo
+  en invierno y 0,5 en verano, como el ejemplo de A5.

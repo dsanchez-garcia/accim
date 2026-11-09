@@ -332,6 +332,10 @@ Biblioteca consultada: `D:\Python\local-reference-manager` (1776 documentos en `
 7. **Schiavon & Lee 2013**, *B&E* 59, 250–260 — no está en la biblioteca (el inventario no tiene el DOI 10.1016/j.buildenv.2012.08.024), pero las ecuaciones ya están verificadas en ASHRAE 55-2020, p. 47; descargar sólo si se quiere citar el original en la documentación de A5.
 8. **Boerstra et al. 2015** (nueva guía híbrida neerlandesa, ISSO 74 rev.) — sin PDF; sólo si B1 incluye la versión revisada de `Te,ref`.
 
+> Nota (2026-11-09): los puntos 3 y 6 ya están, en el servidor (`D:\DSG\Normativas`): UNE-EN 16798-1:2020 (EN 16798-1:2019), UNE-CEN/TR 16798-2:2019 y UNE-EN ISO 7730:2025, la edición vigente de ISO 7730. ISO 7730:2025 llama I a IV a sus categorías (las A, B y C de 2005, más la IV), con los mismos rangos de PMV que la tabla B.1 de EN 16798-1; y en CEN/TR 16798-2:2019 la evaluación del confort a largo plazo está en el apartado 8 y en el anexo D, no en un anexo F. Lo comprobado para la 1.2.0 está en la sección 6 de `CAMBIOS_CODIGO_v1.2.0.md`.
+
+> Nota (2026-11-09, después): también están los puntos 1, 2 y 7: Schweiker (2022), *Indoor Air* 32, e13018, y Aqilah, Rijal, Yoshida y Nicol (2025), *Energy and Buildings* 335, 115469, en `D:\DSG\Otros articulos pendientes` (en el servidor); y Schiavon y Lee (2013), allí y en la biblioteca de Mendeley (`D:\DSG\Mendeley library`), con el que se comprobaron las ecuaciones de A5. Faltan los puntos 4 (CIBSE TM52 y TM59), 5 (GB/T 50785-2012) y 8 (Boerstra et al. 2015), que no están en la biblioteca.
+
 Cuando estén descargados, el siguiente paso es una `_v03` de este documento con los coeficientes de A4 y B4 y los criterios de C2/D1 verificados.
 
 ---
