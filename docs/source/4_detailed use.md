@@ -839,6 +839,47 @@ dataset_hourly = session['dataset_hourly']
 
 The notebook of the research paper case study (How-to Guides) saves and resumes its tables in this way.
 
+(table-pmv-setpoints)=
+### 4.7.3 The results of the setpoints based on the PMV in `Table`
+
+Since accim 1.2.0, `Table` also makes the tables of the simulations with the setpoints based on the PMV, the aPMV and the ePMV (section 4.8). Their IDFs are not output IDFs of `AddAccis()`, so `run_ep(only_accim_idfs=False)` names the CSV files of their simulations `<IDF>[<EPW>.csv` (for instance, `TestModel_aPMV[Seville.csv`): `Table` gives the name of the IDF to the column `Model` and the name of the EPW to the column `EPW`, and the arguments of `AddAccis()` in the other columns are not applicable (`CS_X`, `CA_X`... `NS_X`). Before, `Table` stopped with `ValueError: Columns must be same length as key` with these files; now it stops with a clear message with the names of other patterns, such as `eplusout.csv`. A folder can have the simulations of both kinds, to compare them in the same table (by `Model`).
+
+With `rename_cols=True`, the outputs of each zone get the name of the zone, as those of the ACCIS (the zone `Block1:Zone1` and the index `aPMV` in the examples):
+
+| Output of the setpoints | Column of `Table` |
+| --- | --- |
+| `aPMV_<zone>`, `ePMV_<zone>` (the index of the zone) | `Block1:Zone1_aPMV`, `Block1:Zone1_ePMV` |
+| `Adaptive Coefficient_<zone>`, `Expectancy Factor_<zone>` | `Block1:Zone1_Adaptive Coefficient`, `Block1:Zone1_Expectancy Factor` |
+| `aPMV Heating Setpoint_<zone>`, `aPMV Cooling Setpoint_<zone>` | `Block1:Zone1_Heating Setpoint (aPMV)`, `Block1:Zone1_Cooling Setpoint (aPMV)` |
+| `aPMV Heating Setpoint No Tolerance_<zone>`... | `Block1:Zone1_Heating Setpoint_No Tolerance (aPMV)`... |
+| `Comfortable Hours_<zone>`, `Discomfortable Hot Hours_<zone>`, `Discomfortable Cold Hours_<zone>`, `Discomfortable Total Hours_<zone>` | `Block1:Zone1_Comfortable Hours (h)`... |
+| The schedules `PMV_H_SP_<zone>` and `PMV_C_SP_<zone>` (the PMV setpoints of the thermostats) | `Block1:Zone1_Thermostat Heating Setpoint (PMV)`, `Block1:Zone1_Thermostat Cooling Setpoint (PMV)` |
+| `Zone Mean Air Temperature` | `Block1:Zone1_Zone Mean Air Temperature (°C)` |
+| `Metabolic Correction Factor_<people>`, `Corrected Activity Level_<people>` (the metabolic correction of the ePMV, section 4.8.1) | `Block1:Zone1_Metabolic Correction Factor`, `Block1:Zone1_Corrected Activity Level (W/person)` |
+
+- The setpoints have the index in parentheses, as the setpoint temperatures have their units, so that no name contains another one: the figures of `Table` and `wrangled_table` take the columns whose names contain the names they are given, so `Block1:Zone1_aPMV` does not also take the setpoints. As the setpoint temperatures, the setpoints are drawn over the other data in the figures.
+- The outputs of the metabolic correction are of each People object: those of a People object of one zone get the name of the zone (in a zone with several People objects, their mean), and those of a People object of several zones, such as a People object assigned to a SpaceList of the spaces of several zones (as in the sample residential model of the notebooks), keep their EMS names (`EMS:CORRECTED ACTIVITY LEVEL_RESIDENTIAL_LIVING_OCCUPANTS [W](HOURLY)`).
+- The PMV of the zone of the PMV setpoints (`PMV_<zone>`, the PMV of the previous timestep, the mean of the occupants weighted by their number) and the occupied hours (`Occupied hours_<zone>`) keep the names of the EMS outputs (`EMS:PMV_BLOCK1:ZONE1 [](HOURLY)`), since `Block1:Zone1_PMV` is the PMV that EnergyPlus reports, and the occupied hours of the ACCIS (`Occupied Hours_<zone>`, the same column) keep theirs.
+- The index, its coefficient, the setpoints, the hour counters and the mean air temperature also have block and building values (`level` and `level_agg_func`): for instance, `Building_Total_aPMV (mean)`, the mean of the aPMV of the zones, and `Building_Total_Comfortable Hours (h) (summed)`. The schedules of the thermostats have none (while a zone is empty, they are −100 and 100), nor do the outputs of the metabolic correction.
+- Over time (`frequency`), the hour counters are added up (with `frequency_agg_func='sum'`), and the other outputs, as the temperatures, the PMV and the PPD, are averaged: before, `frequency_agg_func='sum'` also added up the index, the coefficient (the daily expectancy factor was 16.8 instead of 0.7), the setpoints and the mean air temperature. The daily mean of the schedules of the thermostats mixes the setpoints of the occupied hours with the −100 and 100 of the empty hours. The corrected activity level of the ePMV (W/person) is not an energy: it keeps its units (before, `Table` converted it into kWh/m2).
+- `standard_outputs=True` keeps these outputs, and `format_table(type_of_table='comfort hours')` takes the hour counters of the setpoints with those of the ACCIS.
+- These simulations do not report the floor areas of the zones (the EMS outputs `Zone Floor Area` of the ACCIS), so, with `normalised_energy_units=True` (the default), their energy is not divided by any floor area (`Table` lists these columns), and the block and building totals of energy have no value (NaN; before, they were infinite). Make the tables of their energy with `normalised_energy_units=False`.
+
+```python
+from accim.data.postprocessing.main import Table
+
+# The CSV files of run_ep in the working folder, such as TestModel_aPMV[Seville.csv
+table = Table(source_frequency='hourly', frequency='daily', frequency_agg_func='sum', standard_outputs=True,
+              level=['building'], level_agg_func=['mean'], level_excluded_zones=[], idf_path='TestModel_aPMV.idf')
+table.time_plot(
+    vars_to_gather_rows=['Model'], vars_to_gather_cols=['EPW'],
+    data_on_y_main_axis=[['aPMV', ['Block1:Zone1_aPMV', 'Block1:Zone1_Heating Setpoint (aPMV)',
+                                   'Block1:Zone1_Cooling Setpoint (aPMV)']]],
+    colorlist_y_main_axis=[['aPMV', ['k', 'r', 'b']]],
+    figname='aPMV_Block1_Zone1', confirm_graph=True,
+)
+```
+
 ## 4.8 Setpoints based on the predicted mean vote (PMV) and the adaptive PMV (aPMV)
 
 Besides adaptive setpoint temperatures, accim can apply setpoints based on the predicted mean vote (PMV) of Fanger and on indices derived from it: the adaptive PMV (aPMV), the PMV with the expectancy factor (ePMV, since accim 1.2.0) and the PMV itself. The adaptive predicted mean vote (aPMV) corrects the PMV for the adaptation of the occupants: aPMV = PMV / (1 + λ·PMV), where λ is the adaptive coefficient, with one value for the cooling season and another for the heating season. The thermostats keep the aPMV of each zone between the heating and cooling setpoints, instead of keeping the operative temperature between two temperatures.
@@ -873,6 +914,7 @@ building.saveas('TestModel_aPMV.idf')
 - Since accim 1.2.0, the activity level and the clothing insulation can also take a value for each season, and the clothing insulation can follow the dynamic clothing model of ASHRAE 55 (see below).
 - The cooling season is given by dates: for a location in the southern hemisphere, swap them.
 - The aPMV of each zone (the output `aPMV_<zone>`) and the hours within the setpoints are calculated at the beginning of each timestep, from the last PMV that EnergyPlus has calculated, that of the previous timestep.
+- `Table` makes the tables and figures of these simulations (section {ref}`table-pmv-setpoints`).
 
 Since accim 1.2.0, `apply_pmv_setpoints()` applies setpoints based on the PMV itself, such as those of the categories of ISO 7730 and EN 16798-1 (−0.2 and 0.2, −0.5 and 0.5, −0.7 and 0.7). It takes the arguments of `apply_apmv_setpoints()` except the adaptive coefficients, and its setpoints are those of `apply_apmv_setpoints()` with adaptive coefficients of 0, with EMS objects named after the PMV: the programs `apply_PMV_<zone>` and `count_PMV_comfort_hours_<zone>`, and the outputs `PMV_<zone>` (the PMV of the zone), `PMV Heating Setpoint_<zone>`, `PMV Cooling Setpoint_<zone>`... and the hours within the setpoints.
 

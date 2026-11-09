@@ -12,6 +12,14 @@ accim.data.postprocessing.main module
    :show-inheritance:
    :undoc-members:
 
+accim.data.postprocessing.pmv\_index\_columns module
+----------------------------------------------------
+
+.. automodule:: accim.data.postprocessing.pmv_index_columns
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
 accim.data.postprocessing.setpoint\_hours module
 ------------------------------------------------
 

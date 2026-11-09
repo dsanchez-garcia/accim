@@ -17,6 +17,7 @@
 from typing import Tuple, Union
 
 from accim._deprecation import accepts_legacy_kwargs
+from accim.data.postprocessing import pmv_index_columns
 
 
 def _share_y_axis(reference_ax, ax):
@@ -33,6 +34,12 @@ def _legend_handles(leg):
     """Legend handles (Legend.legendHandles was renamed legend_handles in matplotlib 3.7 and removed in 3.9)."""
     handles = getattr(leg, 'legend_handles', None)
     return handles if handles is not None else leg.legendHandles
+
+
+def _zorder(label) -> int:
+    """The zorder of the data of a figure: the setpoints, such as 'Adaptive Cooling Setpoint Temperature (°C)' or
+    'Cooling Setpoint (aPMV)', are drawn over the other data."""
+    return 1 if 'Setpoint' in str(label) else 0
 
 
 # The outputs that Table averages over time, and over the occupant instances of a zone; it adds up the others
@@ -55,6 +62,12 @@ _AVERAGED_OUTPUTS = [
     'Zone Thermal Comfort Fanger Model PMV',
     'Zone Thermal Comfort Fanger Model PPD'
 ]
+
+
+def _averaged_outputs() -> list:
+    """The outputs that Table averages over time, and over the occupant instances of a zone: those above, and those of
+    the setpoints based on the PMV but their hour counters (see :mod:`accim.data.postprocessing.pmv_index_columns`)."""
+    return _AVERAGED_OUTPUTS + list(pmv_index_columns.averaged_outputs())
 
 
 def _longest_name_in(text: str, names) -> Union[str, None]:
@@ -171,6 +184,10 @@ def _occupied_zones(building, columns: list, spacelists: bool):
 
     renamed = {}
     suffixes = [t['ems_suffix'].upper() for t in targets]
+    # The outputs of the metabolic correction of the ePMV are of each People object ('EMS:<Output>_<People>'): those of
+    # the People objects of one zone get the suffix of the zone, and so its name
+    people_suffixes = pmv_index_columns.metabolic_correction_suffixes(targets)
+    metabolic_columns = pmv_index_columns.metabolic_correction_columns()
     for column in columns:
         key = longest(instances, lambda k: column.startswith(k + ':'))
         if key is not None:
@@ -179,6 +196,11 @@ def _occupied_zones(building, columns: list, spacelists: bool):
             continue
         # EMS outputs ('EMS:<Output>_<suffix> [unit](frequency)') and schedules ('<name>_<suffix>:Schedule Value')
         head = column.split(' [')[0]
+        prefix = next((p for p in metabolic_columns if head.startswith(p)), None)
+        if prefix is not None and head[len(prefix):] in people_suffixes:
+            suffix = people_suffixes[head[len(prefix):]]
+            renamed[column] = prefix + new_suffixes.get(suffix, suffix) + column[len(head):]
+            continue
         if head.endswith(':SCHEDULE VALUE'):
             head = head[:-len(':SCHEDULE VALUE')]
         suffix = longest(suffixes, lambda s: head.endswith('_' + s))
@@ -199,7 +221,7 @@ def _rename_and_merge_columns(df, renamed: dict):
     for name in df.columns[df.columns.duplicated()].unique():
         position = list(df.columns).index(name)
         same = df.loc[:, df.columns == name].apply(pd.to_numeric, errors='coerce')
-        if any(output.upper() in name.upper() for output in _AVERAGED_OUTPUTS):
+        if any(output.upper() in name.upper() for output in _averaged_outputs()):
             merged = same.mean(axis=1)
         else:
             merged = same.sum(axis=1, min_count=1)
@@ -225,6 +247,28 @@ _BUILDING_AVERAGE = '_BUILDING_AVERAGE'
 #: The columns of Table with the parts of the dates, which are text ('01'), also in the CSV files of
 #: gen_csv_concatenated
 DATE_PART_COLUMNS = ('Month/Day', 'Month', 'Day', 'Hour', 'Minute', 'Second')
+#: The parts of the names of the output IDFs of AddAccis between the name of the input IDF and that of the EPW, in the
+#: names of the CSV files of their simulations: '<Model>[CS_...[CA_...[CM_...[HM_...[VC_...[VO_...[MT_...[MW_...[AT_...
+#: [NS_...[<EPW>.csv'
+_NAME_PARTS = ('CS', 'CA', 'CM', 'HM', 'VC', 'VO', 'MT', 'MW', 'AT', 'NS')
+
+
+def _name_fields(source: str) -> list:
+    """
+    The fields of the name of the CSV file of a simulation, the columns Model, ComfStand... NameSuffix and EPW (with the
+    extension): the parts of the names of the simulations of the output IDFs of AddAccis, separated by '['; or, for the
+    simulations of other IDFs, such as those with the setpoints based on the PMV, which run_ep names
+    '<IDF>[<EPW>.csv', the name of the IDF, the arguments of AddAccis as not applicable ('CS_X', 'CA_X'... 'NS_X'),
+    and the name of the EPW.
+    """
+    parts = str(source).split('[')
+    if len(parts) == len(_NAME_PARTS) + 2:
+        return parts
+    if len(parts) == 2:
+        return [parts[0], *[f'{part}_X' for part in _NAME_PARTS], parts[1]]
+    raise ValueError(f"The name of the CSV file '{source}' is not that of a simulation of run_ep: '<output IDF of "
+                     f"AddAccis>[<EPW>.csv' ({len(_NAME_PARTS) + 2} parts separated by '[') or '<IDF>[<EPW>.csv'. "
+                     f"Leave it out with the argument datasets, or move it to another folder.")
 
 
 def _of_output(column: str, output: str) -> bool:
@@ -238,6 +282,45 @@ def _of_output(column: str, output: str) -> bool:
         return False
     longer = [name.upper() for name in _LONGER_OUTPUTS if output in name.upper() and name.upper() != output]
     return not any(name in column for name in longer)
+
+
+def _add_pmv_index_levels(df, index_columns: dict, level: list, level_agg_func: list, block_list: list, in_block,
+                          excluded):
+    """
+    Add the block and building values of the outputs of the zones of the setpoints based on the PMV, as Table does for
+    its other outputs: their sum (``<block>_Total_<name> (summed)_pymod``, ``Building_Total_<name> (summed)_pymod``)
+    and their mean (``... (mean)_pymod``) over the zones of each block and of the building, with ``level`` and
+    ``level_agg_func``, but the excluded zones.
+
+    :param df: The table.
+    :param index_columns: The columns of these outputs (see :func:`pmv_index_columns.zone_columns`).
+    :param in_block: Whether a column is of a block, ``in_block(column, block)``.
+    :param excluded: Whether a column is of an excluded zone, ``excluded(column)``.
+    :return: The table with the new columns.
+    """
+    import pandas as pd
+
+    columns_by_name = {}
+    for column, (_, name, levels) in index_columns.items():
+        if levels and not excluded(column):
+            columns_by_name.setdefault(name, []).append(column)
+    groups = []
+    if any('block' in i for i in level):
+        groups.extend((block, lambda column, block=block: in_block(column, block)) for block in block_list)
+    if any('building' in i for i in level):
+        groups.append(('Building', lambda column: True))
+    new_columns = {}
+    for name, columns in columns_by_name.items():
+        for group, of_group in groups:
+            group_columns = [column for column in columns if of_group(column)]
+            if any('sum' in j for j in level_agg_func):
+                new_columns[f'{group}_Total_{name} (summed)_pymod'] = df[group_columns].sum(axis=1)
+            if any('mean' in j for j in level_agg_func):
+                new_columns[f'{group}_Total_{name} (mean)_pymod'] = df[group_columns].mean(axis=1)
+    if not new_columns:
+        return df
+    # At once: a column at a time would fragment the table
+    return pd.concat([df, pd.DataFrame(new_columns, index=df.index)], axis=1)
 
 
 def _running_mean_outputs(comfort_standards, comfort_modes) -> list:
@@ -266,6 +349,11 @@ class Table:
     """Generates a table or dataframe using the EnergyPlus simulation
     results CSV files available in the current folder.
 
+    The names of the CSV files are those that run_ep gives the simulations, '<IDF>[<EPW>.csv': those of the output IDFs
+    of AddAccis give the columns Model, ComfStand, CAT... NameSuffix and EPW; those of other IDFs, such as the IDFs with
+    the setpoints based on the PMV ('TestModel_aPMV[Seville.csv'), give Model and EPW, and the other columns are not
+    applicable ('CS_X', 'CA_X'...).
+
     :param datasets: A list of strings. The strings are the names of the CSV files
         that you want to work with, at the working directory.
     :type datasets: list
@@ -286,7 +374,8 @@ class Table:
         frequency by sum or mean. Can be 'sum' or 'mean'.
     :type frequency_agg_func: str
     :param standard_outputs: Used to consider only standard outputs from accim.
-        It can be True or False.
+        It can be True or False. The outputs of the setpoints based on the PMV (the aPMV, the ePMV...) are standard
+        outputs.
     :type standard_outputs: bool
     :param output_cols_to_keep: A list of columns from EnergyPlus Output:Variable.
         Used to remove all other columns from EnergyPlus Output:Variable objects
@@ -329,7 +418,9 @@ class Table:
     :type normalised_energy_units: bool
     :param rename_cols: A bool, can be True or False.
         Used to keep the original name of EnergyPlus outputs or rename them for understanding
-        purposes.
+        purposes. The outputs of the zones of the setpoints based on the PMV are named as in section 4.7.3 of the
+        detailed use: 'EMS:aPMV_Block1_Zone1 [](Hourly)' is 'Block1:Zone1_aPMV', and
+        'EMS:aPMV Cooling Setpoint_Block1_Zone1 [](Hourly)', 'Block1:Zone1_Cooling Setpoint (aPMV)'.
     :type rename_cols: bool
     :param energy_units_in_kwh: A bool, can be True or False.
         If True, energy units will be in kWh or kWh/m2,
@@ -593,6 +684,8 @@ class Table:
                 'Zone Thermal Comfort Fanger Model PMV',
                 'Zone Thermal Comfort Fanger Model PPD'
             ]
+            # And those of the setpoints based on the PMV
+            cleaned_columns.extend(pmv_index_columns.standard_outputs())
 
             summed_dataframes = []
 
@@ -688,7 +781,7 @@ class Table:
                 df['count'] = 1
                 agg_dict.update({'count': 'count'})
 
-                aggregation_list_mean = _AVERAGED_OUTPUTS
+                aggregation_list_mean = _averaged_outputs()
 
                 for i in df.columns:
                     for j in aggregation_list_mean:
@@ -1126,7 +1219,9 @@ class Table:
             'Coil': 'Total Energy Demand (Wh)',
             'VRF OUTDOOR UNIT': 'Total Energy Consumption (Wh)',
             'Zone Thermal Comfort Fanger Model PMV': 'PMV',
-            'Zone Thermal Comfort Fanger Model PPD': 'PPD (%)'
+            'Zone Thermal Comfort Fanger Model PPD': 'PPD (%)',
+            # Reported by the setpoints based on the PMV
+            pmv_index_columns.MEAN_AIR_TEMPERATURE: f'{pmv_index_columns.MEAN_AIR_TEMPERATURE} (°C)',
         }
         outputdict_normalisation = {
             'Zone Air Volume': 'Zone Air Volume (m3)',
@@ -1216,12 +1311,19 @@ class Table:
                         df['Building_Total_' + outputdict[output] + ' (mean)_pymod'] = df[
                             [i for i in df.columns if _of_output(i, output) and '_pymod' not in i.lower() and not excluded(i)]].mean(axis=1)
 
+        # The block and building values of the outputs of the zones of the setpoints based on the PMV, named as with
+        # rename_cols (see pmv_index_columns.zone_columns)
+        df = _add_pmv_index_levels(df, pmv_index_columns.zone_columns(df.columns, zone_of, occupied_zone_list),
+                                   level, level_agg_func, block_list, in_block, excluded)
+
         # df.to_excel('checkpoint_02.xlsx')
 
-        # Step: renaming energy units
+        # Step: renaming energy units (not the outputs in W that are not energy rates, such as the corrected activity
+        # level of the ePMV, in W/person)
+        power_outputs = [name.upper() for name in pmv_index_columns.power_outputs()]
         renamedict = {}
         for i in df.columns:
-            if '[W]' in i:
+            if '[W]' in i and not any(name in i.upper() for name in power_outputs):
                 temp = {i: i.replace('[W]', '(Wh)')}
                 renamedict.update(temp)
         df = df.rename(columns=renamedict)
@@ -1246,6 +1348,16 @@ class Table:
                 if 'Zone Floor Area'.upper() in i.upper() and '_pymod' not in i.lower() and zone_of(i) is not None:
                     zone_floor_areas.setdefault(zone_of(i).upper(), i)
             not_normalised = []
+            # The block and building totals of the simulations without floor areas (the EMS outputs Zone Floor
+            # Area of AddAccis), such as those of the setpoints based on the PMV, whose total floor area is 0
+            without_floor_area = []
+
+            def per_area(column, area_column):
+                area = df[area_column].where(df[area_column] > 0)
+                if area.isna().any():
+                    without_floor_area.append(column)
+                return df[column] / area
+
             for i in df.columns:
                 if '(Wh)' in i or '(WH)' in i:
                     if i in zone_total_columns or not (i.endswith('_pymod') or 'WHOLE BUILDING' in i.upper()):
@@ -1256,19 +1368,17 @@ class Table:
                             not_normalised.append(i)
                     for k in block_list:
                         if k + '_Total_' in i:
-                            df[i] = df[i] / df[
-                                [i for i in df.columns
-                                 if 'Zone Floor Area'.upper() in i.upper()
-                                 and k.lower() + '_Total_'.lower() in i.lower()][0]]
+                            df[i] = per_area(i, [i for i in df.columns
+                                                 if 'Zone Floor Area'.upper() in i.upper()
+                                                 and k.lower() + '_Total_'.lower() in i.lower()][0])
                     if 'Building_Total_' in i:
-                        df[i] = df[i] / df[
-                            [i for i in df.columns
-                             if 'Zone Floor Area'.upper() in i.upper()
-                             and 'Building_Total_'.lower() in i.lower()][0]]
+                        df[i] = per_area(i, [i for i in df.columns
+                                             if 'Zone Floor Area'.upper() in i.upper()
+                                             and 'Building_Total_'.lower() in i.lower()][0])
                     if any('building' in x for x in level):
                         # try:
                         if 'Whole Building:Facility Total HVAC Electricity Demand Rate'.upper() in i.upper():
-                            df[i] = df[i] / df[[i for i in df.columns if 'Zone Floor Area'.upper() in i.upper() and 'Building_Total_'.lower() in i.lower()][0]]
+                            df[i] = per_area(i, [i for i in df.columns if 'Zone Floor Area'.upper() in i.upper() and 'Building_Total_'.lower() in i.lower()][0])
                         # except IndexError:
                         #     try:
                         #         if 'Whole Building Facility Total HVAC Electricity Demand Rate' in i:
@@ -1282,6 +1392,12 @@ class Table:
                 print('The following energy columns have not been divided by a floor area, because their zone or its '
                       'floor area has not been found, so they are not per m2 although their units say so:')
                 print(*not_normalised, sep='\n')
+            if without_floor_area:
+                print('The following block and building totals of energy have no value (NaN) in the simulations '
+                      'without the floor areas of the zones (the EMS outputs Zone Floor Area of AddAccis), such as '
+                      'those of the setpoints based on the PMV; make the table with normalised_energy_units=False to '
+                      'have their energy:')
+                print(*dict.fromkeys(without_floor_area), sep='\n')
 
         # df.to_excel('checkpoint_03-0.xlsx')
 
@@ -1325,7 +1441,10 @@ class Table:
         ]
         fixed_columns = [i.upper() for i in fixed_columns_orig]
 
-        df[fixed_columns] = df['SOURCE'].str.split('[', expand=True)
+        # The fields of the names of the simulations (see _name_fields)
+        name_fields = {source: _name_fields(source) for source in df['SOURCE'].unique()}
+        df[fixed_columns] = pd.DataFrame([name_fields[source] for source in df['SOURCE']], index=df.index,
+                                         columns=fixed_columns)
 
         # df['Model'] = df['Model'].str[:-6]
         # df['ComfStand'] = df['ComfStand'].str[3:]
@@ -1570,6 +1689,8 @@ class Table:
                 # f'Zone Thermostat Operative Temperature [C]({SFdict[source_frequency]})': 'Zone Thermostat Operative Temperature (°C)',
                 f'Zone Operative Temperature [C]({SFdict[source_frequency]})': 'Zone Operative Temperature (°C)',
                 'Zone Operative Temperature': 'Zone Operative Temperature (°C)',
+                f'{pmv_index_columns.MEAN_AIR_TEMPERATURE} [C]({SFdict[source_frequency]})':
+                    f'{pmv_index_columns.MEAN_AIR_TEMPERATURE} (°C)',
                 f'Zone Thermal Comfort CEN 15251 Adaptive Model Running Average Outdoor Air Temperature [C]({SFdict[source_frequency]})':
                     'EN16798-1 Running mean outdoor temperature (°C)',
                 f'Zone Thermal Comfort ASHRAE 55 Adaptive Model Running Average Outdoor Air Temperature [C]({SFdict[source_frequency]})':
@@ -1657,6 +1778,13 @@ class Table:
                         if '(mean)' in col:
                             temp = {col: f'Building_Total_{renaming_criteria_block[crit]} {energy_units} (mean)'}
                             all_cols_renamed.update(temp)
+
+            # The outputs of the zones of the setpoints based on the PMV ('EMS:APMV_BLOCK1:ZONE1 [](HOURLY)' is
+            # 'Block1:Zone1_aPMV'; see pmv_index_columns.zone_columns)
+            all_cols_renamed.update({
+                column: f'{zone}_{name}'
+                for column, (zone, name, _) in pmv_index_columns.zone_columns(df.columns, zone_of,
+                                                                              occupied_zone_list).items()})
 
             df = df.rename(columns=all_cols_renamed)
 
@@ -1879,7 +2007,8 @@ class Table:
         """
         It filters the columns.
 
-        :param type_of_table: To get previously set out tables. Can be 'energy demand' or 'comfort hours'.
+        :param type_of_table: To get previously set out tables. Can be 'energy demand' or 'comfort hours' (the hour
+            counters of the ACCIS and of the setpoints based on the PMV).
         :param custom_cols: A list of strings.
         The strings will be used as a filter, and the columns that match will be selected.
         """
@@ -1958,10 +2087,16 @@ class Table:
                      'Discomfortable Applicable Hot Hours', 'Discomfortable Applicable Cold Hours',
                      'Discomfortable Non Applicable Hot Hours', 'Discomfortable Non Applicable Cold Hours',
                      'Ventilation Hours']
+            # And the hours within the setpoints based on the PMV, and out of them ('Comfortable Hours (h)'...): their
+            # block and building values have these names also with rename_cols=False
+            index_hours = list(pmv_index_columns.comfort_hours())
             if self.rename_cols:
-                self.val_cols = [col for col in self.df.columns if any(name in col for name in hours)]
+                self.val_cols = [col for col in self.df.columns if any(name in col for name in hours + index_hours)]
             else:
-                self.val_cols = [col for col in self.df.columns if any(name.upper() in col.upper() for name in hours)]
+                # The EMS outputs of the zones ('EMS:COMFORTABLE HOURS_BLOCK1:ZONE1 [H](HOURLY)')
+                index_hours += [f"EMS:{name[:-len(' (h)')]}_" for name in index_hours]
+                self.val_cols = [col for col in self.df.columns
+                                 if any(name.upper() in col.upper() for name in hours + index_hours)]
         elif type_of_table == 'temperature':
             if not self.rename_cols:
                 raise ValueError("type_of_table='temperature' takes the renamed columns: make the Table with "
@@ -3225,10 +3360,7 @@ class Table:
 
                         for x in range(len(self.y_list_main[i][j][k]['dataframe'])):
 
-                            if 'Setpoint Temperature' in self.y_list_main[i][j][k]['label'][x]:
-                                zord = 1
-                            else:
-                                zord = 0
+                            zord = _zorder(self.y_list_main[i][j][k]['label'][x])
 
                             if i == 0 and j == 0:
                                 main_y_axis[i][j][k].scatter(
@@ -3266,10 +3398,7 @@ class Table:
                                     sec_y_axis[i][j][k].spines["right"].set_position(("axes", 1 + k * 0.15))
                                     sec_y_axis[i][j][k].spines["right"].set_visible(True)
                         for x in range(len(self.y_list_sec[i][j][k]['dataframe'])):
-                            if 'Setpoint Temperature' in self.y_list_sec[i][j][k]['label'][x]:
-                                zord = 1
-                            else:
-                                zord = 0
+                            zord = _zorder(self.y_list_sec[i][j][k]['label'][x])
                             if i == 0 and j == 0:
                                 sec_y_axis[i][j][k].scatter(
                                     self.x_list[i][j][2],
@@ -4171,10 +4300,7 @@ class Table:
                         main_y_axis[i][j][k].set_facecolor(set_facecolor)
 
                         for x in range(len(self.y_list_main[i][j][k]['dataframe'])):
-                            if 'Setpoint Temperature' in self.y_list_main[i][j][k]['label'][x]:
-                                zord = 1
-                            else:
-                                zord = 0
+                            zord = _zorder(self.y_list_main[i][j][k]['label'][x])
                             if i == 0 and j == 0:
                                 main_y_axis[i][j][k].plot(
                                     self.df_for_graph['Date/time'],
@@ -4213,10 +4339,7 @@ class Table:
                                     sec_y_axis[i][j][k].spines["right"].set_position(("axes", 1 + k * 0.15))
                                     sec_y_axis[i][j][k].spines["right"].set_visible(True)
                         for x in range(len(self.y_list_sec[i][j][k]['dataframe'])):
-                            if 'Setpoint Temperature' in self.y_list_sec[i][j][k]['label'][x]:
-                                zord = 1
-                            else:
-                                zord = 0
+                            zord = _zorder(self.y_list_sec[i][j][k]['label'][x])
                             if i == 0 and j == 0:
                                 sec_y_axis[i][j][k].plot(
                                     self.df_for_graph['Date/time'],

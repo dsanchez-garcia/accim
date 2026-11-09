@@ -3,12 +3,13 @@
 Guía de los cambios del código de la rama `v1.2.0` respecto a accim 1.1.0, para quien mantiene accim; no es
 documentación de uso. Recoge las propuestas del bloque A de `notes/PROPUESTAS_MEJORAS_post_1.1.0_v01.md` y `_v02.md`
 (índices de confort derivados del PMV; archivos del autor, en git desde el commit `e238dad`) que el autor pidió para
-esta versión: las P1, A2, A1 y A5, en este orden.
+esta versión: las P1, A2, A1 y A5, en este orden; y después D2 (sección 7), que el autor incluyó en la 1.2.0 el
+2026-11-09 con E2 y E1.
 
 Lo que ya está en otros documentos no se repite aquí:
 
 - `CHANGELOG.md` (sección Unreleased): los cambios que ve el usuario.
-- `docs/source/4_detailed use.md`, secciones 4.8 y 4.8.1: el uso.
+- `docs/source/4_detailed use.md`, secciones 4.7.3, 4.8 y 4.8.1: el uso.
 - `DEVLOG.md`: el registro del trabajo, con cómo se comprobó.
 - `notes/decisions.md`: las decisiones y sus motivos.
 
@@ -24,6 +25,9 @@ Lo que ya está en otros documentos no se repite aquí:
   con la estación de refrigeración de las consignas) y el modelo dinámico de vestimenta de ASHRAE 55
   (`'dynamic_ashrae55'`), y cada llamada escribe de nuevo sus schedules; `accim.sim.people.set_clothing_method` pone
   cualquiera de los tres métodos de la vestimenta de EnergyPlus (sección 4).
+- **D2.** `Table` lee los CSV de los IDF con consignas basadas en el PMV (`<IDF>[<EPW>.csv`), promedia en el tiempo sus
+  salidas (menos las horas), no toma la actividad corregida por una energía y da a las salidas de las zonas el nombre
+  de su zona, con valores de bloque y de edificio, que las figuras distinguen (sección 7).
 - Las categorías del PMV y la aproximación de la corrección del metabolismo se han comprobado en ISO 7730:2025 y
   EN 16798-1:2019, y el modelo dinámico de vestimenta de A5, en Schiavon y Lee (2013) y ASHRAE 55-2020 (sección 6).
 - Lo que quedaba abierto se ha comprobado: el golden master y las pruebas de EnergyPlus 26.1 y 26.2, también la de A5
@@ -268,6 +272,16 @@ nada.
   estación: los `People:Instance` tienen los campos de A5, EnergyPlus simula los dos modelos igual, y la vestimenta
   dinámica es la misma en todas las horas que comprueba (de 8:00 a 24:00).
 - El golden master (`s07` y `s08`) comprueba que los IDF del aPMV no cambian.
+- `tests/core/test_table_pmv_index.py` (D2, 28 pruebas): CSV con los nombres de columna de EnergyPlus (los de la
+  simulación de la sección 7) y valores inventados, con el modelo de DesignBuilder, el residencial de OpenStudio (zonas
+  con el nombre de su espacio y un `People` de dos zonas) y uno con dos `People` en una zona: los nombres de las salidas
+  de los tres índices y de la corrección del metabolismo; que ningún nombre de una zona, de un bloque o del edificio
+  contenga otro; la media en el tiempo y la suma de las horas; la actividad corregida sin convertir; los valores de
+  bloque y de edificio, también con una zona excluida; `rename_cols=False`; `standard_outputs`;
+  `format_table('comfort hours')`; los nombres `<IDF>[<EPW>.csv`, junto a los de `AddAccis` en la misma tabla, y el
+  error con otros; `time_plot` del ePMV y sus consignas (una columna por nombre); y `wrangled_table` de dos modelos en
+  dos ciudades. Una prueba exige un nombre en `Table` para cada salida de `zone_outputs` (o que mantenga el suyo a
+  propósito).
 - El golden master y las pruebas de EnergyPlus 26.1 y 26.2 se ejecutaron (2026-11-09) en un ordenador sin esas
   versiones, con los zip de NREL extraídos fuera del repositorio y enlazados (uniones de directorio) temporalmente en
   `C:\EnergyPlusV26-1-0` y `C:\EnergyPlusV26-2-0`: 87 passed. Con `ACCIM_ENERGYPLUS_DIR` no basta: besos (la
@@ -299,3 +313,91 @@ cuando se escribieron las propuestas (§9.2 de la v02), y en los textos de A5:
   estudios de campo, puede no valer para todas las culturas y tipos de ocupación (lo dice la sección 4.8 del uso
   detallado); no se aplica a ocupantes con más de 1,5 clo (5.2.2.3). El artículo recuerda que las normas suponen 1 clo
   en invierno y 0,5 en verano, como el ejemplo de A5.
+
+## 7. Las simulaciones de las consignas basadas en el PMV en `Table` (D2)
+
+La propuesta D2 pide que `Table` reconozca `ePMV_<zone>`, `e_<zone>` y `aPMV_<zone>` en el renombrado (`rename_cols`) y
+en las figuras de `time_plot`; también `Tout_metric` y `HoursBelow_*`, que son salidas de B1 y B5, que accim no tiene
+(quedan en `TODO.md`). El factor de expectativa se llama `Expectancy Factor_<zone>`, no `e_<zone>`. La v03 de las
+propuestas (del autor, en git desde `4d5fb90`, escrita sobre el código de la 1.1.0) añade `Activity_corrected_<zone>`
+(aquí, `Corrected Activity Level_<people>`, de cada `People`), `ATHB_PMV_<zone>` (A4) y `HoursBelow_*_<zone>` (D1 o
+B5), `wrangled_table` y las unidades (adimensional, W/persona, °C, h): todo hecho menos las salidas de A4, B1, B5 y D1,
+que accim no tiene.
+
+**Antes** (comprobado el 2026-11-09 con tres días de julio del modelo de ejemplo con las consignas del ePMV y la
+corrección del metabolismo, EnergyPlus 25.1, con un script fuera del repositorio):
+
+- `Table` partía el nombre de cada CSV por `[` en las doce columnas de los nombres de los IDF de `AddAccis` (`Model`,
+  `ComfStand`... `EPW`). Los IDF de las consignas del PMV no son de `AddAccis` (la GUI los llama
+  `<entrada>_<índice>.idf`), así que `run_ep` llama a sus CSV `<IDF>[<EPW>.csv`, con dos partes, y `Table` se paraba
+  con `ValueError: Columns must be same length as key`; también desde la pestaña de la GUI, que pasa a `Table` todos
+  los CSV con `[`.
+- Con un nombre de doce partes, las salidas EMS de las zonas quedaban con su nombre EMS en mayúsculas
+  (`EMS:EPMV_BLOCK1:ZONE1 [](HOURLY)`), sin valores de bloque ni de edificio, y `standard_outputs=True` las quitaba.
+- Al agregar en el tiempo, `Table` solo promedia las salidas de `_AVERAGED_OUTPUTS`; a las demás les aplica
+  `frequency_agg_func`. Con `'sum'` y valores diarios, sumaba el índice (15,33 en vez de 0,639), el factor de
+  expectativa (16,8 en vez de 0,7), las consignas, las schedules de los termostatos y la temperatura del aire, que solo
+  añaden estas consignas; el PMV de EnergyPlus sí se promediaba.
+- `Corrected Activity Level` (W por persona) pasaba de `[W]` a `(Wh)` y luego a kWh/m2, como si fuera una energía.
+- Con `normalised_energy_units=True` (por defecto), los totales de bloque y de edificio de la energía se dividen por
+  la suma de las superficies de las zonas (las salidas EMS `Zone Floor Area` del ACCIS); estas simulaciones no las
+  tienen, así que la suma era 0 y los totales, infinitos (en la simulación del modelo residencial, con su VRF, el total
+  de refrigeración del edificio). Pasaba lo mismo con `output_type='simplified'`, que tampoco añade esas salidas.
+
+**Ahora.**
+
+- `_name_fields` (en `main.py`) da las doce columnas de cada nombre: las partes, si son doce; si son dos
+  (`<IDF>[<EPW>.csv`), el IDF en `Model`, el EPW en `EPW` y `CS_X`, `CA_X`... `NS_X` en las demás, como los argumentos
+  de `AddAccis` que no se aplican; con otro número de partes, un `ValueError` con el nombre del archivo y los dos
+  patrones (antes, el error de pandas de arriba).
+- Los nombres de las salidas salen del motor, para que no se separen: `accim.sim.pmv_index` tiene
+  `zone_outputs(pmv_index)` (las salidas de cada zona que `_add_outputs` escribía en un diccionario dentro de la
+  función; ahora las escribe de ahí, en el mismo orden: el golden master no cambia), `PMV_SETPOINT_SCHEDULES`
+  (`PMV_H_SP`, `PMV_C_SP`) y `METABOLIC_CORRECTION_OUTPUTS`.
+- El módulo nuevo `accim/data/postprocessing/pmv_index_columns.py` dice qué hace `Table` con ellas, sin engordar el
+  constructor (lo que pide R-04): `averaged_outputs()` (todas menos los contadores de horas, que se suman), que
+  `_averaged_outputs()` de `main.py` añade a `_AVERAGED_OUTPUTS` en la agregación en el tiempo y al juntar las
+  instancias de una zona; `standard_outputs()`, que se añade a la lista de `standard_outputs=True`; `power_outputs()`,
+  que no se convierten en energía (la actividad corregida); `comfort_hours()`, para
+  `format_table(type_of_table='comfort hours')`; y `zone_columns()`, las columnas de las zonas con su zona y su nombre
+  en `Table`.
+- `zone_columns` reconoce `EMS:<salida>_<zona>...` con la salida exacta (sin la exactitud,
+  `EMS:COMFORTABLE HOURS_NO APPLICABILITY_<zona>`, del ACCIS, sería `Comfortable Hours`): el resto del nombre tiene que
+  empezar por la zona que `zone_of` encuentra en la columna. En las zonas que se llaman como su espacio, detrás de la
+  zona va el nombre del `People` (`Floor_1_Residential_Living_Occupants`), como en las salidas del ACCIS. Las schedules
+  de los termostatos, `PMV_H_SP_<zona>:SCHEDULE VALUE`, con la zona exacta.
+- Los nombres en `Table` (sección 4.7.3 del uso detallado): el índice y su coeficiente, con su nombre
+  (`Block1:Zone1_aPMV`, `Block1:Zone1_Expectancy Factor`); las consignas, con el índice entre paréntesis, como las
+  unidades de las temperaturas de consigna (`Block1:Zone1_Heating Setpoint (aPMV)`,
+  `Block1:Zone1_Cooling Setpoint_No Tolerance (aPMV)`); los contadores, con `(h)`; las schedules,
+  `Thermostat Heating Setpoint (PMV)` y `Thermostat Cooling Setpoint (PMV)`; la temperatura del aire, como la operativa.
+  Las figuras de `Table` toman las columnas cuyo nombre contiene el que se les da, así que ningún nombre puede contener
+  otro: con `Block1:Zone1_aPMV Heating Setpoint`, pedir `Block1:Zone1_aPMV` daría también las consignas. Por eso las
+  consignas llevan el índice detrás.
+- Mantienen su nombre EMS: `PMV_<zona>` de las consignas del PMV (`Block1:Zone1_PMV` ya es el PMV de EnergyPlus; el
+  del EMS es el del paso anterior, la media de los ocupantes ponderada por su número), `Occupied hours_<zona>` (es la
+  misma columna que `Occupied Hours_<zona>` del ACCIS, que `Table` no renombra; cambiarla cambiaría las tablas del
+  ACCIS) y las salidas de la corrección del metabolismo de los `People` de varias zonas.
+- Las salidas de la corrección del metabolismo son de cada `People` (`EMS:<salida>_<People>`): `_occupied_zones` da a
+  las de un `People` de una sola zona (target) el sufijo EMS de la zona (`metabolic_correction_suffixes`), así que se
+  llaman como la zona (`Block1:Zone1_Corrected Activity Level (W/person)`) y, en una zona con varios `People`, se
+  promedian, como las salidas de las instancias de una zona (`_rename_and_merge_columns`). No tienen valores de bloque
+  ni de edificio.
+- Los nombres nuevos no tienen `[`, que `wrangled_table` usa para separar el nombre de la columna del de la simulación,
+  y ninguno contiene otro, así que `wrangled_table` toma una columna por nombre, como las figuras.
+- `_add_pmv_index_levels` (en `main.py`) añade los valores de bloque y de edificio (suma y media, con `level`,
+  `level_agg_func` y las zonas excluidas, como los demás) del índice, el coeficiente, las consignas y los contadores; la
+  temperatura del aire, por `outputdict`. Las schedules de los termostatos no los tienen: valen −100 y 100 con la zona
+  vacía.
+- `_zorder` dibuja encima las series cuyo nombre tiene `Setpoint` (antes, `Setpoint Temperature`), en `time_plot` y en
+  `scatter_plot`.
+- `per_area` (en el paso de la normalización del constructor) divide los totales de bloque y de edificio por su
+  superficie solo donde es positiva, y deja NaN en las demás filas, que lista con un mensaje, como ya listaba la
+  energía de las zonas que no puede dividir. En una tabla mixta, la energía de las zonas ya era NaN en las filas sin
+  superficie (división por NaN).
+- `_add_pmv_index_levels` añade las columnas nuevas de una vez (`pd.concat`): una a una, pandas avisaba de que la tabla
+  quedaba fragmentada (`PerformanceWarning`).
+- No se ha cambiado: el `PMV` de EnergyPlus se sigue juntando con la media simple de las instancias de una zona,
+  mientras que el `PMV_<zona>` del EMS pondera por el número de ocupantes; `ComfStand` deja de ser una variable de la
+  tabla si sus valores son un estándar y `CS_X` (la regla de `Table` para los argumentos que no se aplican, `_X`), así
+  que en una tabla con simulaciones de los dos tipos se distinguen por `Model`.

@@ -40,13 +40,16 @@ from accim.utils.people import get_people_objects
 
 __all__ = [
     'IndexParameter',
+    'METABOLIC_CORRECTION_OUTPUTS',
     'PMV_INDICES',
+    'PMV_SETPOINT_SCHEDULES',
     'PmvIndex',
     'apply_pmv_index_setpoints',
     'arguments_table',
     'get_pmv_index',
     'metabolic_correction_names',
     'program_names',
+    'zone_outputs',
 ]
 
 #: The eppy or besos IDF object of a model
@@ -69,6 +72,12 @@ _COUNTERS = (
     ('Discomfortable Total Hours', 'discomfhour'),
     ('Occupied hours', 'occupied_hour'),
 )
+#: The schedules of the PMV setpoints of the thermal comfort thermostats, ``<prefix>_<zone>`` (with the raw name of the
+#: zone), heating and cooling, which the EMS sets at each timestep
+PMV_SETPOINT_SCHEDULES = ('PMV_H_SP', 'PMV_C_SP')
+#: The EMS output variables of the metabolic correction of the ePMV, ``<output>_<People>`` (one per People object), and
+#: their units: the factor of the activity level and the corrected activity level (W/person)
+METABOLIC_CORRECTION_OUTPUTS = (('Metabolic Correction Factor', ''), ('Corrected Activity Level', 'W'))
 
 
 @dataclass(frozen=True)
@@ -322,8 +331,7 @@ def _add_metabolic_correction(building: IDF, target_data: List[Dict[str, Any]], 
         add_program(building, names['program'], _metabolic_correction_lines(names, suffixes))
         # 4. The outputs: the factor and the corrected activity level (W/person)
         suffix = sanitize_ems_name(people.Name)
-        for output, variable, units in (('Metabolic Correction Factor', names['factor'], ''),
-                                        ('Corrected Activity Level', names['actuator'], 'W')):
+        for (output, units), variable in zip(METABOLIC_CORRECTION_OUTPUTS, (names['factor'], names['actuator'])):
             building.newidfobject('EnergyManagementSystem:OutputVariable', Name=f'{output}_{suffix}',
                                   EMS_Variable_Name=variable, Type_of_Data_in_Variable='Averaged',
                                   Update_Frequency='ZoneTimestep', Units=units)
@@ -384,6 +392,30 @@ def get_pmv_index(index: str) -> PmvIndex:
     if pmv_index is None:
         raise ValueError(f'{index!r} is not an index derived from the PMV; the indices are {list(PMV_INDICES)}.')
     return pmv_index
+
+
+def zone_outputs(pmv_index: PmvIndex) -> Dict[str, Tuple[str, str, str]]:
+    """The EMS output variables that the setpoints of an index report for each zone, ``<output>_<zone>``: the
+    coefficient of the season (if the index has one), the index of the zone, its setpoints with and without the
+    tolerances, and the hour counters.
+
+    :param pmv_index: The index (:data:`PMV_INDICES`).
+    :return: A dictionary {output: (prefix of its EMS variable, units, type of data)}, in the order in which they are
+        added to the model.
+    """
+    name = pmv_index.name
+    outputs = {}
+    if pmv_index.coefficient is not None:
+        outputs[pmv_index.coefficient_output] = (pmv_index.coefficient, '', 'Averaged')
+    outputs.update({
+        name: (name, '', 'Averaged'),
+        f'{name} Heating Setpoint': (f'{name}_H_SP', '', 'Averaged'),
+        f'{name} Cooling Setpoint': (f'{name}_C_SP', '', 'Averaged'),
+        f'{name} Heating Setpoint No Tolerance': (f'{name}_H_SP_noTol', '', 'Averaged'),
+        f'{name} Cooling Setpoint No Tolerance': (f'{name}_C_SP_noTol', '', 'Averaged'),
+    })
+    outputs.update({output: (variable, 'H', 'Summed') for output, variable in _COUNTERS})
+    return outputs
 
 
 def _resolve_targets(building: IDF) -> List[Dict[str, Any]]:
@@ -621,7 +653,7 @@ def _ensure_infrastructure(building: IDF, unique_zones: List[str], verbose: bool
     # 1. Create Schedules (Using RAW Zone Name)
     # These are the "dummy" schedules that EMS will overwrite (Actuate) at every timestep.
     # We create one for Heating (PMV_H_SP) and one for Cooling (PMV_C_SP).
-    for i in ['PMV_H_SP', 'PMV_C_SP']:
+    for i in PMV_SETPOINT_SCHEDULES:
         for zone in unique_zones:
             sch_name = f'{i}_{zone}'
             if building.getobject('Schedule:Compact', sch_name) is None:
@@ -1115,20 +1147,7 @@ def _add_outputs(building: IDF, pmv_index: PmvIndex, output_frequencies: Sequenc
     :param verbose: If True, prints success messages. Warnings are always printed.
     """
     # 1. Define EMS Output Variables (Mapping internal vars to output names)
-    name = pmv_index.name
-    EMSOutputVariableZone_dict = {}
-    if pmv_index.coefficient is not None:
-        EMSOutputVariableZone_dict[pmv_index.coefficient_output] = [pmv_index.coefficient, '', 'Averaged']
-    EMSOutputVariableZone_dict.update({
-        name: [name, '', 'Averaged'],
-        f'{name} Heating Setpoint': [f'{name}_H_SP', '', 'Averaged'],
-        f'{name} Cooling Setpoint': [f'{name}_C_SP', '', 'Averaged'],
-        f'{name} Heating Setpoint No Tolerance': [f'{name}_H_SP_noTol', '', 'Averaged'],
-        f'{name} Cooling Setpoint No Tolerance': [f'{name}_C_SP_noTol', '', 'Averaged'],
-    })
-    EMSOutputVariableZone_dict.update({output: [variable, 'H', 'Summed'] for output, variable in _COUNTERS})
-
-    for key, val in EMSOutputVariableZone_dict.items():
+    for key, val in zone_outputs(pmv_index).items():
         for suffix in suffixes:
             out_name = f'{key}_{suffix}'
             if building.getobject('EnergyManagementSystem:OutputVariable', out_name) is None:
@@ -1167,7 +1186,7 @@ def _add_outputs(building: IDF, pmv_index: PmvIndex, output_frequencies: Sequenc
                 warnings.warn(f"Output:Variable already exists for '{outvar}' ({freq_cap}). Skipping.")
 
         # Add Schedule Values (using RAW zone names)
-        for i in ['PMV_H_SP', 'PMV_C_SP']:
+        for i in PMV_SETPOINT_SCHEDULES:
             for zone in unique_zones:
                 sch_name = f'{i}_{zone}'
                 key = _var_key(sch_name, 'Schedule Value', freq_cap)

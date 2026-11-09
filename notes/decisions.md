@@ -11,6 +11,36 @@ Durable architectural/process decisions for this repository and its Obsidian
 vault. Newest first. Use [[templates/decision-record.md|the decision-record
 template]] to add a new entry.
 
+## 2026-11-09 — Table reads the CSV files of the simulations of any IDF and names the outputs of the setpoints based on the PMV after their zones, with names that do not contain each other (D2)
+
+- **Status**: accepted (proposal D2 of `notes/PROPUESTAS_MEJORAS_post_1.1.0_v02.md` and `_v03.md`, which the author
+  included in 1.2.0 on 2026-11-09; the details below were not in the proposal: for the review of the author)
+- **Context**: D2 asks `Table` to recognise `ePMV_<zone>`, `e_<zone>` (`Expectancy Factor_<zone>`) and `aPMV_<zone>` in
+  `rename_cols` and in `time_plot`. A simulation of the ePMV setpoints showed that `Table` could not read their CSV
+  files at all: `run_ep` names them `<IDF>[<EPW>.csv`, and `Table` split every name into the twelve parts of the names
+  of the output IDFs of `AddAccis`. It also added up their index and setpoints over time and took the corrected activity
+  level for an energy. The figures of `Table` take the columns whose names contain the names they are given.
+- **Decision**: the names with two parts give `Model` (the IDF) and `EPW`, and the other columns `CS_X`... `NS_X`, as
+  the arguments of `AddAccis` that do not apply; other names stop `Table` with a clear `ValueError`. The outputs of the
+  zones are named `<zone>_<name>`: the index and its coefficient with their names, the setpoints with the index in
+  parentheses after them (`Heating Setpoint (aPMV)`, `Cooling Setpoint_No Tolerance (aPMV)`), so that no name contains
+  another one (`<zone>_aPMV` would be part of `<zone>_aPMV Heating Setpoint`), the hour counters with `(h)`, the
+  schedules of the thermostats `Thermostat Heating Setpoint (PMV)` and `Thermostat Cooling Setpoint (PMV)`. They keep
+  their EMS names: `PMV_<zone>` of the PMV setpoints (`<zone>_PMV` is the PMV of EnergyPlus), `Occupied hours_<zone>`
+  (the same column as `Occupied Hours_<zone>` of the ACCIS, which `Table` does not rename) and the outputs of the
+  metabolic correction of the People objects of several zones; those of a People object of one zone get the name of
+  the zone, `<zone>_Metabolic Correction Factor` and `<zone>_Corrected Activity Level (W/person)` (the
+  `Activity_corrected_<zone>` of v03 of the proposals), with the mean of the People objects of a zone that has several.
+  All but the hour counters are averaged over time; the index,
+  the coefficient, the setpoints and the counters get block and building values. The names of the outputs come from
+  `accim.sim.pmv_index` (`zone_outputs`), and what `Table` does with them is in the module
+  `accim.data.postprocessing.pmv_index_columns`, not in the constructor of `Table` (R-04).
+- **Consequences**: the GUI and `Table` make the tables and figures of these simulations, also together with those of
+  the ACCIS (they are told apart by `Model`; `ComfStand` with one standard and `CS_X` is not a variable of the table, as
+  the other `_X` values). The tables of the ACCIS do not change, unless they have `Zone Mean Air Temperature`. Section
+  4.7.3 of [[../docs/source/4_detailed use.md]] and section 7 of [[../CAMBIOS_CODIGO_v1.2.0.md]]; the parts of D2 for B1
+  and B5 are in [[../TODO.md]].
+
 ## 2026-11-09 — The priorities of TODO.md and the format of the references to issues and pull requests
 
 - **Status**: accepted (the author approved both proposals of [[../TODO.md]] of 2026-10-31, 2026-11-09: "¿Apruebas las

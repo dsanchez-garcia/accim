@@ -15,6 +15,23 @@ This log is a lightweight, session-scoped complement to the repository's
 existing tracking files — it does not replace them (see
 [[decisions.md#2026-09-13 — `notes/work-log.md` complements, not replaces, existing tracking files|the related decision]]).
 
+## 2026-11-09 — D2: `Table` with the simulations of the setpoints based on the PMV (branch `v1.2.0`, on the server)
+
+- **Objective**: D2 of the proposals (v02 and v03), included in 1.2.0 by the author; then the session plan of the
+  author (brief `notes/COPILOT_BRIEF_v1.2.0_v01.md`, decisions D1-D12), in which D2 comes after E1: D2 was finished
+  first because it was in progress.
+- **Affected files**: `accim/data/postprocessing/main.py`, `accim/data/postprocessing/pmv_index_columns.py` (new),
+  `accim/sim/pmv_index.py`, `tests/core/test_table_pmv_index.py` (new), [[../docs/source/4_detailed use.md]] (4.7.3),
+  [[../CHANGELOG.md]], [[../CAMBIOS_CODIGO_v1.2.0.md]] (§7), [[../TODO.md]], [[../DEVLOG.md]], [[decisions.md]].
+- **Finding or decision**: See
+  [[decisions.md#2026-11-09 — Table reads the CSV files of the simulations of any IDF and names the outputs of the setpoints based on the PMV after their zones, with names that do not contain each other (D2)|the decision]].
+  `Table` could not read the CSV files of these simulations, added up their indices and setpoints over time and gave
+  infinite totals per m2; v03 of the proposals was written on the code of 1.1.0, so its names of the outputs of A1
+  differ from those of the code, which are used.
+- **Validation**: 29 new tests; two simulations of 3 days with EnergyPlus 25.1; 1490 passed and 1 skipped; the
+  documentation build with the same warnings.
+- **Next step**: E1, and the rest of the session plan.
+
 ## 2026-11-09 — The answers of the author: A5 committed, the conventions of TODO.md, and D2, E2 and E1 for 1.2.0
 
 - **Objective**: The author answered the five questions: commit and push the work to `v1.2.0`, apply the two
