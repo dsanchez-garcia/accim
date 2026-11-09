@@ -15,6 +15,20 @@ This log is a lightweight, session-scoped complement to the repository's
 existing tracking files — it does not replace them (see
 [[decisions.md#2026-09-13 — `notes/work-log.md` complements, not replaces, existing tracking files|the related decision]]).
 
+## 2026-11-09 — The answers of the author: A5 committed, the conventions of TODO.md, and D2, E2 and E1 for 1.2.0
+
+- **Objective**: The author answered the five questions: commit and push the work to `v1.2.0`, apply the two
+  proposals of [[../TODO.md]] (priorities and format of the references), do E1 and then the last part of A5, and
+  include D2 and E2 in 1.2.0; he installed EnergyPlus 26.2 (`C:\EnergyPlusV26-2-0`).
+- **Affected files**: [[../TODO.md]], [[../DEVLOG.md]], [[../ROADMAP.md]], [[decisions.md]], `tests/README.md`.
+- **Finding or decision**: See
+  [[decisions.md#2026-11-09 — The priorities of TODO.md and the format of the references to issues and pull requests|the decision]].
+  GitHub names the repository of EnergyPlus `NatLabRockies/EnergyPlus` (`NREL/EnergyPlus` redirects to it); the pull
+  requests 11409 ("Catch EMS variables initialized after reference") and 11551 (its follow-up) were read there.
+- **Validation**: with the installed EnergyPlus 26.2, the golden master and `tests/core/test_energyplus_versions.py`:
+  86 passed and 1 skipped (EnergyPlus 26.1, not installed); A5 committed (`6a6267d`) and pushed.
+- **Next step**: D2, E2, E1 and the clothing insulation as a function of the outdoor temperature (A5).
+
 ## 2026-11-09 — `set_clothing_method` (A5) with the option of the author; the sources of the dynamic clothing model
 
 - **Objective**: The answer of the author to the open question ("Opción (b)"), and the articles that the proposals

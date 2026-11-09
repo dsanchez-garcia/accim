@@ -11,6 +11,23 @@ Durable architectural/process decisions for this repository and its Obsidian
 vault. Newest first. Use [[templates/decision-record.md|the decision-record
 template]] to add a new entry.
 
+## 2026-11-09 — The priorities of TODO.md and the format of the references to issues and pull requests
+
+- **Status**: accepted (the author approved both proposals of [[../TODO.md]] of 2026-10-31, 2026-11-09: "¿Apruebas las
+  dos propuestas del TODO.md (prioridades y formato de enlaces)? Sí")
+- **Context**: the conventions of [[../TODO.md]] named the priorities `P0`, `P1` and `P2` without criteria, and the
+  tracking files referred to issues and pull requests in several ways ("PR #6", "EnergyPlus pull request 11409").
+- **Decision**: `P0`, it stops users or a release now; `P1`, needed for the next release, or wrong behaviour that has
+  a workaround, failing tests, or documentation that misleads; `P2`, improvements, refactors, reviews and tasks without
+  a date; when in doubt, the lower priority, raised when a user is affected. References: `#123` for this repository and
+  `owner/repo#123` for other repositories, which GitHub links (not inside code spans); full URLs only for other sites.
+  The repository of EnergyPlus is now `NatLabRockies/EnergyPlus` on GitHub (`NREL/EnergyPlus` redirects to it), so the
+  references use that name.
+- **Consequences**: the conventions of [[../TODO.md]] have the criteria and the format, and those of
+  [[../DEVLOG.md]] refer to them; the two references of [[../DEVLOG.md]] to the pull requests of EnergyPlus follow the
+  format, and the dependency of R-01 in [[../ROADMAP.md]] is solved. The numbered "PR 1" to "PR 4" of the entries of the
+  branch reviews are the steps of `notes/branch-reviews.md`, not pull requests of GitHub, and are kept.
+
 ## 2026-11-09 — The schedule of set_clothing_method is the clothing insulation schedule, and CalculationMethodSchedule has its own argument
 
 - **Status**: accepted (the author answered the open question of `notes/questions.md`, 2026-11-09: "Opción (b)")
