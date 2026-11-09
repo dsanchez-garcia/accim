@@ -15,6 +15,60 @@ This log is a lightweight, session-scoped complement to the repository's
 existing tracking files — it does not replace them (see
 [[decisions.md#2026-09-13 — `notes/work-log.md` complements, not replaces, existing tracking files|the related decision]]).
 
+## 2026-11-09 — `set_clothing_method` (A5) with the option of the author; the sources of the dynamic clothing model
+
+- **Objective**: The answer of the author to the open question ("Opción (b)"), and the articles that the proposals
+  lacked, in `D:\DSG\Otros articulos pendientes` and `D:\DSG\Mendeley library` (on the server).
+- **Affected files**: `accim/sim/people.py`, `tests/core/test_pmv_input_parameters.py`,
+  `tests/core/test_people_instance.py`, [[../docs/source/4_detailed use.md]] (4.8), [[../CHANGELOG.md]],
+  [[../CAMBIOS_CODIGO_v1.2.0.md]], [[../TODO.md]], [[../DEVLOG.md]], [[decisions.md]], [[questions.md]],
+  [[PROPUESTAS_MEJORAS_post_1.1.0_v02.md]] (§9.2).
+- **Finding or decision**: See
+  [[decisions.md#2026-11-09 — The schedule of set_clothing_method is the clothing insulation schedule, and CalculationMethodSchedule has its own argument|the decision]].
+  The equations of the dynamic model are those of Schiavon and Lee (2013, equation 10) and ASHRAE 55-2020
+  (Figure 5-1), which accepts the model in mechanically conditioned buildings.
+- **Validation**: 1451 passed and 11 skipped (EnergyPlus 26.x); the documentation build with the same 59 lines of
+  warnings.
+- **Next step**: the tasks of [[../TODO.md]] that need the author.
+
+## 2026-11-09 — The open points of `CAMBIOS_CODIGO_v1.2.0.md` (branch `v1.2.0`, on the server)
+
+- **Objective**: The request of the author: "continúa con lo que puedas hacer del documento
+  CAMBIOS_CODIGO_v1.2.0.md": the tests with EnergyPlus 26.x, the calling point of the metabolic correction "sin
+  probarlo" and the cause of the differences between the backends, not looked for.
+- **Affected files**: `tests/core/test_energyplus_versions.py`, [[../CAMBIOS_CODIGO_v1.2.0.md]] (§1, §2, §3, §5),
+  [[../TODO.md]], [[../DEVLOG.md]], [[questions.md]].
+- **Finding or decision**: EnergyPlus 26.1 and 26.2 can be tested without installing them: the zip files of NREL,
+  linked with directory junctions at the default folders (`ACCIM_ENERGYPLUS_DIR` is not enough for besos and four
+  tests). The correction before the internal gains makes them follow it in the same timestep, but delays the season
+  one timestep, with negligible differences in a year: it stays. The backends start to differ in the HVAC or zone air
+  solution of the warm-up, not in the EMS, the PMV or the comfort thermostat. Details in [[../DEVLOG.md]]; the
+  question of `set_clothing_method`, in [[questions.md]].
+- **Validation**: `tests/core` and `tests/parametric_and_optimisation` with EnergyPlus 26.x linked: 1448 passed, no
+  skips (the junctions and the copies removed afterwards).
+- **Next step**: the answers of the author ([[questions.md]], [[../TODO.md]]).
+
+## 2026-11-09 — The pending tasks of `TODO.md` and A5 (branch `v1.2.0`, on the server); the standards checked
+
+- **Objective**: The requests of the author: "quiero que actualices accim a la rama v1.2.0" (the server, `D:\DSG\accim`,
+  had a shallow clone of July at 0.7.8), "vamos a trabajar en las tareas pendientes; mira las del TODO.md; cuando
+  termines, vamos a continuar con las tareas de los cambios de la v1.2.0 ... no quiero que te inventes nada", and the
+  standards that the proposals lacked, in `D:\DSG\Normativas` (EN 16798-1, CEN/TR 16798-2 and ISO 7730:2025).
+- **Affected files**: `accim/sim/apmv.py`, `tests/core/test_pmv_input_parameters.py` (new),
+  `tests/core/test_people_instance.py`, the ePMV notebook and its page (new), `docs/source/index.rst`,
+  `2_installation.md`, `3_quick tutorial.md`, [[../docs/source/4_detailed use.md]] (4.8, 4.8.1), [[../docs/README.md]]
+  (§2, §7), [[../CHANGELOG.md]], [[../DEVLOG.md]], [[../CAMBIOS_CODIGO_v1.2.0.md]], [[../TODO.md]], [[decisions.md]],
+  [[PROPUESTAS_MEJORAS_post_1.1.0_v02.md]] (§9.2).
+- **Finding or decision**: See
+  [[decisions.md#2026-11-09 — The activity level and the clothing insulation take values by season in set_pmv_input_parameters, with the cooling season of the setpoints, and 'dynamic_ashrae55' sets the dynamic clothing model of EnergyPlus|the decision]].
+  Read the Docs already had `v1.1.0` active. ISO 7730:2025 names I to IV the categories (A to C in 2005), and the
+  approximation of the metabolic correction holds with the PMV program of its Annex D (details in [[../DEVLOG.md]]).
+  On the server, `py` is Python 3.14 (accim in editable mode) and `python` is Python 3.10 (accim 0.7.8); EnergyPlus 9.4,
+  9.6, 25.1 and 25.2 are installed (not 26.x), and pandoc is not (the documentation build used a portable copy).
+- **Validation**: `tests/core` and `tests/parametric_and_optimisation`: 1437 passed, 10 skipped (EnergyPlus 26.x);
+  the notebook run twice (the same results); the documentation build, with the same 59 lines of warnings as `HEAD`.
+- **Next step**: the tests with EnergyPlus 26.x and the two parts of A5 not done ([[../TODO.md]]).
+
 ## 2026-11-09 — A1: the ePMV setpoints (branch `v1.2.0`)
 
 - **Objective**: The request of the author: go on with the work of the previous session, "termines el A1 y el A5 lo

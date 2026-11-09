@@ -11,6 +11,54 @@ Durable architectural/process decisions for this repository and its Obsidian
 vault. Newest first. Use [[templates/decision-record.md|the decision-record
 template]] to add a new entry.
 
+## 2026-11-09 — The schedule of set_clothing_method is the clothing insulation schedule, and CalculationMethodSchedule has its own argument
+
+- **Status**: accepted (the author answered the open question of `notes/questions.md`, 2026-11-09: "Opción (b)")
+- **Context**: the design of A5 proposes `accim.sim.people.set_clothing_method(building, method, schedule=None)`
+  without defining `schedule`. The field *Clothing Insulation Calculation Method* has three methods:
+  `ClothingInsulationSchedule` reads the clothing insulation schedule, `DynamicClothingModelASHRAE55` no schedule, and
+  `CalculationMethodSchedule` a schedule that chooses the method (1, the clothing insulation schedule; 2, the dynamic
+  model) and, for the periods with 1, the clothing insulation schedule.
+- **Decision**: `schedule` is the clothing insulation schedule (with `ClothingInsulationSchedule`, and for the periods
+  of the method 1 of `CalculationMethodSchedule`; an error with `DynamicClothingModelASHRAE55`), and
+  `calculation_method_schedule`, named as its field in the IDD, is the schedule that chooses the method, required with
+  `CalculationMethodSchedule` and an error with the other methods. Without `schedule`, the People objects keep theirs.
+  The function sets all the People objects (and the People:Instance objects of EnergyPlus 26.2), and checks the method,
+  the schedules and the values of the calculation method schedule (1 and 2) before changing anything.
+- **Consequences**: with `set_pmv_input_parameters` (`'dynamic_ashrae55'` and the values by season), accim sets the
+  three methods of EnergyPlus; the clothing insulation as a function of the outdoor temperature, which needs E1, is
+  the part of A5 that is left ([[../TODO.md]]). Section 4.8 of [[../docs/source/4_detailed use.md]] and section 4 of
+  [[../CAMBIOS_CODIGO_v1.2.0.md]].
+
+## 2026-11-09 — The activity level and the clothing insulation take values by season in set_pmv_input_parameters, with the cooling season of the setpoints, and 'dynamic_ashrae55' sets the dynamic clothing model of EnergyPlus
+
+- **Status**: accepted (proposal A5 of the author's file of proposals after 1.1.0,
+  `notes/PROPUESTAS_MEJORAS_post_1.1.0_v02.md`, done as its prompt asks; the author asked to work on the pending tasks
+  of `TODO.md` and then on those of the changes of 1.2.0, "pero no quiero que te inventes nada")
+- **Context**: `set_pmv_input_parameters` wrote a constant `Schedule:Compact` for each parameter of each People object,
+  with one value for the model or a dictionary with a value for each target, and reused an existing schedule with its
+  old value. A5 asks for `clothing_insulation` as a number, `'dynamic_ashrae55'` (the method
+  `DynamicClothingModelASHRAE55` of the field *Clothing Insulation Calculation Method*, in the People objects of the
+  IDDs of 9.4 to 25.2 and in the People:Instance objects of 26.2) or a dictionary by season "aligned with
+  cooling_season_start/end", and the same dictionary for `activity_level`. The function had no cooling season, and its
+  dictionaries already meant "by target".
+- **Decision**: a dictionary whose keys are among `'heating_season'` and `'cooling_season'` is by season (with both
+  keys and numbers, or a `ValueError`); any other one is by target, as before, and its values can also be dictionaries
+  by season or `'dynamic_ashrae55'` (only for the clothing insulation). The keyword-only arguments
+  `cooling_season_start` and `cooling_season_end` (after `verbose`, so that positional calls keep their meaning) have
+  the defaults and the meaning of those of the setpoints (from the first day to the day before the second one, also
+  across the new year), and give the `Through:` dates of the schedule, those of a year that is not a leap year, as
+  `transform_ddmm_to_int`. `'dynamic_ashrae55'` only sets the method and keeps the clothing insulation schedule, which
+  EnergyPlus does not read with it; a number or a dictionary by season sets `ClothingInsulationSchedule` back when the
+  field has another method, and does not touch an empty field, so earlier models do not change. Each call replaces the
+  schedules of the parameters that it receives, which fixes the reuse of the old value.
+- **Consequences**: the user gives the same cooling season to the setpoints and to `set_pmv_input_parameters`. With the
+  daylight saving time of a model, EnergyPlus changes the schedule one hour before the EMS programs change the season
+  (at 0:00 of the local time instead of the standard time), on the same day; documented in
+  [[../CAMBIOS_CODIGO_v1.2.0.md]] §4. The clothing insulation as a function of the outdoor temperature (which needs E1)
+  and `set_clothing_method` of the proposal are pending in [[../TODO.md]]. Section 4.8 of
+  [[../docs/source/4_detailed use.md]].
+
 ## 2026-11-09 — The ePMV applies the expectancy factor in the cooling season to the warm side only, and its metabolic correction uses the PMV of the previous timestep
 
 - **Status**: accepted (the author chose, for A1: "e solo en la estación de refrigeración y en la consigna de

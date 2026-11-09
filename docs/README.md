@@ -38,7 +38,7 @@ Revisada el 19/10/2026, con accim 0.8.2.
 - `docs/requirements.txt` es solo para Read the Docs (Python 3.9, `numpy<2`, `matplotlib<=3.7`): no
   lo instales en tu Python.
 - Versiones: `latest` (la de por defecto) y `master` siguen la rama `master`; las etiquetas `v0.7.5`
-  a `v1.0.0` están activas, cada una con su HTML, PDF y EPUB, y aparecen en el menú de Read the Docs
+  a `v1.1.0` están activas, cada una con su HTML, PDF y EPUB, y aparecen en el menú de Read the Docs
   (abajo a la derecha de cada página). `stable` está desactivada: `/en/stable/` da 404.
 - **Al publicar una versión**, Read the Docs ve la etiqueta nueva, pero no la compila hasta
   activarla: en el panel del proyecto, Versions → «Add version» (o «Edit», si ya aparece) → marcar
@@ -206,6 +206,7 @@ How-to Guides:
 | Full example (IBPSA) | `full_example_IBPSA/full_example_IBPSA.ipynb` | `full_example_IBPSA/` | 6 min |
 | Research paper case study | `research_paper_case_study/research_paper_case_study.ipynb` | `research_paper_case_study_v0-7-3/` | 27 min |
 | aPMV setpoints | `example_apmv_setpoints_paper/using_apmv_setpoints.ipynb` | `example_apmv_setpoints_paper/` | < 2 min |
+| ePMV setpoints | `example_epmv_setpoints/using_epmv_setpoints.ipynb` | `example_epmv_setpoints/` | < 1 min (three simulations) |
 
 Simulación paramétrica y optimización: los tutoriales `00` a `10` y los flujos completos `wf1` a
 `wf5`, con el mismo nombre en `docs/source/jupyter_notebooks/parametric_and_optimisation_examples/`
@@ -220,7 +221,7 @@ python docs/prepare_howto_notebooks.py run --run-dir D:\runs --only using_addAcc
 python docs/prepare_howto_notebooks.py export --executed-dir D:\runs --only using_addAccis full_example_IBPSA
 ```
 
-- Sin `--only`, los siete. `--only` admite el nombre del notebook o el de su carpeta, o su
+- Sin `--only`, los ocho. `--only` admite el nombre del notebook o el de su carpeta, o su
   principio.
 - `run` borra y vuelve a copiar la subcarpeta de cada notebook dentro de la carpeta de trabajo, lo
   ejecuta ahí (las muestras no cambian) y deja `<nombre>_executed.ipynb`. Al final da el tiempo y

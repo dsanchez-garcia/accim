@@ -27,5 +27,7 @@ it here as answered).
 None.
 
 The questions on the scope and the technology of the GUI, on the names of the arguments of accim 1.0.0, on the EMS
-code of the comfort standards of each output IDF of `AddAccis` (option 1, as implemented) and on the design days of
-`vrf_mm` (option (a): the same rule as `ex_mm`) were answered: see [[decisions.md]].
+code of the comfort standards of each output IDF of `AddAccis` (option 1, as implemented), on the design days of
+`vrf_mm` (option (a): the same rule as `ex_mm`) and on the `schedule` of `set_clothing_method` of A5 (option (b): the
+clothing insulation schedule, and another argument for `CalculationMethodSchedule`) were answered: see
+[[decisions.md]].

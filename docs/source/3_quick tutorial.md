@@ -69,6 +69,7 @@ The How-to Guides {doc}`jupyter_notebooks/addAccis/using_addAccis` and {doc}`jup
 Although the main use of accim is the implementation of adaptive setpoint temperatures, there are some functions, classes and methods that allow to roughly automate the whole process consisting of preparation of the epw and idf files, the simulation runs and the data analysis:
 
 - setpoints based on the adaptive predicted mean vote (`accim.sim.apmv`): {doc}`jupyter_notebooks/example_apmv_setpoints_paper/using_apmv_setpoints`;
+- setpoints based on the PMV with the expectancy factor (ePMV) of Fanger and Toftum (`accim.sim.apmv.apply_epmv_setpoints`): {doc}`jupyter_notebooks/example_epmv_setpoints/using_epmv_setpoints`;
 - renaming EPW files for the data analysis (`accim.data.preprocessing.rename_epw_files`): {doc}`jupyter_notebooks/rename_epw_files/using_rename_epw_files`;
 - changing the arguments of the ACCIS of an output IDF, also its comfort standard (`accim.sim.accis.modify_accis`): {doc}`jupyter_notebooks/addAccis/using_addAccis`;
 - running the simulations (`accim.run.run_ep`), with the Energy Management System of EnergyPlus or through its Python API, and estimating the size of their results before running them (`accim.run.estimate_results_size`): {doc}`jupyter_notebooks/runEp/using_runEp` and {ref}`python-api-backend`;

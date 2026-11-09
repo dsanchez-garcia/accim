@@ -20,7 +20,7 @@ import pytest
 from accim.sim.apmv import (_resolve_targets, get_available_target_names, set_pmv_input_parameters,
                             set_zones_always_occupied)
 from accim.sim.model import AccimModel
-from accim.sim.people import set_comfort_models
+from accim.sim.people import set_clothing_method, set_comfort_models
 from accim.utils import (get_idf_hierarchy_with_people, get_people_definition, get_people_hierarchy,
                          get_people_objects, is_people_instance, set_occupancy_to_always)
 
@@ -60,6 +60,9 @@ class _FakeIDF:
         self.idfobjects[key].append(obj)
         return obj
 
+    def removeidfobject(self, obj):
+        self.idfobjects[obj.key].remove(obj)
+
     def getobject(self, key, name):
         """As eppy: the object of a class with a name, in any case, or None."""
         return next((obj for obj in self.idfobjects[key] if obj.Name.upper() == name.upper()), None)
@@ -90,9 +93,11 @@ def _definition(name, **fields):
 
 
 def _instance(name, definition, target):
+    # The fields of People:Instance in the IDD of EnergyPlus 26.2 that accim reads or sets
     return _Obj(key='PEOPLE:INSTANCE', Name=name, People_Definition_Name=definition,
                 Zone_or_ZoneList_or_Space_or_SpaceList_Name=target, Number_of_People_Schedule_Name='Occupancy',
                 Activity_Level_Schedule_Name='Activity', Work_Efficiency_Schedule_Name='',
+                Clothing_Insulation_Calculation_Method='', Clothing_Insulation_Calculation_Method_Schedule_Name='',
                 Clothing_Insulation_Schedule_Name='', Air_Velocity_Schedule_Name='')
 
 
@@ -228,6 +233,54 @@ def test_set_pmv_input_parameters_changes_the_people_instances_and_their_definit
     assert schedules['Sch_Eff_People_Block1_Zone2'] == 'Until: 24:00,0.0'
     # The thermal comfort models of the instances are in their People:Definition
     assert idf.idfobjects['PEOPLE:DEFINITION'][0].Thermal_Comfort_Model_1_Type == 'Fanger'
+
+
+def test_set_pmv_input_parameters_sets_the_values_by_season_and_the_dynamic_clothing_of_the_people_instances():
+    # In EnergyPlus 26.2, the field Clothing Insulation Calculation Method is in the People:Instance objects
+    idf = _two_zone_model()
+
+    set_pmv_input_parameters(idf, activity_level={'heating_season': 120, 'cooling_season': 100},
+                             clothing_insulation={'Block1:Zone1': 'dynamic_ashrae55', 'Block1:Zone2': 0.5},
+                             verbose=False)
+
+    zone1, zone2 = idf.idfobjects['PEOPLE:INSTANCE']
+    assert zone1.Clothing_Insulation_Calculation_Method == 'DynamicClothingModelASHRAE55'
+    assert zone1.Clothing_Insulation_Schedule_Name == ''
+    assert zone2.Clothing_Insulation_Calculation_Method == ''
+    assert zone2.Clothing_Insulation_Schedule_Name == 'Sch_Clo_People_Block1_Zone2'
+    activity = idf.getobject('Schedule:Compact', 'Sch_Act_People_Block1_Zone1')
+    assert zone1.Activity_Level_Schedule_Name == 'Sch_Act_People_Block1_Zone1'
+    assert [activity.Field_1, activity.Field_3, activity.Field_4, activity.Field_6, activity.Field_7,
+            activity.Field_9] == ['Through: 4/30', 'Until: 24:00,120', 'Through: 9/30', 'Until: 24:00,100',
+                                  'Through: 12/31', 'Until: 24:00,120']
+    assert idf.idfobjects['PEOPLE:DEFINITION'][0].Thermal_Comfort_Model_1_Type == 'Fanger'
+
+    # A number sets the method of the clothing insulation schedule again, and replaces the schedule of a previous call
+    set_pmv_input_parameters(idf, clothing_insulation=0.7, activity_level=110, verbose=False)
+    assert zone1.Clothing_Insulation_Calculation_Method == 'ClothingInsulationSchedule'
+    assert zone1.Clothing_Insulation_Schedule_Name == 'Sch_Clo_People_Block1_Zone1'
+    assert len([s for s in idf.idfobjects['Schedule:Compact'] if s.Name == 'Sch_Act_People_Block1_Zone1']) == 1
+    assert idf.getobject('Schedule:Compact', 'Sch_Act_People_Block1_Zone1').Field_3 == 'Until: 24:00,110'
+
+
+def test_set_clothing_method_sets_the_fields_of_the_people_instances():
+    # The method and its schedule are fields of the People:Instance objects in the IDD of EnergyPlus 26.2
+    method = _Obj(key='SCHEDULE:COMPACT', Name='Clothing method',
+                  fieldvalues=['Schedule:Compact', 'Clothing method', 'Any Number', 'Through: 4/30', 'For: AllDays',
+                               'Until: 24:00,1', 'Through: 12/31', 'For: AllDays', 'Until: 24:00,2'])
+    idf = _FakeIDF([_zone('Block1:Zone1'), _definition('Office Definition'),
+                    _instance('People Block1:Zone1', 'Office Definition', 'Block1:Zone1'), method],
+                   classes=_FakeIDF.CLASSES + ['SCHEDULE:YEAR', 'SCHEDULE:CONSTANT', 'SCHEDULE:FILE'])
+
+    with pytest.warns(UserWarning, match='has no clothing insulation schedule'):
+        set_clothing_method(idf, 'CalculationMethodSchedule', calculation_method_schedule='Clothing method',
+                            verbose=False)
+
+    instance = idf.idfobjects['PEOPLE:INSTANCE'][0]
+    assert instance.Clothing_Insulation_Calculation_Method == 'CalculationMethodSchedule'
+    assert instance.Clothing_Insulation_Calculation_Method_Schedule_Name == 'Clothing method'
+    # The People:Definition objects do not change
+    assert not hasattr(idf.idfobjects['PEOPLE:DEFINITION'][0], 'Clothing_Insulation_Calculation_Method')
 
 
 def test_always_occupied_functions_change_the_people_instances():

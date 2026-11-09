@@ -20,20 +20,10 @@ Active short-term tasks.
 
 ## Backlog
 
-- [ ] [P1][todo] Run and export the How-to notebook of the ePMV setpoints (`using_epmv_setpoints`)
-  - Context: A1 of the proposals after 1.1.0 (branch `v1.2.0`). The source notebook is in `accim/sample_files/jupyter_notebooks/example_epmv_setpoints/` (with copies of the model and the EPW of the aPMV notebook), and it is registered in `docs/prepare_howto_notebooks.py`, but it has not been run (the author asked not to run it, 2026-11-09): its code was only checked to parse, and the names of the columns that it reads were checked in simulations of the same model.
-  - Definition of done: `python docs/prepare_howto_notebooks.py run --run-dir D:\runs --only using_epmv_setpoints` without problems, and `export --executed-dir D:\runs --only using_epmv_setpoints`; the conclusion of the notebook checked against its results; the page in the toctree of the How-to Guides (`docs/source/index.rst`), in the table of `docs/source/2_installation.md` (instead of the section 4.8.1) and of `docs/README.md` §7.1 (with its time), and linked from the section 4.8.1 of the detailed use and from the Quick tutorial; the documentation build without new warnings.
-  - References: `docs/README.md` §7.2, `CAMBIOS_CODIGO_v1.2.0.md` §3.
-
-- [ ] [P2][blocked] A5: dynamic and seasonal clothing insulation in `set_pmv_input_parameters`
-  - Context: proposal A5 of `notes/PROPUESTAS_MEJORAS_post_1.1.0_v02.md` (block A, P1): `clothing_insulation` as a number, `'dynamic_ashrae55'` (the field *Clothing Insulation Calculation Method* of the People objects, `DynamicClothingModelASHRAE55`, checked in the IDDs of 9.0 to 26.2, also in `People:Instance`) or a dictionary by season, and the same dictionary for `activity_level`. Left pending at the request of the author (2026-11-09: "el A5 lo dejes pendiente").
-  - Definition of done: as in the proposal, with tests of the fields of the People objects and of the values of the schedules on the days 120, 121, 274 and 275.
-  - References: `notes/PROPUESTAS_MEJORAS_post_1.1.0_v02.md` (A5).
-
-- [ ] [P1][blocked] Activate the version `v1.1.0` in Read the Docs
-  - Context: 1.1.0 is published on PyPI and GitHub (2026-11-08), and `latest` and `master` show 1.1.0. Read the Docs created the version `v1.1.0` of the tag (slug `v1.1.0`, commit `33f2cae8`), but it is inactive (`/en/v1.1.0/` gives 404), and activating it needs the session of the author: Versions, `v1.1.0`, Edit, Active, Update version (`docs/README.md` §2). Blocked on the author.
-  - Definition of done: `https://accim.readthedocs.io/en/v1.1.0/` says "accim 1.1.0 documentation", with its PDF and EPUB; `docs/README.md` §2 lists the active tags up to `v1.1.0`.
-  - References: `packaging/README.md` §4.10, `docs/README.md` §2.
+- [ ] [P2][blocked] A5: the clothing insulation as a function of the outdoor temperature
+  - Context: A5 is done (2026-11-09, `DEVLOG.md`): the activity level and the clothing insulation by season and `'dynamic_ashrae55'` in `set_pmv_input_parameters`, as the prompt of the proposal asks, and `accim.sim.people.set_clothing_method`, with the `schedule` that the author chose (`notes/decisions.md`). The design of the proposal also has the clothing insulation as a function of the outdoor temperature (`callable(rmot) -> clo`), written as a `Schedule:File` from the EPW "vía E1" (`compute_setpoints`, not implemented) or as Erl by sections. Blocked on E1, a proposal that the author has not asked for.
+  - Definition of done: as the author decides, with tests, documentation and `CHANGELOG.md`.
+  - References: `notes/PROPUESTAS_MEJORAS_post_1.1.0_v02.md` (A5 and E1), `CAMBIOS_CODIGO_v1.2.0.md` §4.
 
 - [ ] [P1][blocked] Define backlog priority rules
   - Context: Standardize entry criteria for new tasks. Blocked on the approval of the author.
