@@ -118,6 +118,14 @@ accim.sim.pmv\_index module
    :show-inheritance:
    :undoc-members:
 
+accim.sim.preview module
+------------------------
+
+.. automodule:: accim.sim.preview
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
 accim.sim.prompts module
 ------------------------
 

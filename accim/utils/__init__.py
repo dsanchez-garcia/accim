@@ -11,7 +11,8 @@ which takes long to import):
 - :mod:`accim.utils.editing`: functions that edit the models (timesteps, occupancy, run period...).
 - :mod:`accim.utils.accim_args`: the arguments of the ACCIS of a model.
 - :mod:`accim.utils.ems_code`: the EMS code with which the ACCIS calculates the setpoints of a comfort standard,
-  category and comfort mode, to read it before adding the ACCIS to a model (``print_setpoint_ems_code``).
+  category and comfort mode, to read it before adding the ACCIS to a model (``print_setpoint_ems_code``), and its
+  programs, to run them (``get_setpoint_ems_programs``, used by :func:`accim.sim.preview.compute_setpoints`).
 - :mod:`accim.utils.versions`: the IDD files and the transition of IDF files to newer EnergyPlus versions.
 - :mod:`accim.utils.outputs`: the outputs available in a model, and the ESO files.
 - :mod:`accim.utils.verification`: verification of the simulations of the models of accim.
@@ -55,6 +56,7 @@ _SUBMODULES = {
     'get_accim_args': 'accim_args',
     'get_accim_args_flattened': 'accim_args',
     'get_setpoint_ems_code': 'ems_code',
+    'get_setpoint_ems_programs': 'ems_code',
     'print_setpoint_ems_code': 'ems_code',
     'get_idd_path_from_ep_version': 'versions',
     'update_idf_version': 'versions',

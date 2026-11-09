@@ -15,6 +15,25 @@ This log is a lightweight, session-scoped complement to the repository's
 existing tracking files — it does not replace them (see
 [[decisions.md#2026-09-13 — `notes/work-log.md` complements, not replaces, existing tracking files|the related decision]]).
 
+## 2026-11-09 — E1: the setpoints of the ACCIS without EnergyPlus (branch `v1.2.0`, on the server)
+
+- **Objective**: E1, the first proposal of the list of the author for this session (the brief
+  `notes/COPILOT_BRIEF_v1.2.0_v01.md`, decisions D1-D12), after D2.
+- **Affected files**: `accim/sim/preview.py` (new), `accim/utils/ems_code.py`, `accim/utils/__init__.py`,
+  `accim/sim/__init__.py`, `tests/core/test_preview.py` (new), [[../docs/source/4_detailed use.md]] (4.3.1),
+  `docs/source/api/accim.sim.rst`, [[../CHANGELOG.md]], [[../CAMBIOS_CODIGO_v1.2.0.md]] (§8), [[../TODO.md]],
+  [[../DEVLOG.md]], [[decisions.md]], [[questions.md]].
+- **Finding or decision**: See
+  [[decisions.md#2026-11-09 — compute_setpoints runs the setpoint programs of the output IDFs with the running means of EnergyPlus, start-up transient included (E1)|the decision]].
+  EnergyPlus starts the running mean of CEN 15251 without normalising equation 19.82 (v03 says there is no start-up
+  transient), takes the daily means of the simulated days from the first timestep of each hour, and its EMS reads the
+  running means of the previous day at the first timestep of each day; `compute_setpoints` reproduces it to machine
+  precision. Two possible errors of comfort standards 9 and 10, left in [[../TODO.md]] for the author; the first days
+  of `outdoor_metrics`, decided provisionally in [[questions.md]].
+- **Validation**: 30 new tests, two of them with simulations of EnergyPlus 25.1; the whole suite; the documentation
+  build.
+- **Next step**: E2.
+
 ## 2026-11-09 — D2: `Table` with the simulations of the setpoints based on the PMV (branch `v1.2.0`, on the server)
 
 - **Objective**: D2 of the proposals (v02 and v03), included in 1.2.0 by the author; then the session plan of the

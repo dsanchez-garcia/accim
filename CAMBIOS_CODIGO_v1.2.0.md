@@ -4,12 +4,13 @@ Guía de los cambios del código de la rama `v1.2.0` respecto a accim 1.1.0, par
 documentación de uso. Recoge las propuestas del bloque A de `notes/PROPUESTAS_MEJORAS_post_1.1.0_v01.md` y `_v02.md`
 (índices de confort derivados del PMV; archivos del autor, en git desde el commit `e238dad`) que el autor pidió para
 esta versión: las P1, A2, A1 y A5, en este orden; y después D2 (sección 7), que el autor incluyó en la 1.2.0 el
-2026-11-09 con E2 y E1.
+2026-11-09 con E2 y E1, y las demás propuestas de la v03 (`notes/PROPUESTAS_MEJORAS_post_1.1.0_v03.md`), en el orden
+del autor (`notes/COPILOT_BRIEF_v1.2.0_v01.md`): E1 (sección 8)...
 
 Lo que ya está en otros documentos no se repite aquí:
 
 - `CHANGELOG.md` (sección Unreleased): los cambios que ve el usuario.
-- `docs/source/4_detailed use.md`, secciones 4.7.3, 4.8 y 4.8.1: el uso.
+- `docs/source/4_detailed use.md`, secciones 4.3.1, 4.7.3, 4.8 y 4.8.1: el uso.
 - `DEVLOG.md`: el registro del trabajo, con cómo se comprobó.
 - `notes/decisions.md`: las decisiones y sus motivos.
 
@@ -28,6 +29,11 @@ Lo que ya está en otros documentos no se repite aquí:
 - **D2.** `Table` lee los CSV de los IDF con consignas basadas en el PMV (`<IDF>[<EPW>.csv`), promedia en el tiempo sus
   salidas (menos las horas), no toma la actividad corregida por una energía y da a las salidas de las zonas el nombre
   de su zona, con valores de bloque y de edificio, que las figuras distinguen (sección 7).
+- **E1.** `accim.sim.preview` calcula las consignas del ACCIS sin EnergyPlus: ejecuta con el intérprete de Erl de
+  accim los programas EMS de las consignas (`accim.utils.get_setpoint_ems_programs`) en cada paso de tiempo de un EPW,
+  con las medias móviles exteriores que calcula EnergyPlus, que reproduce exactamente (`energyplus_running_means`); y
+  da las temperaturas exteriores de referencia de las normas (`outdoor_metrics`). Coincide con EnergyPlus 25.1 a la
+  precisión de la máquina (sección 8).
 - Las categorías del PMV y la aproximación de la corrección del metabolismo se han comprobado en ISO 7730:2025 y
   EN 16798-1:2019, y el modelo dinámico de vestimenta de A5, en Schiavon y Lee (2013) y ASHRAE 55-2020 (sección 6).
 - Lo que quedaba abierto se ha comprobado: el golden master y las pruebas de EnergyPlus 26.1 y 26.2, también la de A5
@@ -401,3 +407,75 @@ corrección del metabolismo, EnergyPlus 25.1, con un script fuera del repositori
   mientras que el `PMV_<zona>` del EMS pondera por el número de ocupantes; `ComfStand` deja de ser una variable de la
   tabla si sus valores son un estándar y `CS_X` (la regla de `Table` para los argumentos que no se aplican, `_X`), así
   que en una tabla con simulaciones de los dos tipos se distinguen por `Model`.
+
+## 8. Las consignas del ACCIS sin EnergyPlus (E1)
+
+La propuesta E1 pide `accim/sim/preview.py` con `outdoor_metrics(epw, alpha=0.8, days=30)`,
+`compute_setpoints(epw, comfort_standard, category=None, comfort_mode=None, **custom_arguments)` y `plot_setpoints(df)`,
+con las convenciones de EnergyPlus (Engineering Reference 25.2, §19.1), y pruebas frente al CSV de una simulación del
+IDF de ejemplo para los ComfStand 1, 2 y 99, con la tolerancia del redondeo `SetpointAcc`. El brief del autor añade que
+dé también las series exteriores con las que B1 iniciará las medias móviles en Erl (decisión D3), y la decisión D9, que
+reproduzca las medias de EnergyPlus y ejecute el Erl de `get_setpoint_ems_code` con `accim.sim.ems.erl`.
+
+**Antes.** `get_setpoint_ems_code` daba el Erl de cada combinación como texto, con los subprogramas recortados a las
+líneas del modo de confort: no se puede ejecutar tal cual, porque `SetAST_Master` llama a los subprogramas enteros.
+`accim.sim.ems.erl` (`ErlProgramSet`) ya interpretaba el Erl en Python para el backend de la API. No había forma de ver
+las consignas de un clima sin simular.
+
+**Ahora.**
+
+- `accim.utils.get_setpoint_ems_programs` (en `ems_code.py`) da los programas de `get_setpoint_ems_code` por nombre y
+  en el mismo orden (`SetInputData_<zone>`, `SetAppLimits`, `ApplyCAT`, `SetComfTemp`, `SetAST`, `SetAST_Master`, los
+  subprogramas enteros y `SetASTnoTol`), con los mismos argumentos y valores por defecto; exige la categoría y el modo
+  de confort cuando el estándar los tiene. Las comprobaciones de los argumentos están en `_checked_arguments`, que
+  comparten las dos funciones; la salida de `get_setpoint_ems_code` no cambia.
+- `accim.sim.preview` (módulo nuevo):
+  - `read_epw_dry_bulb`: la temperatura seca de cada hora del EPW (las 8 líneas de cabecera, y días enteros de las
+    horas 1 a 24).
+  - `outdoor_metrics`: las temperaturas exteriores de referencia como las definen las normas (v03 §11.4), por hora o
+    por día (`frequency`): media, máxima y mínima diarias; `RMOT`, la media móvil de EN 16798-1 (B.1) con cualquier α,
+    calculada para un año que se repite (la suma infinita es la de los días del año dividida por 1 − α^n); `RMOT_7day`
+    (B.2); `PMOT_n`, la media de los `days` días anteriores (ASHRAE 55-2020, 5.4.2.1); `Te_ref_nl` (van der Linden et
+    al., 2006, con la media de la máxima y la mínima de cada día); y la media mensual. Los primeros días toman los
+    últimos del archivo. Es la serie diaria con la que B1 iniciará las medias en Erl (D3).
+  - `energyplus_running_means`: las medias que el EMS lee de EnergyPlus (`RMOT`, CEN 15251; `PMOT`, ASHRAE 55), tal
+    como las calcula EnergyPlus 25.1, comprobado con simulaciones y con su código (`ThermalComfort.cc`):
+    - `PMOT`: la media simple de las medias de los 30 días anteriores (ec. 19.70). Los días anteriores al periodo de
+      simulación son los del EPW (media de sus 24 valores; para los primeros días del año, los últimos del archivo).
+    - `RMOT`: el primer día del periodo, la suma ponderada de los 7 días anteriores de la ec. 19.82, que EnergyPlus no
+      divide por 1 − α⁷ (con α = 0,8), así que sale baja los primeros días (en Sevilla, 5,92 °C el 1 de enero frente a
+      8,34 °C de la B.1; 0,5 °C menos una semana después); el primer día no se actualiza; después, la ec. 19.83 con la
+      media del día anterior.
+    - La media de un día simulado es la de la temperatura exterior del primer paso de cada hora, que EnergyPlus
+      interpola entre el valor horario anterior y el actual: media del EPW + ((N − 1)/N)·(T(d − 1, 24 h) − T(d, 24 h))/24,
+      con N pasos por hora. El primer día del periodo, la hora anterior a la primera es la última del mismo día (el
+      calentamiento repite el día), así que su media es la del EPW.
+    - Con un `.stat` junto al EPW, EnergyPlus toma `PMOT` de sus medias mensuales; no se reproduce (documentado y en
+      `TODO.md`). Hace falta un EPW de 365 días.
+  - `compute_setpoints`: ejecuta con `ErlProgramSet` los programas, en el orden de `RunACCIS_<zone>`
+    (`SetInputData_Z`, `SetAppLimits`, `ApplyCAT`, `SetComfTemp`, `SetAST`, que llama a `SetAST_Master` y a los
+    subprogramas, `SetASTnoTol`, y `CountHours_Z` con `Z_OpT = 0`, para la aplicabilidad), en cada paso de tiempo, desde
+    `start_date` hasta el final del año. El estado inicial es el de `InitASTvariables` (`ACST`, `AHST` y `ComfTemp`
+    nulos, `CoolingSeason = 0`) y `ZoneTimeStep = 1/N`. Los sensores del EMS se leen en
+    `BeginTimestepBeforePredictor`: en el primer paso de cada día leen la media del día anterior (y 0 en el primer paso
+    del periodo), y `CurrentTime` es el final del paso (comprobado con el ComfStand 0: el paso que acaba a las 8:00 ya
+    tiene las consignas del día). Los programas solo se ejecutan cuando cambian sus entradas (`RMOT`, `PMOT`, el día y,
+    si lo usan, `CurrentTime`): con las mismas entradas dan lo mismo. Los valores horarios son la media de los pasos,
+    como las salidas EMS de EnergyPlus (`Averaged`); `applicable` y `cooling_season`, los del último paso de la hora.
+    Un valor nulo (la temperatura de confort de las consignas fijas) sale NaN; EnergyPlus lo informa como 0.
+    `Tout_metric` es la media móvil que usan las líneas de las consignas del modo de confort (o `SetComfTemp`).
+    Un año con 6 pasos por hora tarda menos de un segundo.
+  - `plot_setpoints`: las consignas, la temperatura de confort y la media móvil del estándar.
+- Pruebas: `tests/core/test_preview.py`, 30 pruebas: las fórmulas con EPW inventados; las medias de EnergyPlus
+  (arranque, días simulados, inicio del año); los programas frente al texto de `get_setpoint_ems_code`; los argumentos;
+  y dos simulaciones del modelo de ejemplo con EnergyPlus 25.1 (EN 16798-1 en una zona y ASHRAE 55 en la otra, 36 días
+  de enero y febrero, horario; el modelo CUSTOM y ESP CTE, 4 días de julio, por paso de tiempo), con tolerancia
+  0,0001 °C en las consignas y 1e-9 en las medias. Antes, cinco experimentos fuera del repositorio (ComfStand 1 un año
+  horario; 2 del 10/03 al 20/04 horario; 1, 0 y 99 unos días por paso) coincidieron a la precisión de la máquina
+  (~1e-14).
+- Desviación de la v03: dice que, al calcularse del EPW, "no hay transitorio de arranque". EnergyPlus sí lo tiene en la
+  media de CEN 15251 (la ec. 19.82 sin normalizar); se reproduce EnergyPlus, como pide D9.
+- No cambian los IDF de salida ni la GUI (E1 no añade argumentos a `AddAccis`). Al comprobarlo con EnergyPlus salieron
+  dos posibles errores de los ComfStand 9 y 10 (las medias de 7DRM y 30DRM parecen cambiadas, y la consigna de
+  calefacción del modo 1 del 9 fuera de los límites lleva el signo de la de refrigeración): están en `TODO.md`,
+  pendientes del autor, sin tocar.

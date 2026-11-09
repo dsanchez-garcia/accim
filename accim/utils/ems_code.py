@@ -10,7 +10,7 @@ output IDFs of :class:`accim.sim.accis.AddAccis`, and :func:`print_setpoint_ems_
 apply, and what happens out of the applicability limits of the comfort standard.
 """
 
-from typing import Iterable, List, Optional, Union
+from typing import Dict, Iterable, List, Optional, Union
 
 from accim.sim.ems import program_lines as pl
 from accim.sim.ems.inputs import INPUT_VARIABLES, input_values
@@ -26,7 +26,7 @@ from accim.sim.ems.setast import (
 )
 from accim.sim.standards import COMFORT_STANDARDS
 
-__all__ = ['get_setpoint_ems_code', 'print_setpoint_ems_code']
+__all__ = ['get_setpoint_ems_code', 'get_setpoint_ems_programs', 'print_setpoint_ems_code']
 
 Number = Union[int, float]
 
@@ -99,6 +99,25 @@ def _input_lines(comfort_standard: int, category: Optional[Number], comfort_mode
     return lines
 
 
+def _checked_arguments(comfort_standard: int, category: Optional[Number], comfort_mode: Optional[Number],
+                       **arguments) -> dict:
+    """Check the comfort standard, category and comfort mode, as :class:`accim.sim.accis.AddAccis` does, and return the
+    other arguments, with the defaults of :func:`get_setpoint_ems_code`."""
+    if comfort_standard not in COMFORT_STANDARDS:
+        raise ValueError(f'comfort_standard {comfort_standard!r} is not a comfort standard '
+                         f'(valid: {list(COMFORT_STANDARDS)})')
+    comfort_standard = int(comfort_standard)
+    categories = COMFORT_STANDARDS[comfort_standard].categories
+    if category is not None and categories and category not in categories:
+        raise ValueError(f'category {category!r} is not a category of comfort_standard {comfort_standard} '
+                         f'(valid: {list(categories)})')
+    if comfort_mode is not None and not has_setpoints(comfort_standard, comfort_mode):
+        valid = [mode for mode in MODULAR_COMFORT_MODES[comfort_standard] if has_setpoints(comfort_standard, mode)]
+        raise ValueError(f'comfort_standard {comfort_standard} has no setpoints with comfort_mode {comfort_mode!r} '
+                         f'(valid: {valid})')
+    return arguments
+
+
 def get_setpoint_ems_code(
     comfort_standard: int,
     category: Optional[Number] = None,
@@ -169,15 +188,8 @@ def get_setpoint_ems_code(
         raise ValueError(f'comfort_standard {comfort_standard!r} is not a comfort standard '
                          f'(valid: {list(COMFORT_STANDARDS)})')
     comfort_standard = int(comfort_standard)
-    categories = COMFORT_STANDARDS[comfort_standard].categories
-    if category is not None and categories and category not in categories:
-        raise ValueError(f'category {category!r} is not a category of comfort_standard {comfort_standard} '
-                         f'(valid: {list(categories)})')
-    if comfort_mode is not None and not has_setpoints(comfort_standard, comfort_mode):
-        valid = [mode for mode in MODULAR_COMFORT_MODES[comfort_standard] if has_setpoints(comfort_standard, mode)]
-        raise ValueError(f'comfort_standard {comfort_standard} has no setpoints with comfort_mode {comfort_mode!r} '
-                         f'(valid: {valid})')
-    arguments = dict(
+    arguments = _checked_arguments(
+        comfort_standard, category, comfort_mode,
         setpoint_tolerance=setpoint_tolerance, setpoint_accuracy=setpoint_accuracy,
         cooling_season_start=cooling_season_start, cooling_season_end=cooling_season_end,
         category_cooling_offset=category_cooling_offset, category_heating_offset=category_heating_offset,
@@ -219,3 +231,77 @@ def print_setpoint_ems_code(comfort_standard: int, category: Optional[Number] = 
     For instance, ``print_setpoint_ems_code(comfort_standard=1, category=2, comfort_mode=3)``.
     """
     print(get_setpoint_ems_code(comfort_standard, category, comfort_mode, **arguments))
+
+
+def get_setpoint_ems_programs(
+    comfort_standard: int,
+    category: Optional[Number] = None,
+    comfort_mode: Optional[Number] = None,
+    setpoint_tolerance: Number = 0.1,
+    setpoint_accuracy: Number = 10000,
+    cooling_season_start: Union[int, str] = 121,
+    cooling_season_end: Union[int, str] = 274,
+    category_cooling_offset: Number = 0,
+    category_heating_offset: Number = 0,
+    custom_slope: Number = 0,
+    custom_intercept: Number = 0,
+    custom_cooling_offset: Number = 0,
+    custom_heating_offset: Number = 0,
+    custom_cooling_upper_limit: Number = 0,
+    custom_cooling_lower_limit: Number = 0,
+    custom_heating_upper_limit: Number = 0,
+    custom_heating_lower_limit: Number = 0,
+) -> Dict[str, List[str]]:
+    """The EMS programs with which the ACCIS calculates the setpoints of a comfort standard, category and comfort mode,
+    as they are in the output IDFs of :class:`accim.sim.accis.AddAccis`, to run them with the Erl interpreter of
+    :mod:`accim.sim.ems.erl` (as :func:`accim.sim.preview.compute_setpoints` does).
+
+    They are the programs of :func:`get_setpoint_ems_code`, by name and in the same order, except that the subprograms
+    ``SetAST_CS<n>_<chunk>`` are whole (``get_setpoint_ems_code`` shows the lines of the comfort mode only) and that
+    ``SetInputData_<zone>`` sets the category and the comfort mode, which must be given if the comfort standard has
+    categories or setpoints that depend on the comfort mode. ``SetAST`` runs ``SetAST_Master``, which runs the
+    subprograms.
+
+    :param comfort_standard: The comfort standard (see :func:`get_setpoint_ems_code`).
+    :param category: The category.
+    :param comfort_mode: The comfort mode.
+    :return: The lines of each program, by name: ``SetInputData_<zone>``, ``SetAppLimits``, ``ApplyCAT``,
+        ``SetComfTemp``, ``SetAST``, ``SetAST_Master``, the subprograms and ``SetASTnoTol``.
+    :raises ValueError: As :func:`get_setpoint_ems_code`, and if the category or the comfort mode is missing.
+
+    The other arguments are those of :func:`get_setpoint_ems_code`, with the same defaults.
+    """
+    arguments = _checked_arguments(
+        comfort_standard, category, comfort_mode,
+        setpoint_tolerance=setpoint_tolerance, setpoint_accuracy=setpoint_accuracy,
+        cooling_season_start=cooling_season_start, cooling_season_end=cooling_season_end,
+        category_cooling_offset=category_cooling_offset, category_heating_offset=category_heating_offset,
+        custom_slope=custom_slope, custom_intercept=custom_intercept, custom_cooling_offset=custom_cooling_offset,
+        custom_heating_offset=custom_heating_offset, custom_cooling_upper_limit=custom_cooling_upper_limit,
+        custom_cooling_lower_limit=custom_cooling_lower_limit, custom_heating_upper_limit=custom_heating_upper_limit,
+        custom_heating_lower_limit=custom_heating_lower_limit,
+    )
+    comfort_standard = int(comfort_standard)
+    if category is None and COMFORT_STANDARDS[comfort_standard].categories:
+        raise ValueError(f'comfort_standard {comfort_standard} needs a category '
+                         f'(valid: {list(COMFORT_STANDARDS[comfort_standard].categories)})')
+    if comfort_mode is None and depends_on_comfort_mode(comfort_standard):
+        valid = [mode for mode in MODULAR_COMFORT_MODES[comfort_standard] if has_setpoints(comfort_standard, mode)]
+        raise ValueError(f'comfort_standard {comfort_standard} needs a comfort_mode (valid: {valid})')
+
+    def branches(lines):
+        return pl.for_comfort_standards(lines, [comfort_standard]) or ['return']
+
+    inputs = [line for line in _input_lines(comfort_standard, category, comfort_mode, arguments)
+              if not line.startswith('!')]
+    programs = {
+        'SetInputData_<zone>': inputs,
+        'SetAppLimits': branches(pl.SET_APP_LIMITS),
+        'ApplyCAT': branches(pl.APPLY_CAT),
+        'SetComfTemp': branches(pl.SET_COMF_TEMP),
+        'SetAST': list(pl.SET_AST),
+        'SetAST_Master': master_program_lines([comfort_standard]),
+    }
+    programs.update({name: list(lines) for name, lines in subprograms([comfort_standard]).items()})
+    programs['SetASTnoTol'] = list(pl.SET_AST_NO_TOL)
+    return programs

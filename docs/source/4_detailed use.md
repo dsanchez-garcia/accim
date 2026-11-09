@@ -394,6 +394,40 @@ endif
 
 Without `category` or `comfort_mode`, the code covers all of them (the offsets of every category, and the subprograms of the comfort standard, whole). The combinations that give no setpoints raise a `ValueError`, as in `AddAccis`.
 
+(setpoints-without-energyplus)=
+### 4.3.1 The setpoints without EnergyPlus
+
+`accim.sim.preview` calculates the setpoints of a comfort standard, category and comfort mode for each hour of a weather file in a few seconds, without EnergyPlus, to choose the arguments before simulating the models:
+
+```python
+>>> from accim.sim.preview import compute_setpoints, plot_setpoints
+>>> df = compute_setpoints('Seville_Present.epw', comfort_standard=1, category=2, comfort_mode=3)
+>>> df.columns.tolist()
+['datetime', 'Tout', 'RMOT', 'PMOT', 'Tout_metric', 'ComfTemp', 'ACST', 'AHST', 'ACSTnoTol', 'AHSTnoTol', 'applicable', 'cooling_season']
+>>> ax = plot_setpoints(df)
+```
+
+`compute_setpoints` runs the EMS programs that calculate the setpoints in the output IDFs (those that `print_setpoint_ems_code` prints, which `accim.utils.get_setpoint_ems_programs` gives by name) with the Erl interpreter of accim, in each timestep, with the running mean outdoor temperatures that EnergyPlus calculates from the weather file. It takes the arguments of `print_setpoint_ems_code` (`setpoint_tolerance`, `setpoint_accuracy`, `cooling_season_start`, those of the custom model...), and `timesteps_per_hour` (6 by default), `start_date` (the first day of the run period, 1 January by default; the rows go until the end of the year) and `frequency` (`'hourly'` or `'timestep'`). The hourly values are the means of those of the timesteps, as in the hourly outputs of EnergyPlus: with the same weather file, run period and timesteps per hour, they are those of the hourly EMS outputs of an output IDF (the tests of accim compare them with simulations of EnergyPlus 25.1, within the accuracy of the setpoints). The columns are:
+
+-   `datetime`: the end of the hour (or timestep), as EnergyPlus reports it; `Tout`: the outdoor dry-bulb temperature.
+-   `RMOT` and `PMOT`: the running mean outdoor temperatures of EnergyPlus for the adaptive models of CEN 15251 and ASHRAE 55; `Tout_metric`: the one with which the comfort standard calculates the setpoints (empty for static setpoints).
+-   `ComfTemp`: the comfort temperature; `ACST` and `AHST`: the cooling and heating setpoints that the EMS gives to the thermostats, with the tolerance, rounded with `setpoint_accuracy` (the outputs `Adaptive Cooling Setpoint Temperature` and `Adaptive Heating Setpoint Temperature`); `ACSTnoTol` and `AHSTnoTol`: the setpoints without the tolerance.
+-   `applicable`: 1 if the running mean is within the applicability limits of the comfort model, as the hour counters of the ACCIS count it; `cooling_season`: 1 in the cooling season.
+
+The running means of EnergyPlus are not exactly those of the standards (EnergyPlus Engineering Reference, section 19.1), and `compute_setpoints` reproduces them (`energyplus_running_means` gives them for each day):
+
+-   `PMOT` is the simple mean of the daily means of the 30 previous days; with a `.stat` file next to the weather file, EnergyPlus takes it from the monthly means of the `.stat` file instead, which accim does not reproduce.
+-   `RMOT` is the running mean with α = 0.8. On the first day of the run period, it is the weighted sum of the daily means of the 7 previous days, not divided by 1 − α⁷, so it is lower than the running mean of EN 16798-1 in the first days of the run period (with `Seville_Present.epw`, 2.4 °C lower on 1 January, and 0.5 °C lower a week later).
+-   The daily means of the days before the run period are those of the weather file (the last days of the file for the first days of the year); those of the simulated days are the means of the outdoor temperatures of the first timestep of each hour, which EnergyPlus interpolates between the hourly values.
+-   The EMS reads the running means of the previous day at the first timestep of each day (and 0 at the first timestep of the run period).
+
+The weather file must have a whole year of 365 days. `outdoor_metrics` gives the outdoor temperatures of reference of the adaptive comfort models as the standards define them, for each hour (or day, with `frequency='daily'`) of a weather file, taking the last days of the file before the first ones, as if the year repeated: the daily mean, maximum and minimum, the running mean of EN 16798-1 (formula B.1, with any `alpha`: `RMOT`), its approximate formula (B.2: `RMOT_7day`), the mean of the daily means of the `days` previous days (ASHRAE 55: `PMOT_n`), the reference temperature of the Dutch ATG (van der Linden et al., 2006: `Te_ref_nl`) and the monthly mean:
+
+```python
+>>> from accim.sim.preview import outdoor_metrics
+>>> metrics = outdoor_metrics('Seville_Present.epw', alpha=0.8, days=7, frequency='daily')
+```
+
 ## 4.4 Putting it into practice: Adaptive setpoint temperatures step by step
 
 You can see a Jupyter Notebook in the How-to Guides section of this documentation: {doc}`jupyter_notebooks/addAccis/using_addAccis`. To run it on your computer, copy the folder `jupyter_notebooks/addAccis` of the sample files to a working folder (see {ref}`running-example-notebooks`).

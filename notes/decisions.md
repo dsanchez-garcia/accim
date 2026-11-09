@@ -11,6 +11,31 @@ Durable architectural/process decisions for this repository and its Obsidian
 vault. Newest first. Use [[templates/decision-record.md|the decision-record
 template]] to add a new entry.
 
+## 2026-11-09 — compute_setpoints runs the setpoint programs of the output IDFs with the running means of EnergyPlus, start-up transient included (E1)
+
+- **Status**: accepted (proposal E1 of `notes/PROPUESTAS_MEJORAS_post_1.1.0_v03.md` and decision D9 of
+  `notes/COPILOT_BRIEF_v1.2.0_v01.md`; the details below were not in the proposal: for the review of the author)
+- **Context**: E1 asks for `compute_setpoints`, which evaluates the Erl programs of `get_setpoint_ems_code` hour by hour
+  with the running means as EnergyPlus calculates them ("both computed from the weather file, so no start-up
+  transient"), tested against the hourly CSV of EnergyPlus within the rounding of `SetpointAcc`. But
+  `get_setpoint_ems_code` gives text whose subprograms are cut to the lines of the comfort mode, which `SetAST_Master`
+  cannot run. And EnergyPlus 25.1 (simulations of the sample model, and its `ThermalComfort.cc`) starts the running
+  mean of CEN 15251 with equation 19.82 not divided by 1 − α⁷, takes the daily means of the simulated days from the
+  first timestep of each hour, and its EMS reads the running means of the previous day at the first timestep of each
+  day.
+- **Decision**: a new function, `accim.utils.get_setpoint_ems_programs`, gives the programs by name with the whole
+  subprograms (the text of `get_setpoint_ems_code` does not change). `compute_setpoints` runs them in each timestep, as
+  `RunACCIS_<zone>` does, with the running means as EnergyPlus calculates them, including the start-up transient of
+  CEN 15251 that v03 says does not exist (D9: reproduce the running means of EnergyPlus). The hourly values are the
+  means of the timesteps, as the hourly EMS outputs of EnergyPlus; `applicable` and `cooling_season` are those of the
+  last timestep of the hour. `outdoor_metrics` gives the metrics as the standards define them, apart from those of
+  EnergyPlus (`energyplus_running_means`). The `.stat` file that EnergyPlus reads for ASHRAE 55 is not reproduced.
+- **Consequences**: the values of `compute_setpoints` are those of the EMS outputs of EnergyPlus 25.1 to machine
+  precision (the tests allow 0.0001 °C); a run period from 1 January has the low running mean of CEN 15251 of
+  EnergyPlus in its first days. B1 can initialise its running means in Erl from `outdoor_metrics` (D3). Section 4.3.1
+  of [[../docs/source/4_detailed use.md]] and section 8 of [[../CAMBIOS_CODIGO_v1.2.0.md]]; the `.stat` file, the leap
+  years and two possible errors of comfort standards 9 and 10 found on the way are in [[../TODO.md]].
+
 ## 2026-11-09 — Table reads the CSV files of the simulations of any IDF and names the outputs of the setpoints based on the PMV after their zones, with names that do not contain each other (D2)
 
 - **Status**: accepted (proposal D2 of `notes/PROPUESTAS_MEJORAS_post_1.1.0_v02.md` and `_v03.md`, which the author
