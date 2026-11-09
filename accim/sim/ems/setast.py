@@ -14,10 +14,12 @@ and INT ISO7730) set them whatever ComfMod is.
 import re
 from typing import Dict, Iterable, List, Optional, Sequence, Set, Tuple, Union
 
+from accim.sim.ems.program_lines import OUTDOOR_METRIC_VARIABLE
 from accim.sim.ems.setpoint_lines import ROUNDING, SETPOINT_LINES
 
 __all__ = [
     'COOLING_SEASON_LINES',
+    'CUSTOM_COMFORT_STANDARD',
     'MODULAR_COMFORT_MODES',
     'depends_on_comfort_mode',
     'get_setpoint_lines',
@@ -61,6 +63,10 @@ MODULAR_COMFORT_MODES: Dict[int, List[Number]] = {
 _CHUNK_SIZE = 3
 _SETPOINT = re.compile(r'^set (ACST|AHST) = ', re.IGNORECASE)
 _SUBPROGRAM_NAME = re.compile(r'^SetAST_CS(\d+)_\d+$', re.IGNORECASE)
+#: The comfort standard of the custom model, and the sensor of its outdoor temperature without the EMS code of its
+#: outdoor metric
+CUSTOM_COMFORT_STANDARD = 99
+_PMOT = re.compile(r'\bPMOT\b')
 #: The Erl lines that set CoolingSeason (1 in the cooling season, from CoolSeasonStart to the day before CoolSeasonEnd,
 #: which can be in the next year; 0 otherwise). SetAST_Master and the aPMV setpoints run them.
 COOLING_SEASON_LINES = (
@@ -80,13 +86,22 @@ COOLING_SEASON_LINES = (
 )
 
 
-def _own_lines(comfort_standard: int, comfort_mode: Number) -> Tuple[str, ...]:
-    return SETPOINT_LINES.get((comfort_standard, comfort_mode), SETPOINT_LINES.get((comfort_standard, None), ()))
+def _own_lines(comfort_standard: int, comfort_mode: Number, outdoor_metric: bool = False) -> Tuple[str, ...]:
+    lines = SETPOINT_LINES.get((comfort_standard, comfort_mode), SETPOINT_LINES.get((comfort_standard, None), ()))
+    if outdoor_metric and comfort_standard == CUSTOM_COMFORT_STANDARD:
+        # The custom model with the EMS code of its outdoor metric (accim.sim.ems.outdoor_metric)
+        lines = tuple(_PMOT.sub(OUTDOOR_METRIC_VARIABLE, line) for line in lines)
+    return lines
 
 
-def get_setpoint_lines(comfort_standard: int, comfort_mode: Number) -> List[str]:
-    """The Erl lines that set ACST and AHST for a comfort standard and a comfort mode, with the rounding."""
-    return list(_own_lines(comfort_standard, comfort_mode)) + list(ROUNDING)
+def get_setpoint_lines(comfort_standard: int, comfort_mode: Number, outdoor_metric: bool = False) -> List[str]:
+    """The Erl lines that set ACST and AHST for a comfort standard and a comfort mode, with the rounding.
+
+    :param outdoor_metric: True for the models with the EMS code of the outdoor metric of the custom model
+        (:mod:`accim.sim.ems.outdoor_metric`), whose lines of the custom model use its outdoor metric, Tout_metric,
+        instead of PMOT.
+    """
+    return list(_own_lines(comfort_standard, comfort_mode, outdoor_metric)) + list(ROUNDING)
 
 
 def has_setpoints(comfort_standard: int, comfort_mode: Number) -> bool:
@@ -120,7 +135,8 @@ def master_program_lines(comfort_standards: Optional[Iterable[int]] = None) -> L
     return lines
 
 
-def _subprogram_lines(comfort_standard: int, chunk: int, comfort_modes: Sequence[Number]) -> List[str]:
+def _subprogram_lines(comfort_standard: int, chunk: int, comfort_modes: Sequence[Number],
+                      outdoor_metric: bool = False) -> List[str]:
     name = f'SetAST_CS{comfort_standard}_{chunk}'
     if not depends_on_comfort_mode(comfort_standard):
         # The static standards (ESP CTE, INT ISO7730) set the same setpoints whatever ComfMod is, so they also work
@@ -129,7 +145,7 @@ def _subprogram_lines(comfort_standard: int, chunk: int, comfort_modes: Sequence
             f'! {name}',
             f'! SetAST subprogram for ComfStand == {comfort_standard}, Chunk {chunk}',
             '! The setpoints of this ComfStand do not depend on ComfMod',
-            *get_setpoint_lines(comfort_standard, comfort_modes[0]),
+            *get_setpoint_lines(comfort_standard, comfort_modes[0], outdoor_metric),
         ]
     lines = [
         f'! {name}',
@@ -140,7 +156,7 @@ def _subprogram_lines(comfort_standard: int, chunk: int, comfort_modes: Sequence
         keyword = 'if' if n == 0 else 'elseif'
         text = str(int(comfort_mode)) if comfort_mode == int(comfort_mode) else str(comfort_mode)
         lines.append(f'{keyword} (ComfMod == {text})')
-        lines.extend(get_setpoint_lines(comfort_standard, comfort_mode))
+        lines.extend(get_setpoint_lines(comfort_standard, comfort_mode, outdoor_metric))
     if comfort_modes:
         lines.append('endif')
     return lines
@@ -151,15 +167,21 @@ def depends_on_comfort_mode(comfort_standard: int) -> bool:
     return [mode for stand, mode in SETPOINT_LINES if stand == comfort_standard] != [None]
 
 
-def subprograms(comfort_standards: Optional[Iterable[int]] = None) -> Dict[str, List[str]]:
-    """Name and lines of each subprogram ``SetAST_CS<ComfStand>_<chunk>`` (of all the comfort standards, by default)."""
+def subprograms(comfort_standards: Optional[Iterable[int]] = None,
+                outdoor_metric: bool = False) -> Dict[str, List[str]]:
+    """Name and lines of each subprogram ``SetAST_CS<ComfStand>_<chunk>`` (of all the comfort standards, by default).
+
+    :param outdoor_metric: True for the models with the EMS code of the outdoor metric of the custom model (see
+        :func:`get_setpoint_lines`).
+    """
     selected = MODULAR_COMFORT_MODES if comfort_standards is None else set(comfort_standards)
     programs = {}
     for comfort_standard, comfort_modes in MODULAR_COMFORT_MODES.items():
         if comfort_standard not in selected:
             continue
         for chunk, chunk_mods in enumerate(_chunks(comfort_modes)):
-            programs[f'SetAST_CS{comfort_standard}_{chunk}'] = _subprogram_lines(comfort_standard, chunk, chunk_mods)
+            programs[f'SetAST_CS{comfort_standard}_{chunk}'] = _subprogram_lines(comfort_standard, chunk, chunk_mods,
+                                                                                 outdoor_metric)
     return programs
 
 

@@ -54,6 +54,8 @@ _AVERAGED_OUTPUTS = [
     'EMS:Adaptive Heating Setpoint Temperature_No Tolerance',
     'EMS:Ventilation Setpoint Temperature',
     'EMS:Minimum Outdoor Temperature for ventilation',
+    # The outdoor metric of the custom model (accim.sim.ems.outdoor_metric), of the whole model and of each zone
+    'EMS:Tout_metric',
     # 'Zone Thermostat Operative Temperature',
     # 'Zone Operative Temperature',
     'Zone Operative Temperature',

@@ -24,6 +24,56 @@ it here as answered).
 
 ## Open
 
+## 2026-11-09 — B1: does every model of the custom model have the EMS code of the outdoor metric, or only those that need it
+- Context: the prompt of B1 says that SetComfTemp, SetAppLimits and COUNT_HOURS of the custom model use `Tout_metric`,
+  a new global variable and EMS output; with the default `'pmot'`, the behaviour must not change.
+- Why it matters: with the code in every model of the custom model (and in the models of `add_accis_to_idf`, which
+  have the code of all the comfort standards), the output IDFs of 1.1.0 with comfort standard 99 would get new
+  programs, global variables and outputs (new columns in the CSV files), although their setpoints would not change.
+- Options considered: (a) always; (b) only if a zone has a metric other than `'pmot'` (`CustAST_metric` ≠ 0) and the
+  model has the code of the custom model; otherwise the custom model uses PMOT, as in 1.1.0.
+- Owner: the author.
+- Status: open; option (b) decided provisionally, pending author (the golden master does not change; the parametric
+  parameters of C1 will add the code when they set a metric).
+
+## 2026-11-09 — B1: which programs of the custom model use Tout_metric
+- Context: the prompt names SetComfTemp, SetAppLimits and COUNT_HOURS. In accim, SetAppLimits only sets the limits of
+  the custom model from its inputs; the outdoor temperature is compared with them in the subprogram of its setpoints
+  (`SetAST_CS99_0`), in `CountHours_<zone>` and, in mixed mode, in `SetVST` (the ventilation setpoint).
+- Why it matters: with PMOT in some of them, the custom model would mix two outdoor temperatures.
+- Options considered: (a) only the programs of the prompt (SetAppLimits unchanged); (b) every program where the
+  custom model uses its outdoor temperature: SetComfTemp, `SetAST_CS99_0`, `CountHours_<zone>` and `SetVST`.
+- Owner: the author.
+- Status: open; option (b) decided provisionally, pending author.
+
+## 2026-11-09 — B1: on which day do the programs of the outdoor metric begin with the values of the weather file
+- Context: decision D3 says to initialise the running means with the values that accim calculates from the EPW given
+  to AddAccis, but not for which day; the programs keep constants, not the whole year.
+- Why it matters: if the model is simulated from another day (another RunPeriod, or the design days), the constants
+  of the first day would be wrong.
+- Options considered: (a) the constants of the first day of the first RunPeriod of the input IDF, used only if the
+  environment begins on that day (otherwise, the PMOT of EnergyPlus, as without the EPW); (b) the constants of the
+  365 days (more than 10 000 program lines).
+- Owner: the author.
+- Status: open; option (a) decided provisionally, pending author.
+
+## 2026-11-09 — B1: T0 of te_ref_nl before the first hour of the day has ended
+- Context: v03 gives Te,ref = (T0 + 0.8·T−1 + 0.4·T−2 + 0.2·T−3)/2.4 with T0 "the running (max+min)/2 of today"; at
+  the first timesteps of a day, no hourly value of the day has ended.
+- Options considered: (a) the outdoor temperature of the timestep; (b) the mean of the maximum and minimum of the
+  previous day.
+- Owner: the author.
+- Status: open; option (a) decided provisionally, pending author.
+
+## 2026-11-09 — B1: the arguments of the outdoor metric in modify_accis
+- Context: the other arguments of the custom model of `modify_accis` (`custom_slope`...) default to 0 and are always
+  written.
+- Options considered: (a) `custom_outdoor_metric='pmot'`, `custom_alpha=0.8`, `custom_days=30` written by every call
+  (a call without them would remove the metric of the zones); (b) `None` by default, keeping the values of each zone,
+  as `comfort_standard` and the other arguments that are None.
+- Owner: the author.
+- Status: open; option (b) decided provisionally, pending author (the most conservative: a call without them changes
+  nothing of the outdoor metric).
 ## 2026-11-09 — A3: with adaptive_coefficient_by='pmv_sign', which λ converts each setpoint into the PMV setpoint of the thermostat
 - Context: the design of A3 gives the Erl of the option, "if PMV_{s} >= 0 set adap_coeff = λ_warm else λ_cool", with
   the PMV of the previous timestep, but not which λ converts the setpoints of the aPMV into the PMV setpoints of the

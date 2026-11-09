@@ -55,12 +55,15 @@ class InputVariable:
     :ivar default: Its value in the models of :func:`accim.sim.accis.add_accis_to_idf`.
     :ivar mixed_mode_only: True for the inputs of the venting opening factor, which only the models in mixed mode
         have.
+    :ivar outdoor_metric_only: True for the inputs of the outdoor metric of the custom model, which only the models
+        with the EMS code of the custom model have (:mod:`accim.sim.ems.outdoor_metric`).
     """
 
     variable: str
     argument: str
     default: Number
     mixed_mode_only: bool = False
+    outdoor_metric_only: bool = False
 
 
 #: The inputs, in the order of the lines of SetInputData_<zone>. The first 12 are those of the program SetInputData
@@ -89,6 +92,9 @@ INPUT_VARIABLES = (
     InputVariable('CustAST_ACSTall', 'custom_cooling_lower_limit', 10),
     InputVariable('CustAST_AHSTaul', 'custom_heating_upper_limit', 33.5),
     InputVariable('CustAST_AHSTall', 'custom_heating_lower_limit', 10),
+    InputVariable('CustAST_metric', 'custom_outdoor_metric', 0, outdoor_metric_only=True),
+    InputVariable('CustAST_alpha', 'custom_alpha', 0.8, outdoor_metric_only=True),
+    InputVariable('CustAST_days', 'custom_days', 30, outdoor_metric_only=True),
     InputVariable('MaxTempDiffVOF', 'opening_factor_max_temp_diff', 6, mixed_mode_only=True),
     InputVariable('MinTempDiffVOF', 'opening_factor_min_temp_diff', 1, mixed_mode_only=True),
     InputVariable('MultiplierVOF', 'min_opening_factor', 0.25, mixed_mode_only=True),
@@ -119,19 +125,26 @@ def input_values(arguments: Mapping) -> Dict[str, Any]:
             value = -value
         elif item.argument in ('cooling_season_start', 'cooling_season_end'):
             value = to_day_of_year(value, item.argument)
+        elif item.variable == 'CustAST_metric':
+            from accim.sim.ems.outdoor_metric import metric_code
+            value = metric_code(value)
         values[item.variable] = value
     return values
 
 
-def input_lines(values: Optional[Mapping[str, Any]] = None, mixed_mode: bool = True) -> List[str]:
+def input_lines(values: Optional[Mapping[str, Any]] = None, mixed_mode: bool = True,
+                outdoor_metric: bool = False) -> List[str]:
     """The lines of a program SetInputData_<zone>, with the default value of the variables not given.
 
     :param values: The values of some EMS variables (see :func:`input_values`).
     :param mixed_mode: False to leave out the inputs of the venting opening factor.
+    :param outdoor_metric: True to add the inputs of the outdoor metric of the custom model (the models with its EMS
+        code, see :mod:`accim.sim.ems.outdoor_metric`).
     """
     values = values or {}
     return [f'set {item.variable} = {values.get(item.variable, item.default)}'
-            for item in INPUT_VARIABLES if mixed_mode or not item.mixed_mode_only]
+            for item in INPUT_VARIABLES
+            if (mixed_mode or not item.mixed_mode_only) and (outdoor_metric or not item.outdoor_metric_only)]
 
 
 def input_programs(idf) -> Dict[str, Any]:

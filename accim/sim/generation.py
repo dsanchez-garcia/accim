@@ -65,6 +65,10 @@ class GenerationArguments:
     setpoint_tolerance_end: Number = 0.1
     setpoint_tolerance_step: Number = 0.1
     name_suffix: str = ''
+    #: The outdoor metric of the custom model (see :mod:`accim.sim.ems.outdoor_metric`)
+    custom_outdoor_metric: Union[str, int] = 'pmot'
+    custom_alpha: Number = 0.8
+    custom_days: int = 30
 
     def __post_init__(self):
         self.comfort_standard = as_list(self.comfort_standard)
@@ -235,6 +239,7 @@ def zone_input_arguments(args: GenerationArguments, combination: Combination,
         custom_cooling_lower_limit=a.custom_cooling_lower_limit,
         custom_heating_upper_limit=a.custom_heating_upper_limit,
         custom_heating_lower_limit=a.custom_heating_lower_limit,
+        custom_outdoor_metric=a.custom_outdoor_metric, custom_alpha=a.custom_alpha, custom_days=a.custom_days,
         opening_factor_max_temp_diff=a.opening_factor_max_temp_diff,
         opening_factor_min_temp_diff=a.opening_factor_min_temp_diff, min_opening_factor=a.min_opening_factor,
     )
@@ -286,7 +291,9 @@ def set_combination(idf, args: GenerationArguments, combination: Combination,
     :param zone_arguments: The arguments of some zones, which are the same in all the output IDFs,
         ``{zone name in the EMS objects: {argument: value}}`` (see :func:`zone_input_arguments`).
     """
-    # The models in mixed mode have the program SetVST, and the inputs of the venting opening factor
+    # The models in mixed mode have the program SetVST, and the inputs of the venting opening factor. The inputs of
+    # the outdoor metric of the custom model are always written: set_comfort_standard_code removes them, and keeps the
+    # EMS code of the outdoor metric only if a zone of the custom model has a metric other than 'pmot'
     mixed_mode = idf.getobject('EnergyManagementSystem:Program', 'SetVST') is not None
     for zone, program in input_programs(idf).items():
         if combination.is_pmv:
@@ -296,7 +303,7 @@ def set_combination(idf, args: GenerationArguments, combination: Combination,
                              min_opening_factor=args.min_opening_factor)
         else:
             arguments = zone_input_arguments(args, combination, (zone_arguments or {}).get(zone))
-        set_program_lines(program, input_lines(input_values(arguments), mixed_mode))
+        set_program_lines(program, input_lines(input_values(arguments), mixed_mode, outdoor_metric=True))
 
 
 class OutputIdfs(Mapping):

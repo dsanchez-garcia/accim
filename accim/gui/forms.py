@@ -29,6 +29,8 @@ __all__ = [
     'APMV_ZONE_FIELDS',
     'BACKENDS',
     'CUSTOM_MODEL_FIELDS',
+    'CUSTOM_OUTDOOR_METRICS',
+    'CUSTOM_OUTDOOR_METRIC_FIELDS',
     'CUSTOM_MODEL_PARAMETERS',
     'ENERGYPLUS_VERSIONS',
     'EPMV_OPTIONS',
@@ -137,6 +139,23 @@ CUSTOM_MODEL_FIELDS = {
     'custom_heating_upper_limit': ('Upper applicability limit, heating (°C)', '33.5'),
     'custom_heating_lower_limit': ('Lower applicability limit, heating (°C)', '10'),
 }
+#: The outdoor metrics of the custom comfort model (custom_outdoor_metric, accim.sim.ems.outdoor_metric), with their
+#: descriptions, in the order of their codes.
+CUSTOM_OUTDOOR_METRICS = {
+    'pmot': 'Running mean of ASHRAE 55 that EnergyPlus calculates (as before accim 1.2.0)',
+    'rmot': 'Running mean of CEN 15251 that EnergyPlus calculates',
+    'rmot_alpha': 'Running mean of EN 16798-1 (B.1), with the alpha below',
+    'rmot_7day': 'Running mean of EN 16798-1, approximate formula (B.2): 7 days',
+    'daily_mean': 'Daily mean outdoor temperature of the previous day',
+    'ndrm': 'Mean of the daily means of the days below (ASHRAE 55-2020, 5.4.2.1)',
+    'monthly_mean': 'Monthly mean of the weather file (it needs the weather file)',
+    'te_ref_nl': 'Te,ref of the Dutch ATG (van der Linden et al., 2006)',
+}
+#: The numbers of the outdoor metric of the custom model: argument -> (label, default).
+CUSTOM_OUTDOOR_METRIC_FIELDS = {
+    'custom_alpha': ('Alpha of rmot_alpha (0.6 to 0.9; EN 16798-1: 0.8)', '0.8'),
+    'custom_days': ('Days of ndrm (7 to 30)', '30'),
+}
 #: The options of the existing HVAC systems (script types 'ex_ac' and 'ex_mm') that are booleans: argument -> label.
 EXISTING_HVAC_OPTIONS = {
     'existing_hvac_operative_temperature_control': 'The thermostats control the operative temperature',
@@ -195,6 +214,9 @@ ADD_ACCIS_DEFAULTS = {
     'setpoint_tolerance_step': '0.1',
     'name_suffix': '',
     **{name: default for name, (_, default) in CUSTOM_MODEL_FIELDS.items()},
+    'custom_outdoor_metric': 'pmot',
+    **{name: default for name, (_, default) in CUSTOM_OUTDOOR_METRIC_FIELDS.items()},
+    'epw': '',
     **EXISTING_HVAC_DEFAULTS,
 }
 #: The initial values of the form of run_ep (``simulate``: estimate the size of the results with a simulation).
@@ -491,10 +513,27 @@ def _pairs(text: Any, label: str, allowed: Iterable[str], what: str) -> Dict[str
             raise FormError(f'{label}: {name!r} is not {what} (they are {", ".join(allowed)}).')
         if name in arguments:
             raise FormError(f'{label}: {name} is given twice.')
-        arguments[name] = _day_value(value, name) if name in _DAY_ARGUMENTS else _number(value, f'{label}: {name}')
+        if name in _DAY_ARGUMENTS:
+            arguments[name] = _day_value(value, name)
+        elif name == 'custom_outdoor_metric':
+            arguments[name] = _metric_value(value, f'{label}: {name}')
+        else:
+            arguments[name] = _number(value, f'{label}: {name}')
     if not arguments:
         raise FormError(f'{label}: give at least one argument (name=value).')
     return arguments
+
+
+def _metric_value(text: Any, label: str) -> str:
+    """The name of an outdoor metric of the custom model (:data:`CUSTOM_OUTDOOR_METRICS`), from its name or its code
+    (0 to 7)."""
+    text = str(text).strip()
+    names = list(CUSTOM_OUTDOOR_METRICS)
+    if text in CUSTOM_OUTDOOR_METRICS:
+        return text
+    if text.isdigit() and int(text) < len(names):
+        return names[int(text)]
+    raise FormError(f'{label}: {text!r} is not an outdoor metric of the custom model ({", ".join(names)}).')
 
 
 def _pairs_text(arguments: Mapping[str, Any]) -> str:
@@ -703,6 +742,7 @@ def add_accis_arguments(form: Mapping[str, Any]) -> Dict[str, Any]:
     )
     if 99 in comfort_standard:
         arguments.update({name: parse_number(form.get(name, ''), name) for name in CUSTOM_MODEL_FIELDS})
+        arguments.update(custom_outdoor_metric_arguments(form))
     if script_type in MIXED_MODE_SCRIPT_TYPES:
         hvac_mode = sorted(int(mode) for mode in form.get('hvac_mode') or [])
         ventilation_control = sorted(int(control) for control in form.get('ventilation_control') or [])
@@ -747,6 +787,37 @@ def _positive(form: Mapping[str, Any], name: str) -> Number:
     if number <= 0:
         raise FormError(f'{name}: enter a number greater than 0.')
     return number
+
+
+def custom_outdoor_metric_arguments(form: Mapping[str, Any]) -> Dict[str, Any]:
+    """The arguments of the outdoor metric of the custom model of :class:`accim.sim.accis.AddAccis` from the values of
+    its form: ``custom_outdoor_metric`` (a name of :data:`CUSTOM_OUTDOOR_METRICS`), ``custom_alpha`` and
+    ``custom_days`` (their defaults of :data:`ADD_ACCIS_DEFAULTS` if the form does not have them) and, if the form
+    has it, ``epw``, the weather file of the simulations (relative to the ``folder`` of the form).
+
+    :raises FormError: If a value is not valid, the weather file does not exist, or 'monthly_mean' has none.
+    """
+    metric = str(form.get('custom_outdoor_metric') or ADD_ACCIS_DEFAULTS['custom_outdoor_metric']).strip()
+    if metric not in CUSTOM_OUTDOOR_METRICS:
+        raise FormError(f'custom_outdoor_metric: choose one of {list(CUSTOM_OUTDOOR_METRICS)}.')
+    arguments: Dict[str, Any] = dict(custom_outdoor_metric=metric)
+    arguments.update({name: parse_number(form.get(name, ADD_ACCIS_DEFAULTS[name]), name)
+                      for name in CUSTOM_OUTDOOR_METRIC_FIELDS})
+    if not 0 < arguments['custom_alpha'] < 1:
+        raise FormError('custom_alpha: enter a number between 0 and 1 (not included).')
+    if not isinstance(arguments['custom_days'], int) or arguments['custom_days'] < 1:
+        raise FormError('custom_days: enter an integer of at least 1.')
+    epw = str(form.get('epw') or '').strip()
+    if epw:
+        if not os.path.isabs(epw) and form.get('folder'):
+            epw = os.path.join(str(form['folder']), epw)
+        if not os.path.isfile(epw):
+            raise FormError(f'epw: {epw} is not a file (the weather file of the simulations).')
+        arguments['epw'] = epw
+    elif metric == 'monthly_mean':
+        raise FormError("epw: the outdoor metric 'monthly_mean' needs the weather file of the simulations, whose "
+                        "monthly means the EMS programs keep.")
+    return arguments
 
 
 def _generation(arguments: Mapping[str, Any]):
@@ -818,7 +889,10 @@ def _single(values: List[Number], standard, attribute: str) -> Union[Number, Non
 #: The arguments of :func:`accim.utils.get_setpoint_ems_code` other than the comfort standard, category and comfort
 #: mode, which a zone of the table of the zones can give.
 _EMS_CODE_ARGUMENTS = ('setpoint_tolerance', 'setpoint_accuracy', 'cooling_season_start', 'cooling_season_end',
-                       'category_cooling_offset', 'category_heating_offset', *CUSTOM_MODEL_FIELDS)
+                       'category_cooling_offset', 'category_heating_offset', *CUSTOM_MODEL_FIELDS,
+                       'custom_outdoor_metric', *CUSTOM_OUTDOOR_METRIC_FIELDS)
+#: Those of the custom model only
+_CUSTOM_EMS_CODE_ARGUMENTS = (*CUSTOM_MODEL_FIELDS, 'custom_outdoor_metric', *CUSTOM_OUTDOOR_METRIC_FIELDS, 'epw')
 
 
 def setpoint_ems_code_calls(form: Mapping[str, Any]) -> List[Tuple[str, Dict[str, Any]]]:
@@ -851,6 +925,8 @@ def setpoint_ems_code_calls(form: Mapping[str, Any]) -> List[Tuple[str, Dict[str
     )
     if 99 in standards or any(values.get('comfort_standard') == 99 for values in zones.values()):
         common.update({name: parse_number(form.get(name, ''), name) for name in CUSTOM_MODEL_FIELDS})
+        # With the weather file, the code of the outdoor metric begins with its values on 1 January
+        common.update(custom_outdoor_metric_arguments(form))
 
     def call(title: str, number: int, category, comfort_mode, extra: Mapping[str, Any]) -> Tuple[str, Dict[str, Any]]:
         if number == 0:
@@ -858,7 +934,7 @@ def setpoint_ems_code_calls(form: Mapping[str, Any]) -> List[Tuple[str, Dict[str
             category = comfort_mode = None
         kwargs = dict(common, comfort_standard=number, category=category, comfort_mode=comfort_mode, **extra)
         if number != 99:
-            for name in CUSTOM_MODEL_FIELDS:
+            for name in _CUSTOM_EMS_CODE_ARGUMENTS:
                 kwargs.pop(name, None)
         described = ', '.join(f'{name.replace("_", " ")} {"(all)" if kwargs[name] is None else kwargs[name]}'
                               for name in ('category', 'comfort_mode'))

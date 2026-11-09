@@ -324,6 +324,54 @@ def test_the_ems_code_of_the_setpoints_of_the_form(tmp_path):
         forms.setpoint_ems_code_calls(_form(tmp_path, setpoint_type='pmv'))
 
 
+def test_the_outdoor_metric_of_the_custom_model_in_the_form(tmp_path):
+    from accim.sim.ems.outdoor_metric import OUTDOOR_METRICS
+
+    # The metrics of the list are those of accim, in the order of their codes
+    assert list(forms.CUSTOM_OUTDOOR_METRICS) == list(OUTDOOR_METRICS)
+    # Only with the custom model; 'pmot' and the defaults of AddAccis by default, without a weather file
+    assert 'custom_outdoor_metric' not in forms.add_accis_arguments(_form(tmp_path))
+    arguments = forms.add_accis_arguments(_form(tmp_path, comfort_standard=[99]))
+    assert {name: arguments[name] for name in ('custom_outdoor_metric', 'custom_alpha', 'custom_days')} == dict(
+        custom_outdoor_metric='pmot', custom_alpha=0.8, custom_days=30)
+    assert 'epw' not in arguments
+    from accim.sim.accis import AddAccis
+
+    parameters = inspect.signature(AddAccis).parameters
+    assert all(arguments[name] == parameters[name].default
+               for name in ('custom_outdoor_metric', 'custom_alpha', 'custom_days'))
+    # The weather file, relative to the folder
+    (tmp_path / 'weather.epw').write_text('')
+    arguments = forms.add_accis_arguments(_form(tmp_path, comfort_standard=[99], custom_outdoor_metric='monthly_mean',
+                                                epw='weather.epw', custom_alpha='0.7', custom_days='7'))
+    assert (arguments['custom_outdoor_metric'], arguments['custom_alpha'], arguments['custom_days']) == (
+        'monthly_mean', 0.7, 7)
+    assert arguments['epw'] == os.path.join(str(tmp_path), 'weather.epw')
+    for values, message in ((dict(custom_outdoor_metric='monthly_mean'), "epw: the outdoor metric 'monthly_mean'"),
+                            (dict(epw='missing.epw'), 'is not a file'),
+                            (dict(custom_outdoor_metric='weekly'), 'custom_outdoor_metric: choose one of'),
+                            (dict(custom_alpha='1.5'), 'custom_alpha: enter a number between 0 and 1'),
+                            (dict(custom_days='7.5'), 'custom_days: enter an integer')):
+        with pytest.raises(FormError, match=message):
+            forms.add_accis_arguments(_form(tmp_path, comfort_standard=[99], **values))
+    # In the table of the zones, by name or by code
+    assert forms.parse_zone_arguments('custom_outdoor_metric=rmot_alpha, custom_alpha=0.7') == dict(
+        custom_outdoor_metric='rmot_alpha', custom_alpha=0.7)
+    assert forms.parse_zone_arguments('custom_outdoor_metric=5') == dict(custom_outdoor_metric='ndrm')
+    with pytest.raises(FormError, match="'weekly' is not an outdoor metric of the custom model"):
+        forms.parse_zone_arguments('custom_outdoor_metric=weekly')
+    # The EMS code of the form, with the outdoor metric of the custom model only
+    calls = dict(forms.setpoint_ems_code_calls(_form(tmp_path, comfort_standard=[1, 99], category='2',
+                                                     custom_outdoor_metric='rmot_alpha')))
+    custom = next(kwargs for title, kwargs in calls.items() if title.startswith('99'))
+    en16798 = next(kwargs for title, kwargs in calls.items() if title.startswith('1 '))
+    assert custom['custom_outdoor_metric'] == 'rmot_alpha' and 'custom_outdoor_metric' not in en16798
+    from accim.gui import tasks
+
+    assert '! --- SetOutdoorMetric_<zone>: the outdoor metric of the zone, Tout_metric ---' in tasks.setpoint_ems_code(
+        [('99', custom)])
+
+
 def _apmv_form(folder, **values):
     return dict(dict(forms.APMV_DEFAULTS, folder=str(folder), idf='model.idf'), **values)
 
@@ -991,6 +1039,29 @@ def test_the_window_gives_the_arguments_of_the_existing_hvac_systems(app, tmp_pa
     assert arguments['existing_hvac_ideal_loads_backup'] is True
     assert arguments['existing_hvac_availability_schedule'] == 'On 24/7'
     assert arguments['existing_hvac_operative_temperature_control'] is True
+
+
+def test_the_window_gives_the_outdoor_metric_of_the_custom_model(app, tmp_path, monkeypatch):
+    from tkinter import filedialog
+
+    (tmp_path / 'model.idf').write_text('')
+    (tmp_path / 'weather.epw').write_text('')
+    app.folder.set(str(tmp_path))
+    tab = app.add_accis
+    # Disabled without the custom model
+    assert all(widget.instate(['disabled']) for widget in (tab.epw_entry, tab.epw_button))
+    assert str(tab.metric_combo.cget('state')) == 'disabled'
+    tab.standard_list.selection_set(len(tab.standards) - 1)
+    tab.update_state()
+    assert str(tab.metric_combo.cget('state')) == 'readonly' and not tab.epw_button.instate(['disabled'])
+    assert list(tab.metric_combo.cget('values')) == list(forms.CUSTOM_OUTDOOR_METRICS)
+    # The description of the metric chosen
+    tab.vars['custom_outdoor_metric'].set('te_ref_nl')
+    assert tab.metric_description.cget('text') == forms.CUSTOM_OUTDOOR_METRICS['te_ref_nl']
+    monkeypatch.setattr(filedialog, 'askopenfilename', lambda **kwargs: str(tmp_path / 'weather.epw'))
+    assert tab.choose_epw() is True
+    arguments = forms.add_accis_arguments(tab.form())
+    assert (arguments['custom_outdoor_metric'], arguments['epw']) == ('te_ref_nl', str(tmp_path / 'weather.epw'))
 
 
 def test_wrong_values_are_shown_and_nothing_runs(app, tmp_path):

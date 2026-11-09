@@ -285,7 +285,8 @@ def _metric(comfort_standard: int, comfort_mode: Optional[Number]) -> Optional[s
 
 def compute_setpoints(epw: PathLike, comfort_standard: int, category: Optional[Number] = None,
                       comfort_mode: Optional[Number] = None, *, timesteps_per_hour: int = 6,
-                      start_date: Union[int, str] = 1, frequency: str = 'hourly', **custom_arguments) -> pd.DataFrame:
+                      start_date: Union[int, str] = 1, frequency: str = 'hourly', outdoor_metric_start: str = 'epw',
+                      **custom_arguments) -> pd.DataFrame:
     """The setpoints of the ACCIS for a comfort standard, category and comfort mode in each hour of a weather file,
     without EnergyPlus.
 
@@ -298,6 +299,11 @@ def compute_setpoints(epw: PathLike, comfort_standard: int, category: Optional[N
     the timesteps, as EnergyPlus reports the EMS outputs (``Averaged``), so they are those of the hourly EMS outputs of
     an output IDF simulated with the same weather file, run period and timesteps per hour.
 
+    With the custom model (comfort standard 99) and an outdoor metric other than 'pmot' (``custom_outdoor_metric``),
+    the programs of the outdoor metric (:mod:`accim.sim.ems.outdoor_metric`) also run in each timestep, with the outdoor
+    temperature of EnergyPlus (interpolated between the hourly values of the weather file, which it has at the end of
+    each hour).
+
     :param epw: The path of the weather file (EPW), of a whole year of 365 days.
     :param comfort_standard: The comfort standard (see :func:`accim.utils.get_setpoint_ems_code`).
     :param category: The category, which the comfort standards with categories need.
@@ -306,40 +312,62 @@ def compute_setpoints(epw: PathLike, comfort_standard: int, category: Optional[N
     :param start_date: The first day of the run period, a date 'dd/mm' or a day of the year (1, by default); the
         values go from that day to the end of the year.
     :param frequency: 'hourly' (by default) or 'timestep'.
+    :param outdoor_metric_start: The values with which the outdoor metric of the custom model begins: 'epw' (by
+        default), those of the weather file, as in the output IDFs of AddAccis with its argument ``epw``; 'pmot', the
+        running mean of ASHRAE 55 of EnergyPlus, as in those without it.
     :param custom_arguments: The other arguments of :func:`accim.utils.get_setpoint_ems_code` (``setpoint_tolerance``,
-        ``setpoint_accuracy``, ``cooling_season_start``, ``custom_slope``...), with the same defaults.
+        ``setpoint_accuracy``, ``cooling_season_start``, ``custom_slope``, ``custom_outdoor_metric``...), with the same
+        defaults.
     :return: A DataFrame with a row for each hour (or timestep): ``datetime`` (the end of the hour or timestep, as
         EnergyPlus reports it), ``Tout`` (the outdoor dry-bulb temperature: that of the weather file, or that of
         EnergyPlus, interpolated, for each timestep), ``RMOT`` and ``PMOT`` (those of EnergyPlus for the day),
-        ``Tout_metric`` (the one of them with which the setpoints are calculated, NaN for static setpoints),
-        ``ComfTemp`` (the comfort temperature), ``ACST`` and ``AHST`` (the cooling and heating setpoints, rounded with
-        ``setpoint_accuracy``, which the EMS gives to the thermostats: the outputs *Adaptive Cooling Setpoint
-        Temperature* and *Adaptive Heating Setpoint Temperature*), ``ACSTnoTol`` and ``AHSTnoTol`` (without the
-        tolerance), ``applicable`` (1 if the running mean is within the applicability limits, as the hour counters of
-        the ACCIS count it, at the end of the hour) and ``cooling_season`` (1 in the cooling season). Values that the
-        programs do not set (such as the comfort temperature of static setpoints) are NaN.
+        ``Tout_metric`` (the one of them with which the setpoints are calculated, NaN for static setpoints; with the
+        custom model and an outdoor metric other than 'pmot', the one that its EMS programs calculate, as the outputs
+        ``Tout_metric_<zone>``), ``ComfTemp`` (the comfort temperature), ``ACST`` and ``AHST`` (the cooling and
+        heating setpoints, rounded with ``setpoint_accuracy``, which the EMS gives to the thermostats: the outputs
+        *Adaptive Cooling Setpoint Temperature* and *Adaptive Heating Setpoint Temperature*), ``ACSTnoTol`` and
+        ``AHSTnoTol`` (without the tolerance), ``applicable`` (1 if the running mean is within the applicability
+        limits, as the hour counters of the ACCIS count it, at the end of the hour) and ``cooling_season`` (1 in the
+        cooling season). Values that the programs do not set (such as the comfort temperature of static setpoints) are
+        NaN.
     :raises ValueError: If the arguments are not valid (as in :func:`accim.utils.get_setpoint_ems_programs` and
         :func:`energyplus_running_means`).
     """
+    from accim.sim.ems import outdoor_metric as om
     from accim.sim.ems import program_lines as pl
     from accim.sim.ems.erl import ErlProgramSet, variables_in_programs
     from accim.utils.ems_code import get_setpoint_ems_programs
 
     if frequency not in ('hourly', 'timestep'):
         raise ValueError(f"frequency must be 'hourly' or 'timestep', not {frequency!r}.")
-    programs = get_setpoint_ems_programs(comfort_standard, category, comfort_mode, **custom_arguments)
+    if outdoor_metric_start not in ('epw', 'pmot'):
+        raise ValueError(f"outdoor_metric_start must be 'epw' or 'pmot', not {outdoor_metric_start!r}.")
+    programs = get_setpoint_ems_programs(comfort_standard, category, comfort_mode,
+                                         epw=epw if outdoor_metric_start == 'epw' else None, start_date=start_date,
+                                         **custom_arguments)
     running_means, temperatures, first = _energyplus_daily(epw, timesteps_per_hour, start_date)
     hourly = read_epw_dry_bulb(epw)
 
     inputs = f'SetInputData_{_ZONE}'
-    programs = {(inputs if name == 'SetInputData_<zone>' else name): lines for name, lines in programs.items()}
+    # The programs of the zone (SetInputData_<zone>, and the outdoor metric of the custom model)
+    programs = {name.replace('<zone>', _ZONE): [line.replace('<zone>', _ZONE) for line in lines]
+                for name, lines in programs.items()}
+    # The custom model with an outdoor metric other than 'pmot' (accim.sim.ems.outdoor_metric)
+    outdoor_metric = om.PROGRAM in programs
+    zone_metric = f'{om.ZONE_PROGRAM_PREFIX}{_ZONE}'
     # The hour counters of the zone tell whether the running mean is within the applicability limits
     counter = f'CountHours_{_ZONE}'
-    programs[counter] = pl.format_lines(pl.COUNT_HOURS, zone=_ZONE)
+    programs[counter] = pl.format_lines(pl.COUNT_HOURS_OUTDOOR_METRIC if outdoor_metric else pl.COUNT_HOURS,
+                                        zone=_ZONE)
     names = set().union(*variables_in_programs(programs).values())
     erl = ErlProgramSet(programs, global_variables=names)
-    order = [inputs, 'SetAppLimits', 'ApplyCAT', 'SetComfTemp', 'SetAST', 'SetASTnoTol', counter]
+    order = ['SetAppLimits', 'ApplyCAT', 'SetComfTemp', 'SetAST', 'SetASTnoTol', counter]
+    # The programs that run in each timestep (those of the outdoor metric keep the daily values)
+    every_timestep = [om.PROGRAM, inputs, zone_metric] if outdoor_metric else []
+    if not outdoor_metric:
+        order.insert(0, inputs)
     uses_time = 'CURRENTTIME' in names
+    reported = _REPORTED + ((('Tout_metric', pl.OUTDOOR_METRIC_VARIABLE),) if outdoor_metric else ())
 
     n = timesteps_per_hour
     # InitASTvariables, at the beginning of the run period
@@ -348,6 +376,14 @@ def compute_setpoints(epw: PathLike, comfort_standard: int, category: Optional[N
     erl.set('CoolingSeason', 0)
     erl.set('ZoneTimeStep', 1 / n)
     erl.set(f'{_ZONE}_OpT', 0)
+    file_hours = hourly['dry_bulb'].to_numpy(dtype=float)[24 * first:]
+    if outdoor_metric:
+        erl.set('WarmupFlag', 0)
+        erl.run(om.INIT_PROGRAM)
+        months = hourly['month'].to_numpy()[24 * first::24]
+        # The outdoor temperature of each timestep, interpolated between the hourly values as in EnergyPlus (the
+        # value of the weather file at the end of each hour); on the first day, from the last hour of the same day
+        last_hours = np.r_[temperatures[first, 23], file_hours[:-1]]
 
     rmot_day = running_means['RMOT'].to_numpy()
     pmot_day = running_means['PMOT'].to_numpy()
@@ -363,7 +399,23 @@ def compute_setpoints(epw: PathLike, comfort_standard: int, category: Optional[N
                 else:
                     rmot, pmot = rmot_day[index], pmot_day[index]
                 current_time = hour - 1 + step / n
-                timestep_inputs = (rmot, pmot, day, current_time if uses_time else None)
+                tout_metric = None
+                if outdoor_metric:
+                    fraction = step / n
+                    hour_index = 24 * index + hour - 1
+                    erl.set('OutT', last_hours[hour_index] * (1 - fraction) + file_hours[hour_index] * fraction)
+                    erl.set('RMOT', rmot)
+                    erl.set('PMOT', pmot)
+                    erl.set('DayOfYear', day + 1)
+                    erl.set('Month', int(months[index]))
+                    erl.set('Hour', hour - 1)
+                    erl.set('TimeStepNum', step)
+                    # The end of the timestep, in minutes of the hour (60 at the end of the hour)
+                    erl.set('Minute', step * 60 / n)
+                    for program in every_timestep:
+                        erl.run(program)
+                    tout_metric = erl.get(pl.OUTDOOR_METRIC_VARIABLE)
+                timestep_inputs = (rmot, pmot, tout_metric, day, current_time if uses_time else None)
                 if timestep_inputs != previous_inputs:
                     # The programs give the same values with the same inputs
                     erl.set('RMOT', rmot)
@@ -372,7 +424,7 @@ def compute_setpoints(epw: PathLike, comfort_standard: int, category: Optional[N
                     erl.set('CurrentTime', current_time)
                     for program in order:
                         erl.run(program)
-                    values = [erl.get(variable) for _, variable in _REPORTED]
+                    values = [erl.get(variable) for _, variable in reported]
                     non_applicable = [erl.get(f'{name}_{_ZONE}')
                                       for name in ('DiscomfNonAppHotHours', 'DiscomfNonAppColdHours')]
                     previous_record = (*[np.nan if v is None else v for v in values],
@@ -380,15 +432,18 @@ def compute_setpoints(epw: PathLike, comfort_standard: int, category: Optional[N
                     previous_inputs = timestep_inputs
                 records.append(previous_record)
 
-    columns = [column for column, _ in _REPORTED] + ['applicable', 'cooling_season']
+    columns = [column for column, _ in reported] + ['applicable', 'cooling_season']
     steps = pd.DataFrame.from_records(records, columns=columns)
     days = len(running_means)
     day_index = np.repeat(np.arange(days), 24 * n)
-    metric = _metric(int(comfort_standard), comfort_mode)
-    file_hours = hourly['dry_bulb'].to_numpy(dtype=float)[24 * first:]
+    if outdoor_metric:
+        metric = om.metric_name(custom_arguments.get('custom_outdoor_metric', 'pmot'))
+    else:
+        metric = _metric(int(comfort_standard), comfort_mode)
     starts = hourly.iloc[24 * first:]
     hour_ends = (_dates(starts['month'].to_numpy(), starts['day'].to_numpy(), 365)
                  + pd.to_timedelta(starts['hour'].to_numpy(), unit='h'))
+    averaged = [column for column, _ in reported]
     if frequency == 'timestep':
         # EnergyPlus interpolates the outdoor temperature between the hourly values (on the first day, from the last
         # hour of the same day)
@@ -401,7 +456,7 @@ def compute_setpoints(epw: PathLike, comfort_standard: int, category: Optional[N
         daily_rows = day_index
     else:
         groups = np.repeat(np.arange(len(file_hours)), n)
-        result = steps[[column for column, _ in _REPORTED]].groupby(groups).mean()
+        result = steps[averaged].groupby(groups).mean()
         ends = steps[['applicable', 'cooling_season']].groupby(groups).last()
         result = pd.concat([result, ends], axis=1).reset_index(drop=True)
         tout = file_hours
@@ -411,7 +466,10 @@ def compute_setpoints(epw: PathLike, comfort_standard: int, category: Optional[N
     result.insert(1, 'Tout', tout)
     result.insert(2, 'RMOT', rmot_day[daily_rows])
     result.insert(3, 'PMOT', pmot_day[daily_rows])
-    result.insert(4, 'Tout_metric', result[metric] if metric else np.nan)
+    if outdoor_metric:
+        result.insert(4, 'Tout_metric', result.pop('Tout_metric'))
+    else:
+        result.insert(4, 'Tout_metric', result[metric] if metric else np.nan)
     result.attrs.update(comfort_standard=int(comfort_standard), category=category, comfort_mode=comfort_mode,
                         timesteps_per_hour=n, start_date=start_date, metric=metric)
     return result

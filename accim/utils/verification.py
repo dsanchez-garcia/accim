@@ -95,8 +95,11 @@ def verify_accim_simulation(
     temperatures of EnergyPlus (*Zone Thermal Comfort CEN 15251 Adaptive Model Running Average Outdoor Air
     Temperature* and *... ASHRAE 55 ...*) are those of :func:`accim.sim.preview.energyplus_running_means`
     (``Check4_RMOT``, ``Check4_PMOT``, ``Check4_ComfTemp``, ``Check4_ACST``, ``Check4_AHST``, ``Check4_ACSTnoTol``
-    and ``Check4_AHSTnoTol``). They are checked with the outputs at timestep frequency, or else hourly, of the last
-    environment of the outputs (the run period).
+    and ``Check4_AHSTnoTol``). With the custom model and an outdoor metric other than 'pmot'
+    (:mod:`accim.sim.ems.outdoor_metric`), the outdoor metric that the EMS of each zone calculates
+    (``Tout_metric_<zone>``) is that of ``compute_setpoints`` too (``Check4_Tout_metric``), which begins as the programs
+    of the model do (with the values of the weather file given to AddAccis, or with PMOT). They are checked with the
+    outputs at timestep frequency, or else hourly, of the last environment of the outputs (the run period).
 
     :param eso_file_path: Path to the eplusout.eso file.
     :type eso_file_path: str
@@ -1124,6 +1127,8 @@ def _setpoint_mismatches(building, data: Mapping[str, pd.DataFrame], epw: str,
     """
     from accim.sim.ems.inputs import input_programs, read_inputs
     from accim.sim.ems.objects import ZONE_SETPOINT_OUTPUT_VARIABLES
+    from accim.sim.ems.outdoor_metric import OUTPUT_PREFIX, begins_with_weather_file, metric_code
+    from accim.sim.ems.setast import CUSTOM_COMFORT_STANDARD
     from accim.sim.preview import SETPOINT_EMS_VARIABLES, compute_setpoints, energyplus_running_means
 
     zone_programs = input_programs(building)
@@ -1178,6 +1183,8 @@ def _setpoint_mismatches(building, data: Mapping[str, pd.DataFrame], epw: str,
         mismatches.extend(new_rows)
         lines.append(line)
     previews: Dict[Tuple, pd.DataFrame] = {}
+    # The outdoor metric of the custom model begins with the values of the weather file of AddAccis, or with PMOT
+    metric_start = 'epw' if begins_with_weather_file(building) else 'pmot'
     for zone, program in zone_programs.items():
         try:
             arguments = _compute_setpoints_arguments(read_inputs(program))
@@ -1185,7 +1192,7 @@ def _setpoint_mismatches(building, data: Mapping[str, pd.DataFrame], epw: str,
             if key not in previews:
                 previews[key] = compute_setpoints(epw, timesteps_per_hour=timesteps_per_hour, start_date=start_date,
                                                   frequency='timestep' if frequency == 'Timestep' else 'hourly',
-                                                  **arguments).set_index('datetime')
+                                                  outdoor_metric_start=metric_start, **arguments).set_index('datetime')
         except (ValueError, TypeError) as error:
             lines.append(f"  '{zone}': not checked ({error}).")
             continue
@@ -1199,6 +1206,15 @@ def _setpoint_mismatches(building, data: Mapping[str, pd.DataFrame], epw: str,
             expected = np.where(inside, np.nan_to_num(preview[column].to_numpy(dtype=float)), np.nan)
             new_rows, line = _mismatch_rows(timestamps, found[rows], expected, zone, f'Check4_{column}',
                                             f'{output} of compute_setpoints', tolerance)
+            mismatches.extend(new_rows)
+            lines.append(line)
+        # The outdoor metric of the custom model that its EMS programs calculate (not with 'pmot', which is PMOT)
+        found = outputs.get('EMS', f'{OUTPUT_PREFIX}{zone}')
+        if (found is not None and arguments.get('comfort_standard') == CUSTOM_COMFORT_STANDARD
+                and metric_code(arguments.get('custom_outdoor_metric', 0)) != 0):
+            expected = np.where(inside, preview['Tout_metric'].to_numpy(dtype=float), np.nan)
+            new_rows, line = _mismatch_rows(timestamps, found[rows], expected, zone, 'Check4_Tout_metric',
+                                            f'{OUTPUT_PREFIX}{zone} of compute_setpoints', tolerance)
             mismatches.extend(new_rows)
             lines.append(line)
     return mismatches, lines

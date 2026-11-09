@@ -15,6 +15,29 @@ This log is a lightweight, session-scoped complement to the repository's
 existing tracking files — it does not replace them (see
 [[decisions.md#2026-09-13 — `notes/work-log.md` complements, not replaces, existing tracking files|the related decision]]).
 
+## 2026-11-09 — B1: the outdoor metric of the custom model (branch `v1.2.0`, on the server)
+
+- **Objective**: B1, after A3, in the order of the author (with decisions D3 and D7).
+- **Affected files**: `accim/sim/ems/outdoor_metric.py` (new), `accim/sim/ems/program_lines.py`,
+  `accim/sim/ems/setast.py`, `accim/sim/ems/programs.py`, `accim/sim/ems/inputs.py`, `accim/sim/generation.py`,
+  `accim/sim/accis.py`, `accim/sim/preview.py`, `accim/utils/ems_code.py`, `accim/utils/verification.py`,
+  `accim/data/postprocessing/main.py`, `accim/gui/forms.py`, `accim/gui/app.py`,
+  `tests/core/test_outdoor_metric.py` (new), `tests/core/test_gui.py`, [[../docs/source/4_detailed use.md]] (4.2.2,
+  4.3.1, 4.6.1, 4.10), `docs/source/api/accim.sim.ems.rst`, [[../CHANGELOG.md]], [[../CAMBIOS_CODIGO_v1.2.0.md]]
+  (§11), [[../DEVLOG.md]], [[../TODO.md]], [[decisions.md]], [[questions.md]].
+- **Finding or decision**: See
+  [[decisions.md#2026-11-09 — The custom model calculates its outdoor metric in Erl, only where a zone needs it (B1)|the decision]].
+  The first simulations found that the built-in variable `TimeStepsPerHour` reads 0 at BeginTimestepBeforePredictor
+  in EnergyPlus 25.1 (the hourly values were never added; the interpreter of `compute_setpoints` had hidden it, since
+  it set the value), and that the running means are not initialised without the EPW (EnergyPlus stopped: a variable
+  used before it was set); the end of the hour is `Minute > 59.5`, and `InitOutdoorMetric` sets them to 0.
+  `read_eso_using_readvarseso` keeps the last 8760 rows of long outputs (in [[../TODO.md]]). Five details decided
+  provisionally in [[questions.md]].
+- **Validation**: 34 new tests (two with EnergyPlus 25.1) and 2 of the GUI; five simulations of EnergyPlus 25.1 at
+  timestep frequency (every metric, with and without the EPW, mixed mode) without mismatches in check 4; `run_ep` with
+  both backends, identical; a screenshot of the frame; the whole suite; the documentation build.
+- **Next step**: B5.
+
 ## 2026-11-09 — A3: the catalogue of adaptive coefficients of the aPMV and pmv_sign (branch `v1.2.0`, on the server)
 
 - **Objective**: A3, after E2, in the order of the author (with decision D4).

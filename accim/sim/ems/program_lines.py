@@ -17,7 +17,7 @@ comfort standards that a model does not use.
 """
 
 import re
-from typing import Iterable, List, Tuple
+from typing import Iterable, List, Optional, Set, Tuple
 
 __all__ = [
     'SET_COMF_TEMP',
@@ -35,6 +35,11 @@ __all__ = [
     'SET_WINDOW_OPERATION',
     'SET_WINDOW_OPERATION_EXISTING_HVAC',
     'APPLY_AST_AIR_CONDITIONED',
+    'COUNT_HOURS_OUTDOOR_METRIC',
+    'OUTDOOR_METRIC_VARIABLE',
+    'SET_COMF_TEMP_OUTDOOR_METRIC',
+    'SET_VST_OUTDOOR_METRIC',
+    'chain_comfort_standards',
     'for_comfort_standards',
     'format_lines',
 ]
@@ -69,17 +74,12 @@ def _comfort_standards_of(condition: str) -> List[int]:
     return [int(match.group(1)) for match in matches]
 
 
-def for_comfort_standards(lines: Iterable[str], comfort_standards: Iterable[int]) -> List[str]:
-    """The lines of a program that is a chain ``if ComfStand == ... elseif ComfStand == ... else ... endif``, with the
-    branches of some comfort standards only.
+def _branches(lines: Iterable[str]) -> List[Tuple[Optional[str], List[str]]]:
+    """The condition (None for else) and lines of each branch of a chain ``if ... elseif ... else ... endif``.
 
-    The conditions of the branches only name these comfort standards, and the branch ``else`` becomes a branch
-    ``elseif`` of those that no condition names. For the comfort standards given, the lines do the same as the whole
-    chain. If none of them has a branch, there are no lines.
+    :raises ValueError: If the lines are not one chain.
     """
-    wanted = set(comfort_standards)
-    # The condition (None for else) and lines of each branch
-    branches = []
+    branches: List[Tuple[Optional[str], List[str]]] = []
     depth = 0
     for line in lines:
         keyword, _, condition = line.strip().partition(' ')
@@ -101,6 +101,19 @@ def for_comfort_standards(lines: Iterable[str], comfort_standards: Iterable[int]
             branches[-1][1].append(line)
     if depth != 0:
         raise ValueError('The chain if ... endif is not closed.')
+    return branches
+
+
+def for_comfort_standards(lines: Iterable[str], comfort_standards: Iterable[int]) -> List[str]:
+    """The lines of a program that is a chain ``if ComfStand == ... elseif ComfStand == ... else ... endif``, with the
+    branches of some comfort standards only.
+
+    The conditions of the branches only name these comfort standards, and the branch ``else`` becomes a branch
+    ``elseif`` of those that no condition names. For the comfort standards given, the lines do the same as the whole
+    chain. If none of them has a branch, there are no lines.
+    """
+    wanted = set(comfort_standards)
+    branches = _branches(lines)
     # As in the EMS, each comfort standard runs the first branch that names it, or the branch else if none does
     named = set()
     kept = []
@@ -121,6 +134,20 @@ def for_comfort_standards(lines: Iterable[str], comfort_standards: Iterable[int]
     if kept:
         result.append('endif')
     return result
+
+
+def chain_comfort_standards(lines: Iterable[str]) -> Optional[Set[int]]:
+    """The comfort standards that the conditions of a chain ``if ComfStand == ... endif`` name, or None if it has a
+    branch ``else`` (the chain of all the comfort standards; those of :func:`for_comfort_standards` have none).
+
+    :raises ValueError: If the lines are not such a chain.
+    """
+    standards: Set[int] = set()
+    for condition, _ in _branches(lines):
+        if condition is None:
+            return None
+        standards.update(_comfort_standards_of(condition))
+    return standards
 
 
 #: Comfort (neutral) temperature of each comfort standard.
@@ -188,80 +215,65 @@ set ComfTemp = PMOT*0.678+13.51
 endif
 """)
 
+_COUNT_HOURS_BODY = """
+if (METRIC >= AHSTall) && (METRIC <= ACSTaul)
+if ({zone}_OpT > ACSTnoTol)
+set ComfHours_{zone} = 0
+set DiscomfAppHotHours_{zone} = 1*ZoneTimeStep
+set DiscomfAppColdHours_{zone} = 0
+set DiscomfNonAppHotHours_{zone} = 0
+set DiscomfNonAppColdHours_{zone} = 0
+elseif ({zone}_OpT < AHSTnoTol)
+set ComfHours_{zone} = 0
+set DiscomfAppHotHours_{zone} = 0
+set DiscomfAppColdHours_{zone} = 1*ZoneTimeStep
+set DiscomfNonAppHotHours_{zone} = 0
+set DiscomfNonAppColdHours_{zone} = 0
+else
+set ComfHours_{zone} = 1*ZoneTimeStep
+set DiscomfAppHotHours_{zone} = 0
+set DiscomfAppColdHours_{zone} = 0
+set DiscomfNonAppHotHours_{zone} = 0
+set DiscomfNonAppColdHours_{zone} = 0
+endif
+elseif (METRIC > ACSTaul)
+set ComfHours_{zone} = 0
+set DiscomfAppHotHours_{zone} = 0
+set DiscomfAppColdHours_{zone} = 0
+set DiscomfNonAppHotHours_{zone} = 1*ZoneTimeStep
+set DiscomfNonAppColdHours_{zone} = 0
+elseif (METRIC < AHSTall)
+set ComfHours_{zone} = 0
+set DiscomfAppHotHours_{zone} = 0
+set DiscomfAppColdHours_{zone} = 0
+set DiscomfNonAppHotHours_{zone} = 0
+set DiscomfNonAppColdHours_{zone} = 1*ZoneTimeStep
+endif
+"""
+
+
+def _count_hours_body(metric: str) -> str:
+    """The lines of COUNT_HOURS for the comfort standards whose running mean is ``metric``."""
+    return _COUNT_HOURS_BODY.strip('\n').replace('METRIC', metric)
+
+
 #: Comfortable and discomfortable hours of a zone, within the applicability limits: in each timestep, one of the five
 #: counters is the length of the timestep and the others are 0. The operative temperature is compared with the
 #: setpoints without tolerance of the timestep (RunACCIS_<zone> runs it after SetASTnoTol).
-COUNT_HOURS = _lines("""
-if (ComfStand == 1) || (ComfStand == 10)
-if (RMOT >= AHSTall) && (RMOT <= ACSTaul)
-if ({zone}_OpT > ACSTnoTol)
-set ComfHours_{zone} = 0
-set DiscomfAppHotHours_{zone} = 1*ZoneTimeStep
-set DiscomfAppColdHours_{zone} = 0
-set DiscomfNonAppHotHours_{zone} = 0
-set DiscomfNonAppColdHours_{zone} = 0
-elseif ({zone}_OpT < AHSTnoTol)
-set ComfHours_{zone} = 0
-set DiscomfAppHotHours_{zone} = 0
-set DiscomfAppColdHours_{zone} = 1*ZoneTimeStep
-set DiscomfNonAppHotHours_{zone} = 0
-set DiscomfNonAppColdHours_{zone} = 0
-else
-set ComfHours_{zone} = 1*ZoneTimeStep
-set DiscomfAppHotHours_{zone} = 0
-set DiscomfAppColdHours_{zone} = 0
-set DiscomfNonAppHotHours_{zone} = 0
-set DiscomfNonAppColdHours_{zone} = 0
-endif
-elseif (RMOT > ACSTaul)
-set ComfHours_{zone} = 0
-set DiscomfAppHotHours_{zone} = 0
-set DiscomfAppColdHours_{zone} = 0
-set DiscomfNonAppHotHours_{zone} = 1*ZoneTimeStep
-set DiscomfNonAppColdHours_{zone} = 0
-elseif (RMOT < AHSTall)
-set ComfHours_{zone} = 0
-set DiscomfAppHotHours_{zone} = 0
-set DiscomfAppColdHours_{zone} = 0
-set DiscomfNonAppHotHours_{zone} = 0
-set DiscomfNonAppColdHours_{zone} = 1*ZoneTimeStep
-endif
-else
-if (PMOT >= AHSTall) && (PMOT <= ACSTaul)
-if ({zone}_OpT > ACSTnoTol)
-set ComfHours_{zone} = 0
-set DiscomfAppHotHours_{zone} = 1*ZoneTimeStep
-set DiscomfAppColdHours_{zone} = 0
-set DiscomfNonAppHotHours_{zone} = 0
-set DiscomfNonAppColdHours_{zone} = 0
-elseif ({zone}_OpT < AHSTnoTol)
-set ComfHours_{zone} = 0
-set DiscomfAppHotHours_{zone} = 0
-set DiscomfAppColdHours_{zone} = 1*ZoneTimeStep
-set DiscomfNonAppHotHours_{zone} = 0
-set DiscomfNonAppColdHours_{zone} = 0
-else
-set ComfHours_{zone} = 1*ZoneTimeStep
-set DiscomfAppHotHours_{zone} = 0
-set DiscomfAppColdHours_{zone} = 0
-set DiscomfNonAppHotHours_{zone} = 0
-set DiscomfNonAppColdHours_{zone} = 0
-endif
-elseif (PMOT > ACSTaul)
-set ComfHours_{zone} = 0
-set DiscomfAppHotHours_{zone} = 0
-set DiscomfAppColdHours_{zone} = 0
-set DiscomfNonAppHotHours_{zone} = 1*ZoneTimeStep
-set DiscomfNonAppColdHours_{zone} = 0
-elseif (PMOT < AHSTall)
-set ComfHours_{zone} = 0
-set DiscomfAppHotHours_{zone} = 0
-set DiscomfAppColdHours_{zone} = 0
-set DiscomfNonAppHotHours_{zone} = 0
-set DiscomfNonAppColdHours_{zone} = 1*ZoneTimeStep
-endif
-endif
-""")
+COUNT_HOURS = _join('if (ComfStand == 1) || (ComfStand == 10)', _count_hours_body('RMOT'), 'else',
+                    _count_hours_body('PMOT'), 'endif')
+
+#: The variable with the outdoor metric of the custom model (ComfStand 99) in the models with the EMS code of its
+#: outdoor metric (:mod:`accim.sim.ems.outdoor_metric`); the other models use PMOT, as before accim 1.2.0.
+OUTDOOR_METRIC_VARIABLE = 'Tout_metric'
+#: SET_COMF_TEMP in the models with the EMS code of the outdoor metric of the custom model.
+SET_COMF_TEMP_OUTDOOR_METRIC = tuple(line.replace('PMOT*m+n', f'{OUTDOOR_METRIC_VARIABLE}*m+n')
+                                     for line in SET_COMF_TEMP)
+#: COUNT_HOURS in the models with the EMS code of the outdoor metric of the custom model: the custom model compares its
+#: outdoor metric with its limits.
+COUNT_HOURS_OUTDOOR_METRIC = _join('if (ComfStand == 1) || (ComfStand == 10)', _count_hours_body('RMOT'),
+                                   'elseif ComfStand == 99', _count_hours_body(OUTDOOR_METRIC_VARIABLE), 'else',
+                                   _count_hours_body('PMOT'), 'endif')
 
 #: Applicability limits of each comfort standard (those of the custom model are inputs of the zone).
 SET_APP_LIMITS = _lines("""
@@ -649,6 +661,22 @@ elseif (VentCtrl == 1) || (VentCtrl==3)
 set VST = roundedAHST+VSToffset
 endif
 """)
+
+
+def _set_vst_outdoor_metric() -> Tuple[str, ...]:
+    """SET_VST with a branch of the custom model (ComfStand 99) that compares its outdoor metric with its limits,
+    before the branch of the comfort standards that compare PMOT with them."""
+    lines = list(SET_VST)
+    branch = ['else', 'if (PMOT >= AHSTall) && (PMOT <= ACSTaul)', 'set VST = ComfTemp+VSToffset']
+    index = next(n for n in range(len(lines)) if lines[n:n + len(branch)] == branch)
+    custom = ['elseif ComfStand == 99',
+              f'if ({OUTDOOR_METRIC_VARIABLE} >= AHSTall) && ({OUTDOOR_METRIC_VARIABLE} <= ACSTaul)',
+              'set VST = ComfTemp+VSToffset', 'else', 'set VST = (roundedACST+roundedAHST)/2+VSToffset', 'endif']
+    return tuple(lines[:index] + custom + lines[index:])
+
+
+#: SET_VST in the models with the EMS code of the outdoor metric of the custom model.
+SET_VST_OUTDOOR_METRIC = _set_vst_outdoor_metric()
 
 #: Whether the HVAC system of a zone (or of the zone of a window) neither heats nor cools: with the VRF systems of
 #: accim, from its coils, which were off in the previous timestep.

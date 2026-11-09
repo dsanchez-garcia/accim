@@ -28,11 +28,12 @@ comfort standard add its code if the model does not have it (:func:`add_comfort_
 The lines of the programs are indented inside the blocks IF and WHILE (:func:`indent_lines`).
 """
 
-from typing import Dict, Iterable, List, Optional, Tuple
+from typing import Dict, Iterable, List, Optional, Set, Tuple
 
 from accim.sim.ems import program_lines as pl
 from accim.sim.ems.inputs import INPUT_PROGRAM_PREFIX, RUN_PROGRAM_PREFIX, input_lines
-from accim.sim.ems.setast import master_program_lines, subprogram_comfort_standards, subprograms
+from accim.sim.ems.setast import (CUSTOM_COMFORT_STANDARD, master_program_lines, subprogram_comfort_standards,
+                                  subprograms)
 from accim.sim.model import AccimModel
 
 __all__ = [
@@ -44,6 +45,7 @@ __all__ = [
     'add_program',
     'add_program_calling_managers',
     'add_programs',
+    'code_comfort_standards',
     'indent_lines',
     'indent_programs',
     'set_comfort_standard_code',
@@ -122,7 +124,7 @@ def indent_programs(idf) -> None:
             program.fieldvalues[2:] = indent_lines(program.fieldvalues[2:])
 
 
-def set_comfort_standard_code(idf, comfort_standards: Optional[Iterable[int]] = None) -> None:
+def set_comfort_standard_code(idf, comfort_standards: Optional[Iterable[int]] = None, epw=None) -> None:
     """Write in the EMS programs of ACCIS of a model the code of some comfort standards only (of all of them with
     None).
 
@@ -134,7 +136,20 @@ def set_comfort_standard_code(idf, comfort_standards: Optional[Iterable[int]] = 
     which use neither the comfort temperature nor the offsets of the categories). With these comfort standards, the
     programs do the same as with the code of all of them; with another one, they do not set its setpoints, and
     EnergyPlus stops.
+
+    The model has the EMS code of the outdoor metric of the custom model (comfort standard 99) only if it has the code
+    of the custom model and a zone has an outdoor metric other than 'pmot' (``CustAST_metric``); then the programs of
+    the custom model use its outdoor metric instead of PMOT (see
+    :func:`accim.sim.ems.outdoor_metric.set_outdoor_metric_code`). Otherwise, the model has neither that code nor the
+    inputs of the outdoor metric, as before accim 1.2.0.
+
+    :param epw: The weather file with which the outdoor metric of the custom model begins (see
+        :func:`accim.sim.ems.outdoor_metric.set_outdoor_metric_code`); None to begin with the running mean of ASHRAE 55
+        of EnergyPlus, or to keep the programs of the outdoor metric of the model.
     """
+    from accim.sim.ems.inputs import input_programs
+    from accim.sim.ems.outdoor_metric import set_outdoor_metric_code, uses_outdoor_metric
+
     if comfort_standards is not None:
         # The models can have them as numbers with decimals (set ComfStand = 1.0)
         comfort_standards = {int(n) for n in comfort_standards}
@@ -154,13 +169,16 @@ def set_comfort_standard_code(idf, comfort_standards: Optional[Iterable[int]] = 
             zone = program.Name[len(_COUNT_HOURS_PREFIX):]
             set_program_lines(program, lines_for(pl.format_lines(pl.COUNT_HOURS, zone=zone)))
     master = idf.getobject('EnergyManagementSystem:Program', 'SetAST_Master')
-    if master is None:
-        return
-    set_program_lines(master, master_program_lines(comfort_standards))
-    for program in [p for p in programs if p.Name.upper().startswith('SETAST_CS')]:
-        idf.removeidfobject(program)
-    for name, lines in subprograms(comfort_standards).items():
-        add_program(idf, name, lines)
+    if master is not None:
+        set_program_lines(master, master_program_lines(comfort_standards))
+        for program in [p for p in programs if p.Name.upper().startswith('SETAST_CS')]:
+            idf.removeidfobject(program)
+        for name, lines in subprograms(comfort_standards).items():
+            add_program(idf, name, lines)
+    if input_programs(idf):
+        outdoor_metric = ((comfort_standards is None or CUSTOM_COMFORT_STANDARD in comfort_standards)
+                          and uses_outdoor_metric(idf))
+        set_outdoor_metric_code(idf, outdoor_metric, epw)
 
 
 def add_comfort_standard_code(idf, comfort_standards: Iterable[int]) -> None:
@@ -171,6 +189,18 @@ def add_comfort_standard_code(idf, comfort_standards: Iterable[int]) -> None:
     wanted = {int(n) for n in comfort_standards}
     if not wanted <= with_code:
         set_comfort_standard_code(idf, with_code | wanted)
+
+
+def code_comfort_standards(idf) -> Optional[Set[int]]:
+    """The comfort standards whose EMS code a model has (see :func:`set_comfort_standard_code`): None for the models
+    with the code of all of them as :func:`accim.sim.accis.add_accis_to_idf` writes it (whose SetComfTemp is the
+    whole chain of comfort standards), or those of the subprograms SetAST_CS<n>_<chunk> of the model."""
+    program = idf.getobject('EnergyManagementSystem:Program', 'SetComfTemp')
+    if program is not None:
+        lines = [str(value).strip() for value in program.fieldvalues[2:]]
+        if lines in (list(pl.SET_COMF_TEMP), list(pl.SET_COMF_TEMP_OUTDOOR_METRIC)):
+            return None
+    return subprogram_comfort_standards(idf)
 
 
 def zone_variables(mixed_mode: bool) -> Tuple[str, ...]:

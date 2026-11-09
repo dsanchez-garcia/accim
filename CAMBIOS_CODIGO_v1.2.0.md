@@ -5,7 +5,7 @@ documentación de uso. Recoge las propuestas del bloque A de `notes/PROPUESTAS_M
 (índices de confort derivados del PMV; archivos del autor, en git desde el commit `e238dad`) que el autor pidió para
 esta versión: las P1, A2, A1 y A5, en este orden; y después D2 (sección 7), que el autor incluyó en la 1.2.0 el
 2026-11-09 con E2 y E1, y las demás propuestas de la v03 (`notes/PROPUESTAS_MEJORAS_post_1.1.0_v03.md`), en el orden
-del autor (`notes/COPILOT_BRIEF_v1.2.0_v01.md`): E1 (sección 8), E2 (sección 9), A3 (sección 10)...
+del autor (`notes/COPILOT_BRIEF_v1.2.0_v01.md`): E1 (sección 8), E2 (sección 9), A3 (sección 10), B1 (sección 11)...
 
 Lo que ya está en otros documentos no se repite aquí:
 
@@ -40,6 +40,9 @@ Lo que ya está en otros documentos no se repite aquí:
 - **A3.** El aPMV admite los coeficientes adaptativos de un catálogo (`accim.constants.APMV_ADAPTIVE_COEFFICIENTS`:
   Yao 2009, GB/T 50785-2012 y los λN de Zhang 2024, estos con aviso) y elegirlos por el signo del PMV
   (`adaptive_coefficient_by='pmv_sign'`), además de por la estación (sección 10).
+- **B1.** El modelo personalizado elige su temperatura exterior de referencia (`custom_outdoor_metric`): las medias de
+  EnergyPlus o las de EN 16798-1 (B.1, B.2), ASHRAE 55 (n días), la media diaria, la mensual del EPW y la Te,ref de la
+  ATG, calculadas en Erl sin `TrendVariable`, solo en los IDF que las usan (sección 11).
 - Las categorías del PMV y la aproximación de la corrección del metabolismo se han comprobado en ISO 7730:2025 y
   EN 16798-1:2019, y el modelo dinámico de vestimenta de A5, en Schiavon y Lee (2013) y ASHRAE 55-2020 (sección 6).
 - Lo que quedaba abierto se ha comprobado: el golden master y las pruebas de EnergyPlus 26.1 y 26.2, también la de A5
@@ -613,3 +616,98 @@ y con el que se convertían las dos consignas en las consignas PMV de los termos
 - Comparación de backends (`run_ep(backend='ems')` frente a `run_ep(backend='api')`, el modelo de ejemplo con
   'pmv_sign' y los λ de `gbt50785_cold_general`, del 24/04 al 07/05, salidas por paso y horarias): 2016 filas × 81
   columnas idénticas (diferencia máxima 0,0); 5,0 s frente a 7,4 s.
+
+## 11. La métrica exterior del modelo personalizado (B1)
+
+La propuesta B1 pide el argumento `custom_outdoor_metric` del modelo personalizado (ComfStand 99), `'pmot'` por
+defecto (el comportamiento de antes), con `'rmot'`, `'rmot_alpha'` (y `custom_alpha`), `'rmot_7day'`, `'daily_mean'`,
+`'ndrm'` (y `custom_days`), `'monthly_mean'` y `'te_ref_nl'`, calculadas en Erl sin
+`EnergyManagementSystem:TrendVariable` (el backend de la API no lo admite), con `Tout_metric` como variable global y
+salida EMS, y que `SetComfTemp`, `SetAppLimits` y `COUNT_HOURS` la usen con ComfStand 99. Las decisiones D3 (arranque
+con los valores del EPW dado a AddAccis, o con PMOT y aviso; `'monthly_mean'` exige el EPW) y D7 (α fuera de 0,6–0,9 y
+días fuera de 7–30 avisan) del brief la completan. Las ecuaciones son las de la v03 §11.4: EN 16798-1:2019, anexo B,
+fórmulas (B.1) y (B.2); ASHRAE 55-2020, 5.4.2.1; van der Linden et al. (2006).
+
+**Antes.** El modelo personalizado calculaba su temperatura de confort (`PMOT*m+n`), sus consignas
+(`SetAST_CS99_0`), las horas (`CountHours_<zona>`) y, en modo mixto, la consigna de ventilación (`SetVST`) con `PMOT`,
+la media de ASHRAE 55 de EnergyPlus.
+
+**Ahora.**
+
+- `accim/sim/ems/outdoor_metric.py` (nuevo):
+  - `OUTDOOR_METRICS` (nombre → código, el valor de `CustAST_metric`: pmot 0 ... te_ref_nl 7), `metric_code`,
+    `metric_name`, `check_outdoor_metric_arguments` (errores y los avisos de D7), `ring_days` (los días que se guardan:
+    30, o más si una zona tiene más `custom_days`).
+  - Tres programas: `SetOutdoorMetric` (del edificio, en BeginTimestepBeforePredictor antes de los de las zonas: suma
+    los valores del final de cada hora, `Minute > 59.5`, que son los del EPW, y en el primer paso de cada día,
+    `(Hour == 0) && (TimeStepNum == 1)`, desplaza las medias diarias `Tday_1...Tday_n` y las medias de máxima y mínima
+    `Tmid_1...Tmid_3`; no suma los días de calentamiento, `WarmupFlag`); `SetOutdoorMetric_<zona>` (lo ejecuta
+    `RunACCIS_<zona>` tras sus entradas: la media recursiva `RMOTa_<zona>` con su α y `Tout_metric` según
+    `CustAST_metric`; `'monthly_mean'` sin EPW sería `@FatalHaltEp 6`, pero antes se da `ValueError`); e
+    `InitOutdoorMetric` (BeginNewEnvironment: todo a 0, el valor de PMOT antes de que EnergyPlus lo calcule).
+  - Arranque (D3): con el EPW, constantes del primer día del primer RunPeriod del IDF (`initial_values`, la serie de
+    `outdoor_metrics`, con caché), usadas si el entorno empieza ese día; si no, o sin EPW (con aviso), PMOT en cuanto no
+    es 0. Los 12 valores mensuales del EPW van en el programa: el IDF queda ligado a ese EPW.
+  - `set_outdoor_metric_code(idf, enabled, epw, rewrite)` añade o quita las entradas, los programas, la línea de
+    `RunACCIS_<zona>`, los programas de llamada, las variables globales (un objeto cuya primera variable es
+    `Tout_metric`), las salidas `Tout_metric` y `Tout_metric_<zona>` (con `Output:Variable` en las frecuencias de las de
+    la temperatura de confort) y cambia `PMOT` por `Tout_metric` en los programas del modelo personalizado
+    (`_set_custom_model_lines`: la línea de `SetComfTemp`, `SetAST_CS99_<n>`, la rama propia en `CountHours_<zona>` y en
+    `SetVST`). Sin EPW y sin `rewrite`, conserva los programas que ya tenga el modelo (y sus constantes del EPW) si
+    guardan días suficientes. `uses_outdoor_metric`, `has_outdoor_metric_code`, `begins_with_weather_file`.
+- `accim/sim/ems/program_lines.py`: `SET_COMF_TEMP`, `COUNT_HOURS` y `SET_VST` no cambian (comprobado frente a HEAD);
+  nuevas `OUTDOOR_METRIC_VARIABLE`, `SET_COMF_TEMP_OUTDOOR_METRIC`, `COUNT_HOURS_OUTDOOR_METRIC` (la rama de 99 con
+  `Tout_metric`), `SET_VST_OUTDOOR_METRIC` y `chain_comfort_standards` (las normas que nombra una cadena); el análisis
+  de las ramas pasa a `_branches`, sin cambiar `for_comfort_standards`.
+- `accim/sim/ems/setast.py`: `get_setpoint_lines` y `subprograms` admiten `outdoor_metric=True` (las líneas de 99 con
+  `Tout_metric`); `CUSTOM_COMFORT_STANDARD`.
+- `accim/sim/ems/programs.py`: `set_comfort_standard_code(idf, normas, epw=None)` escribe los programas de las normas
+  como antes y llama al final a `set_outdoor_metric_code` (activado si el modelo tiene el código de 99 y alguna zona una
+  métrica distinta de `'pmot'`); `code_comfort_standards(idf)` (None si el modelo tiene el código de todas las normas,
+  como `add_accis_to_idf`).
+- `accim/sim/ems/inputs.py`: tres entradas nuevas tras `CustAST_AHSTall` (`CustAST_metric`, `CustAST_alpha`,
+  `CustAST_days`, con `outdoor_metric_only`), que `input_lines(..., outdoor_metric=True)` escribe y `input_values`
+  convierte (el nombre de la métrica en su código). `ZONE_ARGUMENTS` las incluye.
+- `accim/sim/generation.py`: `GenerationArguments` tiene `custom_outdoor_metric`, `custom_alpha` y `custom_days` (al
+  final); `set_combination` escribe siempre las entradas de la métrica, y `set_comfort_standard_code` las quita si
+  ninguna zona las necesita.
+- `accim/sim/accis.py`: `AddAccis` tiene `custom_outdoor_metric`, `custom_alpha`, `custom_days` y `epw` al final de la
+  firma (`_check_outdoor_metric`: errores, avisos de D7 también por zona, `ValueError` de `'monthly_mean'` sin EPW; los
+  prompts no las preguntan, y se conservan si se usan); `_write_output_idfs` pasa `epw`. `modify_accis` tiene los
+  cuatro al final, con `None` por defecto (conservan los valores de las zonas; `notes/questions.md`): si se da alguno,
+  añade las líneas que falten y escribe de nuevo los programas (`rewrite=True`); los modelos de versiones anteriores
+  solo admiten `'pmot'`.
+- `accim/utils/ems_code.py`: `get_setpoint_ems_code` y `get_setpoint_ems_programs` toman las tres y `epw` y
+  `start_date`; con 99 y una métrica distinta de `'pmot'` dan los programas de la métrica (con `<zone>`), sus entradas y
+  las líneas con `Tout_metric`.
+- `accim/sim/preview.py`: `compute_setpoints` ejecuta los programas de la métrica en cada paso (con `Hour`,
+  `TimeStepNum`, `Minute`, `Month`, `WarmupFlag` = 0 y la temperatura exterior interpolada, exacta al final de cada
+  hora), y su `Tout_metric` es la de esos programas; argumento nuevo `outdoor_metric_start` ('epw' o 'pmot').
+- `accim/utils/verification.py`: `Check4_Tout_metric` (la métrica de cada zona frente a `compute_setpoints`, que
+  arranca como el modelo: `begins_with_weather_file`). La v03 decía «frente a `outdoor_metrics()`»: `compute_setpoints`
+  ejecuta los mismos programas, y en las pruebas se compara con `outdoor_metrics` y con pandas.
+- `accim/data/postprocessing/main.py`: `Table` promedia en el tiempo `EMS:Tout_metric` (antes las habría sumado).
+- GUI: en el marco del modelo personalizado, la métrica (lista con su descripción, `forms.CUSTOM_OUTDOOR_METRICS`),
+  `custom_alpha`, `custom_days` y el EPW (`epw`, con *Browse...*); `custom_outdoor_metric_arguments`; los pares de la
+  tabla de zonas admiten `custom_outdoor_metric=<nombre>`; el código EMS de la GUI incluye la métrica.
+- Desviaciones de la v03: el código de la métrica solo está en los IDF cuyas zonas lo necesitan (con `'pmot'` los IDF
+  son los de 1.1.0, golden master idéntico); además de `SetComfTemp` y `COUNT_HOURS`, usan `Tout_metric` las consignas
+  de 99 y `SetVST` (`SetAppLimits` no compara la métrica en accim); el final de la hora es `Minute > 59.5` porque
+  `TimeStepsPerHour`, que la guía del EMS lista, vale 0 en ese punto de llamada con EnergyPlus 25.1 (comprobado con una
+  salida EMS de una copia); la prueba de `rmot_alpha(0.8)` frente al RMOT nativo es tras 21 días, no 14 (EnergyPlus
+  arranca con la ecuación 19.82 sin dividir por 1 − α⁷: 0,10 K el día 15 en Sevilla desde el 1 de enero, menos de
+  0,045 K desde el día 22).
+- Pruebas: `tests/core/test_outdoor_metric.py` (34: códigos, avisos y errores de D7; las variantes de los programas;
+  el código EMS; con el intérprete y un EPW inventado, frente a pandas: (B.1) recursiva con α 0,8 y 0,7, (B.2) y
+  `rolling(n).mean()` desplazado para 7, 30 y 45 días, media diaria y mensual, Te,ref al final del día y de cada hora,
+  el RMOT nativo y el arranque con PMOT; AddAccis: los IDF de las demás normas idénticos a los de un AddAccis sin la
+  métrica y los objetos del de 99; `modify_accis` añade la métrica y, al volver a `'pmot'`, el modelo es idéntico al
+  de referencia; los modelos de 0.x; EnergyPlus 25.1: `rmot_alpha` y `te_ref_nl` del 1/01 al 28/02 por paso, sin
+  discrepancias en la comprobación 4 y a menos de 0,05 K del RMOT nativo desde el día 22; y los dos backends
+  idénticos con `ndrm` y `daily_mean` arrancando con PMOT).
+- Comparaciones con EnergyPlus 25.1 (fuera del repositorio, por paso de tiempo): `rmot_alpha` + `te_ref_nl` (1/01 a
+  28/02), `ndrm(7)` + `rmot_7day` (10/06 a 20/07), `monthly_mean` + `daily_mean` (20/03 a 10/05), `rmot_alpha(0,7)` +
+  `rmot` sin EPW (1/01 a 28/02) y `rmot_alpha` + `pmot` en modo mixto (1/07 a 10/08): 0 discrepancias en la
+  comprobación 4, también en `Check4_Tout_metric`. Backends (`run_ep(backend='ems')` frente a `'api'`, tres de esos
+  modelos): todas las columnas idénticas (diferencia máxima 0,0; 8496, 8496 y 5904 filas), 13,5 s frente a 16,2 s,
+  12,8 frente a 16,2 y 9,5 frente a 13,1.

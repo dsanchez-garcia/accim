@@ -584,7 +584,7 @@ class AddAccisTab(_Tab):
                      'ventilation_setpoint_offset', 'min_outdoor_temp_offset', 'max_wind_speed',
                      'opening_factor_max_temp_diff', 'opening_factor_min_temp_diff', 'min_opening_factor',
                      'setpoint_tolerance_start', 'setpoint_tolerance_end', 'setpoint_tolerance_step', 'name_suffix',
-                     *forms.CUSTOM_MODEL_FIELDS):
+                     *forms.CUSTOM_MODEL_FIELDS, 'custom_outdoor_metric', *forms.CUSTOM_OUTDOOR_METRIC_FIELDS, 'epw'):
             self.vars[name] = tk.StringVar(value=defaults[name])
         for name in ('keep_existing_outputs', 'add_building_averages', 'debug_ems', *forms.EXISTING_HVAC_OPTIONS):
             self.vars[name] = tk.BooleanVar(value=defaults[name])
@@ -734,9 +734,48 @@ class AddAccisTab(_Tab):
     def _custom_frame(self, parent) -> ttk.LabelFrame:
         frame = ttk.LabelFrame(parent, text='Custom comfort model (comfort standard 99)', padding=6)
         frame.columnconfigure(1, weight=1)
+        fields = list(forms.CUSTOM_MODEL_FIELDS.items())
         self.custom_widgets = [_grid_entry(frame, row, f'{label}:', self.vars[name])
-                               for row, (name, (label, _)) in enumerate(forms.CUSTOM_MODEL_FIELDS.items())]
+                               for row, (name, (label, _)) in enumerate(fields)]
+        # The outdoor metric of the custom model (accim.sim.ems.outdoor_metric)
+        row = len(fields)
+        self.metric_combo = _grid_combo(frame, row, 'Outdoor metric (custom_outdoor_metric):',
+                                        self.vars['custom_outdoor_metric'], forms.CUSTOM_OUTDOOR_METRICS)
+        self.custom_widgets.append(self.metric_combo)
+        self.metric_description = ttk.Label(frame, text='', wraplength=340)
+        self.metric_description.grid(row=row + 1, column=0, columnspan=2, sticky='w', pady=(0, 2))
+        self.vars['custom_outdoor_metric'].trace_add('write', lambda *args: self._metric_changed())
+        row += 2
+        for name, (label, _) in forms.CUSTOM_OUTDOOR_METRIC_FIELDS.items():
+            self.custom_widgets.append(_grid_entry(frame, row, f'{label}:', self.vars[name]))
+            row += 1
+        ttk.Label(frame, text='Weather file of the simulations (epw),\nwith which the outdoor metric begins:').grid(
+            row=row, column=0, sticky='w', padx=(0, 6), pady=2)
+        epw_frame = ttk.Frame(frame)
+        epw_frame.grid(row=row, column=1, sticky='ew', pady=2)
+        epw_frame.columnconfigure(0, weight=1)
+        self.epw_entry = ttk.Entry(epw_frame, textvariable=self.vars['epw'])
+        self.epw_entry.grid(row=0, column=0, sticky='ew')
+        self.epw_button = ttk.Button(epw_frame, text='Browse...', command=self.choose_epw)
+        self.epw_button.grid(row=0, column=1, padx=(4, 0))
+        self.custom_widgets += [self.epw_entry, self.epw_button]
+        self._metric_changed()
         return frame
+
+    def _metric_changed(self) -> None:
+        """The description of the outdoor metric of the custom model."""
+        self.metric_description.configure(
+            text=forms.CUSTOM_OUTDOOR_METRICS.get(self.vars['custom_outdoor_metric'].get(), ''))
+
+    def choose_epw(self) -> bool:
+        """Choose the weather file of the simulations (the outdoor metric of the custom model begins with it)."""
+        path = filedialog.askopenfilename(parent=self.app.root, initialdir=self.folder.get() or None,
+                                          filetypes=[('EPW files', '*.epw'), ('All files', '*.*')],
+                                          title='The weather file of the simulations')
+        if not path:
+            return False
+        self.vars['epw'].set(path)
+        return True
 
     def _existing_hvac_frame(self, parent) -> ttk.LabelFrame:
         frame = ttk.LabelFrame(parent, text='Existing HVAC systems (script types ex_ac and ex_mm): keep the operative '

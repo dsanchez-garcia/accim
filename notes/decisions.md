@@ -11,6 +11,38 @@ Durable architectural/process decisions for this repository and its Obsidian
 vault. Newest first. Use [[templates/decision-record.md|the decision-record
 template]] to add a new entry.
 
+## 2026-11-09 — The custom model calculates its outdoor metric in Erl, only where a zone needs it (B1)
+
+- **Status**: accepted (proposal B1 of `notes/PROPUESTAS_MEJORAS_post_1.1.0_v03.md` with decisions D3 and D7 of
+  `notes/COPILOT_BRIEF_v1.2.0_v01.md`; four details were decided provisionally, see questions.md)
+- **Context**: B1 asks for `custom_outdoor_metric` ('pmot' by default, 'rmot', 'rmot_alpha' with `custom_alpha`,
+  'rmot_7day', 'daily_mean', 'ndrm' with `custom_days`, 'monthly_mean' and 'te_ref_nl') for the custom model, in a new
+  Erl program SetOutdoorMetric without `EnergyManagementSystem:TrendVariable`, with `Tout_metric` as a global variable
+  and an EMS output; D3: the running means begin with the values of the EPW given to AddAccis, or with PMOT and a
+  warning, and 'monthly_mean' needs the EPW (ValueError); D7: alpha outside 0.6–0.9 and days outside 7–30 warn.
+- **Decision**: `accim.sim.ems.outdoor_metric` writes three programs: `SetOutdoorMetric` (building, at
+  BeginTimestepBeforePredictor before the zones: the hourly values of the end of each hour, `Minute > 59.5`, and at the
+  first timestep of each day, `(Hour == 0) && (TimeStepNum == 1)`, the daily means `Tday_1...Tday_n` (n = max(30,
+  `custom_days`)) and the means of the maximum and minimum `Tmid_1...Tmid_3`, without the warm-up days),
+  `SetOutdoorMetric_<zone>` (run by `RunACCIS_<zone>` after its inputs `CustAST_metric`, `CustAST_alpha`,
+  `CustAST_days`: the recursive running mean `RMOTa_<zone>` and `Tout_metric`) and `InitOutdoorMetric`
+  (BeginNewEnvironment: the values are 0 until they begin). The EPW gives constants for the first day of the first
+  RunPeriod (used if the environment begins that day; otherwise PMOT once it is not 0). `set_comfort_standard_code`
+  writes these objects only if the model has the code of the custom model and a zone has a metric other than 'pmot';
+  then `SetComfTemp`, `SetAST_CS99_0`, `CountHours_<zone>` and `SetVST` use `Tout_metric` instead of PMOT (constants
+  `*_OUTDOOR_METRIC` of `program_lines`, `subprograms(outdoor_metric=True)`), and the outputs are `Tout_metric_<zone>`
+  and `Tout_metric`. `modify_accis` keeps the metric when its arguments are None. `get_setpoint_ems_code`,
+  `compute_setpoints` (`outdoor_metric_start`), `verify_accim_simulation` (`Check4_Tout_metric`), `Table` (averaged)
+  and the GUI follow.
+- **Consequences**: the output IDFs of the other comfort standards and of 'pmot' do not change (golden master). The
+  built-in variable `TimeStepsPerHour` of the EMS Application Guide reads 0 at BeginTimestepBeforePredictor in
+  EnergyPlus 25.1 (found with an EMS output of a copy of it, 2026-11-09), so the end of the hour is `Minute > 59.5`
+  (the guide: Minute, 1.0–60.0, the end of the timestep). With EnergyPlus 25.1, every metric gives the values of
+  `compute_setpoints` in every timestep, and both backends give identical results. The test of v03 (rmot_alpha(0.8)
+  against the native RMOT, |Δ| < 0.05 K after 14 days) is made after 21 days: EnergyPlus begins its running mean of
+  CEN 15251 with equation 19.82 not divided by 1 − α⁷ and uses the daily means of the first timestep of each hour,
+  which gives 0.10 K on day 15 with `Seville_Present.epw` from 1 January, and less than 0.045 K from day 22.
+
 ## 2026-11-09 — The aPMV takes the adaptive coefficients of a catalogue, and with pmv_sign the coefficient of the side of the PMV (A3)
 
 - **Status**: accepted (proposal A3 of `notes/PROPUESTAS_MEJORAS_post_1.1.0_v03.md` with decision D4 of

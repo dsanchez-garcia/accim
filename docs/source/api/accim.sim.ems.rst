@@ -28,6 +28,14 @@ accim.sim.ems.objects module
    :show-inheritance:
    :undoc-members:
 
+accim.sim.ems.outdoor\_metric module
+------------------------------------
+
+.. automodule:: accim.sim.ems.outdoor_metric
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
 accim.sim.ems.program\_lines module
 -----------------------------------
 

@@ -51,19 +51,35 @@ from accim.sim.ems.inputs import (
     check_zone_arguments,
     input_programs,
     input_values,
+    read_inputs,
     resolve_zone_arguments,
     set_inputs,
     zone_comfort_standards,
     zone_names,
 )
+from accim.sim.ems.outdoor_metric import (
+    INPUTS as OUTDOOR_METRIC_INPUTS,
+    OUTDOOR_METRICS,
+    check_outdoor_metric_arguments,
+    metric_code,
+    set_outdoor_metric_code,
+    uses_outdoor_metric,
+)
 from accim.sim.ems.programs import (
     add_comfort_standard_code,
     add_program,
+    code_comfort_standards,
     indent_programs,
     set_comfort_standard_code,
     set_program_lines,
 )
-from accim.sim.ems.setast import MODULAR_COMFORT_MODES, depends_on_comfort_mode, master_program_lines, subprograms
+from accim.sim.ems.setast import (
+    CUSTOM_COMFORT_STANDARD,
+    MODULAR_COMFORT_MODES,
+    depends_on_comfort_mode,
+    master_program_lines,
+    subprograms,
+)
 from accim.sim.generation import (
     GenerationArguments,
     OutputIdfs,
@@ -332,6 +348,34 @@ def _warn_hvac_zone_map(hvac_zone_map: Optional[Dict[str, str]]) -> None:
         )
 
 
+#: The arguments of the outdoor metric of the custom model (accim.sim.ems.outdoor_metric)
+_OUTDOOR_METRIC_ARGUMENTS = ('custom_outdoor_metric', 'custom_alpha', 'custom_days')
+
+
+def _check_outdoor_metric(metric: Any, alpha: Any, days: Any, zone_arguments: Dict[Any, Dict[str, Any]],
+                          epw: Optional[Union[str, os.PathLike]]) -> Optional[str]:
+    """Check the arguments of the outdoor metric of the custom model, of all the zones and of those of
+    ``zone_arguments`` (with the warnings of decision D7), and the weather file; return its path.
+
+    :raises ValueError: If an argument is not valid, ``epw`` is not a file, or 'monthly_mean' has no weather file
+        (decision D3).
+    """
+    codes = {check_outdoor_metric_arguments(metric, alpha, days)}
+    for zone, arguments in zone_arguments.items():
+        if any(name in arguments for name in _OUTDOOR_METRIC_ARGUMENTS):
+            codes.add(check_outdoor_metric_arguments(arguments.get('custom_outdoor_metric', metric),
+                                                     arguments.get('custom_alpha', alpha),
+                                                     arguments.get('custom_days', days), where=str(zone)))
+    if epw is not None:
+        if not os.path.isfile(epw):
+            raise ValueError(f'epw must be the path of a weather file (EPW), not {epw!r}.')
+        epw = os.path.abspath(epw)
+    elif OUTDOOR_METRICS['monthly_mean'] in codes:
+        raise ValueError("custom_outdoor_metric 'monthly_mean' needs the weather file of the simulations (argument "
+                         "epw), whose monthly means the EMS programs keep.")
+    return epw
+
+
 # ----------------------------------------------------------------------------------------------------------
 # AddAccis: files
 # ----------------------------------------------------------------------------------------------------------
@@ -467,6 +511,24 @@ class AddAccis:
         operative temperature as their control temperature (the cooling panels in zones with a thermostat get the
         control type ZoneTotalLoad, so that they follow the thermostat); a design object that several zones share is
         copied for each zone. False keeps them as in the model, with a warning.
+    :param custom_outdoor_metric: Custom model: the outdoor temperature of reference of its comfort temperature
+        (m * metric + n), setpoints and applicability (:data:`accim.sim.ems.outdoor_metric.OUTDOOR_METRICS`): 'pmot'
+        (the default, as before accim 1.2.0), the running mean of ASHRAE 55 that EnergyPlus calculates; 'rmot', that
+        of CEN 15251 of EnergyPlus; 'rmot_alpha', the running mean of EN 16798-1:2019, formula (B.1), with
+        ``custom_alpha``; 'rmot_7day', its approximate formula (B.2); 'daily_mean', the daily mean of the previous day;
+        'ndrm', the arithmetic mean of the daily means of the ``custom_days`` previous days (ASHRAE 55-2020,
+        5.4.2.1); 'monthly_mean', the monthly mean of the weather file ``epw``; 'te_ref_nl', the reference
+        temperature of the Dutch ATG (van der Linden et al., 2006). The EMS calculates them from the outdoor dry-bulb
+        temperature (:mod:`accim.sim.ems.outdoor_metric`); with a metric other than 'pmot', the output IDFs of the
+        custom model have these EMS programs, and the outputs ``Tout_metric`` and ``Tout_metric_<zone>``.
+    :param custom_alpha: Custom model, 'rmot_alpha': the alpha of the running mean, between 0 and 1 (EN 16798-1
+        recommends 0.8); outside 0.6 to 0.9 (ASHRAE 55-2020, 5.4.2.1) it warns.
+    :param custom_days: Custom model, 'ndrm': the number of previous days (30 by default); outside 7 to 30 (ASHRAE
+        55-2020, 5.4.2.1) it warns.
+    :param epw: The weather file (EPW) of the simulations, with which the outdoor metrics of the custom model that the
+        EMS calculates begin on the first day of the RunPeriod of the model (the running means of the previous days,
+        as :func:`accim.sim.preview.outdoor_metrics` calculates them), and whose monthly means 'monthly_mean' needs.
+        Without it, they begin with the running mean of ASHRAE 55 of EnergyPlus, with a warning.
     :ivar arguments: The arguments, after asking the missing ones.
     :ivar input_idfs: The input IDFs, {'input IDF name': IDF object}.
     :ivar occupied_zones: The occupied zones of each input IDF, as in the EMS objects.
@@ -543,12 +605,17 @@ class AddAccis:
         existing_hvac_widen_outdoor_temperature_limits: bool = False,
         existing_hvac_ideal_loads_backup: bool = False,
         existing_hvac_radiant_setpoints: bool = True,
+        custom_outdoor_metric: Union[str, int] = 'pmot',
+        custom_alpha: Number = 0.8,
+        custom_days: int = 30,
+        epw: Optional[Union[str, os.PathLike]] = None,
     ):
         files = _input_files(idfs)
         print(BANNER)
         _warn_hvac_zone_map(hvac_zone_map)
         self.verbose = verbose
         checked_zone_arguments = check_zone_arguments(zone_arguments)
+        epw = _check_outdoor_metric(custom_outdoor_metric, custom_alpha, custom_days, checked_zone_arguments, epw)
         (existing_hvac_operative_temperature_control, existing_hvac_widen_outdoor_temperature_limits,
          existing_hvac_ideal_loads_backup, existing_hvac_radiant_setpoints) = _check_existing_hvac_arguments(
             existing_hvac_operative_temperature_control, existing_hvac_availability_schedule,
@@ -686,11 +753,13 @@ class AddAccis:
             ventilation_setpoint_offset=ventilation_setpoint_offset, min_outdoor_temp_offset=min_outdoor_temp_offset,
             max_wind_speed=max_wind_speed, setpoint_tolerance_start=setpoint_tolerance_start,
             setpoint_tolerance_end=setpoint_tolerance_end, setpoint_tolerance_step=setpoint_tolerance_step,
-            name_suffix=name_suffix)
+            name_suffix=name_suffix, custom_outdoor_metric=custom_outdoor_metric, custom_alpha=custom_alpha,
+            custom_days=custom_days)
         self.arguments.update({k: v for k, v in vars(generation).items()})
-        self.arguments.update(verbose=verbose, confirm=confirm, zone_arguments=zone_arguments)
+        self.arguments.update(verbose=verbose, confirm=confirm, zone_arguments=zone_arguments, epw=epw)
 
-        paths = self._write_output_idfs(models, generation, setpoint_type, confirm, is_mixed_mode(script_type), sizes)
+        paths = self._write_output_idfs(models, generation, setpoint_type, confirm, is_mixed_mode(script_type), sizes,
+                                        epw)
         from eppy.modeleditor import IDF
         self.output_idfs = OutputIdfs(paths, IDF)
         self._log(_END_OUTPUTS)
@@ -703,14 +772,17 @@ class AddAccis:
     def _generation_arguments(script_type: str, **kwargs) -> GenerationArguments:
         """The arguments of the output IDFs, asking them if some are missing."""
         name_suffix = kwargs.pop('name_suffix')
+        # The prompts do not ask the outdoor metric of the custom model
+        defaults = dict(zip(_OUTDOOR_METRIC_ARGUMENTS, ('pmot', 0.8, 30)))
+        outdoor_metric = {name: kwargs.pop(name, default) for name, default in defaults.items()}
         needed = ['comfort_standard', 'category', 'comfort_mode']
         if is_mixed_mode(script_type):
             needed += ['hvac_mode', 'ventilation_control']
         if any(kwargs[name] is None for name in needed):
             kwargs = prompts.ask_generation_arguments(script_type)
         if not is_mixed_mode(script_type):
-            return GenerationArguments.air_conditioned(**kwargs, name_suffix=name_suffix)
-        return GenerationArguments(**kwargs, name_suffix=name_suffix)
+            return GenerationArguments.air_conditioned(**kwargs, name_suffix=name_suffix, **outdoor_metric)
+        return GenerationArguments(**kwargs, name_suffix=name_suffix, **outdoor_metric)
 
     def _check_zone_arguments(self, models, generation: GenerationArguments, combos, mixed_mode: bool) -> None:
         """Check that the zones of zone_arguments have setpoints in all the output IDFs."""
@@ -728,9 +800,11 @@ class AddAccis:
                              'standard, category and comfort mode of each of these zones):\n' + '\n'.join(errors))
 
     def _write_output_idfs(self, models, generation: GenerationArguments, setpoint_type: str, confirm,
-                           mixed_mode: bool, sizes: Dict[str, Optional[SimulationSize]]) -> Dict[str, str]:
+                           mixed_mode: bool, sizes: Dict[str, Optional[SimulationSize]],
+                           epw: Optional[str] = None) -> Dict[str, str]:
         """Write the output IDFs: for each combination, eppy saves the model with the arguments of the combination
-        and the EMS code of the comfort standards of its zones only."""
+        and the EMS code of the comfort standards of its zones only (and that of the outdoor metric of the custom
+        model, which begins with the values of ``epw``, if a zone needs it)."""
         from eppy.modeleditor import IDF
 
         combos = list(combinations(generation, setpoint_type))
@@ -755,7 +829,7 @@ class AddAccis:
                 path = output_name(stem, combination, generation.name_suffix)
                 self._log(path)
                 set_combination(idf, generation, combination, self.zone_arguments.get(stem))
-                set_comfort_standard_code(idf, zone_comfort_standards(idf))
+                set_comfort_standard_code(idf, zone_comfort_standards(idf), epw)
                 idf.savecopy(path)
                 paths[os.path.basename(path)] = os.path.abspath(path)
         return paths
@@ -901,6 +975,10 @@ def modify_accis(
     max_wind_speed: Number = 50,
     setpoint_tolerance: Number = 0.1,
     zone_arguments: Optional[Dict[str, Dict[str, Any]]] = None,
+    custom_outdoor_metric: Optional[Union[str, int]] = None,
+    custom_alpha: Optional[Number] = None,
+    custom_days: Optional[int] = None,
+    epw: Optional[Union[str, os.PathLike]] = None,
 ) -> None:
     """Set the arguments of the ACCIS of an IDF object (one value of each argument of :class:`AddAccis`), in all
     its occupied zones or, with ``zone_arguments``, in some of them.
@@ -913,17 +991,30 @@ def modify_accis(
     it sets (the models of :func:`add_accis_to_idf` have that of all of them). The lines of the EMS programs of the
     model are indented inside the blocks IF and WHILE.
 
+    The outdoor metric of the custom model (``custom_outdoor_metric``, ``custom_alpha`` and ``custom_days``, see
+    :class:`AddAccis`) keeps its value if it is None (the models without its EMS code have 'pmot'). If one of them (or
+    ``epw``) is given, here or in ``zone_arguments``, the model gets the EMS code of the outdoor metric if it has the
+    code of the custom model and a zone has a metric other than 'pmot' (and loses it otherwise), and its programs are
+    written again: with ``epw``, they begin with the values of the weather file; without it, with the running mean of
+    ASHRAE 55 of EnergyPlus (:func:`accim.sim.ems.outdoor_metric.set_outdoor_metric_code`).
+
     The models of earlier versions of accim, which have one program SetInputData for all the zones, can only have
     the same arguments in all the zones, and they get the subprograms of this version where they behave
-    differently (those of ESP CTE and INT ISO7730 set the setpoints whatever the comfort mode is).
+    differently (those of ESP CTE and INT ISO7730 set the setpoints whatever the comfort mode is). Their custom model
+    only has the outdoor metric 'pmot'.
 
     :param setpoint_tolerance: The tolerance of the setpoints.
     :param zone_arguments: The arguments of some zones, which replace those of the call in these zones:
         ``{zone: {argument: value}}``, for instance
         ``{'Block1:Zone1': {'comfort_standard': 2, 'category': 80, 'comfort_mode': 3}}`` (see :class:`AddAccis`). An
         argument that is None in the call and is not given for a zone keeps its value in the zone.
-    :raises ValueError: If the model has no ACCIS, setpoint_accuracy is negative, or zone_arguments is not valid (or
-        is given for a model of an earlier version of accim).
+    :param custom_outdoor_metric: The outdoor metric of the custom model (see :class:`AddAccis`), or None to keep it.
+    :param custom_alpha: The alpha of 'rmot_alpha', or None to keep it.
+    :param custom_days: The days of 'ndrm', or None to keep them.
+    :param epw: The weather file with which the outdoor metric of the custom model begins (see :class:`AddAccis`).
+    :raises ValueError: If the model has no ACCIS, setpoint_accuracy is negative, zone_arguments is not valid (or
+        is given for a model of an earlier version of accim), an argument of the outdoor metric is not valid (or is
+        not 'pmot' in a model of an earlier version of accim), or 'monthly_mean' has no weather file.
     """
     arguments = dict(
         comfort_standard=comfort_standard, category=category, category_cooling_offset=category_cooling_offset,
@@ -941,11 +1032,18 @@ def modify_accis(
     )
     programs = _programs(idf)
     zone_programs = input_programs(idf)
+    outdoor_metric = {name: value for name, value in zip(_OUTDOOR_METRIC_ARGUMENTS,
+                                                         (custom_outdoor_metric, custom_alpha, custom_days))
+                      if value is not None}
     if not zone_programs:
         if zone_arguments and 'SetInputData' in programs:
             raise ValueError('The model has the ACCIS of an earlier version of accim, whose arguments are the same in '
                              'all the zones (program SetInputData). To give the arguments of each zone, add the ACCIS '
                              'with this version of accim to the model without it.')
+        if custom_outdoor_metric is not None and metric_code(custom_outdoor_metric) != 0:
+            raise ValueError('The model has the ACCIS of an earlier version of accim, whose custom model only has the '
+                             "outdoor metric 'pmot'. To use another one, add the ACCIS with this version of accim to "
+                             'the model without it.')
         _modify_accis_of_earlier_versions(idf, programs, **arguments)
         indent_programs(idf)
         return
@@ -958,10 +1056,52 @@ def modify_accis(
     resolved: Dict[str, Dict[str, Any]] = {}
     if zones:
         resolved = resolve_zone_arguments(zones, zone_names(resolve_targets(idf), list(zone_programs)))
+    metric_given = (bool(outdoor_metric) or epw is not None
+                    or any(name in own for own in resolved.values() for name in _OUTDOOR_METRIC_ARGUMENTS))
+    if metric_given:
+        epw = _check_zone_outdoor_metrics(zone_programs, outdoor_metric, resolved, epw)
     for zone, program in zone_programs.items():
-        set_inputs(program, input_values(dict(arguments, **resolved.get(zone, {}))))
+        values = input_values({**arguments, **outdoor_metric, **resolved.get(zone, {})})
+        not_set = set_inputs(program, values)
+        # The inputs of the outdoor metric of the models without its EMS code
+        new_lines = [f'set {name} = {values[name]}' for name in not_set if name in OUTDOOR_METRIC_INPUTS]
+        if new_lines:
+            set_program_lines(program, [str(line).strip() for line in program.fieldvalues[2:]] + new_lines)
     add_comfort_standard_code(idf, zone_comfort_standards(idf))
+    if metric_given:
+        standards = code_comfort_standards(idf)
+        enabled = (standards is None or CUSTOM_COMFORT_STANDARD in standards) and uses_outdoor_metric(idf)
+        set_outdoor_metric_code(idf, enabled, epw, rewrite=True)
     indent_programs(idf)
+
+
+def _check_zone_outdoor_metrics(zone_programs: Dict[str, Any], outdoor_metric: Dict[str, Any],
+                                zone_arguments: Dict[str, Dict[str, Any]],
+                                epw: Optional[Union[str, os.PathLike]]) -> Optional[str]:
+    """Check the outdoor metric of the custom model that each zone gets in :func:`modify_accis` (that of the call,
+    that of ``zone_arguments`` or the one it has), with the warnings of decision D7, and the weather file; return its
+    path."""
+    defaults = dict(zip(_OUTDOOR_METRIC_ARGUMENTS, (0, 0.8, 30)))
+    checked = set()
+    codes = set()
+    for zone, program in zone_programs.items():
+        current = read_inputs(program)
+        own = zone_arguments.get(zone, {})
+        values = [own.get(name, outdoor_metric.get(name, current.get(variable, defaults[name])))
+                  for name, variable in zip(_OUTDOOR_METRIC_ARGUMENTS, OUTDOOR_METRIC_INPUTS)]
+        where = zone if any(name in own for name in _OUTDOOR_METRIC_ARGUMENTS) else ''
+        key = (*[str(value) for value in values], where)
+        if key not in checked:
+            checked.add(key)
+            codes.add(check_outdoor_metric_arguments(*values, where=where))
+    if epw is not None:
+        if not os.path.isfile(epw):
+            raise ValueError(f'epw must be the path of a weather file (EPW), not {epw!r}.')
+        return os.path.abspath(epw)
+    if OUTDOOR_METRICS['monthly_mean'] in codes:
+        raise ValueError("custom_outdoor_metric 'monthly_mean' needs the weather file of the simulations (argument "
+                         "epw), whose monthly means the EMS programs keep.")
+    return None
 
 
 def _modify_accis_of_earlier_versions(
