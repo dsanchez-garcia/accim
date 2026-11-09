@@ -15,6 +15,22 @@ This log is a lightweight, session-scoped complement to the repository's
 existing tracking files — it does not replace them (see
 [[decisions.md#2026-09-13 — `notes/work-log.md` complements, not replaces, existing tracking files|the related decision]]).
 
+## 2026-11-09 — A3: the catalogue of adaptive coefficients of the aPMV and pmv_sign (branch `v1.2.0`, on the server)
+
+- **Objective**: A3, after E2, in the order of the author (with decision D4).
+- **Affected files**: `accim/constants.py`, `accim/sim/pmv_index.py`, `accim/sim/apmv.py`, `accim/gui/forms.py`,
+  `accim/gui/app.py`, `tests/core/test_apmv_coefficients.py` (new), `tests/core/test_gui.py`,
+  [[../docs/source/4_detailed use.md]] (4.8), [[../CHANGELOG.md]], [[../CAMBIOS_CODIGO_v1.2.0.md]] (§10),
+  [[../DEVLOG.md]], [[decisions.md]], [[questions.md]].
+- **Finding or decision**: See
+  [[decisions.md#2026-11-09 — The aPMV takes the adaptive coefficients of a catalogue, and with pmv_sign the coefficient of the side of the PMV (A3)|the decision]].
+  With 'pmv_sign', the λ of the sign of the current PMV would make the PMV setpoints of the thermostats jump when the
+  PMV changes sign, so each setpoint is converted with the λ of its side; that, and the keys that fill one
+  coefficient only, are decided provisionally in [[questions.md]].
+- **Validation**: 6 new tests (one with both backends of EnergyPlus 25.1) and those of the GUI; `run_ep` with both
+  backends, identical; a screenshot of the tab; the whole suite; the documentation build.
+- **Next step**: B1.
+
 ## 2026-11-09 — E2: `verify_accim_simulation` checks what the EMS calculates (branch `v1.2.0`, on the server)
 
 - **Objective**: E2, after E1, in the order of the author.

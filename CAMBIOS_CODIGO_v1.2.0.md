@@ -5,7 +5,7 @@ documentación de uso. Recoge las propuestas del bloque A de `notes/PROPUESTAS_M
 (índices de confort derivados del PMV; archivos del autor, en git desde el commit `e238dad`) que el autor pidió para
 esta versión: las P1, A2, A1 y A5, en este orden; y después D2 (sección 7), que el autor incluyó en la 1.2.0 el
 2026-11-09 con E2 y E1, y las demás propuestas de la v03 (`notes/PROPUESTAS_MEJORAS_post_1.1.0_v03.md`), en el orden
-del autor (`notes/COPILOT_BRIEF_v1.2.0_v01.md`): E1 (sección 8), E2 (sección 9)...
+del autor (`notes/COPILOT_BRIEF_v1.2.0_v01.md`): E1 (sección 8), E2 (sección 9), A3 (sección 10)...
 
 Lo que ya está en otros documentos no se repite aquí:
 
@@ -37,6 +37,9 @@ Lo que ya está en otros documentos no se repite aquí:
 - **E2.** `verify_accim_simulation` comprueba lo que calcula el EMS: el índice de cada zona de las consignas basadas
   en el PMV y la corrección del metabolismo del ePMV, con el PMV del paso anterior (salidas por paso de tiempo), y, con
   `epw`, las consignas de cada zona de los IDF de `AddAccis` frente a `compute_setpoints` (sección 9).
+- **A3.** El aPMV admite los coeficientes adaptativos de un catálogo (`accim.constants.APMV_ADAPTIVE_COEFFICIENTS`:
+  Yao 2009, GB/T 50785-2012 y los λN de Zhang 2024, estos con aviso) y elegirlos por el signo del PMV
+  (`adaptive_coefficient_by='pmv_sign'`), además de por la estación (sección 10).
 - Las categorías del PMV y la aproximación de la corrección del metabolismo se han comprobado en ISO 7730:2025 y
   EN 16798-1:2019, y el modelo dinámico de vestimenta de A5, en Schiavon y Lee (2013) y ASHRAE 55-2020 (sección 6).
 - Lo que quedaba abierto se ha comprobado: el golden master y las pruebas de EnergyPlus 26.1 y 26.2, también la de A5
@@ -551,3 +554,62 @@ calentamiento.
 - Encontrado de paso (en `TODO.md`, sin tocar): la comprobación 1 no encuentra las salidas de las zonas cuyo nombre
   tiene `:` (como `Block1:Zone1`), porque parte el nombre de la columna por el primer `:`; las comprobaciones nuevas
   buscan por clave y variable. Quedan para B1 y B5 sus comprobaciones (`Tout_metric`, suelo y techo).
+
+## 10. El catálogo de coeficientes adaptativos del aPMV y su elección por el signo del PMV (A3)
+
+La propuesta A3 pide `APMV_ADAPTIVE_COEFFICIENTS` en `accim/constants.py` (Yao 2009; GB/T 50785-2012 por zona
+climática y tipo de edificio; los λN de la Tabla 6 de Zhang, Yao y Li 2024 por zona Köppen, de grado 'literature'),
+claves del catálogo en `adaptive_coefficient_cooling/heating` resueltas en `generate_df_from_args`, un aviso con las
+entradas 'literature', `get_adaptive_coefficients(key)` y la opción `adaptive_coefficient_by='season'|'pmv_sign'`. La
+decisión D4 del brief mantiene `'season'` por defecto y admite las entradas 'literature' con aviso.
+
+**Antes.** `apply_apmv_setpoints` tomaba λ como números (o diccionarios de números por zona), y el programa
+`apply_aPMV_<zona>` elegía el de la estación (`adap_coeff_<zona>`), con el que `monitor_aPMV_<zona>` calculaba el aPMV
+y con el que se convertían las dos consignas en las consignas PMV de los termostatos.
+
+**Ahora.**
+
+- `accim/constants.py`: `APMV_ADAPTIVE_COEFFICIENTS`, con los valores de la v03 (§11.2 y A3): `cooling` es el λ de las
+  sensaciones cálidas (PMV ≥ 0) y `heating` el de las frías (PMV < 0), que `apply_apmv_setpoints` toma como
+  `adaptive_coefficient_cooling` y `_heating`; `grade` ('standard' para Yao 2009 y GB/T 50785; 'literature' para los
+  14 de Zhang 2024), `source` y `notes`. Aw no tiene λ de sensaciones frías (`None`). La Tabla 6 de Zhang da cada fila
+  como «PMV<0 / PMV>0»: en el catálogo, `heating` y `cooling`.
+- `accim/sim/pmv_index.py`:
+  - `get_adaptive_coefficients(key)` (una copia de la entrada; `ValueError` con las claves válidas) y
+    `resolve_adaptive_coefficients(values)`, que sustituye las claves de los cuatro argumentos de λ (también como
+    valores de los diccionarios por zona) por el coeficiente de su lado y avisa una vez por clave 'literature' (muchos
+    λN saturan en ±0,66 y algunos signos contradicen el mecanismo adaptativo: λ < 0 con PMV > 0 en Cfb, Csc, Dfb y Dwa;
+    λ > 0 con PMV < 0 en Af y Cfa). Una clave sin coeficiente para su lado (Aw en calefacción) da `ValueError`.
+  - `PmvIndex` tiene dos ganchos nuevos: `resolve` (los valores de los parámetros que se usan, a partir de los dados;
+    `_index_values` lo llama antes de `validate`), y `seasonal_coefficient(options)` (si `apply_<índice>_<zona>` elige el
+    coeficiente de la estación; si no, lo elige el monitor).
+  - El índice 'apmv' tiene la opción `adaptive_coefficient_by` ('season' por defecto, o 'pmv_sign';
+    `ADAPTIVE_COEFFICIENT_BY`; `_apmv_validate`). Con 'pmv_sign': `apply_aPMV_<zona>` solo elige las tolerancias por
+    estación; `monitor_aPMV_<zona>` elige `adap_coeff_<zona>` por el signo de `PMV_<zona>` (el del paso anterior; el
+    monitor va detrás de `average_PMV_<zona>`, así que también en las zonas con varios `People`) antes de calcular el
+    aPMV; y la consigna de calefacción se convierte en la consigna PMV del termostato con λ de calefacción, y la de
+    refrigeración con λ de refrigeración (`_apmv_inverse`), sea cual sea la estación. Esto último no lo dice la v03: es
+    la inversa del aPMV con λ por el signo (una consigna negativa está en el lado frío); con el λ del signo del PMV de
+    cada momento, las consignas del termostato cambiarían cada vez que el PMV cambia de signo. Queda en
+    `notes/questions.md`, decidido provisionalmente.
+  - Con 'season', las líneas no cambian (golden master idéntico).
+- `accim/sim/apmv.py`: `apply_apmv_setpoints` acepta claves (los tipos de los argumentos lo dicen) y el argumento nuevo
+  `adaptive_coefficient_by` (al final de la firma); `generate_df_from_args` resuelve las claves; `get_adaptive_coefficients`
+  se exporta desde aquí, como pide la propuesta. Cada argumento toma el coeficiente de su lado: para usar los dos de una
+  entrada hay que dar la clave a los dos (la v03 sugiere que una clave rellene los dos; queda en `notes/questions.md`,
+  decidido provisionalmente, porque los valores por defecto son números y no se distingue un valor explícito igual al
+  defecto).
+- GUI (`accim/gui/forms.py`, `app.py`): en la pestaña *2. PMV-based setpoints*, *λ of the literature* (las claves del
+  catálogo) rellena los dos campos de λ (el de calefacción no, si la entrada no tiene) y muestra las notas, la fuente
+  y el grado (con 'literature', que hay que comprobarlos), y *Adaptive coefficient by* da `adaptive_coefficient_by`;
+  ambos solo con el aPMV. Los campos siguen siendo números. `forms.APMV_OPTIONS` y `forms.ADAPTIVE_COEFFICIENT_BY`
+  coinciden con los de `accim.sim.pmv_index` (probado); los rótulos de λ dicen «cooling season or PMV >= 0» y «heating
+  season or PMV < 0» (sin «≥», que cp1252 no tiene: `tests/core/test_printed_messages.py`).
+- Pruebas: `tests/core/test_apmv_coefficients.py` (6: el catálogo frente a los valores de la v03, incluidos los signos
+  anómalos; `get_adaptive_coefficients`; la resolución y el aviso; el IDF con claves igual al de números;
+  `generate_df_from_args`; el Erl de 'pmv_sign' con el intérprete en las dos estaciones y con PMV positivo, negativo y
+  cero; y una simulación de EnergyPlus 25.1 con los dos backends, CSV iguales, los dos λ usados y la comprobación 3 de
+  `verify_accim_simulation` sin errores), y en `tests/core/test_gui.py`, los formularios y la pestaña.
+- Comparación de backends (`run_ep(backend='ems')` frente a `run_ep(backend='api')`, el modelo de ejemplo con
+  'pmv_sign' y los λ de `gbt50785_cold_general`, del 24/04 al 07/05, salidas por paso y horarias): 2016 filas × 81
+  columnas idénticas (diferencia máxima 0,0); 5,0 s frente a 7,4 s.

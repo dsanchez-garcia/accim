@@ -23,7 +23,8 @@ import pandas as pd
 
 from accim._deprecation import accepts_legacy_kwargs
 from accim.sim.pmv_index import (_resolve_targets, apply_pmv_index_setpoints, arguments_table,
-                                 metabolic_correction_names)
+                                 get_adaptive_coefficients, metabolic_correction_names,
+                                 resolve_adaptive_coefficients)
 from accim.sim.targets import sanitize_ems_name
 from accim.utils.editing import transform_ddmm_to_int
 from accim.utils.people import get_people_definition, get_people_objects, is_people_instance
@@ -36,6 +37,7 @@ __all__ = [
     'apply_pmv_setpoints',
     'change_adaptive_coeff',
     'generate_df_from_args',
+    'get_adaptive_coefficients',
     'get_available_target_names',
     'get_input_template_dictionary',
     'set_pmv_input_parameters',
@@ -95,8 +97,8 @@ def apply_apmv_setpoints(
         building: IDF,
         output_frequencies: Sequence[str] = ('hourly',),
         other_pmv_related_outputs: bool = True,
-        adaptive_coefficient_cooling: Union[float, dict] = 0.293,
-        adaptive_coefficient_heating: Union[float, dict] = -0.293,
+        adaptive_coefficient_cooling: Union[float, str, dict] = 0.293,
+        adaptive_coefficient_heating: Union[float, str, dict] = -0.293,
         pmv_cooling_setpoint: Union[float, dict] = 0.5,
         pmv_heating_setpoint: Union[float, dict] = -0.5,
         cooling_setpoint_tolerance_cooling_season: Union[float, dict] = -0.1,
@@ -105,8 +107,8 @@ def apply_apmv_setpoints(
         heating_setpoint_tolerance_heating_season: Union[float, dict] = 0.1,
         cooling_season_start: Union[float, str] = 121,
         cooling_season_end: Union[float, str] = 274,
-        default_adaptive_coefficient_cooling: float = 0.4,
-        default_adaptive_coefficient_heating: float = -0.4,
+        default_adaptive_coefficient_cooling: Union[float, str] = 0.4,
+        default_adaptive_coefficient_heating: Union[float, str] = -0.4,
         default_pmv_cooling_setpoint: float = 0.5,
         default_pmv_heating_setpoint: float = -0.5,
         default_cooling_setpoint_tolerance_cooling_season: float = -0.1,
@@ -114,6 +116,7 @@ def apply_apmv_setpoints(
         default_heating_setpoint_tolerance_cooling_season: float = 0.1,
         default_heating_setpoint_tolerance_heating_season: float = 0.1,
         verbose: bool = True,
+        adaptive_coefficient_by: str = 'season',
 ) -> IDF:
     """
     Applies setpoints based on the Adaptive Predicted Mean Vote (aPMV) index.
@@ -130,9 +133,14 @@ def apply_apmv_setpoints(
     :param output_frequencies: List of reporting frequencies for the output variables (e.g., ['hourly', 'timestep']).
     :param other_pmv_related_outputs: If True, adds additional comfort-related output variables (e.g., Fanger PMV,
         PPD).
-    :param adaptive_coefficient_cooling: Adaptive coefficient (lambda) for cooling. Can be a single float (applied
-        globally) or a dict {TargetName: Value}.
-    :param adaptive_coefficient_heating: Adaptive coefficient (lambda) for heating. Float or Dict {TargetName: Value}.
+    :param adaptive_coefficient_cooling: Adaptive coefficient (lambda) for cooling: that of the cooling season (or of
+        warm sensations, PMV >= 0, with ``adaptive_coefficient_by='pmv_sign'``). Can be a single float (applied
+        globally), a key of :data:`accim.constants.APMV_ADAPTIVE_COEFFICIENTS` (its ``cooling`` coefficient; see
+        :func:`get_adaptive_coefficients`), or a dict {TargetName: Value} whose values are numbers or keys.
+    :param adaptive_coefficient_heating: Adaptive coefficient (lambda) for heating: that of the heating season (or of
+        cool sensations, PMV < 0, with ``adaptive_coefficient_by='pmv_sign'``). Float, key of the catalogue (its
+        ``heating`` coefficient) or Dict {TargetName: Value}. A key sets only its own argument: give it to both to
+        use the two coefficients of an entry. The keys of the grade 'literature' warn.
     :param pmv_cooling_setpoint: Target aPMV setpoint for cooling. Float or Dict. Default is 0.5. The PMV setpoint
         applied to the thermostat is obtained with the inverse aPMV formula, PMV = aPMV/(1 - lambda*aPMV).
     :param pmv_heating_setpoint: Target aPMV setpoint for heating. Float or Dict. Default is -0.5. Converted to PMV in
@@ -160,6 +168,11 @@ def apply_apmv_setpoints(
     :param default_heating_setpoint_tolerance_cooling_season: Default tolerance value if key is missing.
     :param default_heating_setpoint_tolerance_heating_season: Default tolerance value if key is missing.
     :param verbose: If True, prints detailed progress messages (added objects) and warnings to the console.
+    :param adaptive_coefficient_by: How the adaptive coefficient of each timestep is chosen: 'season' (by default,
+        that of the cooling or heating season of the calendar) or 'pmv_sign' (that of the side of the scale of the PMV
+        of the zone of the previous timestep, the coefficient for cooling with PMV >= 0 and that for heating with
+        PMV < 0, as Yao et al. (2009) and GB/T 50785-2012 define them; the heating setpoint is converted with the
+        coefficient for heating, and the cooling setpoint with that for cooling).
     :return: The modified BESOS IDF object with EMS controls added.
 
     The arguments had other names before accim 1.0.0 (outputs_freq, other_PMV_related_outputs, adap_coeff_cooling,
@@ -174,6 +187,7 @@ def apply_apmv_setpoints(
             adaptive_coefficient_heating=adaptive_coefficient_heating,
             default_adaptive_coefficient_cooling=default_adaptive_coefficient_cooling,
             default_adaptive_coefficient_heating=default_adaptive_coefficient_heating,
+            adaptive_coefficient_by=adaptive_coefficient_by,
         ),
         output_frequencies=output_frequencies,
         other_pmv_related_outputs=other_pmv_related_outputs,
@@ -404,7 +418,8 @@ def generate_df_from_args(
     :param target_keys_input: List of unique keys identifying the targets (e.g., "Space1 People").
     :param ems_suffixes: List of sanitized suffixes corresponding to the keys (e.g., "Space1_People").
     :param adaptive_coefficient_cooling: Adaptive coefficient for cooling (and adaptive_coefficient_heating, for
-        heating).
+        heating): a number, a key of :data:`accim.constants.APMV_ADAPTIVE_COEFFICIENTS` or a dictionary of them (see
+        :func:`apply_apmv_setpoints`).
     :param pmv_cooling_setpoint: aPMV setpoint for cooling (and pmv_heating_setpoint, for heating).
     :param cooling_setpoint_tolerance_cooling_season: Tolerance of the cooling setpoint in the cooling season (and
         the other tolerances, for the other setpoints and seasons).
@@ -413,10 +428,17 @@ def generate_df_from_args(
     :return: A pandas DataFrame indexed by target keys, containing all parameters (a column for each argument, with
         its name) and the 'underscore_zonename'.
     """
-
+    coefficients = resolve_adaptive_coefficients(dict(
+        adaptive_coefficient_cooling=adaptive_coefficient_cooling,
+        adaptive_coefficient_heating=adaptive_coefficient_heating,
+        default_adaptive_coefficient_cooling=default_adaptive_coefficient_cooling,
+        default_adaptive_coefficient_heating=default_adaptive_coefficient_heating,
+    ))
     return arguments_table(target_keys_input, ems_suffixes, [
-        ('adaptive_coefficient_cooling', adaptive_coefficient_cooling, default_adaptive_coefficient_cooling),
-        ('adaptive_coefficient_heating', adaptive_coefficient_heating, default_adaptive_coefficient_heating),
+        ('adaptive_coefficient_cooling', coefficients['adaptive_coefficient_cooling'],
+         coefficients['default_adaptive_coefficient_cooling']),
+        ('adaptive_coefficient_heating', coefficients['adaptive_coefficient_heating'],
+         coefficients['default_adaptive_coefficient_heating']),
         ('pmv_cooling_setpoint', pmv_cooling_setpoint, default_pmv_cooling_setpoint),
         ('pmv_heating_setpoint', pmv_heating_setpoint, default_pmv_heating_setpoint),
         ('cooling_setpoint_tolerance_cooling_season', cooling_setpoint_tolerance_cooling_season,

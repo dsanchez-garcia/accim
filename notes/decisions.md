@@ -11,6 +11,27 @@ Durable architectural/process decisions for this repository and its Obsidian
 vault. Newest first. Use [[templates/decision-record.md|the decision-record
 template]] to add a new entry.
 
+## 2026-11-09 — The aPMV takes the adaptive coefficients of a catalogue, and with pmv_sign the coefficient of the side of the PMV (A3)
+
+- **Status**: accepted (proposal A3 of `notes/PROPUESTAS_MEJORAS_post_1.1.0_v03.md` with decision D4 of
+  `notes/COPILOT_BRIEF_v1.2.0_v01.md`; the details below were not in the proposal: for the review of the author)
+- **Context**: A3 asks for `APMV_ADAPTIVE_COEFFICIENTS` (Yao 2009, GB/T 50785-2012, the λN of Zhang 2024 as
+  'literature'), keys in `adaptive_coefficient_cooling/heating` resolved in `generate_df_from_args`, a warning for
+  the 'literature' entries, `get_adaptive_coefficients(key)` and `adaptive_coefficient_by='season'|'pmv_sign'`; D4
+  keeps 'season' as the default. In the code, `apply_apmv_setpoints` goes through `accim.sim.pmv_index`, whose EMS
+  programs choose the coefficient in `apply_aPMV_<zone>` (by season) and calculate the aPMV in `monitor_aPMV_<zone>`.
+- **Decision**: the catalogue is in `accim.constants`, with the values of v03 §11.2 and A3. The keys are resolved by
+  the engine (a new hook `PmvIndex.resolve`, also used by `generate_df_from_args`), so `apply_pmv_index_setpoints`
+  takes them too; each argument takes the coefficient of its own side (questions.md). With 'pmv_sign', the program
+  of the setpoints does not choose the coefficient (the new hook `PmvIndex.seasonal_coefficient`), the monitor chooses
+  it by the sign of the PMV of the zone (after `average_PMV_<zone>`, so with the PMV of the previous timestep also in
+  zones with several People objects), and each setpoint is converted with the λ of its side (questions.md). The
+  `get_adaptive_coefficients` of `accim.sim.apmv` is that of `accim.sim.pmv_index`. The GUI keeps numbers in its
+  fields: the list of the catalogue fills them and shows the grade, source and notes.
+- **Consequences**: the output IDFs of 'season' do not change (golden master); 'pmv_sign' gives the same results with
+  both backends and passes check 3 of `verify_accim_simulation`. Section 4.8 of
+  [[../docs/source/4_detailed use.md]] and section 10 of [[../CAMBIOS_CODIGO_v1.2.0.md]].
+
 ## 2026-11-09 — verify_accim_simulation checks the indices of the PMV with the outputs at timestep frequency, and every comfort standard against compute_setpoints (E2)
 
 - **Status**: accepted (proposal E2 of `notes/PROPUESTAS_MEJORAS_post_1.1.0_v03.md` and its adjustment in

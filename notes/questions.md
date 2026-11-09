@@ -24,6 +24,33 @@ it here as answered).
 
 ## Open
 
+## 2026-11-09 — A3: with adaptive_coefficient_by='pmv_sign', which λ converts each setpoint into the PMV setpoint of the thermostat
+- Context: the design of A3 gives the Erl of the option, "if PMV_{s} >= 0 set adap_coeff = λ_warm else λ_cool", with
+  the PMV of the previous timestep, but not which λ converts the setpoints of the aPMV into the PMV setpoints of the
+  thermostats (PMV = aPMV/(1 − λ·aPMV), v03 §11.1); with 'season' it is the λ of the season, as in accim 1.1.0.
+- Why it matters: with the λ of the sign of the current PMV, the PMV setpoints of the thermostat would change each
+  time the PMV changes sign (with λ 0.21/−0.49, the heating setpoint −0.5 would be the PMV −0.45 or −0.66).
+- Options considered: (a) each setpoint with the λ of its side of the scale (the heating setpoint, negative where it
+  is converted, with the λ of cool sensations; the cooling one with that of warm sensations), which is the inverse of
+  aPMV(PMV) with λ by the sign; (b) both with the λ of the sign of the PMV of the previous timestep (the Erl of the
+  design applied to the inverse too).
+- Owner: the author.
+- Status: open; option (a) decided provisionally, pending author (the monitor and the output `Adaptive
+  Coefficient_<zone>` follow the design).
+
+## 2026-11-09 — A3: does a key of the catalogue in one coefficient also set the other one
+- Context: the design of A3 says that a key given in `adaptive_coefficient_cooling` "fills both coefficients at once
+  unless the other is given explicitly"; its prompt only says that the arguments accept a key, and the defaults of the
+  coefficients are numbers (0.293 and −0.293), so an explicit value equal to the default cannot be told apart.
+- Why it matters: `adaptive_coefficient_cooling='yao2009_chongqing_classrooms'` alone gives λ 0.293 and −0.293 (the
+  default) with (a), and 0.293 and −0.125 with (b).
+- Options considered: (a) each argument takes the coefficient of its own side of the key (give the key to both to use
+  the entry); (b) the defaults become None, which takes the other coefficient of a key, or 0.293/−0.293 otherwise (the
+  signature changes, and the GUI and the documentation show other defaults); (c) a new argument with the key for both.
+- Owner: the author.
+- Status: open; option (a) decided provisionally, pending author (the conservative, backward-compatible one;
+  documented in the docstring and in section 4.8).
+
 ## 2026-11-09 — E2: what the metabolic correction of the ePMV is checked against (the 5.5–6.1 % of the brief)
 - Context: the brief asks E2 to check "the metabolic correction with the tolerance of 5.5–6.1 %". The EMS sets the
   factor of each People object to 1 − 0.067·PMV with the PMV of the previous timestep (exact in EnergyPlus 25.1:

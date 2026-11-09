@@ -15,14 +15,16 @@ import re
 import warnings
 from typing import Any, Dict, Iterable, List, Mapping, Tuple, Union
 
-from accim.constants import SUPPORTED_ENERGYPLUS_VERSIONS
+from accim.constants import APMV_ADAPTIVE_COEFFICIENTS, SUPPORTED_ENERGYPLUS_VERSIONS
 from accim.sim.arguments import MIXED_MODE_SCRIPT_TYPES, OUTPUT_FREQUENCIES, SUPPLY_AIR_TEMP_INPUT_METHODS
 from accim.sim.ems.inputs import ZONE_ARGUMENTS, check_zone_arguments
 from accim.sim.standards import COMFORT_STANDARDS
 
 __all__ = [
+    'ADAPTIVE_COEFFICIENT_BY',
     'ADD_ACCIS_DEFAULTS',
     'APMV_DEFAULTS',
+    'APMV_OPTIONS',
     'APMV_SETPOINT_FIELDS',
     'APMV_ZONE_FIELDS',
     'BACKENDS',
@@ -60,6 +62,8 @@ __all__ = [
     'VRF_AVAILABILITY',
     'ZONE_ARGUMENTS',
     'ZONE_FIELDS',
+    'adaptive_coefficient_choices',
+    'adaptive_coefficient_entry',
     'add_accis_arguments',
     'apmv_arguments',
     'apmv_zone_row_text',
@@ -207,8 +211,8 @@ PMV_INDEX_PARAMETERS = {'apmv': ('adaptive_coefficient_cooling', 'adaptive_coeff
 #: The setpoints of the PMV-based setpoints (the arguments of apply_apmv_setpoints, apply_epmv_setpoints and
 #: apply_pmv_setpoints): argument -> label.
 APMV_SETPOINT_FIELDS = {
-    'adaptive_coefficient_cooling': 'Adaptive coefficient λ, cooling season (aPMV)',
-    'adaptive_coefficient_heating': 'Adaptive coefficient λ, heating season (aPMV)',
+    'adaptive_coefficient_cooling': 'Adaptive coefficient λ, cooling season or PMV >= 0 (aPMV)',
+    'adaptive_coefficient_heating': 'Adaptive coefficient λ, heating season or PMV < 0 (aPMV)',
     'expectancy_factor': 'Expectancy factor e, cooling season (ePMV)',
     'pmv_cooling_setpoint': 'Setpoint for cooling (aPMV, ePMV or PMV)',
     'pmv_heating_setpoint': 'Setpoint for heating (aPMV, ePMV or PMV)',
@@ -226,6 +230,11 @@ EPMV_OPTIONS = {
     'apply_to_heating': 'The expectancy factor also on the heating setpoint (apply_to_heating)',
     'metabolic_correction': 'Metabolic correction of the activity level (metabolic_correction)',
 }
+#: The options of the aPMV setpoints (the arguments of apply_apmv_setpoints): argument -> label.
+APMV_OPTIONS = {'adaptive_coefficient_by': 'Adaptive coefficient by (aPMV):'}
+#: The ways of choosing the adaptive coefficient of the aPMV (accim.sim.pmv_index.ADAPTIVE_COEFFICIENT_BY): by the
+#: season, or by the sign of the PMV of the previous timestep.
+ADAPTIVE_COEFFICIENT_BY = ('season', 'pmv_sign')
 #: The inputs of the PMV of the People objects (the arguments of set_pmv_input_parameters): argument -> label.
 PMV_INPUT_FIELDS = {
     'activity_level': 'Activity level (W/person)',
@@ -245,6 +254,8 @@ APMV_DEFAULTS = {
     'output_frequencies': ['hourly'],
     'other_pmv_related_outputs': True,
     'index': 'apmv',
+    'adaptive_coefficients': '',
+    'adaptive_coefficient_by': 'season',
     'adaptive_coefficient_cooling': '0.293',
     'adaptive_coefficient_heating': '-0.293',
     'expectancy_factor': '0.8',
@@ -1000,6 +1011,34 @@ def index_setpoint_fields(index: str) -> List[str]:
     return [name for name in APMV_SETPOINT_FIELDS if name not in others]
 
 
+def adaptive_coefficient_choices() -> List[str]:
+    """The choices of the catalogue of adaptive coefficients of the aPMV in the form: an empty one (the coefficients
+    typed in the form) and the keys of :data:`accim.constants.APMV_ADAPTIVE_COEFFICIENTS`."""
+    return [''] + list(APMV_ADAPTIVE_COEFFICIENTS)
+
+
+def adaptive_coefficient_entry(key: str) -> Tuple[str, str, str]:
+    """The adaptive coefficients of the aPMV of a key of :data:`accim.constants.APMV_ADAPTIVE_COEFFICIENTS`, as the
+    texts of the fields for cooling and heating of the form (that of heating empty if the entry has none), and a
+    description of the entry: its grade, its notes and its source (three empty texts for the empty key).
+
+    :raises FormError: If the key is not in the catalogue.
+    """
+    if not key:
+        return '', '', ''
+    if key not in APMV_ADAPTIVE_COEFFICIENTS:
+        raise FormError(f'adaptive_coefficients: {key!r} is not in the catalogue of adaptive coefficients.')
+    entry = APMV_ADAPTIVE_COEFFICIENTS[key]
+    grade = entry['grade']
+    if grade == 'literature':
+        grade += ': check the coefficients before using them (section 4.8 of the documentation)'
+    heating = '' if entry['heating'] is None else str(entry['heating'])
+    description = f"{entry['notes']} ({entry['source']}); grade {grade}."
+    if entry['heating'] is None:
+        description += ' It has no coefficient for heating (cool sensations).'
+    return str(entry['cooling']), heating, description
+
+
 def apmv_arguments(form: Mapping[str, Any]) -> Dict[str, Any]:
     """The arguments of the PMV-based setpoints (:mod:`accim.sim.apmv`) from the values of their form (as in
     :data:`APMV_DEFAULTS`, with ``folder``, and ``zone_setpoints``, the rows of the table of the zones with other
@@ -1041,6 +1080,10 @@ def apmv_arguments(form: Mapping[str, Any]) -> Dict[str, Any]:
                 verbose=True)
     if index == 'epmv':
         apmv.update({name: bool(form.get(name)) for name in EPMV_OPTIONS})
+    if index == 'apmv':
+        apmv['adaptive_coefficient_by'] = _choice(
+            {'adaptive_coefficient_by': form.get('adaptive_coefficient_by') or 'season'}, 'adaptive_coefficient_by',
+            ADAPTIVE_COEFFICIENT_BY)
     pmv_inputs = {name: parse_number(form.get(name), name) for name in PMV_INPUT_FIELDS
                   if str(form.get(name, '')).strip()}
     zones = apmv_zone_setpoints(form.get('zone_setpoints') or [])

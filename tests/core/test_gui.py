@@ -340,7 +340,7 @@ def test_arguments_of_the_apmv_setpoints(tmp_path):
                   adaptive_coefficient_heating=-0.293, pmv_cooling_setpoint=0.5, pmv_heating_setpoint=-0.5,
                   cooling_setpoint_tolerance_cooling_season=-0.1, cooling_setpoint_tolerance_heating_season=-0.1,
                   heating_setpoint_tolerance_cooling_season=0.1, heating_setpoint_tolerance_heating_season=0.1,
-                  cooling_season_start=121, cooling_season_end=274, verbose=True),
+                  cooling_season_start=121, cooling_season_end=274, verbose=True, adaptive_coefficient_by='season'),
         pmv_inputs={})
     # The defaults of the form are those of apply_apmv_setpoints
     from accim.sim.apmv import apply_apmv_setpoints
@@ -450,6 +450,31 @@ def test_the_indices_of_the_form_are_those_of_accim():
         function = getattr(apmv, forms.PMV_INDEX_FUNCTIONS[index])
         assert set(forms.index_setpoint_fields(index)) <= set(inspect.signature(function).parameters)
     assert set(forms.EPMV_OPTIONS) == set(PMV_INDICES['epmv'].options)
+    assert set(forms.APMV_OPTIONS) == set(PMV_INDICES['apmv'].options)
+    from accim.sim.pmv_index import ADAPTIVE_COEFFICIENT_BY
+    assert forms.ADAPTIVE_COEFFICIENT_BY == ADAPTIVE_COEFFICIENT_BY
+
+
+def test_the_adaptive_coefficients_of_the_form(tmp_path):
+    from accim.constants import APMV_ADAPTIVE_COEFFICIENTS
+
+    (tmp_path / 'model.idf').write_text('')
+    apmv = forms.apmv_arguments(_apmv_form(tmp_path, adaptive_coefficient_by='pmv_sign'))['apmv']
+    assert apmv['adaptive_coefficient_by'] == 'pmv_sign'
+    assert 'adaptive_coefficient_by' not in forms.apmv_arguments(_apmv_form(tmp_path, index='epmv'))['apmv']
+    with pytest.raises(FormError, match='adaptive_coefficient_by: choose one of'):
+        forms.apmv_arguments(_apmv_form(tmp_path, adaptive_coefficient_by='sign'))
+    # The catalogue fills the fields of the coefficients
+    assert forms.adaptive_coefficient_choices() == [''] + list(APMV_ADAPTIVE_COEFFICIENTS)
+    assert forms.adaptive_coefficient_entry('') == ('', '', '')
+    cooling, heating, description = forms.adaptive_coefficient_entry('gbt50785_cold_general')
+    assert (cooling, heating) == ('0.24', '-0.5') and 'GB/T 50785-2012' in description
+    assert description.endswith('grade standard.')
+    cooling, heating, description = forms.adaptive_coefficient_entry('zhang2024_Aw')
+    assert (cooling, heating) == ('0.36', '') and 'grade literature: check the coefficients' in description
+    assert 'no coefficient for heating' in description
+    with pytest.raises(FormError, match="'Aw' is not in the catalogue"):
+        forms.adaptive_coefficient_entry('Aw')
 
 
 def test_arguments_of_rename_epw_files(tmp_path):
@@ -1250,8 +1275,18 @@ def test_the_tab_enables_the_fields_of_the_index(app, tmp_path):
 
     assert enabled(tab.setpoint_entries['adaptive_coefficient_cooling'])
     assert not enabled(tab.setpoint_entries['expectancy_factor']) and not any(map(enabled, tab.epmv_checks))
+    assert all(map(enabled, tab.apmv_combos))
+    # An entry of the catalogue fills the coefficients
+    tab.vars['adaptive_coefficients'].set('yao2009_chongqing_classrooms')
+    tab.fill_coefficients()
+    assert tab.vars['adaptive_coefficient_cooling'].get() == '0.293'
+    assert tab.vars['adaptive_coefficient_heating'].get() == '-0.125'
+    assert 'Chongqing' in tab.coefficients_note.cget('text')
+    tab.vars['adaptive_coefficient_by'].set('pmv_sign')
+    assert forms.apmv_arguments(tab.form())['apmv']['adaptive_coefficient_by'] == 'pmv_sign'
     tab.vars['index'].set('epmv')
     tab.update_state()
+    assert not any(map(enabled, tab.apmv_combos))
     assert not enabled(tab.setpoint_entries['adaptive_coefficient_heating'])
     assert enabled(tab.setpoint_entries['expectancy_factor']) and all(map(enabled, tab.epmv_checks))
     assert enabled(tab.setpoint_entries['pmv_cooling_setpoint'])

@@ -975,8 +975,8 @@ class ApmvTab(_Tab):
         body.columnconfigure(1, weight=1)
         self.vars: Dict[str, tk.Variable] = {}
         for name in ('idf', 'output_idf', 'energyplus_version', 'supply_air_temp_input_method', 'index',
-                     *forms.APMV_SETPOINT_FIELDS, 'cooling_season_start', 'cooling_season_end',
-                     *forms.PMV_INPUT_FIELDS):
+                     'adaptive_coefficients', *forms.APMV_OPTIONS, *forms.APMV_SETPOINT_FIELDS,
+                     'cooling_season_start', 'cooling_season_end', *forms.PMV_INPUT_FIELDS):
             self.vars[name] = tk.StringVar(value=defaults[name])
         for name in ('add_vrf_system', 'always_occupied', 'other_pmv_related_outputs', *forms.EPMV_OPTIONS):
             self.vars[name] = tk.BooleanVar(value=defaults[name])
@@ -1017,6 +1017,20 @@ class ApmvTab(_Tab):
         self.setpoint_entries = {name: _grid_entry(setpoints, row, f'{label}:', self.vars[name], width=10)
                                  for row, (name, label) in enumerate(forms.APMV_SETPOINT_FIELDS.items(), start=1)}
         row = len(forms.APMV_SETPOINT_FIELDS) + 1
+        # The adaptive coefficients of the literature (accim.constants.APMV_ADAPTIVE_COEFFICIENTS), which fill the
+        # fields of the coefficients, and how the coefficient of each timestep is chosen
+        self.coefficients_combo = _grid_combo(setpoints, row, 'λ of the literature (aPMV):',
+                                              self.vars['adaptive_coefficients'],
+                                              forms.adaptive_coefficient_choices(), width=32)
+        self.coefficients_combo.bind('<<ComboboxSelected>>', lambda event: self.fill_coefficients())
+        self.coefficients_note = ttk.Label(setpoints, text='', foreground='gray25', wraplength=420)
+        self.coefficients_note.grid(row=row + 1, column=0, columnspan=2, sticky='w')
+        self.apmv_combos = [self.coefficients_combo]
+        row += 2
+        for name, label in forms.APMV_OPTIONS.items():
+            self.apmv_combos.append(_grid_combo(setpoints, row, label, self.vars[name],
+                                                forms.ADAPTIVE_COEFFICIENT_BY, width=10))
+            row += 1
         self.epmv_checks = []
         for name, label in forms.EPMV_OPTIONS.items():
             check = ttk.Checkbutton(setpoints, text=label, variable=self.vars[name])
@@ -1048,7 +1062,10 @@ class ApmvTab(_Tab):
         ttk.Label(body, text='The thermostats keep an index of the comfort of each zone between the heating and cooling '
                              'setpoints (section 4.8 of the documentation): the aPMV, which corrects the PMV for the '
                              'adaptation of the occupants, aPMV = PMV / (1 + λ·PMV), with one λ for the cooling season '
-                             'and another for the heating season; the ePMV of Fanger and Toftum, ePMV = e·PMV, with the '
+                             'and another for the heating season (or, with "pmv_sign", one for warm sensations and '
+                             'another for cool ones; "λ of the literature" fills them with those of Yao et al. 2009, '
+                             'the Chinese standard GB/T 50785 or Zhang et al. 2024); the ePMV of Fanger and Toftum, '
+                             'ePMV = e·PMV, with the '
                              'expectancy factor e (0.5 to 1) of buildings without air-conditioning in warm climates, '
                              'in the cooling season and on the warm side of the scale; or the PMV. To simulate the new '
                              'IDF in the tab "4. Run the simulations", uncheck "Only the output IDFs of accim".',
@@ -1070,7 +1087,21 @@ class ApmvTab(_Tab):
         for name, entry in self.setpoint_entries.items():
             _set_state([entry], name not in others)
         _set_state(self.epmv_checks, index == 'epmv')
+        _set_state(self.apmv_combos, index == 'apmv')
         self.zone_table.set_state(True, disabled=[name for name in forms.APMV_ZONE_FIELDS if name in others])
+
+    def fill_coefficients(self) -> None:
+        """Write the adaptive coefficients of the chosen entry of the catalogue in their fields, and describe it."""
+        try:
+            cooling, heating, description = forms.adaptive_coefficient_entry(self.vars['adaptive_coefficients'].get())
+        except forms.FormError as error:
+            self.app.show_error('PMV-based setpoints', str(error))
+            return
+        if cooling:
+            self.vars['adaptive_coefficient_cooling'].set(cooling)
+        if heating:
+            self.vars['adaptive_coefficient_heating'].set(heating)
+        self.coefficients_note.configure(text=description)
 
     def form(self) -> Dict[str, Any]:
         """The values of the form, for :func:`accim.gui.forms.apmv_arguments`."""
@@ -1107,6 +1138,12 @@ class ApmvTab(_Tab):
             _restore_checks(self.frequencies, state['output_frequencies'])
         if 'zone_setpoints' in state:
             self.zone_table.set_rows(state['zone_setpoints'])
+        try:
+            self.coefficients_note.configure(
+                text=forms.adaptive_coefficient_entry(self.vars['adaptive_coefficients'].get())[2])
+        except forms.FormError:
+            self.vars['adaptive_coefficients'].set('')
+            self.coefficients_note.configure(text='')
         self.update_state()
         return messages
 

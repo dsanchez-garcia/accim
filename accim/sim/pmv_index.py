@@ -13,7 +13,10 @@ coefficient of the season, the inverse of the index (the PMV whose index is the 
 the PMV of the zone).
 
 - ``'apmv'``: the adaptive PMV of Yao et al. (2009), aPMV = PMV/(1 + λ·PMV), with the adaptive coefficient λ of the
-  season; the PMV setpoint is aPMV/(1 − λ·aPMV).
+  season; the PMV setpoint is aPMV/(1 − λ·aPMV). With the option ``adaptive_coefficient_by='pmv_sign'``, λ is that
+  of the side of the scale of the PMV of the previous timestep (warm sensations, PMV >= 0, or cool ones), as Yao et
+  al. (2009) and GB/T 50785-2012 define it, and each PMV setpoint is converted with the λ of its side. The
+  coefficients can be keys of :data:`accim.constants.APMV_ADAPTIVE_COEFFICIENTS` (:func:`get_adaptive_coefficients`).
 - ``'epmv'``: the PMV with the expectancy factor e of Fanger and Toftum (2002), ePMV = e·PMV, in the cooling season
   and on the warm side of the scale (also on the cool side with the option ``apply_to_heating``); the PMV setpoint is
   ePMV/e. With the option ``metabolic_correction``, the activity level of the occupants is also reduced by 6.7 % for
@@ -39,6 +42,7 @@ from accim.utils.editing import transform_ddmm_to_int
 from accim.utils.people import get_people_objects
 
 __all__ = [
+    'ADAPTIVE_COEFFICIENT_BY',
     'IndexParameter',
     'METABOLIC_CORRECTION_OUTPUTS',
     'PMV_INDICES',
@@ -46,9 +50,11 @@ __all__ = [
     'PmvIndex',
     'apply_pmv_index_setpoints',
     'arguments_table',
+    'get_adaptive_coefficients',
     'get_pmv_index',
     'metabolic_correction_names',
     'program_names',
+    'resolve_adaptive_coefficients',
     'zone_outputs',
 ]
 
@@ -101,6 +107,10 @@ def _identity(side: str, setpoint: str, suffix: str, options: Mapping[str, Any])
     return setpoint
 
 
+def _always(options: Mapping[str, Any]) -> bool:
+    return True
+
+
 @dataclass(frozen=True)
 class PmvIndex:
     """An index derived from the PMV, and the Erl code that depends on it.
@@ -128,6 +138,12 @@ class PmvIndex:
     :ivar add_objects: A function that adds the EMS objects of the index besides those of the engine,
         ``add_objects(building, target_data, options, verbose)``, and returns the names of their programs, which run
         at each timestep after those of the zones; None if the index has none.
+    :ivar resolve: A function that gives the values of the parameters to use from those given,
+        ``resolve(values)`` (the keys of :data:`accim.constants.APMV_ADAPTIVE_COEFFICIENTS` of the aPMV, replaced by
+        their coefficients); None if the values are used as given.
+    :ivar seasonal_coefficient: Whether the program ``apply_<name>_<zone>`` sets the coefficient of the season,
+        ``seasonal_coefficient(options)``; if not, the monitor sets it (the aPMV with
+        ``adaptive_coefficient_by='pmv_sign'``).
     """
 
     key: str
@@ -144,15 +160,104 @@ class PmvIndex:
     options: Mapping[str, Any] = field(default_factory=dict)
     validate: Optional[Callable[[Mapping[str, Any], Mapping[str, Any]], None]] = None
     add_objects: Optional[Callable[[Any, List[Dict[str, Any]], Mapping[str, Any], bool], List[str]]] = None
+    resolve: Optional[Callable[[Mapping[str, Any]], Dict[str, Any]]] = None
+    seasonal_coefficient: Callable[[Mapping[str, Any]], bool] = _always
+
+
+#: The ways of choosing the adaptive coefficient λ of the aPMV: by the season of the calendar (``'season'``, the
+#: coefficients of the cooling and heating seasons), or by the sign of the PMV of the previous timestep
+#: (``'pmv_sign'``, the λ of warm sensations, PMV >= 0, and that of cool sensations, PMV < 0, as Yao et al., 2009, and
+#: GB/T 50785-2012 define them)
+ADAPTIVE_COEFFICIENT_BY = ('season', 'pmv_sign')
+
+
+def _by_pmv_sign(options: Mapping[str, Any]) -> bool:
+    return options.get('adaptive_coefficient_by', 'season') == 'pmv_sign'
+
+
+def _apmv_seasonal_coefficient(options: Mapping[str, Any]) -> bool:
+    return not _by_pmv_sign(options)
 
 
 def _apmv_inverse(side: str, setpoint: str, suffix: str, options: Mapping[str, Any]) -> str:
-    # The PMV whose aPMV = PMV/(1 + lambda*PMV) is the setpoint
-    return f'{setpoint}/(1-adap_coeff_{suffix}*{setpoint})'
+    # The PMV whose aPMV = PMV/(1 + lambda*PMV) is the setpoint, PMV = aPMV/(1 - lambda*aPMV) (Yao et al., 2009): with
+    # the coefficient of the season, or, by the sign of the PMV, with that of the side of the scale of the setpoint
+    # (the heating setpoint is negative, and the cooling one positive, where they are converted)
+    coefficient = f'adap_coeff_{suffix}'
+    if _by_pmv_sign(options):
+        coefficient = f'adap_coeff_{"cooling" if side == "C" else "heating"}_{suffix}'
+    return f'{setpoint}/(1-{coefficient}*{setpoint})'
 
 
 def _apmv_monitor(suffix: str, options: Mapping[str, Any]) -> List[str]:
-    return [f'set aPMV_{suffix} = PMV_{suffix}/(1+adap_coeff_{suffix}*PMV_{suffix})']
+    lines = []
+    if _by_pmv_sign(options):
+        # The coefficient of the side of the scale of the PMV of the zone, that of the previous timestep (Yao et al.,
+        # 2009; GB/T 50785-2012)
+        lines = [f'if PMV_{suffix} >= 0', f'set adap_coeff_{suffix} = adap_coeff_cooling_{suffix}', 'else',
+                 f'set adap_coeff_{suffix} = adap_coeff_heating_{suffix}', 'endif']
+    return lines + [f'set aPMV_{suffix} = PMV_{suffix}/(1+adap_coeff_{suffix}*PMV_{suffix})']
+
+
+def _apmv_validate(values: Mapping[str, Any], options: Mapping[str, Any]) -> None:
+    if options['adaptive_coefficient_by'] not in ADAPTIVE_COEFFICIENT_BY:
+        raise ValueError(f"adaptive_coefficient_by must be one of {list(ADAPTIVE_COEFFICIENT_BY)}, not "
+                         f"{options['adaptive_coefficient_by']!r}.")
+
+
+def get_adaptive_coefficients(key: str) -> Dict[str, Any]:
+    """The adaptive coefficients λ of the aPMV of a key of :data:`accim.constants.APMV_ADAPTIVE_COEFFICIENTS`.
+
+    :param key: The key, such as 'yao2009_chongqing_classrooms' or 'gbt50785_cold_general'.
+    :return: A copy of its entry: ``cooling`` (the λ of warm sensations, PMV >= 0), ``heating`` (that of cool
+        sensations, PMV < 0; None if the source gives none), ``grade``, ``source`` and ``notes``.
+    :raises ValueError: If the key is not in the catalogue.
+    """
+    from accim.constants import APMV_ADAPTIVE_COEFFICIENTS
+
+    if key not in APMV_ADAPTIVE_COEFFICIENTS:
+        raise ValueError(f'{key!r} is not a key of accim.constants.APMV_ADAPTIVE_COEFFICIENTS: '
+                         f'{list(APMV_ADAPTIVE_COEFFICIENTS)}.')
+    return dict(APMV_ADAPTIVE_COEFFICIENTS[key])
+
+
+def _adaptive_coefficient(value: Any, side: str, name: str, warned: set) -> Any:
+    """The adaptive coefficient of an argument of the aPMV: a number, a dictionary {zone: number}, or a key of the
+    catalogue (also as a value of the dictionary), replaced by its coefficient of the side ('cooling' or 'heating')."""
+    if isinstance(value, Mapping):
+        return {zone: _adaptive_coefficient(number, side, name, warned) for zone, number in value.items()}
+    if not isinstance(value, str):
+        return value
+    entry = get_adaptive_coefficients(value)
+    if entry[side] is None:
+        raise ValueError(f'{name}: the adaptive coefficients {value!r} have no {side} coefficient ({entry["source"]}).')
+    if entry['grade'] == 'literature' and value not in warned:
+        warned.add(value)
+        warnings.warn(f"The adaptive coefficients {value!r} are of the grade 'literature' ({entry['source']}): many of "
+                      f"the coefficients of Zhang, Yao and Li (2024) saturate at the limit +/-0.66 of their fit, and "
+                      f"some signs contradict the adaptive mechanism (a negative lambda of warm sensations in Cfb, "
+                      f"Csc, Dfb and Dwa; a positive lambda of cool sensations in Af and Cfa): check them before "
+                      f"using them.")
+    return entry[side]
+
+
+def resolve_adaptive_coefficients(values: Mapping[str, Any]) -> Dict[str, Any]:
+    """The values of the arguments of the aPMV with the keys of :data:`accim.constants.APMV_ADAPTIVE_COEFFICIENTS`
+    replaced by their coefficients: those of ``adaptive_coefficient_cooling`` and
+    ``default_adaptive_coefficient_cooling`` by the λ of warm sensations, and those of the heating arguments by that of
+    cool sensations. A key of the grade 'literature' warns.
+
+    :param values: The arguments (numbers, dictionaries {zone: number or key} or keys); the others are kept.
+    :raises ValueError: If a key is not in the catalogue, or its entry has no coefficient of that side.
+    """
+    resolved = dict(values)
+    warned: set = set()
+    for name, side in (('adaptive_coefficient_cooling', 'cooling'), ('adaptive_coefficient_heating', 'heating'),
+                       ('default_adaptive_coefficient_cooling', 'cooling'),
+                       ('default_adaptive_coefficient_heating', 'heating')):
+        if name in resolved:
+            resolved[name] = _adaptive_coefficient(resolved[name], side, name, warned)
+    return resolved
 
 
 # ------------------------------------------------------------------------------------------------------------------
@@ -358,6 +463,10 @@ PMV_INDICES: Dict[str, PmvIndex] = {
         global_variables=('adap_coeff', 'adap_coeff_heating', 'adap_coeff_cooling'),
         inverse=_apmv_inverse,
         monitor=_apmv_monitor,
+        options={'adaptive_coefficient_by': 'season'},
+        validate=_apmv_validate,
+        resolve=resolve_adaptive_coefficients,
+        seasonal_coefficient=_apmv_seasonal_coefficient,
     ),
     'epmv': PmvIndex(
         key='epmv',
@@ -438,6 +547,8 @@ def _index_values(pmv_index: PmvIndex, index_parameters: Optional[Mapping[str, A
         values[parameter.argument] = given.get(parameter.argument, parameter.default)
         values[f'default_{parameter.argument}'] = given.get(f'default_{parameter.argument}',
                                                              parameter.default_for_missing)
+    if pmv_index.resolve is not None:
+        values = pmv_index.resolve(values)
     options = {name: given.get(name, default) for name, default in pmv_index.options.items()}
     if pmv_index.validate is not None:
         pmv_index.validate(values, options)
@@ -996,7 +1107,7 @@ def _add_programs(building: IDF, pmv_index: PmvIndex, options: Mapping[str, Any]
         sp_h = f'{name}_H_SP_{suffix}'
         sp_c = f'{name}_C_SP_{suffix}'
         cooling_coefficient, heating_coefficient = [], []
-        if pmv_index.coefficient is not None:
+        if pmv_index.coefficient is not None and pmv_index.seasonal_coefficient(options):
             cooling_coefficient = [f'set {pmv_index.coefficient}_{suffix} = '
                                    f'{pmv_index.cooling_season_coefficient.format(s=suffix)}']
             heating_coefficient = [f'set {pmv_index.coefficient}_{suffix} = '
