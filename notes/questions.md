@@ -24,6 +24,37 @@ it here as answered).
 
 ## Open
 
+## 2026-11-09 — D1: what are the warm and cold periods of the indicators of Table
+- Context: the prompt of D1 asks Table for the indicators "per zone and building for the warm and cold periods, using
+  the ACSTnoTol/AHSTnoTol columns as limits by default"; CEN/TR 16798-2 (Annex D, Methods B and C) calls "warm period"
+  the sum of the time above the upper limit and "cold period" that below the lower limit, while the design of v03
+  also says "por estación cálida/fría definida con cooling_season_start/end".
+- Options considered: (a) the warm and cold periods of the TR (above and below the range), with the setpoints of each
+  hour as the limits (which already follow the cooling season); (b) also split by the cooling and heating seasons.
+- Owner: the author.
+- Status: open; option (a) decided provisionally, pending author.
+
+## 2026-11-09 — D1: what Table(long_term_indicators=True) gives
+- Context: the prompt asks Table for "these indicators per zone and building"; the indicators are sums of each
+  simulation, while the rows of `Table.df` are timesteps or hours (the indicators need them).
+- Options considered: Methods A and B with the temperature (the operative temperature and the setpoints without the
+  tolerance of each zone), the occupied hours of each row (the EMS output `Occupied Hours_<zone>`) as the time, in a
+  new attribute `long_term_indicators` (a row per simulation, columns `<zone>_...` and `Building_...`, the building
+  adding up its zones), only for the tables that ask for it (so the files of the other tables do not change); Method C
+  (which needs the PMV and its limits), the deviations of Table E.1 and the hours below some temperatures with the
+  functions of the module.
+- Owner: the author.
+- Status: open; decided provisionally, pending author.
+
+## 2026-11-09 — D1: the gaps of CEN/TR 16798-2 in Method C and Table E.1
+- Context: Method C gives wf = 0 for PMVlimit,lower ≤ PMV < PMVlimit,upper and the weight for PMV < PMVlimit,lower or
+  PMVlimit,upper < PMV, so a PMV equal to the upper limit is in neither; Table E.1 gives 44 h for 25 % of 175 h
+  (43.75 h), and 58 h of 166 h for 50 % of the weekly total time.
+- Options considered: a PMV equal to the upper limit is within the range (as in Method B); `deviation_check` uses the
+  percentages of Table E.1 (43.75 h), not its rounded hours.
+- Owner: the author.
+- Status: open; decided provisionally, pending author.
+
 ## 2026-11-09 — C1: with which parameters types are the inputs of the PMV parameters
 - Context: the prompt of C1 asks to register `Clo`, `Met` and `AirVelocity` "in get_available_params_apmv_setpoints()",
   and the brief points to `get_available_params_epmv_setpoints()` as the recent pattern; with the accim models

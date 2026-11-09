@@ -15,6 +15,23 @@ This log is a lightweight, session-scoped complement to the repository's
 existing tracking files — it does not replace them (see
 [[decisions.md#2026-09-13 — `notes/work-log.md` complements, not replaces, existing tracking files|the related decision]]).
 
+## 2026-11-09 — D1: the indicators of the long-term thermal discomfort (branch `v1.2.0`, on the server)
+
+- **Objective**: D1, after C1, in the order of the author (with decision D8).
+- **Affected files**: `accim/data/postprocessing/long_term_discomfort.py` (new), `accim/data/postprocessing/main.py`,
+  `accim/gui/forms.py`, `accim/gui/app.py`, `tests/core/test_long_term_discomfort.py` (new), `tests/core/test_gui.py`,
+  [[../docs/source/4_detailed use.md]] (4.7.4, 4.10), `docs/source/api/accim.data.postprocessing.rst`,
+  [[../CHANGELOG.md]], [[../CAMBIOS_CODIGO_v1.2.0.md]] (§14), [[../DEVLOG.md]], [[../TODO.md]], [[decisions.md]],
+  [[questions.md]].
+- **Finding or decision**: See
+  [[decisions.md#2026-11-09 — The indicators of the long-term discomfort are functions of a module of their own, and Table gives those of the temperature on request (D1)|the decision]].
+  Annex D and Table E.1 of CEN/TR 16798-2 and formula (5) of ISO 7730:2025 checked in the documents. `Table` with
+  timestep CSV files and `standard_outputs=True` drops all the outputs (in [[../TODO.md]]). Three details decided
+  provisionally in [[questions.md]].
+- **Validation**: 9 new tests and 2 of the GUI; the indicators of a timestep table equal to a direct calculation from
+  the CSV file of a simulation of B5; the whole suite; the documentation build.
+- **Next step**: B2.
+
 ## 2026-11-09 — C1: the parameters of the occupants, the new indices and the custom model (branch `v1.2.0`, on the server)
 
 - **Objective**: C1, after B5, in the order of the author (with the adjustment of the brief: `clothing_insulation` and

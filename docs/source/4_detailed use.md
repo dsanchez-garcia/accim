@@ -1013,6 +1013,37 @@ table.time_plot(
 )
 ```
 
+(long-term-discomfort)=
+### 4.7.4 Indicators of the long-term thermal discomfort
+
+Since accim 1.2.0, `accim.data.postprocessing.long_term_discomfort` has the methods of CEN/TR 16798-2:2019 (Annex D) for the long-term evaluation of the thermal comfort conditions of the occupied hours, from simulated (or measured) data, as functions of pandas Series of each timestep or hour:
+
+| Function | Indicator | Source |
+| :--- | :--- | :--- |
+| `hours_outside_range(top, lower, upper, occupied, timestep_h)` | Method A: the occupied hours above the upper limit (the warm period) and below the lower limit (the cold period) of a range of the operative temperature (or the PMV), and their percentages of the occupied hours (`hot_h`, `cold_h`, `hot_pct`, `cold_pct`, `occupied_h`) | CEN/TR 16798-2, Annex D |
+| `degree_hours(top, lower, upper, occupied, timestep_h)` | Method B: the degree hours, the sums of wf = abs(Θo − Θo,limit) times the time outside the range, Θo,limit,lower ≤ Θo ≤ Θo,limit,upper (`hot_Kh`, `cold_Kh`) | CEN/TR 16798-2, Annex D |
+| `ppd_weighted_hours(pmv, pmv_lower, pmv_upper, occupied, timestep_h)` | Method C: the sums of wf = PPD(PMV)/PPD(PMVlimit) times the time outside the range of the PMV (`hot_h`, `cold_h`) | CEN/TR 16798-2, Annex D |
+| `ppd_from_pmv(pmv)` | PPD = 100 − 95·exp(−0.03353·PMV⁴ − 0.2179·PMV²) | ISO 7730:2025, formula (5) |
+| `deviation_check(hours_outside, occupied_hours, period, level)` | whether the hours outside the range are within the acceptable deviation of a week (20 % or 50 % of its occupied hours), a month (12 % or 25 %) or a year (3 % or 6 %), on the level `'3%'` or `'6%'` | CEN/TR 16798-2, Annex E, Table E.1 |
+| `hours_below(temp, thresholds, occupied, timestep_h)` | the occupied hours below each of some temperatures, as the outputs `HoursBelow_<T>_<zone>` of `report_hours_below` (section {ref}`setpoint-limits`) | |
+
+`occupied` is None (all the rows), or a Series of booleans or of numbers (such as the occupants: occupied if more than 0), and `timestep_h` the hours of each row (a number, or a Series). The rows with missing values are left out. A PMV equal to the upper limit, which Annex D leaves out of both cases of Method C, is taken as within the range, as in Method B. Table E.1 gives the deviations as hours of the working time (40 h a week, 175 h a month and 2100 h a year): 126 h a year on the 6 % level, and 44 h a month for 25 % (43.75 h, which `deviation_check` uses). ISO 7730:2025 has left out its sections on the long-term evaluation, so CEN/TR 16798-2 is the reference of these indicators. For instance, with the PMV of a zone and the range of category II of EN 16798-1 (−0.5 < PMV < 0.5, Table B.1):
+
+```python
+from accim.data.postprocessing.long_term_discomfort import ppd_weighted_hours
+
+ppd_weighted_hours(pmv, pmv_lower=-0.5, pmv_upper=0.5, occupied=occupants, timestep_h=1)
+```
+
+`Table(..., long_term_indicators=True)` calculates the indicators of Methods A and B of each simulation, for each occupied zone and the building, in the attribute `long_term_indicators`: a DataFrame with a row for each simulation (`Source`, `Model`, `ComfStand`... `EPW`) and the columns `<zone>_Occupied Hours (h)`, `<zone>_Hours Above Upper Limit (h)`, `<zone>_Hours Below Lower Limit (h)`, their percentages (`(%)`), `<zone>_Degree Hours Above Upper Limit (Kh)` and `<zone>_Degree Hours Below Lower Limit (Kh)`, and the same for `Building_` (the sums of the zones). The limits are the setpoints without the tolerance of the ACCIS of each zone (the outputs `Adaptive Cooling Setpoint Temperature_No Tolerance_<zone>` and `Adaptive Heating Setpoint Temperature_No Tolerance_<zone>`), the temperature is its operative temperature, and the time is the occupied hours of each row (the output `Occupied Hours_<zone>`), so it needs these outputs (the standard outputs of `AddAccis`) and `frequency='timestep'` or `'hourly'`: with hourly rows of timestep outputs, the temperatures and the limits are the means of each hour. The tables without it do not have the attribute, and their files do not change.
+
+```python
+table = Table(source_frequency='hourly', frequency='hourly', frequency_agg_func='sum', standard_outputs=True,
+              level=['building'], level_agg_func=['sum'], level_excluded_zones=[], idf_path='TestModel.idf',
+              long_term_indicators=True)
+table.long_term_indicators
+```
+
 ## 4.8 Setpoints based on the predicted mean vote (PMV) and the adaptive PMV (aPMV)
 
 Besides adaptive setpoint temperatures, accim can apply setpoints based on the predicted mean vote (PMV) of Fanger and on indices derived from it: the adaptive PMV (aPMV), the PMV with the expectancy factor (ePMV, since accim 1.2.0) and the PMV itself. The adaptive predicted mean vote (aPMV) corrects the PMV for the adaptation of the occupants: aPMV = PMV / (1 + λ·PMV), where λ is the adaptive coefficient, with one value for the cooling season and another for the heating season. The thermostats keep the aPMV of each zone between the heating and cooling setpoints, instead of keeping the operative temperature between two temperatures.
@@ -1183,7 +1214,7 @@ It uses tkinter, which comes with Python on Windows and macOS (on Linux, it may 
 3. **Rename the EPWs**: `rename_epw_files()` (section 4.5) on the selected EPWs of the folder; the cities and countries that OpenStreetMap does not give can be entered in the form.
 4. **Run the simulations**: `run_ep()` (section 4.6) with the IDFs and EPWs of the folder, with the EMS or the Python API backend (section 4.9), `remove_files()`, and `estimate_results_size()` (section 4.6), which estimates the size of the results from the outputs of the IDFs in a few seconds, or measures it in a simulation.
 5. **Hours within the setpoints**: the percentage of the occupied hours within the setpoints of each simulation, in each zone and in the building, from the CSV files of the folder ({ref}`hours-within-setpoints`), the simulations that reach a minimum percentage (in the building, in every zone, or in some zones), and a CSV file with the table.
-6. **Table and figures**: `Table` (section 4.7) of the CSV files of the simulations of the folder, with its frequency, the totals of the blocks and of the building and the columns of the table, which can be exported to a CSV file; and its scatter plots and time plots, whose subplots group the simulations by the variables whose values differ between them (the comfort standard, the category, the EPW...), saved as PNG files in the folder. *Save the table...* saves the table in a pickle file and a JSON file with the same name ({ref}`saving-sessions`), and *Open a table...* opens it again without the CSV files, as well as the tables saved in Python with `Table.save`, to make their figures.
+6. **Table and figures**: `Table` (section 4.7) of the CSV files of the simulations of the folder, with its frequency, the totals of the blocks and of the building and the columns of the table, which can be exported to a CSV file, and, with tables of hours or timesteps, the indicators of the long-term thermal discomfort of each simulation (`long_term_indicators`, section {ref}`long-term-discomfort`), which the log shows; and its scatter plots and time plots, whose subplots group the simulations by the variables whose values differ between them (the comfort standard, the category, the EPW...), saved as PNG files in the folder. *Save the table...* saves the table in a pickle file and a JSON file with the same name ({ref}`saving-sessions`), and *Open a table...* opens it again without the CSV files, as well as the tables saved in Python with `Table.save`, to make their figures.
 7. **Parametric study**: a basic `ParametricSimulation` ({doc}`parametric_and_optimisation`) of the predefined or the custom model of accim, on an input IDF of the folder and the selected EPWs (with the existing HVAC systems, `ex_ac`, and their options): the full set of the options of the parameters, or a Latin hypercube sample of their ranges (custom model); the results are the sums of some meters over the run period of each simulation.
 
 Each task runs in the background, one at a time, and what accim prints appears in the log at the bottom of the window (EnergyPlus writes its own messages in the console). The GUI does not ask anything in the prompt, so it gives all the arguments, and it checks them before running (for instance, that the lists of numbers are numbers); it only answers the questions of `rename_epw_files()` about amending or excluding EPWs (none), and those of the figures about renaming the rows and columns of the subplots (no), and it asks in a dialog the confirmation of `AddAccis()` before writing the output IDFs. It does not cover the `custom` output type, `modify_accis()`, the other figures of `Table` and the reshaping of its tables, nor the aPMV and ePMV setpoints, outputs, objectives, optimisations and plots of the parametric module: use Python for them.

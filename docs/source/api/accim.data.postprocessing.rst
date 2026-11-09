@@ -4,6 +4,14 @@ accim.data.postprocessing package
 Submodules
 ----------
 
+accim.data.postprocessing.long\_term\_discomfort module
+-------------------------------------------------------
+
+.. automodule:: accim.data.postprocessing.long_term_discomfort
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
 accim.data.postprocessing.main module
 -------------------------------------
 

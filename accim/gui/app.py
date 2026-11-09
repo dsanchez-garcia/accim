@@ -1562,7 +1562,7 @@ class TableTab(_Tab):
             for name in ('idf_path', 'source_frequency', 'frequency', 'frequency_agg_func', 'level_excluded_zones',
                          'type_of_table', 'figure_type', 'y_axis_label', 'figname', 'figsize', 'dpi')}
         self.vars['data_on_x_axis'] = tk.StringVar(value='')
-        for name in ('standard_outputs', 'split_epw_names'):
+        for name in ('standard_outputs', 'split_epw_names', 'long_term_indicators'):
             self.vars[name] = tk.BooleanVar(value=defaults[name])
         self.levels = {level: tk.BooleanVar(value=level in defaults['level']) for level in ('block', 'building')}
         self.level_funcs = {func: tk.BooleanVar(value=func in defaults['level_agg_func']) for func in ('sum', 'mean')}
@@ -1586,6 +1586,8 @@ class TableTab(_Tab):
             side='left')
         ttk.Checkbutton(checks, text='Split the names of the EPWs (Country_City_Scenario-Year)',
                         variable=self.vars['split_epw_names']).pack(side='left', padx=12)
+        ttk.Checkbutton(checks, text='Long-term discomfort indicators (CEN/TR 16798-2; tables of hours or timesteps)',
+                        variable=self.vars['long_term_indicators']).pack(side='left')
         levels = ttk.Frame(frame)
         levels.grid(row=5, column=0, columnspan=2, sticky='w', pady=2)
         ttk.Label(levels, text='Totals of:').pack(side='left')
@@ -1718,6 +1720,12 @@ class TableTab(_Tab):
                          f'differ between the simulations: {differing or "none (the figures need at least two)"}.')
         for button in (self.export_button, self.figure_button, self.save_button):
             button.state(['!disabled'])
+        indicators = getattr(table, 'long_term_indicators', None)
+        if indicators is not None:
+            # The indicators of each simulation (Table(long_term_indicators=True)), one column per simulation
+            self.app.log_text('\nThe long-term discomfort indicators of CEN/TR 16798-2 (Annex D) of each simulation '
+                              '(Table.long_term_indicators):\n'
+                              + indicators.set_index('Source').T.to_string() + '\n')
 
     def clear(self) -> None:
         """Forget the table (when a session without a table is opened)."""

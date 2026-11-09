@@ -6,7 +6,7 @@ documentación de uso. Recoge las propuestas del bloque A de `notes/PROPUESTAS_M
 esta versión: las P1, A2, A1 y A5, en este orden; y después D2 (sección 7), que el autor incluyó en la 1.2.0 el
 2026-11-09 con E2 y E1, y las demás propuestas de la v03 (`notes/PROPUESTAS_MEJORAS_post_1.1.0_v03.md`), en el orden
 del autor (`notes/COPILOT_BRIEF_v1.2.0_v01.md`): E1 (sección 8), E2 (sección 9), A3 (sección 10), B1 (sección 11),
-B5 (sección 12), C1 (sección 13)...
+B5 (sección 12), C1 (sección 13), D1 (sección 14)...
 
 Lo que ya está en otros documentos no se repite aquí:
 
@@ -52,6 +52,9 @@ Lo que ya está en otros documentos no se repite aquí:
 - **C1.** El paramétrico varía la vestimenta, la actividad y la velocidad del aire (con las consignas basadas en el
   PMV, avisando fuera de los rangos de ISO 7730:2025 §4), la métrica exterior del modelo personalizado y el suelo y el
   techo de las consignas, con una clase para cada parámetro (sección 13).
+- **D1.** Los indicadores de disconfort de largo plazo de CEN/TR 16798-2 (anexo D, métodos A, B y C; anexo E,
+  tabla E.1) en `accim.data.postprocessing.long_term_discomfort`, y los de los métodos A y B de cada simulación, zona
+  y edificio con `Table(long_term_indicators=True)` (sección 14).
 - Las categorías del PMV y la aproximación de la corrección del metabolismo se han comprobado en ISO 7730:2025 y
   EN 16798-1:2019, y el modelo dinámico de vestimenta de A5, en Schiavon y Lee (2013) y ASHRAE 55-2020 (sección 6).
 - Lo que quedaba abierto se ha comprobado: el golden master y las pruebas de EnergyPlus 26.1 y 26.2, también la de A5
@@ -867,3 +870,52 @@ B1 y B5 no tenían parámetros (los de B5 se registraron con B5).
   con su valor; los modificadores de la métrica, en el orden de una muestra, con el redondeo de los días, el anillo de
   45 días, los avisos y los errores; la métrica conserva el EPW de `modify_accis`; los modelos de 0.x), y las listas
   de `test_epmv_parameters.py` y `test_legacy_names.py`.
+
+## 14. Los indicadores de disconfort de largo plazo (D1)
+
+La propuesta D1 pide un módulo de funciones puras de pandas con los métodos del anexo D de CEN/TR 16798-2:2019
+(A: horas y % de horas ocupadas fuera del rango; B: grados-hora; C: ponderado por el PPD), `ppd_from_pmv` (ISO 7730),
+`deviation_check` (anexo E, tabla E.1) y `hours_below`, y la opción `long_term_indicators=True` de `Table` por zona y
+edificio "para los periodos cálido y frío", con `ACSTnoTol`/`AHSTnoTol` como límites por defecto. La decisión D8 del
+brief cambia las pruebas: no reproducir la tabla D.1 (necesita calcular el PMV), comprobar los pesos del método B
+analíticamente, el método C con el PPD de la fórmula, y `ppd_from_pmv` en 0, ±0,5 y ±1 con la fórmula. Comprobado en
+UNE-CEN/TR 16798-2:2019 (páginas 68 a 71: los métodos A, B y C con sus desigualdades, la tabla D.1 y la tabla E.1 con
+el ejemplo de 126 h al año, 20 h a la semana y 44 h al mes al 6 %) y en ISO 7730:2025 (cláusula 5, fórmula (5)).
+
+**Antes.** `Table` daba las horas de confort de las consignas de accim (los contadores del EMS), pero no los
+indicadores de largo plazo de la norma.
+
+**Ahora.**
+
+- `accim/data/postprocessing/long_term_discomfort.py` (nuevo): `ppd_from_pmv`; `hours_outside_range` (método A:
+  `hot_h`, `cold_h`, `hot_pct`, `cold_pct`, `occupied_h`; fuera del rango es por encima del superior o por debajo del
+  inferior, con los límites dentro, como en el método B); `degree_hours` (método B: `hot_Kh`, `cold_Kh`);
+  `ppd_weighted_hours` (método C: `hot_h`, `cold_h`; un PMV igual al límite superior, que el anexo D no pone en ningún
+  caso, se toma como dentro); `deviation_check` y `DEVIATION_LIMITS` (los porcentajes de la tabla E.1, con niveles
+  '3%' y '6%' por su porcentaje anual: 25 % de 175 h son 43,75 h, que la tabla redondea a 44 h); `hours_below`; y
+  `table_indicators`, los de los métodos A y B de una tabla de `Table`. Las funciones toman Series (o arrays) de cada
+  fila, la ocupación (`occupied`: None, booleanos o números como los ocupantes) y las horas de cada fila
+  (`timestep_h`: un número o una Series), y dejan fuera las filas con valores ausentes.
+- `accim/data/postprocessing/main.py`: `Table(..., long_term_indicators=False)` (al final de la firma; con `True`,
+  `ValueError` si `frequency` no es 'timestep' u 'hourly'); al final del constructor, el atributo
+  `long_term_indicators`, solo en las tablas que lo piden (así el JSON de las demás no cambia), con una fila por
+  simulación (`Source` y las columnas que la describen) y `<zona>_Occupied Hours (h)`, `_Hours Above Upper Limit (h)`,
+  `_Hours Below Lower Limit (h)`, sus porcentajes, `_Degree Hours Above Upper Limit (Kh)` y `_Degree Hours Below Lower
+  Limit (Kh)` de cada zona y del edificio (`Building_`, la suma de las zonas). Los límites son las salidas EMS de las
+  consignas sin tolerancia de cada zona, la temperatura es su temperatura operativa y el tiempo, sus horas ocupadas de
+  cada fila (`Occupied Hours_<zona>`); `_JSON_ATTRIBUTES` la incluye.
+- GUI: la casilla *Long-term discomfort indicators* de la pestaña *Table and figures* (`forms.TABLE_DEFAULTS`,
+  `table_arguments`, que la exige con tablas horarias o por paso), y el registro muestra los indicadores.
+- Desviaciones de la v03: las pruebas siguen D8, no la tabla D.1; `Table` da los métodos A y B (no el C, que necesita
+  el PMV y sus límites, ni las desviaciones de la tabla E.1, que dependen del periodo) en un atributo con una fila por
+  simulación, no como columnas de `Table.df` (cuyas filas son las horas); los periodos cálido y frío son los de la
+  norma (por encima y por debajo del rango), no las estaciones (`notes/questions.md`).
+- Pruebas: `tests/core/test_long_term_discomfort.py` (9: el PPD de la fórmula, calculado en la prueba; los pesos del
+  método B de la tabla D.1 (3, 2, 1 y 1, 2, 3 K) con la ocupación, las horas de cada fila y límites de cada fila; el
+  método A con ocupantes, valores ausentes y sin horas ocupadas; los pesos PPD del método C; las desviaciones de la
+  tabla E.1 en las horas de trabajo; las horas por debajo; `Table` con un CSV inventado de dos zonas, con y sin
+  `rename_cols`, frente al cálculo de cada zona y del edificio; sus errores, y que las demás tablas no tienen el
+  atributo), y 2 de la GUI. Con el CSV por paso de tiempo de una simulación de B5, la tabla por paso coincide con el
+  cálculo directo desde el CSV (zona 1: 60 h ocupadas, 25,1667 h por encima y 16,7978 K·h).
+- Hallazgo: `Table` con `source_frequency='timestep'` y `standard_outputs=True` deja fuera todas las salidas
+  (EnergyPlus escribe `(TimeStep)` y el filtro busca `Timestep`); en `TODO.md`.

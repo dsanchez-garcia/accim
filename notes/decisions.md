@@ -11,6 +11,24 @@ Durable architectural/process decisions for this repository and its Obsidian
 vault. Newest first. Use [[templates/decision-record.md|the decision-record
 template]] to add a new entry.
 
+## 2026-11-09 — The indicators of the long-term discomfort are functions of a module of their own, and Table gives those of the temperature on request (D1)
+
+- **Status**: accepted (proposal D1 of `notes/PROPUESTAS_MEJORAS_post_1.1.0_v03.md` with decision D8 of the brief;
+  three details decided provisionally, see questions.md)
+- **Context**: CEN/TR 16798-2:2019 (Annex D: Methods A, B and C; Annex E: Table E.1) is the reference of the long-term
+  evaluation, since ISO 7730:2025 left it out (checked in the TR, pages 68–71, and in ISO 7730:2025, formula 5). The
+  prompt asks for pure pandas functions, `Table(long_term_indicators=True)` with the setpoints without tolerance as
+  limits, and tests of Table D.1, which D8 replaces with analytic tests (Method B), the PPD formula (Method C) and the
+  PPD at 0, ±0.5 and ±1.
+- **Decision**: `accim.data.postprocessing.long_term_discomfort` with `hours_outside_range`, `degree_hours`,
+  `ppd_weighted_hours`, `ppd_from_pmv`, `deviation_check` (`DEVIATION_LIMITS`, levels '3%' and '6%') and
+  `hours_below`, on Series of each row, with the occupancy and the hours of each row; `table_indicators` and
+  `Table(long_term_indicators=True)` give Methods A and B of each simulation, zone and building, in the attribute
+  `long_term_indicators`, separate from the constructor (R-04); the GUI shows them.
+- **Consequences**: the tables without the option and their files do not change. With timestep tables, the indicators
+  of Table are those of the CSV files (checked against a direct calculation with a simulation of B5); with hourly rows
+  of timestep outputs, they use the means of each hour.
+
 ## 2026-11-09 — The parametric module varies the inputs of the PMV and the outdoor metric of the custom model (C1)
 
 - **Status**: accepted (proposal C1 of `notes/PROPUESTAS_MEJORAS_post_1.1.0_v03.md`, with the adjustment of the brief:

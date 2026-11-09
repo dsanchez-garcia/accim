@@ -24,6 +24,11 @@ Active short-term tasks.
 
 ## Backlog
 
+- [ ] [P1][todo] `Table` with `source_frequency='timestep'` and `standard_outputs=True` drops all the outputs (found with D1)
+  - Context: the filter of the standard outputs keeps the columns that contain `SFdict[source_frequency]`, which is `'Timestep'` for timestep frequency, but EnergyPlus names these columns `[C](TimeStep)` (capital S), so no output is kept: with the CSV of a simulation of an output IDF of `AddAccis` at timestep frequency (2026-11-09), `Table(source_frequency='timestep', frequency='hourly', standard_outputs=True, ...)` found no occupied zones and asked for `level_excluded_zones` in the prompt; with `standard_outputs=False`, it reads them. The aggregation of the timestep rows into hours also reported "rows not correctly aggregated" (the first row, 00:10, counted alone). Not changed, since it is not part of D1 (the code has "todo timestep frequency to be tested").
+  - Definition of done: the filters compare the frequency without case (also `output_cols_to_keep`), with a test with the columns that EnergyPlus writes at timestep frequency, and `CHANGELOG.md` explains it as a fix.
+  - References: `accim/data/postprocessing/main.py` (the filter of `standard_outputs`, `SFdict`).
+
 - [ ] [P2][todo] C1: the parameters of the regimes of the custom model, `custom_regime_parameters(n)` (with B2)
   - Context: C1 is done (2026-11-09, `DEVLOG.md`) but for the last row of its table: the factory `custom_regime_parameters(n)`, which generates the classes `CustAST_m_1`, `CustAST_n_1`... of the regimes of B2 (the custom model with several regimes). B2 does not exist yet; it is later in the list of the author (C1 → D1 → B2).
   - Definition of done: B2 adds the factory and its parameters, with tests, as its design says ("Paramétrico: fábrica `custom_regime_parameters(n_regimes)`... (C1)").

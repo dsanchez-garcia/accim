@@ -437,6 +437,15 @@ class Table:
         A string used as a name to export a xlsx file with the rows not correctly aggregated.
         Used only to check the aggregations are correct.
     :type name_export_rows_not_corr_agg: str
+    :param long_term_indicators: True to calculate the indicators of the long-term thermal discomfort of
+        CEN/TR 16798-2:2019, Annex D, of each simulation, for each occupied zone and the building, in the attribute
+        ``long_term_indicators`` (:func:`accim.data.postprocessing.long_term_discomfort.table_indicators`): the
+        occupied hours above the upper limit and below the lower limit (the warm and cold periods of Method A) and
+        their percentages, and the degree hours above and below (Method B), with the setpoints without the tolerance
+        of the ACCIS as the limits. It needs ``frequency`` 'timestep' or 'hourly', and the operative temperature, the
+        setpoints without the tolerance and the occupied hours of each zone (the standard outputs of AddAccis). False
+        by default (since accim 1.2.0).
+    :type long_term_indicators: bool
     :ivar df: The pandas DataFrame instance.
         It is modified when method ``format_table`` is called.
     :ivar df_backup: The full pandas DataFrame instance resulting from class ``Table``.
@@ -456,6 +465,9 @@ class Table:
     :ivar arguments: A dictionary with the arguments with which the table was made.
     :ivar type_of_table: The ``type_of_table`` of the last call to ``format_table`` (and ``custom_cols``, its
         ``custom_cols``).
+    :ivar long_term_indicators: With ``long_term_indicators=True``, a DataFrame with a row for each simulation and the
+        indicators of the long-term thermal discomfort of each occupied zone and of the building (``<zone>_Hours Above
+        Upper Limit (h)``, ``Building_Degree Hours Below Lower Limit (Kh)``...).
 
     The method ``save`` saves the table in a pickle file, which ``Table.load`` reads to resume the session without
     reading the CSV files again, and in a JSON file that can be read.
@@ -484,6 +496,7 @@ class Table:
         drop_nan: bool = False,
         name_export_rows_with_nan: str = None,
         name_export_rows_not_corr_agg: str = None,
+        long_term_indicators: bool = False,
     ):
         """
         Constructor method
@@ -494,6 +507,10 @@ class Table:
 
         self.arguments = copy.deepcopy(arguments)
         checkpoint = 0
+
+        if long_term_indicators and frequency not in ('timestep', 'hourly'):
+            raise ValueError("long_term_indicators needs the rows of each timestep or hour (frequency 'timestep' or "
+                             f"'hourly'), not frequency {frequency!r}.")
 
         if datasets is None:
             datasets = []
@@ -1874,6 +1891,13 @@ class Table:
         self.cols_for_multiindex = cols_for_multiindex
         self.suggested_vars_dict = suggested_vars_dict
 
+        if long_term_indicators:
+            # The indicators of CEN/TR 16798-2, Annex D, of each simulation (only in the tables that ask for them, so
+            # that the files of the other tables do not change)
+            from accim.data.postprocessing.long_term_discomfort import table_indicators
+
+            self.long_term_indicators = table_indicators(df, occupied_zone_list)
+
         # df.to_excel('checkpoint_04.xlsx')
 
         # todo pop up when process ends; by default True
@@ -1883,6 +1907,7 @@ class Table:
         'arguments', 'frequency', 'occupied_zone_list', 'hvac_zone_list', 'block_list', 'cols_for_multiindex',
         'suggested_vars_dict', 'type_of_table', 'custom_cols', 'indexcols', 'val_cols', 'df',
         'wrangled_df_pivoted', 'wrangled_df_unstacked', 'wrangled_df_stacked', 'wrangled_df_multiindex',
+        'long_term_indicators',
     )
 
     def _json_content(self) -> dict:

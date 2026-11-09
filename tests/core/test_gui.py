@@ -611,6 +611,18 @@ def test_arguments_of_table(tmp_path):
         forms.table_arguments(dict(form, folder=str(tmp_path / 'empty')))
 
 
+def test_the_long_term_discomfort_indicators_of_the_table_form(tmp_path):
+    for name in ('model.idf', 'model[CS_INT EN16798[CA_3[Seville.csv'):
+        (tmp_path / name).write_text('')
+    form = dict(forms.TABLE_DEFAULTS, folder=str(tmp_path), idf_path='model.idf')
+    # Not by default (the arguments of Table are those of before)
+    assert 'long_term_indicators' not in forms.table_arguments(form)['table']
+    table = forms.table_arguments(dict(form, frequency='hourly', long_term_indicators=True))['table']
+    assert table['long_term_indicators'] is True and table['frequency'] == 'hourly'
+    with pytest.raises(FormError, match="long_term_indicators: the indicators need a table of timesteps or hours"):
+        forms.table_arguments(dict(form, long_term_indicators=True))
+
+
 def test_arguments_of_the_figures():
     form = dict(forms.TABLE_DEFAULTS, vars_to_gather_rows=['ComfMod'], vars_to_gather_cols=['EPW'],
                 data_on_x_axis='RMOT (C)', data_on_y_main_axis=['Cooling (kWh/m2)', 'Heating (kWh/m2)'],
@@ -1504,6 +1516,16 @@ def test_the_tab_of_table(app, tmp_path, monkeypatch):
     assert tab.make_figure() and captured['answers'] == tasks.FIGURE_ANSWERS
     tab.vars['figure_type'].set('time')
     assert tab.x_combo.instate(['disabled'])
+    # The long-term discomfort indicators of a table are shown in the log
+    tab.vars['long_term_indicators'].set(True)
+    tab.vars['frequency'].set('hourly')
+    assert forms.table_arguments(tab.form())['table']['long_term_indicators'] is True
+    logged = []
+    monkeypatch.setattr(app, 'log_text', logged.append)
+    table.long_term_indicators = pd.DataFrame({'Source': ['model[Seville'], 'Building_Occupied Hours (h)': [10.0]})
+    tab.show_table(table)
+    assert 'long-term discomfort indicators of CEN/TR 16798-2' in logged[-1]
+    assert 'Building_Occupied Hours (h)' in logged[-1] and 'model[Seville' in logged[-1]
 
 
 def test_the_tab_of_the_parametric_study(app, tmp_path):

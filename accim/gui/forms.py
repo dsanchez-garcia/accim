@@ -329,6 +329,7 @@ TABLE_DEFAULTS = {
     'level_agg_func': ['sum'],
     'level_excluded_zones': '',
     'split_epw_names': False,
+    'long_term_indicators': False,
     'type_of_table': 'all',
     'figure_type': 'scatter',
     'y_axis_label': '',
@@ -1324,6 +1325,13 @@ def table_arguments(form: Mapping[str, Any]) -> Dict[str, Any]:
     )
     if TABLE_FREQUENCIES.index(table['frequency']) < TABLE_FREQUENCIES.index(table['source_frequency']):
         raise FormError('frequency: it cannot be shorter than the frequency of the CSV files (source_frequency).')
+    if form.get('long_term_indicators'):
+        # The indicators of the long-term thermal discomfort of CEN/TR 16798-2 (accim.data.postprocessing.
+        # long_term_discomfort), from the rows of each timestep or hour
+        if table['frequency'] not in ('timestep', 'hourly'):
+            raise FormError("long_term_indicators: the indicators need a table of timesteps or hours (frequency "
+                            "'timestep' or 'hourly').")
+        table['long_term_indicators'] = True
     return dict(table=table, type_of_table=_choice(form, 'type_of_table', TABLE_TYPES))
 
 
