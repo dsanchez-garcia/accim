@@ -32,6 +32,7 @@ import pandas as pd
 __all__ = [
     'ENERGYPLUS_ASHRAE55_DAYS',
     'ENERGYPLUS_CEN15251_ALPHA',
+    'SETPOINT_EMS_VARIABLES',
     'TIMESTEPS_PER_HOUR',
     'compute_setpoints',
     'energyplus_running_means',
@@ -61,10 +62,12 @@ _ATG_DIVISOR = 2.4
 #: The year of the dates of the rows: weather files of 365 days have no 29 February
 _YEAR = 2007
 _LEAP_YEAR = 2008
-#: The values that the EMS of a zone reports, by the EMS variable: 'Adaptive Cooling Setpoint Temperature' is
-#: roundedACST, and 'Adaptive Cooling Setpoint Temperature_No Tolerance' is ACSTnoTol (accim.sim.ems.objects)
-_REPORTED = (('ComfTemp', 'ComfTemp'), ('ACST', 'roundedACST'), ('AHST', 'roundedAHST'), ('ACSTnoTol', 'ACSTnoTol'),
-             ('AHSTnoTol', 'AHSTnoTol'))
+#: The columns of :func:`compute_setpoints` that the EMS of each zone of an output IDF reports, and their EMS variables:
+#: the outputs ``<output>_<zone>`` of :data:`accim.sim.ems.objects.ZONE_SETPOINT_OUTPUT_VARIABLES` ('Adaptive Cooling
+#: Setpoint Temperature' is roundedACST, and 'Adaptive Cooling Setpoint Temperature_No Tolerance' is ACSTnoTol)
+SETPOINT_EMS_VARIABLES = {'ComfTemp': 'ComfTemp', 'ACST': 'roundedACST', 'AHST': 'roundedAHST',
+                          'ACSTnoTol': 'ACSTnoTol', 'AHSTnoTol': 'AHSTnoTol'}
+_REPORTED = tuple(SETPOINT_EMS_VARIABLES.items())
 #: The zone of the programs of compute_setpoints (the programs of a zone of an output IDF)
 _ZONE = 'Z'
 

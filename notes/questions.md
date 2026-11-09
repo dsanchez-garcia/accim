@@ -24,6 +24,22 @@ it here as answered).
 
 ## Open
 
+## 2026-11-09 — E2: what the metabolic correction of the ePMV is checked against (the 5.5–6.1 % of the brief)
+- Context: the brief asks E2 to check "the metabolic correction with the tolerance of 5.5–6.1 %". The EMS sets the
+  factor of each People object to 1 − 0.067·PMV with the PMV of the previous timestep (exact in EnergyPlus 25.1:
+  differences of 1e-16 with the outputs at timestep frequency); the 5.5–6.1 % is the reduction of the activity level
+  for a PMV of 1 *before* the correction, once the correction converges (section 4.8.1 of the detailed use), and the
+  outputs of a simulation do not have that PMV (EnergyPlus calculates the PMV with the corrected activity level).
+- Why it matters: a check of the reduction against the reported PMV of the same timestep would give about 6.7 %, not
+  5.5–6.1 %, and one against the PMV before the correction needs the PMV calculated again (A6, `accim[comfort]`).
+- Options considered: (a) the relation of the EMS, factor = 1 − 0.067·PMV of the previous timestep (0–3, cooling
+  season), and corrected activity = activity·factor, with `calculation_tolerance` (0.001); (b) a band of 5.5–6.7 % on
+  (1 − factor)/PMV of the same timestep, approximate and also with hourly outputs; (c) the PMV before the correction
+  calculated with pythermalcomfort, and the band 5.5–6.1 %.
+- Owner: the author.
+- Status: open; option (a) decided provisionally, pending author (it is exact and catches any other reduction; the
+  5.5–6.1 % stays documented as the result of the correction).
+
 ## 2026-11-09 — E1: the running means of the first days of the weather file in outdoor_metrics
 - Context: `accim.sim.preview.outdoor_metrics` (E1) calculates the running means of the standards (EN 16798-1 B.1 and
   B.2, the mean of the n previous days of ASHRAE 55, the reference temperature of the ATG) from the daily means of the

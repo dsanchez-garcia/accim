@@ -15,6 +15,20 @@ This log is a lightweight, session-scoped complement to the repository's
 existing tracking files — it does not replace them (see
 [[decisions.md#2026-09-13 — `notes/work-log.md` complements, not replaces, existing tracking files|the related decision]]).
 
+## 2026-11-09 — E2: `verify_accim_simulation` checks what the EMS calculates (branch `v1.2.0`, on the server)
+
+- **Objective**: E2, after E1, in the order of the author.
+- **Affected files**: `accim/utils/verification.py`, `accim/sim/preview.py`, `tests/core/test_verification.py` (new),
+  [[../docs/source/4_detailed use.md]] (4.6.1), [[../CHANGELOG.md]], [[../CAMBIOS_CODIGO_v1.2.0.md]] (§9),
+  [[../TODO.md]], [[../DEVLOG.md]], [[decisions.md]], [[questions.md]].
+- **Finding or decision**: See
+  [[decisions.md#2026-11-09 — verify_accim_simulation checks the indices of the PMV with the outputs at timestep frequency, and every comfort standard against compute_setpoints (E2)|the decision]].
+  The EMS reads the PMV of the previous timestep and the occupants of the current one; the outputs follow the
+  formulas within 1e-16 at timestep frequency, not hourly. The 5.5–6.1 % of the brief is decided provisionally in
+  [[questions.md]]. Check 1 skips the zones whose names have ':' (pre-existing, in [[../TODO.md]]).
+- **Validation**: 12 new tests, two with simulations of EnergyPlus 25.1; the whole suite; the documentation build.
+- **Next step**: A3.
+
 ## 2026-11-09 — E1: the setpoints of the ACCIS without EnergyPlus (branch `v1.2.0`, on the server)
 
 - **Objective**: E1, the first proposal of the list of the author for this session (the brief

@@ -3,12 +3,15 @@
 # Distributed under the GNU General Public License v3 or later.
 
 """Verification of the simulations of the models of accim: checks of the outputs against the arguments of
-the ACCIS."""
+the ACCIS, and of the values that the EMS calculates (the indices derived from the PMV, the metabolic correction of
+the ePMV and the setpoints of :func:`accim.sim.preview.compute_setpoints`)."""
 
 import os
+import re
 import warnings
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
 
+import numpy as np
 import pandas as pd
 
 from accim.utils.accim_args import get_accim_args_flattened
@@ -25,12 +28,14 @@ def verify_accim_simulation(
         idf_path: str,
         eplus_install_dir: Optional[str] = None,
         tolerance: float = 0.1,
+        epw: Optional[str] = None,
+        calculation_tolerance: float = 1e-3,
 ) -> pd.DataFrame:
     """
     Reads EnergyPlus simulation output and verifies that the ACCIS EMS scripts
     added by AddAccis are working correctly.
 
-    The function performs two categories of checks:
+    The function performs four categories of checks:
 
     **Check 1 – HVAC Setpoint Adherence (per zone):**
     - If cooling is active (CoolCoil > 0): Zone Operative Temperature <= ACST_Sch + tolerance
@@ -60,6 +65,39 @@ def verify_accim_simulation(
       Window may open when:
       NoH_NoC_reqs == 1 AND meets_base_reqs == 1 AND OpT > VST
 
+    **Check 3 – Setpoints based on the PMV (per zone, models of** :func:`accim.sim.pmv_index.apply_pmv_index_setpoints`,
+    **such as those of** :func:`accim.sim.apmv.apply_apmv_setpoints` **and** :func:`accim.sim.apmv.apply_epmv_setpoints`
+    **):**
+    The EMS calculates the index of each zone at the beginning of each timestep from the PMV of its occupants of the
+    previous timestep (*Zone Thermal Comfort Fanger Model PMV* of each People object; in a zone with several, their
+    mean weighted by their *People Occupant Count* of the timestep), so these checks need the outputs at timestep
+    frequency; the first timestep of each environment (sizing period or run period) is not checked:
+
+    - ``Check3_aPMV``: aPMV = PMV/(1 + λ·PMV) (Yao et al., 2009), with the adaptive coefficient λ of the output
+      ``Adaptive Coefficient_<zone>``.
+    - ``Check3_ePMV``: ePMV = e·PMV if PMV > 0, and PMV otherwise (Fanger and Toftum, 2002, as accim applies it: on
+      the warm side of the scale; on both sides with ``apply_to_heating``), with the expectancy factor e of the output
+      ``Expectancy Factor_<zone>`` (1 in the heating season).
+    - ``Check3_PMV``: the PMV of the zone of the PMV setpoints is that of the previous timestep.
+    - ``Check3_MetabolicFactor`` (ePMV setpoints with ``metabolic_correction=True``, each People object):
+      Metabolic Correction Factor = 1 − 0.067·PMV in the cooling season (Fanger and Toftum, 2002), with the PMV of the
+      previous timestep between 0 and 3 (the mean of the zones of the People object, weighted by their occupants), and
+      1 in the heating season.
+    - ``Check3_CorrectedActivity``: Corrected Activity Level = the activity level without the correction (the output
+      *Schedule Value* of its schedule, which must be added to the model to check it) times that factor.
+
+    **Check 4 – Setpoints against** :func:`accim.sim.preview.compute_setpoints` **(per zone, output IDFs of AddAccis,
+    only with** ``epw`` **):**
+    The comfort temperature and the setpoints that the EMS of each zone reports (``Comfort Temperature_<zone>``,
+    ``Adaptive Cooling Setpoint Temperature_<zone>``... with and without the tolerance) are those that
+    ``compute_setpoints`` calculates with the arguments of the zone (its program ``SetInputData_<zone>``), the weather
+    file ``epw``, the first day of the RunPeriod and the timesteps per hour of the model; and the running mean outdoor
+    temperatures of EnergyPlus (*Zone Thermal Comfort CEN 15251 Adaptive Model Running Average Outdoor Air
+    Temperature* and *... ASHRAE 55 ...*) are those of :func:`accim.sim.preview.energyplus_running_means`
+    (``Check4_RMOT``, ``Check4_PMOT``, ``Check4_ComfTemp``, ``Check4_ACST``, ``Check4_AHST``, ``Check4_ACSTnoTol``
+    and ``Check4_AHSTnoTol``). They are checked with the outputs at timestep frequency, or else hourly, of the last
+    environment of the outputs (the run period).
+
     :param eso_file_path: Path to the eplusout.eso file.
     :type eso_file_path: str
     :param idf_path: Path to the IDF file used for simulation (to read accim args and window names).
@@ -68,6 +106,11 @@ def verify_accim_simulation(
     :type eplus_install_dir: str, optional
     :param tolerance: Temperature tolerance in °C for setpoint checks. Default is 0.1 °C.
     :type tolerance: float
+    :param epw: The weather file of the simulation, for check 4 (not done without it).
+    :type epw: str, optional
+    :param calculation_tolerance: The largest difference between the values that the EMS calculates and those of
+        checks 3 and 4 (in °C for the temperatures). Default is 0.001.
+    :type calculation_tolerance: float
     :return: DataFrame with all detected mismatch timesteps, with columns
         ['timestep', 'zone_or_window', 'check', 'description', 'value_found', 'value_expected'].
         Empty DataFrame means all checks passed.
@@ -716,6 +759,25 @@ def verify_accim_simulation(
                   f"Condition violations: {new_fails}")
 
     # ─────────────────────────────────────────────
+    # 5.C CHECK 3 – SETPOINTS BASED ON THE PMV
+    # ─────────────────────────────────────────────
+    timestep_data = eso['data'].get('Timestep')
+    rows, messages = _pmv_index_mismatches(building, timestep_data, calculation_tolerance)
+    if messages:
+        print("\n--- Check 3: Setpoints based on the PMV (the index of the PMV of the previous timestep) ---")
+        print('\n'.join(messages))
+    mismatch_rows.extend(rows)
+
+    # ─────────────────────────────────────────────
+    # 5.D CHECK 4 – SETPOINTS AGAINST compute_setpoints
+    # ─────────────────────────────────────────────
+    if epw is not None:
+        print("\n--- Check 4: Setpoints and running means against accim.sim.preview.compute_setpoints ---")
+        rows, messages = _setpoint_mismatches(building, eso['data'], epw, calculation_tolerance)
+        print('\n'.join(messages))
+        mismatch_rows.extend(rows)
+
+    # ─────────────────────────────────────────────
     # 6. RETURN RESULTS
     # ─────────────────────────────────────────────
     result_df = pd.DataFrame(mismatch_rows)
@@ -729,6 +791,417 @@ def verify_accim_simulation(
               .rename('count').reset_index().to_string(index=False))
 
     return result_df
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# CHECKS 3 AND 4: THE VALUES THAT THE EMS CALCULATES
+# ─────────────────────────────────────────────────────────────────────────────
+
+#: The date and time of a row of the outputs of EnergyPlus: 'MM/DD  HH:MM:SS'
+_DATE_TIME = re.compile(r'(\d{1,2})/(\d{1,2})\s+(\d{1,2}):(\d{2}):(\d{2})')
+#: The program that applies the setpoints of an index of accim.sim.pmv_index to a zone: apply_<index>_<zone>
+_PMV_INDEX_PROGRAM = re.compile(r'apply_(aPMV|ePMV|PMV)_(.+)$', re.IGNORECASE)
+#: The running mean outdoor temperatures of EnergyPlus, by their columns in accim.sim.preview
+_RUNNING_MEANS = {
+    'RMOT': 'Zone Thermal Comfort CEN 15251 Adaptive Model Running Average Outdoor Air Temperature',
+    'PMOT': 'Zone Thermal Comfort ASHRAE 55 Adaptive Model Running Average Outdoor Air Temperature',
+}
+
+
+def _dates_and_times(timestamps: Sequence[str]) -> Tuple[pd.DatetimeIndex, pd.DatetimeIndex]:
+    """The date and time of the end of each row of the outputs of EnergyPlus (``'MM/DD  HH:MM:SS'``; ``24:00:00`` is
+    the end of the day, the midnight of the next day), and the date of each row (that of the timestamp, also at
+    24:00:00), in the year of :func:`accim.sim.preview.compute_setpoints` (2007, or 2008 if there is a 29 February).
+
+    :raises ValueError: If a timestamp has another format.
+    """
+    parts = []
+    for timestamp in timestamps:
+        match = _DATE_TIME.search(str(timestamp))
+        if match is None:
+            raise ValueError(f'{timestamp!r} is not a date and time of the outputs of EnergyPlus (MM/DD  HH:MM:SS).')
+        parts.append([int(value) for value in match.groups()])
+    parts = np.array(parts, dtype=np.int64).reshape(-1, 5)
+    year = 2008 if ((parts[:, 0] == 2) & (parts[:, 1] == 29)).any() else 2007
+    dates = pd.DatetimeIndex(pd.to_datetime(pd.DataFrame({'year': np.full(len(parts), year), 'month': parts[:, 0],
+                                                          'day': parts[:, 1]})))
+    seconds = parts[:, 2] * 3600 + parts[:, 3] * 60 + parts[:, 4]
+    return dates + pd.to_timedelta(seconds, unit='s'), dates
+
+
+def _environment_starts(datetimes: pd.DatetimeIndex) -> np.ndarray:
+    """Whether each row of the outputs is the first one of an environment (a sizing period or a run period): its time
+    is not that of the previous row plus one step (the most frequent difference between rows)."""
+    starts = np.ones(len(datetimes), dtype=bool)
+    if len(datetimes) > 1:
+        differences = np.diff(datetimes.asi8)
+        starts[1:] = differences != pd.Series(differences).mode().iloc[0]
+    return starts
+
+
+class _Outputs:
+    """The outputs of one frequency of :func:`accim.utils.outputs.read_eso_using_readvarseso` (a DataFrame with the
+    columns (key, variable, units) and the date and time of each row as its index): their values by key and variable
+    (in any case), the date and time of the end of each row, its date, and the first rows of the environments."""
+
+    def __init__(self, frame: pd.DataFrame):
+        self.frame = frame
+        self.timestamps = [str(timestamp).strip() for timestamp in frame.index]
+        self.datetimes, self.dates = _dates_and_times(self.timestamps)
+        self.starts = _environment_starts(self.datetimes)
+        self._columns = {(str(column[0]).strip().upper(), str(column[1]).strip().upper()): column
+                         for column in frame.columns}
+
+    def get(self, key: str, variable: str) -> Optional[np.ndarray]:
+        """The values of an output (None if it is not in the outputs)."""
+        column = self._columns.get((str(key).strip().upper(), str(variable).strip().upper()))
+        return None if column is None else self.frame[column].to_numpy(dtype=float)
+
+    def keys(self, variable: str) -> List[str]:
+        """The keys of an output variable."""
+        return [str(column[0]) for (_, name), column in self._columns.items() if name == variable.strip().upper()]
+
+    def previous(self, values: np.ndarray) -> np.ndarray:
+        """The values of the previous row (NaN in the first row of each environment)."""
+        result = np.r_[np.nan, values[:-1]]
+        result[self.starts] = np.nan
+        return result
+
+
+def _program_lines(program) -> List[str]:
+    return [str(line).strip() for line in program.fieldvalues[2:] if str(line).strip()]
+
+
+def _weighted_mean(values: Sequence[np.ndarray], weights: Sequence[np.ndarray]) -> np.ndarray:
+    """The mean of some values weighted by the occupants, or their simple mean where there are none, as the EMS
+    programs of accim.sim.pmv_index calculate the PMV of a zone with several People objects."""
+    total = sum(weights)
+    weighted = sum(value * weight for value, weight in zip(values, weights))
+    return np.where(total > 0, weighted / np.where(total > 0, total, 1), sum(values) / len(values))
+
+
+def _mismatch_rows(timestamps: Sequence[str], found: np.ndarray, expected: np.ndarray, zone: str, check: str,
+                   description: str, tolerance: float) -> Tuple[List[dict], str]:
+    """The mismatches (the rows whose value differs from the expected one by more than the tolerance; the rows without
+    an expected value are not checked), and a line of the summary."""
+    difference = np.abs(found - expected)
+    checked = np.isfinite(difference)
+    bad = np.flatnonzero(checked & (np.where(checked, difference, 0) > tolerance))
+    rows = [{
+        'timestep': timestamps[position],
+        'zone_or_window': zone,
+        'check': check,
+        'description': f'{description}: {found[position]:.6f} instead of {expected[position]:.6f}',
+        'value_found': round(float(found[position]), 6),
+        'value_expected': round(float(expected[position]), 6),
+    } for position in bad]
+    return rows, f"  '{zone}' {check} ({description}): {len(bad)} mismatch(es) in {int(checked.sum())} timesteps"
+
+
+def _pmv_index_mismatches(building, frame: Optional[pd.DataFrame], tolerance: float) -> Tuple[List[dict], List[str]]:
+    """Check 3 of :func:`verify_accim_simulation`: the indices derived from the PMV of the setpoints of
+    :mod:`accim.sim.pmv_index`, and the metabolic correction of the ePMV, from the PMV of the previous timestep.
+
+    :param building: The model (eppy).
+    :param frame: The outputs at timestep frequency of :func:`accim.utils.outputs.read_eso_using_readvarseso` (None
+        if there are none).
+    :param tolerance: The largest difference allowed.
+    :return: The mismatches, and the lines of the summary (none if the model has no setpoints based on the PMV).
+    """
+    from accim.constants import EPMV_MET_REDUCTION_PER_PMV
+    from accim.sim.ems.erl import ErlProgramSet
+    from accim.sim.pmv_index import _MAX_METABOLIC_PMV, PMV_INDICES, metabolic_correction_names
+    from accim.sim.targets import resolve_targets, sanitize_ems_name
+    from accim.utils.people import get_people_objects
+
+    indices = {pmv_index.name.upper(): pmv_index for pmv_index in PMV_INDICES.values()}
+    programs = {str(program.Name).upper(): program for program in building.idfobjects['EnergyManagementSystem:Program']}
+    zones = []
+    for program in building.idfobjects['EnergyManagementSystem:Program']:
+        match = _PMV_INDEX_PROGRAM.match(str(program.Name))
+        if match is not None and match.group(1).upper() in indices:
+            zones.append((indices[match.group(1).upper()], match.group(2)))
+    if not zones:
+        return [], []
+    if frame is None or frame.empty:
+        message = ("The setpoints based on the PMV are checked with the outputs at timestep frequency, since the EMS "
+                   "calculates the index of each timestep from the PMV of the previous one: add 'timestep' to the "
+                   "output_frequencies of the setpoints to check them.")
+        warnings.warn(message)
+        return [], [f'  Not checked. {message}']
+    outputs = _Outputs(frame)
+    sensors = {str(sensor.Name).upper(): (str(sensor.OutputVariable_or_OutputMeter_Index_Key_Name),
+                                          str(sensor.OutputVariable_or_OutputMeter_Name))
+               for sensor in building.idfobjects['EnergyManagementSystem:Sensor']}
+
+    def sensor_values(name: str) -> Tuple[Optional[np.ndarray], str]:
+        """The values of the output that an EMS sensor reads, and what is missing if they are not in the outputs."""
+        if name.upper() not in sensors:
+            return None, f'the EMS sensor {name}'
+        key, variable = sensors[name.upper()]
+        values = outputs.get(key, variable)
+        return values, ('' if values is not None else f"the output '{variable}' of '{key}' at timestep frequency")
+
+    def zone_pmv(suffix: str) -> Tuple[Optional[np.ndarray], str]:
+        """The PMV of a zone that the EMS reads at each timestep: that of its People object of the previous timestep
+        (with several People objects, their mean weighted by their occupants of the timestep)."""
+        if f'PMV_{suffix}'.upper() in sensors:
+            pmv, missing = sensor_values(f'PMV_{suffix}')
+            return (None, missing) if pmv is None else (outputs.previous(pmv), '')
+        values, weights = [], []
+        number = 1
+        while f'PMV_{suffix}_{number}'.upper() in sensors:
+            pmv, missing = sensor_values(f'PMV_{suffix}_{number}')
+            occupants, missing_occupants = sensor_values(f'People_Occupant_Count_{suffix}_{number}')
+            if pmv is None or occupants is None:
+                return None, missing or missing_occupants
+            values.append(outputs.previous(pmv))
+            weights.append(occupants)
+            number += 1
+        if not values:
+            return None, f'the EMS sensor PMV_{suffix}'
+        return _weighted_mean(values, weights), ''
+
+    rows: List[dict] = []
+    lines: List[str] = []
+
+    def check(found, expected, zone, name, description):
+        new_rows, line = _mismatch_rows(outputs.timestamps, found, expected, zone, name, description, tolerance)
+        rows.extend(new_rows)
+        lines.append(line)
+
+    with np.errstate(invalid='ignore'):
+        pmv_of_zones: Dict[str, np.ndarray] = {}
+        for pmv_index, suffix in zones:
+            name = pmv_index.name
+            pmv, missing = zone_pmv(suffix)
+            found = outputs.get('EMS', f'{name}_{suffix}')
+            coefficient = (outputs.get('EMS', f'{pmv_index.coefficient_output}_{suffix}')
+                           if pmv_index.coefficient_output else None)
+            if found is None:
+                missing = f"the output '{name}_{suffix}' at timestep frequency"
+            elif pmv_index.coefficient_output and coefficient is None:
+                missing = f"the output '{pmv_index.coefficient_output}_{suffix}' at timestep frequency"
+            if pmv is not None:
+                pmv_of_zones[suffix] = pmv
+            if pmv is None or missing:
+                lines.append(f"  '{suffix}' Check3_{name}: not checked, without {missing}.")
+                continue
+            if pmv_index.key == 'apmv':
+                # Yao et al. (2009)
+                check(found, pmv / (1 + coefficient * pmv), suffix, 'Check3_aPMV', 'aPMV = PMV/(1 + lambda*PMV)')
+            elif pmv_index.key == 'epmv':
+                # Fanger and Toftum (2002): on the warm side of the scale, unless the monitor of the zone applies the
+                # expectancy factor to every PMV (apply_to_heating)
+                monitor = programs.get(f'MONITOR_{name}_{suffix}'.upper())
+                both_sides = monitor is not None and not any(
+                    line.lower().startswith('if') for line in _program_lines(monitor))
+                check(found, np.where((pmv > 0) | both_sides, coefficient * pmv, pmv), suffix, 'Check3_ePMV',
+                      'ePMV = e*PMV' if both_sides else 'ePMV = e*PMV if PMV > 0')
+            elif pmv_index.key == 'pmv':
+                check(found, pmv, suffix, 'Check3_PMV', 'PMV of the previous timestep')
+            else:
+                lines.append(f"  '{suffix}': no check for the index {name}.")
+
+        # The metabolic correction of the ePMV, of each People object
+        corrected_people = []
+        for people in get_people_objects(building):
+            names = metabolic_correction_names(str(people.Name))
+            if names['program'].upper() in programs:
+                corrected_people.append((people, names))
+        if corrected_people:
+            season = None
+            inputs_program = programs.get('SET_COOLING_SEASON_INPUT_DATA')
+            season_program = programs.get('SET_COOLING_SEASON')
+            if inputs_program is not None and season_program is not None:
+                # CoolingSeason of each day, with the programs of the model
+                erl = ErlProgramSet({'inputs': _program_lines(inputs_program),
+                                     'season': _program_lines(season_program)},
+                                    global_variables=['CoolingSeason', 'CoolSeasonStart', 'CoolSeasonEnd'])
+                erl.run('inputs')
+                seasons = {}
+                for day in np.unique(outputs.dates.dayofyear):
+                    erl.set('DayOfYear', float(day))
+                    erl.run('season')
+                    seasons[day] = erl.get('CoolingSeason')
+                season = np.array([seasons[day] for day in outputs.dates.dayofyear], dtype=float)
+            suffixes_of_people: Dict[str, List[str]] = {}
+            for target in resolve_targets(building):
+                for people_name in target.people_names:
+                    suffixes_of_people.setdefault(str(people_name).upper(), []).append(target.ems_suffix)
+            for people, names in corrected_people:
+                suffix = sanitize_ems_name(str(people.Name))
+                factor = outputs.get('EMS', f'Metabolic Correction Factor_{suffix}')
+                zone_suffixes = suffixes_of_people.get(str(people.Name).upper(), [])
+                pmvs, missing = [], ''
+                for zone_suffix in zone_suffixes:
+                    pmv = pmv_of_zones.get(zone_suffix)
+                    if pmv is None:
+                        pmv, missing = zone_pmv(zone_suffix)
+                    pmvs.append(pmv)
+                weights = []
+                if len(zone_suffixes) > 1:
+                    for zone_suffix in zone_suffixes:
+                        occupants, missing_occupants = sensor_values(f'People_Occupant_Count_{zone_suffix}')
+                        weights.append(occupants)
+                        missing = missing or missing_occupants
+                if factor is None:
+                    missing = f"the output 'Metabolic Correction Factor_{suffix}' at timestep frequency"
+                elif season is None:
+                    missing = 'the EMS programs set_cooling_season_input_data and set_cooling_season'
+                elif not zone_suffixes:
+                    missing = 'the zones of the People object'
+                if missing or any(pmv is None for pmv in pmvs) or any(weight is None for weight in weights):
+                    lines.append(f"  '{suffix}' Check3_MetabolicFactor: not checked, without "
+                                 f"{missing or 'the PMV of its zones'}.")
+                    continue
+                mean = pmvs[0] if len(pmvs) == 1 else _weighted_mean(pmvs, weights)
+                # Fanger and Toftum (2002): 6.7 % less for each unit of PMV, in the cooling season, between 0 and 3
+                expected = 1 - EPMV_MET_REDUCTION_PER_PMV * np.clip(np.where(season == 1, mean, 0), 0,
+                                                                    _MAX_METABOLIC_PMV)
+                check(factor, expected, suffix, 'Check3_MetabolicFactor',
+                      f'1 - {EPMV_MET_REDUCTION_PER_PMV}*PMV in the cooling season')
+                base, missing = sensor_values(names['base'])
+                corrected = outputs.get('EMS', f'Corrected Activity Level_{suffix}')
+                if base is None or corrected is None:
+                    missing = missing or f"the output 'Corrected Activity Level_{suffix}' at timestep frequency"
+                    lines.append(f"  '{suffix}' Check3_CorrectedActivity: not checked, without {missing}.")
+                    continue
+                check(corrected, base * expected, suffix, 'Check3_CorrectedActivity',
+                      f'activity level*(1 - {EPMV_MET_REDUCTION_PER_PMV}*PMV)')
+    return rows, lines
+
+
+def _timesteps_per_hour(building, outputs: Optional[_Outputs]) -> Optional[int]:
+    """The timesteps per hour of a model: those of its Timestep object (6, the default of its field in the IDD, if it
+    is empty), or else those of its outputs at timestep frequency (None if it has neither)."""
+    timesteps = building.idfobjects['Timestep']
+    if timesteps:
+        value = str(timesteps[0].Number_of_Timesteps_per_Hour).strip()
+        return int(float(value)) if value else 6
+    if outputs is not None and len(outputs.datetimes) > 1:
+        minutes = pd.Series(np.diff(outputs.datetimes.asi8)).mode().iloc[0] / 6e10
+        if minutes > 0 and 60 % minutes == 0:
+            return int(60 // minutes)
+    return None
+
+
+def _compute_setpoints_arguments(values: Mapping[str, Any]) -> Dict[str, Any]:
+    """The arguments of :func:`accim.sim.preview.compute_setpoints` of a zone, from the values of the variables of its
+    program SetInputData_<zone> (``accim.sim.ems.inputs.INPUT_VARIABLES``).
+
+    :raises ValueError: If the tolerances of the cooling and heating setpoints are not opposite, as
+        ``setpoint_tolerance`` sets them.
+    """
+    import inspect
+    import math
+
+    from accim.sim.ems.inputs import INPUT_VARIABLES
+    from accim.utils.ems_code import get_setpoint_ems_code
+
+    accepted = set(inspect.signature(get_setpoint_ems_code).parameters)
+    arguments = {}
+    for item in INPUT_VARIABLES:
+        # setpoint_tolerance is AHSTtol, and ACSTtol its opposite
+        if item.argument in accepted and item.variable in values and item.variable != 'ACSTtol':
+            arguments[item.argument] = values[item.variable]
+    if 'ACSTtol' in values and 'AHSTtol' in values and not math.isclose(values['ACSTtol'], -values['AHSTtol']):
+        raise ValueError(f"ACSTtol ({values['ACSTtol']}) is not the opposite of AHSTtol ({values['AHSTtol']})")
+    return arguments
+
+
+def _setpoint_mismatches(building, data: Mapping[str, pd.DataFrame], epw: str,
+                         tolerance: float) -> Tuple[List[dict], List[str]]:
+    """Check 4 of :func:`verify_accim_simulation`: the setpoints of each zone of an output IDF of AddAccis against
+    :func:`accim.sim.preview.compute_setpoints`, and the running mean outdoor temperatures of EnergyPlus against
+    :func:`accim.sim.preview.energyplus_running_means`, in the last environment of the outputs (the run period).
+
+    :param building: The model (eppy).
+    :param data: The outputs of :func:`accim.utils.outputs.read_eso_using_readvarseso`, by frequency.
+    :param epw: The weather file of the simulation.
+    :param tolerance: The largest difference allowed.
+    :return: The mismatches, and the lines of the summary.
+    """
+    from accim.sim.ems.inputs import input_programs, read_inputs
+    from accim.sim.ems.objects import ZONE_SETPOINT_OUTPUT_VARIABLES
+    from accim.sim.preview import SETPOINT_EMS_VARIABLES, compute_setpoints, energyplus_running_means
+
+    zone_programs = input_programs(building)
+    if not zone_programs:
+        return [], ['  Not checked: the model has no programs SetInputData_<zone> (output IDFs of AddAccis).']
+    columns_of_variables = {variable: column for column, variable in SETPOINT_EMS_VARIABLES.items()}
+    outputs_of_columns = {columns_of_variables[variable]: output
+                          for output, (variable, _) in ZONE_SETPOINT_OUTPUT_VARIABLES.items()
+                          if variable in columns_of_variables}
+    chosen = None
+    for frequency in ('Timestep', 'Hourly'):
+        frame = data.get(frequency)
+        if frame is None or frame.empty:
+            continue
+        outputs = _Outputs(frame)
+        if any(outputs.get('EMS', f'{output}_{zone}') is not None
+               for zone in zone_programs for output in outputs_of_columns.values()):
+            chosen = frequency, outputs
+            break
+    if chosen is None:
+        return [], ['  Not checked: no setpoints of the zones (Comfort Temperature_<zone>...) at timestep or hourly '
+                    'frequency.']
+    frequency, outputs = chosen
+    run_periods = building.idfobjects['RunPeriod']
+    timesteps_per_hour = _timesteps_per_hour(building, outputs if frequency == 'Timestep' else None)
+    if not run_periods or timesteps_per_hour is None:
+        return [], ['  Not checked: the model has no RunPeriod, or no Timestep object.']
+    month, day = int(run_periods[0].Begin_Month), int(run_periods[0].Begin_Day_of_Month)
+    start_date = f'{day:02d}/{month:02d}'
+    environment = np.cumsum(outputs.starts)
+    rows = np.flatnonzero(environment == environment[-1])
+    first = outputs.dates[rows[0]]
+    if (first.month, first.day) != (month, day):
+        return [], [f'  Not checked: the last environment of the outputs begins on {first.day:02d}/{first.month:02d}, '
+                    f'not on the first day of the RunPeriod ({start_date}).']
+    timestamps = [outputs.timestamps[row] for row in rows]
+    datetimes = outputs.datetimes[rows]
+    mismatches: List[dict] = []
+    lines = [f'  {frequency} outputs from {start_date}, {timesteps_per_hour} timesteps per hour, weather file {epw}']
+    # The running means, those of the first People object (all have the same)
+    try:
+        running_means = energyplus_running_means(epw, timesteps_per_hour, start_date).set_index('date')
+    except ValueError as error:
+        return [], lines + [f'  Not checked: {error}']
+    for column, variable in _RUNNING_MEANS.items():
+        keys = outputs.keys(variable)
+        if not keys:
+            continue
+        expected = running_means[column].reindex(outputs.dates[rows]).to_numpy(dtype=float)
+        new_rows, line = _mismatch_rows(timestamps, outputs.get(keys[0], variable)[rows], expected, keys[0],
+                                        f'Check4_{column}', f'{column} of energyplus_running_means', tolerance)
+        mismatches.extend(new_rows)
+        lines.append(line)
+    previews: Dict[Tuple, pd.DataFrame] = {}
+    for zone, program in zone_programs.items():
+        try:
+            arguments = _compute_setpoints_arguments(read_inputs(program))
+            key = tuple(sorted(arguments.items()))
+            if key not in previews:
+                previews[key] = compute_setpoints(epw, timesteps_per_hour=timesteps_per_hour, start_date=start_date,
+                                                  frequency='timestep' if frequency == 'Timestep' else 'hourly',
+                                                  **arguments).set_index('datetime')
+        except (ValueError, TypeError) as error:
+            lines.append(f"  '{zone}': not checked ({error}).")
+            continue
+        preview = previews[key].reindex(datetimes)
+        inside = preview['Tout'].notna().to_numpy()
+        for column, output in outputs_of_columns.items():
+            found = outputs.get('EMS', f'{output}_{zone}')
+            if found is None:
+                continue
+            # A null value (the comfort temperature of static setpoints) is reported as 0
+            expected = np.where(inside, np.nan_to_num(preview[column].to_numpy(dtype=float)), np.nan)
+            new_rows, line = _mismatch_rows(timestamps, found[rows], expected, zone, f'Check4_{column}',
+                                            f'{output} of compute_setpoints', tolerance)
+            mismatches.extend(new_rows)
+            lines.append(line)
+    return mismatches, lines
 
 
 class AccimSimulationVerifier:

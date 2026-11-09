@@ -5,12 +5,12 @@ documentación de uso. Recoge las propuestas del bloque A de `notes/PROPUESTAS_M
 (índices de confort derivados del PMV; archivos del autor, en git desde el commit `e238dad`) que el autor pidió para
 esta versión: las P1, A2, A1 y A5, en este orden; y después D2 (sección 7), que el autor incluyó en la 1.2.0 el
 2026-11-09 con E2 y E1, y las demás propuestas de la v03 (`notes/PROPUESTAS_MEJORAS_post_1.1.0_v03.md`), en el orden
-del autor (`notes/COPILOT_BRIEF_v1.2.0_v01.md`): E1 (sección 8)...
+del autor (`notes/COPILOT_BRIEF_v1.2.0_v01.md`): E1 (sección 8), E2 (sección 9)...
 
 Lo que ya está en otros documentos no se repite aquí:
 
 - `CHANGELOG.md` (sección Unreleased): los cambios que ve el usuario.
-- `docs/source/4_detailed use.md`, secciones 4.3.1, 4.7.3, 4.8 y 4.8.1: el uso.
+- `docs/source/4_detailed use.md`, secciones 4.3.1, 4.6.1, 4.7.3, 4.8 y 4.8.1: el uso.
 - `DEVLOG.md`: el registro del trabajo, con cómo se comprobó.
 - `notes/decisions.md`: las decisiones y sus motivos.
 
@@ -34,6 +34,9 @@ Lo que ya está en otros documentos no se repite aquí:
   con las medias móviles exteriores que calcula EnergyPlus, que reproduce exactamente (`energyplus_running_means`); y
   da las temperaturas exteriores de referencia de las normas (`outdoor_metrics`). Coincide con EnergyPlus 25.1 a la
   precisión de la máquina (sección 8).
+- **E2.** `verify_accim_simulation` comprueba lo que calcula el EMS: el índice de cada zona de las consignas basadas
+  en el PMV y la corrección del metabolismo del ePMV, con el PMV del paso anterior (salidas por paso de tiempo), y, con
+  `epw`, las consignas de cada zona de los IDF de `AddAccis` frente a `compute_setpoints` (sección 9).
 - Las categorías del PMV y la aproximación de la corrección del metabolismo se han comprobado en ISO 7730:2025 y
   EN 16798-1:2019, y el modelo dinámico de vestimenta de A5, en Schiavon y Lee (2013) y ASHRAE 55-2020 (sección 6).
 - Lo que quedaba abierto se ha comprobado: el golden master y las pruebas de EnergyPlus 26.1 y 26.2, también la de A5
@@ -479,3 +482,72 @@ las consignas de un clima sin simular.
   dos posibles errores de los ComfStand 9 y 10 (las medias de 7DRM y 30DRM parecen cambiadas, y la consigna de
   calefacción del modo 1 del 9 fuera de los límites lleva el signo de la de refrigeración): están en `TODO.md`,
   pendientes del autor, sin tocar.
+
+## 9. La verificación de lo que calcula el EMS (E2)
+
+La propuesta E2 pide a `verify_accim_simulation` (`accim/utils/verification.py`) que compruebe `ePMV = e·PMV`,
+`aPMV = PMV/(1 + λ·PMV)`, `Activity_corrected = met·(1 − 0.067·PMV_prev)` con `PMV_prev > 0`, `Tout_metric` frente a
+`outdoor_metrics()` (B1), `AHST ≥ AHSTfloor` y `ACST ≤ ACSTceil` (B5) y, para B3, que las consignas de los modelos
+registrados coinciden con `compute_setpoints`. El brief añade: `ePMV = e·PMV` solo con PMV > 0 (así está hecho) y la
+corrección del metabolismo «con la tolerancia del 5,5–6,1 %».
+
+**Antes.** `verify_accim_simulation` tenía dos comprobaciones de los IDF de `AddAccis`: la temperatura operativa
+dentro de las consignas mientras se climatiza (1) y las condiciones de las ventanas en modo mixto (2). En un IDF con
+consignas basadas en el PMV no encontraba zonas (busca los sensores `<zona>_OpT` del ACCIS) y daba todo por bueno.
+
+**Lo que hace el EMS** (comprobado el 2026-11-09 con tres simulaciones de EnergyPlus 25.1 con salidas por paso de
+tiempo, del 28/04 al 03/05: aPMV y PMV en el modelo de ejemplo, ePMV con la corrección en el residencial, cuyo
+`People` es de dos plantas): en `BeginTimestepBeforePredictor`, el sensor del PMV de cada `People` lee el del paso
+anterior y el de sus ocupantes, el del paso actual (`Occupied hours_<zona>` y la schedule de 100 siguen a los
+ocupantes del paso, no a los del anterior). Con eso, las salidas cumplen las fórmulas con diferencias de 1e-16, salvo
+el primer paso de cada entorno (los días de diseño y el periodo de simulación), cuyo PMV anterior es el del
+calentamiento.
+
+**Ahora.**
+
+- Comprobación 3 (`_pmv_index_mismatches`), en los modelos con programas `apply_<índice>_<zona>` de
+  `accim.sim.pmv_index`, con las salidas por paso de tiempo (con las horarias no se hace y avisa: la media horaria no
+  cumple las fórmulas, por el paso de retraso y porque la media de una función no es la función de la media):
+  - El PMV de la zona que lee el EMS: el del `People` de la zona en el paso anterior; con varios `People`
+    (`PMV_<zona>_<n>`), su media ponderada por sus ocupantes del paso (la media simple si no hay), como
+    `average_PMV_<zona>`. Los sensores dicen de qué salidas se leen.
+  - `Check3_aPMV`: aPMV = PMV/(1 + λ·PMV), con λ de la salida `Adaptive Coefficient_<zona>`.
+  - `Check3_ePMV`: ePMV = e·PMV si PMV > 0 y PMV si no, con e de `Expectancy Factor_<zona>`; si el programa
+    `monitor_ePMV_<zona>` no tiene `if` (`apply_to_heating=True`), e·PMV siempre.
+  - `Check3_PMV`: el PMV de las consignas del PMV es el del paso anterior.
+  - `Check3_MetabolicFactor`: el factor de cada `People` es 1 − 0,067·PMV (entre 0 y 3) en la estación de
+    refrigeración y 1 en la de calefacción; la estación sale de los programas `set_cooling_season_input_data` y
+    `set_cooling_season` del modelo, ejecutados con el intérprete de Erl de accim para cada día. Con un `People` de
+    varias zonas, la media de sus PMV ponderada por los ocupantes (`resolve_targets` da las zonas de cada `People`).
+  - `Check3_CorrectedActivity`: la actividad corregida es la actividad sin corregir por ese factor; solo si las
+    salidas tienen la actividad sin corregir (`Schedule Value` de la schedule del sensor `Activity_base_<people>`).
+  - La tolerancia del 5,5–6,1 % del brief: es la reducción de la actividad para un PMV de 1 *antes* de la corrección,
+    cuando la corrección converge, y las salidas no tienen ese PMV. Se comprueba la relación exacta del EMS (con el PMV
+    del paso anterior); queda en `notes/questions.md`, decidido provisionalmente.
+- Comprobación 4 (`_setpoint_mismatches`), solo con el argumento nuevo `epw`, en los IDF de `AddAccis`: las salidas
+  de cada zona (`Comfort Temperature_<zona>`, `Adaptive Cooling Setpoint Temperature_<zona>`... con y sin tolerancia)
+  frente a `compute_setpoints` con los argumentos de su programa `SetInputData_<zona>`
+  (`_compute_setpoints_arguments`, por `INPUT_VARIABLES`; la tolerancia es `AHSTtol`, y `ACSTtol` debe ser su
+  opuesta), el EPW, el primer día del `RunPeriod` y los pasos por hora del objeto `Timestep` (6, el valor por defecto
+  de su campo en el IDD, si está vacío; si no hay objeto, los de las salidas por paso); y las medias móviles de
+  EnergyPlus frente a `energyplus_running_means`. Usa las salidas por paso de tiempo o, si no, las horarias, del
+  último entorno (el periodo de simulación); si este no empieza el primer día del `RunPeriod`, no compara. Cubre todos
+  los ComfStand, así que los de B3 pasarán por ella. `accim.sim.preview.SETPOINT_EMS_VARIABLES` da la variable EMS de
+  cada columna de `compute_setpoints`.
+- La hora de cada fila sale de `Date/Time` (`_dates_and_times`: el final del paso, con 24:00:00 como medianoche del
+  día siguiente, y la fecha de la fila, también a las 24:00:00), en el año de `compute_setpoints` (2007, o 2008 con un
+  29 de febrero); `_environment_starts` marca la primera fila de cada entorno (la que no sigue a la anterior por un
+  paso). `_Outputs` busca las salidas por clave y variable, sin distinguir mayúsculas.
+- El argumento `calculation_tolerance` (0,001) es la diferencia admitida en las comprobaciones 3 y 4. Las
+  comprobaciones 1 y 2 no cambian. Las descripciones que se imprimen son ASCII (la consola de Windows, cp1252, no
+  imprime λ).
+- Pruebas: `tests/core/test_verification.py`, 12: las fechas y los entornos; la media ponderada; los argumentos de
+  `compute_setpoints`; la comprobación 3 con salidas inventadas (aPMV, ePMV con y sin `apply_to_heating`, PMV; un
+  valor erróneo; el aPMV del mismo paso; la corrección de un `People` de dos zonas, que con los ocupantes del paso
+  anterior falla; sin salidas por paso, aviso); la comprobación 4 con salidas de `compute_setpoints` tras un día de
+  diseño (otro EPW y otro `RunPeriod`); y dos simulaciones de EnergyPlus 25.1 (ePMV con la corrección, sin errores con
+  tolerancia 1e-6; el modelo CUSTOM y ESP CTE frente a `compute_setpoints`, sin errores con su EPW y con errores en
+  las medias y en el CUSTOM, no en ESP CTE, con otro).
+- Encontrado de paso (en `TODO.md`, sin tocar): la comprobación 1 no encuentra las salidas de las zonas cuyo nombre
+  tiene `:` (como `Block1:Zone1`), porque parte el nombre de la columna por el primer `:`; las comprobaciones nuevas
+  buscan por clave y variable. Quedan para B1 y B5 sus comprobaciones (`Tout_metric`, suelo y techo).

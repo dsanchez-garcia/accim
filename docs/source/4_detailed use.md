@@ -797,6 +797,27 @@ run.remove_files()
 
 `remove_files()` deletes the simulation files of the working folder, that is, the files with ‘[’ in the name, except the `.py`, `.idf`, `.epw`, `.csv` and `.eso` files, and it also deletes the `Table.csv`, `Meter.csv` and `Zsz.csv` files of the simulations. It does not delete subfolders or files without ‘[’ in the name, such as a Jupyter notebook; files of other programs whose names contain ‘[’ would be deleted.
 
+(verifying-simulations)=
+### 4.6.1 Verifying the simulations
+
+`verify_accim_simulation()` (in `accim.utils`) reads the ESO file of a simulation (with `ReadVarsESO` of EnergyPlus) and checks its outputs against the IDF that was simulated. It returns a table with a row for each value that does not pass a check (empty if all pass), with the timestep, the zone (or window), the check, a description, the value found and the value expected, and prints a summary of each check:
+
+```python
+from accim.utils import verify_accim_simulation
+mismatches = verify_accim_simulation(
+    'TestModel[CS_INT EN16798[CA_2[CM_3[HM_0[VC_X[VO_X[MT_X[MW_X[AT_0.1[NS_X[Seville_Present.eso',  # the ESO file
+    'TestModel[CS_INT EN16798[CA_2[CM_3[HM_0[VC_X[VO_X[MT_X[MW_X[AT_0.1[NS_X.idf',                     # the IDF
+    epw='Seville_Present.epw',  # the weather file of the simulation, for check 4
+)
+```
+
+-   Check 1, in the output IDFs of `AddAccis()`: the operative temperature of each zone is not above the cooling setpoint while it is cooled, nor below the heating setpoint while it is heated (with `tolerance`, 0.1 °C by default).
+-   Check 2, in mixed mode: the windows are open only when the EMS can open them (the HVAC system is off, the zone is occupied and cooler than the cooling setpoint, the outdoor temperature and the wind speed allow it...).
+-   Check 3, in the models with setpoints based on the PMV (section 4.8): the index of each zone, which the EMS calculates at the beginning of each timestep from the PMV of the previous timestep (the *Zone Thermal Comfort Fanger Model PMV* of its People object; with several People objects, their mean weighted by their occupants of the timestep): aPMV = PMV/(1 + λ·PMV), with the adaptive coefficient of the output `Adaptive Coefficient_<zone>` (Yao et al., 2009); ePMV = e·PMV if the PMV is positive (also if it is negative, with `apply_to_heating=True`), with the expectancy factor of the output `Expectancy Factor_<zone>` (Fanger and Toftum, 2002); and the PMV of the PMV setpoints. With the metabolic correction of the ePMV, the factor of each People object is 1 − 0.067·PMV in the cooling season (with the PMV of the previous timestep between 0 and 3) and 1 in the heating season, and the corrected activity level is the activity level times that factor: the latter is checked if the outputs have the activity level without the correction (the output `Schedule Value` of the schedule of the sensor `Activity_base_<people>`). These checks need the outputs at timestep frequency (`output_frequencies=['timestep']`): with hourly ones, they are not done, with a warning.
+-   Check 4, in the output IDFs of `AddAccis()`, with `epw`: the comfort temperature and the setpoints of each zone (the outputs `Comfort Temperature_<zone>`, `Adaptive Cooling Setpoint Temperature_<zone>`... with and without the tolerance) are those of `compute_setpoints()` (section {ref}`setpoints-without-energyplus`) with the arguments of the zone, the weather file, the first day of the run period and the timesteps per hour of the model; and the running mean outdoor temperatures of EnergyPlus are those of `energyplus_running_means()`. It uses the outputs at timestep frequency, or else the hourly ones, of the run period.
+
+Checks 3 and 4 compare the values that the EMS calculates, so they allow a difference of `calculation_tolerance` (0.001 by default). The first timestep of each environment (each sizing period and the run period) is not checked by check 3, since the PMV of the previous timestep is that of the warm-up days.
+
 ## 4.7 Functions and methods for data analysis; making figures and tables
 
 You can see a Jupyter Notebook in the How-to Guides section of this documentation: {doc}`jupyter_notebooks/Table/using_Table`.
@@ -949,6 +970,7 @@ building.saveas('TestModel_aPMV.idf')
 - The cooling season is given by dates: for a location in the southern hemisphere, swap them.
 - The aPMV of each zone (the output `aPMV_<zone>`) and the hours within the setpoints are calculated at the beginning of each timestep, from the last PMV that EnergyPlus has calculated, that of the previous timestep.
 - `Table` makes the tables and figures of these simulations (section {ref}`table-pmv-setpoints`).
+- `verify_accim_simulation()` checks the index of each zone and the metabolic correction of the ePMV in the outputs at timestep frequency (section {ref}`verifying-simulations`).
 
 Since accim 1.2.0, `apply_pmv_setpoints()` applies setpoints based on the PMV itself, such as those of the categories of ISO 7730 and EN 16798-1 (−0.2 and 0.2, −0.5 and 0.5, −0.7 and 0.7). It takes the arguments of `apply_apmv_setpoints()` except the adaptive coefficients, and its setpoints are those of `apply_apmv_setpoints()` with adaptive coefficients of 0, with EMS objects named after the PMV: the programs `apply_PMV_<zone>` and `count_PMV_comfort_hours_<zone>`, and the outputs `PMV_<zone>` (the PMV of the zone), `PMV Heating Setpoint_<zone>`, `PMV Cooling Setpoint_<zone>`... and the hours within the setpoints.
 

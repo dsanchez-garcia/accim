@@ -11,6 +11,30 @@ Durable architectural/process decisions for this repository and its Obsidian
 vault. Newest first. Use [[templates/decision-record.md|the decision-record
 template]] to add a new entry.
 
+## 2026-11-09 — verify_accim_simulation checks the indices of the PMV with the outputs at timestep frequency, and every comfort standard against compute_setpoints (E2)
+
+- **Status**: accepted (proposal E2 of `notes/PROPUESTAS_MEJORAS_post_1.1.0_v03.md` and its adjustment in
+  `notes/COPILOT_BRIEF_v1.2.0_v01.md`; the details below were not in the proposal: for the review of the author)
+- **Context**: E2 asks `verify_accim_simulation` to check ePMV = e·PMV (with PMV > 0, as implemented), aPMV =
+  PMV/(1 + λ·PMV), the corrected activity level, `Tout_metric` (B1), the floor and ceiling of B5 and, for B3, the
+  setpoints of the registered models against `compute_setpoints`. The EMS calculates the index at the beginning of
+  each timestep from the PMV of the previous timestep and the occupants of the current one (checked with simulations
+  of EnergyPlus 25.1: differences of 1e-16 with the outputs at timestep frequency); hourly outputs average both, so
+  the relations do not hold in them.
+- **Decision**: check 3 compares the index of each zone, the metabolic factor and the corrected activity level with
+  their formulas applied to the PMV of the previous timestep, only with the outputs at timestep frequency (with hourly
+  ones it warns that it needs them); the first timestep of each environment is not checked, and the expected values
+  are independent of the Erl of the model, except the cooling season, which the programs of the model give. Check 4,
+  only with the new argument `epw`, compares the setpoints of every zone of an output IDF of `AddAccis` with
+  `compute_setpoints` (with the arguments of its program `SetInputData_<zone>`) and the running means of EnergyPlus
+  with `energyplus_running_means`, in the run period, so the comfort standards of B3 will go through it. The checks of
+  before do not change; the new ones have their own tolerance, `calculation_tolerance` (0.001).
+- **Consequences**: the outputs of the indices, the metabolic correction and the setpoints of the ACCIS can be checked
+  after a simulation; the checks of B1 and B5 wait for their outputs ([[../TODO.md]]). A wrong weather file makes check
+  4 fail in every adaptive setpoint (not in the static ones). Section 4.6.1 of
+  [[../docs/source/4_detailed use.md]] and section 9 of [[../CAMBIOS_CODIGO_v1.2.0.md]]; the 5.5–6.1 % of the brief
+  is in [[questions.md]].
+
 ## 2026-11-09 — compute_setpoints runs the setpoint programs of the output IDFs with the running means of EnergyPlus, start-up transient included (E1)
 
 - **Status**: accepted (proposal E1 of `notes/PROPUESTAS_MEJORAS_post_1.1.0_v03.md` and decision D9 of
