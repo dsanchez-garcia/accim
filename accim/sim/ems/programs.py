@@ -153,6 +153,13 @@ def set_comfort_standard_code(idf, comfort_standards: Optional[Iterable[int]] = 
     if comfort_standards is not None:
         # The models can have them as numbers with decimals (set ComfStand = 1.0)
         comfort_standards = {int(n) for n in comfort_standards}
+    # The objects of the outdoor metric first, so that the subprograms are the last programs of the model whatever
+    # the output IDF is
+    outdoor_metric = False
+    if input_programs(idf):
+        outdoor_metric = ((comfort_standards is None or CUSTOM_COMFORT_STANDARD in comfort_standards)
+                          and uses_outdoor_metric(idf))
+        set_outdoor_metric_code(idf, outdoor_metric, epw)
 
     def lines_for(lines) -> List[str]:
         if comfort_standards is None:
@@ -163,22 +170,21 @@ def set_comfort_standard_code(idf, comfort_standards: Optional[Iterable[int]] = 
     for name, lines in _COMFORT_STANDARD_PROGRAMS.items():
         program = idf.getobject('EnergyManagementSystem:Program', name)
         if program is not None:
+            if name == 'SetComfTemp' and outdoor_metric:
+                lines = pl.SET_COMF_TEMP_OUTDOOR_METRIC
             set_program_lines(program, lines_for(lines))
+    count_hours = pl.COUNT_HOURS_OUTDOOR_METRIC if outdoor_metric else pl.COUNT_HOURS
     for program in programs:
         if program.Name.upper().startswith(_COUNT_HOURS_PREFIX.upper()):
             zone = program.Name[len(_COUNT_HOURS_PREFIX):]
-            set_program_lines(program, lines_for(pl.format_lines(pl.COUNT_HOURS, zone=zone)))
+            set_program_lines(program, lines_for(pl.format_lines(count_hours, zone=zone)))
     master = idf.getobject('EnergyManagementSystem:Program', 'SetAST_Master')
     if master is not None:
         set_program_lines(master, master_program_lines(comfort_standards))
         for program in [p for p in programs if p.Name.upper().startswith('SETAST_CS')]:
             idf.removeidfobject(program)
-        for name, lines in subprograms(comfort_standards).items():
+        for name, lines in subprograms(comfort_standards, outdoor_metric).items():
             add_program(idf, name, lines)
-    if input_programs(idf):
-        outdoor_metric = ((comfort_standards is None or CUSTOM_COMFORT_STANDARD in comfort_standards)
-                          and uses_outdoor_metric(idf))
-        set_outdoor_metric_code(idf, outdoor_metric, epw)
 
 
 def add_comfort_standard_code(idf, comfort_standards: Iterable[int]) -> None:

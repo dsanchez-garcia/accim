@@ -15,6 +15,32 @@ This log is a lightweight, session-scoped complement to the repository's
 existing tracking files — it does not replace them (see
 [[decisions.md#2026-09-13 — `notes/work-log.md` complements, not replaces, existing tracking files|the related decision]]).
 
+## 2026-11-09 — B5: the floor and ceiling of the setpoints, and the hours below some temperatures (branch `v1.2.0`, on the server)
+
+- **Objective**: B5, after B1, in the order of the author (with decision D5).
+- **Affected files**: `accim/sim/ems/setpoint_limits.py` (new), `accim/constants.py`, `accim/sim/ems/inputs.py`,
+  `accim/sim/ems/programs.py`, `accim/sim/generation.py`, `accim/sim/accis.py`, `accim/sim/preview.py`,
+  `accim/utils/ems_code.py`, `accim/utils/verification.py`,
+  `accim/parametric_and_optimisation/funcs_for_besos/param_accis.py`, `accim/parametric_and_optimisation/parameters.py`,
+  `accim/parametric_and_optimisation/params_dicts.py`, `accim/gui/forms.py`, `accim/gui/app.py`,
+  `tests/core/test_setpoint_limits.py` (new), `tests/core/test_gui.py`,
+  `tests/parametric_and_optimisation/test_setpoint_limit_parameters.py` (new),
+  `tests/parametric_and_optimisation/test_legacy_names.py`, [[../docs/source/4_detailed use.md]] (4.2, 4.2.1, 4.2.3,
+  4.3, 4.6.1, 4.10), `docs/source/api/accim.sim.ems.rst`, `docs/source/parametric_and_optimisation.rst`,
+  [[../CHANGELOG.md]], [[../CAMBIOS_CODIGO_v1.2.0.md]] (§12), [[../DEVLOG.md]], [[../TODO.md]], [[decisions.md]],
+  [[questions.md]].
+- **Finding or decision**: See
+  [[decisions.md#2026-11-09 — The setpoints of the ACCIS can have a floor and a ceiling, and the zones count the occupied hours below some temperatures (B5)|the decision]].
+  Table B.2 and clause B.2.2 checked in UNE-EN 16798-1:2020. A program of each zone after SetAST that bounds the
+  setpoints and rounds them again gives the setpoints of the lines of v03 (checked with the interpreter). The
+  counters read the occupants of the timestep and the operative temperature of the previous one (checked with
+  EnergyPlus 25.1). With a run period from 8 January, the PMOT of `energyplus_running_means` (E1) is 0.142361 °C above
+  that of EnergyPlus (in [[../TODO.md]]). Four details decided provisionally in [[questions.md]].
+- **Validation**: 20 new tests (three with EnergyPlus 25.1), 2 of the parametric module and 2 of the GUI; two weeks of
+  EnergyPlus 25.1 at timestep frequency without mismatches in checks 4 and 5; `run_ep` with both backends, identical;
+  a screenshot of the frame; the whole suite; the documentation build.
+- **Next step**: C1.
+
 ## 2026-11-09 — B1: the outdoor metric of the custom model (branch `v1.2.0`, on the server)
 
 - **Objective**: B1, after A3, in the order of the author (with decisions D3 and D7).

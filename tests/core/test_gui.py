@@ -372,6 +372,48 @@ def test_the_outdoor_metric_of_the_custom_model_in_the_form(tmp_path):
         [('99', custom)])
 
 
+def test_the_floor_and_ceiling_of_the_setpoints_in_the_form(tmp_path):
+    from accim.constants import EN16798_TABLE_B2
+    from accim.gui import tasks
+
+    # None by default (empty fields), as in AddAccis
+    arguments = forms.add_accis_arguments(_form(tmp_path))
+    assert not {'heating_setpoint_floor', 'cooling_setpoint_ceiling', 'report_hours_below'} & set(arguments)
+    # The choices of Table B.2 of EN 16798-1 are its values
+    assert list(forms.EN16798_TABLE_B2_CHOICES.values()) == list(EN16798_TABLE_B2.values())
+    assert forms.EN16798_TABLE_B2_CHOICES['Residential, category II: 20.0 / 26.0 °C'] == (20.0, 26.0)
+    arguments = forms.add_accis_arguments(_form(tmp_path, heating_setpoint_floor='20', cooling_setpoint_ceiling=' 26 ',
+                                                report_hours_below='18, 17.5 16'))
+    assert (arguments['heating_setpoint_floor'], arguments['cooling_setpoint_ceiling']) == (20, 26)
+    assert arguments['report_hours_below'] == [18, 17.5, 16]
+    arguments = forms.add_accis_arguments(_form(tmp_path, cooling_setpoint_ceiling='25.5'))
+    assert arguments['cooling_setpoint_ceiling'] == 25.5 and 'heating_setpoint_floor' not in arguments
+    # The occupied hours below some temperatures also with the PMV-based setpoints, which have no floor nor ceiling
+    arguments = forms.add_accis_arguments(_form(tmp_path, setpoint_type='pmv', report_hours_below='18'))
+    assert arguments['report_hours_below'] == [18]
+    for values, message in ((dict(heating_setpoint_floor='27', cooling_setpoint_ceiling='26'), 'must be lower than'),
+                            (dict(heating_setpoint_floor='x'), "heating_setpoint_floor: 'x' is not a number"),
+                            (dict(setpoint_type='pmv', cooling_setpoint_ceiling='26'), 'PMV-based setpoints have '
+                                                                                       'neither floor nor ceiling'),
+                            (dict(report_hours_below='18 18'), 'repeated temperatures')):
+        with pytest.raises(FormError, match=message):
+            forms.add_accis_arguments(_form(tmp_path, **values))
+    # In the table of the zones, and in the EMS code of the form and of the zones
+    assert forms.parse_zone_arguments('heating_setpoint_floor=21, cooling_setpoint_ceiling=25.5') == dict(
+        heating_setpoint_floor=21, cooling_setpoint_ceiling=25.5)
+    calls = dict(forms.setpoint_ems_code_calls(_form(
+        tmp_path, category='2', heating_setpoint_floor='20', report_hours_below='18',
+        zone_arguments=[('Zone1', 'comfort_standard=2, category=80, cooling_setpoint_ceiling=25')])))
+    en16798, zone = (next(kwargs for title, kwargs in calls.items() if title.startswith(start))
+                     for start in ('1 ', 'Zone Zone1'))
+    assert en16798['heating_setpoint_floor'] == 20 and 'cooling_setpoint_ceiling' not in en16798
+    assert (zone['heating_setpoint_floor'], zone['cooling_setpoint_ceiling']) == (20, 25)
+    assert 'report_hours_below' not in en16798
+    text = tasks.setpoint_ems_code([('1', en16798)])
+    assert '! --- ApplySetpointLimits_<zone>' in text and 'set AHST = AHSTfloor' in text
+    assert 'set ACST = ACSTceil' not in text
+
+
 def _apmv_form(folder, **values):
     return dict(dict(forms.APMV_DEFAULTS, folder=str(folder), idf='model.idf'), **values)
 
@@ -1062,6 +1104,29 @@ def test_the_window_gives_the_outdoor_metric_of_the_custom_model(app, tmp_path, 
     assert tab.choose_epw() is True
     arguments = forms.add_accis_arguments(tab.form())
     assert (arguments['custom_outdoor_metric'], arguments['epw']) == ('te_ref_nl', str(tmp_path / 'weather.epw'))
+
+
+def test_the_window_gives_the_floor_and_ceiling_of_the_setpoints(app, tmp_path):
+    (tmp_path / 'model.idf').write_text('')
+    app.folder.set(str(tmp_path))
+    tab = app.add_accis
+
+    # The values of Table B.2 of EN 16798-1 fill both fields
+    assert list(tab.table_b2_combo.cget('values')) == ['', *forms.EN16798_TABLE_B2_CHOICES]
+    tab.table_b2.set('Office, category III: 19.0 / 27.0 °C')
+    assert (tab.vars['heating_setpoint_floor'].get(), tab.vars['cooling_setpoint_ceiling'].get()) == ('19.0', '27.0')
+    tab.vars['report_hours_below'].set('18 17')
+    arguments = forms.add_accis_arguments(tab.form())
+    assert (arguments['heating_setpoint_floor'], arguments['cooling_setpoint_ceiling']) == (19.0, 27.0)
+    assert arguments['report_hours_below'] == [18, 17]
+    # The PMV-based setpoints have neither floor nor ceiling: their fields are disabled and left out
+    tab.vars['setpoint_type'].set('pmv')
+    assert all(widget.instate(['disabled']) for widget in tab.limit_widgets[1:])
+    assert str(tab.table_b2_combo.cget('state')) == 'disabled'
+    arguments = forms.add_accis_arguments(tab.form())
+    assert 'heating_setpoint_floor' not in arguments and arguments['report_hours_below'] == [18, 17]
+    tab.vars['setpoint_type'].set('temperature')
+    assert not tab.limit_widgets[1].instate(['disabled'])
 
 
 def test_wrong_values_are_shown_and_nothing_runs(app, tmp_path):

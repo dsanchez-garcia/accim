@@ -1739,3 +1739,112 @@ class MultiplierVOF:
         """
         param_accis.modify_MultiplierVOF(idf, value)
 
+
+class HeatingSetpointFloor:
+    """OO wrapper for the ACCIS parameter ``heating_setpoint_floor`` (the input ``AHSTfloor``, accim 1.2.0): the
+    heating setpoint of all the zones is not lower than the value (°C), whatever the comfort standard and the comfort
+    mode are (EN 16798-1:2019 applies in winter the minimums of its Table B.2, ``accim.constants.EN16798_TABLE_B2``).
+
+    Usage
+    -----
+    Instantiate the class and call :meth:`modify` with ``idf`` and ``value``.
+
+    Examples
+    --------
+    p = HeatingSetpointFloor()
+    p.modify(idf, 20)
+    """
+
+    def __init__(self):
+        """Initialize the wrapper and expose the canonical parameter name.
+
+        Usage
+        -----
+        Use the instance ``name`` attribute for logging or mapping checks.
+
+        Examples
+        --------
+        HeatingSetpointFloor().name
+        'heating_setpoint_floor'
+        """
+        self.name = 'heating_setpoint_floor'
+
+    def modify(self, idf, value):
+        """Apply parameter ``heating_setpoint_floor`` to an IDF in place.
+
+        Parameters
+        ----------
+        idf : besos.IDF_class
+            Target building model to edit, with the ACCIS of accim 1.0.0 or later.
+        value : float
+            The floor of the heating setpoint (°C), written by ``param_accis.modify_AHSTfloor``.
+
+        Returns
+        -------
+        None
+            The function edits ``idf`` in place.
+
+        Usage
+        -----
+        Call this method before executing parametric or optimisation runs.
+
+        Examples
+        --------
+        HeatingSetpointFloor().modify(idf, 20)
+        """
+        param_accis.modify_AHSTfloor(idf, value)
+
+
+class CoolingSetpointCeiling:
+    """OO wrapper for the ACCIS parameter ``cooling_setpoint_ceiling`` (the input ``ACSTceil``, accim 1.2.0): the
+    cooling setpoint of all the zones is not higher than the value (°C), whatever the comfort standard and the comfort
+    mode are (the maximums of Table B.2 of EN 16798-1:2019, ``accim.constants.EN16798_TABLE_B2``).
+
+    Usage
+    -----
+    Instantiate the class and call :meth:`modify` with ``idf`` and ``value``.
+
+    Examples
+    --------
+    p = CoolingSetpointCeiling()
+    p.modify(idf, 26)
+    """
+
+    def __init__(self):
+        """Initialize the wrapper and expose the canonical parameter name.
+
+        Usage
+        -----
+        Use the instance ``name`` attribute for logging or mapping checks.
+
+        Examples
+        --------
+        CoolingSetpointCeiling().name
+        'cooling_setpoint_ceiling'
+        """
+        self.name = 'cooling_setpoint_ceiling'
+
+    def modify(self, idf, value):
+        """Apply parameter ``cooling_setpoint_ceiling`` to an IDF in place.
+
+        Parameters
+        ----------
+        idf : besos.IDF_class
+            Target building model to edit, with the ACCIS of accim 1.0.0 or later.
+        value : float
+            The ceiling of the cooling setpoint (°C), written by ``param_accis.modify_ACSTceil``.
+
+        Returns
+        -------
+        None
+            The function edits ``idf`` in place.
+
+        Usage
+        -----
+        Call this method before executing parametric or optimisation runs.
+
+        Examples
+        --------
+        CoolingSetpointCeiling().modify(idf, 26)
+        """
+        param_accis.modify_ACSTceil(idf, value)

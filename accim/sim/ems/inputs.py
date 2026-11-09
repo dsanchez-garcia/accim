@@ -57,13 +57,16 @@ class InputVariable:
         have.
     :ivar outdoor_metric_only: True for the inputs of the outdoor metric of the custom model, which only the models
         with the EMS code of the custom model have (:mod:`accim.sim.ems.outdoor_metric`).
+    :ivar optional: True for the inputs that SetInputData_<zone> only has if they are given (the floor of the heating
+        setpoint and the ceiling of the cooling setpoint, :mod:`accim.sim.ems.setpoint_limits`); their default is None.
     """
 
     variable: str
     argument: str
-    default: Number
+    default: Optional[Number]
     mixed_mode_only: bool = False
     outdoor_metric_only: bool = False
+    optional: bool = False
 
 
 #: The inputs, in the order of the lines of SetInputData_<zone>. The first 12 are those of the program SetInputData
@@ -95,6 +98,8 @@ INPUT_VARIABLES = (
     InputVariable('CustAST_metric', 'custom_outdoor_metric', 0, outdoor_metric_only=True),
     InputVariable('CustAST_alpha', 'custom_alpha', 0.8, outdoor_metric_only=True),
     InputVariable('CustAST_days', 'custom_days', 30, outdoor_metric_only=True),
+    InputVariable('AHSTfloor', 'heating_setpoint_floor', None, optional=True),
+    InputVariable('ACSTceil', 'cooling_setpoint_ceiling', None, optional=True),
     InputVariable('MaxTempDiffVOF', 'opening_factor_max_temp_diff', 6, mixed_mode_only=True),
     InputVariable('MinTempDiffVOF', 'opening_factor_min_temp_diff', 1, mixed_mode_only=True),
     InputVariable('MultiplierVOF', 'min_opening_factor', 0.25, mixed_mode_only=True),
@@ -134,7 +139,8 @@ def input_values(arguments: Mapping) -> Dict[str, Any]:
 
 def input_lines(values: Optional[Mapping[str, Any]] = None, mixed_mode: bool = True,
                 outdoor_metric: bool = False) -> List[str]:
-    """The lines of a program SetInputData_<zone>, with the default value of the variables not given.
+    """The lines of a program SetInputData_<zone>, with the default value of the variables not given (the optional
+    inputs, only if they are given).
 
     :param values: The values of some EMS variables (see :func:`input_values`).
     :param mixed_mode: False to leave out the inputs of the venting opening factor.
@@ -144,7 +150,8 @@ def input_lines(values: Optional[Mapping[str, Any]] = None, mixed_mode: bool = T
     values = values or {}
     return [f'set {item.variable} = {values.get(item.variable, item.default)}'
             for item in INPUT_VARIABLES
-            if (mixed_mode or not item.mixed_mode_only) and (outdoor_metric or not item.outdoor_metric_only)]
+            if (mixed_mode or not item.mixed_mode_only) and (outdoor_metric or not item.outdoor_metric_only)
+            and (not item.optional or values.get(item.variable) is not None)]
 
 
 def input_programs(idf) -> Dict[str, Any]:

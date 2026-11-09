@@ -57,6 +57,9 @@ accim_predef_model_params = {
     'min_outdoor_temp_offset': param_accis.modify_MinOToffset,
     'max_wind_speed': param_accis.modify_MaxWindSpeed,
     'setpoint_tolerance': param_accis.modify_ASTtol,
+    # The floor of the heating setpoint and the ceiling of the cooling setpoint (accim 1.2.0)
+    'heating_setpoint_floor': param_accis.modify_AHSTfloor,
+    'cooling_setpoint_ceiling': param_accis.modify_ACSTceil,
 }
 accim_custom_model_params = {
     # accim custom models parameters
@@ -71,6 +74,9 @@ accim_custom_model_params = {
     'custom_cooling_offset': param_accis.modify_CustAST_ACSToffset,
     'custom_heating_offset': param_accis.modify_CustAST_AHSToffset,
     'custom_offset': param_accis.modify_CustAST_ASToffset,
+    # The floor of the heating setpoint and the ceiling of the cooling setpoint (accim 1.2.0)
+    'heating_setpoint_floor': param_accis.modify_AHSTfloor,
+    'cooling_setpoint_ceiling': param_accis.modify_ACSTceil,
 }
 apmv_setpoints_params = {
     # apmv setpoints parameters

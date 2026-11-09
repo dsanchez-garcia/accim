@@ -101,6 +101,12 @@ def verify_accim_simulation(
     of the model do (with the values of the weather file given to AddAccis, or with PMOT). They are checked with the
     outputs at timestep frequency, or else hourly, of the last environment of the outputs (the run period).
 
+    **Check 5 – The floor and ceiling of the setpoints (per zone, output IDFs of AddAccis):**
+    The heating setpoint of each zone with a floor (``heating_setpoint_floor``, the input ``AHSTfloor`` of its program
+    ``SetInputData_<zone>``, see :mod:`accim.sim.ems.setpoint_limits`) is not below it (``Check5_AHSTfloor``), and the
+    cooling setpoint of each zone with a ceiling (``cooling_setpoint_ceiling``, ``ACSTceil``) is not above it
+    (``Check5_ACSTceil``), in the outputs at timestep frequency, or else hourly.
+
     :param eso_file_path: Path to the eplusout.eso file.
     :type eso_file_path: str
     :param idf_path: Path to the IDF file used for simulation (to read accim args and window names).
@@ -112,7 +118,7 @@ def verify_accim_simulation(
     :param epw: The weather file of the simulation, for check 4 (not done without it).
     :type epw: str, optional
     :param calculation_tolerance: The largest difference between the values that the EMS calculates and those of
-        checks 3 and 4 (in °C for the temperatures). Default is 0.001.
+        checks 3, 4 and 5 (in °C for the temperatures). Default is 0.001.
     :type calculation_tolerance: float
     :return: DataFrame with all detected mismatch timesteps, with columns
         ['timestep', 'zone_or_window', 'check', 'description', 'value_found', 'value_expected'].
@@ -781,6 +787,15 @@ def verify_accim_simulation(
         mismatch_rows.extend(rows)
 
     # ─────────────────────────────────────────────
+    # 5.E CHECK 5 – THE FLOOR AND CEILING OF THE SETPOINTS
+    # ─────────────────────────────────────────────
+    rows, messages = _setpoint_limit_mismatches(building, eso['data'], calculation_tolerance)
+    if messages:
+        print("\n--- Check 5: The floor of the heating setpoint and the ceiling of the cooling setpoint ---")
+        print('\n'.join(messages))
+    mismatch_rows.extend(rows)
+
+    # ─────────────────────────────────────────────
     # 6. RETURN RESULTS
     # ─────────────────────────────────────────────
     result_df = pd.DataFrame(mismatch_rows)
@@ -1215,6 +1230,52 @@ def _setpoint_mismatches(building, data: Mapping[str, pd.DataFrame], epw: str,
             expected = np.where(inside, preview['Tout_metric'].to_numpy(dtype=float), np.nan)
             new_rows, line = _mismatch_rows(timestamps, found[rows], expected, zone, 'Check4_Tout_metric',
                                             f'{OUTPUT_PREFIX}{zone} of compute_setpoints', tolerance)
+            mismatches.extend(new_rows)
+            lines.append(line)
+    return mismatches, lines
+
+
+def _setpoint_limit_mismatches(building, data: Mapping[str, pd.DataFrame],
+                               tolerance: float) -> Tuple[List[dict], List[str]]:
+    """Check 5 of :func:`verify_accim_simulation`: the heating setpoint of each zone with a floor (``AHSTfloor`` in
+    its program SetInputData_<zone>, :mod:`accim.sim.ems.setpoint_limits`) is not below it, and the cooling setpoint
+    of each zone with a ceiling (``ACSTceil``) is not above it, in the outputs of the setpoints of the zone at timestep
+    frequency, or else hourly (whose means keep the limits too).
+
+    :return: The mismatches, and the lines of the summary (none if no zone has a floor or a ceiling).
+    """
+    from accim.sim.ems.setpoint_limits import zone_limits
+
+    limits = {zone: values for zone, values in zone_limits(building).items()
+              if any(value is not None for value in values.values())}
+    if not limits:
+        return [], []
+    outputs_of_limits = {'AHSTfloor': ('Adaptive Heating Setpoint Temperature', np.maximum, 'floor'),
+                         'ACSTceil': ('Adaptive Cooling Setpoint Temperature', np.minimum, 'ceiling')}
+    chosen = None
+    for frequency in ('Timestep', 'Hourly'):
+        frame = data.get(frequency)
+        if frame is not None and not frame.empty:
+            outputs = _Outputs(frame)
+            if any(outputs.get('EMS', f'{output}_{zone}') is not None
+                   for zone in limits for output, _, _ in outputs_of_limits.values()):
+                chosen = frequency, outputs
+                break
+    if chosen is None:
+        return [], ['  Not checked: no setpoints of the zones (Adaptive Heating Setpoint Temperature_<zone>...) at '
+                    'timestep or hourly frequency.']
+    frequency, outputs = chosen
+    mismatches: List[dict] = []
+    lines = [f'  {frequency} outputs']
+    for zone, values in limits.items():
+        for variable, (output, bound, side) in outputs_of_limits.items():
+            limit = values[variable]
+            found = outputs.get('EMS', f'{output}_{zone}')
+            if limit is None or found is None:
+                continue
+            new_rows, line = _mismatch_rows(outputs.timestamps, found, bound(found, float(limit)), zone,
+                                            f'Check5_{variable}', f'{output}_{zone} within the {side} {limit}',
+                                            tolerance)
             mismatches.extend(new_rows)
             lines.append(line)
     return mismatches, lines

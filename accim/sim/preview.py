@@ -362,6 +362,10 @@ def compute_setpoints(epw: PathLike, comfort_standard: int, category: Optional[N
     names = set().union(*variables_in_programs(programs).values())
     erl = ErlProgramSet(programs, global_variables=names)
     order = ['SetAppLimits', 'ApplyCAT', 'SetComfTemp', 'SetAST', 'SetASTnoTol', counter]
+    # The floor and ceiling of the setpoints of the zone (accim.sim.ems.setpoint_limits), right after SetAST
+    limits = f'ApplySetpointLimits_{_ZONE}'
+    if limits in programs:
+        order.insert(order.index('SetAST') + 1, limits)
     # The programs that run in each timestep (those of the outdoor metric keep the daily values)
     every_timestep = [om.PROGRAM, inputs, zone_metric] if outdoor_metric else []
     if not outdoor_metric:

@@ -24,6 +24,52 @@ it here as answered).
 
 ## Open
 
+## 2026-11-09 — B5: where the floor and ceiling bound the setpoints
+- Context: the prompt of B5 puts the lines `if AHST < AHSTfloor ...` and `if ACST > ACSTceil ...` at the end of
+  SetAST, before ROUNDING, for every comfort standard and comfort mode. In accim, SetAST runs SetAST_Master and the
+  subprograms `SetAST_CS<n>_<k>`, shared by all the zones, whose branches of each comfort mode end with ROUNDING;
+  ROUNDING reads ACST and AHST (unrounded) and writes `roundedACST` and `roundedAHST`.
+- Why it matters: lines in the subprograms would change the output IDFs without a floor or a ceiling (they would need
+  a sentinel value for the zones without them, and a Null variable stops EnergyPlus), and they would be repeated in
+  every branch of every comfort mode.
+- Options considered: (a) the lines in every branch of the subprograms, with sentinel values; (b) a program of each
+  zone with a floor or a ceiling, `ApplySetpointLimits_<zone>`, run by `RunACCIS_<zone>` right after `run SetAST`,
+  which bounds ACST and AHST and runs the lines of ROUNDING again: the same setpoints as (a), and the output IDFs
+  without them do not change.
+- Owner: the author.
+- Status: open; option (b) decided provisionally, pending author (checked with the Erl interpreter: the setpoints are
+  those of bounding before the rounding; with EnergyPlus 25.1, no mismatch with `compute_setpoints`).
+
+## 2026-11-09 — B5: the floor and ceiling in modify_accis
+- Context: `modify_accis` writes the inputs of its arguments that are not None; several of them have numbers as
+  defaults, which every call writes.
+- Options considered: (a) numbers as defaults; (b) `None` by default, keeping the floor and ceiling of each zone, as
+  the arguments of the outdoor metric of B1; there is no way to remove them with `modify_accis` (a model without them
+  is made again with `AddAccis` or `add_accis_to_idf`, or the lines are removed from `SetInputData_<zone>` and
+  `accim.sim.ems.setpoint_limits.set_setpoint_limits_code` is called).
+- Owner: the author.
+- Status: open; option (b) decided provisionally, pending author (the most conservative: a call without them changes
+  nothing of the floor and ceiling).
+
+## 2026-11-09 — B5: the outputs of report_hours_below and the setpoint types
+- Context: the prompt asks for the counters `HoursBelow_<T>_<zone>`, but not with which outputs and setpoint types.
+- Options considered: the outputs of every `output_type` but 'custom' (the standard and detailed outputs take all the
+  EMS outputs; with 'simplified', their `Output:Variable` objects are added; with 'custom', the user keeps those
+  chosen); the counters also with `setpoint_type='pmv'`, since they only need the occupants and the operative
+  temperature (only the floor and ceiling are rejected there, D5); the temperatures with decimals named with `p`
+  (`HoursBelow_17p5_<zone>`: the names of the EMS cannot have dots) and `m` for the minus sign.
+- Owner: the author.
+- Status: open; these options decided provisionally, pending author.
+
+## 2026-11-09 — B5: a floor above the cooling setpoint, or a ceiling below the heating setpoint
+- Context: the floor only bounds the heating setpoint and the ceiling the cooling setpoint; accim checks that the floor
+  is lower than the ceiling, but a floor above the cooling setpoint of the comfort model (or a ceiling below its heating
+  setpoint) gives a heating setpoint above the cooling setpoint in those timesteps. v03 does not say what to do.
+- Options considered: (a) as v03 writes the lines, documented; (b) also raise the cooling setpoint to the floor and
+  lower the heating setpoint to the ceiling (not in v03).
+- Owner: the author.
+- Status: open; option (a) decided provisionally, pending author (documented in section 4.2.3 of the detailed use).
+
 ## 2026-11-09 — B1: does every model of the custom model have the EMS code of the outdoor metric, or only those that need it
 - Context: the prompt of B1 says that SetComfTemp, SetAppLimits and COUNT_HOURS of the custom model use `Tout_metric`,
   a new global variable and EMS output; with the default `'pmot'`, the behaviour must not change.

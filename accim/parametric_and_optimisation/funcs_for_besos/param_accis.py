@@ -35,7 +35,8 @@ import besos.IDF_class
 import pandas as pd
 
 from accim.sim.ems.inputs import input_programs, read_inputs, set_inputs
-from accim.sim.ems.programs import add_comfort_standard_code
+from accim.sim.ems.programs import add_comfort_standard_code, set_program_lines
+from accim.sim.ems.setpoint_limits import check_setpoint_limits, set_setpoint_limits_code
 
 #: The program, line and variable of each input of the ACCIS in the models of earlier versions of accim, which have
 #: one program SetInputData for all the zones and other inputs in SetAST, ApplyCAT, SetAppLimits and
@@ -367,6 +368,67 @@ def modify_ComfStand(idf: besos.IDF_class, value: int):
     _set_inputs(idf, {'ComfStand': value})
     if input_programs(idf):
         add_comfort_standard_code(idf, [value])
+
+
+def _set_setpoint_limit(idf, variable: str, value: float) -> None:
+    """Set the floor of the heating setpoint (AHSTfloor) or the ceiling of the cooling setpoint (ACSTceil) of all the
+    zones of a model of accim 1.0.0 or later, adding the lines that their programs SetInputData_<zone> do not have,
+    and the programs ApplySetpointLimits_<zone> (:mod:`accim.sim.ems.setpoint_limits`).
+
+    :raises ValueError: If the model has the ACCIS of an earlier version, the value is not a number, or the floor of a
+        zone would not be lower than its ceiling.
+    """
+    zone_programs = input_programs(idf)
+    if not zone_programs:
+        raise ValueError('The model has the ACCIS of an earlier version of accim, whose setpoints have neither floor '
+                         'nor ceiling. Add the ACCIS with this version of accim to the model without it.')
+    for zone, program in zone_programs.items():
+        limits = {name: read_inputs(program).get(name) for name in ('AHSTfloor', 'ACSTceil')}
+        limits[variable] = value
+        check_setpoint_limits(limits['AHSTfloor'], limits['ACSTceil'], where=zone)
+    for program in zone_programs.values():
+        if set_inputs(program, {variable: value}):
+            set_program_lines(program, [str(line).strip() for line in program.fieldvalues[2:]]
+                              + [f'set {variable} = {value}'])
+    set_setpoint_limits_code(idf)
+
+
+def modify_AHSTfloor(idf: besos.IDF_class, value: float):
+    """Modifies the floor of the heating setpoint (``heating_setpoint_floor``, the input AHSTfloor) of all the zones:
+    their heating setpoint is not lower than the value (°C), whatever the comfort standard and the comfort mode are
+    (EN 16798-1:2019 applies in winter the minimums of its Table B.2, ``accim.constants.EN16798_TABLE_B2``).
+
+    :param idf: The eppy or besos IDF class instance, with the ACCIS of accim 1.0.0 or later.
+    :param value: The floor (°C).
+
+    Usage
+    -----
+    Use `modify_AHSTfloor` within ACCIM parametric and optimisation workflows.
+
+    Examples
+    --------
+    result = modify_AHSTfloor(idf=..., value=20)
+    """
+    _set_setpoint_limit(idf, 'AHSTfloor', value)
+
+
+def modify_ACSTceil(idf: besos.IDF_class, value: float):
+    """Modifies the ceiling of the cooling setpoint (``cooling_setpoint_ceiling``, the input ACSTceil) of all the zones:
+    their cooling setpoint is not higher than the value (°C), whatever the comfort standard and the comfort mode are
+    (the maximums of Table B.2 of EN 16798-1:2019).
+
+    :param idf: The eppy or besos IDF class instance, with the ACCIS of accim 1.0.0 or later.
+    :param value: The ceiling (°C).
+
+    Usage
+    -----
+    Use `modify_ACSTceil` within ACCIM parametric and optimisation workflows.
+
+    Examples
+    --------
+    result = modify_ACSTceil(idf=..., value=26)
+    """
+    _set_setpoint_limit(idf, 'ACSTceil', value)
 
 
 def modify_CustAST_ACSTaul(idf: besos.IDF_class, value: float):

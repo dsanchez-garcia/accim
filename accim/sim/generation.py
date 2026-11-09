@@ -69,6 +69,10 @@ class GenerationArguments:
     custom_outdoor_metric: Union[str, int] = 'pmot'
     custom_alpha: Number = 0.8
     custom_days: int = 30
+    #: The floor of the heating setpoint and the ceiling of the cooling setpoint (see
+    #: :mod:`accim.sim.ems.setpoint_limits`); None for none
+    heating_setpoint_floor: Optional[Number] = None
+    cooling_setpoint_ceiling: Optional[Number] = None
 
     def __post_init__(self):
         self.comfort_standard = as_list(self.comfort_standard)
@@ -240,6 +244,7 @@ def zone_input_arguments(args: GenerationArguments, combination: Combination,
         custom_heating_upper_limit=a.custom_heating_upper_limit,
         custom_heating_lower_limit=a.custom_heating_lower_limit,
         custom_outdoor_metric=a.custom_outdoor_metric, custom_alpha=a.custom_alpha, custom_days=a.custom_days,
+        heating_setpoint_floor=a.heating_setpoint_floor, cooling_setpoint_ceiling=a.cooling_setpoint_ceiling,
         opening_factor_max_temp_diff=a.opening_factor_max_temp_diff,
         opening_factor_min_temp_diff=a.opening_factor_min_temp_diff, min_opening_factor=a.min_opening_factor,
     )

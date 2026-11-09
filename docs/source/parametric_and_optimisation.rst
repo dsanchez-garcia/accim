@@ -136,14 +136,17 @@ the object does to each model when it is created:
      - Adds accim to each model (:func:`~accim.sim.accis.add_accis_to_idf`)
      - ``comfort_standard``, ``category``, ``comfort_mode``, ``hvac_mode``, ``ventilation_control``,
        ``setpoint_tolerance`` and the other arguments of :func:`~accim.sim.accis.modify_accis`, with
-       their names (see :doc:`4_detailed use`)
+       their names (see :doc:`4_detailed use`); since accim 1.2.0, also ``heating_setpoint_floor`` and
+       ``cooling_setpoint_ceiling`` (the floor of the heating setpoint and the ceiling of the cooling
+       setpoint of all the zones)
    * - ``'accim custom model'``
      - Adds accim to each model, with the custom adaptive model
      - ``custom_slope`` (slope of the comfort temperature), ``custom_intercept`` (intercept),
        ``custom_offset`` (offset of the setpoints from the comfort temperature) and
        ``custom_lower_limit``/``custom_upper_limit`` (applicability limits of the running mean
        outdoor temperature); the offsets and limits can also be set separately for cooling and
-       heating (``custom_cooling_offset``, ``custom_heating_offset``, ``custom_cooling_lower_limit``...)
+       heating (``custom_cooling_offset``, ``custom_heating_offset``, ``custom_cooling_lower_limit``...);
+       since accim 1.2.0, also ``heating_setpoint_floor`` and ``cooling_setpoint_ceiling``
    * - ``'apmv setpoints'``
      - Applies the aPMV setpoints with the default values of ``apply_apmv_setpoints``, unless
        ``bypass_add_accis=True``

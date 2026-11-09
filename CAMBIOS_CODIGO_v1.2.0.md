@@ -5,12 +5,13 @@ documentación de uso. Recoge las propuestas del bloque A de `notes/PROPUESTAS_M
 (índices de confort derivados del PMV; archivos del autor, en git desde el commit `e238dad`) que el autor pidió para
 esta versión: las P1, A2, A1 y A5, en este orden; y después D2 (sección 7), que el autor incluyó en la 1.2.0 el
 2026-11-09 con E2 y E1, y las demás propuestas de la v03 (`notes/PROPUESTAS_MEJORAS_post_1.1.0_v03.md`), en el orden
-del autor (`notes/COPILOT_BRIEF_v1.2.0_v01.md`): E1 (sección 8), E2 (sección 9), A3 (sección 10), B1 (sección 11)...
+del autor (`notes/COPILOT_BRIEF_v1.2.0_v01.md`): E1 (sección 8), E2 (sección 9), A3 (sección 10), B1 (sección 11),
+B5 (sección 12)...
 
 Lo que ya está en otros documentos no se repite aquí:
 
 - `CHANGELOG.md` (sección Unreleased): los cambios que ve el usuario.
-- `docs/source/4_detailed use.md`, secciones 4.3.1, 4.6.1, 4.7.3, 4.8 y 4.8.1: el uso.
+- `docs/source/4_detailed use.md`, secciones 4.2.2, 4.2.3, 4.3.1, 4.6.1, 4.7.3, 4.8 y 4.8.1: el uso.
 - `DEVLOG.md`: el registro del trabajo, con cómo se comprobó.
 - `notes/decisions.md`: las decisiones y sus motivos.
 
@@ -43,6 +44,11 @@ Lo que ya está en otros documentos no se repite aquí:
 - **B1.** El modelo personalizado elige su temperatura exterior de referencia (`custom_outdoor_metric`): las medias de
   EnergyPlus o las de EN 16798-1 (B.1, B.2), ASHRAE 55 (n días), la media diaria, la mensual del EPW y la Te,ref de la
   ATG, calculadas en Erl sin `TrendVariable`, solo en los IDF que las usan (sección 11).
+- **B5.** Suelo de la consigna de calefacción y techo de la de refrigeración (`heating_setpoint_floor`,
+  `cooling_setpoint_ceiling`; los valores de la tabla B.2 de EN 16798-1 en `accim.constants.EN16798_TABLE_B2`), para
+  todas las normas y modos de confort, salvo las consignas basadas en el PMV (D5); y las horas ocupadas por debajo de
+  unas temperaturas (`report_hours_below`, salidas `HoursBelow_<T>_<zona>`). Solo los IDF que los usan cambian
+  (sección 12).
 - Las categorías del PMV y la aproximación de la corrección del metabolismo se han comprobado en ISO 7730:2025 y
   EN 16798-1:2019, y el modelo dinámico de vestimenta de A5, en Schiavon y Lee (2013) y ASHRAE 55-2020 (sección 6).
 - Lo que quedaba abierto se ha comprobado: el golden master y las pruebas de EnergyPlus 26.1 y 26.2, también la de A5
@@ -711,3 +717,97 @@ la media de ASHRAE 55 de EnergyPlus.
   comprobación 4, también en `Check4_Tout_metric`. Backends (`run_ep(backend='ems')` frente a `'api'`, tres de esos
   modelos): todas las columnas idénticas (diferencia máxima 0,0; 8496, 8496 y 5904 filas), 13,5 s frente a 16,2 s,
   12,8 frente a 16,2 y 9,5 frente a 13,1.
+
+## 12. El suelo y el techo de las consignas, y las horas por debajo de unas temperaturas (B5)
+
+La propuesta B5 pide los argumentos `heating_setpoint_floor` (clave `AHSTfloor`) y `cooling_setpoint_ceiling`
+(`ACSTceil`) de `AddAccis`, `None` por defecto, aplicados en todas las normas y modos de confort como las últimas
+líneas de `SetAST` antes de `ROUNDING` (`if AHST < AHSTfloor; set AHST = AHSTfloor` y `if ACST > ACSTceil; set ACST =
+ACSTceil`); la constante `EN16798_TABLE_B2` con el mínimo de calefacción y el máximo de refrigeración por tipo de
+edificio y categoría (residencial I–IV: 21,0/25,5, 20,0/26,0, 18,0/27,0, 16,0/28,0; oficina I–IV: 21,0/25,5,
+20,0/26,0, 19,0/27,0, 18,0/28,0); la lista opcional `report_hours_below` con los contadores `HoursBelow_<T>_<zona>`;
+las clases `HeatingSetpointFloor` y `CoolingSetpointCeiling` del paramétrico; y pruebas en una semana de invierno y
+otra de verano. La decisión D5 del brief: no se aplican a las consignas basadas en el PMV (se documenta). Los valores
+de la tabla B.2 se han comprobado en UNE-EN 16798-1:2020 (página 49): la tabla está en B.2.1 (edificios con
+refrigeración mecánica) y B.2.2 (edificios sin ella, el modelo adaptativo) dice que «durante la estación de invierno,
+deben aplicarse los mismos límites de temperatura que los mostrados en la tabla B.2» (página 51); la tabla supone
+~1,0 clo en invierno, ~0,5 clo en verano y ~1,2 met.
+
+**Antes.** Los límites de aplicabilidad de cada norma cambian la ecuación de las consignas (modos 1, 2 y 3), pero
+nada las acotaba: con el modo 3 de INT EN16798, categoría II, la consigna de calefacción de Sevilla en enero es de unos
+18 °C, por debajo de los 20 °C de la tabla B.2.
+
+**Ahora.**
+
+- `accim/sim/ems/setpoint_limits.py` (nuevo):
+  - `INPUTS = ('AHSTfloor', 'ACSTceil')`, `PROGRAM_PREFIX = 'ApplySetpointLimits_'`, `HOURS_BELOW_PROGRAM_PREFIX =
+    'CountHoursBelow_'`, `HOURS_BELOW_PREFIX = 'HoursBelow_'`.
+  - `check_setpoint_limits(suelo, techo, where)` (números o `None`, y suelo < techo), `check_hours_below` (lista de
+    números distintos; `None` o `[]`, ninguna), `hours_below_variable(T, zona)` (`HoursBelow_17p5_<zona>` para 17,5, y
+    `m` por el signo menos: los nombres del EMS no admiten puntos).
+  - `limit_program_lines(suelo, techo)`: las líneas de `ApplySetpointLimits_<zona>`, que acotan `AHST` y `ACST` y
+    repiten `ROUNDING`.
+  - `set_setpoint_limits_code(idf)`: escribe, actualiza o quita `ApplySetpointLimits_<zona>` según las entradas de cada
+    `SetInputData_<zona>`, con la línea `run ApplySetpointLimits_<zona>` justo después de `run SetAST` en
+    `RunACCIS_<zona>`, y declara `AHSTfloor` y `ACSTceil` (un objeto `EnergyManagementSystem:GlobalVariable`) si alguna
+    zona los tiene. `has_setpoint_limits`, `zone_limits`.
+  - `hours_below_lines(zona, T)` y `set_hours_below_code(idf, T, frecuencias)`: el programa `CountHoursBelow_<zona>`
+    (`if Occ_count_<zona> > 0` y `if <zona>_OpT < T` → `1*ZoneTimeStep`, como `COUNT_HOURS_NO_APP`), que
+    `RunACCIS_<zona>` ejecuta tras `CountHoursNoApp_<zona>`, las variables globales y las salidas EMS `Summed` en
+    horas.
+- `accim/constants.py`: `EN16798_TABLE_B2`, con los valores de la v03, comprobados en la norma.
+- `accim/sim/ems/inputs.py`: `InputVariable.optional`; las entradas opcionales `AHSTfloor` y `ACSTceil` (tras
+  `CustAST_days`), que `input_lines` solo escribe si tienen valor, así que los IDF sin ellas no cambian.
+  `ZONE_ARGUMENTS` las incluye.
+- `accim/sim/generation.py`: `GenerationArguments` tiene `heating_setpoint_floor` y `cooling_setpoint_ceiling`.
+- `accim/sim/accis.py`: `AddAccis` tiene los tres argumentos al final de la firma (`_check_setpoint_limits`, también
+  por zona; `ValueError` con `setpoint_type='pmv'`, D5; los prompts no los preguntan, `_NOT_ASKED_ARGUMENTS`);
+  `set_hours_below_code` antes de las salidas (las salidas estándar y detalladas toman todas las salidas EMS; con
+  `'simplified'`, `_add_hours_below_outputs` añade las suyas); `_write_output_idfs` llama a
+  `set_setpoint_limits_code` tras `set_combination`. `modify_accis` tiene el suelo y el techo al final, `None` por
+  defecto (conservan los de cada zona), y añade las líneas que falten; los modelos de versiones anteriores no los
+  admiten.
+- `accim/sim/ems/programs.py`: `set_comfort_standard_code` añade primero el código de la métrica exterior de B1 y
+  después escribe los programas de las normas, para que los subprogramas `SetAST_CS<n>_<k>` sean siempre los últimos
+  programas del modelo y el orden de los programas sea el mismo en todos los IDF de salida (antes, la métrica iba al
+  final; solo afecta a los IDF de 99 con una métrica distinta de `'pmot'`, que son nuevos en 1.2.0).
+- `accim/utils/ems_code.py`: `get_setpoint_ems_code` y `get_setpoint_ems_programs` toman el suelo y el techo y dan las
+  entradas y el programa `ApplySetpointLimits_<zone>` antes de `SetASTnoTol`, con una leyenda. `accim/sim/preview.py`:
+  `compute_setpoints` ejecuta ese programa justo después de `SetAST`. `accim/utils/verification.py`: la comprobación 5
+  (`Check5_AHSTfloor`, `Check5_ACSTceil`); la 4 ya compara las consignas acotadas, porque toma las entradas de cada
+  zona.
+- Paramétrico: `param_accis.modify_AHSTfloor` y `modify_ACSTceil` (todas las zonas, con la comprobación del suelo
+  frente al techo de cada zona), las clases `HeatingSetpointFloor` y `CoolingSetpointCeiling` de `parameters.py`, y
+  los parámetros `heating_setpoint_floor` y `cooling_setpoint_ceiling` de los modelos predefinidos y personalizados
+  (`params_dicts`, y las tuplas de la GUI, que deben coincidir).
+- GUI: un marco nuevo en *Add the ACCIS* con una lista de los valores de la tabla B.2, que rellena el suelo y el techo
+  (vacíos: ninguno; desactivados con las consignas del PMV) y las temperaturas de `report_hours_below`;
+  `forms.setpoint_limit_arguments`, `SETPOINT_LIMIT_FIELDS`, `EN16798_TABLE_B2_CHOICES`; el código EMS de la GUI
+  incluye el suelo y el techo, también los de cada zona.
+- Desviaciones de la v03: las líneas no están al final de los subprogramas de `SetAST`, sino en un programa de cada
+  zona que se ejecuta justo después de `SetAST`, acota `AHST` y `ACST` y repite `ROUNDING`: como `ROUNDING` lee `ACST`
+  y `AHST` sin redondear y escribe `roundedACST` y `roundedAHST`, el resultado es exactamente el de acotar antes del
+  redondeo (comprobado con el intérprete en un año: las consignas son las de acotar y redondear con las fórmulas de
+  `ROUNDING`), los subprogramas compartidos no cambian y no hace falta un valor centinela para las zonas sin suelo ni
+  techo (una variable nula detiene EnergyPlus); las clases del paramétrico llevan los nombres de la v03, no el nombre
+  de la variable EMS como las demás (`ASTtol`...); y los parámetros se registran ya en el paramétrico (C1 añadirá los
+  demás).
+- Pruebas: `tests/core/test_setpoint_limits.py` (20: la tabla B.2; las comprobaciones y los nombres; las líneas; los
+  contadores con el intérprete; con `compute_setpoints`, un semestre con suelo y techo (INT EN16798), solo suelo (INT
+  ASHRAE55) y solo techo (ESP CTE, consignas estáticas): las consignas son las de acotar antes de redondear, y las demás
+  columnas no cambian; el código EMS; AddAccis: con `None` los IDF son idénticos a los de antes, y con suelo y techo
+  solo cambian las entradas, las líneas de `RunACCIS_<zona>`, los programas nuevos y las variables globales; suelo de
+  una zona; los errores; las horas por debajo con salidas estándar y simplificadas, y con `'pmv'`; `modify_accis` y el
+  paramétrico; los modelos de 0.x; EnergyPlus 25.1: una semana de invierno (1–7/01) y otra de verano (15–21/07) por
+  paso de tiempo con suelo 20, techo 26 y horas por debajo de 26, 25 y 24,5 °C: comprobaciones 4 y 5 sin
+  discrepancias, el suelo actúa en todos los pasos de invierno y el techo (25,9999 °C) en más del 90 % de los de verano,
+  y los contadores son exactamente la duración del paso cuando la zona tiene ocupantes y su temperatura operativa del
+  paso anterior está por debajo, decrecientes con T; y los dos backends idénticos) y
+  `tests/parametric_and_optimisation/test_setpoint_limit_parameters.py` (2).
+- Comparaciones con EnergyPlus 25.1 (fuera del repositorio): con la temperatura operativa del paso actual en lugar de
+  la del anterior, los contadores difieren en 5 a 8 pasos por semana, así que el EMS lee la del paso anterior. Backends
+  (`run_ep(backend='ems')` frente a `'api'`, las dos semanas por paso de tiempo): 1008 filas y 108 columnas idénticas
+  (diferencia máxima 0,0, también en las 18 columnas de las consignas y los contadores), 5,7 s frente a 7,0 s y 4,1 s
+  frente a 6,5 s.
+- Hallazgo: con un periodo que empieza el 8 de enero, el PMOT de `energyplus_running_means` (E1) es 0,142361 °C mayor
+  que el de EnergyPlus todos los días de la semana (`TODO.md`); con el 1 de enero y el 15 de julio, coinciden.

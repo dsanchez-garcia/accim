@@ -11,6 +11,31 @@ Durable architectural/process decisions for this repository and its Obsidian
 vault. Newest first. Use [[templates/decision-record.md|the decision-record
 template]] to add a new entry.
 
+## 2026-11-09 — The setpoints of the ACCIS can have a floor and a ceiling, and the zones count the occupied hours below some temperatures (B5)
+
+- **Status**: accepted (proposal B5 of `notes/PROPUESTAS_MEJORAS_post_1.1.0_v03.md` with decision D5 of
+  `notes/COPILOT_BRIEF_v1.2.0_v01.md`; four details were decided provisionally, see questions.md)
+- **Context**: EN 16798-1:2019 gives in Table B.2 the default design values of the indoor operative temperature
+  (minimum for heating, maximum for cooling) of the buildings with mechanical cooling, and B.2.2 applies them in winter
+  to those without it (checked in UNE-EN 16798-1:2020, pages 49 and 51). In accim, the applicability limits change the
+  equation of the setpoints but do not bound them. B5 asks for `heating_setpoint_floor` (`AHSTfloor`) and
+  `cooling_setpoint_ceiling` (`ACSTceil`), applied before ROUNDING in every comfort standard and comfort mode,
+  `EN16798_TABLE_B2`, `report_hours_below` (`HoursBelow_<T>_<zone>`) and the parametric classes
+  `HeatingSetpointFloor` and `CoolingSetpointCeiling`; D5: the setpoints based on the PMV have neither.
+- **Decision**: `accim.sim.ems.setpoint_limits`: the zones with a floor or a ceiling get the optional inputs
+  `AHSTfloor` and `ACSTceil` in `SetInputData_<zone>` and the program `ApplySetpointLimits_<zone>`, which
+  `RunACCIS_<zone>` runs right after `SetAST`: it bounds AHST and ACST and runs the lines of ROUNDING again, so the
+  setpoints are those of bounding before the rounding; the shared subprograms do not change. `report_hours_below`
+  adds `CountHoursBelow_<zone>` after the other hour counters, with summed EMS outputs in hours. `AddAccis` rejects the
+  floor and ceiling with `setpoint_type='pmv'`; `modify_accis` keeps them when its arguments are None; the parametric
+  module sets them in all the zones. `get_setpoint_ems_code`, `compute_setpoints`, `verify_accim_simulation` (check 5)
+  and the GUI (with the values of Table B.2) follow.
+- **Consequences**: the output IDFs without a floor or a ceiling do not change (golden master). Since the cooling
+  setpoint is rounded down strictly, a cooling setpoint bounded by the ceiling is one step of `setpoint_accuracy`
+  below it (25.9999 °C with 26 °C and 10000), as with the lines of v03. With EnergyPlus 25.1, the setpoints of a winter
+  and a summer week are within them and those of `compute_setpoints`, the counters are those of the occupants of the
+  timestep and the operative temperature of the previous one, and both backends give identical results.
+
 ## 2026-11-09 — The custom model calculates its outdoor metric in Erl, only where a zone needs it (B1)
 
 - **Status**: accepted (proposal B1 of `notes/PROPUESTAS_MEJORAS_post_1.1.0_v03.md` with decisions D3 and D7 of

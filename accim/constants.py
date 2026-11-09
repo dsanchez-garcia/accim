@@ -6,6 +6,7 @@
 
 __all__ = [
     'APMV_ADAPTIVE_COEFFICIENTS',
+    'EN16798_TABLE_B2',
     'ENERGYPLUS_VERSIONS_WITH_SPACES',
     'EPMV_EXPECTANCY_RANGES',
     'EPMV_MET_REDUCTION_PER_PMV',
@@ -33,6 +34,26 @@ EPMV_EXPECTANCY_RANGES = {'high': (0.9, 1.0), 'moderate': (0.7, 0.9), 'low': (0.
 #: The reduction of the metabolic rate for each unit of PMV above neutral (Fanger and Toftum, 2002): the PMV is
 #: calculated again with the activity level multiplied by 1 - 0.067·PMV.
 EPMV_MET_REDUCTION_PER_PMV = 0.067
+
+#: The default design values of the indoor operative temperature (°C) of EN 16798-1:2019, Table B.2, for buildings
+#: with mechanical cooling systems, by type of building and category: (minimum for heating, in winter, about 1.0 clo;
+#: maximum for cooling, in summer, about 0.5 clo), with sedentary activity (about 1.2 met), 50 % of relative humidity
+#: and air speeds below 0.1 m/s. 'residential' are the living spaces of residential buildings (bedrooms, living
+#: rooms...), and 'office' the offices and spaces with similar activity (meeting rooms, auditoria, cafeterias,
+#: restaurants, classrooms...). B.2.2 applies them in winter also to the buildings without mechanical cooling systems,
+#: whose adaptive limits (Figure B.1) apply in summer and the mid-seasons. They are the arguments
+#: ``heating_setpoint_floor`` and ``cooling_setpoint_ceiling`` of :class:`accim.sim.accis.AddAccis` (proposal B5 of
+#: ``notes/PROPUESTAS_MEJORAS_post_1.1.0_v03.md``).
+EN16798_TABLE_B2 = {
+    ('residential', 1): (21.0, 25.5),
+    ('residential', 2): (20.0, 26.0),
+    ('residential', 3): (18.0, 27.0),
+    ('residential', 4): (16.0, 28.0),
+    ('office', 1): (21.0, 25.5),
+    ('office', 2): (20.0, 26.0),
+    ('office', 3): (19.0, 27.0),
+    ('office', 4): (18.0, 28.0),
+}
 
 _ZHANG_2024 = '10.1016/j.buildenv.2024.111481 (Zhang, Yao and Li, 2024), Table 6 (lambda_N)'
 _GB_T_50785 = 'GB/T 50785-2012, via 10.1016/j.buildenv.2024.111481 (Zhang, Yao and Li, 2024), Table 1'

@@ -22,7 +22,7 @@ def _simulation(**kwargs):
 
 
 #: The parameters added after accim 1.0.0, which have no name of accim 0.x
-PARAMETERS_WITHOUT_LEGACY_NAMES = {'expectancy_factor'}
+PARAMETERS_WITHOUT_LEGACY_NAMES = {'expectancy_factor', 'heating_setpoint_floor', 'cooling_setpoint_ceiling'}
 
 
 def test_the_legacy_names_are_those_of_all_the_parameters():

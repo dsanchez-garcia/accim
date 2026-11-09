@@ -60,6 +60,14 @@ accim.sim.ems.setast module
    :show-inheritance:
    :undoc-members:
 
+accim.sim.ems.setpoint\_limits module
+-------------------------------------
+
+.. automodule:: accim.sim.ems.setpoint_limits
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
 accim.sim.ems.setpoint\_lines module
 ------------------------------------
 

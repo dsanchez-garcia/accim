@@ -584,7 +584,8 @@ class AddAccisTab(_Tab):
                      'ventilation_setpoint_offset', 'min_outdoor_temp_offset', 'max_wind_speed',
                      'opening_factor_max_temp_diff', 'opening_factor_min_temp_diff', 'min_opening_factor',
                      'setpoint_tolerance_start', 'setpoint_tolerance_end', 'setpoint_tolerance_step', 'name_suffix',
-                     *forms.CUSTOM_MODEL_FIELDS, 'custom_outdoor_metric', *forms.CUSTOM_OUTDOOR_METRIC_FIELDS, 'epw'):
+                     *forms.CUSTOM_MODEL_FIELDS, 'custom_outdoor_metric', *forms.CUSTOM_OUTDOOR_METRIC_FIELDS, 'epw',
+                     *forms.SETPOINT_LIMIT_FIELDS, 'report_hours_below'):
             self.vars[name] = tk.StringVar(value=defaults[name])
         for name in ('keep_existing_outputs', 'add_building_averages', 'debug_ems', *forms.EXISTING_HVAC_OPTIONS):
             self.vars[name] = tk.BooleanVar(value=defaults[name])
@@ -608,7 +609,8 @@ class AddAccisTab(_Tab):
         self._mixed_mode_frame(body).grid(row=4, column=0, sticky='nsew', padx=(0, 6), pady=4)
         self._custom_frame(body).grid(row=4, column=1, sticky='nsew', pady=4)
         self._existing_hvac_frame(body).grid(row=5, column=0, columnspan=2, sticky='ew', pady=4)
-        self._tolerance_frame(body).grid(row=6, column=0, columnspan=2, sticky='ew', pady=4)
+        self._setpoint_limits_frame(body).grid(row=6, column=0, columnspan=2, sticky='ew', pady=4)
+        self._tolerance_frame(body).grid(row=7, column=0, columnspan=2, sticky='ew', pady=4)
         ttk.Button(self.bar, text='Preview', command=self.preview).pack(side='left')
         self.ems_code_button = ttk.Button(self.bar, text='EMS code of the setpoints...', command=self.show_ems_code)
         self.ems_code_button.pack(side='left', padx=(6, 0))
@@ -784,6 +786,32 @@ class AddAccisTab(_Tab):
          self.availability_combo) = _existing_hvac_widgets(frame, self.vars)
         return frame
 
+    def _setpoint_limits_frame(self, parent) -> ttk.LabelFrame:
+        frame = ttk.LabelFrame(parent, text='Floor and ceiling of the setpoints (setpoint type temperature), and '
+                                            'occupied hours below some temperatures', padding=6)
+        # The values of Table B.2 of EN 16798-1 fill both fields (accim.constants.EN16798_TABLE_B2)
+        self.table_b2 = tk.StringVar(value='')
+        self.table_b2_combo = _grid_combo(frame, 0, 'EN 16798-1, Table B.2 (fills the floor and ceiling):',
+                                          self.table_b2, ('', *forms.EN16798_TABLE_B2_CHOICES), width=34)
+        self.table_b2.trace_add('write', lambda *args: self._table_b2_chosen())
+        self.limit_widgets: List[Any] = [self.table_b2_combo]
+        for row, (name, (label, _)) in enumerate(forms.SETPOINT_LIMIT_FIELDS.items(), start=1):
+            self.limit_widgets.append(_grid_entry(frame, row, f'{label}:', self.vars[name], width=8))
+        _grid_entry(frame, 3, 'Occupied hours below (°C, such as 18 17 16; empty: none):',
+                    self.vars['report_hours_below'], width=8)
+        ttk.Label(frame, text='The heating setpoint is not lower than the floor, and the cooling setpoint not higher '
+                              'than the ceiling, whatever the comfort standard and comfort mode (the cooling '
+                              'setpoint is rounded down, below the ceiling). The PMV-based setpoints have neither.',
+                  wraplength=760, foreground='gray25').grid(row=4, column=0, columnspan=2, sticky='w', pady=(2, 0))
+        return frame
+
+    def _table_b2_chosen(self) -> None:
+        """Fill the floor and ceiling of the setpoints with the values of Table B.2 of EN 16798-1 chosen."""
+        values = forms.EN16798_TABLE_B2_CHOICES.get(self.table_b2.get())
+        if values is not None:
+            for name, value in zip(forms.SETPOINT_LIMIT_FIELDS, values):
+                self.vars[name].set(str(value))
+
     def _tolerance_frame(self, parent) -> ttk.LabelFrame:
         frame = ttk.LabelFrame(parent, text='Tolerance of the setpoints and names of the output IDFs', padding=6)
         _grid_entry(frame, 0, 'Tolerance from (°C):', self.vars['setpoint_tolerance_start'], width=8)
@@ -847,6 +875,8 @@ class AddAccisTab(_Tab):
                                  self.availability_combo, script_type.startswith('ex'), temperature)
         _set_state(self.comfort_widgets, temperature)
         _set_state([self.ems_code_button], temperature)
+        # The PMV-based setpoints have neither floor nor ceiling (decision D5 of accim 1.2.0)
+        _set_state(self.limit_widgets, temperature)
         self.zone_table.set_state(temperature, () if mixed_mode else ('hvac_mode', 'ventilation_control'))
         standards = self.selected_standards() if temperature else []
         _set_state(self.custom_widgets, 99 in standards)
@@ -894,6 +924,9 @@ class AddAccisTab(_Tab):
         if values['setpoint_type'] == 'pmv' and not values['comfort_standard']:
             # The comfort models are not used with PMV control, but AddAccis needs them
             values['comfort_standard'] = forms.ADD_ACCIS_DEFAULTS['comfort_standard']
+        if values['setpoint_type'] != 'temperature':
+            # The fields of the floor and ceiling of the setpoints are disabled
+            values.update(dict.fromkeys(forms.SETPOINT_LIMIT_FIELDS, ''))
         return values
 
     def state(self) -> Dict[str, Any]:
