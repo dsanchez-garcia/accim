@@ -3037,7 +3037,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             self,
             buildings: Union[Any, List] = None,
             epws: list = None,
-            parameters_type: Literal['accim custom model', 'accim predefined model', 'apmv setpoints', None] = None,
+            parameters_type: Literal['accim custom model', 'accim predefined model', 'apmv setpoints', 'epmv setpoints', None] = None,
             output_type: Literal['standard', 'custom', 'detailed', 'simplified'] = 'standard',
             keep_existing_outputs: bool = True,
             output_frequencies: List[allowed_output_freqs] = ['hourly'],
@@ -3124,6 +3124,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         is_accim_predef_model = False
         is_accim_custom_model = False
         is_apmv_setpoints = False
+        is_epmv_setpoints = False
         if parameters_type == 'accim custom model':
             setpoint_type = 'temperature'
             is_accim_custom_model = True
@@ -3133,10 +3134,13 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         elif parameters_type == 'apmv setpoints':
             setpoint_type = 'PMV'
             is_apmv_setpoints = True
+        elif parameters_type == 'epmv setpoints':
+            setpoint_type = 'PMV'
+            is_epmv_setpoints = True
         elif parameters_type is None:
             setpoint_type = None
         else:
-            raise KeyError(f'String {parameters_type} entered in argument parametric_simulation_type is not supported. Valid strings are: "accim custom model", "accim predefined model" or "apmv setpoints".')
+            raise KeyError(f'String {parameters_type} entered in argument parametric_simulation_type is not supported. Valid strings are: "accim custom model", "accim predefined model", "apmv setpoints" or "epmv setpoints".')
         allowed_script_types = ['vrf_mm', 'vrf_ac', 'ex_ac']
         if script_type not in allowed_script_types:
             raise ValueError(f'Invalid script_type: {script_type}. Allowed values are: {allowed_script_types}')
@@ -3184,13 +3188,14 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                         existing_hvac_ideal_loads_backup=existing_hvac_ideal_loads_backup,
                         existing_hvac_radiant_setpoints=existing_hvac_radiant_setpoints,
                     )
-        elif is_apmv_setpoints:
+        elif is_apmv_setpoints or is_epmv_setpoints:
+            apply_setpoints = apmv.apply_apmv_setpoints if is_apmv_setpoints else apmv.apply_epmv_setpoints
             if not bypass_add_accis:
                 if isinstance(buildings, list):
                     for b in buildings:
-                        apmv.apply_apmv_setpoints(building=b, output_frequencies=output_frequencies)
+                        apply_setpoints(building=b, output_frequencies=output_frequencies)
                 else:
-                    apmv.apply_apmv_setpoints(building=buildings, output_frequencies=output_frequencies)
+                    apply_setpoints(building=buildings, output_frequencies=output_frequencies)
             print('Arguments output_type, keep_existing_outputs, script_type, and supply_air_temp_input_method are only used in accim predefined and custom models, therefore these will not have any effect in this case.')
         elif parameters_type is None:
             self.script_type = None
@@ -3202,6 +3207,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         self.is_accim_custom_model = is_accim_custom_model
         self.is_accim_predef_model = is_accim_predef_model
         self.is_apmv_setpoints = is_apmv_setpoints
+        self.is_epmv_setpoints = is_epmv_setpoints
         self.bypass_add_accis = bypass_add_accis
 
         for b in self.buildings:
@@ -6312,6 +6318,8 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             available_params = [i for i in params_dicts.accim_custom_model_params.keys()]
         elif self.is_apmv_setpoints:
             available_params = [i for i in params_dicts.apmv_setpoints_params.keys()]
+        elif getattr(self, 'is_epmv_setpoints', False):
+            available_params = [i for i in params_dicts.epmv_setpoints_params.keys()]
         else:
             available_params = []
         return available_params
@@ -13408,7 +13416,7 @@ class ParametricSimulation(SimulationBase):
             self,
             buildings: Union[Any, List] = None,
             epws: list = None,
-            parameters_type: Literal['accim custom model', 'accim predefined model', 'apmv setpoints', None] = None,
+            parameters_type: Literal['accim custom model', 'accim predefined model', 'apmv setpoints', 'epmv setpoints', None] = None,
             output_type: Literal['standard', 'custom', 'detailed', 'simplified'] = 'standard',
             keep_existing_outputs: bool = True,
             output_frequencies: List[allowed_output_freqs] = ['hourly'],
@@ -13438,7 +13446,7 @@ class ParametricSimulation(SimulationBase):
         :param buildings: one BESOS/eppy IDF object or a list of IDF objects.
         :param epws: one EPW filename or a list of EPW filenames.
         :param parameters_type: parameter workflow to prepare: accim custom model,
-            accim predefined model, apmv setpoints, or None.
+            accim predefined model, apmv setpoints, epmv setpoints, or None.
         :param output_type: output selection preset used by addAccis.
         :param keep_existing_outputs: keep existing IDF output objects when addAccis runs.
         :param output_frequencies: output frequencies requested from EnergyPlus.
@@ -13590,7 +13598,7 @@ class OptimisationSimulation(SimulationBase):
             self,
             buildings: Union[Any, List] = None,
             epws: list = None,
-            parameters_type: Literal['accim custom model', 'accim predefined model', 'apmv setpoints', None] = None,
+            parameters_type: Literal['accim custom model', 'accim predefined model', 'apmv setpoints', 'epmv setpoints', None] = None,
             output_type: Literal['standard', 'custom', 'detailed', 'simplified'] = 'standard',
             keep_existing_outputs: bool = True,
             output_frequencies: List[allowed_output_freqs] = ['hourly'],
@@ -13620,7 +13628,7 @@ class OptimisationSimulation(SimulationBase):
         :param buildings: one BESOS/eppy IDF object or a list of IDF objects.
         :param epws: one EPW filename or a list of EPW filenames.
         :param parameters_type: parameter workflow to prepare: accim custom model,
-            accim predefined model, apmv setpoints, or None.
+            accim predefined model, apmv setpoints, epmv setpoints, or None.
         :param output_type: output selection preset used by addAccis.
         :param keep_existing_outputs: keep existing IDF output objects when addAccis runs.
         :param output_frequencies: output frequencies requested from EnergyPlus.

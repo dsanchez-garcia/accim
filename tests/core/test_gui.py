@@ -9,6 +9,7 @@ import copy
 import inspect
 import json
 import os
+import re
 import shutil
 from pathlib import Path
 from types import SimpleNamespace
@@ -333,7 +334,7 @@ def test_arguments_of_the_apmv_setpoints(tmp_path):
     arguments = forms.apmv_arguments(_apmv_form(tmp_path))
 
     assert arguments == dict(
-        idf='model.idf', output_idf='model_aPMV.idf', energyplus_version='auto', add_vrf_system=True,
+        idf='model.idf', output_idf='model_aPMV.idf', index='apmv', energyplus_version='auto', add_vrf_system=True,
         supply_air_temp_input_method='temperature difference', always_occupied=False,
         apmv=dict(output_frequencies=['hourly'], other_pmv_related_outputs=True, adaptive_coefficient_cooling=0.293,
                   adaptive_coefficient_heating=-0.293, pmv_cooling_setpoint=0.5, pmv_heating_setpoint=-0.5,
@@ -384,15 +385,71 @@ def test_the_apmv_setpoints_of_each_zone(tmp_path):
     assert apmv['default_adaptive_coefficient_cooling'] == 0.293
     assert apmv['pmv_heating_setpoint'] == -0.5 and 'default_pmv_heating_setpoint' not in apmv
     fields = {'adaptive_coefficient_cooling': '', 'adaptive_coefficient_heating': '', 'pmv_cooling_setpoint': '0.7',
-              'pmv_heating_setpoint': ''}
+              'pmv_heating_setpoint': '', 'expectancy_factor': ''}
     text = forms.apmv_zone_row_text(fields, 'cooling_setpoint_tolerance_cooling_season=-0.2')
     assert text == rows[0][1]
     assert forms.split_apmv_zone_setpoints(text) == (fields, 'cooling_setpoint_tolerance_cooling_season=-0.2')
-    with pytest.raises(FormError, match="'activity_level' is not an aPMV setpoint of a zone"):
+    with pytest.raises(FormError, match="'activity_level' is not a PMV-based setpoint of a zone"):
         forms.apmv_arguments(_apmv_form(tmp_path, zone_setpoints=[('Z', 'activity_level=100')]))
     with pytest.raises(FormError, match="the zone 'z' is given twice"):
         forms.apmv_arguments(_apmv_form(tmp_path, zone_setpoints=[('Z', 'pmv_cooling_setpoint=1'),
                                                                   ('z', 'pmv_cooling_setpoint=1')]))
+
+
+def test_the_epmv_and_pmv_setpoints_of_the_form(tmp_path):
+    from accim.sim.apmv import apply_epmv_setpoints
+
+    (tmp_path / 'model.idf').write_text('')
+
+    arguments = forms.apmv_arguments(_apmv_form(tmp_path, index='epmv'))
+    # Only the setpoints of the ePMV, with its options; the defaults of the form are those of apply_epmv_setpoints
+    assert arguments['index'] == 'epmv' and arguments['output_idf'] == 'model_ePMV.idf'
+    apmv = arguments['apmv']
+    assert 'adaptive_coefficient_cooling' not in apmv and 'adaptive_coefficient_heating' not in apmv
+    defaults = inspect.signature(apply_epmv_setpoints).parameters
+    for name in ('expectancy_factor', 'pmv_cooling_setpoint', 'apply_to_heating', 'metabolic_correction',
+                 'heating_setpoint_tolerance_heating_season', 'cooling_season_start'):
+        assert apmv[name] == defaults[name].default, name
+    apmv = forms.apmv_arguments(_apmv_form(tmp_path, index='epmv', metabolic_correction=True,
+                                           zone_setpoints=[('Block1:Zone1', 'expectancy_factor=0.6')]))['apmv']
+    assert apmv['metabolic_correction'] is True and apmv['apply_to_heating'] is False
+    assert apmv['expectancy_factor'] == {'Block1:Zone1': 0.6} and apmv['default_expectancy_factor'] == 0.8
+
+    arguments = forms.apmv_arguments(_apmv_form(tmp_path, index='pmv'))
+    assert arguments['output_idf'] == 'model_PMV.idf'
+    assert not {'adaptive_coefficient_cooling', 'expectancy_factor', 'metabolic_correction'} & set(arguments['apmv'])
+    # The forms of the sessions of accim 1.1.0 have no index: the aPMV
+    form = _apmv_form(tmp_path)
+    del form['index']
+    assert forms.apmv_arguments(form)['index'] == 'apmv'
+
+
+@pytest.mark.parametrize('values, message', [
+    (dict(index='athb'), "index: choose one of"),
+    (dict(index='epmv', expectancy_factor='0.4'), 'expectancy_factor: 0.4 is not between 0.5 and 1.0'),
+    (dict(index='epmv', zone_setpoints=[('Z', 'expectancy_factor=1.2')]), '1.2 is not between 0.5 and 1.0'),
+    (dict(index='epmv', zone_setpoints=[('Z', 'adaptive_coefficient_cooling=0.3')]),
+     r"zone_setpoints of 'Z': \['adaptive_coefficient_cooling'\] are not setpoints of the ePMV"),
+    (dict(index='apmv', zone_setpoints=[('Z', 'expectancy_factor=0.7')]), 'are not setpoints of the aPMV'),
+    (dict(index='pmv', zone_setpoints=[('Z', 'expectancy_factor=0.7')]), 'are not setpoints of the PMV'),
+])
+def test_wrong_arguments_of_the_epmv_and_pmv_setpoints(tmp_path, values, message):
+    (tmp_path / 'model.idf').write_text('')
+    with pytest.raises(FormError, match=message):
+        forms.apmv_arguments(_apmv_form(tmp_path, **values))
+
+
+def test_the_indices_of_the_form_are_those_of_accim():
+    from accim.sim import apmv
+    from accim.sim.pmv_index import PMV_INDICES
+
+    assert set(forms.PMV_INDEX_FUNCTIONS) == set(PMV_INDICES) == set(forms.PMV_INDEX_NAMES)
+    for index, pmv_index in PMV_INDICES.items():
+        assert forms.PMV_INDEX_NAMES[index] == pmv_index.name
+        assert forms.PMV_INDEX_PARAMETERS[index] == tuple(p.argument for p in pmv_index.parameters)
+        function = getattr(apmv, forms.PMV_INDEX_FUNCTIONS[index])
+        assert set(forms.index_setpoint_fields(index)) <= set(inspect.signature(function).parameters)
+    assert set(forms.EPMV_OPTIONS) == set(PMV_INDICES['epmv'].options)
 
 
 def test_arguments_of_rename_epw_files(tmp_path):
@@ -570,10 +627,11 @@ def test_the_task_of_the_apmv_setpoints(tmp_path, monkeypatch):
     arguments = forms.apmv_arguments(_apmv_form(tmp_path, always_occupied=True, air_velocity='0.2'))
 
     assert tasks.apply_apmv(arguments) == 'model_aPMV.idf' and building.saved == 'model_aPMV.idf'
+    # The inputs of the PMV are set before the setpoints (the metabolic correction of the ePMV reads them)
     assert [call[0] for call in calls] == ['load', 'set_zones_always_occupied', 'add_vrf_system',
-                                           'apply_apmv_setpoints', 'set_pmv_input_parameters']
+                                           'set_pmv_input_parameters', 'apply_apmv_setpoints']
     assert calls[2][1] == {'supply_air_temp_input_method': 'temperature difference'}
-    assert calls[3][1] == arguments['apmv'] and calls[4][1] == {'air_velocity': 0.2}
+    assert calls[3][1] == {'air_velocity': 0.2} and calls[4][1] == arguments['apmv']
 
 
 @needs_energyplus
@@ -586,6 +644,37 @@ def test_the_apmv_setpoints_of_the_form_on_the_sample_model(tmp_path, monkeypatc
     assert tasks.apply_apmv(forms.apmv_arguments(_apmv_form(tmp_path))) == 'model_aPMV.idf'
     text = (tmp_path / 'model_aPMV.idf').read_text(encoding='latin-1')
     assert 'apply_aPMV_' in text and 'set_zone_input_data_' in text
+
+
+def test_the_task_of_the_epmv_setpoints(tmp_path, monkeypatch):
+    from accim.gui import tasks
+    from accim.sim import accis, apmv
+
+    calls, building = [], _Building()
+    monkeypatch.setattr(accis, 'load_idf', lambda idf, version: building)
+    for name in ('add_vrf_system', 'apply_apmv_setpoints', 'apply_epmv_setpoints', 'apply_pmv_setpoints'):
+        monkeypatch.setattr(apmv, name, lambda b, _name=name, **kwargs: calls.append((_name, kwargs)))
+    (tmp_path / 'model.idf').write_text('')
+
+    for index, function in (('epmv', 'apply_epmv_setpoints'), ('pmv', 'apply_pmv_setpoints')):
+        arguments = forms.apmv_arguments(_apmv_form(tmp_path, index=index))
+        assert tasks.apply_apmv(arguments) == arguments['output_idf'] == building.saved
+        assert calls[-1] == (function, arguments['apmv'])
+
+
+@needs_energyplus
+def test_the_epmv_setpoints_with_the_metabolic_correction_on_the_sample_model(tmp_path, monkeypatch):
+    from accim.gui import tasks
+
+    shutil.copy(SAMPLE_IDF, tmp_path / 'model.idf')
+    monkeypatch.chdir(tmp_path)
+
+    # The activity level of the form is that which the metabolic correction reduces
+    assert tasks.apply_apmv(forms.apmv_arguments(_apmv_form(tmp_path, index='epmv', metabolic_correction=True,
+                                                            activity_level='110'))) == 'model_ePMV.idf'
+    text = (tmp_path / 'model_ePMV.idf').read_text(encoding='latin-1')
+    assert 'apply_ePMV_' in text and 'correct_activity_People_Block1_Zone1' in text
+    assert re.search(r'Activity_base_People_Block1_Zone1,\s*!- Name\s*Sch_Act_People_Block1_Zone1,', text)
 
 
 def test_the_zones_of_the_apmv_setpoints_get_their_keys_in_the_model(monkeypatch):
@@ -926,7 +1015,7 @@ def test_the_table_of_the_hours_within_the_setpoints(app, tmp_path):
 
 def test_the_tabs_of_the_window(app):
     assert [app.notebook.tab(tab, 'text') for tab in app.notebook.tabs()] == [
-        '1. Add the ACCIS', '2. aPMV setpoints', '3. Rename the EPWs', '4. Run the simulations',
+        '1. Add the ACCIS', '2. PMV-based setpoints', '3. Rename the EPWs', '4. Run the simulations',
         '5. Hours within the setpoints', '6. Table and figures', '7. Parametric study']
 
 
@@ -1146,9 +1235,40 @@ def test_the_tab_of_the_apmv_setpoints(app, tmp_path):
     assert arguments['apmv']['pmv_cooling_setpoint'] == {'Block1:Zone1': 0.7}
     assert arguments['apmv']['default_pmv_cooling_setpoint'] == 0.5
     tab.zone_table.other.set('activity_level=100')
-    assert not tab.zone_table.set_zone() and "'activity_level' is not an aPMV setpoint of a zone" in app.errors[-1]
+    assert not tab.zone_table.set_zone() and "'activity_level' is not a PMV-based setpoint of a zone" in app.errors[-1]
     tab.vars['idf'].set('')
     assert tab.find_zones() is False and app.errors[-1] == 'Choose the input IDF first.'
+
+
+def test_the_tab_enables_the_fields_of_the_index(app, tmp_path):
+    (tmp_path / 'model.idf').write_text('')
+    app.folder.set(str(tmp_path))
+    tab = app.apmv
+
+    def enabled(widget):
+        return not widget.instate(['disabled'])
+
+    assert enabled(tab.setpoint_entries['adaptive_coefficient_cooling'])
+    assert not enabled(tab.setpoint_entries['expectancy_factor']) and not any(map(enabled, tab.epmv_checks))
+    tab.vars['index'].set('epmv')
+    tab.update_state()
+    assert not enabled(tab.setpoint_entries['adaptive_coefficient_heating'])
+    assert enabled(tab.setpoint_entries['expectancy_factor']) and all(map(enabled, tab.epmv_checks))
+    assert enabled(tab.setpoint_entries['pmv_cooling_setpoint'])
+    # The table of the zones: the fields of the index only
+    assert not enabled(tab.zone_table.fields['adaptive_coefficient_cooling'])
+    assert enabled(tab.zone_table.fields['expectancy_factor'])
+    tab.zone_table.zone.set('Block1:Zone1')
+    tab.zone_table.vars['expectancy_factor'].set('0.6')
+    assert tab.zone_table.set_zone()
+    tab.vars['metabolic_correction'].set(True)
+    arguments = forms.apmv_arguments(tab.form())
+    assert arguments['output_idf'] == 'model_ePMV.idf' and arguments['apmv']['metabolic_correction'] is True
+    assert arguments['apmv']['expectancy_factor'] == {'Block1:Zone1': 0.6}
+    tab.vars['index'].set('pmv')
+    tab.update_state()
+    assert not enabled(tab.setpoint_entries['expectancy_factor']) and not any(map(enabled, tab.epmv_checks))
+    assert tab.state()['index'] == 'pmv'
 
 
 def test_the_tab_of_rename_epw_files(app, tmp_path, monkeypatch):

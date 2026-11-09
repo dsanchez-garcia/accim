@@ -81,11 +81,19 @@ apmv_setpoints_params = {
     'pmv_cooling_setpoint': param_apmv.change_pmv_cooling_setpoint_all_zones,
     'pmv_heating_setpoint': param_apmv.change_pmv_heating_setpoint_all_zones,
 }
+epmv_setpoints_params = {
+    # epmv setpoints parameters (the setpoints are on the ePMV scale)
+    'expectancy_factor': param_apmv.change_expectancy_factor_all_zones,
+    'pmv_setpoint': param_apmv.change_pmv_setpoint_all_zones,
+    'pmv_cooling_setpoint': param_apmv.change_pmv_cooling_setpoint_all_zones,
+    'pmv_heating_setpoint': param_apmv.change_pmv_heating_setpoint_all_zones,
+}
 
 all_params = {}
 all_params.update(accim_predef_model_params)
 all_params.update(accim_custom_model_params)
 all_params.update(apmv_setpoints_params)
+all_params.update(epmv_setpoints_params)
 
 #: The names of the parameters in accim 0.x -> their names since accim 1.0.0
 LEGACY_PARAMETER_NAMES = {

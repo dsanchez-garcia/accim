@@ -150,14 +150,20 @@ the object does to each model when it is created:
      - ``adaptive_coefficient_cooling``, ``adaptive_coefficient_heating``,
        ``pmv_cooling_setpoint``, ``pmv_heating_setpoint``, and ``adaptive_coefficient`` and
        ``pmv_setpoint`` to vary both seasons, or both setpoints (-s and +s), together
+   * - ``'epmv setpoints'``
+     - Applies the ePMV setpoints with the default values of ``apply_epmv_setpoints``, unless
+       ``bypass_add_accis=True`` (since accim 1.2.0)
+     - ``expectancy_factor`` (between 0.5 and 1), ``pmv_cooling_setpoint``, ``pmv_heating_setpoint`` and
+       ``pmv_setpoint`` (both setpoints together), on the ePMV scale
 
 ``sim.get_available_parameters()`` lists the names. The parameters have the names of the arguments
 of :mod:`accim.sim` since accim 1.0.0; their names of accim 0.x (``ComfStand``, ``CustAST_m``,
 ``'PMV setpoint'``...) still work, with a ``DeprecationWarning``, and the results of accim 0.x get
 the new names when they are loaded (see :doc:`9_migration_guide`). The parameters of the accim models set the
 arguments of all the occupied zones (each zone has them in its EMS program ``SetInputData_<zone>``).
-For the aPMV setpoints, apply them yourself
-with explicit values, as in step 1, and pass ``bypass_add_accis=True``: the parameters of the study
+For the aPMV and ePMV setpoints, apply them yourself
+with explicit values, as in step 1 (for the ePMV, with ``apply_epmv_setpoints()``, section 4.8 of
+:doc:`4_detailed use`), and pass ``bypass_add_accis=True``: the parameters of the study
 then replace only the values they vary, and the object does not apply the setpoints again.
 
 The other arguments are passed to :func:`~accim.sim.accis.add_accis_to_idf`, which has the same

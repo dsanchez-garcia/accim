@@ -29,6 +29,7 @@ __all__ = [
     'CUSTOM_MODEL_FIELDS',
     'CUSTOM_MODEL_PARAMETERS',
     'ENERGYPLUS_VERSIONS',
+    'EPMV_OPTIONS',
     'EXISTING_HVAC_AVAILABILITY',
     'EXISTING_HVAC_DEFAULTS',
     'EXISTING_HVAC_OPTIONS',
@@ -41,6 +42,9 @@ __all__ = [
     'PARAMETRIC_DEFAULTS',
     'PARAMETRIC_SCRIPT_TYPES',
     'PARAMETERS_TYPES',
+    'PMV_INDEX_FUNCTIONS',
+    'PMV_INDEX_NAMES',
+    'PMV_INDEX_PARAMETERS',
     'PMV_INPUT_FIELDS',
     'PREDEFINED_MODEL_PARAMETERS',
     'RENAME_EPWS_DEFAULTS',
@@ -68,6 +72,7 @@ __all__ = [
     'figure_arguments',
     'hours_zones',
     'idf_files',
+    'index_setpoint_fields',
     'input_idfs',
     'output_idf_count',
     'parametric_arguments',
@@ -192,21 +197,35 @@ ADD_ACCIS_DEFAULTS = {
 RUN_DEFAULTS = {'only_accim_idfs': True, 'processes': '2', 'energyplus_version': 'auto', 'backend': 'ems',
                 'simulate': False}
 
-#: The setpoints of the aPMV (the arguments of apply_apmv_setpoints): argument -> label.
+#: The indices of the PMV-based setpoints, and the functions of accim.sim.apmv that apply them: index -> function.
+PMV_INDEX_FUNCTIONS = {'apmv': 'apply_apmv_setpoints', 'epmv': 'apply_epmv_setpoints', 'pmv': 'apply_pmv_setpoints'}
+#: The name of each index (in the EMS objects, and in the name of the output IDF, '<input IDF>_<name>.idf').
+PMV_INDEX_NAMES = {'apmv': 'aPMV', 'epmv': 'ePMV', 'pmv': 'PMV'}
+#: The setpoints of each index that the other indices do not have (those of accim.sim.pmv_index.PMV_INDICES).
+PMV_INDEX_PARAMETERS = {'apmv': ('adaptive_coefficient_cooling', 'adaptive_coefficient_heating'),
+                        'epmv': ('expectancy_factor',), 'pmv': ()}
+#: The setpoints of the PMV-based setpoints (the arguments of apply_apmv_setpoints, apply_epmv_setpoints and
+#: apply_pmv_setpoints): argument -> label.
 APMV_SETPOINT_FIELDS = {
-    'adaptive_coefficient_cooling': 'Adaptive coefficient λ, cooling season',
-    'adaptive_coefficient_heating': 'Adaptive coefficient λ, heating season',
-    'pmv_cooling_setpoint': 'aPMV setpoint for cooling',
-    'pmv_heating_setpoint': 'aPMV setpoint for heating',
+    'adaptive_coefficient_cooling': 'Adaptive coefficient λ, cooling season (aPMV)',
+    'adaptive_coefficient_heating': 'Adaptive coefficient λ, heating season (aPMV)',
+    'expectancy_factor': 'Expectancy factor e, cooling season (ePMV)',
+    'pmv_cooling_setpoint': 'Setpoint for cooling (aPMV, ePMV or PMV)',
+    'pmv_heating_setpoint': 'Setpoint for heating (aPMV, ePMV or PMV)',
     'cooling_setpoint_tolerance_cooling_season': 'Tolerance of the cooling setpoint, cooling season',
     'cooling_setpoint_tolerance_heating_season': 'Tolerance of the cooling setpoint, heating season',
     'heating_setpoint_tolerance_cooling_season': 'Tolerance of the heating setpoint, cooling season',
     'heating_setpoint_tolerance_heating_season': 'Tolerance of the heating setpoint, heating season',
 }
-#: The aPMV setpoints that have a field of their own in the table of the zones of the window (the tolerances are
+#: The setpoints that have a field of their own in the table of the zones of the window (the tolerances are
 #: written as pairs name=value).
 APMV_ZONE_FIELDS = ('adaptive_coefficient_cooling', 'adaptive_coefficient_heating', 'pmv_cooling_setpoint',
-                    'pmv_heating_setpoint')
+                    'pmv_heating_setpoint', 'expectancy_factor')
+#: The options of the ePMV setpoints (the arguments of apply_epmv_setpoints): argument -> label.
+EPMV_OPTIONS = {
+    'apply_to_heating': 'The expectancy factor also on the heating setpoint (apply_to_heating)',
+    'metabolic_correction': 'Metabolic correction of the activity level (metabolic_correction)',
+}
 #: The inputs of the PMV of the People objects (the arguments of set_pmv_input_parameters): argument -> label.
 PMV_INPUT_FIELDS = {
     'activity_level': 'Activity level (W/person)',
@@ -214,8 +233,8 @@ PMV_INPUT_FIELDS = {
     'air_velocity': 'Air velocity (m/s)',
     'work_efficiency': 'Work efficiency (0 to 1)',
 }
-#: The initial values of the form of the aPMV setpoints (the defaults of apply_apmv_setpoints; the inputs of the PMV,
-#: empty, keep those of the model).
+#: The initial values of the form of the PMV-based setpoints (the defaults of apply_apmv_setpoints and
+#: apply_epmv_setpoints; the inputs of the PMV, empty, keep those of the model).
 APMV_DEFAULTS = {
     'idf': '',
     'output_idf': '',
@@ -225,14 +244,18 @@ APMV_DEFAULTS = {
     'always_occupied': False,
     'output_frequencies': ['hourly'],
     'other_pmv_related_outputs': True,
+    'index': 'apmv',
     'adaptive_coefficient_cooling': '0.293',
     'adaptive_coefficient_heating': '-0.293',
+    'expectancy_factor': '0.8',
     'pmv_cooling_setpoint': '0.5',
     'pmv_heating_setpoint': '-0.5',
     'cooling_setpoint_tolerance_cooling_season': '-0.1',
     'cooling_setpoint_tolerance_heating_season': '-0.1',
     'heating_setpoint_tolerance_cooling_season': '0.1',
     'heating_setpoint_tolerance_heating_season': '0.1',
+    'apply_to_heating': False,
+    'metabolic_correction': False,
     'cooling_season_start': '121',
     'cooling_season_end': '274',
     **{name: '' for name in PMV_INPUT_FIELDS},
@@ -903,17 +926,18 @@ def _file_of_folder(form: Mapping[str, Any], name: str, choices: Iterable[str], 
 
 
 def parse_apmv_zone_setpoints(text: Any, zone: str = '') -> Dict[str, Number]:
-    """The aPMV setpoints of a zone, from a text such as ``'pmv_cooling_setpoint=0.7, pmv_heating_setpoint=-0.7'``:
-    pairs ``name=value`` separated by commas, semicolons or new lines, with the names of :data:`APMV_SETPOINT_FIELDS`.
+    """The PMV-based setpoints of a zone, from a text such as
+    ``'pmv_cooling_setpoint=0.7, pmv_heating_setpoint=-0.7'``: pairs ``name=value`` separated by commas, semicolons or
+    new lines, with the names of :data:`APMV_SETPOINT_FIELDS`.
 
     :raises FormError: If a name is not one of them, is repeated, or its value is not a number.
     """
     label = f'zone_setpoints of {zone!r}' if zone else 'zone_setpoints'
-    return _pairs(text, label, APMV_SETPOINT_FIELDS, 'an aPMV setpoint of a zone')
+    return _pairs(text, label, APMV_SETPOINT_FIELDS, 'a PMV-based setpoint of a zone')
 
 
 def apmv_zone_row_text(fields: Mapping[str, Any], other: Any = '', zone: str = '') -> str:
-    """The text of the aPMV setpoints of a zone (as :func:`parse_apmv_zone_setpoints` reads it) from the fields of the
+    """The text of the PMV-based setpoints of a zone (as :func:`parse_apmv_zone_setpoints` reads it) from the fields of the
     table of the zones of the window (those of :data:`APMV_ZONE_FIELDS`; empty: the value of all the zones) and the
     other setpoints (the tolerances), as pairs name=value.
 
@@ -923,13 +947,13 @@ def apmv_zone_row_text(fields: Mapping[str, Any], other: Any = '', zone: str = '
 
 
 def split_apmv_zone_setpoints(text: Any, zone: str = '') -> Tuple[Dict[str, str], str]:
-    """The fields of the table of the zones of the aPMV setpoints (:data:`APMV_ZONE_FIELDS`) and the other setpoints
+    """The fields of the table of the zones of the PMV-based setpoints (:data:`APMV_ZONE_FIELDS`) and the other setpoints
     of the text of a zone: the reverse of :func:`apmv_zone_row_text`."""
     return _split_row(text, APMV_ZONE_FIELDS, parse_apmv_zone_setpoints, zone)
 
 
 def apmv_zone_setpoints(rows: Iterable[Tuple[str, str]]) -> Dict[str, Dict[str, Number]]:
-    """The aPMV setpoints of some zones from the rows of their table: (zone, text of its setpoints, as in
+    """The PMV-based setpoints of some zones from the rows of their table: (zone, text of its setpoints, as in
     :func:`parse_apmv_zone_setpoints`), by zone.
 
     :raises FormError: If a zone is missing or repeated, or its setpoints are not valid.
@@ -969,25 +993,38 @@ def hours_zones(text: Any) -> Union[str, List[str]]:
     return zones
 
 
+def index_setpoint_fields(index: str) -> List[str]:
+    """The setpoints of :data:`APMV_SETPOINT_FIELDS` that an index of :data:`PMV_INDEX_FUNCTIONS` takes: its own
+    parameters and those that all the indices take (the setpoints and their tolerances)."""
+    others = {name for key, names in PMV_INDEX_PARAMETERS.items() if key != index for name in names}
+    return [name for name in APMV_SETPOINT_FIELDS if name not in others]
+
+
 def apmv_arguments(form: Mapping[str, Any]) -> Dict[str, Any]:
-    """The arguments of the aPMV setpoints (:mod:`accim.sim.apmv`) from the values of their form (as in
+    """The arguments of the PMV-based setpoints (:mod:`accim.sim.apmv`) from the values of their form (as in
     :data:`APMV_DEFAULTS`, with ``folder``, and ``zone_setpoints``, the rows of the table of the zones with other
     setpoints, see :func:`apmv_zone_setpoints`; none by default).
 
     :return: ``idf`` and ``output_idf`` (the names of the input IDF and of the IDF to write, by default
-        '<input IDF>_aPMV.idf'), ``energyplus_version``, ``add_vrf_system`` and ``supply_air_temp_input_method``
-        (:func:`accim.sim.apmv.add_vrf_system`), ``always_occupied``
-        (:func:`accim.sim.apmv.set_zones_always_occupied`), ``apmv`` (the keyword arguments of
-        :func:`accim.sim.apmv.apply_apmv_setpoints`: each setpoint that some zones of the table change is a
-        dictionary ``{zone: value}``, with the value of the form as its ``default_*`` argument, for the other zones;
-        :func:`accim.gui.tasks.apply_apmv` gives these dictionaries the keys of the zones in the model) and
-        ``pmv_inputs`` (those of :func:`accim.sim.apmv.set_pmv_input_parameters` that are given; empty to keep those
-        of the model).
+        '<input IDF>_<index>.idf', such as '<input IDF>_aPMV.idf'), ``index`` (the index of the setpoints, a key of
+        :data:`PMV_INDEX_FUNCTIONS`; 'apmv' if the form has none), ``energyplus_version``, ``add_vrf_system`` and
+        ``supply_air_temp_input_method`` (:func:`accim.sim.apmv.add_vrf_system`), ``always_occupied``
+        (:func:`accim.sim.apmv.set_zones_always_occupied`), ``apmv`` (the keyword arguments of the function of the
+        index, such as :func:`accim.sim.apmv.apply_apmv_setpoints`, with the setpoints of the index
+        (:func:`index_setpoint_fields`) and, for the ePMV, the options of :data:`EPMV_OPTIONS`: each setpoint that
+        some zones of the table change is a dictionary ``{zone: value}``, with the value of the form as its
+        ``default_*`` argument, for the other zones; :func:`accim.gui.tasks.apply_apmv` gives these dictionaries the
+        keys of the zones in the model) and ``pmv_inputs`` (those of :func:`accim.sim.apmv.set_pmv_input_parameters`
+        that are given; empty to keep those of the model).
     :raises FormError: If a value is missing or not valid.
     """
+    from accim.constants import EPMV_EXPECTANCY_RANGES
+
     folder = _folder(form, 'the input IDF')
     idf = _file_of_folder(form, 'idf', input_idfs(folder), 'the input IDF')
-    output_idf = str(form.get('output_idf', '')).strip() or f'{os.path.splitext(idf)[0]}_aPMV.idf'
+    index = _choice({'index': form.get('index') or 'apmv'}, 'index', PMV_INDEX_FUNCTIONS)
+    output_idf = (str(form.get('output_idf', '')).strip()
+                  or f'{os.path.splitext(idf)[0]}_{PMV_INDEX_NAMES[index]}.idf')
     if not output_idf.lower().endswith('.idf') or os.path.basename(output_idf) != output_idf:
         raise FormError('output_idf: enter the name of an IDF file of the folder (ending in .idf).')
     if output_idf.lower() == idf.lower():
@@ -995,20 +1032,36 @@ def apmv_arguments(form: Mapping[str, Any]) -> Dict[str, Any]:
     output_frequencies = [f for f in OUTPUT_FREQUENCIES if f in (form.get('output_frequencies') or [])]
     if not output_frequencies:
         raise FormError('output_frequencies: check at least one output frequency.')
+    fields = index_setpoint_fields(index)
     apmv = dict(output_frequencies=output_frequencies,
                 other_pmv_related_outputs=bool(form.get('other_pmv_related_outputs')),
-                **{name: parse_number(form.get(name, ''), name) for name in APMV_SETPOINT_FIELDS},
+                **{name: parse_number(form.get(name, ''), name) for name in fields},
                 cooling_season_start=_day(form, 'cooling_season_start'),
                 cooling_season_end=_day(form, 'cooling_season_end'),
                 verbose=True)
+    if index == 'epmv':
+        apmv.update({name: bool(form.get(name)) for name in EPMV_OPTIONS})
     pmv_inputs = {name: parse_number(form.get(name), name) for name in PMV_INPUT_FIELDS
                   if str(form.get(name, '')).strip()}
-    for name, values in _zone_values(apmv_zone_setpoints(form.get('zone_setpoints') or [])).items():
+    zones = apmv_zone_setpoints(form.get('zone_setpoints') or [])
+    for zone, setpoints in zones.items():
+        other = [name for name in setpoints if name not in fields]
+        if other:
+            raise FormError(f'zone_setpoints of {zone!r}: {other} are not setpoints of the {PMV_INDEX_NAMES[index]}.')
+    for name, values in _zone_values(zones).items():
         apmv[f'default_{name}'] = apmv[name]
         apmv[name] = values
+    if 'expectancy_factor' in apmv:
+        low = min(limits[0] for limits in EPMV_EXPECTANCY_RANGES.values())
+        high = max(limits[1] for limits in EPMV_EXPECTANCY_RANGES.values())
+        given = apmv['expectancy_factor']
+        for value in (given.values() if isinstance(given, Mapping) else [given]):
+            if not low <= value <= high:
+                raise FormError(f'expectancy_factor: {value} is not between {low} and {high}.')
     return dict(
         idf=idf,
         output_idf=output_idf,
+        index=index,
         energyplus_version=_choice(form, 'energyplus_version', ENERGYPLUS_VERSIONS),
         add_vrf_system=bool(form.get('add_vrf_system')),
         supply_air_temp_input_method=_choice(form, 'supply_air_temp_input_method', SUPPLY_AIR_TEMP_INPUT_METHODS),

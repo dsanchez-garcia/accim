@@ -2,10 +2,10 @@
 # Copyright (C) 2021-2026 Daniel Sánchez-García
 # Distributed under the GNU General Public License v3 or later.
 
-"""The graphical user interface of accim, with tkinter: add the ACCIS (with the arguments of each zone) or the aPMV
-setpoints (with the setpoints of each zone) to IDF files, read the EMS code of the setpoints, rename the EPW files,
-estimate the size of the results and run the simulations, measure the occupied hours within the setpoints, make tables
-and figures of the results with ``Table``, and run a basic parametric study.
+"""The graphical user interface of accim, with tkinter: add the ACCIS (with the arguments of each zone) or the
+PMV-based setpoints (aPMV, ePMV or PMV, with the setpoints of each zone) to IDF files, read the EMS code of the
+setpoints, rename the EPW files, estimate the size of the results and run the simulations, measure the occupied hours
+within the setpoints, make tables and figures of the results with ``Table``, and run a basic parametric study.
 
 Open it with ``accim-gui`` (a command installed with accim) or ``python -m accim.gui``. Each task runs in a thread,
 one at a time, in the working folder, and what it prints appears in the log at the bottom of the window; when a task
@@ -964,21 +964,21 @@ class AddAccisTab(_Tab):
 
 
 class ApmvTab(_Tab):
-    """Apply the setpoints based on the adaptive predicted mean vote (aPMV) to an IDF of the folder
-    (:mod:`accim.sim.apmv`)."""
+    """Apply the setpoints based on the predicted mean vote (PMV) or an index derived from it (aPMV, ePMV) to an IDF of
+    the folder (:mod:`accim.sim.apmv`)."""
 
     def __init__(self, app: 'AccimApp'):
-        super().__init__(app, '2. aPMV setpoints', scrollable=True, bar=True)
+        super().__init__(app, '2. PMV-based setpoints', scrollable=True, bar=True)
         defaults = forms.APMV_DEFAULTS
         body = self.body
         body.columnconfigure(0, weight=1)
         body.columnconfigure(1, weight=1)
         self.vars: Dict[str, tk.Variable] = {}
-        for name in ('idf', 'output_idf', 'energyplus_version', 'supply_air_temp_input_method',
+        for name in ('idf', 'output_idf', 'energyplus_version', 'supply_air_temp_input_method', 'index',
                      *forms.APMV_SETPOINT_FIELDS, 'cooling_season_start', 'cooling_season_end',
                      *forms.PMV_INPUT_FIELDS):
             self.vars[name] = tk.StringVar(value=defaults[name])
-        for name in ('add_vrf_system', 'always_occupied', 'other_pmv_related_outputs'):
+        for name in ('add_vrf_system', 'always_occupied', 'other_pmv_related_outputs', *forms.EPMV_OPTIONS):
             self.vars[name] = tk.BooleanVar(value=defaults[name])
         self.frequencies = {f: tk.BooleanVar(value=f in defaults['output_frequencies'])
                             for f in forms.OUTPUT_FREQUENCIES}
@@ -988,7 +988,7 @@ class ApmvTab(_Tab):
         model.grid(row=1, column=0, sticky='nsew', padx=(0, 6), pady=4)
         model.columnconfigure(1, weight=1)
         self.idf_combo = _grid_combo(model, 0, 'Input IDF:', self.vars['idf'], [])
-        _grid_entry(model, 1, 'Output IDF (empty: <input>_aPMV.idf):', self.vars['output_idf'])
+        _grid_entry(model, 1, 'Output IDF (empty: <input>_<index>.idf):', self.vars['output_idf'])
         _grid_combo(model, 2, 'EnergyPlus version:', self.vars['energyplus_version'], forms.ENERGYPLUS_VERSIONS)
         ttk.Checkbutton(model, text='Add a VRF system to each occupied zone (add_vrf_system)',
                         variable=self.vars['add_vrf_system'], command=self.update_state).grid(
@@ -1007,13 +1007,22 @@ class ApmvTab(_Tab):
                         variable=self.vars['other_pmv_related_outputs']).grid(row=7, column=0, columnspan=2,
                                                                               sticky='w')
 
-        setpoints = ttk.LabelFrame(body, text='aPMV setpoints (of all the zones, except those of the table below)',
+        setpoints = ttk.LabelFrame(body, text='Setpoints (of all the zones, except those of the table below)',
                                    padding=6)
         setpoints.grid(row=1, column=1, sticky='nsew', pady=4)
         setpoints.columnconfigure(1, weight=1)
-        for row, (name, label) in enumerate(forms.APMV_SETPOINT_FIELDS.items()):
-            _grid_entry(setpoints, row, f'{label}:', self.vars[name], width=10)
-        row = len(forms.APMV_SETPOINT_FIELDS)
+        self.index_combo = _grid_combo(setpoints, 0, 'Index (aPMV, ePMV or PMV):', self.vars['index'],
+                                       forms.PMV_INDEX_FUNCTIONS, width=10)
+        self.index_combo.bind('<<ComboboxSelected>>', lambda event: self.update_state())
+        self.setpoint_entries = {name: _grid_entry(setpoints, row, f'{label}:', self.vars[name], width=10)
+                                 for row, (name, label) in enumerate(forms.APMV_SETPOINT_FIELDS.items(), start=1)}
+        row = len(forms.APMV_SETPOINT_FIELDS) + 1
+        self.epmv_checks = []
+        for name, label in forms.EPMV_OPTIONS.items():
+            check = ttk.Checkbutton(setpoints, text=label, variable=self.vars[name])
+            check.grid(row=row, column=0, columnspan=2, sticky='w')
+            self.epmv_checks.append(check)
+            row += 1
         _grid_entry(setpoints, row, 'Cooling season from (dd/mm or day):', self.vars['cooling_season_start'],
                     width=10)
         _grid_entry(setpoints, row + 1, 'to (dd/mm or day):', self.vars['cooling_season_end'], width=10)
@@ -1024,7 +1033,7 @@ class ApmvTab(_Tab):
             _grid_entry(pmv, index // 2, f'{label}:', self.vars[name], width=10, column=(index % 2) * 2)
         pmv.columnconfigure(2, pad=24)
 
-        zones = ttk.LabelFrame(body, text='aPMV setpoints of each zone: other setpoints for some zones', padding=6)
+        zones = ttk.LabelFrame(body, text='Setpoints of each zone: other setpoints for some zones', padding=6)
         zones.grid(row=3, column=0, columnspan=2, sticky='ew', pady=4)
         tolerances = [name for name in forms.APMV_SETPOINT_FIELDS if name not in forms.APMV_ZONE_FIELDS]
         hint = ('Empty fields take the values above. Other setpoints: pairs name=value separated by commas, such as '
@@ -1032,15 +1041,17 @@ class ApmvTab(_Tab):
                 'occupied zones of the input IDF.')
         self.zone_table = _ZoneTable(
             self.app, zones, [(name, f'{forms.APMV_SETPOINT_FIELDS[name]}:', None) for name in forms.APMV_ZONE_FIELDS],
-            forms.apmv_zone_row_text, forms.split_apmv_zone_setpoints, self.find_zones, 'aPMV setpoints of a zone',
+            forms.apmv_zone_row_text, forms.split_apmv_zone_setpoints, self.find_zones, 'Setpoints of a zone',
             'zone_setpoints', hint, what='setpoints')
 
-        ttk.Button(self.bar, text='Apply the aPMV setpoints', command=self.apply).pack(side='left')
-        ttk.Label(body, text='The aPMV corrects the PMV for the adaptation of the occupants: aPMV = PMV / (1 + λ·PMV), '
-                             'with one λ for the cooling season and another for the heating season. The thermostats '
-                             'keep the aPMV of each zone between the heating and cooling setpoints (section 4.8 of '
-                             'the documentation). To simulate the new IDF in the tab "4. Run the simulations", '
-                             'uncheck "Only the output IDFs of accim".',
+        ttk.Button(self.bar, text='Apply the setpoints', command=self.apply).pack(side='left')
+        ttk.Label(body, text='The thermostats keep an index of the comfort of each zone between the heating and cooling '
+                             'setpoints (section 4.8 of the documentation): the aPMV, which corrects the PMV for the '
+                             'adaptation of the occupants, aPMV = PMV / (1 + λ·PMV), with one λ for the cooling season '
+                             'and another for the heating season; the ePMV of Fanger and Toftum, ePMV = e·PMV, with the '
+                             'expectancy factor e (0.5 to 1) of buildings without air-conditioning in warm climates, '
+                             'in the cooling season and on the warm side of the scale; or the PMV. To simulate the new '
+                             'IDF in the tab "4. Run the simulations", uncheck "Only the output IDFs of accim".',
                   foreground='gray25', wraplength=900).grid(row=4, column=0, columnspan=2, sticky='w')
         self.update_state()
 
@@ -1052,7 +1063,14 @@ class ApmvTab(_Tab):
             self.vars['idf'].set(idfs[0] if idfs else '')
 
     def update_state(self) -> None:
+        """Enable the fields of the index of the setpoints only (and the supply air temperature with the VRF systems)."""
         _set_state([self.supply_air], self.vars['add_vrf_system'].get())
+        index = self.vars['index'].get()
+        others = {name for key, names in forms.PMV_INDEX_PARAMETERS.items() if key != index for name in names}
+        for name, entry in self.setpoint_entries.items():
+            _set_state([entry], name not in others)
+        _set_state(self.epmv_checks, index == 'epmv')
+        self.zone_table.set_state(True, disabled=[name for name in forms.APMV_ZONE_FIELDS if name in others])
 
     def form(self) -> Dict[str, Any]:
         """The values of the form, for :func:`accim.gui.forms.apmv_arguments`."""
@@ -1084,7 +1102,7 @@ class ApmvTab(_Tab):
     def restore(self, state: Mapping[str, Any]) -> List[str]:
         messages = super().restore(state)
         messages += _file_messages(self.vars['idf'].get(), forms.input_idfs(self.folder.get()),
-                                   'Input IDF of "2. aPMV setpoints"')
+                                   'Input IDF of "2. PMV-based setpoints"')
         if 'output_frequencies' in state:
             _restore_checks(self.frequencies, state['output_frequencies'])
         if 'zone_setpoints' in state:
@@ -1093,23 +1111,24 @@ class ApmvTab(_Tab):
         return messages
 
     def apply(self) -> bool:
-        """Apply the aPMV setpoints to the input IDF and save it with the new name (in a thread)."""
+        """Apply the setpoints of the index to the input IDF and save it with the new name (in a thread)."""
         try:
             arguments = forms.apmv_arguments(self.form())
         except forms.FormError as error:
-            self.app.show_error('aPMV setpoints', str(error))
+            self.app.show_error('PMV-based setpoints', str(error))
             return False
-        question = f'Apply the aPMV setpoints to {arguments["idf"]} and save it as {arguments["output_idf"]}?'
+        name = forms.PMV_INDEX_NAMES[arguments['index']]
+        question = f'Apply the {name} setpoints to {arguments["idf"]} and save it as {arguments["output_idf"]}?'
         if os.path.exists(os.path.join(self.folder.get(), arguments['output_idf'])):
             question += f' {arguments["output_idf"]} will be overwritten.'
-        if not self.app.ask_yes_no('aPMV setpoints', question):
+        if not self.app.ask_yes_no('PMV-based setpoints', question):
             return False
 
-        def done(name):
+        def done(written):
             self.app.folder_changed()
-            self.app.show_info('aPMV setpoints', f'{name} has been written.')
+            self.app.show_info('PMV-based setpoints', f'{written} has been written.')
 
-        return self.app.run_task('aPMV setpoints', self.folder.get(), lambda: tasks.apply_apmv(arguments),
+        return self.app.run_task(f'{name} setpoints', self.folder.get(), lambda: tasks.apply_apmv(arguments),
                                  on_done=done)
 
 
@@ -1904,7 +1923,7 @@ class AccimApp:
 
     :param root: The tkinter window; a new one if None.
     :ivar add_accis: The tab that adds the ACCIS.
-    :ivar apmv: The tab of the aPMV setpoints.
+    :ivar apmv: The tab of the PMV-based setpoints (aPMV, ePMV or PMV).
     :ivar rename_epws: The tab that renames the EPW files.
     :ivar run: The tab that runs the simulations.
     :ivar hours: The tab of the occupied hours within the setpoints.

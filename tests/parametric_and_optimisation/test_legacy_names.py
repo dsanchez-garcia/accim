@@ -21,8 +21,14 @@ def _simulation(**kwargs):
     return ParametricSimulation(**arguments)
 
 
+#: The parameters added after accim 1.0.0, which have no name of accim 0.x
+PARAMETERS_WITHOUT_LEGACY_NAMES = {'expectancy_factor'}
+
+
 def test_the_legacy_names_are_those_of_all_the_parameters():
-    assert set(params_dicts.LEGACY_PARAMETER_NAMES.values()) == set(params_dicts.all_params)
+    assert (set(params_dicts.LEGACY_PARAMETER_NAMES.values())
+            == set(params_dicts.all_params) - PARAMETERS_WITHOUT_LEGACY_NAMES)
+    assert PARAMETERS_WITHOUT_LEGACY_NAMES <= set(params_dicts.all_params)
     assert not set(params_dicts.LEGACY_PARAMETER_NAMES) & set(params_dicts.all_params)
 
 

@@ -112,29 +112,32 @@ def apmv_target_keys(building, values_by_name: Mapping[str, Mapping[str, Any]], 
 
 
 def apply_apmv(arguments: Mapping[str, Any]) -> str:
-    """Apply the aPMV setpoints to an IDF and save it with another name (the arguments of
-    :func:`accim.gui.forms.apmv_arguments`); the setpoints of some zones get the keys of these zones in the model
-    (:func:`apmv_target_keys`).
+    """Apply the PMV-based setpoints of an index (aPMV, ePMV or PMV) to an IDF and save it with another name (the
+    arguments of :func:`accim.gui.forms.apmv_arguments`); the setpoints of some zones get the keys of these zones in the
+    model (:func:`apmv_target_keys`). The inputs of the PMV are set before the setpoints, since the metabolic correction
+    of the ePMV reads the activity level of the occupants.
 
     :return: The name of the IDF written.
     """
+    from accim.gui.forms import PMV_INDEX_FUNCTIONS, PMV_INDEX_NAMES
     from accim.sim import apmv
     from accim.sim.accis import load_idf
 
+    index = arguments.get('index', 'apmv')
     building = load_idf(arguments['idf'], arguments['energyplus_version'])
     if arguments['always_occupied']:
         apmv.set_zones_always_occupied(building)
     if arguments['add_vrf_system']:
         apmv.add_vrf_system(building, supply_air_temp_input_method=arguments['supply_air_temp_input_method'])
+    if arguments['pmv_inputs']:
+        apmv.set_pmv_input_parameters(building, **arguments['pmv_inputs'])
     setpoints = dict(arguments['apmv'])
     by_zone = {name: value for name, value in setpoints.items() if isinstance(value, Mapping)}
     if by_zone:
         setpoints.update(apmv_target_keys(building, by_zone, arguments['idf']))
-    apmv.apply_apmv_setpoints(building, **setpoints)
-    if arguments['pmv_inputs']:
-        apmv.set_pmv_input_parameters(building, **arguments['pmv_inputs'])
+    getattr(apmv, PMV_INDEX_FUNCTIONS[index])(building, **setpoints)
     building.saveas(arguments['output_idf'])
-    print(f'\nThe IDF with the aPMV setpoints has been saved as {arguments["output_idf"]}')
+    print(f'\nThe IDF with the {PMV_INDEX_NAMES[index]} setpoints has been saved as {arguments["output_idf"]}')
     return arguments['output_idf']
 
 

@@ -15,6 +15,27 @@ This log is a lightweight, session-scoped complement to the repository's
 existing tracking files — it does not replace them (see
 [[decisions.md#2026-09-13 — `notes/work-log.md` complements, not replaces, existing tracking files|the related decision]]).
 
+## 2026-11-09 — A1: the ePMV setpoints (branch `v1.2.0`)
+
+- **Objective**: The request of the author: go on with the work of the previous session, "termines el A1 y el A5 lo
+  dejes pendiente"; the How-to notebook of the ePMV "no lo ejecutes; déjalo como tarea pendiente".
+- **Affected files**: `accim/sim/pmv_index.py`, `accim/sim/apmv.py`, `accim/constants.py`, the parametric module
+  (`param_apmv.py`, `params_dicts.py`, `parameters.py`, `main.py`), the GUI (`forms.py`, `tasks.py`, `app.py`), the new
+  folder `accim/sample_files/jupyter_notebooks/example_epmv_setpoints`, `docs/prepare_howto_notebooks.py`,
+  `tests/core/test_epmv.py` (new), `tests/core/test_gui.py`, [[../docs/source/4_detailed use.md]] (4.8.1),
+  `docs/source/parametric_and_optimisation.rst`, `docs/source/2_installation.md`, [[../README.md]],
+  [[../CHANGELOG.md]], [[../DEVLOG.md]], [[../CAMBIOS_CODIGO_v1.2.0.md]], [[../TODO.md]], [[decisions.md]].
+- **Finding or decision**: See
+  [[decisions.md#2026-11-09 — The ePMV applies the expectancy factor in the cooling season to the warm side only, and its metabolic correction uses the PMV of the previous timestep|the decision]].
+  The heat gains of the occupants follow the corrected activity level one timestep later, and the correction converges
+  to a slightly smaller reduction than that of Fanger and Toftum; both documented. The author's file of proposals has a
+  v02 with the coefficients checked.
+- **Validation**: 17 new tests of the ePMV (one with both backends), 6 of the GUI and 2 of the parametric module;
+  simulations of the residential model; `tests/core` and `tests/parametric_and_optimisation`: 1421 passed and one test
+  of the legacy names fixed (`expectancy_factor` has no name of accim 0.x); the documentation build (the same 59
+  lines of warnings).
+- **Next step**: run and export the notebook ([[../TODO.md]]); A5, pending.
+
 ## 2026-11-08 — A2: one engine for the setpoints based on indices derived from the PMV (branch `v1.2.0`)
 
 - **Objective**: The request of the author: "vamos a añadir una serie de nuevas funcionalidades a accim; quiero que lo

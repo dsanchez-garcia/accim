@@ -17,20 +17,21 @@
 """Helpers to modify APMV EMS program lines across all zones.
 
 These functions locate ``set_zone_input_data_*`` EMS programs in an IDF and
-rewrite the lines that set the adaptive coefficients and the PMV setpoints,
-found by the names of their variables, so that the PMV setpoints can be changed
-in the models with the setpoints of any index derived from the PMV
-(:mod:`accim.sim.pmv_index`).
+rewrite the lines that set the adaptive coefficients, the expectancy factors
+and the PMV setpoints, found by the names of their variables, so that the PMV
+setpoints can be changed in the models with the setpoints of any index derived
+from the PMV (:mod:`accim.sim.pmv_index`).
 
 Usage
 -----
 Use these helpers as BESOS parameter modifiers when building parametric or
-optimisation problems for APMV controls.
+optimisation problems for APMV and ePMV controls.
 
 Examples
 --------
 change_adaptive_coeff_all_zones(idf, 0.3)
 change_pmv_setpoint_all_zones(idf, 0.5)
+change_expectancy_factor_all_zones(idf, 0.7)
 """
 
 import re
@@ -260,3 +261,42 @@ def change_pmv_heating_setpoint_all_zones(idf: besos.IDF_class, value: float):
     """
     for zonename, program in _get_apmv_input_programs_by_target(idf).items():
         _set_input_line(program, f'pmv_heating_sp_{zonename}', value)
+
+
+def change_expectancy_factor_all_zones(idf: besos.IDF_class, value: float):
+    """Set the expectancy factor of the ePMV setpoints for all detected zone programs.
+
+    Parameters
+    ----------
+    idf : besos.IDF_class
+        IDF object with the ePMV setpoints (:func:`accim.sim.apmv.apply_epmv_setpoints`), whose EMS program lines
+        will be updated.
+    value : float
+        Value assigned to ``expectancy_factor_*`` lines, between 0.5 and 1 (Fanger and Toftum, 2002).
+
+    Returns
+    -------
+    None
+        The IDF is modified in place.
+
+    Raises
+    ------
+    ValueError
+        If the value is not between 0.5 and 1, or the model has no ePMV setpoints.
+
+    Usage
+    -----
+    Use as the modifier of the parameter ``expectancy_factor`` of the parameters type ``'epmv setpoints'``.
+
+    Examples
+    --------
+    change_expectancy_factor_all_zones(idf, 0.7)
+    """
+    from accim.constants import EPMV_EXPECTANCY_RANGES
+
+    low = min(limits[0] for limits in EPMV_EXPECTANCY_RANGES.values())
+    high = max(limits[1] for limits in EPMV_EXPECTANCY_RANGES.values())
+    if not low <= float(value) <= high:
+        raise ValueError(f'The expectancy factor must be between {low} and {high}, not {value}.')
+    for zonename, program in _get_apmv_input_programs_by_target(idf).items():
+        _set_input_line(program, f'expectancy_factor_{zonename}', value)

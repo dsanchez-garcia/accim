@@ -61,6 +61,7 @@ The Jupyter notebooks mentioned in section 2.2 are part of the sample files, in 
 | `Table` | Data analysis, figures and tables (section 2.2.4) |
 | `full_example_IBPSA` | Full example, from the input files to the figures (section 2.2.5) |
 | `example_apmv_setpoints_paper` | aPMV setpoints (section 2.2.6) |
+| `example_epmv_setpoints` | ePMV setpoints (section 2.2.6) |
 | `research_paper_case_study_v0-7-3` | Case study of a research paper |
 | `parametric_and_optimisation_examples` | Parametric simulation and optimisation: tutorials `00`-`10` and complete workflows `wf1`-`wf5` |
 
@@ -232,9 +233,11 @@ You can apply aPMV setpoints to a building using the following function:
         verbose=bool # verbose: True to print detailed progress messages (added objects) and warnings to the console. Default is True.
     )
 
+Since accim 1.2.0, `apmv.apply_epmv_setpoints()` applies setpoints based on the PMV with the expectancy factor of Fanger and Toftum (2002), ePMV = e·PMV, for buildings without air-conditioning in warm climates: the expectancy factor `expectancy_factor` (between 0.5 and 1) applies in the cooling season to the cooling setpoint, and `metabolic_correction=True` also reduces the activity level of the occupants by 6.7 % for each unit of PMV above neutral. `apmv.apply_pmv_setpoints()` applies setpoints based on the PMV itself. Section 4.8 of the documentation explains their arguments, and the folder `jupyter_notebooks/example_epmv_setpoints` of the sample files has a notebook of the ePMV setpoints.
+
 ### 2.2.7 Graphical user interface
 
-Since accim 1.0.0, a graphical user interface, in English, adds the ACCIS (with different arguments for some zones if needed) or the aPMV setpoints (also different for some zones) to the IDF files of a folder, shows the EMS code of the setpoints, renames the EPW files, estimates the size of the results and runs the simulations, measures the occupied hours within the setpoints, makes tables and figures of the results and runs a basic parametric study, without writing Python; its sessions can be saved and opened again. Open it with the command:
+Since accim 1.0.0, a graphical user interface, in English, adds the ACCIS (with different arguments for some zones if needed) or the PMV-based setpoints (aPMV, ePMV or PMV, also different for some zones) to the IDF files of a folder, shows the EMS code of the setpoints, renames the EPW files, estimates the size of the results and runs the simulations, measures the occupied hours within the setpoints, makes tables and figures of the results and runs a basic parametric study, without writing Python; its sessions can be saved and opened again. Open it with the command:
 
     accim-gui
 

@@ -1,9 +1,9 @@
 """Run the notebooks of the How-to Guides and export them for the documentation.
 
 The notebooks of the How-to Guides (``using_addAccis``, ``using_rename_epw_files``, ``using_runEp``,
-``using_Table``, ``full_example_IBPSA``, ``research_paper_case_study`` and ``using_apmv_setpoints``)
-are kept, without outputs, in ``accim/sample_files/jupyter_notebooks/<folder>``, next to their IDF,
-EPW and CSV files. That is the copy to edit. Read the Docs cannot run them (they need EnergyPlus),
+``using_Table``, ``full_example_IBPSA``, ``research_paper_case_study``, ``using_apmv_setpoints`` and
+``using_epmv_setpoints``) are kept, without outputs, in ``accim/sample_files/jupyter_notebooks/<folder>``, next to
+their IDF, EPW and CSV files. That is the copy to edit. Read the Docs cannot run them (they need EnergyPlus),
 so the documentation shows copies that were run beforehand, in
 ``docs/source/jupyter_notebooks/<folder>``.
 
@@ -60,6 +60,7 @@ NOTEBOOKS = [
     ('full_example_IBPSA', 'full_example_IBPSA', 'full_example_IBPSA'),
     ('research_paper_case_study_v0-7-3', 'research_paper_case_study', 'research_paper_case_study'),
     ('example_apmv_setpoints_paper', 'using_apmv_setpoints', 'example_apmv_setpoints_paper'),
+    ('example_epmv_setpoints', 'using_epmv_setpoints', 'example_epmv_setpoints'),
 ]
 
 # Answers to the questions of each notebook: {notebook: {text that identifies the cell: [answers]}}.

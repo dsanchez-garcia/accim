@@ -11,6 +11,37 @@ Durable architectural/process decisions for this repository and its Obsidian
 vault. Newest first. Use [[templates/decision-record.md|the decision-record
 template]] to add a new entry.
 
+## 2026-11-09 — The ePMV applies the expectancy factor in the cooling season to the warm side only, and its metabolic correction uses the PMV of the previous timestep
+
+- **Status**: accepted (the author chose, for A1: "e solo en la estación de refrigeración y en la consigna de
+  refrigeración; apply_to_heating=True lo aplica también a la de calefacción, con aviso", with the ePMV of each zone
+  coherent with it, and the metabolic correction "opcional (metabolic_correction=False por defecto), documentando la
+  aproximación y el efecto en las ganancias internas"; the How-to notebook written but not run, "déjalo como tarea
+  pendiente")
+- **Context**: Fanger and Toftum (2002) define ePMV = e·PMV for buildings without air-conditioning in warm climates,
+  and only the upper limit of the comfort zone depends on e (their Table 3). They also reduce the metabolic rate by
+  6.7 % for each unit of PMV, calculated with the uncorrected rate, and calculate the PMV again. EnergyPlus calculates
+  the PMV once per timestep, at its end, with the activity level of the People objects, which also gives their heat
+  gains; an activity level schedule may be shared by several People objects, and a People object may apply to several
+  zones (OpenStudio models: one People object for a SpaceList).
+- **Decision**: the index `'epmv'` of [[decisions.md#2026-11-08 — The setpoints based on indices derived from the PMV share one engine, with the Erl of each index in a registry|the engine]]:
+  e (0.5 to 1, `ValueError` otherwise) in the cooling season and 1 in the heating season; the PMV setpoint of the
+  cooling thermostat is the setpoint divided by e, the heating setpoint is a PMV setpoint unless `apply_to_heating`
+  (warning); the ePMV of each zone is e·PMV for positive PMV and the PMV otherwise (always e·PMV with
+  `apply_to_heating`), so that the hours within the setpoints are counted with the index that the thermostat keeps. The
+  metabolic correction (EMS programs run after those of the zones, at `BeginTimestepBeforePredictor`) multiplies the
+  activity level of each People object by 1 - 0.067·PMV, with the PMV of the previous timestep, between 0 and 3, in the
+  cooling season; each People object gets its own activity level schedule, a copy of its own that the EMS sets, and an
+  EMS sensor reads the original one; a People object of several zones is corrected with the mean PMV of its occupants
+  in them (warning). `set_pmv_input_parameters` refuses to set the activity level of a corrected People object. The
+  engine gets `PmvIndex.add_objects` for these objects.
+- **Consequences**: the correction converges to the activity level whose PMV gives it, slightly less than Fanger and
+  Toftum (5.5 to 6.1 % instead of 6.7 % for a PMV of 1 with 1 to 1.2 met; PMV 0.01 to 0.04 higher), and the heat gains
+  of the occupants follow it one timestep later (EnergyPlus calculates the internal gains before the calling point),
+  both documented in section 4.8.1 of [[../docs/source/4_detailed use.md]]. The ePMV is also a parameters type of the
+  parametric module and an index of the tab *2. PMV-based setpoints* of the GUI. Section 3 of
+  [[../CAMBIOS_CODIGO_v1.2.0.md]]; the notebook to run is in [[../TODO.md]].
+
 ## 2026-11-08 — The setpoints based on indices derived from the PMV share one engine, with the Erl of each index in a registry
 
 - **Status**: accepted (proposal A2 of the author's file of proposals after 1.1.0,

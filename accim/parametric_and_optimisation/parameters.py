@@ -179,6 +179,28 @@ def get_available_params_apmv_setpoints():
     return param_dict
 
 
+def get_available_params_epmv_setpoints():
+    """List available ePMV setpoint parameter names.
+
+    Returns
+    -------
+    list[str]
+        Parameter names that control the ePMV setpoints (the parameters type ``'epmv setpoints'``).
+
+    Usage
+    -----
+    Use this helper before building ePMV-oriented parameter sweeps.
+
+    Examples
+    --------
+    >>> names = get_available_params_epmv_setpoints()
+    >>> 'expectancy_factor' in names
+    True
+    """
+    param_dict = [k for k in params_dicts.epmv_setpoints_params.keys()]
+    return param_dict
+
+
 class Parameter:
     """Legacy OO wrapper that resolves one ACCIS parameter by name.
 

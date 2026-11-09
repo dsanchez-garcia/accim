@@ -14,22 +14,29 @@ the PMV of the zone).
 
 - ``'apmv'``: the adaptive PMV of Yao et al. (2009), aPMV = PMV/(1 + λ·PMV), with the adaptive coefficient λ of the
   season; the PMV setpoint is aPMV/(1 − λ·aPMV).
+- ``'epmv'``: the PMV with the expectancy factor e of Fanger and Toftum (2002), ePMV = e·PMV, in the cooling season
+  and on the warm side of the scale (also on the cool side with the option ``apply_to_heating``); the PMV setpoint is
+  ePMV/e. With the option ``metabolic_correction``, the activity level of the occupants is also reduced by 6.7 % for
+  each unit of PMV above neutral (:func:`metabolic_correction_names`).
 - ``'pmv'``: the PMV itself; the setpoints are PMV setpoints.
 
-:func:`accim.sim.apmv.apply_apmv_setpoints` and :func:`accim.sim.apmv.apply_pmv_setpoints` apply them with the
-arguments of each index.
+:func:`accim.sim.apmv.apply_apmv_setpoints`, :func:`accim.sim.apmv.apply_epmv_setpoints` and
+:func:`accim.sim.apmv.apply_pmv_setpoints` apply them with the arguments of each index.
 """
 
+import numbers
 import warnings
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence, Tuple, Union
 
 import pandas as pd
 
+from accim.constants import EPMV_EXPECTANCY_RANGES, EPMV_MET_REDUCTION_PER_PMV
 from accim.sim.ems.programs import add_program
 from accim.sim.ems.setast import COOLING_SEASON_LINES
-from accim.sim.targets import resolve_targets
+from accim.sim.targets import resolve_targets, sanitize_ems_name
 from accim.utils.editing import transform_ddmm_to_int
+from accim.utils.people import get_people_objects
 
 __all__ = [
     'IndexParameter',
@@ -38,6 +45,7 @@ __all__ = [
     'apply_pmv_index_setpoints',
     'arguments_table',
     'get_pmv_index',
+    'metabolic_correction_names',
     'program_names',
 ]
 
@@ -108,6 +116,9 @@ class PmvIndex:
     :ivar options: The other parameters of the index (one value for all the zones), with their default values.
     :ivar validate: A function that checks the parameters and options, ``validate(values, options)``, where
         ``values`` has the value of each parameter and of its ``default_<argument>``.
+    :ivar add_objects: A function that adds the EMS objects of the index besides those of the engine,
+        ``add_objects(building, target_data, options, verbose)``, and returns the names of their programs, which run
+        at each timestep after those of the zones; None if the index has none.
     """
 
     key: str
@@ -123,6 +134,7 @@ class PmvIndex:
     monitor: Optional[Callable[[str, Mapping[str, Any]], List[str]]] = None
     options: Mapping[str, Any] = field(default_factory=dict)
     validate: Optional[Callable[[Mapping[str, Any], Mapping[str, Any]], None]] = None
+    add_objects: Optional[Callable[[Any, List[Dict[str, Any]], Mapping[str, Any], bool], List[str]]] = None
 
 
 def _apmv_inverse(side: str, setpoint: str, suffix: str, options: Mapping[str, Any]) -> str:
@@ -132,6 +144,193 @@ def _apmv_inverse(side: str, setpoint: str, suffix: str, options: Mapping[str, A
 
 def _apmv_monitor(suffix: str, options: Mapping[str, Any]) -> List[str]:
     return [f'set aPMV_{suffix} = PMV_{suffix}/(1+adap_coeff_{suffix}*PMV_{suffix})']
+
+
+# ------------------------------------------------------------------------------------------------------------------
+# ePMV (Fanger and Toftum, 2002)
+# ------------------------------------------------------------------------------------------------------------------
+
+#: The highest PMV with which the metabolic correction of the ePMV reduces the activity level: the end of the scale of
+#: thermal sensation
+_MAX_METABOLIC_PMV = 3
+#: The schedule objects that can be the activity level schedule of a People object, and the EMS actuators of their
+#: values ('Schedule Value')
+_SCHEDULE_TYPES = ('Schedule:Compact', 'Schedule:Constant', 'Schedule:Year', 'Schedule:File')
+
+
+def _epmv_inverse(side: str, setpoint: str, suffix: str, options: Mapping[str, Any]) -> str:
+    # ePMV = e*PMV on the warm side of the scale (also on the cool side with apply_to_heating), so the PMV setpoint is
+    # the setpoint divided by e, which is 1 in the heating season
+    if side == 'C' or options['apply_to_heating']:
+        return f'{setpoint}/e_{suffix}'
+    return setpoint
+
+
+def _epmv_monitor(suffix: str, options: Mapping[str, Any]) -> List[str]:
+    if options['apply_to_heating']:
+        return [f'set ePMV_{suffix} = e_{suffix}*PMV_{suffix}']
+    # The expectancy factor only applies to warm sensations (the upper limit of the comfort zone)
+    return [
+        f'if PMV_{suffix} > 0',
+        f'set ePMV_{suffix} = e_{suffix}*PMV_{suffix}',
+        'else',
+        f'set ePMV_{suffix} = PMV_{suffix}',
+        'endif',
+    ]
+
+
+def _epmv_validate(values: Mapping[str, Any], options: Mapping[str, Any]) -> None:
+    low = min(limits[0] for limits in EPMV_EXPECTANCY_RANGES.values())
+    high = max(limits[1] for limits in EPMV_EXPECTANCY_RANGES.values())
+    for name in ('expectancy_factor', 'default_expectancy_factor'):
+        value = values[name]
+        for number in (value.values() if isinstance(value, Mapping) else [value]):
+            if isinstance(number, bool) or not isinstance(number, numbers.Real) or not low <= number <= high:
+                raise ValueError(f'{name} must be between {low} and {high}, as the expectancy factor of Fanger and '
+                                 f'Toftum (2002), not {number!r}.')
+    for name in ('apply_to_heating', 'metabolic_correction'):
+        if not isinstance(options[name], bool):
+            raise ValueError(f'{name} must be True or False, not {options[name]!r}.')
+    if options['apply_to_heating']:
+        warnings.warn('Fanger and Toftum (2002) apply the expectancy factor of the ePMV only to the upper limit of the '
+                      'comfort zone (warm sensations); with apply_to_heating=True, it also divides the heating '
+                      'setpoint and multiplies the PMV of cool sensations.')
+
+
+def metabolic_correction_names(people_name: str) -> Dict[str, str]:
+    """The names of the EMS objects of the metabolic correction of the ePMV of a People (or People:Instance) object.
+
+    :param people_name: The name of the People object.
+    :return: ``schedule``: the activity level schedule of the People object, which the EMS sets (a copy of its
+        activity level schedule, which stays in the model as the activity level without the correction);
+        ``base``: the sensor of the activity level without the correction; ``actuator``; ``program``; ``factor``:
+        the global variable of the factor of the activity level (1 - 0.067·PMV); ``pmv``: the local variable of the
+        PMV that reduces it.
+    """
+    suffix = sanitize_ems_name(people_name)
+    return {
+        'schedule': f'ePMV_Activity_{suffix}',
+        'base': f'Activity_base_{suffix}',
+        'actuator': f'Activity_act_{suffix}',
+        'program': f'correct_activity_{suffix}',
+        'factor': f'metabolic_factor_{suffix}',
+        'pmv': f'metabolic_PMV_{suffix}',
+    }
+
+
+def _find_schedule(building: IDF, name: str) -> Tuple[Optional[str], Any]:
+    """The type and the object of a schedule of the model whose value an EMS actuator can set ((None, None) if there
+    is none of that name)."""
+    for schedule_type in _SCHEDULE_TYPES:
+        schedule = building.getobject(schedule_type, name)
+        if schedule is not None:
+            return schedule_type, schedule
+    return None, None
+
+
+def _metabolic_correction_lines(names: Mapping[str, str], suffixes: Sequence[str]) -> List[str]:
+    """The Erl lines that set the activity level of a People object whose occupants are in the zones of ``suffixes``.
+
+    The PMV that reduces it is that of the zone, or, if the People object applies to several zones, the mean PMV of
+    its occupants in them (the simple mean while the zones are unoccupied).
+    """
+    pmv = names['pmv']
+    if len(suffixes) == 1:
+        mean = [f'set {pmv} = PMV_{suffixes[0]}']
+    else:
+        weighted, occupants, total = (f'{pmv}_{part}' for part in ('wsum', 'occupants', 'sum'))
+        mean = [f'set {weighted} = 0', f'set {occupants} = 0', f'set {total} = 0']
+        for suffix in suffixes:
+            mean += [
+                f'set {weighted} = {weighted} + PMV_{suffix}*People_Occupant_Count_{suffix}',
+                f'set {occupants} = {occupants} + People_Occupant_Count_{suffix}',
+                f'set {total} = {total} + PMV_{suffix}',
+            ]
+        mean += [f'if {occupants} > 0', f'set {pmv} = {weighted}/{occupants}', 'else',
+                 f'set {pmv} = {total}/{len(suffixes)}', 'endif']
+    return [
+        # The PMV of the previous timestep, in the cooling season (the ePMV is the PMV in the heating season)
+        'if CoolingSeason == 1',
+        *mean,
+        'else',
+        f'set {pmv} = 0',
+        'endif',
+        # Only the warm sensations reduce the activity level, up to the end of the scale
+        f'if {pmv} < 0',
+        f'set {pmv} = 0',
+        f'elseif {pmv} > {_MAX_METABOLIC_PMV}',
+        f'set {pmv} = {_MAX_METABOLIC_PMV}',
+        'endif',
+        f'set {names["factor"]} = 1-{EPMV_MET_REDUCTION_PER_PMV}*{pmv}',
+        f'set {names["actuator"]} = {names["base"]}*{names["factor"]}',
+    ]
+
+
+def _add_metabolic_correction(building: IDF, target_data: List[Dict[str, Any]], options: Mapping[str, Any],
+                              verbose: bool) -> List[str]:
+    """Add the metabolic correction of the ePMV, if ``options['metabolic_correction']``: in the cooling season, the
+    activity level of the occupants is reduced by 6.7 % for each unit of PMV above neutral (Fanger and Toftum, 2002),
+    with the PMV of the previous timestep.
+
+    The activity level schedule of each People object becomes a copy of it that the EMS sets
+    (:func:`metabolic_correction_names`), and the original schedule is the activity level without the correction.
+
+    :return: The names of the programs, one for each People object.
+    :raises ValueError: If the activity level schedule of a People object is not in the model.
+    """
+    if not options['metabolic_correction']:
+        return []
+    people_objects = {str(people.Name).upper(): people for people in get_people_objects(building)}
+    suffixes_by_people: Dict[str, List[str]] = {}
+    for target in target_data:
+        for people_name in target['people_names']:
+            suffixes_by_people.setdefault(people_name.upper(), []).append(target['ems_suffix'])
+
+    programs = []
+    for people_key, suffixes in suffixes_by_people.items():
+        people = people_objects[people_key]
+        names = metabolic_correction_names(people.Name)
+        programs.append(names['program'])
+        if building.getobject('EnergyManagementSystem:Program', names['program']) is not None:
+            warnings.warn(f"The activity level of the People object '{people.Name}' already has the metabolic "
+                          f"correction. Skipping.")
+            continue
+        base_name = str(people.Activity_Level_Schedule_Name).strip()
+        schedule_type, base = _find_schedule(building, base_name)
+        if base is None:
+            raise ValueError(f"The activity level schedule '{base_name}' of the People object '{people.Name}' is not "
+                             f"a {', '.join(_SCHEDULE_TYPES)} object of the model, which the metabolic correction "
+                             f"needs.")
+        if len(suffixes) > 1:
+            warnings.warn(f"The People object '{people.Name}' applies to several zones ({', '.join(suffixes)}), and "
+                          f"it has one activity level: the metabolic correction reduces it with the mean PMV of its "
+                          f"occupants in these zones.")
+        # 1. The activity level schedule that the EMS sets: a copy of that of the People object, so that it is the
+        # same before the first timestep of each environment
+        schedule = building.copyidfobject(base)
+        schedule.Name = names['schedule']
+        people.Activity_Level_Schedule_Name = names['schedule']
+        # 2. The activity level without the correction, the actuator and the factor
+        building.newidfobject('EnergyManagementSystem:Sensor', Name=names['base'],
+                              OutputVariable_or_OutputMeter_Index_Key_Name=base_name,
+                              OutputVariable_or_OutputMeter_Name='Schedule Value')
+        building.newidfobject('EnergyManagementSystem:Actuator', Name=names['actuator'],
+                              Actuated_Component_Unique_Name=names['schedule'], Actuated_Component_Type=schedule_type,
+                              Actuated_Component_Control_Type='Schedule Value')
+        building.newidfobject('EnergyManagementSystem:GlobalVariable', Erl_Variable_1_Name=names['factor'])
+        # 3. The program
+        add_program(building, names['program'], _metabolic_correction_lines(names, suffixes))
+        # 4. The outputs: the factor and the corrected activity level (W/person)
+        suffix = sanitize_ems_name(people.Name)
+        for output, variable, units in (('Metabolic Correction Factor', names['factor'], ''),
+                                        ('Corrected Activity Level', names['actuator'], 'W')):
+            building.newidfobject('EnergyManagementSystem:OutputVariable', Name=f'{output}_{suffix}',
+                                  EMS_Variable_Name=variable, Type_of_Data_in_Variable='Averaged',
+                                  Update_Frequency='ZoneTimestep', Units=units)
+        if verbose:
+            print(f"Added the metabolic correction of the activity level of the People object '{people.Name}': "
+                  f"{names['schedule']}, {names['base']}, {names['actuator']}, {names['program']}")
+    return programs
 
 
 #: The indices derived from the PMV, by key.
@@ -151,6 +350,22 @@ PMV_INDICES: Dict[str, PmvIndex] = {
         global_variables=('adap_coeff', 'adap_coeff_heating', 'adap_coeff_cooling'),
         inverse=_apmv_inverse,
         monitor=_apmv_monitor,
+    ),
+    'epmv': PmvIndex(
+        key='epmv',
+        name='ePMV',
+        description='PMV with the expectancy factor of Fanger and Toftum (2002): ePMV = e*PMV, in the cooling season',
+        parameters=(IndexParameter('expectancy_factor', 'expectancy_factor', 0.8, 0.8),),
+        coefficient='e',
+        coefficient_output='Expectancy Factor',
+        cooling_season_coefficient='expectancy_factor_{s}',
+        heating_season_coefficient='1',
+        global_variables=('e', 'expectancy_factor'),
+        inverse=_epmv_inverse,
+        monitor=_epmv_monitor,
+        options={'apply_to_heating': False, 'metabolic_correction': False},
+        validate=_epmv_validate,
+        add_objects=_add_metabolic_correction,
     ),
     'pmv': PmvIndex(
         key='pmv',
@@ -250,7 +465,7 @@ def apply_pmv_index_setpoints(
     is controlled as a whole, with the PMV of its occupants averaged (weighted by their number).
 
     :param building: The eppy or besos IDF object to be modified.
-    :param index: The key of the index in :data:`PMV_INDICES`: 'apmv' or 'pmv'.
+    :param index: The key of the index in :data:`PMV_INDICES`: 'apmv', 'epmv' or 'pmv'.
     :param index_parameters: The parameters of the index (:attr:`PmvIndex.parameters`, each with its
         ``default_<argument>``, and :attr:`PmvIndex.options`); those not given take their default values.
     :param output_frequencies: The reporting frequencies of the outputs (e.g., ['hourly', 'timestep']).
@@ -330,8 +545,13 @@ def apply_pmv_index_setpoints(
     # D. Programs: the cooling season, the arguments of each zone, its setpoints, its index and its hours.
     _add_programs(building, pmv_index, options, ems_suffixes, df_arguments, cooling_season_start, cooling_season_end,
                   verbose, instance_counts)
+    # The EMS objects of the index itself (the metabolic correction of the ePMV), whose programs run after those of
+    # the zones
+    index_programs = program_names(pmv_index, ems_suffixes, instance_counts)
+    if pmv_index.add_objects is not None:
+        index_programs += pmv_index.add_objects(building, target_data, options, verbose)
     # E. Program calling managers: the programs run at the beginning of each timestep (BeginTimestepBeforePredictor).
-    _add_program_calling_managers(building, verbose, program_names(pmv_index, ems_suffixes, instance_counts))
+    _add_program_calling_managers(building, verbose, index_programs)
     # F. Outputs: the EMS variables and the standard variables.
     _add_outputs(building, pmv_index, output_frequencies, other_pmv_related_outputs, ems_suffixes, unique_zones,
                  verbose)
@@ -837,7 +1057,8 @@ def _add_programs(building: IDF, pmv_index: PmvIndex, options: Mapping[str, Any]
 
 def program_names(pmv_index: PmvIndex, suffixes: Sequence[str],
                   instance_counts: Optional[Mapping[str, int]] = None) -> List[str]:
-    """The names of the EMS programs of the setpoints of an index (those of :func:`apply_pmv_index_setpoints`).
+    """The names of the EMS programs of the setpoints of an index (those of :func:`apply_pmv_index_setpoints`, without
+    those of :attr:`PmvIndex.add_objects`).
 
     :param pmv_index: The index (see :func:`get_pmv_index`).
     :param suffixes: The suffixes of the zones in the EMS objects.

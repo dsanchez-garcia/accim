@@ -4,7 +4,8 @@
 
 """
 Contains the functions to apply setpoints based on the predicted mean vote (PMV) of Fanger and on indices derived
-from it: the adaptive PMV (aPMV), with :func:`apply_apmv_setpoints`, and the PMV, with :func:`apply_pmv_setpoints`.
+from it: the adaptive PMV (aPMV), with :func:`apply_apmv_setpoints`, the PMV with the expectancy factor (ePMV), with
+:func:`apply_epmv_setpoints`, and the PMV, with :func:`apply_pmv_setpoints`.
 Unified version supporting EnergyPlus versions pre and post 23.1.
 
 These functions call :func:`accim.sim.pmv_index.apply_pmv_index_setpoints`, which identifies the target zones or
@@ -19,7 +20,8 @@ from typing import Any, Dict, List, Optional, Sequence, Union
 import pandas as pd
 
 from accim._deprecation import accepts_legacy_kwargs
-from accim.sim.pmv_index import _resolve_targets, apply_pmv_index_setpoints, arguments_table
+from accim.sim.pmv_index import (_resolve_targets, apply_pmv_index_setpoints, arguments_table,
+                                 metabolic_correction_names)
 from accim.sim.targets import sanitize_ems_name
 from accim.utils.people import get_people_definition, get_people_objects, is_people_instance
 
@@ -27,6 +29,7 @@ __all__ = [
     'add_ems_debug_output',
     'add_vrf_system',
     'apply_apmv_setpoints',
+    'apply_epmv_setpoints',
     'apply_pmv_setpoints',
     'change_adaptive_coeff',
     'generate_df_from_args',
@@ -162,6 +165,111 @@ def apply_apmv_setpoints(
             adaptive_coefficient_heating=adaptive_coefficient_heating,
             default_adaptive_coefficient_cooling=default_adaptive_coefficient_cooling,
             default_adaptive_coefficient_heating=default_adaptive_coefficient_heating,
+        ),
+        output_frequencies=output_frequencies,
+        other_pmv_related_outputs=other_pmv_related_outputs,
+        pmv_cooling_setpoint=pmv_cooling_setpoint,
+        pmv_heating_setpoint=pmv_heating_setpoint,
+        cooling_setpoint_tolerance_cooling_season=cooling_setpoint_tolerance_cooling_season,
+        cooling_setpoint_tolerance_heating_season=cooling_setpoint_tolerance_heating_season,
+        heating_setpoint_tolerance_cooling_season=heating_setpoint_tolerance_cooling_season,
+        heating_setpoint_tolerance_heating_season=heating_setpoint_tolerance_heating_season,
+        cooling_season_start=cooling_season_start,
+        cooling_season_end=cooling_season_end,
+        default_pmv_cooling_setpoint=default_pmv_cooling_setpoint,
+        default_pmv_heating_setpoint=default_pmv_heating_setpoint,
+        default_cooling_setpoint_tolerance_cooling_season=default_cooling_setpoint_tolerance_cooling_season,
+        default_cooling_setpoint_tolerance_heating_season=default_cooling_setpoint_tolerance_heating_season,
+        default_heating_setpoint_tolerance_cooling_season=default_heating_setpoint_tolerance_cooling_season,
+        default_heating_setpoint_tolerance_heating_season=default_heating_setpoint_tolerance_heating_season,
+        verbose=verbose,
+    )
+
+
+def apply_epmv_setpoints(
+        building: IDF,
+        output_frequencies: Sequence[str] = ('hourly',),
+        other_pmv_related_outputs: bool = True,
+        expectancy_factor: Union[float, dict] = 0.8,
+        pmv_cooling_setpoint: Union[float, dict] = 0.5,
+        pmv_heating_setpoint: Union[float, dict] = -0.5,
+        apply_to_heating: bool = False,
+        metabolic_correction: bool = False,
+        cooling_setpoint_tolerance_cooling_season: Union[float, dict] = -0.1,
+        cooling_setpoint_tolerance_heating_season: Union[float, dict] = -0.1,
+        heating_setpoint_tolerance_cooling_season: Union[float, dict] = 0.1,
+        heating_setpoint_tolerance_heating_season: Union[float, dict] = 0.1,
+        cooling_season_start: Union[float, str] = 121,
+        cooling_season_end: Union[float, str] = 274,
+        default_expectancy_factor: float = 0.8,
+        default_pmv_cooling_setpoint: float = 0.5,
+        default_pmv_heating_setpoint: float = -0.5,
+        default_cooling_setpoint_tolerance_cooling_season: float = -0.1,
+        default_cooling_setpoint_tolerance_heating_season: float = -0.1,
+        default_heating_setpoint_tolerance_cooling_season: float = 0.1,
+        default_heating_setpoint_tolerance_heating_season: float = 0.1,
+        verbose: bool = True,
+) -> IDF:
+    """
+    Applies setpoints based on the PMV with the expectancy factor (ePMV) of Fanger and Toftum (2002), ePMV = e·PMV,
+    which extends the PMV to the buildings without air-conditioning in warm climates, whose occupants feel the warmth
+    as less severe than the PMV predicts.
+
+    The expectancy factor e of each zone applies in the cooling season, and only to the warm sensations (the upper
+    limit of the comfort zone): the PMV setpoint of the cooling thermostat is ePMV/e, and the heating setpoint is a
+    PMV setpoint, as in the heating season, where e is 1. The ePMV of each zone (the output ``ePMV_<zone>``) is e·PMV if
+    the PMV is positive, and the PMV otherwise. Fanger and Toftum (2002, Table 1) give e between 0.9 and 1 where
+    air-conditioned buildings are common and the warm periods are brief, between 0.7 and 0.9 where some buildings are
+    air-conditioned and the summer is warm, and between 0.5 and 0.7 where few buildings are air-conditioned and it is
+    warm all the year (:data:`accim.constants.EPMV_EXPECTANCY_RANGES`); e is 1 in air-conditioned buildings. It is
+    :func:`accim.sim.pmv_index.apply_pmv_index_setpoints` with the index 'epmv'.
+
+    :param building: The eppy or besos IDF object to be modified.
+    :param output_frequencies: The reporting frequencies of the outputs (e.g., ['hourly', 'timestep']).
+    :param other_pmv_related_outputs: If True, adds other outputs of the comfort of the zones (Fanger PMV and PPD,
+        operative and air temperatures).
+    :param expectancy_factor: The expectancy factor e, between 0.5 and 1: one number, or a dict {zone: number} (see
+        :func:`get_available_target_names`). Default is 0.8.
+    :param pmv_cooling_setpoint: The ePMV setpoint for cooling. Number or dict. Default is 0.5.
+    :param pmv_heating_setpoint: The ePMV setpoint for heating, which is a PMV setpoint unless ``apply_to_heating``.
+        Number or dict. Default is -0.5.
+    :param apply_to_heating: If True, the expectancy factor also applies to the cool sensations (the heating setpoint
+        is ePMV/e in the cooling season, and the ePMV of each zone is always e·PMV); Fanger and Toftum (2002) do not
+        apply it to them, so a warning is issued.
+    :param metabolic_correction: If True, the activity level of the occupants is reduced in the cooling season by
+        6.7 % for each unit of PMV above neutral, up to 3 (:data:`accim.constants.EPMV_MET_REDUCTION_PER_PMV`), as
+        Fanger and Toftum (2002) do because the occupants slow down in the warmth. EnergyPlus calculates the PMV once
+        per timestep, with the activity level of the People objects, so the correction uses the PMV of the previous
+        timestep, which is calculated with the corrected activity level: the corrected activity level tends to the one
+        whose PMV gives it, a slightly smaller reduction than that of Fanger and Toftum, whose PMV is calculated with
+        the activity level without the correction. The activity level also gives the heat gains of the occupants, which
+        the correction reduces too (from the next timestep, since EnergyPlus calculates the internal gains before the
+        EMS programs of the setpoints run). The activity level schedule of each People object becomes a copy of it
+        that the EMS sets, and the outputs ``Metabolic Correction Factor_<people>`` and
+        ``Corrected Activity Level_<people>`` report it (see :func:`accim.sim.pmv_index.metabolic_correction_names`);
+        a People object that applies to several zones has one activity level, reduced with the mean PMV of its
+        occupants in them. Set the activity level with :func:`set_pmv_input_parameters` before applying the
+        setpoints. Default is False.
+    :param cooling_setpoint_tolerance_cooling_season: The tolerance added to the cooling setpoint in the cooling
+        season (and the other tolerances, to the other setpoints and seasons), on the ePMV scale. Number or dict.
+    :param cooling_season_start: The first day of the cooling season: the day of the year or 'dd/mm'. Default is 121
+        (1 May), as in AddAccis.
+    :param cooling_season_end: The day after the last day of the cooling season: the day of the year or 'dd/mm'.
+        Default is 274 (1 October).
+    :param default_expectancy_factor: The expectancy factor of the zones missing in the dict of ``expectancy_factor``
+        (and the other ``default_*`` arguments, for the other arguments).
+    :param verbose: If True, prints the objects that are added. The warnings are always issued.
+    :return: The modified IDF object.
+    :raises ValueError: If an expectancy factor is not between 0.5 and 1.
+    """
+    return apply_pmv_index_setpoints(
+        building,
+        index='epmv',
+        index_parameters=dict(
+            expectancy_factor=expectancy_factor,
+            default_expectancy_factor=default_expectancy_factor,
+            apply_to_heating=apply_to_heating,
+            metabolic_correction=metabolic_correction,
         ),
         output_frequencies=output_frequencies,
         other_pmv_related_outputs=other_pmv_related_outputs,
@@ -502,6 +610,8 @@ def set_pmv_input_parameters(
     :param air_velocity: Air velocity in m/s. If None, ignores this parameter.
     :param work_efficiency: Work efficiency (0.0 - 1.0). If None, ignores this parameter.
     :param verbose: If True, prints created schedules to console.
+    :raises ValueError: If an activity level is given for a People object whose activity level has the metabolic
+        correction of :func:`apply_epmv_setpoints`, which reads it from its schedule: set it before applying them.
     """
 
     # 1. Resolve targets to map People objects to Data Keys
@@ -538,6 +648,17 @@ def set_pmv_input_parameters(
     for t in target_data:
         for people_name in t['people_names']:
             people_to_keys.setdefault(people_name.strip().upper(), []).append(t['df_key'])
+
+    # The metabolic correction of the ePMV sets the activity level schedule of its People objects (a copy of their
+    # schedule, which it reads), so a new activity level schedule would remove the correction
+    corrected = [str(people.Name) for people in get_people_objects(building)
+                 if val_map_activity.get((people_to_keys.get(people.Name.strip().upper()) or [None])[0]) is not None
+                 and str(people.Activity_Level_Schedule_Name).strip().upper()
+                 == metabolic_correction_names(people.Name)['schedule'].upper()]
+    if corrected:
+        raise ValueError(f'The activity level of the People objects {corrected} has the metabolic correction of the '
+                         f'ePMV setpoints (apply_epmv_setpoints), which reads it from their schedules: set the '
+                         f'activity level with set_pmv_input_parameters before applying the setpoints.')
 
     # 3. Iterate over People and People:Instance objects
     for people in get_people_objects(building):
