@@ -16,7 +16,8 @@ def test_the_parameters_of_the_epmv_setpoints():
 
     assert simulation.is_epmv_setpoints and not simulation.is_apmv_setpoints
     assert simulation.get_available_parameters() == ['expectancy_factor', 'pmv_setpoint', 'pmv_cooling_setpoint',
-                                                     'pmv_heating_setpoint']
+                                                     'pmv_heating_setpoint', 'clothing_insulation', 'activity_level',
+                                                     'air_velocity']
     assert parameters.get_available_params_epmv_setpoints() == simulation.get_available_parameters()
     # The setpoints are changed by the modifiers of the aPMV setpoints, which find the lines by their variables
     for name in ('pmv_setpoint', 'pmv_cooling_setpoint', 'pmv_heating_setpoint'):

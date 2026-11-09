@@ -1848,3 +1848,502 @@ class CoolingSetpointCeiling:
         CoolingSetpointCeiling().modify(idf, 26)
         """
         param_accis.modify_ACSTceil(idf, value)
+
+
+class Clo:
+    """OO wrapper for the parameter ``clothing_insulation``: the clothing insulation of all the People objects (clo),
+    with :func:`accim.sim.apmv.set_pmv_input_parameters` (the schedules ``Sch_Clo_<people>``); it warns outside 0 to 2
+    clo (ISO 7730:2025, section 4) and above 1.5 clo (ASHRAE 55-2020). A parameter of the parameters types
+    ``'apmv setpoints'`` and ``'epmv setpoints'`` (accim 1.2.0).
+
+    Usage
+    -----
+    Instantiate the class and call :meth:`modify` with ``idf`` and ``value``.
+
+    Examples
+    --------
+    p = Clo()
+    p.modify(idf, 0.5)
+    """
+
+    def __init__(self):
+        """Initialize the wrapper and expose the canonical parameter name.
+
+        Usage
+        -----
+        Use the instance ``name`` attribute for logging or mapping checks.
+
+        Examples
+        --------
+        Clo().name
+        'clothing_insulation'
+        """
+        self.name = 'clothing_insulation'
+
+    def modify(self, idf, value):
+        """Apply parameter ``clothing_insulation`` to an IDF in place.
+
+        Parameters
+        ----------
+        idf : besos.IDF_class
+            Target building model to edit.
+        value : float
+            The clothing insulation (clo). Written by ``param_apmv.change_clothing_insulation_all_zones``.
+
+        Returns
+        -------
+        None
+            The function edits ``idf`` in place.
+
+        Usage
+        -----
+        Call this method before executing parametric or optimisation runs.
+
+        Examples
+        --------
+        Clo().modify(idf, 0.5)
+        """
+        param_apmv.change_clothing_insulation_all_zones(idf, value)
+
+
+class Met:
+    """OO wrapper for the parameter ``activity_level``: the activity level of all the People objects (W/person, as in
+    EnergyPlus), with :func:`accim.sim.apmv.set_pmv_input_parameters` (the schedules ``Sch_Act_<people>``); it warns
+    outside 82.8 to 417.6 W/person, the 0.8 to 4 met (46 to 232 W/m²) of ISO 7730:2025 (section 4) with a body surface
+    area of 1.8 m². A parameter of the parameters types ``'apmv setpoints'`` and ``'epmv setpoints'`` (accim 1.2.0).
+
+    Usage
+    -----
+    Instantiate the class and call :meth:`modify` with ``idf`` and ``value``.
+
+    Examples
+    --------
+    p = Met()
+    p.modify(idf, 126)
+    """
+
+    def __init__(self):
+        """Initialize the wrapper and expose the canonical parameter name.
+
+        Usage
+        -----
+        Use the instance ``name`` attribute for logging or mapping checks.
+
+        Examples
+        --------
+        Met().name
+        'activity_level'
+        """
+        self.name = 'activity_level'
+
+    def modify(self, idf, value):
+        """Apply parameter ``activity_level`` to an IDF in place.
+
+        Parameters
+        ----------
+        idf : besos.IDF_class
+            Target building model to edit.
+        value : float
+            The activity level (W/person). Written by ``param_apmv.change_activity_level_all_zones``.
+
+        Returns
+        -------
+        None
+            The function edits ``idf`` in place.
+
+        Usage
+        -----
+        Call this method before executing parametric or optimisation runs.
+
+        Examples
+        --------
+        Met().modify(idf, 126)
+        """
+        param_apmv.change_activity_level_all_zones(idf, value)
+
+
+class AirVelocity:
+    """OO wrapper for the parameter ``air_velocity``: the air velocity of all the People objects (m/s), with
+    :func:`accim.sim.apmv.set_pmv_input_parameters` (the schedules ``Sch_Vel_<people>``); it warns outside 0 to 1 m/s
+    (ISO 7730:2025, section 4). A parameter of the parameters types ``'apmv setpoints'`` and ``'epmv setpoints'`` (accim
+    1.2.0).
+
+    Usage
+    -----
+    Instantiate the class and call :meth:`modify` with ``idf`` and ``value``.
+
+    Examples
+    --------
+    p = AirVelocity()
+    p.modify(idf, 0.2)
+    """
+
+    def __init__(self):
+        """Initialize the wrapper and expose the canonical parameter name.
+
+        Usage
+        -----
+        Use the instance ``name`` attribute for logging or mapping checks.
+
+        Examples
+        --------
+        AirVelocity().name
+        'air_velocity'
+        """
+        self.name = 'air_velocity'
+
+    def modify(self, idf, value):
+        """Apply parameter ``air_velocity`` to an IDF in place.
+
+        Parameters
+        ----------
+        idf : besos.IDF_class
+            Target building model to edit.
+        value : float
+            The air velocity (m/s). Written by ``param_apmv.change_air_velocity_all_zones``.
+
+        Returns
+        -------
+        None
+            The function edits ``idf`` in place.
+
+        Usage
+        -----
+        Call this method before executing parametric or optimisation runs.
+
+        Examples
+        --------
+        AirVelocity().modify(idf, 0.2)
+        """
+        param_apmv.change_air_velocity_all_zones(idf, value)
+
+
+class ExpectancyFactor:
+    """OO wrapper for the parameter ``expectancy_factor``: the expectancy factor of the ePMV setpoints of all the zones
+    (:func:`accim.sim.apmv.apply_epmv_setpoints`), between 0.5 and 1 (Fanger and Toftum, 2002). A parameter of the
+    parameters type ``'epmv setpoints'``.
+
+    Usage
+    -----
+    Instantiate the class and call :meth:`modify` with ``idf`` and ``value``.
+
+    Examples
+    --------
+    p = ExpectancyFactor()
+    p.modify(idf, 0.7)
+    """
+
+    def __init__(self):
+        """Initialize the wrapper and expose the canonical parameter name.
+
+        Usage
+        -----
+        Use the instance ``name`` attribute for logging or mapping checks.
+
+        Examples
+        --------
+        ExpectancyFactor().name
+        'expectancy_factor'
+        """
+        self.name = 'expectancy_factor'
+
+    def modify(self, idf, value):
+        """Apply parameter ``expectancy_factor`` to an IDF in place.
+
+        Parameters
+        ----------
+        idf : besos.IDF_class
+            Target building model to edit.
+        value : float
+            The expectancy factor. Written by ``param_apmv.change_expectancy_factor_all_zones``.
+
+        Returns
+        -------
+        None
+            The function edits ``idf`` in place.
+
+        Usage
+        -----
+        Call this method before executing parametric or optimisation runs.
+
+        Examples
+        --------
+        ExpectancyFactor().modify(idf, 0.7)
+        """
+        param_apmv.change_expectancy_factor_all_zones(idf, value)
+
+
+class AdaptiveCoefficientCooling:
+    """OO wrapper for the parameter ``adaptive_coefficient_cooling``: the adaptive coefficient of the aPMV setpoints of
+    all the zones in the cooling season (or with PMV >= 0, with ``adaptive_coefficient_by='pmv_sign'``). A parameter of
+    the parameters type ``'apmv setpoints'``.
+
+    Usage
+    -----
+    Instantiate the class and call :meth:`modify` with ``idf`` and ``value``.
+
+    Examples
+    --------
+    p = AdaptiveCoefficientCooling()
+    p.modify(idf, 0.293)
+    """
+
+    def __init__(self):
+        """Initialize the wrapper and expose the canonical parameter name.
+
+        Usage
+        -----
+        Use the instance ``name`` attribute for logging or mapping checks.
+
+        Examples
+        --------
+        AdaptiveCoefficientCooling().name
+        'adaptive_coefficient_cooling'
+        """
+        self.name = 'adaptive_coefficient_cooling'
+
+    def modify(self, idf, value):
+        """Apply parameter ``adaptive_coefficient_cooling`` to an IDF in place.
+
+        Parameters
+        ----------
+        idf : besos.IDF_class
+            Target building model to edit.
+        value : float
+            The adaptive coefficient. Written by ``param_apmv.change_adaptive_coeff_cooling_all_zones``.
+
+        Returns
+        -------
+        None
+            The function edits ``idf`` in place.
+
+        Usage
+        -----
+        Call this method before executing parametric or optimisation runs.
+
+        Examples
+        --------
+        AdaptiveCoefficientCooling().modify(idf, 0.293)
+        """
+        param_apmv.change_adaptive_coeff_cooling_all_zones(idf, value)
+
+
+class AdaptiveCoefficientHeating:
+    """OO wrapper for the parameter ``adaptive_coefficient_heating``: the adaptive coefficient of the aPMV setpoints of
+    all the zones in the heating season (or with PMV < 0, with ``adaptive_coefficient_by='pmv_sign'``). A parameter of
+    the parameters type ``'apmv setpoints'``.
+
+    Usage
+    -----
+    Instantiate the class and call :meth:`modify` with ``idf`` and ``value``.
+
+    Examples
+    --------
+    p = AdaptiveCoefficientHeating()
+    p.modify(idf, -0.125)
+    """
+
+    def __init__(self):
+        """Initialize the wrapper and expose the canonical parameter name.
+
+        Usage
+        -----
+        Use the instance ``name`` attribute for logging or mapping checks.
+
+        Examples
+        --------
+        AdaptiveCoefficientHeating().name
+        'adaptive_coefficient_heating'
+        """
+        self.name = 'adaptive_coefficient_heating'
+
+    def modify(self, idf, value):
+        """Apply parameter ``adaptive_coefficient_heating`` to an IDF in place.
+
+        Parameters
+        ----------
+        idf : besos.IDF_class
+            Target building model to edit.
+        value : float
+            The adaptive coefficient. Written by ``param_apmv.change_adaptive_coeff_heating_all_zones``.
+
+        Returns
+        -------
+        None
+            The function edits ``idf`` in place.
+
+        Usage
+        -----
+        Call this method before executing parametric or optimisation runs.
+
+        Examples
+        --------
+        AdaptiveCoefficientHeating().modify(idf, -0.125)
+        """
+        param_apmv.change_adaptive_coeff_heating_all_zones(idf, value)
+
+
+class CustAST_metric:
+    """OO wrapper for the parameter ``custom_outdoor_metric``: the outdoor metric of the custom model of all the zones
+    (the input ``CustAST_metric``): its name or its code (:data:`accim.sim.ems.outdoor_metric.OUTDOOR_METRICS`, 0 to 7;
+    the options of the parametric module are numbers). A parameter of the parameters type ``'accim custom model'``
+    (accim 1.2.0).
+
+    Usage
+    -----
+    Instantiate the class and call :meth:`modify` with ``idf`` and ``value``.
+
+    Examples
+    --------
+    p = CustAST_metric()
+    p.modify(idf, 2)
+    """
+
+    def __init__(self):
+        """Initialize the wrapper and expose the canonical parameter name.
+
+        Usage
+        -----
+        Use the instance ``name`` attribute for logging or mapping checks.
+
+        Examples
+        --------
+        CustAST_metric().name
+        'custom_outdoor_metric'
+        """
+        self.name = 'custom_outdoor_metric'
+
+    def modify(self, idf, value):
+        """Apply parameter ``custom_outdoor_metric`` to an IDF in place.
+
+        Parameters
+        ----------
+        idf : besos.IDF_class
+            Target building model to edit.
+        value : int or str
+            The code or the name of the metric. Written by ``param_accis.modify_CustAST_metric``.
+
+        Returns
+        -------
+        None
+            The function edits ``idf`` in place.
+
+        Usage
+        -----
+        Call this method before executing parametric or optimisation runs.
+
+        Examples
+        --------
+        CustAST_metric().modify(idf, 2)
+        """
+        param_accis.modify_CustAST_metric(idf, value)
+
+
+class CustAST_alpha:
+    """OO wrapper for the parameter ``custom_alpha``: the alpha of the outdoor metric 'rmot_alpha' of the custom model
+    of all the zones (the input ``CustAST_alpha``); it warns outside 0.6 to 0.9 with 'rmot_alpha' (ASHRAE 55-2020,
+    5.4.2.1). A parameter of the parameters type ``'accim custom model'`` (accim 1.2.0).
+
+    Usage
+    -----
+    Instantiate the class and call :meth:`modify` with ``idf`` and ``value``.
+
+    Examples
+    --------
+    p = CustAST_alpha()
+    p.modify(idf, 0.8)
+    """
+
+    def __init__(self):
+        """Initialize the wrapper and expose the canonical parameter name.
+
+        Usage
+        -----
+        Use the instance ``name`` attribute for logging or mapping checks.
+
+        Examples
+        --------
+        CustAST_alpha().name
+        'custom_alpha'
+        """
+        self.name = 'custom_alpha'
+
+    def modify(self, idf, value):
+        """Apply parameter ``custom_alpha`` to an IDF in place.
+
+        Parameters
+        ----------
+        idf : besos.IDF_class
+            Target building model to edit.
+        value : float
+            The alpha, between 0 and 1. Written by ``param_accis.modify_CustAST_alpha``.
+
+        Returns
+        -------
+        None
+            The function edits ``idf`` in place.
+
+        Usage
+        -----
+        Call this method before executing parametric or optimisation runs.
+
+        Examples
+        --------
+        CustAST_alpha().modify(idf, 0.8)
+        """
+        param_accis.modify_CustAST_alpha(idf, value)
+
+
+class CustAST_days:
+    """OO wrapper for the parameter ``custom_days``: the days of the outdoor metric 'ndrm' of the custom model of all
+    the zones (the input ``CustAST_days``), rounded to the nearest integer; it warns outside 7 to 30 days with 'ndrm'
+    (ASHRAE 55-2020, 5.4.2.1). A parameter of the parameters type ``'accim custom model'`` (accim 1.2.0).
+
+    Usage
+    -----
+    Instantiate the class and call :meth:`modify` with ``idf`` and ``value``.
+
+    Examples
+    --------
+    p = CustAST_days()
+    p.modify(idf, 7)
+    """
+
+    def __init__(self):
+        """Initialize the wrapper and expose the canonical parameter name.
+
+        Usage
+        -----
+        Use the instance ``name`` attribute for logging or mapping checks.
+
+        Examples
+        --------
+        CustAST_days().name
+        'custom_days'
+        """
+        self.name = 'custom_days'
+
+    def modify(self, idf, value):
+        """Apply parameter ``custom_days`` to an IDF in place.
+
+        Parameters
+        ----------
+        idf : besos.IDF_class
+            Target building model to edit.
+        value : float
+            The number of days. Written by ``param_accis.modify_CustAST_days``.
+
+        Returns
+        -------
+        None
+            The function edits ``idf`` in place.
+
+        Usage
+        -----
+        Call this method before executing parametric or optimisation runs.
+
+        Examples
+        --------
+        CustAST_days().modify(idf, 7)
+        """
+        param_accis.modify_CustAST_days(idf, value)

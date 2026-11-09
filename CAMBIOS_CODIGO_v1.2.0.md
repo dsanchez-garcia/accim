@@ -6,7 +6,7 @@ documentación de uso. Recoge las propuestas del bloque A de `notes/PROPUESTAS_M
 esta versión: las P1, A2, A1 y A5, en este orden; y después D2 (sección 7), que el autor incluyó en la 1.2.0 el
 2026-11-09 con E2 y E1, y las demás propuestas de la v03 (`notes/PROPUESTAS_MEJORAS_post_1.1.0_v03.md`), en el orden
 del autor (`notes/COPILOT_BRIEF_v1.2.0_v01.md`): E1 (sección 8), E2 (sección 9), A3 (sección 10), B1 (sección 11),
-B5 (sección 12)...
+B5 (sección 12), C1 (sección 13)...
 
 Lo que ya está en otros documentos no se repite aquí:
 
@@ -49,6 +49,9 @@ Lo que ya está en otros documentos no se repite aquí:
   todas las normas y modos de confort, salvo las consignas basadas en el PMV (D5); y las horas ocupadas por debajo de
   unas temperaturas (`report_hours_below`, salidas `HoursBelow_<T>_<zona>`). Solo los IDF que los usan cambian
   (sección 12).
+- **C1.** El paramétrico varía la vestimenta, la actividad y la velocidad del aire (con las consignas basadas en el
+  PMV, avisando fuera de los rangos de ISO 7730:2025 §4), la métrica exterior del modelo personalizado y el suelo y el
+  techo de las consignas, con una clase para cada parámetro (sección 13).
 - Las categorías del PMV y la aproximación de la corrección del metabolismo se han comprobado en ISO 7730:2025 y
   EN 16798-1:2019, y el modelo dinámico de vestimenta de A5, en Schiavon y Lee (2013) y ASHRAE 55-2020 (sección 6).
 - Lo que quedaba abierto se ha comprobado: el golden master y las pruebas de EnergyPlus 26.1 y 26.2, también la de A5
@@ -811,3 +814,56 @@ nada las acotaba: con el modo 3 de INT EN16798, categoría II, la consigna de ca
   frente a 6,5 s.
 - Hallazgo: con un periodo que empieza el 8 de enero, el PMOT de `energyplus_running_means` (E1) es 0,142361 °C mayor
   que el de EnergyPlus todos los días de la semana (`TODO.md`); con el 1 de enero y el 15 de julio, coinciden.
+
+## 13. Los parámetros de los ocupantes, de los índices nuevos y del modelo personalizado en el paramétrico (C1)
+
+La propuesta C1 pide las clases `Clo`, `Met`, `AirVelocity` (con `set_pmv_input_parameters`), `ExpectancyFactor`,
+`HeatingSetpointFloor`, `CoolingSetpointCeiling`, `CustAST_metric`, `CustAST_alpha` y `CustAST_days`, con avisos
+fuera de los rangos de ISO 7730:2025 §4 (0,8–4 met, 0–2 clo, 0–1 m/s) y de ASHRAE 55 (≤ 1,5 clo), registradas en
+`params_dicts.py` y en `get_available_params_apmv_setpoints()`/`get_available_params_accim_custom_models()`, y una
+prueba con un diseño de dos puntos de `Clo` que compruebe la schedule de vestimenta de los IDF generados. El brief
+cambia `clo`/`met` por `clothing_insulation`/`activity_level` y señala `get_available_params_epmv_setpoints()` como
+patrón. Los rangos se han comprobado en ISO 7730:2025 (§4, página 3 de la norma: «M 46 W/m² a 232 W/m² (0,8 met a
+4 met); Icl 0 a 0,310 m²·K/W (0 clo a 2 clo)... var 0 m/s a 1 m/s», y el área corporal media A_Du = 1,8 m²) y en la
+Engineering Reference 25.2 de EnergyPlus (§19.1: «this average person area of 1.8 m² is used for the body surface
+area [in] all thermal comfort models»; 1 met = 58,2 W/m²).
+
+**Antes.** El paramétrico tenía las consignas del aPMV y del ePMV, pero no las entradas del PMV de los ocupantes;
+B1 y B5 no tenían parámetros (los de B5 se registraron con B5).
+
+**Ahora.**
+
+- `accim/constants.py`: `PMV_BODY_SURFACE_AREA` (1,8 m²), `PMV_INPUT_RANGES` (la actividad en W/persona, 46–232 W/m²
+  por 1,8 m² = 82,8–417,6 W/persona, como el *Activity Level* de las People de EnergyPlus; 0–2 clo; 0–1 m/s) y
+  `ASHRAE55_MAX_CLOTHING_INSULATION` (1,5 clo, v03 §11.3).
+- `funcs_for_besos/param_apmv.py`: `change_clothing_insulation_all_zones`, `change_activity_level_all_zones` y
+  `change_air_velocity_all_zones` (llaman a `set_pmv_input_parameters` con `verbose=False`; `_check_pmv_input` avisa
+  fuera de los rangos y da `ValueError` con un valor negativo o que no es un número).
+- `funcs_for_besos/param_accis.py`: `modify_CustAST_metric` (el nombre o el código de la métrica; las opciones del
+  paramétrico son números), `modify_CustAST_alpha` y `modify_CustAST_days` (redondeado al día entero), con
+  `_set_outdoor_metric_input`: comprueba los valores de cada zona (los avisos de D7), escribe la entrada (añadiendo la
+  línea que falte) y llama a `set_outdoor_metric_code` si el modelo necesita el código de la métrica o lo tiene. Los
+  programas del modelo se conservan si pueden (con los valores del EPW, si `modify_accis` recibió `epw` antes del
+  estudio); si no, empiezan con PMOT (aviso) y `'monthly_mean'` da `ValueError`. Con `'pmot'` y sin código, las
+  entradas se quedan en `SetInputData_<zona>` como variables locales de Erl (la guía del EMS: las variables no
+  declaradas son locales), para que `custom_alpha` o `custom_days` aplicados antes que `custom_outdoor_metric` en una
+  muestra se conserven: sin esto, el α de la muestra se perdía al quitar las entradas.
+  `drop_invalid_param_combinations` quita las filas con suelo ≥ techo.
+- `params_dicts.py`: `clothing_insulation`, `activity_level` y `air_velocity` en `apmv_setpoints_params` y
+  `epmv_setpoints_params`; `custom_outdoor_metric`, `custom_alpha` y `custom_days` en `accim_custom_model_params` (y en
+  la tupla de la GUI). `main.py`: `sampling_full_set()` aplica `drop_invalid_param_combinations` también a los modelos
+  personalizados.
+- `parameters.py`: las clases `Clo`, `Met`, `AirVelocity`, `ExpectancyFactor`, `AdaptiveCoefficientCooling`,
+  `AdaptiveCoefficientHeating`, `CustAST_metric`, `CustAST_alpha` y `CustAST_days` (las de B5 ya estaban).
+- Desviaciones de la v03: los nombres de los parámetros son los de los argumentos de accim (`clothing_insulation`,
+  `activity_level` en W/persona, `air_velocity`, `custom_outdoor_metric`...), como pide el brief; el rango de la
+  actividad se da en W/persona; las entradas del PMV no son parámetros de los modelos de accim (consignas de
+  temperatura); se añaden `AdaptiveCoefficientCooling` y `AdaptiveCoefficientHeating`, que la tabla de la v03 pide si
+  no existían; la fábrica `custom_regime_parameters(n)` espera a B2 (`TODO.md`).
+- Pruebas: `tests/parametric_and_optimisation/test_pmv_and_metric_parameters.py` (8: el registro y las clases; los
+  rangos y sus avisos; los planes sin suelo ≥ techo, también de los modelos personalizados; los modificadores de las
+  entradas del PMV en el modelo de ejemplo con el aPMV; el diseño de dos puntos de `clothing_insulation` con
+  `sampling_full_set()` y `EvaluatorEP.generate_building` de besos, sin simular: cada IDF tiene sus `Sch_Clo_<people>`
+  con su valor; los modificadores de la métrica, en el orden de una muestra, con el redondeo de los días, el anillo de
+  45 días, los avisos y los errores; la métrica conserva el EPW de `modify_accis`; los modelos de 0.x), y las listas
+  de `test_epmv_parameters.py` y `test_legacy_names.py`.

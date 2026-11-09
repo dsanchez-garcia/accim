@@ -356,7 +356,7 @@ CUSTOM_MODEL_PARAMETERS = (
     'custom_cooling_upper_limit', 'custom_cooling_lower_limit', 'custom_heating_upper_limit',
     'custom_heating_lower_limit', 'custom_upper_limit', 'custom_lower_limit', 'custom_slope', 'custom_intercept',
     'custom_cooling_offset', 'custom_heating_offset', 'custom_offset', 'heating_setpoint_floor',
-    'cooling_setpoint_ceiling',
+    'cooling_setpoint_ceiling', 'custom_outdoor_metric', 'custom_alpha', 'custom_days',
 )
 PARAMETERS_TYPES = {'accim predefined model': PREDEFINED_MODEL_PARAMETERS,
                     'accim custom model': CUSTOM_MODEL_PARAMETERS}

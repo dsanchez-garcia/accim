@@ -6847,7 +6847,9 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             parameters_values_df = pd.DataFrame()
         else:
             parameters_values_df = make_all_combinations(parameters_values)
-            if self.is_accim_predef_model:
+            if self.is_accim_predef_model or self.is_accim_custom_model:
+                # The combinations that are not valid (also a floor of the heating setpoint that is not lower than
+                # the ceiling of the cooling setpoint, since accim 1.2.0)
                 parameters_values_df = bf_accim.drop_invalid_param_combinations(parameters_values_df)
         self.parameters_values_df = parameters_values_df
         self._apply_mn_filter_to_samples('sampling_full_set')

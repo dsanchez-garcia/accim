@@ -242,7 +242,9 @@ def drop_invalid_param_combinations(samples_df):
     of INT ISO7730 (22) not on the comfort mode, so a full set would simulate the same model once for each of their
     values: their rows keep only the first value of these columns in the plan (one row for each combination of the
     other parameters). Before accim 1.0.0, the rows of ESP CTE were dropped when the plan had `category` or
-    `comfort_mode`, and those of INT ISO7730 kept only `comfort_mode` 0.
+    `comfort_mode`, and those of INT ISO7730 kept only `comfort_mode` 0. Since accim 1.2.0, the rows whose floor of
+    the heating setpoint is not lower than the ceiling of the cooling setpoint (`heating_setpoint_floor` and
+    `cooling_setpoint_ceiling`, which the modifiers reject) are dropped too.
 
     Parameters
     ----------
@@ -299,6 +301,8 @@ def drop_invalid_param_combinations(samples_df):
         'min_outdoor_temp_offset': 'MinOToffset', 'max_wind_speed': 'MaxWindSpeed', 'setpoint_accuracy': 'SetpointAcc',
         'opening_factor_max_temp_diff': 'MaxTempDiffVOF', 'opening_factor_min_temp_diff': 'MinTempDiffVOF',
         'min_opening_factor': 'MultiplierVOF',
+        # The parameters of accim 1.2.0 have no names of accim 0.x
+        'heating_setpoint_floor': 'heating_setpoint_floor', 'cooling_setpoint_ceiling': 'cooling_setpoint_ceiling',
     }
     columns = {new: (old if old in samples_df.columns and new not in samples_df.columns else new)
                for new, old in legacy_names.items()}
@@ -329,6 +333,7 @@ def drop_invalid_param_combinations(samples_df):
         lambda v: v('opening_factor_min_temp_diff') <= 0,
         lambda v: v('opening_factor_min_temp_diff') >= v('opening_factor_max_temp_diff'),
         lambda v: v('min_opening_factor') < 0 or v('min_opening_factor') > 1,
+        lambda v: v('heating_setpoint_floor') >= v('cooling_setpoint_ceiling'),
     )
     samples_df['valid'] = True
     for i in samples_df.index:
@@ -429,6 +434,117 @@ def modify_ACSTceil(idf: besos.IDF_class, value: float):
     result = modify_ACSTceil(idf=..., value=26)
     """
     _set_setpoint_limit(idf, 'ACSTceil', value)
+
+
+def _set_outdoor_metric_input(idf, variable: str, value) -> None:
+    """Set an input of the outdoor metric of the custom model (``CustAST_metric``, ``CustAST_alpha`` or
+    ``CustAST_days``) in all the zones of a model of accim 1.0.0 or later, adding the line to the programs
+    SetInputData_<zone> that do not have it, and write the EMS code of the outdoor metric where the model needs it, as
+    :func:`accim.sim.accis.modify_accis` does (:func:`accim.sim.ems.outdoor_metric.set_outdoor_metric_code`): the
+    programs of the model are kept if they can be (with the values of the weather file with which they begin, if
+    ``modify_accis`` gave them ``epw``); otherwise they begin with the running mean of ASHRAE 55 of EnergyPlus, with a
+    warning, and 'monthly_mean' raises a ValueError.
+
+    The parametric module applies the parameters of a sample one after the other: while the metric of the zones is
+    'pmot' and the model has no EMS code of the outdoor metric, the inputs stay in SetInputData_<zone> (as local
+    variables of the program, which Erl does not need to declare), so that a ``custom_alpha`` or ``custom_days`` given
+    before ``custom_outdoor_metric`` is kept when the metric gets the code.
+
+    :raises ValueError: If the model has the ACCIS of an earlier version, or a value is not valid.
+    """
+    from accim.sim.ems.outdoor_metric import (check_outdoor_metric_arguments, has_outdoor_metric_code,
+                                              set_outdoor_metric_code, uses_outdoor_metric)
+    from accim.sim.ems.programs import code_comfort_standards
+    from accim.sim.ems.setast import CUSTOM_COMFORT_STANDARD
+
+    zone_programs = input_programs(idf)
+    if not zone_programs:
+        raise ValueError('The model has the ACCIS of an earlier version of accim, whose custom model only has the '
+                         "outdoor metric 'pmot'. Add the ACCIS with this version of accim to the model without it.")
+    defaults = {'CustAST_metric': 'pmot', 'CustAST_alpha': 0.8, 'CustAST_days': 30}
+    for zone, program in zone_programs.items():
+        values = {name: read_inputs(program).get(name, default) for name, default in defaults.items()}
+        values[variable] = value
+        check_outdoor_metric_arguments(values['CustAST_metric'], values['CustAST_alpha'], values['CustAST_days'],
+                                       where=zone)
+    for program in zone_programs.values():
+        if set_inputs(program, {variable: value}):
+            set_program_lines(program, [str(line).strip() for line in program.fieldvalues[2:]]
+                              + [f'set {variable} = {value}'])
+    standards = code_comfort_standards(idf)
+    enabled = (standards is None or CUSTOM_COMFORT_STANDARD in standards) and uses_outdoor_metric(idf)
+    if enabled or has_outdoor_metric_code(idf):
+        set_outdoor_metric_code(idf, enabled)
+
+
+def modify_CustAST_metric(idf: besos.IDF_class, value):
+    """Modifies the outdoor metric of the custom model (``custom_outdoor_metric``, the input CustAST_metric) of all the
+    zones: its name or its code (:data:`accim.sim.ems.outdoor_metric.OUTDOOR_METRICS`: 'pmot' 0, 'rmot' 1,
+    'rmot_alpha' 2, 'rmot_7day' 3, 'daily_mean' 4, 'ndrm' 5, 'monthly_mean' 6, 'te_ref_nl' 7), such as the options of
+    the parametric module (numbers). The model gets the EMS code of the outdoor metric if a zone needs it (proposal
+    B1); the metrics that the EMS calculates begin with the running mean of ASHRAE 55 of EnergyPlus (with a warning),
+    unless the model has the programs of the outdoor metric with the values of a weather file
+    (:func:`accim.sim.accis.modify_accis` with ``epw``), and 'monthly_mean' needs them.
+
+    :param idf: The eppy or besos IDF class instance, with the ACCIS of accim 1.0.0 or later.
+    :param value: The name or the code of the metric.
+
+    Usage
+    -----
+    Use `modify_CustAST_metric` within ACCIM parametric and optimisation workflows (parameters type 'accim custom
+    model').
+
+    Examples
+    --------
+    result = modify_CustAST_metric(idf=..., value=2)
+    """
+    from accim.sim.ems.outdoor_metric import metric_code
+
+    _set_outdoor_metric_input(idf, 'CustAST_metric', metric_code(value))
+
+
+def modify_CustAST_alpha(idf: besos.IDF_class, value: float):
+    """Modifies the alpha of the running mean of the outdoor metric 'rmot_alpha' of the custom model (``custom_alpha``,
+    the input CustAST_alpha) of all the zones: between 0 and 1 (not included); it warns outside 0.6 to 0.9 with
+    'rmot_alpha' (ASHRAE 55-2020, 5.4.2.1; EN 16798-1 recommends 0.8).
+
+    :param idf: The eppy or besos IDF class instance, with the ACCIS of accim 1.0.0 or later.
+    :param value: The alpha.
+
+    Usage
+    -----
+    Use `modify_CustAST_alpha` within ACCIM parametric and optimisation workflows (parameters type 'accim custom
+    model').
+
+    Examples
+    --------
+    result = modify_CustAST_alpha(idf=..., value=0.7)
+    """
+    _set_outdoor_metric_input(idf, 'CustAST_alpha', value)
+
+
+def modify_CustAST_days(idf: besos.IDF_class, value: float):
+    """Modifies the number of previous days of the outdoor metric 'ndrm' of the custom model (``custom_days``, the
+    input CustAST_days) of all the zones, rounded to the nearest integer (the samples of a range of the parametric
+    module are not integers); it warns outside 7 to 30 days with 'ndrm' (ASHRAE 55-2020, 5.4.2.1).
+
+    :param idf: The eppy or besos IDF class instance, with the ACCIS of accim 1.0.0 or later.
+    :param value: The number of days.
+
+    Usage
+    -----
+    Use `modify_CustAST_days` within ACCIM parametric and optimisation workflows (parameters type 'accim custom
+    model').
+
+    Examples
+    --------
+    result = modify_CustAST_days(idf=..., value=7)
+    """
+    import numbers
+
+    if isinstance(value, bool) or not isinstance(value, numbers.Real):
+        raise ValueError(f'custom_days must be a number of days, not {value!r}.')
+    _set_outdoor_metric_input(idf, 'CustAST_days', int(round(value)))
 
 
 def modify_CustAST_ACSTaul(idf: besos.IDF_class, value: float):

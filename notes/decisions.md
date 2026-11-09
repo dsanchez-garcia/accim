@@ -11,6 +11,27 @@ Durable architectural/process decisions for this repository and its Obsidian
 vault. Newest first. Use [[templates/decision-record.md|the decision-record
 template]] to add a new entry.
 
+## 2026-11-09 — The parametric module varies the inputs of the PMV and the outdoor metric of the custom model (C1)
+
+- **Status**: accepted (proposal C1 of `notes/PROPUESTAS_MEJORAS_post_1.1.0_v03.md`, with the adjustment of the brief:
+  `clothing_insulation`/`activity_level` instead of `clo`/`met`; four details decided provisionally, see questions.md)
+- **Context**: the parametric module had no parameters for the clothing insulation, the activity level or the air
+  velocity, nor for the new arguments of B1 and B5; the prompt asks for the classes `Clo`, `Met`, `AirVelocity`,
+  `ExpectancyFactor`, `HeatingSetpointFloor`, `CoolingSetpointCeiling`, `CustAST_metric`, `CustAST_alpha` and
+  `CustAST_days`, with warnings outside the ranges of ISO 7730:2025 §4 and ASHRAE 55 (clo ≤ 1.5).
+- **Decision**: the parameters `clothing_insulation`, `activity_level` (W/person) and `air_velocity` of the parameters
+  types 'apmv setpoints' and 'epmv setpoints' call `set_pmv_input_parameters`, and warn outside
+  `accim.constants.PMV_INPUT_RANGES` (ISO 7730:2025 §4, with A_Du = 1.8 m²) and above
+  `ASHRAE55_MAX_CLOTHING_INSULATION`; `custom_outdoor_metric` (codes), `custom_alpha` and `custom_days` of the accim
+  custom models set the inputs of B1 and its EMS code as `modify_accis` does, without removing the inputs given
+  while the metric is 'pmot'; the wrapper classes have the names of v03 (with `AdaptiveCoefficientCooling` and
+  `AdaptiveCoefficientHeating`); the full sets leave out a floor that is not lower than the ceiling. The factory of
+  the regimes of B2 waits for B2.
+- **Consequences**: the parameters of the PMV-based setpoints and of the accim custom models grow (the lists of
+  `get_available_parameters()`, `test_epmv_parameters.py`, `test_legacy_names.py` and the GUI follow). A two-point
+  design of `clothing_insulation` gives IDFs whose `Sch_Clo_<people>` schedules have each value (checked with
+  `EvaluatorEP.generate_building` of besos, without simulating).
+
 ## 2026-11-09 — The setpoints of the ACCIS can have a floor and a ceiling, and the zones count the occupied hours below some temperatures (B5)
 
 - **Status**: accepted (proposal B5 of `notes/PROPUESTAS_MEJORAS_post_1.1.0_v03.md` with decision D5 of

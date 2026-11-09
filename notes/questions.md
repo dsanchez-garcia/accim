@@ -24,6 +24,44 @@ it here as answered).
 
 ## Open
 
+## 2026-11-09 — C1: with which parameters types are the inputs of the PMV parameters
+- Context: the prompt of C1 asks to register `Clo`, `Met` and `AirVelocity` "in get_available_params_apmv_setpoints()",
+  and the brief points to `get_available_params_epmv_setpoints()` as the recent pattern; with the accim models
+  (temperature setpoints), they would only change the outputs of the PMV.
+- Options considered: (a) the parameters types 'apmv setpoints' and 'epmv setpoints' only; (b) also the accim models.
+- Owner: the author.
+- Status: open; option (a) decided provisionally, pending author.
+
+## 2026-11-09 — C1: the units and range of activity_level
+- Context: the brief replaces `met` with `activity_level`, the argument of `set_pmv_input_parameters`, in W/person (as
+  the People objects of EnergyPlus); the prompt warns outside 0.8–4 met (ISO 7730:2025 §4: 46–232 W/m²).
+- Options considered: (a) the parameter in W/person, warning outside 82.8–417.6 W/person (46–232 W/m² times the body
+  surface area of 1.8 m² of ISO 7730:2025 §4 and of EnergyPlus, Engineering Reference 19.1); (b) a parameter in met,
+  converted to W/person.
+- Owner: the author.
+- Status: open; option (a) decided provisionally, pending author (the name and units of the argument of accim).
+
+## 2026-11-09 — C1: the outdoor metric of the custom model as a parameter
+- Context: the parametric module turns the options into floats, and samples ranges with floats; the modifiers get the
+  model and the value only (not the weather file of the simulation); its parameters are applied one after the other.
+- Options considered: `custom_outdoor_metric` takes the codes of the metrics (0–7) as options (a code that is not
+  whole raises a ValueError); `custom_days` is rounded to the nearest whole day; the metrics begin with PMOT, unless
+  the model was given the weather file with `modify_accis(..., epw=...)` before the study, whose programs are kept
+  ('monthly_mean' needs them); while the metric is 'pmot' and the model has no code of the outdoor metric, the inputs
+  given stay in `SetInputData_<zone>` as local Erl variables, so that `custom_alpha` or `custom_days` given before
+  `custom_outdoor_metric` are kept.
+- Owner: the author.
+- Status: open; these options decided provisionally, pending author.
+
+## 2026-11-09 — C1: the plans with a floor of the heating setpoint not lower than the ceiling
+- Context: the prompt asks to update "the plans of `sampling_full_set()`"; the modifiers of B5 reject a floor that is
+  not lower than the ceiling, which stops that simulation.
+- Options considered: `drop_invalid_param_combinations` leaves those rows out, and `sampling_full_set()` also applies it
+  to the accim custom models (before, only to the predefined models; its other rules need columns that the custom
+  models do not have).
+- Owner: the author.
+- Status: open; decided provisionally, pending author.
+
 ## 2026-11-09 — B5: where the floor and ceiling bound the setpoints
 - Context: the prompt of B5 puts the lines `if AHST < AHSTfloor ...` and `if ACST > ACSTceil ...` at the end of
   SetAST, before ROUNDING, for every comfort standard and comfort mode. In accim, SetAST runs SetAST_Master and the

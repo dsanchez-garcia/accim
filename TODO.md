@@ -24,6 +24,11 @@ Active short-term tasks.
 
 ## Backlog
 
+- [ ] [P2][todo] C1: the parameters of the regimes of the custom model, `custom_regime_parameters(n)` (with B2)
+  - Context: C1 is done (2026-11-09, `DEVLOG.md`) but for the last row of its table: the factory `custom_regime_parameters(n)`, which generates the classes `CustAST_m_1`, `CustAST_n_1`... of the regimes of B2 (the custom model with several regimes). B2 does not exist yet; it is later in the list of the author (C1 → D1 → B2).
+  - Definition of done: B2 adds the factory and its parameters, with tests, as its design says ("Paramétrico: fábrica `custom_regime_parameters(n_regimes)`... (C1)").
+  - References: `notes/PROPUESTAS_MEJORAS_post_1.1.0_v03.md` (C1, B2).
+
 - [ ] [P2][todo] A5: the clothing insulation as a function of the outdoor temperature
   - Context: A5 is done (2026-11-09, `DEVLOG.md`): the activity level and the clothing insulation by season and `'dynamic_ashrae55'` in `set_pmv_input_parameters`, as the prompt of the proposal asks, and `accim.sim.people.set_clothing_method`, with the `schedule` that the author chose (`notes/decisions.md`). The design of the proposal also has the clothing insulation as a function of the outdoor temperature (`callable(rmot) -> clo`), written as a `Schedule:File` from the EPW "vía E1" or as Erl by sections. It was blocked on E1, which is done (2026-11-09: `accim.sim.preview.outdoor_metrics` gives the running means of each hour of an EPW); the author's list of proposals for this session (2026-11-09) counts A5 as done, so it waits for the author.
   - Definition of done: as the author decides, with tests, documentation and `CHANGELOG.md`.

@@ -6,10 +6,13 @@
 
 __all__ = [
     'APMV_ADAPTIVE_COEFFICIENTS',
+    'ASHRAE55_MAX_CLOTHING_INSULATION',
     'EN16798_TABLE_B2',
     'ENERGYPLUS_VERSIONS_WITH_SPACES',
     'EPMV_EXPECTANCY_RANGES',
     'EPMV_MET_REDUCTION_PER_PMV',
+    'PMV_BODY_SURFACE_AREA',
+    'PMV_INPUT_RANGES',
     'SUPPORTED_ENERGYPLUS_VERSIONS',
 ]
 
@@ -34,6 +37,27 @@ EPMV_EXPECTANCY_RANGES = {'high': (0.9, 1.0), 'moderate': (0.7, 0.9), 'low': (0.
 #: The reduction of the metabolic rate for each unit of PMV above neutral (Fanger and Toftum, 2002): the PMV is
 #: calculated again with the activity level multiplied by 1 - 0.067·PMV.
 EPMV_MET_REDUCTION_PER_PMV = 0.067
+
+#: The body surface area (m²) with which the metabolic rate per person is divided to get it per unit of area: the
+#: commonly accepted mean value of ISO 7730:2025 (section 4), A_Du = 1.8 m², which EnergyPlus uses in all its thermal
+#: comfort models (Engineering Reference 25.2, section 19.1).
+PMV_BODY_SURFACE_AREA = 1.8
+
+#: The ranges of the inputs of the PMV within which ISO 7730:2025 (section 4) uses the PMV: the metabolic rate,
+#: 46 to 232 W/m² (0.8 to 4 met), here per person, as the activity level of the People objects of EnergyPlus
+#: (W/person), with :data:`PMV_BODY_SURFACE_AREA` (82.8 to 417.6 W/person); the clothing insulation, 0 to 2 clo
+#: (0 to 0.310 m²·K/W); and the relative air velocity, 0 to 1 m/s. The parameters ``activity_level``,
+#: ``clothing_insulation`` and ``air_velocity`` of the parametric module warn outside them (proposal C1).
+PMV_INPUT_RANGES = {
+    'activity_level': (46 * PMV_BODY_SURFACE_AREA, 232 * PMV_BODY_SURFACE_AREA),
+    'clothing_insulation': (0.0, 2.0),
+    'air_velocity': (0.0, 1.0),
+}
+
+#: The largest clothing insulation (clo) with which ASHRAE 55-2020 uses the PMV (section 11.3 of
+#: ``notes/PROPUESTAS_MEJORAS_post_1.1.0_v03.md``): the parameter ``clothing_insulation`` of the parametric module
+#: warns above it.
+ASHRAE55_MAX_CLOTHING_INSULATION = 1.5
 
 #: The default design values of the indoor operative temperature (°C) of EN 16798-1:2019, Table B.2, for buildings
 #: with mechanical cooling systems, by type of building and category: (minimum for heating, in winter, about 1.0 clo;

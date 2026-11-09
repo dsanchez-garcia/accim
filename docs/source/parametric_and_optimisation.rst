@@ -146,24 +146,40 @@ the object does to each model when it is created:
        ``custom_lower_limit``/``custom_upper_limit`` (applicability limits of the running mean
        outdoor temperature); the offsets and limits can also be set separately for cooling and
        heating (``custom_cooling_offset``, ``custom_heating_offset``, ``custom_cooling_lower_limit``...);
-       since accim 1.2.0, also ``heating_setpoint_floor`` and ``cooling_setpoint_ceiling``
+       since accim 1.2.0, also ``heating_setpoint_floor`` and ``cooling_setpoint_ceiling``, and the outdoor
+       metric of the custom model: ``custom_outdoor_metric`` (the codes of the metrics, 0 to 7, as options),
+       ``custom_alpha`` and ``custom_days`` (rounded to whole days)
    * - ``'apmv setpoints'``
      - Applies the aPMV setpoints with the default values of ``apply_apmv_setpoints``, unless
        ``bypass_add_accis=True``
      - ``adaptive_coefficient_cooling``, ``adaptive_coefficient_heating``,
        ``pmv_cooling_setpoint``, ``pmv_heating_setpoint``, and ``adaptive_coefficient`` and
-       ``pmv_setpoint`` to vary both seasons, or both setpoints (-s and +s), together
+       ``pmv_setpoint`` to vary both seasons, or both setpoints (-s and +s), together; since accim 1.2.0,
+       also the inputs of the PMV of the occupants: ``clothing_insulation`` (clo), ``activity_level``
+       (W/person) and ``air_velocity`` (m/s)
    * - ``'epmv setpoints'``
      - Applies the ePMV setpoints with the default values of ``apply_epmv_setpoints``, unless
        ``bypass_add_accis=True`` (since accim 1.2.0)
      - ``expectancy_factor`` (between 0.5 and 1), ``pmv_cooling_setpoint``, ``pmv_heating_setpoint`` and
-       ``pmv_setpoint`` (both setpoints together), on the ePMV scale
+       ``pmv_setpoint`` (both setpoints together), on the ePMV scale, and ``clothing_insulation``,
+       ``activity_level`` and ``air_velocity``
 
 ``sim.get_available_parameters()`` lists the names. The parameters have the names of the arguments
 of :mod:`accim.sim` since accim 1.0.0; their names of accim 0.x (``ComfStand``, ``CustAST_m``,
 ``'PMV setpoint'``...) still work, with a ``DeprecationWarning``, and the results of accim 0.x get
 the new names when they are loaded (see :doc:`9_migration_guide`). The parameters of the accim models set the
 arguments of all the occupied zones (each zone has them in its EMS program ``SetInputData_<zone>``).
+``clothing_insulation``, ``activity_level`` and ``air_velocity`` set the schedules of all the People objects
+with :func:`~accim.sim.apmv.set_pmv_input_parameters`, and warn outside the ranges in which ISO 7730:2025
+(section 4) uses the PMV: 0 to 2 clo (and above 1.5 clo, with which ASHRAE 55-2020 does not use it), 0.8 to 4 met
+(82.8 to 417.6 W/person, with a body surface area of 1.8 m², as in EnergyPlus) and 0 to 1 m/s
+(:data:`accim.constants.PMV_INPUT_RANGES`). The metrics of ``custom_outdoor_metric`` that the EMS calculates begin
+with the running mean of ASHRAE 55 of EnergyPlus, unless the model was given the weather file with
+``modify_accis(..., custom_outdoor_metric=..., epw=...)`` before the study (``'monthly_mean'`` needs it).
+``accim.parametric_and_optimisation.parameters`` also has a class for each of them, which applies it to a model
+(``Clo``, ``Met``, ``AirVelocity``, ``ExpectancyFactor``, ``AdaptiveCoefficientCooling``,
+``AdaptiveCoefficientHeating``, ``CustAST_metric``, ``CustAST_alpha``, ``CustAST_days``, ``HeatingSetpointFloor``
+and ``CoolingSetpointCeiling``, besides those of the other parameters).
 For the aPMV and ePMV setpoints, apply them yourself
 with explicit values, as in step 1 (for the ePMV, with ``apply_epmv_setpoints()``, section 4.8 of
 :doc:`4_detailed use`), and pass ``bypass_add_accis=True``: the parameters of the study
@@ -365,7 +381,9 @@ compared with the same parameter values.
      - Use
    * - ``sampling_full_set()``
      - lists
-     - all the combinations
+     - all the combinations (those that are not valid are left out: with the accim models, the categories
+       and comfort modes that a comfort standard does not have, and since accim 1.2.0 a floor of the heating
+       setpoint that is not lower than the ceiling of the cooling setpoint)
      - compare discrete alternatives, such as comfort models and categories
    * - ``sampling_full_factorial(level)``
      - ranges

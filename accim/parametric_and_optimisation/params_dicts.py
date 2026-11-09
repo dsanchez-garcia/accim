@@ -77,6 +77,10 @@ accim_custom_model_params = {
     # The floor of the heating setpoint and the ceiling of the cooling setpoint (accim 1.2.0)
     'heating_setpoint_floor': param_accis.modify_AHSTfloor,
     'cooling_setpoint_ceiling': param_accis.modify_ACSTceil,
+    # The outdoor metric of the custom model (accim 1.2.0; custom_outdoor_metric takes the codes of the metrics)
+    'custom_outdoor_metric': param_accis.modify_CustAST_metric,
+    'custom_alpha': param_accis.modify_CustAST_alpha,
+    'custom_days': param_accis.modify_CustAST_days,
 }
 apmv_setpoints_params = {
     # apmv setpoints parameters
@@ -86,6 +90,10 @@ apmv_setpoints_params = {
     'pmv_setpoint': param_apmv.change_pmv_setpoint_all_zones,
     'pmv_cooling_setpoint': param_apmv.change_pmv_cooling_setpoint_all_zones,
     'pmv_heating_setpoint': param_apmv.change_pmv_heating_setpoint_all_zones,
+    # The inputs of the PMV of the occupants (accim 1.2.0)
+    'clothing_insulation': param_apmv.change_clothing_insulation_all_zones,
+    'activity_level': param_apmv.change_activity_level_all_zones,
+    'air_velocity': param_apmv.change_air_velocity_all_zones,
 }
 epmv_setpoints_params = {
     # epmv setpoints parameters (the setpoints are on the ePMV scale)
@@ -93,6 +101,10 @@ epmv_setpoints_params = {
     'pmv_setpoint': param_apmv.change_pmv_setpoint_all_zones,
     'pmv_cooling_setpoint': param_apmv.change_pmv_cooling_setpoint_all_zones,
     'pmv_heating_setpoint': param_apmv.change_pmv_heating_setpoint_all_zones,
+    # The inputs of the PMV of the occupants (accim 1.2.0)
+    'clothing_insulation': param_apmv.change_clothing_insulation_all_zones,
+    'activity_level': param_apmv.change_activity_level_all_zones,
+    'air_velocity': param_apmv.change_air_velocity_all_zones,
 }
 
 all_params = {}

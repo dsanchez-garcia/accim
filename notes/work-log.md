@@ -15,6 +15,29 @@ This log is a lightweight, session-scoped complement to the repository's
 existing tracking files — it does not replace them (see
 [[decisions.md#2026-09-13 — `notes/work-log.md` complements, not replaces, existing tracking files|the related decision]]).
 
+## 2026-11-09 — C1: the parameters of the occupants, the new indices and the custom model (branch `v1.2.0`, on the server)
+
+- **Objective**: C1, after B5, in the order of the author (with the adjustment of the brief: `clothing_insulation` and
+  `activity_level` instead of `clo` and `met`).
+- **Affected files**: `accim/constants.py`, `accim/parametric_and_optimisation/funcs_for_besos/param_apmv.py`,
+  `accim/parametric_and_optimisation/funcs_for_besos/param_accis.py`,
+  `accim/parametric_and_optimisation/params_dicts.py`, `accim/parametric_and_optimisation/parameters.py`,
+  `accim/parametric_and_optimisation/main.py`, `accim/gui/forms.py`,
+  `tests/parametric_and_optimisation/test_pmv_and_metric_parameters.py` (new),
+  `tests/parametric_and_optimisation/test_epmv_parameters.py`, `tests/parametric_and_optimisation/test_legacy_names.py`,
+  `docs/source/parametric_and_optimisation.rst`, [[../docs/source/4_detailed use.md]] (4.2.2, 4.8),
+  [[../CHANGELOG.md]], [[../CAMBIOS_CODIGO_v1.2.0.md]] (§13), [[../DEVLOG.md]], [[../TODO.md]], [[decisions.md]],
+  [[questions.md]].
+- **Finding or decision**: See
+  [[decisions.md#2026-11-09 — The parametric module varies the inputs of the PMV and the outdoor metric of the custom model (C1)|the decision]].
+  The ranges of ISO 7730:2025 §4 and the body surface area of 1.8 m² checked in the standard and in the Engineering
+  Reference of EnergyPlus 25.2 (§19.1). Applying `custom_alpha` before `custom_outdoor_metric` in a sample lost the
+  alpha (the inputs were removed while the metric was 'pmot'): the modifiers keep them. The factory of the regimes of
+  B2 waits for B2 (in [[../TODO.md]]). Four details decided provisionally in [[questions.md]].
+- **Validation**: 8 new tests (a two-point design of `clothing_insulation` with besos, without simulating); the
+  whole suite; the documentation build.
+- **Next step**: D1.
+
 ## 2026-11-09 — B5: the floor and ceiling of the setpoints, and the hours below some temperatures (branch `v1.2.0`, on the server)
 
 - **Objective**: B5, after B1, in the order of the author (with decision D5).
