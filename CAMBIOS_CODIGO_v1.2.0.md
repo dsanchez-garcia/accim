@@ -116,6 +116,9 @@ Lo que ya está en otros documentos no se repite aquí:
 - **H1 (revisión v04).** El suelo y el techo de las consignas se llaman ahora `heating_setpoint_minimum` y
   `cooling_setpoint_maximum` (entradas EMS `AHSTmin` y `ACSTmax`, parámetros `HeatingSetpointMinimum` y
   `CoolingSetpointMaximum`); los nombres anteriores funcionan como alias obsoletos (sección 28).
+- **E-F1 (bloque F).** `add_thermal_comfort_model` añade el modelo Pierce a los objetos People; en un año del modelo de
+  ejemplo, el SET de pythermalcomfort queda 0,045 K por debajo del de EnergyPlus de media (máximo 0,20 K) de pie y
+  0,116 K (máximo 0,34 K) sentado (sección 29).
 - Las categorías del PMV y la aproximación de la corrección del metabolismo se han comprobado en ISO 7730:2025 y
   EN 16798-1:2019, y el modelo dinámico de vestimenta de A5, en Schiavon y Lee (2013) y ASHRAE 55-2020 (sección 6).
 - Lo que quedaba abierto se ha comprobado: el golden master y las pruebas de EnergyPlus 26.1 y 26.2, también la de A5
@@ -1731,3 +1734,24 @@ pueden leerse como un suelo físico (suelo radiante), antes de publicar la 1.2.0
   `AddAccis` con IDF idénticos, `modify_accis`, `zone_arguments`), `test_gui.py` (sesiones antiguas),
   `test_legacy_names.py` y `test_setpoint_limit_parameters.py` (paramétrico). El golden master no cambia (ninguna
   configuración tiene suelo ni techo).
+
+## 29. El SET de EnergyPlus (Pierce) frente al de pythermalcomfort (E-F1, bloque F)
+
+El bloque F (`notes/PROPUESTA_ADAPTACION_INTERIOR_v03.md` §3 y §5) pide, antes de usar F1 en un artículo, comparar
+hora a hora el SET del modelo de dos nodos de Pierce de EnergyPlus con el de `pythermalcomfort.models.set_tmp` (el que
+invierte el gancho de la SET) a partir de las mismas salidas, y anotar la diferencia media y la máxima.
+
+**Ahora.**
+
+- `accim.sim.people.add_thermal_comfort_model(building, comfort_model)` añade `'Fanger'`, `'Pierce'` o `'KSU'`
+  (`THERMAL_COMFORT_MODELS`) en el primer campo *Thermal Comfort Model n Type* vacío de los objetos People (y de los
+  People:Definition de EnergyPlus 26.2), sin tocar los del ACCIS; `PIERCE_SET_OUTPUT` es el nombre de la salida del SET
+  de Pierce (comprobado en el `.rdd` de EnergyPlus 25.1 y en la Engineering Reference 25.2, 19.1.4).
+- Medido (modelo de ejemplo con el ACCIS, INT EN16798 categoría II modo 3, `vrf_ac`, un año en Sevilla, EnergyPlus 25.1,
+  6 pasos por hora; `set_tmp` con la temperatura media del aire, la radiante media y la humedad relativa de la zona, y
+  los horarios de actividad, vestimenta y velocidad del aire del People): diferencia (pythermalcomfort − EnergyPlus) de
+  las medias horarias de −0,045 K de media, 0,056 K en valor absoluto y 0,180/0,196 K como máximo (zonas 1/2), de pie
+  (la postura de EnergyPlus, área radiante 0,72); sentado (la del gancho con 1,2 met o menos), −0,116 K, 0,118/0,117 K
+  y 0,324/0,344 K. El área corporal y la presión no cambian el resultado; la diferencia crece con el SET (de −0,01 K
+  por debajo de 26 °C a −0,14 K por encima de 30 °C). La tabla está en `notes/decisions.md` y en la sección 4.9.2.
+- Pruebas: `tests/core/test_pierce_set.py` (el ayudante; la simulación anual reproduce la tabla con 0,001 K).

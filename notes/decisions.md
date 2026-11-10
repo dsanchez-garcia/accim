@@ -11,6 +11,47 @@ Durable architectural/process decisions for this repository and its Obsidian
 vault. Newest first. Use [[templates/decision-record.md|the decision-record
 template]] to add a new entry.
 
+## 2026-11-10 — The SET of EnergyPlus (Pierce) against that of pythermalcomfort, measured (E-F1)
+
+- **Status**: accepted (task E-F1 of `notes/PROPUESTA_ADAPTACION_INTERIOR_v03.md` §3 and §5, and of the session of
+  2026-11-10; a measurement, not a tolerance decided beforehand)
+- **Context**: F1 inverts the SET of pythermalcomfort (`set_tmp`, the code of ASHRAE 55) in the hook of the SET, while
+  EnergyPlus reports the SET of its Pierce two-node model (Engineering Reference 25.2, 19.1.4: hc = max(8.6·v^0.53,
+  5.66·(met − 0.85)^0.39) with v ≥ 0.137 m/s, radiative area 0.72 of the body, 1.8 m²). Block F asked to compare them,
+  hour by hour, from the same outputs, before using F1 in a paper.
+- **Measurement**: the sample model (`TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2510.idf`) with the ACCIS
+  (`vrf_ac`, INT EN16798, category II, comfort mode 3) and Pierce in its People objects
+  (`accim.sim.people.add_thermal_comfort_model`), a year in Seville (`Seville_Present.epw`), EnergyPlus 25.1, 6
+  timesteps per hour; in each timestep, `set_tmp(tdb=Zone Mean Air Temperature, tr=Zone Mean Radiant Temperature,
+  v=the air velocity schedule (0.137 m/s), rh=Zone Air Relative Humidity, met=activity schedule/(58.2·1.8) (110.7
+  W/person, 1.057 met), clo=the clothing schedule (0.5 and 1.0), limit_inputs=False, round_output=False)` against
+  `Zone Thermal Comfort Pierce Model Standard Effective Temperature` (the mean radiant temperature of the People objects,
+  `EnclosureAveraged`, is that of the zone; the work efficiency schedule is 0; the output `Zone Thermal Comfort Clothing
+  Value` was 0 in this run, so the schedule values were used). Differences of the hourly means (pythermalcomfort minus
+  EnergyPlus), all the hours of the year (52 560 timesteps per zone):
+
+  | Zone | Posture | Mean (K) | Mean absolute (K) | Maximum absolute (K) |
+  |---|---|---|---|---|
+  | Block1:Zone1 | standing | −0.045 | 0.056 | 0.180 |
+  | Block1:Zone2 | standing | −0.045 | 0.056 | 0.196 |
+  | Block1:Zone1 | sitting | −0.116 | 0.118 | 0.324 |
+  | Block1:Zone2 | sitting | −0.116 | 0.117 | 0.344 |
+
+  The differences of the timesteps are those of the hours to 0.001 K (standing: maximum 0.181 and 0.197 K, 95th
+  percentile 0.144 and 0.149 K); in the occupied hours, the mean absolute differences are 0.076 and 0.073
+  K (standing) and 0.160 and 0.154 K (sitting). The body surface area (1.8 or 1.8258 m²) and the barometric pressure of
+  the site (99 900 to 103 200 Pa, or 101 325 Pa) do not change them at 0.001 K. Standing, the mean difference of the
+  timesteps grows with the SET of EnergyPlus (Block1:Zone1 / Block1:Zone2): −0.007 / −0.008 K (22–24 °C), −0.014 /
+  −0.012 K (24–26 °C), −0.045 / −0.043 K (26–28 °C), −0.094 / −0.096 K (28–30 °C) and −0.137 / −0.144 K (above 30 °C,
+  maximum 0.181 / 0.197 K); −0.077 / −0.076 K with 0.5 clo and −0.014 K with 1.0 clo. The largest differences were in warm afternoons
+  with the mean radiant temperature 7 K above the air temperature (Block1:Zone2, 29 July 17:20: SET 33.03 °C in
+  EnergyPlus and 32.83 °C in pythermalcomfort).
+- **Consequences**: the SET of accim (pythermalcomfort) is that of EnergyPlus within 0.2 K standing and 0.35 K sitting
+  in this case, and slightly lower (so the setpoints of the SET of accim are slightly warmer than those that would give
+  the same SET in EnergyPlus); F1 keeps the posture of the hook (sitting with 1.2 met or less, G3) and reports both
+  SET; `tests/core/test_pierce_set.py` reproduces the table (within 0.001 K) and fails if EnergyPlus, pythermalcomfort
+  or the model change it.
+
 ## 2026-11-10 — The minimum and maximum of the setpoints replace the floor and ceiling (H1)
 
 - **Status**: accepted (task H1 of `notes/PROPUESTAS_MEJORAS_post_1.1.0_v04.md` §7, §4.5; decision 8 of block F,

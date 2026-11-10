@@ -12,13 +12,21 @@ from accim.sim.hvac.schedules import schedule_values
 from accim.sim.model import AccimModel
 from accim.utils.people import get_people_definition, get_people_objects
 
-__all__ = ['CLOTHING_METHODS', 'set_clothing_method', 'set_comfort_models']
+__all__ = ['CLOTHING_METHODS', 'PIERCE_SET_OUTPUT', 'THERMAL_COMFORT_MODELS', 'add_thermal_comfort_model',
+           'set_clothing_method', 'set_comfort_models']
 
 #: The methods of the field Clothing Insulation Calculation Method of the People objects (in the IDDs of EnergyPlus 9.4
 #: to 26.2, and of the People:Instance objects in 26.2)
 CLOTHING_METHODS = ('ClothingInsulationSchedule', 'DynamicClothingModelASHRAE55', 'CalculationMethodSchedule')
 #: The schedules that the fields of the People objects can name
 _SCHEDULE_TYPES = ('Schedule:Year', 'Schedule:Compact', 'Schedule:Constant', 'Schedule:File')
+#: The thermal comfort models that :func:`add_thermal_comfort_model` adds (the choices of the fields Thermal Comfort
+#: Model n Type of the People objects in the IDDs of EnergyPlus 9.4 to 26.2; AdaptiveASH55 and AdaptiveCEN15251 are
+#: those of the ACCIS, :func:`set_comfort_models`)
+THERMAL_COMFORT_MODELS = ('Fanger', 'Pierce', 'KSU')
+#: The output of the standard effective temperature of the Pierce model of each People object (Engineering Reference
+#: 25.2, 19.1.4; the output exists when the People object has the model Pierce)
+PIERCE_SET_OUTPUT = 'Zone Thermal Comfort Pierce Model Standard Effective Temperature'
 
 
 def _comfort_models(setpoint_type: str, number: int) -> list:
@@ -62,6 +70,52 @@ def set_comfort_models(model: AccimModel) -> None:
     model.log('The people objects in the model have been amended.')
     if definitions:
         model.log('The People:Definition objects of the People:Instance objects in the model have been amended.')
+
+
+def add_thermal_comfort_model(building: Any, comfort_model: str, verbose: bool = False) -> None:
+    """Add a thermal comfort model to the People objects (and, in models of EnergyPlus 26.2 with People:Instance
+    objects, to the People:Definition objects they reference) in their first field Thermal Comfort Model n Type that
+    is empty, keeping the models they have (those of the ACCIS, AdaptiveASH55 and AdaptiveCEN15251, and Fanger with
+    the PMV-based setpoints); the objects that have it already do not change. EnergyPlus then reports the outputs of
+    the model for each People object, such as the standard effective temperature of the Pierce two-node model
+    (:data:`PIERCE_SET_OUTPUT`), with the inputs of the People object (activity level, work efficiency, clothing
+    insulation and air velocity schedules) and the conditions of its zone.
+
+    :param building: The eppy or besos IDF object.
+    :param comfort_model: 'Fanger', 'Pierce' or 'KSU' (:data:`THERMAL_COMFORT_MODELS`), in any case.
+    :param verbose: If True, prints the changes.
+    :raises ValueError: Before changing anything, if the model is not one of :data:`THERMAL_COMFORT_MODELS`, a
+        People:Instance object references a People:Definition object that is not in the model, or an object has no
+        empty field for it.
+    """
+    models = {m.upper(): m for m in THERMAL_COMFORT_MODELS}
+    if str(comfort_model).strip().upper() not in models:
+        raise ValueError(f'comfort_model must be one of {list(THERMAL_COMFORT_MODELS)}, not {comfort_model!r}.')
+    comfort_model = models[str(comfort_model).strip().upper()]
+    targets = list(building.idfobjects['PEOPLE'])
+    for instance in building.idfobjects.get('PEOPLE:INSTANCE', []):
+        definition = get_people_definition(building, instance)
+        if definition is None:
+            raise ValueError(f'The People:Instance object "{instance.Name}" references the People:Definition object '
+                             f'"{instance.People_Definition_Name}", which is not in the model.')
+        if all(definition is not target for target in targets):
+            targets.append(definition)
+    changes = []
+    for target in targets:
+        fields = [f'Thermal_Comfort_Model_{n}_Type' for n in range(1, 8)
+                  if f'Thermal_Comfort_Model_{n}_Type' in target.fieldnames]
+        values = [str(getattr(target, field)).strip() for field in fields]
+        if comfort_model.upper() in (value.upper() for value in values):
+            continue
+        empty = next((field for field, value in zip(fields, values) if not value), None)
+        if empty is None:
+            raise ValueError(f'The {target.key} object "{target.Name}" has no empty field for the thermal comfort '
+                             f'model {comfort_model!r}.')
+        changes.append((target, empty))
+    for target, field in changes:
+        setattr(target, field, comfort_model)
+        if verbose:
+            print(f"Added the thermal comfort model {comfort_model} to '{target.Name}'")
 
 
 def set_clothing_method(building: Any, method: str, schedule: Optional[str] = None,

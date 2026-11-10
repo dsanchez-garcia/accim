@@ -29,8 +29,8 @@ Active short-term tasks.
   - Definition of done: the tests that only read models use `accim.sim.accis.load_idf` (eppy), and those of the parametric module call `pytest.importorskip('besos')` first; `py -m pytest tests/core` without besos (a plugin that sets `sys.modules['besos'] = None`) skips them and fails none.
   - References: `notes/PROPUESTAS_MEJORAS_post_1.1.0_v04.md` (§3.4), `tests/core/test_setpoint_limits.py` and `tests/core/test_jpn_aqilah2025.py` (the four tests).
 
-- [ ] [P1][todo] Block F: E-F1, F1 and F2 (the causal SET of Sun et al. 2026 as comfort standard 24, and the limiter of the setpoint drift)
-  - Context: `notes/PROPUESTA_ADAPTACION_INTERIOR_v03.md` (§3, §4, §6) and its prompts (`notes/PROMPTS_COPILOT_bloque_F_v02.md`), for the paper with Ruiji Sun; the order of the author for this session: E-F1 (the SET of EnergyPlus's Pierce model against that of pythermalcomfort, hour by hour, recorded in `notes/decisions.md`), F1 on `SetSetpointHook(method='bisection')` of G3 with the names of H1 and the `tr_mode` decision of 2026-11-10, then F2.
+- [ ] [P1][todo] Block F: F1 and F2 (the causal SET of Sun et al. 2026 as comfort standard 24, and the limiter of the setpoint drift)
+  - Context: `notes/PROPUESTA_ADAPTACION_INTERIOR_v03.md` (§3, §4, §6) and its prompts (`notes/PROMPTS_COPILOT_bloque_F_v02.md`), for the paper with Ruiji Sun; the order of the author for this session: F1 on `SetSetpointHook(method='bisection')` of G3 with the names of H1 and the `tr_mode` decision of 2026-11-10, then F2. E-F1 is done (2026-11-10, `notes/decisions.md`: the SET of pythermalcomfort is 0.045 K below that of EnergyPlus on average, at most 0.20 K, standing; 0.116 K, at most 0.34 K, sitting).
   - Definition of done: as the prompts of v02 say, one commit each.
   - References: `notes/PROPUESTAS_MEJORAS_post_1.1.0_v04.md` (§4, §7), `notes/PROPUESTA_ADAPTACION_INTERIOR_v03.md`, `notes/PROMPTS_COPILOT_bloque_F_v02.md`.
 

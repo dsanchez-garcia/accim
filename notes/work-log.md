@@ -15,6 +15,20 @@ This log is a lightweight, session-scoped complement to the repository's
 existing tracking files — it does not replace them (see
 [[decisions.md#2026-09-13 — `notes/work-log.md` complements, not replaces, existing tracking files|the related decision]]).
 
+## 2026-11-10 — E-F1: the SET of EnergyPlus (Pierce) against pythermalcomfort (branch `v1.2.0`, on the server)
+
+- **Objective**: task E-F1 of the review v04 and of block F: compare, hour by hour, the SET of EnergyPlus's Pierce
+  model with `set_tmp` of pythermalcomfort from the same outputs, before F1.
+- **Affected files**: `accim/sim/people.py` (`add_thermal_comfort_model`), `tests/core/test_pierce_set.py`,
+  [[../docs/source/4_detailed use.md]], [[../CHANGELOG.md]], [[../CAMBIOS_CODIGO_v1.2.0.md]] (§29), [[../DEVLOG.md]],
+  [[../TODO.md]], [[decisions.md]].
+- **Finding or decision**: See
+  [[decisions.md#2026-11-10 — The SET of EnergyPlus (Pierce) against that of pythermalcomfort, measured (E-F1)|the decision]].
+  pythermalcomfort is 0.045 K below EnergyPlus on average (at most 0.20 K) standing, 0.116 K (at most 0.34 K) sitting.
+- **Validation**: the yearly EnergyPlus 25.1 run of the test reproduces the table within 0.001 K; 50 related tests
+  passed.
+- **Next step**: F1 (the causal SET of Sun et al. 2026 as comfort standard 24).
+
 ## 2026-11-10 — H1: the minimum and maximum of the setpoints (branch `v1.2.0`, on the server)
 
 - **Objective**: task H1 of the review v04 (§4.5): rename `heating_setpoint_floor`/`cooling_setpoint_ceiling` to
