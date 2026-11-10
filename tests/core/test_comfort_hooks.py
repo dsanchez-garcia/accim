@@ -388,10 +388,10 @@ needs_energyplus = pytest.mark.skipif(
 STEPS = 6
 
 
-def _athb_model(folder, monkeypatch, **arguments):
+def _athb_model(folder, monkeypatch, end_day=21, **arguments):
     """The output IDF of AddAccis of the sample model (INT EN16798, category II, comfort mode 3, full
-    air-conditioning) for 15-21 July, with the setpoints of the ATHB and the outputs of the zones at timestep frequency;
-    return its path and the hook."""
+    air-conditioning) for 15-21 July (or until ``end_day``), with the setpoints of the ATHB and the outputs of the zones
+    at timestep frequency; return its path and the hook."""
     from accim.sim.accis import AddAccis, load_idf
 
     folder.mkdir(parents=True)
@@ -399,7 +399,7 @@ def _athb_model(folder, monkeypatch, **arguments):
     model = load_idf(folder / 'TestModel.idf')
     run_period = model.idfobjects['RunPeriod'][0]
     run_period.Begin_Month, run_period.Begin_Day_of_Month = 7, 15
-    run_period.End_Month, run_period.End_Day_of_Month = 7, 21
+    run_period.End_Month, run_period.End_Day_of_Month = 7, end_day
     model.save()
     monkeypatch.chdir(folder)
     with warnings.catch_warnings():
@@ -524,8 +524,8 @@ def test_the_bisection_of_the_set_brackets_its_setpoints():
         # The SET grows with the operative temperature, and the setpoint is the middle of an interval of 0.1 K or less
         # in which it crosses the setpoint of the SET
         for temperature, target in ((heating, 21.0), (cooling, 27.0)):
-            below = ch.standard_effective_temperature(temperature - 0.05, temperature - 0.05, 0.1, humidity, 1.1, 0.5)
-            above = ch.standard_effective_temperature(temperature + 0.05, temperature + 0.05, 0.1, humidity, 1.1, 0.5)
+            below = hook.zone_set(temperature - 0.05, temperature - 0.05, humidity)
+            above = hook.zone_set(temperature + 0.05, temperature + 0.05, humidity)
             assert below <= target <= above
     wide = ch.SetSetpointHook(['Z'], set_cooling_setpoint=60, set_heating_setpoint=-10, met=1.1, clo=0.5,
                               air_speed=0.1)
@@ -563,8 +563,9 @@ def test_the_arguments_of_the_set_hook_are_checked():
     for arguments, message in ((dict(set_heating_setpoint=27), 'must be lower than set_cooling_setpoint'),
                                (dict(met=-1), 'met must be between 0.0'),
                                (dict(clo='0.5'), 'clo must be a number'),
-                               (dict(position='lying'), "position must be 'standing' or 'sitting'"),
-                               (dict(tolerance_k=-1), 'tolerance_k must be between 0.0')):
+                               (dict(position='lying'), "position must be 'standing', 'sitting' or None"),
+                               (dict(tolerance_k=-1), 'tolerance_k must be between 0.0'),
+                               (dict(method='newton'), "method must be one of \\['table', 'bisection'\\]")):
         with pytest.raises(ValueError, match=message):
             ch.SetSetpointHook(**{**values, **arguments})
     # Out of the limits of the inputs of pythermalcomfort, it warns
@@ -575,24 +576,124 @@ def test_the_arguments_of_the_set_hook_are_checked():
         ch.SetSetpointHook(['Z'], set_cooling_setpoint=27, set_heating_setpoint=21)
 
 
+def test_the_posture_of_the_set_hook_by_default():
+    pytest.importorskip('pythermalcomfort')
+    values = dict(zones=['Z'], set_cooling_setpoint=27, set_heating_setpoint=21, clo=0.5, air_speed=0.1,
+                  method='bisection')
+    # Sitting for sedentary occupants (1.2 met or less), standing above it
+    assert [ch.SetSetpointHook(met=met, **values).position for met in (1.0, 1.2, 1.3)] == ['sitting', 'sitting',
+                                                                                         'standing']
+    assert ch.SetSetpointHook(met=1.1, position='standing', **values).position == 'standing'
+
+
+def test_the_set_hook_by_bisection(monkeypatch):
+    pytest.importorskip('pythermalcomfort')
+    hook = ch.SetSetpointHook(ZONES, set_cooling_setpoint=27.0, set_heating_setpoint=21.0, met=1.1, clo=0.5,
+                              air_speed=0.1, method='bisection')
+    # No table: the setpoints of each humidity are those of the bisection
+    assert hook.table is None and hook.position == 'sitting'
+    assert hook.setpoints_of_humidity(47.3) == hook.operative_temperatures(47.3)
+    controller = _Controller({'SET_RH_Block1_Zone1': 55.0, 'SET_MAT_Block1_Zone1': 25.5, 'SET_MRT_Block1_Zone1': 26.5,
+                              'SET_RH_Block1_Zone2': 35.5})
+    hook(controller, CALLING_POINT)
+    assert _given(controller, 'Block1_Zone1') == hook.operative_temperatures(55.0)
+    assert _given(controller, 'Block1_Zone2') == hook.operative_temperatures(35.5)
+    # The SET of each zone, from its mean air and radiant temperatures and humidity (not without them)
+    assert controller.get('SET_Block1_Zone1') == ch.standard_effective_temperature(25.5, 26.5, 0.1, 55.0, 1.1, 0.5,
+                                                                                    'sitting')
+    assert controller.get('SET_Block1_Zone2') is None
+    # prepare() calls the SET with numbers and with an array of two values, as the bisection does; not with the table
+    table = ch.SetSetpointHook(['Z'], set_cooling_setpoint=27.0, set_heating_setpoint=21.0, met=1.1, clo=0.5,
+                               air_speed=0.1)
+    calls = []
+    monkeypatch.setattr(ch, 'standard_effective_temperature', lambda *args: calls.append(np.shape(args[0])))
+    hook.prepare()
+    assert calls == [(), (2,)]
+    calls.clear()
+    table.prepare()
+    assert calls == []
+    copy = pickle.loads(pickle.dumps(hook))
+    assert copy.method == 'bisection' and copy.table is None
+
+
+def test_run_simulation_prepares_the_hooks():
+    from accim.sim.energyplus_api import prepare_hooks
+
+    prepared = []
+
+    class Prepared:
+        def prepare(self):
+            prepared.append(self)
+
+        def __call__(self, controller, calling_point):
+            return None
+
+    hooks = [Prepared(), lambda controller, calling_point: None, Prepared()]
+    prepare_hooks(hooks)
+    assert prepared == [hooks[0], hooks[2]]
+
+
+def test_the_set_of_the_results_of_a_simulation(tmp_path):
+    pytest.importorskip('pythermalcomfort')
+    hook = ch.SetSetpointHook(ZONES, set_cooling_setpoint=27.0, set_heating_setpoint=21.0, met=1.2, clo=0.6,
+                              air_speed=0.2, method='bisection')
+    hook.keys = {'Block1_Zone1': 'Block1:Zone1', 'Block1_Zone2': 'Block1:Zone2'}
+    results = pd.DataFrame({
+        'Date/Time': [' 07/15  01:00:00', ' 07/15  02:00:00', ' 07/15  03:00:00'],
+        'BLOCK1:ZONE1:Zone Mean Air Temperature [C](Hourly)': [24.0, 25.0, np.nan],
+        'BLOCK1:ZONE1:Zone Mean Radiant Temperature [C](Hourly)': [25.0, 26.5, 26.0],
+        'BLOCK1:ZONE1:Zone Air Relative Humidity [%](Hourly)': [50.0, 60.0, 55.0],
+        'BLOCK1:ZONE2:Zone Mean Air Temperature [C](Hourly)': [22.0, 23.0, 24.0],
+        'BLOCK1:ZONE2:Zone Mean Radiant Temperature [C](Hourly)': [21.0, 22.5, 23.0],
+        'BLOCK1:ZONE2:Zone Air Relative Humidity [%](Hourly)': [40.0, 45.0, 50.0],
+    })
+    found = ch.set_of_results(results, hook)
+    assert list(found.columns) == ['SET_Block1_Zone1', 'SET_Block1_Zone2']
+    for zone, number in (('Block1_Zone1', 1), ('Block1_Zone2', 2)):
+        key = f'BLOCK1:ZONE{number}'
+        for row in range(3):
+            air = results[f'{key}:Zone Mean Air Temperature [C](Hourly)'][row]
+            if np.isnan(air):
+                assert np.isnan(found[f'SET_{zone}'][row])
+                continue
+            expected = ch.standard_effective_temperature(
+                air, results[f'{key}:Zone Mean Radiant Temperature [C](Hourly)'][row], 0.2,
+                results[f'{key}:Zone Air Relative Humidity [%](Hourly)'][row], 1.2, 0.6, 'sitting')
+            assert found[f'SET_{zone}'][row] == pytest.approx(expected, abs=1e-9)
+    # From the CSV file, and with the keys of the zones by default
+    results.to_csv(tmp_path / 'results.csv', index=False)
+    hook.keys = {}
+    pd.testing.assert_frame_equal(ch.set_of_results(tmp_path / 'results.csv', hook), found)
+    with pytest.raises(ValueError, match=r"Zone Mean Radiant Temperature.*Block1_Zone2"):
+        ch.set_of_results(results.drop(columns='BLOCK1:ZONE2:Zone Mean Radiant Temperature [C](Hourly)'), hook)
+
+
 @needs_idd
 def test_apply_set_setpoints_prepares_the_model(tmp_path):
     idf = _model(tmp_path)
     counts = {kind: len(idf.idfobjects[kind]) for kind in ('EnergyManagementSystem:GlobalVariable',
-                                                          'EnergyManagementSystem:OutputVariable', 'Output:Variable')}
+                                                          'EnergyManagementSystem:OutputVariable')}
     hook = ch.apply_set_setpoints(idf, set_cooling_setpoint=27, set_heating_setpoint=21, met=1.1, clo=0.5,
                                   air_speed=0.1)
-    assert isinstance(hook, ch.SetSetpointHook) and sorted(hook.zones) == ZONES
-    # The sensors of the relative humidity and the variables of the setpoints of the hook (one global variable object
-    # for each zone, accim.sim.ems.hook_setpoints): no outputs of the SET
+    assert isinstance(hook, ch.SetSetpointHook) and sorted(hook.zones) == ZONES and hook.method == 'table'
+    assert hook.keys == {'Block1_Zone1': 'Block1:Zone1', 'Block1_Zone2': 'Block1:Zone2'}
+    # The sensors and the variables of the setpoints of the hook (one global variable object for each zone,
+    # accim.sim.ems.hook_setpoints): no output of the SET with the table
     counts['EnergyManagementSystem:GlobalVariable'] += len(ZONES)
     assert {kind: len(idf.idfobjects[kind]) for kind in counts} == counts
     sensors = {s.Name: s for s in idf.idfobjects['EnergyManagementSystem:Sensor']}
     ems_outputs = {o.Name for o in idf.idfobjects['EnergyManagementSystem:OutputVariable']}
+    # The outputs of EnergyPlus of the SET of each zone, at the frequency of the outputs of the ACCIS of the model
+    requested = {(o.Key_Value, o.Variable_Name, o.Reporting_Frequency) for o in idf.idfobjects['Output:Variable']}
     for zone in ZONES:
-        sensor = sensors[f'SET_RH_{zone}']
-        assert sensor.OutputVariable_or_OutputMeter_Name == 'Zone Air Relative Humidity'
-        assert f'SET_MAT_{zone}' not in sensors and f'SET_{zone}' not in ems_outputs
+        key = hook.keys[zone]
+        for prefix, variable in (('SET_MAT', 'Zone Mean Air Temperature'), ('SET_MRT', 'Zone Mean Radiant Temperature'),
+                                 ('SET_RH', 'Zone Air Relative Humidity')):
+            sensor = sensors[f'{prefix}_{zone}']
+            assert (sensor.OutputVariable_or_OutputMeter_Index_Key_Name,
+                    sensor.OutputVariable_or_OutputMeter_Name) == (key, variable)
+            assert (key, variable, 'Hourly') in requested
+        assert f'SET_{zone}' not in ems_outputs
     # The ATHB and the SET would set the same thermostats
     with pytest.raises(ValueError, match='already has the setpoints of the ATHB or of the SET'):
         ch.apply_athb_setpoints(idf)
@@ -602,6 +703,22 @@ def test_apply_set_setpoints_prepares_the_model(tmp_path):
         (tmp_path / 'mm').mkdir()
         ch.apply_set_setpoints(_model(tmp_path / 'mm', script_type='vrf_mm'), set_cooling_setpoint=27,
                                set_heating_setpoint=21, met=1.1, clo=0.5, air_speed=0.1)
+    # With the bisection, the output of the SET of each zone, at the frequencies given
+    (tmp_path / 'bisection').mkdir()
+    other = _model(tmp_path / 'bisection')
+    hook = ch.apply_set_setpoints(other, set_cooling_setpoint=27, set_heating_setpoint=21, met=1.1, clo=0.5,
+                                  air_speed=0.1, method='bisection', output_frequencies=['timestep'])
+    assert hook.method == 'bisection'
+    declared = {str(name) for g in other.idfobjects['EnergyManagementSystem:GlobalVariable'] for name in g.fieldvalues[1:]}
+    ems_outputs = {o.Name: o for o in other.idfobjects['EnergyManagementSystem:OutputVariable']}
+    requested = {(o.Key_Value, o.Variable_Name, o.Reporting_Frequency) for o in other.idfobjects['Output:Variable']}
+    for zone in ZONES:
+        output = ems_outputs[f'SET_{zone}']
+        assert f'SET_{zone}' in declared
+        assert (output.EMS_Variable_Name, output.Type_of_Data_in_Variable, output.Units) == (f'SET_{zone}', 'Averaged',
+                                                                                              'C')
+        assert ('*', f'SET_{zone}', 'Timestep') in requested
+        assert (hook.keys[zone], 'Zone Mean Radiant Temperature', 'Timestep') in requested
 
 
 @needs_energyplus
@@ -647,6 +764,72 @@ def test_the_set_setpoints_in_energyplus(tmp_path, monkeypatch):
                                    atol=1e-4)
         np.testing.assert_allclose(column(f'ACST_SCH_{zone}:Schedule Value').iloc[1:].to_numpy(), cooling - 0.1,
                                    atol=1e-4)
+
+
+@needs_energyplus
+def test_the_set_setpoints_by_bisection_in_energyplus(tmp_path, monkeypatch):
+    from accim.run import run_ep
+    from accim.sim.accis import load_idf
+
+    pytest.importorskip('pythermalcomfort')
+    model, athb = _athb_model(tmp_path / 'set', monkeypatch, end_day=16)
+    idf = load_idf(model)
+    for prefix in ('ATHB_MAT', 'ATHB_MRT', 'ATHB_RH'):
+        for zone in athb.zones:
+            idf.removeidfobject(idf.getobject('EnergyManagementSystem:Sensor', f'{prefix}_{zone}'))
+    hook = ch.apply_set_setpoints(idf, set_cooling_setpoint=27, set_heating_setpoint=21, met=1.1, clo=0.5,
+                                  air_speed=0.1, method='bisection')
+    # The values that the sensors of the hook read (those of the end of the previous timestep, while the outputs of
+    # EnergyPlus of a timestep are its means), copied by a program into reported variables
+    from accim.sim.ems.programs import add_program
+
+    for zone in ZONES:
+        names = [f'Copy{prefix}_{zone}' for prefix in ('MAT', 'MRT', 'RH')]
+        idf.newidfobject('EnergyManagementSystem:GlobalVariable',
+                         **{f'Erl_Variable_{n}_Name': name for n, name in enumerate(names, start=1)})
+        add_program(idf, f'CopySensors_{zone}', [f'set Copy{prefix}_{zone} = SET_{prefix}_{zone}'
+                                                 for prefix in ('MAT', 'MRT', 'RH')])
+        idf.newidfobject('EnergyManagementSystem:ProgramCallingManager', Name=f'CopySensors_{zone}',
+                         EnergyPlus_Model_Calling_Point='BeginTimestepBeforePredictor',
+                         Program_Name_1=f'CopySensors_{zone}')
+        for name in names:
+            idf.newidfobject('EnergyManagementSystem:OutputVariable', Name=name, EMS_Variable_Name=name,
+                             Type_of_Data_in_Variable='Averaged', Update_Frequency='ZoneTimestep', Units='')
+            idf.newidfobject('Output:Variable', Key_Value='*', Variable_Name=name, Reporting_Frequency='Timestep')
+    idf.save()
+    shutil.copy(EPW, model.parent / 'Seville.epw')
+    with warnings.catch_warnings():
+        warnings.simplefilter('ignore')
+        [result] = run_ep(only_accim_idfs=False, confirm=True, processes=1, backend='api', hooks=[hook])
+    # set_tmp runs in the callbacks: run_simulation calls hook.prepare() in the process of the simulation before it loads
+    # the library of the API of EnergyPlus (otherwise, its first call stopped the process with an access violation in
+    # Python 3.14, see the DEVLOG)
+    assert result.success, result.error
+    results = pd.read_csv(model.parent / 'athb[Seville.csv')
+    assert len(results) == 2 * 24 * STEPS
+    columns = list(results.columns)
+
+    def column(start):
+        return results[next(c for c in columns if c.upper().startswith(start.upper()))]
+
+    found = ch.set_of_results(results, hook)
+    for zone in ZONES:
+        air, radiant, humidity = (column(f'EMS:Copy{prefix}_{zone} [').iloc[1:].to_numpy()
+                                  for prefix in ('MAT', 'MRT', 'RH'))
+        # The setpoints without the tolerance are those of the bisection with the humidity that the sensor reads
+        rows = list(range(0, len(air), 25))
+        expected = np.array([hook.operative_temperatures(humidity[t]) for t in rows])
+        heating = column(f'EMS:Adaptive Heating Setpoint Temperature_No Tolerance_{zone} [').iloc[1:].to_numpy()[rows]
+        cooling = column(f'EMS:Adaptive Cooling Setpoint Temperature_No Tolerance_{zone} [').iloc[1:].to_numpy()[rows]
+        np.testing.assert_allclose(heating, expected[:, 0], atol=1e-6)
+        np.testing.assert_allclose(cooling, expected[:, 1], atol=1e-6)
+        # The SET of the zone, from the mean air and radiant temperatures and the humidity that its sensors read
+        reported = column(f'EMS:SET_{zone} [').iloc[1:].to_numpy()
+        np.testing.assert_allclose(reported, hook.zone_set(air, radiant, humidity), atol=1e-6)
+        # set_of_results gives the SET of the outputs of each row (their means in the timestep): close to that of the
+        # next row, whose sensors read the values of the end of the timestep
+        difference = np.abs(found[f'SET_{zone}'].shift(1).iloc[1:].to_numpy() - reported)
+        assert np.median(difference) < 0.05, np.median(difference)
 
 
 class _ConstantHook:

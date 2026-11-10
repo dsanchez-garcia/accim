@@ -98,6 +98,9 @@ Lo que ya está en otros documentos no se repite aquí:
 - **G2 (revisión v04).** `energyplus_running_means` y `compute_setpoints` reproducen la PMOT de EnergyPlus con un
   periodo que empieza del 2 al 30 de enero (la media del 31 de diciembre en lugar de la del día anterior durante 30
   días), y la verificación avisa de un .stat junto al EPW (sección 24).
+- **G3 (revisión v04).** El gancho de la SET calcula por bisección en los callbacks si se pide (`method='bisection'`),
+  con la salida `SET_<zona>`, tras llamar a pythermalcomfort antes de cargar la API de EnergyPlus; pide las salidas de
+  temperaturas y humedad de las zonas (`set_of_results`) y se sienta por defecto con 1,2 met o menos (sección 25).
 - Las categorías del PMV y la aproximación de la corrección del metabolismo se han comprobado en ISO 7730:2025 y
   EN 16798-1:2019, y el modelo dinámico de vestimenta de A5, en Schiavon y Lee (2013) y ASHRAE 55-2020 (sección 6).
 - Lo que quedaba abierto se ha comprobado: el golden master y las pruebas de EnergyPlus 26.1 y 26.2, también la de A5
@@ -1398,7 +1401,10 @@ categorías, sin decirlo la documentación (ni la categoría IV).
   modelo se comparten con el ATHB (`_bisect`, `_model_zones`, `_add_hook_objects`).
 - El SET de pythermalcomfort detiene EnergyPlus con una violación de acceso (código -1073741819) en su primera llamada
   desde un callback de la API (un gancho que solo lo llama), también con un calentamiento previo y en un hilo con una
-  pila de 64 MB; `pmv_athb` sí funciona. Como, con las demás entradas fijas, las consignas solo dependen de la humedad
+  pila de 64 MB; `pmv_athb` sí funciona. (Corregido por G3, sección 25: el fallo es propio de este entorno, Python
+  3.14.3 con numba 0.68.1, y se da en la primera llamada de `set_tmp` en un proceso que ya ha cargado la biblioteca
+  de la API de EnergyPlus, dentro de un callback o no; una llamada antes de cargarla lo evita, y la revisión de la
+  1.2.0 lo ejecutó en los callbacks con Python 3.12 y numba 0.68.1.) Como, con las demás entradas fijas, las consignas solo dependen de la humedad
   relativa, el gancho las calcula por bisección para cada humedad de 0 a 100 % (cada 1 %) al crearse, en el proceso
   principal, y en los callbacks las interpola con la humedad de cada zona (`setpoints_of_humidity`). No hay salida de
   la SET de las zonas (tarea en `TODO.md`).
@@ -1542,3 +1548,39 @@ semana, y la comprobación 4 de `verify_accim_simulation` lo daba por discrepanc
   consignas de INT EN16798 y de INT ASHRAE 55 son las de `compute_setpoints` y la RMOT y la PMOT las de
   `energyplus_running_means`, 10,574306 °C el 8 de enero, la cifra de EnergyPlus); `tests/core/test_verification.py`
   (el aviso del .stat y las zonas con ganchos). 44 pasan. No cambia ningún IDF ni el código del EMS.
+
+## 25. La SET en los callbacks de EnergyPlus (método 'bisection'), sus salidas y la documentación de A6 (G3, revisión v04)
+
+La revisión v04 (§3.1 y §3.3, hallazgos A6-1 a A6-4) encontró que la tabla de A6 se apoyaba en que `set_tmp` no puede
+calcularse en los callbacks, cuando la revisión lo ejecutó allí con Python 3.12 y numba 0.68.1; que el modelo no pedía
+las temperaturas de aire y radiante; que la postura por defecto era de pie; y que faltaba documentar el coste del JIT y
+la insensibilidad del SET de ASHRAE 55 a velocidades del aire bajas. El bloque F necesita la SET en los callbacks.
+
+**Lo comprobado.** Con Python 3.14.3, numba 0.68.1, pythermalcomfort 4.8.1 y EnergyPlus 25.1: sin una llamada previa,
+la primera llamada de `set_tmp` en un callback detiene el proceso (violación de acceso, -1073741819); con una llamada
+antes de `run_simulation` (con números, o con números y un array), funciona; con `NUMBA_DISABLE_JIT=1`,
+pythermalcomfort falla (`'function' object has no attribute 'py_func'`); y con la biblioteca de la API de EnergyPlus
+ya cargada, la primera llamada detiene el proceso aunque no esté en un callback. El fallo es, pues, la primera llamada
+de numba en un proceso que ya ha cargado la biblioteca de la API: por eso el calentamiento de A6 no servía.
+
+**Ahora.**
+
+- `SetSetpointHook(..., position=None, method='table')`: con `method='bisection'`, las consignas se calculan en cada
+  paso y la SET de cada zona es la salida `SET_<zona>` (de los sensores `SET_MAT_<zona>`, `SET_MRT_<zona>` y
+  `SET_RH_<zona>`); `prepare()` calcula una SET con números y otra con un array de dos valores; `position=None` es
+  sentado con 1,2 met o menos y de pie por encima.
+- `run_simulation` llama a `prepare()` de los ganchos (`prepare_hooks`) antes de cargar la biblioteca de la API, en el
+  proceso de cada simulación.
+- `apply_set_setpoints(..., method='table', output_frequencies=None)`: los tres sensores y las salidas de EnergyPlus de
+  la temperatura media del aire, la radiante media y la humedad relativa de las zonas (a las frecuencias de las salidas
+  del EMS del modelo), y `SET_<zona>` con la bisección; `set_of_results(results, hook)` calcula la SET de cada zona en
+  cada fila de los resultados; `Table` la llama `<zona>_SET (°C)`.
+- Documentación (docstrings y sección 4.9.2): el fallo de `set_tmp` en este entorno; el coste del JIT (16 s con la
+  caché de numba vacía: 13,6 s de importar pythermalcomfort y 2,3 s de la primera SET); que el SET del código de ASHRAE
+  55 no cambia con velocidades por debajo de 0,1 m/s, ni de unos 0,16 m/s a 1,1 met y 0,21 m/s a 1,2 met (comprobado en
+  `two_nodes_gagge.py`); el efecto de la postura (hasta 0,008 K en calefacción y 0,05 K en refrigeración) y el de la
+  ponderación del aire y la radiante (con tr − ta = ±3 K, hasta 0,10 y 0,07 K). Las afirmaciones anteriores (sección 21,
+  DEVLOG y decisiones) llevan la corrección.
+- Pruebas: `tests/core/test_comfort_hooks.py` (28: 5 nuevas y 3 cambiadas; con EnergyPlus 25.1, dos días por bisección
+  con `run_ep` en un proceso nuevo, sin violación de acceso, con las consignas y la SET de los valores que leen los
+  sensores, a 1e-6) y `tests/core/test_table_optional_outputs.py`. No cambia el código EMS del ACCIS.

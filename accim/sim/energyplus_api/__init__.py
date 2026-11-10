@@ -24,7 +24,7 @@ during the simulation::
 
 from accim.sim.energyplus_api.controller import CALLING_POINTS, ErlController
 from accim.sim.energyplus_api.idf import EmsDefinition, prepare_for_api, read_ems
-from accim.sim.energyplus_api.runner import SimulationResult, run_simulation, run_simulations
+from accim.sim.energyplus_api.runner import SimulationResult, prepare_hooks, run_simulation, run_simulations
 from accim.sim.energyplus_api.runtime import MINIMUM_API_VERSION, load_energyplus_api
 
 __all__ = [
@@ -35,6 +35,7 @@ __all__ = [
     'SimulationResult',
     'load_energyplus_api',
     'prepare_for_api',
+    'prepare_hooks',
     'read_ems',
     'run_simulation',
     'run_simulations',

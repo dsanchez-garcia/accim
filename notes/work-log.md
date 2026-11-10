@@ -15,6 +15,22 @@ This log is a lightweight, session-scoped complement to the repository's
 existing tracking files — it does not replace them (see
 [[decisions.md#2026-09-13 — `notes/work-log.md` complements, not replaces, existing tracking files|the related decision]]).
 
+## 2026-11-10 — G3: the SET in the callbacks of EnergyPlus (branch `v1.2.0`, on the server)
+
+- **Objective**: task G3 of the review v04 (findings A6-1 to A6-4): `SetSetpointHook(method='bisection')`, its
+  outputs, `set_of_results`, the posture by default, and the documentation of `set_tmp`.
+- **Affected files**: `accim/sim/comfort_hooks.py`, `accim/sim/energyplus_api/runner.py`,
+  `accim/data/postprocessing/optional_output_columns.py`, `tests/core/test_comfort_hooks.py`,
+  [[../docs/source/4_detailed use.md]] (§4.9, §4.9.2, §4.7.5), [[../CHANGELOG.md]], [[../CAMBIOS_CODIGO_v1.2.0.md]]
+  (§25), [[../DEVLOG.md]], [[../TODO.md]], [[decisions.md]].
+- **Finding or decision**: See
+  [[decisions.md#2026-11-10 — The hook of the SET calculates by bisection in the callbacks on request, after calling pythermalcomfort before the API of EnergyPlus is loaded (G3)|the decision]].
+  The access violation of `set_tmp` is its first call in a process that has loaded the library of the API of
+  EnergyPlus (Python 3.14.3, numba 0.68.1), not the callback; `run_simulation` calls `prepare()` before loading it.
+- **Validation**: 28 tests of the hooks (two days by bisection with EnergyPlus 25.1, exact to 1e-6), 58 with the API
+  tests, 47 of Table; documentation build unchanged (59 warnings).
+- **Next step**: G4.
+
 ## 2026-11-10 — G2: the running mean of ASHRAE 55 from the 2nd to the 30th of January (branch `v1.2.0`, on the server)
 
 - **Objective**: task G2 of the review v04 (finding E1-1): `compute_setpoints` reproduces the PMOT of EnergyPlus with

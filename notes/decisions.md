@@ -11,6 +11,24 @@ Durable architectural/process decisions for this repository and its Obsidian
 vault. Newest first. Use [[templates/decision-record.md|the decision-record
 template]] to add a new entry.
 
+## 2026-11-10 — The hook of the SET calculates by bisection in the callbacks on request, after calling pythermalcomfort before the API of EnergyPlus is loaded (G3)
+
+- **Status**: accepted (task G3 of `notes/PROPUESTAS_MEJORAS_post_1.1.0_v04.md` §7, findings A6-1 to A6-4, verdict #35;
+  the rule of the session on `set_tmp` in the callbacks)
+- **Context**: A6 tabulated the setpoints by humidity because `set_tmp` stopped EnergyPlus in the callbacks; the review
+  ran it there with Python 3.12, and block F (F1) needs a SET whose inputs change in time. In this environment (Python
+  3.14.3, numba 0.68.1), the first call of `set_tmp` in a process stops it with an access violation whenever the
+  library of the API of EnergyPlus has been loaded before (inside a callback or not), and works when it is made before
+  loading it; `NUMBA_DISABLE_JIT=1` makes pythermalcomfort 4.8.1 fail (`'function' object has no attribute 'py_func'`).
+- **Decision**: `SetSetpointHook(method='table' | 'bisection')`, `'table'` by default; with `'bisection'`, the
+  setpoints in each timestep and the output `SET_<zone>`; `prepare()` (one call with numbers, one with an array of two
+  values), which `run_simulation` calls (`prepare_hooks`) before `load_energyplus_api`; `apply_set_setpoints` adds the
+  sensors and the outputs of the mean air and radiant temperatures and the humidity, at the frequencies of the outputs
+  of the ACCIS of the model by default; `set_of_results`; `position=None`: sitting with 1.2 met or less.
+- **Consequences**: F1 builds on the bisection; the hooks with `prepare()` must run through `run_simulation` (or
+  `run_ep`, whose processes are new); a process that has loaded the API of EnergyPlus before calling pythermalcomfort
+  cannot calculate the SET in this environment.
+
 ## 2026-11-10 — The hooks of the setpoints run before the EMS programs and give their setpoints to the ACCIS through a program of each zone (G1)
 
 - **Status**: accepted (task G1 of `notes/PROPUESTAS_MEJORAS_post_1.1.0_v04.md` §7, option (a) of finding A4/A6-1; the
@@ -707,7 +725,9 @@ template]] to add a new entry.
   [[decisions.md#2026-11-10 — The hooks of the setpoints run before the EMS programs and give their setpoints to the ACCIS through a program of each zone (G1)|G1]],
   and the rest by the convergence plan A6 → F1 (verdict #35)
 - **Context**: v03 gives the SET setpoints by Erl (approximate) or by a hook with pythermalcomfort (exact), and the PPD
-  through the PMV setpoints; the SET of pythermalcomfort stops EnergyPlus when it is calculated in its callbacks.
+  through the PMV setpoints; the SET of pythermalcomfort stops EnergyPlus when it is calculated in its callbacks
+  (corrected by G3: only at its first call in a process that has loaded the library of the API of EnergyPlus,
+  in Python 3.14.3 with numba 0.68.1).
 - **Decision**: `apply_set_setpoints` and `SetSetpointHook` in `accim.sim.comfort_hooks`, as the ATHB, with the setpoints
   calculated by bisection for each relative humidity (0–100 %, every 1 %) when the hook is made and interpolated in the
   callbacks; no output of the SET; the PPD documented as the PMV setpoints of `apply_pmv_setpoints`.

@@ -19,7 +19,9 @@ of the ATHB add EMS outputs to the zones (``<output>_<zone>``, with the EMS suff
   Limit_<zone>``, in h, ``Degree Hours Above Upper Limit_<zone>`` and ``Degree Hours Below Lower Limit_<zone>``, in Kh)
   and of the building (``..._Building``, the sums of the zones), summed;
 - :func:`accim.sim.comfort_hooks.apply_athb_setpoints`: the ATHB_PMV and the adapted clothing insulation and metabolic
-  rate of each zone, ``ATHB_PMV_<zone>``, ``ATHB_clo_<zone>`` (clo) and ``ATHB_met_<zone>`` (met), averaged.
+  rate of each zone, ``ATHB_PMV_<zone>``, ``ATHB_clo_<zone>`` (clo) and ``ATHB_met_<zone>`` (met), averaged;
+- :func:`accim.sim.comfort_hooks.apply_set_setpoints` with ``method='bisection'``: the standard effective temperature of
+  each zone, ``SET_<zone>`` (°C), averaged.
 
 ``Table`` averages over time those that are averaged (:func:`averaged_outputs`) and gives ``frequency_agg_func`` to the
 others, keeps them with ``standard_outputs=True`` (:func:`standard_outputs`), and names those of the zones as its other
@@ -50,6 +52,7 @@ ZONE_OUTPUTS = {
     'ATHB_PMV': ('ATHB_PMV', True, True),
     'ATHB_clo': ('ATHB_clo (clo)', True, True),
     'ATHB_met': ('ATHB_met (met)', True, True),
+    'SET': ('SET (°C)', True, True),
 }
 #: The occupied hours below a temperature T of each zone, ``HoursBelow_<T>_<zone>``, are ``<zone>_HoursBelow_<T> (h)``,
 #: summed over time, with block and building values

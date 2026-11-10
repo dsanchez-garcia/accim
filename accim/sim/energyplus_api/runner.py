@@ -19,9 +19,21 @@ from accim.sim.energyplus_api.controller import ErlController, Hook
 from accim.sim.energyplus_api.idf import prepare_for_api
 from accim.sim.energyplus_api.runtime import load_energyplus_api
 
-__all__ = ['SimulationResult', 'run_simulation', 'run_simulations']
+__all__ = ['SimulationResult', 'prepare_hooks', 'run_simulation', 'run_simulations']
 
 PathLike = Union[str, os.PathLike]
+
+
+def prepare_hooks(hooks: Sequence[Hook]) -> None:
+    """Call the method ``prepare()`` of the hooks that have one, as :func:`run_simulation` does in the process of the
+    simulation before it loads the library of the API of EnergyPlus: for instance, the hook of the SET of
+    :mod:`accim.sim.comfort_hooks` with ``method='bisection'`` calls pythermalcomfort, whose first call (compiled by
+    numba) stopped the process with an access violation when it was made after loading that library (EnergyPlus 25.1,
+    Python 3.14.3, numba 0.68.1), inside a callback or not."""
+    for hook in hooks:
+        prepare = getattr(hook, 'prepare', None)
+        if callable(prepare):
+            prepare()
 
 
 @dataclass
@@ -97,7 +109,9 @@ def run_simulation(
         ``hook(controller, calling_point)``; :class:`~accim.sim.energyplus_api.controller.ErlController`
         gives access to the variables of the programs.
     :param after_programs: Functions called at each calling point after the EMS programs, before the
-        actuators are set.
+        actuators are set. The hooks (before or after the programs) with a method ``prepare()`` get it called once, in
+        the process of the simulation, before the library of the API of EnergyPlus is loaded (:func:`prepare_hooks`:
+        the hook of the SET of :mod:`accim.sim.comfort_hooks` with ``method='bisection'`` calls pythermalcomfort there).
     :param verbose: True to print the messages of EnergyPlus.
     :param raise_errors: True to raise an error if the EMS programs fail or EnergyPlus ends with a fatal
         error; False to return it in the result.
@@ -107,6 +121,8 @@ def run_simulation(
 
     idf = Path(idf).resolve()
     version = read_idf_version(idf)
+    # Before the library of the API of EnergyPlus is loaded in the process (see prepare_hooks)
+    prepare_hooks([*before_programs, *after_programs])
     api = load_energyplus_api(version)
     model = load_idf(idf, version)
     ems = prepare_for_api(model)
