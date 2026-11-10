@@ -59,6 +59,9 @@ class InputVariable:
         with the EMS code of the custom model have (:mod:`accim.sim.ems.outdoor_metric`).
     :ivar optional: True for the inputs that SetInputData_<zone> only has if they are given (the floor of the heating
         setpoint and the ceiling of the cooling setpoint, :mod:`accim.sim.ems.setpoint_limits`); their default is None.
+    :ivar static_only: True for the inputs of the static setpoints of the comfort standards whose standard does not
+        give them (JPN Aqilah 2025, :mod:`accim.sim.ems.static_setpoints`), which only the zones of these comfort
+        standards have.
     """
 
     variable: str
@@ -67,6 +70,7 @@ class InputVariable:
     mixed_mode_only: bool = False
     outdoor_metric_only: bool = False
     optional: bool = False
+    static_only: bool = False
 
 
 #: The inputs, in the order of the lines of SetInputData_<zone>. The first 12 are those of the program SetInputData
@@ -98,6 +102,8 @@ INPUT_VARIABLES = (
     InputVariable('CustAST_metric', 'custom_outdoor_metric', 0, outdoor_metric_only=True),
     InputVariable('CustAST_alpha', 'custom_alpha', 0.8, outdoor_metric_only=True),
     InputVariable('CustAST_days', 'custom_days', 30, outdoor_metric_only=True),
+    InputVariable('StaticAHST', 'static_heating_setpoint', 20.0, static_only=True),
+    InputVariable('StaticACST', 'static_cooling_setpoint', 28.0, static_only=True),
     InputVariable('AHSTfloor', 'heating_setpoint_floor', None, optional=True),
     InputVariable('ACSTceil', 'cooling_setpoint_ceiling', None, optional=True),
     InputVariable('MaxTempDiffVOF', 'opening_factor_max_temp_diff', 6, mixed_mode_only=True),
@@ -149,18 +155,23 @@ def input_values(arguments: Mapping) -> Dict[str, Any]:
 def input_lines(values: Optional[Mapping[str, Any]] = None, mixed_mode: bool = True,
                 outdoor_metric: bool = False) -> List[str]:
     """The lines of a program SetInputData_<zone>, with the default value of the variables not given (the optional
-    inputs, only if they are given).
+    inputs, only if they are given; the static setpoints of :mod:`accim.sim.ems.static_setpoints`, only in the zones
+    of the comfort standards whose static setpoints they are).
 
     :param values: The values of some EMS variables (see :func:`input_values`).
     :param mixed_mode: False to leave out the inputs of the venting opening factor.
     :param outdoor_metric: True to add the inputs of the outdoor metric of the custom model (the models with its EMS
         code, see :mod:`accim.sim.ems.outdoor_metric`).
     """
+    from accim.sim.ems.static_setpoints import has_static_setpoints
+
     values = values or {}
+    static = has_static_setpoints(values.get('ComfStand', INPUT_VARIABLES[0].default))
     return [f'set {item.variable} = {values.get(item.variable, item.default)}'
             for item in INPUT_VARIABLES
             if (mixed_mode or not item.mixed_mode_only) and (outdoor_metric or not item.outdoor_metric_only)
-            and (not item.optional or values.get(item.variable) is not None)]
+            and (not item.optional or values.get(item.variable) is not None)
+            and (static or not item.static_only)]
 
 
 def input_programs(idf) -> Dict[str, Any]:

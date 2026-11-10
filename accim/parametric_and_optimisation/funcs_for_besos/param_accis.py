@@ -37,6 +37,12 @@ import pandas as pd
 from accim.sim.ems.inputs import input_programs, read_inputs, set_inputs
 from accim.sim.ems.programs import add_comfort_standard_code, set_program_lines
 from accim.sim.ems.setpoint_limits import check_setpoint_limits, set_setpoint_limits_code
+from accim.sim.ems.static_setpoints import (
+    DEFAULTS as STATIC_DEFAULTS,
+    INPUTS as STATIC_INPUTS,
+    check_static_setpoints,
+    has_static_setpoints,
+)
 
 #: The program, line and variable of each input of the ACCIS in the models of earlier versions of accim, which have
 #: one program SetInputData for all the zones and other inputs in SetAST, ApplyCAT, SetAppLimits and
@@ -256,7 +262,9 @@ def drop_invalid_param_combinations(samples_df):
     other parameters). Before accim 1.0.0, the rows of ESP CTE were dropped when the plan had `category` or
     `comfort_mode`, and those of INT ISO7730 kept only `comfort_mode` 0. Since accim 1.2.0, the rows whose floor of
     the heating setpoint is not lower than the ceiling of the cooling setpoint (`heating_setpoint_floor` and
-    `cooling_setpoint_ceiling`, which the modifiers reject) are dropped too.
+    `cooling_setpoint_ceiling`, which the modifiers reject) are dropped too, and so are those whose static heating
+    setpoint of JPN Aqilah 2025 is not lower than its static cooling setpoint (`static_heating_setpoint` and
+    `static_cooling_setpoint`).
 
     Parameters
     ----------
@@ -317,6 +325,7 @@ def drop_invalid_param_combinations(samples_df):
         'min_opening_factor': 'MultiplierVOF',
         # The parameters of accim 1.2.0 have no names of accim 0.x
         'heating_setpoint_floor': 'heating_setpoint_floor', 'cooling_setpoint_ceiling': 'cooling_setpoint_ceiling',
+        'static_heating_setpoint': 'static_heating_setpoint', 'static_cooling_setpoint': 'static_cooling_setpoint',
     }
     columns = {new: (old if old in samples_df.columns and new not in samples_df.columns else new)
                for new, old in legacy_names.items()}
@@ -348,6 +357,7 @@ def drop_invalid_param_combinations(samples_df):
         lambda v: v('opening_factor_min_temp_diff') >= v('opening_factor_max_temp_diff'),
         lambda v: v('min_opening_factor') < 0 or v('min_opening_factor') > 1,
         lambda v: v('heating_setpoint_floor') >= v('cooling_setpoint_ceiling'),
+        lambda v: v('static_heating_setpoint') >= v('static_cooling_setpoint'),
     )
     samples_df['valid'] = True
     for i in samples_df.index:
@@ -372,6 +382,10 @@ def modify_ComfStand(idf: besos.IDF_class, value: int):
     The model gets the EMS code of this comfort standard if it does not have it (the output IDFs of ``AddAccis`` only
     have that of the comfort standards of their zones). With a comfort standard of the registry
     (:mod:`accim.sim.standards`), the zones also get its outdoor metric (and its EMS code, if the EMS calculates it).
+    With JPN Aqilah 2025 (23), the zones get its static setpoints (20 and 28 °C, unless a parameter
+    ``static_heating_setpoint`` or ``static_cooling_setpoint`` gave them before), and the running mean of EN 16798-1
+    with α = 0.8 if the programs of the outdoor metric of the model begin with the values of a weather file (AddAccis
+    or ``modify_accis`` with ``epw``), or the RMOT of EnergyPlus otherwise.
     The models of earlier versions of accim do not have the comfort standards defined by their data (JPN Aqilah 2025,
     23, and those of the registry): a ``ValueError`` says so.
     
@@ -400,6 +414,91 @@ def modify_ComfStand(idf: besos.IDF_class, value: int):
         if definition is not None:
             from accim.sim.ems.standard_lines import standard_inputs
             _set_outdoor_metric_inputs(idf, standard_inputs(definition))
+        if has_static_setpoints(value):
+            # The static setpoints of JPN Aqilah 2025 that the zones do not have yet (a parameter of the static
+            # setpoints applied before keeps its value), and the outdoor metric of the weather file of the model
+            for program in input_programs(idf).values():
+                current = read_inputs(program)
+                missing = [f'set {name} = {default}' for name, default in zip(STATIC_INPUTS, STATIC_DEFAULTS)
+                           if name not in current]
+                if missing:
+                    set_program_lines(program, [str(line).strip() for line in program.fieldvalues[2:]] + missing)
+            _refresh_outdoor_metric_code(idf)
+
+
+def _refresh_outdoor_metric_code(idf) -> None:
+    """Write the EMS code of the outdoor metric where the model needs it, keeping its programs if they can be kept
+    (:func:`accim.sim.ems.outdoor_metric.outdoor_metric_needed`): JPN Aqilah 2025 uses the outdoor metric of the weather
+    file if the programs of the model begin with its values (:func:`accim.sim.accis.modify_accis` or AddAccis with
+    ``epw``)."""
+    from accim.sim.ems.outdoor_metric import has_outdoor_metric_code, outdoor_metric_needed, set_outdoor_metric_code
+    from accim.sim.ems.programs import code_comfort_standards
+
+    enabled = outdoor_metric_needed(idf, code_comfort_standards(idf))
+    if enabled or has_outdoor_metric_code(idf):
+        set_outdoor_metric_code(idf, enabled)
+
+
+def _set_static_setpoint(idf, variable: str, value: float) -> None:
+    """Set the static heating (StaticAHST) or cooling (StaticACST) setpoint of JPN Aqilah 2025 in all the zones of a
+    model of accim 1.0.0 or later, adding the line to the programs SetInputData_<zone> that do not have it
+    (:mod:`accim.sim.ems.static_setpoints`). The zones of the other comfort standards ignore it, and keep it if a
+    parameter ``comfort_standard`` applied after it gives them JPN Aqilah 2025.
+
+    :raises ValueError: If the model has the ACCIS of an earlier version, the value is not a number, or the static
+        heating setpoint of a zone would not be lower than its static cooling setpoint.
+    """
+    zone_programs = input_programs(idf)
+    if not zone_programs:
+        raise ValueError('The model has the ACCIS of an earlier version of accim, which does not have JPN Aqilah 2025, '
+                         'whose static setpoints these are. Add the ACCIS with this version of accim to the model '
+                         'without it.')
+    for zone, program in zone_programs.items():
+        current = read_inputs(program)
+        values = {name: current.get(name, default) for name, default in zip(STATIC_INPUTS, STATIC_DEFAULTS)}
+        values[variable] = value
+        check_static_setpoints(*(values[name] for name in STATIC_INPUTS), where=zone)
+    for program in zone_programs.values():
+        if set_inputs(program, {variable: value}):
+            set_program_lines(program, [str(line).strip() for line in program.fieldvalues[2:]]
+                              + [f'set {variable} = {value}'])
+
+
+def modify_StaticAHST(idf: besos.IDF_class, value: float):
+    """Modifies the static heating setpoint of JPN Aqilah 2025 (``static_heating_setpoint``, the input StaticAHST) of
+    all the zones (°C): its setpoint in comfort mode 0, and out of the applicability limits in comfort mode 1 (decision
+    D2 of accim 1.2.0, :mod:`accim.sim.ems.static_setpoints`). The other comfort standards ignore it.
+
+    :param idf: The eppy or besos IDF class instance, with the ACCIS of accim 1.0.0 or later.
+    :param value: The static heating setpoint (°C).
+
+    Usage
+    -----
+    Use `modify_StaticAHST` within ACCIM parametric and optimisation workflows.
+
+    Examples
+    --------
+    result = modify_StaticAHST(idf=..., value=19)
+    """
+    _set_static_setpoint(idf, 'StaticAHST', value)
+
+
+def modify_StaticACST(idf: besos.IDF_class, value: float):
+    """Modifies the static cooling setpoint of JPN Aqilah 2025 (``static_cooling_setpoint``, the input StaticACST) of
+    all the zones (°C), as :func:`modify_StaticAHST`.
+
+    :param idf: The eppy or besos IDF class instance, with the ACCIS of accim 1.0.0 or later.
+    :param value: The static cooling setpoint (°C).
+
+    Usage
+    -----
+    Use `modify_StaticACST` within ACCIM parametric and optimisation workflows.
+
+    Examples
+    --------
+    result = modify_StaticACST(idf=..., value=27)
+    """
+    _set_static_setpoint(idf, 'StaticACST', value)
 
 
 def _set_setpoint_limit(idf, variable: str, value: float) -> None:
@@ -485,9 +584,7 @@ def _set_outdoor_metric_input(idf, variable: str, value) -> None:
 def _set_outdoor_metric_inputs(idf, inputs: dict) -> None:
     """Set some inputs of the outdoor metric (``{EMS variable: value}``) in all the zones of a model, and write the EMS
     code of the outdoor metric where the model needs it (see :func:`_set_outdoor_metric_input`)."""
-    from accim.sim.ems.outdoor_metric import (check_outdoor_metric_arguments, has_outdoor_metric_code,
-                                              metric_comfort_standards, set_outdoor_metric_code, uses_outdoor_metric)
-    from accim.sim.ems.programs import code_comfort_standards
+    from accim.sim.ems.outdoor_metric import check_outdoor_metric_arguments
 
     zone_programs = input_programs(idf)
     if not zone_programs:
@@ -504,11 +601,7 @@ def _set_outdoor_metric_inputs(idf, inputs: dict) -> None:
         if missing:
             set_program_lines(program, [str(line).strip() for line in program.fieldvalues[2:]]
                               + [f'set {variable} = {inputs[variable]}' for variable in inputs if variable in missing])
-    standards = code_comfort_standards(idf)
-    enabled = ((standards is None or bool(set(standards) & metric_comfort_standards()))
-               and uses_outdoor_metric(idf))
-    if enabled or has_outdoor_metric_code(idf):
-        set_outdoor_metric_code(idf, enabled)
+    _refresh_outdoor_metric_code(idf)
 
 
 def modify_CustAST_metric(idf: besos.IDF_class, value):

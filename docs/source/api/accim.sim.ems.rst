@@ -100,6 +100,14 @@ accim.sim.ems.standard\_lines module
    :show-inheritance:
    :undoc-members:
 
+accim.sim.ems.static\_setpoints module
+--------------------------------------
+
+.. automodule:: accim.sim.ems.static_setpoints
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
 Module contents
 ---------------
 

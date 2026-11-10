@@ -18,7 +18,7 @@ from accim.energyplus import find_energyplus
 from accim.sim.accis import load_idf, modify_accis
 from accim.sim.ems import program_lines as pl
 from accim.sim.ems.erl import ErlProgramSet, ErlRuntimeError, variables_in_programs
-from accim.sim.ems.inputs import input_lines, input_values, zone_comfort_standards
+from accim.sim.ems.inputs import INPUT_VARIABLES, input_lines, input_values, zone_comfort_standards
 from accim.sim.ems.programs import (
     INDENTATION,
     accis_programs,
@@ -41,8 +41,11 @@ SAMPLE_IDF = (REPO / 'accim' / 'sample_files' / 'sample IDFs' / 'input_IDFs'
               / 'TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2510.idf')
 CHAIN = ['if ComfStand == 1', 'set A = 1', 'elseif ComfStand == 2 || (ComfStand == 12)', 'if CAT == 1', 'set A = 2',
          'endif', 'else', 'set A = 3', 'endif']
-#: The inputs of the zones with full air-conditioning (the EMS variables of SetInputData_<zone>).
-INPUTS = [line[len('set '):].split(' = ')[0] for line in input_lines(mixed_mode=False)]
+#: The inputs of the zones with full air-conditioning (the EMS variables of SetInputData_<zone>), with those that only
+#: the zones of some comfort standards have (the static setpoints of JPN Aqilah 2025, accim.sim.ems.static_setpoints)
+INPUTS = [line[len('set '):].split(' = ')[0] for line in input_lines({'ComfStand': 23}, mixed_mode=False)]
+#: Their defaults, for the zones that do not have them
+DEFAULTS = {item.variable: item.default for item in INPUT_VARIABLES}
 #: The timesteps run with each comfort standard, category and comfort mode (RMOT and PMOT differ, as the branches that
 #: use one or the other).
 TIMESTEPS = [dict(RMOT=t, PMOT=t - 1.5, DayOfYear=d, CurrentTime=h, Zone1_OpT=op, Zone2_OpT=op, ZoneTimeStep=0.25,
@@ -170,9 +173,9 @@ class _Erl:
             store.clear()
         for zone, arguments in zone_arguments.items():
             values = input_values(dict(arguments, hvac_mode=0, setpoint_tolerance=0.1))
-            for line in input_lines(values, mixed_mode=False):
-                name, value = line[len('set '):].split(' = ')
-                self.erl.set(f'In_{name}_{zone}', float(value))
+            given = dict(line[len('set '):].split(' = ') for line in input_lines(values, mixed_mode=False))
+            for name in INPUTS:
+                self.erl.set(f'In_{name}_{zone}', float(given.get(name, DEFAULTS[name])))
         self.erl.run('InitASTvariables')
 
     def timestep(self, values):

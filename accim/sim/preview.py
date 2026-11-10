@@ -317,9 +317,11 @@ def compute_setpoints(epw: PathLike, comfort_standard: int, category: Optional[N
     With the custom model (comfort standard 99) and an outdoor metric other than 'pmot' (``custom_outdoor_metric``),
     the programs of the outdoor metric (:mod:`accim.sim.ems.outdoor_metric`) also run in each timestep, with the outdoor
     temperature of EnergyPlus (interpolated between the hourly values of the weather file, which it has at the end of
-    each hour). With its regimes (``custom_regimes``), the program of the regimes (:mod:`accim.sim.ems.custom_regimes`)
-    runs before SetAppLimits; their conditions 'hvac_off' and 'hvac_on' depend on the HVAC system of the simulation, so
-    they cannot be calculated without EnergyPlus.
+    each hour), and so they do with JPN Aqilah 2025 (23) and ``outdoor_metric_start`` 'epw', whose running mean is then
+    that of EN 16798-1 with α = 0.8 that the EMS calculates (as in the output IDFs of AddAccis with the weather file,
+    :data:`accim.sim.ems.standard_lines.WEATHER_FILE_METRICS`). With its regimes (``custom_regimes``), the program of
+    the regimes (:mod:`accim.sim.ems.custom_regimes`) runs before SetAppLimits; their conditions 'hvac_off' and
+    'hvac_on' depend on the HVAC system of the simulation, so they cannot be calculated without EnergyPlus.
 
     :param epw: The path of the weather file (EPW), of a whole year of 365 days.
     :param comfort_standard: The comfort standard (see :func:`accim.utils.get_setpoint_ems_code`).
@@ -331,10 +333,12 @@ def compute_setpoints(epw: PathLike, comfort_standard: int, category: Optional[N
     :param frequency: 'hourly' (by default) or 'timestep'.
     :param outdoor_metric_start: The values with which the outdoor metric of the custom model begins: 'epw' (by
         default), those of the weather file, as in the output IDFs of AddAccis with its argument ``epw``; 'pmot', the
-        running mean of ASHRAE 55 of EnergyPlus, as in those without it.
+        running mean of ASHRAE 55 of EnergyPlus, as in those without it. JPN Aqilah 2025 (23) reads, with 'epw', the
+        running mean of EN 16798-1 with α = 0.8 that begins with the values of the weather file, and, with 'pmot', the
+        RMOT of EnergyPlus, as the output IDFs of AddAccis with and without ``epw``.
     :param custom_arguments: The other arguments of :func:`accim.utils.get_setpoint_ems_code` (``setpoint_tolerance``,
         ``setpoint_accuracy``, ``cooling_season_start``, ``custom_slope``, ``custom_outdoor_metric``,
-        ``custom_regimes``...), with the same defaults.
+        ``custom_regimes``, ``static_heating_setpoint``...), with the same defaults.
     :return: A DataFrame with a row for each hour (or timestep): ``datetime`` (the end of the hour or timestep, as
         EnergyPlus reports it), ``Tout`` (the outdoor dry-bulb temperature: that of the weather file, or that of
         EnergyPlus, interpolated, for each timestep), ``RMOT`` and ``PMOT`` (those of EnergyPlus for the day),
@@ -357,6 +361,7 @@ def compute_setpoints(epw: PathLike, comfort_standard: int, category: Optional[N
     from accim.sim.ems import outdoor_metric as om
     from accim.sim.ems import program_lines as pl
     from accim.sim.ems.erl import ErlProgramSet, variables_in_programs
+    from accim.sim.ems.standard_lines import WEATHER_FILE_METRICS, weather_file_definition, weather_file_lines
     from accim.utils.ems_code import get_setpoint_ems_programs
 
     if frequency not in ('hourly', 'timestep'):
@@ -376,12 +381,15 @@ def compute_setpoints(epw: PathLike, comfort_standard: int, category: Optional[N
     # The programs of the zone (SetInputData_<zone>, and the outdoor metric of the custom model)
     programs = {name.replace('<zone>', _ZONE): [line.replace('<zone>', _ZONE) for line in lines]
                 for name, lines in programs.items()}
-    # The custom model with an outdoor metric other than 'pmot' (accim.sim.ems.outdoor_metric)
+    # The custom model with an outdoor metric other than 'pmot' (accim.sim.ems.outdoor_metric), or JPN Aqilah 2025 with
+    # the weather file (accim.sim.ems.standard_lines.WEATHER_FILE_METRICS)
     outdoor_metric = om.PROGRAM in programs
+    weather_file = outdoor_metric and int(comfort_standard) in WEATHER_FILE_METRICS
     zone_metric = f'{om.ZONE_PROGRAM_PREFIX}{_ZONE}'
     # The hour counters of the zone tell whether the running mean is within the applicability limits
     counter = f'CountHours_{_ZONE}'
-    programs[counter] = pl.format_lines(pl.count_hours_lines(outdoor_metric), zone=_ZONE)
+    programs[counter] = weather_file_lines(counter, pl.format_lines(pl.count_hours_lines(outdoor_metric), zone=_ZONE),
+                                           weather_file)
     names = set().union(*variables_in_programs(programs).values())
     erl = ErlProgramSet(programs, global_variables=names)
     order = ['SetAppLimits', 'ApplyCAT', 'SetComfTemp', 'SetAST', 'SetASTnoTol', counter]
@@ -472,7 +480,7 @@ def compute_setpoints(epw: PathLike, comfort_standard: int, category: Optional[N
     if outdoor_metric:
         from accim.sim.standards import comfort_standard_definition
 
-        definition = comfort_standard_definition(comfort_standard)
+        definition = comfort_standard_definition(comfort_standard) or weather_file_definition(comfort_standard)
         metric = (definition.outdoor_metric if definition is not None
                   else om.metric_name(custom_arguments.get('custom_outdoor_metric', 'pmot')))
     else:

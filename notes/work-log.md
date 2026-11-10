@@ -15,6 +15,29 @@ This log is a lightweight, session-scoped complement to the repository's
 existing tracking files — it does not replace them (see
 [[decisions.md#2026-09-13 — `notes/work-log.md` complements, not replaces, existing tracking files|the related decision]]).
 
+## 2026-11-10 — G4: JPN Aqilah 2025 with the weather file, and its static setpoints (branch `v1.2.0`, on the server)
+
+- **Objective**: task G4 of the review v04 (findings B4-1, B4-2): comfort standard 23 with `rmot_alpha` from the weather
+  file when it is given (RMOT and a warning otherwise), the test against 101, and `static_heating_setpoint` /
+  `static_cooling_setpoint` (`StaticAHST`/`StaticACST`) in `AddAccis`, `modify_accis`, `zone_arguments`, the EMS code
+  functions, the parametric module and the GUI.
+- **Affected files**: `accim/sim/ems/static_setpoints.py` (new), `standard_lines.py`, `outdoor_metric.py`,
+  `programs.py`, `objects.py`, `inputs.py`, `setpoint_lines.py`, `accim/sim/accis.py`, `generation.py`, `preview.py`,
+  `standards.py`, `accim/utils/ems_code.py`, `verification.py`, the parametric module, the GUI, the golden files
+  `s01`–`s06` and `s09`, [[../docs/source/4_detailed use.md]] (§4.1, §4.2, §4.2.5, §4.3, §4.3.1, §4.10),
+  [[../CHANGELOG.md]], [[../CAMBIOS_CODIGO_v1.2.0.md]] (§26), [[../DEVLOG.md]], [[../TODO.md]], [[decisions.md]],
+  [[questions.md]].
+- **Finding or decision**: See
+  [[decisions.md#2026-11-10 — JPN Aqilah 2025 reads the running mean of EN 16798-1 of the weather file when the model has its values, and its static setpoints are inputs of its zones (G4)|the decision]].
+  Measured: the literal test criterion fails from 1 January (0.92 K on day 1, hours 2–24) and in some first hours of
+  the year (0.1013 K, one timestep of reading lag); the test uses the starts of 1 April and 1 July and the hours 2–24
+  (provisional, [[questions.md]]).
+- **Validation**: `tests/core` 1269 passed, 2 skipped; golden master 35 passed (7 files written again, only the static
+  lines of 23 and their declaration); `tests/parametric_and_optimisation` 507 passed; EnergyPlus 25.1: check 4 with 0
+  mismatches (also `Tout_metric`), EMS and API backends identical with and without the weather file; documentation
+  build with the warnings of the baseline.
+- **Next step**: G5.
+
 ## 2026-11-10 — G3: the SET in the callbacks of EnergyPlus (branch `v1.2.0`, on the server)
 
 - **Objective**: task G3 of the review v04 (findings A6-1 to A6-4): `SetSetpointHook(method='bisection')`, its

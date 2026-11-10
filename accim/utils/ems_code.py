@@ -17,6 +17,7 @@ from accim.sim.ems import custom_regimes as cr
 from accim.sim.ems import outdoor_metric as om
 from accim.sim.ems import program_lines as pl
 from accim.sim.ems import setpoint_limits as sl
+from accim.sim.ems import static_setpoints as ss
 from accim.sim.ems.inputs import INPUT_VARIABLES, input_values
 from accim.sim.ems.programs import indent_lines
 from accim.sim.ems.setast import (
@@ -28,7 +29,14 @@ from accim.sim.ems.setast import (
     subprogram_name,
     subprograms,
 )
-from accim.sim.ems.standard_lines import metric_variable, needs_outdoor_metric_code
+from accim.sim.ems.standard_lines import (
+    WEATHER_FILE_METRICS,
+    metric_variable,
+    needs_outdoor_metric_code,
+    standard_inputs,
+    weather_file_definition,
+    weather_file_lines,
+)
 from accim.sim.standards import COMFORT_STANDARDS, FIRST_REGISTRY_NUMBER, comfort_standard_definition, definition_of
 
 __all__ = ['get_setpoint_ems_code', 'get_setpoint_ems_programs', 'print_setpoint_ems_code']
@@ -91,7 +99,8 @@ def _section(title: str, lines: Iterable[str]) -> List[str]:
     return [f'! --- {title} ---', *indent_lines(lines), '']
 
 
-def _header(comfort_standard: int, category: Optional[Number], comfort_mode: Optional[Number]) -> List[str]:
+def _header(comfort_standard: int, category: Optional[Number], comfort_mode: Optional[Number],
+            arguments: Optional[dict] = None, weather_file: bool = False) -> List[str]:
     standard = COMFORT_STANDARDS[comfort_standard]
     lines = ['! The EMS code (Erl) with which the ACCIS calculates the setpoints, as in the output IDFs of AddAccis',
              f'! Comfort standard (ComfStand): {standard.title}']
@@ -110,7 +119,7 @@ def _header(comfort_standard: int, category: Optional[Number], comfort_mode: Opt
     else:
         lines.append(f'! Comfort mode (ComfMod): {_number(comfort_mode)} = '
                      f'{standard.comfort_modes.get(comfort_mode, "")}')
-    lines += _definition_lines(comfort_standard)
+    lines += _definition_lines(comfort_standard, arguments or {}, weather_file)
     return lines
 
 
@@ -123,21 +132,40 @@ def _evidence_text(value) -> str:
     return str(value)
 
 
-def _definition_lines(comfort_standard: int) -> List[str]:
-    """The comments with the source, the outdoor metric and the evidence of a comfort standard defined by its data
-    (:mod:`accim.sim.standards`: JPN Aqilah 2025, built in, and those of the registry), or none."""
-    definition = definition_of(comfort_standard)
-    if definition is None:
-        return []
+def _metric_text(definition) -> str:
     metric = definition.outdoor_metric
     if metric == 'rmot_alpha':
         metric += f' (alpha {definition.alpha})'
     elif metric == 'ndrm':
         metric += f' ({definition.days} days)'
+    return metric
+
+
+def _definition_lines(comfort_standard: int, arguments: dict, weather_file: bool = False) -> List[str]:
+    """The comments with the source, the outdoor metric and the evidence of a comfort standard defined by its data
+    (:mod:`accim.sim.standards`: JPN Aqilah 2025, built in, and those of the registry), or none. With
+    ``weather_file``, the outdoor metric of JPN Aqilah 2025 is that of the models with the values of the weather file
+    (:data:`accim.sim.ems.standard_lines.WEATHER_FILE_METRICS`), and its static setpoints are those of ``arguments``
+    (:mod:`accim.sim.ems.static_setpoints`)."""
+    definition = definition_of(comfort_standard)
+    if definition is None:
+        return []
     kind = 'defined by its data' if definition.number >= FIRST_REGISTRY_NUMBER else 'built in, defined by its data'
-    lines = [f'! Comfort standard {kind} (accim.sim.standards): {definition.citation}',
-             f'! Outdoor metric: {metric}, in the EMS {metric_variable(definition.outdoor_metric)}']
-    if definition.static_setpoints is not None:
+    lines = [f'! Comfort standard {kind} (accim.sim.standards): {definition.citation}']
+    if weather_file and comfort_standard in WEATHER_FILE_METRICS:
+        weather = weather_file_definition(comfort_standard)
+        lines.append(f'! Outdoor metric: {_metric_text(weather)}, in the EMS '
+                     f'{metric_variable(weather.outdoor_metric)}, which begins with the values of the weather file '
+                     f'(without it, {_metric_text(definition)}, in the EMS '
+                     f'{metric_variable(definition.outdoor_metric)})')
+    else:
+        lines.append(f'! Outdoor metric: {_metric_text(definition)}, in the EMS '
+                     f'{metric_variable(definition.outdoor_metric)}')
+    if ss.has_static_setpoints(comfort_standard):
+        heating, cooling = (arguments.get(name, default) for name, default in zip(ss.ARGUMENTS, ss.DEFAULTS))
+        lines.append(f'! Static setpoints: {heating} for heating and {cooling} for cooling (the inputs StaticAHST and '
+                     f'StaticACST of the zone: static_heating_setpoint and static_cooling_setpoint)')
+    elif definition.static_setpoints is not None:
         lines.append(f'! Static setpoints: {definition.static_setpoints[0]} for heating and '
                      f'{definition.static_setpoints[1]} for cooling')
     lines.append('! Evidence:')
@@ -152,8 +180,14 @@ def _input_lines(comfort_standard: int, category: Optional[Number], comfort_mode
     wanted = _SETPOINT_INPUTS | (_CUSTOM_INPUTS if comfort_standard == _CUSTOM else set())
     if outdoor_metric:
         wanted |= _OUTDOOR_METRIC_INPUTS
-    # The floor and ceiling of the setpoints, if they are given
+        # JPN Aqilah 2025 with the weather file: the inputs of its outdoor metric (accim.sim.ems.outdoor_metric)
+        weather = weather_file_definition(comfort_standard)
+        if weather is not None:
+            values.update(standard_inputs(weather))
+    # The floor and ceiling of the setpoints, if they are given, and the static setpoints of JPN Aqilah 2025
     wanted |= set(sl.INPUTS)
+    if ss.has_static_setpoints(comfort_standard):
+        wanted |= set(ss.INPUTS)
     lines = []
     for item in INPUT_VARIABLES:
         if item.variable not in wanted:
@@ -174,6 +208,13 @@ def _limit_program(arguments: dict) -> List[str]:
     if floor is None and ceiling is None:
         return []
     return sl.limit_program_lines(floor is not None, ceiling is not None)
+
+
+def _check_static_setpoints(comfort_standard: int, arguments: dict) -> None:
+    """Check the static setpoints of JPN Aqilah 2025 (:mod:`accim.sim.ems.static_setpoints`), which the other comfort
+    standards ignore."""
+    if ss.has_static_setpoints(comfort_standard):
+        ss.check_static_setpoints(*(arguments.get(name, default) for name, default in zip(ss.ARGUMENTS, ss.DEFAULTS)))
 
 
 def _regime_program(comfort_standard: int, arguments: dict, outdoor_metric: bool) -> List[str]:
@@ -200,8 +241,11 @@ def _outdoor_metric_programs(comfort_standard: int, arguments: dict, epw, start_
     """The programs of the outdoor metric of the custom model, as in the output IDFs of AddAccis with the weather file
     ``epw`` and a RunPeriod that begins on ``start_date`` (none if the comfort standard is not the custom model or its
     metric is 'pmot'), or those of the outdoor metric of a comfort standard defined by its data (none if EnergyPlus
-    calculates it)."""
+    calculates it), or, with ``epw``, those of the outdoor metric of JPN Aqilah 2025 with the weather file
+    (:data:`accim.sim.ems.standard_lines.WEATHER_FILE_METRICS`)."""
     definition = comfort_standard_definition(comfort_standard)
+    if definition is None and epw is not None:
+        definition = weather_file_definition(comfort_standard)
     if definition is not None:
         if not needs_outdoor_metric_code(definition):
             return {}
@@ -277,6 +321,8 @@ def get_setpoint_ems_code(
     cooling_setpoint_ceiling: Optional[Number] = None,
     custom_regimes: Optional[Sequence[CustomRegime]] = None,
     script_type: Optional[str] = None,
+    static_heating_setpoint: Number = ss.DEFAULTS[0],
+    static_cooling_setpoint: Number = ss.DEFAULTS[1],
 ) -> str:
     """The EMS code with which the ACCIS calculates the setpoints of a comfort standard, category and comfort mode, to
     read it before adding the ACCIS to a model (:func:`print_setpoint_ems_code` prints it).
@@ -331,7 +377,10 @@ def get_setpoint_ems_code(
     :param custom_alpha: Custom model, 'rmot_alpha': the alpha of the running mean.
     :param custom_days: Custom model, 'ndrm': the number of previous days.
     :param epw: Custom model with an outdoor metric other than 'pmot': the weather file with which its programs begin
-        (argument ``epw`` of :class:`accim.sim.accis.AddAccis`); None to begin with PMOT.
+        (argument ``epw`` of :class:`accim.sim.accis.AddAccis`); None to begin with PMOT. JPN Aqilah 2025 (23): with
+        it, the code of the output IDFs of AddAccis with the weather file, whose running mean is that of EN 16798-1
+        with α = 0.8 that the EMS calculates from it; without it, that of the output IDFs without it, which reads the
+        RMOT of EnergyPlus (:data:`accim.sim.ems.standard_lines.WEATHER_FILE_METRICS`).
     :param start_date: The first day of the RunPeriod of the model (a date 'dd/mm' or a day of the year), with which
         the programs of the outdoor metric begin with the values of ``epw``.
     :param heating_setpoint_floor: The floor of the heating setpoint (°C), or None for none.
@@ -340,11 +389,15 @@ def get_setpoint_ems_code(
     :param script_type: The script type of the output IDFs ('vrf_mm' or 'ex_mm'), which the conditions 'hvac_off' and
         'hvac_on' of the regimes of the custom model need (they read the coils of the VRF systems of accim, or the
         load of the thermostats of the existing HVAC systems); None otherwise.
+    :param static_heating_setpoint: JPN Aqilah 2025: its static heating setpoint (°C), the input ``StaticAHST`` of the
+        zone (:mod:`accim.sim.ems.static_setpoints`); the other comfort standards ignore it.
+    :param static_cooling_setpoint: JPN Aqilah 2025: its static cooling setpoint (°C), the input ``StaticACST``.
     :return: The lines of the programs, one after the other, separated by a comment with the name of each one.
     :raises ValueError: If the comfort standard does not exist, the category is not one of the comfort standard, or
         the comfort standard has no setpoints with the comfort mode (as in :class:`accim.sim.accis.AddAccis`), or the
         arguments of the outdoor metric are not valid ('monthly_mean' needs ``epw``), or the floor and the ceiling,
-        or the regimes (they need the custom model, and their conditions 'hvac_off' and 'hvac_on' the script type).
+        or the static setpoints of JPN Aqilah 2025, or the regimes (they need the custom model, and their conditions
+        'hvac_off' and 'hvac_on' the script type).
     """
     if comfort_standard not in COMFORT_STANDARDS:
         raise ValueError(f'comfort_standard {comfort_standard!r} is not a comfort standard '
@@ -361,17 +414,22 @@ def get_setpoint_ems_code(
         custom_heating_lower_limit=custom_heating_lower_limit, custom_outdoor_metric=custom_outdoor_metric,
         custom_alpha=custom_alpha, custom_days=custom_days, heating_setpoint_floor=heating_setpoint_floor,
         cooling_setpoint_ceiling=cooling_setpoint_ceiling, custom_regimes=custom_regimes, script_type=script_type,
+        static_heating_setpoint=static_heating_setpoint, static_cooling_setpoint=static_cooling_setpoint,
     )
     metric_programs = _outdoor_metric_programs(comfort_standard, arguments, epw, start_date)
     outdoor_metric = bool(metric_programs)
+    # JPN Aqilah 2025 with the weather file reads its outdoor metric, Tout_metric (finding B4-1 of accim 1.2.0)
+    weather_file = outdoor_metric and comfort_standard in WEATHER_FILE_METRICS
     limit_lines = _limit_program(arguments)
+    _check_static_setpoints(comfort_standard, arguments)
     regime_lines = _regime_program(comfort_standard, arguments, outdoor_metric)
 
-    def branches(lines):
+    def branches(lines, name=''):
         # As in the output IDFs: the branch of the comfort standard, or 'return' if it has none
-        return pl.for_comfort_standards(lines, [comfort_standard]) or ['return']
+        lines = pl.for_comfort_standards(lines, [comfort_standard]) or ['return']
+        return weather_file_lines(name, lines, weather_file)
 
-    lines = [*_header(comfort_standard, category, comfort_mode), '', *_LEGEND]
+    lines = [*_header(comfort_standard, category, comfort_mode, arguments, weather_file), '', *_LEGEND]
     if outdoor_metric:
         lines += _OUTDOOR_METRIC_LEGEND
     if regime_lines:
@@ -397,17 +455,19 @@ def get_setpoint_ems_code(
     lines += _section('SetAppLimits: the applicability limits', branches(pl.set_app_limits_lines()))
     lines += _section('ApplyCAT: the offsets of the category', branches(pl.apply_cat_lines()))
     lines += _section('SetComfTemp: the comfort temperature',
-                      branches(pl.set_comf_temp_lines(outdoor_metric)))
+                      branches(pl.set_comf_temp_lines(outdoor_metric), 'SetComfTemp'))
     lines += _section('SetAST: the setpoints', pl.SET_AST)
     lines += _section('SetAST_Master: the cooling season, and the subprograms of the comfort standard',
                       master_program_lines([comfort_standard]))
     if comfort_mode is not None and depends_on_comfort_mode(comfort_standard):
         name = subprogram_name(comfort_standard, comfort_mode)
         lines += _section(f'{name}, its lines for ComfMod == {_number(comfort_mode)}: the setpoints, and their '
-                          f'rounding', get_setpoint_lines(comfort_standard, comfort_mode, outdoor_metric))
+                          f'rounding', weather_file_lines(name, get_setpoint_lines(comfort_standard, comfort_mode,
+                                                                                 outdoor_metric), weather_file))
     else:
         for name, subprogram in subprograms([comfort_standard], outdoor_metric).items():
-            lines += _section(f'{name}: the setpoints, and their rounding', subprogram)
+            lines += _section(f'{name}: the setpoints, and their rounding',
+                              weather_file_lines(name, subprogram, weather_file))
     if limit_lines:
         lines += _section(f'{sl.PROGRAM_PREFIX}{_ZONE}: after SetAST, the floor of the heating setpoint and the '
                           f'ceiling of the cooling setpoint of the zone, and the rounding again', limit_lines)
@@ -452,6 +512,8 @@ def get_setpoint_ems_programs(
     cooling_setpoint_ceiling: Optional[Number] = None,
     custom_regimes: Optional[Sequence[CustomRegime]] = None,
     script_type: Optional[str] = None,
+    static_heating_setpoint: Number = ss.DEFAULTS[0],
+    static_cooling_setpoint: Number = ss.DEFAULTS[1],
 ) -> Dict[str, List[str]]:
     """The EMS programs with which the ACCIS calculates the setpoints of a comfort standard, category and comfort mode,
     as they are in the output IDFs of :class:`accim.sim.accis.AddAccis`, to run them with the Erl interpreter of
@@ -489,6 +551,7 @@ def get_setpoint_ems_programs(
         custom_heating_lower_limit=custom_heating_lower_limit, custom_outdoor_metric=custom_outdoor_metric,
         custom_alpha=custom_alpha, custom_days=custom_days, heating_setpoint_floor=heating_setpoint_floor,
         cooling_setpoint_ceiling=cooling_setpoint_ceiling, custom_regimes=custom_regimes, script_type=script_type,
+        static_heating_setpoint=static_heating_setpoint, static_cooling_setpoint=static_cooling_setpoint,
     )
     comfort_standard = int(comfort_standard)
     if category is None and COMFORT_STANDARDS[comfort_standard].categories:
@@ -499,9 +562,13 @@ def get_setpoint_ems_programs(
         raise ValueError(f'comfort_standard {comfort_standard} needs a comfort_mode (valid: {valid})')
     metric_programs = _outdoor_metric_programs(comfort_standard, arguments, epw, start_date)
     outdoor_metric = bool(metric_programs)
+    # JPN Aqilah 2025 with the weather file reads its outdoor metric, Tout_metric (finding B4-1 of accim 1.2.0)
+    weather_file = outdoor_metric and comfort_standard in WEATHER_FILE_METRICS
+    _check_static_setpoints(comfort_standard, arguments)
 
-    def branches(lines):
-        return pl.for_comfort_standards(lines, [comfort_standard]) or ['return']
+    def branches(lines, name=''):
+        lines = pl.for_comfort_standards(lines, [comfort_standard]) or ['return']
+        return weather_file_lines(name, lines, weather_file)
 
     inputs = [line for line in _input_lines(comfort_standard, category, comfort_mode, arguments, outdoor_metric)
               if not line.startswith('!')]
@@ -516,11 +583,12 @@ def get_setpoint_ems_programs(
     programs.update({
         'SetAppLimits': branches(pl.set_app_limits_lines()),
         'ApplyCAT': branches(pl.apply_cat_lines()),
-        'SetComfTemp': branches(pl.set_comf_temp_lines(outdoor_metric)),
+        'SetComfTemp': branches(pl.set_comf_temp_lines(outdoor_metric), 'SetComfTemp'),
         'SetAST': list(pl.SET_AST),
         'SetAST_Master': master_program_lines([comfort_standard]),
     })
-    programs.update({name: list(lines) for name, lines in subprograms([comfort_standard], outdoor_metric).items()})
+    programs.update({name: weather_file_lines(name, lines, weather_file)
+                     for name, lines in subprograms([comfort_standard], outdoor_metric).items()})
     limit_lines = _limit_program(arguments)
     if limit_lines:
         programs[f'{sl.PROGRAM_PREFIX}{_ZONE}'] = limit_lines

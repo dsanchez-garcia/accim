@@ -101,6 +101,11 @@ Lo que ya está en otros documentos no se repite aquí:
 - **G3 (revisión v04).** El gancho de la SET calcula por bisección en los callbacks si se pide (`method='bisection'`),
   con la salida `SET_<zona>`, tras llamar a pythermalcomfort antes de cargar la API de EnergyPlus; pide las salidas de
   temperaturas y humedad de las zonas (`set_of_results`) y se sienta por defecto con 1,2 met o menos (sección 25).
+- **G4 (revisión v04).** Con el archivo climático de la simulación, JPN Aqilah 2025 (23) usa la media móvil de
+  EN 16798-1 con α 0,8 que calcula el EMS desde el archivo (sus consignas son las de su gemelo YAML 101 desde el
+  primer día), y sin él lee el RMOT de EnergyPlus con un aviso; sus consignas estáticas son los argumentos
+  `static_heating_setpoint` y `static_cooling_setpoint` (20 y 28 °C), entradas `StaticAHST` y `StaticACST` de sus zonas
+  (sección 26).
 - Las categorías del PMV y la aproximación de la corrección del metabolismo se han comprobado en ISO 7730:2025 y
   EN 16798-1:2019, y el modelo dinámico de vestimenta de A5, en Schiavon y Lee (2013) y ASHRAE 55-2020 (sección 6).
 - Lo que quedaba abierto se ha comprobado: el golden master y las pruebas de EnergyPlus 26.1 y 26.2, también la de A5
@@ -1584,3 +1589,49 @@ de numba en un proceso que ya ha cargado la biblioteca de la API: por eso el cal
 - Pruebas: `tests/core/test_comfort_hooks.py` (28: 5 nuevas y 3 cambiadas; con EnergyPlus 25.1, dos días por bisección
   con `run_ep` en un proceso nuevo, sin violación de acceso, con las consignas y la SET de los valores que leen los
   sensores, a 1e-6) y `tests/core/test_table_optional_outputs.py`. No cambia el código EMS del ACCIS.
+
+## 26. JPN Aqilah 2025 con el archivo climático y sus consignas estáticas como argumentos (G4, revisión v04)
+
+La revisión v04 (§3.1, §3.3 y §6.2, hallazgos B4-1 y B4-2, veredictos 29 y 30) encontró que la norma 23 lee el RMOT de
+EnergyPlus, cuyo primer valor en un periodo de simulación es la suma de la ecuación 19.82 de la Engineering Reference
+sin dividir por 1 − α⁷ (un 21 % más baja), de modo que su temperatura de confort queda baja unas tres semanas frente a
+su gemelo YAML 101 (`rmot_alpha` iniciado con el archivo climático); y que sus consignas estáticas 20/28 °C eran
+literales. El autor decidió: `rmot_alpha` desde el EPW cuando `AddAccis` lo recibe, el RMOT si no (con aviso), y los
+argumentos `static_heating_setpoint`/`static_cooling_setpoint` (20,0/28,0, claves EMS `StaticAHST`/`StaticACST`).
+
+**Lo medido** (`compute_setpoints`, Sevilla, categoría 90, modo 3; 23 con RMOT frente a 101): el primer día, de la hora 2
+a la 24, 23 queda 0,92 K (1 de enero), 1,47 K (1 de abril) y 1,93 K (1 de julio) por debajo; desde el día 21, como mucho
+0,024, 0,024 y 0,028 K. En la primera hora de cada día difieren durante un paso (23 aún lee el RMOT del día anterior y
+101 ya ha actualizado su media), hasta 0,10 K en la media horaria (0,1013 K el 2 de mayo desde el 1 de enero). El
+criterio de la tarea (< 0,1 K desde el día 21 y > 1 K el día 1) se cumple para el transitorio con los arranques del 1 de
+abril y del 1 de julio y las horas 2 a 24 (y todas las horas de los días 21 a 30); así lo comprueba la prueba.
+
+**Ahora.**
+
+- Con el archivo climático de la simulación (`epw` de `AddAccis` o `modify_accis`), las zonas de la norma 23 tienen las
+  entradas de `rmot_alpha` (código 2, α 0,8, 30 días) y su código (sus ramas de `SetComfTemp`, `CountHours_<zona>` y
+  `SetVST`, y sus subprogramas) lee `Tout_metric` en lugar de RMOT, con los programas de la métrica exterior del modelo
+  personalizado, que empiezan con los valores del archivo: sus consignas son las de 101 desde el primer día. Sin él, lee
+  RMOT como antes, y `AddAccis` y `modify_accis` avisan. Un modelo cuyos programas ya empiezan con los valores de un
+  archivo los conserva para la norma 23 (`modify_accis` sin `epw`, el paramétrico). Funciones nuevas:
+  `standard_lines.WEATHER_FILE_METRICS`, `weather_file_definition`, `weather_file_lines`;
+  `outdoor_metric.outdoor_metric_needed`, `weather_file_zones`, `set_weather_file_lines`.
+- `compute_setpoints(..., outdoor_metric_start='epw')`, por defecto, da las consignas con el archivo, y `'pmot'` las de
+  RMOT; `print_setpoint_ems_code(..., epw=...)` imprime el código con el archivo; la comprobación 4 de
+  `verify_accim_simulation` compara también `Tout_metric_<zona>` de la norma 23 con el archivo.
+- Las consignas estáticas de la norma 23 (modo 0, y fuera de los límites en el modo 1) son las entradas `StaticAHST` y
+  `StaticACST` de sus zonas (módulo nuevo `accim.sim.ems.static_setpoints`), con los argumentos `static_heating_setpoint`
+  y `static_cooling_setpoint` de `AddAccis` (20,0 y 28,0), `modify_accis` (`None` las conserva), `zone_arguments`,
+  `print_setpoint_ems_code` y `compute_setpoints` (`ValueError` si la de calefacción no es menor); los modelos con su
+  código las declaran como variables globales del EMS. Las demás normas las ignoran y sus IDF no cambian; los modelos
+  con el código de todas las normas (`add_accis_to_idf`: archivos `s01` a `s06` y `s09` del golden master, escritos de
+  nuevo) tienen las líneas de la 23 con las entradas y su declaración.
+- Paramétrico: los parámetros `static_heating_setpoint` y `static_cooling_setpoint` (`modify_StaticAHST`,
+  `modify_StaticACST`, las clases `StaticHeatingSetpoint` y `StaticCoolingSetpoint`); `modify_ComfStand(idf, 23)` da a
+  las zonas las consignas que un parámetro no les dio y la media del archivo si el modelo la tiene;
+  `drop_invalid_param_combinations` quita las filas con la de calefacción no menor. Interfaz gráfica: los campos de las
+  consignas estáticas y el archivo climático con la norma 23.
+- Pruebas: `tests/core/test_jpn_aqilah2025.py` (28: con el archivo, la 23 es la 101 en cada paso; el transitorio sin
+  él; las consignas estáticas; `AddAccis`, `modify_accis`, `add_accis_to_idf` y el paramétrico; con EnergyPlus 25.1,
+  desde el 8 de enero con el archivo, la comprobación 4 sin discrepancias, y los dos backends con resultados idénticos),
+  `tests/core/test_comfort_standard_code.py` y `tests/core/test_gui.py`.

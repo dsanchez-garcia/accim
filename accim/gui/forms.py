@@ -60,6 +60,8 @@ __all__ = [
     'SCRIPT_TYPES',
     'SETPOINT_LIMIT_FIELDS',
     'SETPOINT_TYPES',
+    'STATIC_SETPOINT_FIELDS',
+    'STATIC_SETPOINT_STANDARDS',
     'SUPPLY_AIR_TEMP_INPUT_METHODS',
     'TABLE_DEFAULTS',
     'TABLE_FREQUENCIES',
@@ -105,8 +107,10 @@ __all__ = [
     'simulations',
     'split_apmv_zone_setpoints',
     'split_zone_arguments',
+    'static_setpoint_arguments',
     'table_arguments',
     'weather_file_arguments',
+    'weather_file_standards',
     'zone_arguments',
     'zone_arguments_problems',
     'zone_field_choices',
@@ -179,6 +183,14 @@ SETPOINT_LIMIT_FIELDS = {
     'heating_setpoint_floor': ('Floor of the heating setpoint (°C; empty: none)', ''),
     'cooling_setpoint_ceiling': ('Ceiling of the cooling setpoint (°C; empty: none)', ''),
 }
+#: The static setpoints of JPN Aqilah 2025 (accim.sim.ems.static_setpoints), whose paper gives none: argument ->
+#: (label, default).
+STATIC_SETPOINT_FIELDS = {
+    'static_heating_setpoint': ('Static heating setpoint of JPN Aqilah 2025 (°C)', '20'),
+    'static_cooling_setpoint': ('Static cooling setpoint of JPN Aqilah 2025 (°C)', '28'),
+}
+#: The comfort standards whose static setpoints are those of STATIC_SETPOINT_FIELDS
+STATIC_SETPOINT_STANDARDS = (23,)
 _ROMAN = {1: 'I', 2: 'II', 3: 'III', 4: 'IV'}
 #: The minimum operative temperature for heating and the maximum for cooling of Table B.2 of EN 16798-1:2019
 #: (accim.constants.EN16798_TABLE_B2), which fill the fields of the floor and ceiling: description -> (floor, ceiling).
@@ -249,6 +261,7 @@ ADD_ACCIS_DEFAULTS = {
     'epw': '',
     'custom_regimes': '',
     **{name: default for name, (_, default) in SETPOINT_LIMIT_FIELDS.items()},
+    **{name: default for name, (_, default) in STATIC_SETPOINT_FIELDS.items()},
     'report_hours_below': '',
     'report_long_term_discomfort': False,
     **EXISTING_HVAC_DEFAULTS,
@@ -367,7 +380,7 @@ PREDEFINED_MODEL_PARAMETERS = (
     'setpoint_accuracy', 'cooling_season_start', 'cooling_season_end', 'hvac_mode', 'ventilation_control',
     'opening_factor_max_temp_diff', 'opening_factor_min_temp_diff', 'min_opening_factor',
     'ventilation_setpoint_offset', 'min_outdoor_temp_offset', 'max_wind_speed', 'setpoint_tolerance',
-    'heating_setpoint_floor', 'cooling_setpoint_ceiling',
+    'heating_setpoint_floor', 'cooling_setpoint_ceiling', 'static_heating_setpoint', 'static_cooling_setpoint',
 )
 CUSTOM_MODEL_PARAMETERS = (
     'custom_cooling_upper_limit', 'custom_cooling_lower_limit', 'custom_heating_upper_limit',
@@ -785,8 +798,9 @@ def add_accis_arguments(form: Mapping[str, Any]) -> Dict[str, Any]:
         arguments.update({name: parse_number(form.get(name, ''), name) for name in CUSTOM_MODEL_FIELDS})
         arguments.update(custom_outdoor_metric_arguments(form))
         arguments.update(custom_regime_arguments(form, script_type))
-    elif registered_metric_standards(comfort_standard):
-        # The outdoor metric of the comfort standards defined by their data that the EMS calculates begins with it
+    elif weather_file_standards(comfort_standard):
+        # The outdoor metric of the comfort standards defined by their data that the EMS calculates begins with it,
+        # and JPN Aqilah 2025 uses the running mean of EN 16798-1 with it
         arguments.update(weather_file_arguments(form))
     if script_type in MIXED_MODE_SCRIPT_TYPES:
         hvac_mode = sorted(int(mode) for mode in form.get('hvac_mode') or [])
@@ -827,6 +841,11 @@ def add_accis_arguments(form: Mapping[str, Any]) -> Dict[str, Any]:
                             'the comfort standard, category and comfort mode of each of these zones, and the HVAC '
                             'mode and ventilation control of mixed mode only with vrf_mm and ex_mm):\n'
                             + '\n'.join(problems))
+    # The static setpoints of JPN Aqilah 2025, if an output IDF or a zone has it
+    if setpoint_type == 'temperature' and (
+            set(comfort_standard) & set(STATIC_SETPOINT_STANDARDS)
+            or any(values.get('comfort_standard') in STATIC_SETPOINT_STANDARDS for values in zones.values())):
+        arguments.update(static_setpoint_arguments(form))
     if script_type.startswith('ex'):
         arguments.update(existing_hvac_arguments(form))
     return arguments
@@ -890,6 +909,35 @@ def registered_metric_standards(standards: Iterable[Any]) -> List[int]:
 
     found = outdoor_metric_standards()
     return [int(number) for number in standards if isinstance(number, (int, float)) and int(number) in found]
+
+
+def weather_file_standards(standards: Iterable[Any]) -> List[int]:
+    """The comfort standards among some whose outdoor metric the weather file of the simulations (``epw``) begins:
+    those of :func:`registered_metric_standards`, and JPN Aqilah 2025 (23), whose running mean is then that of EN
+    16798-1 with α = 0.8 that the EMS calculates (:data:`accim.sim.ems.standard_lines.WEATHER_FILE_METRICS`)."""
+    from accim.sim.ems.standard_lines import WEATHER_FILE_METRICS
+
+    standards = list(standards)
+    found = set(registered_metric_standards(standards))
+    return [int(number) for number in standards if isinstance(number, (int, float))
+            and (int(number) in found or int(number) in WEATHER_FILE_METRICS)]
+
+
+def static_setpoint_arguments(form: Mapping[str, Any]) -> Dict[str, Any]:
+    """The static setpoints of JPN Aqilah 2025 (``static_heating_setpoint`` and ``static_cooling_setpoint``,
+    :mod:`accim.sim.ems.static_setpoints`) from the values of the form (their defaults of :data:`ADD_ACCIS_DEFAULTS`
+    if the form does not have them).
+
+    :raises FormError: If a value is not a number, or the heating setpoint is not lower than the cooling setpoint.
+    """
+    from accim.sim.ems.static_setpoints import check_static_setpoints
+
+    arguments = {name: parse_number(form.get(name, ADD_ACCIS_DEFAULTS[name]), name) for name in STATIC_SETPOINT_FIELDS}
+    try:
+        check_static_setpoints(*arguments.values())
+    except ValueError as error:
+        raise FormError(str(error)) from None
+    return arguments
 
 
 def parse_custom_regimes(text: Any) -> List[Any]:
@@ -1060,7 +1108,8 @@ def _single(values: List[Number], standard, attribute: str) -> Union[Number, Non
 #: mode, which a zone of the table of the zones can give.
 _EMS_CODE_ARGUMENTS = ('setpoint_tolerance', 'setpoint_accuracy', 'cooling_season_start', 'cooling_season_end',
                        'category_cooling_offset', 'category_heating_offset', *CUSTOM_MODEL_FIELDS,
-                       'custom_outdoor_metric', *CUSTOM_OUTDOOR_METRIC_FIELDS, *SETPOINT_LIMIT_FIELDS)
+                       'custom_outdoor_metric', *CUSTOM_OUTDOOR_METRIC_FIELDS, *SETPOINT_LIMIT_FIELDS,
+                       *STATIC_SETPOINT_FIELDS)
 #: Those of the custom model only
 _CUSTOM_EMS_CODE_ARGUMENTS = (*CUSTOM_MODEL_FIELDS, 'custom_outdoor_metric', *CUSTOM_OUTDOOR_METRIC_FIELDS, 'epw',
                               'custom_regimes', 'script_type')
@@ -1105,9 +1154,13 @@ def setpoint_ems_code_calls(form: Mapping[str, Any]) -> List[Tuple[str, Dict[str
         regimes = custom_regime_arguments(form, script_type)
         if regimes:
             common.update(regimes, script_type=script_type)
-    elif registered_metric_standards(standards + [values.get('comfort_standard') for values in zones.values()]):
-        # The outdoor metric of the comfort standards defined by their data that the EMS calculates
+    elif weather_file_standards(standards + [values.get('comfort_standard') for values in zones.values()]):
+        # The outdoor metric of the comfort standards defined by their data that the EMS calculates, and that of JPN
+        # Aqilah 2025 with the weather file
         common.update(weather_file_arguments(form))
+    # The static setpoints of JPN Aqilah 2025
+    if set(standards + [values.get('comfort_standard') for values in zones.values()]) & set(STATIC_SETPOINT_STANDARDS):
+        common.update(static_setpoint_arguments(form))
 
     def call(title: str, number: int, category, comfort_mode, extra: Mapping[str, Any]) -> Tuple[str, Dict[str, Any]]:
         if number == 0:
@@ -1115,8 +1168,9 @@ def setpoint_ems_code_calls(form: Mapping[str, Any]) -> List[Tuple[str, Dict[str
             category = comfort_mode = None
         kwargs = dict(common, comfort_standard=number, category=category, comfort_mode=comfort_mode, **extra)
         if number != 99:
-            # The weather file also begins the outdoor metric of the comfort standards defined by their data
-            kept = ('epw',) if registered_metric_standards([number]) else ()
+            # The weather file also begins the outdoor metric of the comfort standards defined by their data, and
+            # that of JPN Aqilah 2025
+            kept = ('epw',) if weather_file_standards([number]) else ()
             for name in _CUSTOM_EMS_CODE_ARGUMENTS:
                 if name not in kept:
                     kwargs.pop(name, None)

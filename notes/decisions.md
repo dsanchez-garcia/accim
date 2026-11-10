@@ -11,6 +11,30 @@ Durable architectural/process decisions for this repository and its Obsidian
 vault. Newest first. Use [[templates/decision-record.md|the decision-record
 template]] to add a new entry.
 
+## 2026-11-10 — JPN Aqilah 2025 reads the running mean of EN 16798-1 of the weather file when the model has its values, and its static setpoints are inputs of its zones (G4)
+
+- **Status**: accepted (task G4 of `notes/PROPUESTAS_MEJORAS_post_1.1.0_v04.md` §7, findings B4-1 and B4-2, verdicts
+  #29 and #30, decision §6.2); the criterion of its test is provisional (`notes/questions.md`)
+- **Context**: comfort standard 23 read the RMOT of EnergyPlus, whose first value in a run period is not divided by
+  1 − α⁷, and its static setpoints were literals. The author decided `rmot_alpha` from the weather file when `AddAccis`
+  gets one (RMOT otherwise, with a warning) and the arguments `static_heating_setpoint`/`static_cooling_setpoint`
+  (`StaticAHST`/`StaticACST`, 20.0/28.0). The EMS code of 23 is shared by all its zones (one branch of `SetComfTemp`),
+  so the metric has to be a property of the model.
+- **Decision**: the code of 23 reads `Tout_metric` exactly when the programs of the outdoor metric of the model begin
+  with the values of a weather file (`epw` of `AddAccis` or `modify_accis`, or programs already written with it), and
+  then its zones get the inputs of `rmot_alpha` with α 0.8 (`standard_lines.WEATHER_FILE_METRICS`,
+  `outdoor_metric.outdoor_metric_needed`, `set_weather_file_lines`); otherwise RMOT, and the inputs of the outdoor metric
+  of its zones are not used. The static setpoints are inputs of the zones of 23 only (other comfort standards ignore
+  them), read in comfort modes 0 and 1 (D2: the static setpoints of the definition, those of both modes), declared as
+  global variables in the models with the code of 23; in the parametric module they are written to all the zones, so
+  that the order of the parameters of a sample does not matter.
+- **Consequences**: with the weather file, 23 gives the setpoints of the YAML twin 101 from the first day; the models
+  with the code of all the comfort standards (golden `s01`–`s06`, `s09`) changed by the static lines of 23 and their
+  declaration; `compute_setpoints(outdoor_metric_start='epw')` (the default) gives the setpoints of 23 with the weather
+  file. Measured: without it, 23 is 0.92/1.47/1.93 K lower on the first day (hours 2–24; starts 1 January, 1 April,
+  1 July, Seville) and at most 0.028 K from day 21; the first hour of each day differs by up to 0.10 K for the timing of
+  the readings (one timestep), not the transient.
+
 ## 2026-11-10 — The hook of the SET calculates by bisection in the callbacks on request, after calling pythermalcomfort before the API of EnergyPlus is loaded (G3)
 
 - **Status**: accepted (task G3 of `notes/PROPUESTAS_MEJORAS_post_1.1.0_v04.md` §7, findings A6-1 to A6-4, verdict #35;

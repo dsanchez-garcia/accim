@@ -24,6 +24,25 @@ it here as answered).
 
 ## Open
 
+## 2026-11-10 — G4: the criterion of the test of JPN Aqilah 2025 against its YAML twin 101
+- Context: task G4 of `notes/PROPUESTAS_MEJORAS_post_1.1.0_v04.md` (§3.1 B4-1) asks for a test of 23 (with the RMOT of
+  EnergyPlus) against 101 (`rmot_alpha` from the weather file) with |ΔComfTemp| < 0.1 K from day 21 and > 1 K on day 1;
+  the review suggested the start of 1 January. Measured with `compute_setpoints` (Seville, category 90, comfort mode 3):
+  from 1 January, the difference of the first day is 0.92 K in hours 2 to 24 (1.30 K in the hourly maximum, which is
+  that of the first hour, whose first timestep reads RMOT 0), and from day 21 the first hour of some days differs by up
+  to 0.10 K (0.1013 K on 2 May): in the first timestep of each day 23 still reads the RMOT of the previous day while 101
+  has already updated its running mean (0.52 K in that timestep), a difference that is not the transient of B4-1 and
+  lasts all the year. In hours 2 to 24 the difference from day 21 is at most 0.024–0.028 K.
+- Why it matters: the literal criterion fails with the start of 1 January (by 0.08 K on day 1, and by 0.0013 K on 2 May),
+  and a test must not be loosened to pass.
+- Options considered: (i) the starts of 1 April and 1 July of the review (the transient of the first day 1.47 and 1.93 K),
+  hours 2 to 24 of each day, and all the hours of days 21 to 30; (ii) the start of 1 January with the hourly maximum of
+  day 1 and the whole year from day 21 (fails); (iii) daily means of the comfort temperature.
+- Owner: the author.
+- Status: open; option (i) implemented provisionally (`tests/core/test_jpn_aqilah2025.py`, thresholds unchanged), with the
+  measured values in the test, `DEVLOG.md` and `notes/decisions.md`; with the weather file, 23 and 101 are identical in
+  every timestep, which another test checks.
+
 ## 2026-11-10 — G1: the tolerance of the setpoints of the ACCIS with the setpoints of the hooks
 - Context: task G1 of `notes/PROPUESTAS_MEJORAS_post_1.1.0_v04.md` (§3.1, finding A4/A6-1, option (a)): the hooks of
   the ATHB and of the SET update `ACST`, `AHST`, `ACSTnoTol`, `AHSTnoTol` and the rounded setpoints of the ACCIS

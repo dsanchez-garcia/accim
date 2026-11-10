@@ -2965,26 +2965,27 @@ endif
 endif
 """),
     # JPN Aqilah 2025 (Aqilah, Rijal, Yoshida & Nicol, 2025, equation 8): 0.38·RMOT + 16.9, with the static setpoints of
-    # 20 and 28 °C of comfort modes 0 and 1, a choice of the user (decision D2 of the brief of 1.2.0), and those of ISO
-    # 7730 of the categories 80 and 90 in comfort mode 2, as the other comfort standards
+    # comfort modes 0 and 1 of the inputs StaticAHST and StaticACST of the zone (20 and 28 °C by default, a choice of
+    # the user: decision D2 of the brief of 1.2.0, accim.sim.ems.static_setpoints), and those of ISO 7730 of the
+    # categories 80 and 90 in comfort mode 2, as the other comfort standards
     (23, 0): _lines("""
-set ACST = 28+ACSTtol
-set AHST = 20+AHSTtol
+set ACST = StaticACST+ACSTtol
+set AHST = StaticAHST+AHSTtol
 """),
     (23, 1): _lines("""
 if (RMOT >= ACSTall) && (RMOT <= ACSTaul)
 set ACST = RMOT*0.38+16.9+ACSToffset+ACSTtol
 elseif RMOT < ACSTall
-set ACST = 28+ACSTtol
+set ACST = StaticACST+ACSTtol
 elseif RMOT > ACSTaul
-set ACST = 28+ACSTtol
+set ACST = StaticACST+ACSTtol
 endif
 if (RMOT >= AHSTall) && (RMOT <= AHSTaul)
 set AHST = RMOT*0.38+16.9+AHSToffset+AHSTtol
 elseif RMOT < AHSTall
-set AHST = 20+AHSTtol
+set AHST = StaticAHST+AHSTtol
 elseif RMOT > AHSTaul
-set AHST = 20+AHSTtol
+set AHST = StaticAHST+AHSTtol
 endif
 """),
     (23, 2): _lines("""

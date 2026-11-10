@@ -64,11 +64,12 @@ from accim.sim.ems.long_term_discomfort import set_long_term_discomfort_code
 from accim.sim.ems.outdoor_metric import (
     INPUTS as OUTDOOR_METRIC_INPUTS,
     OUTDOOR_METRICS,
+    begins_with_weather_file,
     check_outdoor_metric_arguments,
     metric_code,
-    metric_comfort_standards,
+    outdoor_metric_needed,
     set_outdoor_metric_code,
-    uses_outdoor_metric,
+    weather_file_zones,
 )
 from accim.sim.ems.programs import (
     add_comfort_standard_code,
@@ -93,7 +94,14 @@ from accim.sim.ems.setpoint_limits import (
     set_hours_below_code,
     set_setpoint_limits_code,
 )
-from accim.sim.ems.standard_lines import outdoor_metric_standards, standard_inputs
+from accim.sim.ems.standard_lines import WEATHER_FILE_METRICS, outdoor_metric_standards, standard_inputs
+from accim.sim.ems.static_setpoints import (
+    ARGUMENTS as STATIC_SETPOINT_ARGUMENTS,
+    DEFAULTS as STATIC_SETPOINT_DEFAULTS,
+    INPUTS as STATIC_SETPOINT_INPUTS,
+    check_static_setpoints,
+    has_static_setpoints,
+)
 from accim.sim.generation import (
     GenerationArguments,
     OutputIdfs,
@@ -369,7 +377,32 @@ _OUTDOOR_METRIC_ARGUMENTS = ('custom_outdoor_metric', 'custom_alpha', 'custom_da
 _SETPOINT_LIMIT_ARGUMENTS = ('heating_setpoint_floor', 'cooling_setpoint_ceiling')
 #: The arguments of the output IDFs that the prompts do not ask, and their defaults
 _NOT_ASKED_ARGUMENTS = (('custom_outdoor_metric', 'pmot'), ('custom_alpha', 0.8), ('custom_days', 30),
-                        ('heating_setpoint_floor', None), ('cooling_setpoint_ceiling', None))
+                        ('heating_setpoint_floor', None), ('cooling_setpoint_ceiling', None),
+                        *zip(STATIC_SETPOINT_ARGUMENTS, STATIC_SETPOINT_DEFAULTS))
+
+
+def _warn_rmot_start(where: str) -> None:
+    """Warn that JPN Aqilah 2025 reads the RMOT of EnergyPlus, without the weather file of the simulation (finding B4-1
+    of the review of accim 1.2.0)."""
+    warnings.warn(f'JPN Aqilah 2025 (comfort standard 23){where} reads the running mean outdoor temperature of CEN '
+                  f'15251 that EnergyPlus calculates (RMOT), whose first value in a run period is the sum of the 7 '
+                  f'previous days of equation 19.82 of the Engineering Reference, not divided by 1 - 0.8**7 (about '
+                  f'21 % below the running mean of EN 16798-1), a difference that decays by 0.8 each day: give the '
+                  f'weather file of the simulation (argument epw) so that the EMS calculates the running mean of EN '
+                  f'16798-1 with alpha 0.8 from its values.', stacklevel=3)
+
+
+def _check_static_setpoint_arguments(heating: Any, cooling: Any, zone_arguments: Dict[Any, Dict[str, Any]]) -> None:
+    """Check the static setpoints of JPN Aqilah 2025 (:mod:`accim.sim.ems.static_setpoints`), of all the zones and of
+    those of ``zone_arguments``.
+
+    :raises ValueError: If they are not valid.
+    """
+    check_static_setpoints(heating, cooling)
+    for zone, arguments in zone_arguments.items():
+        if any(name in arguments for name in STATIC_SETPOINT_ARGUMENTS):
+            check_static_setpoints(arguments.get(STATIC_SETPOINT_ARGUMENTS[0], heating),
+                                   arguments.get(STATIC_SETPOINT_ARGUMENTS[1], cooling), where=str(zone))
 
 
 def _check_setpoint_limits(floor: Any, ceiling: Any, zone_arguments: Dict[Any, Dict[str, Any]]) -> bool:
@@ -599,7 +632,13 @@ class AddAccis:
     :param epw: The weather file (EPW) of the simulations, with which the outdoor metrics of the custom model that the
         EMS calculates begin on the first day of the RunPeriod of the model (the running means of the previous days,
         as :func:`accim.sim.preview.outdoor_metrics` calculates them), and whose monthly means 'monthly_mean' needs.
-        Without it, they begin with the running mean of ASHRAE 55 of EnergyPlus, with a warning.
+        Without it, they begin with the running mean of ASHRAE 55 of EnergyPlus, with a warning. With it, JPN Aqilah
+        2025 (comfort standard 23) uses the running mean of EN 16798-1:2019 (B.1) with α = 0.8 that the EMS calculates
+        from it ('rmot_alpha', as the comfort standard of the sample file
+        ``accim/sample_files/comfort_standards/jpn_aqilah2025_fr.yaml``) instead of the RMOT of EnergyPlus, whose
+        first value in a run period is lower (equation 19.82 of the Engineering Reference is not divided by 1 − α⁷,
+        about 21 % below the running mean, a difference that decays by α each day); without it, JPN Aqilah 2025 reads
+        the RMOT of EnergyPlus, with a warning (finding B4-1 of the review of accim 1.2.0).
     :param heating_setpoint_floor: The floor of the heating setpoint (°C), or None (the default) for none: in every
         comfort standard and comfort mode, the heating setpoint is not lower (the input ``AHSTfloor`` of each zone,
         see :mod:`accim.sim.ems.setpoint_limits`); EN 16798-1:2019 (B.2.2) applies in winter the minimums of its Table
@@ -633,6 +672,14 @@ class AddAccis:
         ``output_type`` but 'custom', which keeps the outputs chosen. The parametric and optimisation module reads them
         as objectives and constraints (:mod:`accim.parametric_and_optimisation.objectives`). False (the default) for
         none, as before accim 1.2.0. It needs ``setpoint_type`` 'temperature'.
+    :param static_heating_setpoint: The static heating setpoint (°C) of the comfort standards whose standard does not
+        give it, in comfort mode 0 and out of the applicability limits in comfort mode 1: only JPN Aqilah 2025
+        (comfort standard 23), whose paper gives no static setpoints (decision D2 of the brief of 1.2.0); 20.0 by
+        default. The other comfort standards ignore it (they have the static setpoints of their standards). Its zones
+        have it as the input ``StaticAHST`` (:mod:`accim.sim.ems.static_setpoints`). Also for each zone in
+        ``zone_arguments``.
+    :param static_cooling_setpoint: The static cooling setpoint (°C) of the same comfort standards (the input
+        ``StaticACST``); 28.0 by default. It must be higher than ``static_heating_setpoint``.
     :ivar arguments: The arguments, after asking the missing ones.
     :ivar input_idfs: The input IDFs, {'input IDF name': IDF object}.
     :ivar occupied_zones: The occupied zones of each input IDF, as in the EMS objects.
@@ -718,6 +765,8 @@ class AddAccis:
         report_hours_below: Optional[Sequence[Number]] = None,
         custom_regimes: Optional[Sequence[CustomRegime]] = None,
         report_long_term_discomfort: bool = False,
+        static_heating_setpoint: Number = STATIC_SETPOINT_DEFAULTS[0],
+        static_cooling_setpoint: Number = STATIC_SETPOINT_DEFAULTS[1],
     ):
         files = _input_files(idfs)
         print(BANNER)
@@ -726,6 +775,7 @@ class AddAccis:
         checked_zone_arguments = check_zone_arguments(zone_arguments)
         epw = _check_outdoor_metric(custom_outdoor_metric, custom_alpha, custom_days, checked_zone_arguments, epw)
         has_limits = _check_setpoint_limits(heating_setpoint_floor, cooling_setpoint_ceiling, checked_zone_arguments)
+        _check_static_setpoint_arguments(static_heating_setpoint, static_cooling_setpoint, checked_zone_arguments)
         hours_below = check_hours_below(report_hours_below)
         regimes = check_custom_regimes(custom_regimes)
         (existing_hvac_operative_temperature_control, existing_hvac_widen_outdoor_temperature_limits,
@@ -885,7 +935,8 @@ class AddAccis:
             setpoint_tolerance_end=setpoint_tolerance_end, setpoint_tolerance_step=setpoint_tolerance_step,
             name_suffix=name_suffix, custom_outdoor_metric=custom_outdoor_metric, custom_alpha=custom_alpha,
             custom_days=custom_days, heating_setpoint_floor=heating_setpoint_floor,
-            cooling_setpoint_ceiling=cooling_setpoint_ceiling)
+            cooling_setpoint_ceiling=cooling_setpoint_ceiling, static_heating_setpoint=static_heating_setpoint,
+            static_cooling_setpoint=static_cooling_setpoint)
         self.arguments.update({k: v for k, v in vars(generation).items()})
         self.arguments.update(verbose=verbose, confirm=confirm, zone_arguments=zone_arguments, epw=epw,
                               report_hours_below=hours_below or None, custom_regimes=list(regimes) or None,
@@ -895,6 +946,12 @@ class AddAccis:
                 for arguments in checked_zone_arguments.values()):
             raise ValueError(f'custom_regimes needs the custom model: comfort_standard {CUSTOM_COMFORT_STANDARD} in '
                              f'the output IDFs or in zone_arguments.')
+        # Without the weather file, JPN Aqilah 2025 reads the RMOT of EnergyPlus (finding B4-1 of accim 1.2.0)
+        if epw is None and setpoint_type == 'temperature' and (
+                set(generation.comfort_standard) & set(WEATHER_FILE_METRICS)
+                or any(arguments.get('comfort_standard') in WEATHER_FILE_METRICS
+                       for arguments in checked_zone_arguments.values())):
+            _warn_rmot_start('')
 
         paths = self._write_output_idfs(models, generation, setpoint_type, confirm, is_mixed_mode(script_type), sizes,
                                         epw, regimes)
@@ -1130,6 +1187,8 @@ def modify_accis(
     heating_setpoint_floor: Optional[Number] = None,
     cooling_setpoint_ceiling: Optional[Number] = None,
     custom_regimes: Optional[Sequence[CustomRegime]] = None,
+    static_heating_setpoint: Optional[Number] = None,
+    static_cooling_setpoint: Optional[Number] = None,
 ) -> None:
     """Set the arguments of the ACCIS of an IDF object (one value of each argument of :class:`AddAccis`), in all
     its occupied zones or, with ``zone_arguments``, in some of them.
@@ -1147,7 +1206,10 @@ def modify_accis(
     ``epw``) is given, here or in ``zone_arguments``, the model gets the EMS code of the outdoor metric if it has the
     code of the custom model and a zone has a metric other than 'pmot' (and loses it otherwise), and its programs are
     written again: with ``epw``, they begin with the values of the weather file; without it, with the running mean of
-    ASHRAE 55 of EnergyPlus (:func:`accim.sim.ems.outdoor_metric.set_outdoor_metric_code`).
+    ASHRAE 55 of EnergyPlus (:func:`accim.sim.ems.outdoor_metric.set_outdoor_metric_code`). The zones of JPN Aqilah
+    2025 (comfort standard 23) use the running mean of EN 16798-1 with α = 0.8 that the EMS calculates if ``epw`` is
+    given or the programs of the outdoor metric of the model begin with the values of a weather file, and the RMOT of
+    EnergyPlus otherwise (with a warning if this call gives them comfort standard 23; see :class:`AddAccis`).
 
     The models of earlier versions of accim, which have one program SetInputData for all the zones, can only have
     the same arguments in all the zones, and they get the subprograms of this version where they behave
@@ -1160,6 +1222,12 @@ def modify_accis(
     ApplySetpointLimits_<zone> (:func:`accim.sim.ems.setpoint_limits.set_setpoint_limits_code`). They bound the
     setpoint temperatures of the ACCIS: the zones controlled by the thermostats of the PMV (``setpoint_type`` 'pmv',
     or :mod:`accim.sim.pmv_index`) do not use them.
+
+    The static setpoints of JPN Aqilah 2025 (``static_heating_setpoint`` and ``static_cooling_setpoint``, see
+    :class:`AddAccis`) keep their values if they are None: a number, here or in ``zone_arguments``, gives it to the
+    zones whose comfort standard is JPN Aqilah 2025 once the arguments are set (the zones that get that comfort
+    standard without them have the defaults, 20 and 28 °C); the other comfort standards ignore them
+    (:mod:`accim.sim.ems.static_setpoints`).
 
     The regimes of the custom model (``custom_regimes``, see :class:`AddAccis`) are kept if it is None: a list gives
     them to the zones whose comfort standard is the custom model (99) once the arguments are set, and removes them
@@ -1175,17 +1243,20 @@ def modify_accis(
     :param custom_outdoor_metric: The outdoor metric of the custom model (see :class:`AddAccis`), or None to keep it.
     :param custom_alpha: The alpha of 'rmot_alpha', or None to keep it.
     :param custom_days: The days of 'ndrm', or None to keep them.
-    :param epw: The weather file with which the outdoor metric of the custom model begins (see :class:`AddAccis`).
+    :param epw: The weather file with which the outdoor metric of the custom model, and that of JPN Aqilah 2025, begin
+        (see :class:`AddAccis`).
     :param heating_setpoint_floor: The floor of the heating setpoint (°C), or None to keep it.
     :param cooling_setpoint_ceiling: The ceiling of the cooling setpoint (°C), or None to keep it.
     :param custom_regimes: The regimes of the custom model (see :class:`AddAccis`), or None to keep them; an empty
         list removes them.
+    :param static_heating_setpoint: The static heating setpoint of JPN Aqilah 2025 (°C), or None to keep it.
+    :param static_cooling_setpoint: The static cooling setpoint of JPN Aqilah 2025 (°C), or None to keep it.
     :raises ValueError: If the model has no ACCIS, setpoint_accuracy is negative, zone_arguments is not valid (or
         is given for a model of an earlier version of accim), an argument of the outdoor metric is not valid (or is
         not 'pmot' in a model of an earlier version of accim), 'monthly_mean' has no weather file, a floor or a
-        ceiling is not valid (or is given for a model of an earlier version of accim), or the regimes are not valid
-        (or no zone has the custom model, or a condition 'hvac_off' or 'hvac_on' is given without mixed mode, or for a
-        model of an earlier version of accim).
+        ceiling is not valid (or is given for a model of an earlier version of accim), the static setpoints of a zone
+        of JPN Aqilah 2025 are not valid, or the regimes are not valid (or no zone has the custom model, or a condition
+        'hvac_off' or 'hvac_on' is given without mixed mode, or for a model of an earlier version of accim).
     """
     arguments = dict(
         comfort_standard=comfort_standard, category=category, category_cooling_offset=category_cooling_offset,
@@ -1209,6 +1280,9 @@ def modify_accis(
     limits = {name: value for name, value in zip(_SETPOINT_LIMIT_ARGUMENTS,
                                                  (heating_setpoint_floor, cooling_setpoint_ceiling))
               if value is not None}
+    statics = {name: value for name, value in zip(STATIC_SETPOINT_ARGUMENTS,
+                                                  (static_heating_setpoint, static_cooling_setpoint))
+               if value is not None}
     regimes = None if custom_regimes is None else check_custom_regimes(custom_regimes)
     if not zone_programs:
         if zone_arguments and 'SetInputData' in programs:
@@ -1251,13 +1325,14 @@ def modify_accis(
     limits_given = bool(limits) or any(name in own for own in resolved.values() for name in _SETPOINT_LIMIT_ARGUMENTS)
     if limits_given:
         _check_zone_setpoint_limits(zone_programs, limits, resolved)
+    _check_zone_static_setpoints(zone_programs, statics, comfort_standard, resolved)
     if regimes:
         _check_zone_custom_regimes(idf, zone_programs, regimes, comfort_standard, resolved)
     for zone, program in zone_programs.items():
-        values = input_values({**arguments, **outdoor_metric, **limits, **resolved.get(zone, {})})
+        current = read_inputs(program)
+        values = input_values({**arguments, **outdoor_metric, **limits, **statics, **resolved.get(zone, {})})
         # The zones that keep a comfort standard defined by its data keep its outdoor metric (accim.sim.standards)
-        definition = (comfort_standard_definition(read_inputs(program).get('ComfStand')) if 'ComfStand' not in values
-                      else None)
+        definition = comfort_standard_definition(current.get('ComfStand')) if 'ComfStand' not in values else None
         if definition is not None:
             values.update(standard_inputs(definition))
         not_set = set_inputs(program, values)
@@ -1265,6 +1340,11 @@ def modify_accis(
         # setpoints of the zones without them
         new_lines = [f'set {name} = {values[name]}' for name in not_set
                      if name in OUTDOOR_METRIC_INPUTS or name in SETPOINT_LIMIT_INPUTS]
+        # The static setpoints of the zones of JPN Aqilah 2025 without them (those given, or the defaults)
+        if has_static_setpoints(values.get('ComfStand', current.get('ComfStand'))):
+            new_lines += [f'set {name} = {values.get(name, default)}'
+                          for name, default in zip(STATIC_SETPOINT_INPUTS, STATIC_SETPOINT_DEFAULTS)
+                          if name not in current]
         if new_lines:
             set_program_lines(program, [str(line).strip() for line in program.fieldvalues[2:]] + new_lines)
     if limits_given:
@@ -1272,14 +1352,37 @@ def modify_accis(
     if regimes is not None:
         set_custom_regimes(idf, regimes)
     add_comfort_standard_code(idf, zone_comfort_standards(idf), epw)
-    # The comfort standards defined by their data whose outdoor metric the EMS calculates need its EMS code
+    # The comfort standards defined by their data whose outdoor metric the EMS calculates need its EMS code, and the
+    # zones of JPN Aqilah 2025 that of the outdoor metric of the weather file (finding B4-1 of accim 1.2.0)
     registered_metric = bool({int(n) for n in zone_comfort_standards(idf)} & outdoor_metric_standards())
-    if metric_given or registered_metric:
-        standards = code_comfort_standards(idf)
-        enabled = ((standards is None or bool(set(standards) & metric_comfort_standards()))
-                   and uses_outdoor_metric(idf))
+    weather_zones = weather_file_zones(idf)
+    if metric_given or registered_metric or weather_zones:
+        enabled = outdoor_metric_needed(idf, code_comfort_standards(idf), epw)
         set_outdoor_metric_code(idf, enabled, epw, rewrite=metric_given)
+    given = {comfort_standard, *(own.get('comfort_standard') for own in resolved.values())}
+    if given & set(WEATHER_FILE_METRICS) and weather_zones and not begins_with_weather_file(idf):
+        _warn_rmot_start('')
     indent_programs(idf)
+
+
+def _check_zone_static_setpoints(zone_programs: Dict[str, Any], statics: Dict[str, Any],
+                                 comfort_standard: Optional[int], zone_arguments: Dict[str, Dict[str, Any]]) -> None:
+    """Check the static setpoints that each zone of JPN Aqilah 2025 gets in :func:`modify_accis` (those of the call,
+    those of ``zone_arguments``, those it has or the defaults), once the comfort standards are set; the numbers given
+    for the other zones are only checked to be numbers, since these zones ignore them."""
+    for name, value in statics.items():
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            raise ValueError(f'{name} must be a number (°C), not {value!r}.')
+    for zone, program in zone_programs.items():
+        current = read_inputs(program)
+        own = zone_arguments.get(zone, {})
+        standard = own.get('comfort_standard', current.get('ComfStand') if comfort_standard is None
+                           else comfort_standard)
+        if has_static_setpoints(standard):
+            values = [own.get(name, statics.get(name, current.get(variable, default)))
+                      for name, variable, default in zip(STATIC_SETPOINT_ARGUMENTS, STATIC_SETPOINT_INPUTS,
+                                                         STATIC_SETPOINT_DEFAULTS)]
+            check_static_setpoints(*values, where=zone)
 
 
 def _check_zone_custom_regimes(idf, zone_programs: Dict[str, Any], regimes: Sequence[CustomRegime],

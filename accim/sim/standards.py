@@ -440,10 +440,16 @@ def built_in_definitions() -> Dict[int, ComfortStandardDefinition]:
     ``Tc = 0.38·Trm + 16.9`` (equation 8), where ``Trm = α·Trm−1 + (1 − α)·Tod−1`` with α = 0.8 is the running mean
     outdoor temperature of McCartney & Nicol (equation 7), applicable from 5 to 30 °C, and the comfort bands of ±1.5 K
     (90 %) and ±2.0 K (80 %) (conclusions 5 and 6). The running mean is that of CEN 15251 that EnergyPlus calculates
-    (RMOT, α = 0.8), as for INT EN16798 (1). The paper gives no static setpoints: those of comfort modes 0 and 1 are 20
-    and 28 °C, a choice of the user (decision D2 of the brief of 1.2.0), which other values change in a comfort
-    standard defined by its data with the same data (:func:`load_comfort_standards`, as
-    ``accim/sample_files/comfort_standards/jpn_aqilah2025_fr.yaml``).
+    (RMOT, α = 0.8), as for INT EN16798 (1): the same definition for practical purposes (Aqilah et al. begin theirs a
+    week before, equation 7; EnergyPlus sums 7 days, equation 19.82 of its Engineering Reference: verdict 30 of section
+    5 of ``notes/PROPUESTAS_MEJORAS_post_1.1.0_v04.md``), but the first value of RMOT in a run period is not divided by
+    1 − α⁷, about 21 % lower; with the weather file of the simulation, accim uses instead the running mean of EN 16798-1
+    with α = 0.8 that the EMS calculates from it (:data:`accim.sim.ems.standard_lines.WEATHER_FILE_METRICS`, finding
+    B4-1 of the review of 1.2.0). The paper gives no static setpoints: those of comfort modes 0 and 1 are inputs of the
+    zones (``static_heating_setpoint`` and ``static_cooling_setpoint``, :mod:`accim.sim.ems.static_setpoints`), 20 and
+    28 °C by default, a choice of the user (decision D2 of the brief of 1.2.0), the ``static_setpoints`` of the
+    definition. ``accim/sample_files/comfort_standards/jpn_aqilah2025_fr.yaml`` has the same data, as a comfort
+    standard defined by its data with the running mean 'rmot_alpha' (:func:`load_comfort_standards`).
     """
     if not _BUILT_IN_DEFINITIONS:
         from accim.sim.arguments import CustomRegime

@@ -5,6 +5,7 @@
 """EMS variables, sensors, actuators and output variables of ACCIS."""
 
 from accim.sim.ems.programs import add_program, zone_variables
+from accim.sim.ems.static_setpoints import set_static_setpoint_variables
 from accim.sim.hvac.schedules import DESIGN_DAY_SCHEDULE, add_design_day_schedule
 from accim.sim.model import AccimModel
 
@@ -174,6 +175,8 @@ def add_global_variables(model: AccimModel) -> None:
             _new_global_variables(model, [f'{name}_{zone}' for name in _ZONE_GLOBAL_VARIABLES_MIXED_MODE], declared)
         for window in model.windows:
             _new_global_variables(model, [f'{window}_MyVOF'], declared)
+    # The static setpoints of JPN Aqilah 2025, if the model has its EMS code (accim.sim.ems.static_setpoints)
+    set_static_setpoint_variables(model.idf)
     model.log('Global variables objects have been added')
 
 

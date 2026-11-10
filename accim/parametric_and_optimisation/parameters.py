@@ -1859,6 +1859,117 @@ class CoolingSetpointCeiling:
         param_accis.modify_ACSTceil(idf, value)
 
 
+class StaticHeatingSetpoint:
+    """OO wrapper for the ACCIS parameter ``static_heating_setpoint`` (the input ``StaticAHST``, accim 1.2.0): the
+    static heating setpoint (°C) of JPN Aqilah 2025 (comfort standard 23) in all the zones, in comfort mode 0 and out
+    of the applicability limits in comfort mode 1 (its paper gives no static setpoints: decision D2 of the brief of
+    1.2.0, 20 °C by default). The other comfort standards ignore it (:mod:`accim.sim.ems.static_setpoints`).
+
+    Usage
+    -----
+    Instantiate the class and call :meth:`modify` with ``idf`` and ``value``.
+
+    Examples
+    --------
+    p = StaticHeatingSetpoint()
+    p.modify(idf, 19)
+    """
+
+    def __init__(self):
+        """Initialize the wrapper and expose the canonical parameter name.
+
+        Usage
+        -----
+        Use the instance ``name`` attribute for logging or mapping checks.
+
+        Examples
+        --------
+        StaticHeatingSetpoint().name
+        'static_heating_setpoint'
+        """
+        self.name = 'static_heating_setpoint'
+
+    def modify(self, idf, value):
+        """Apply parameter ``static_heating_setpoint`` to an IDF in place.
+
+        Parameters
+        ----------
+        idf : besos.IDF_class
+            Target building model to edit, with the ACCIS of accim 1.0.0 or later.
+        value : float
+            The static heating setpoint (°C), written by ``param_accis.modify_StaticAHST``.
+
+        Returns
+        -------
+        None
+            The function edits ``idf`` in place.
+
+        Usage
+        -----
+        Call this method before executing parametric or optimisation runs.
+
+        Examples
+        --------
+        StaticHeatingSetpoint().modify(idf, 19)
+        """
+        param_accis.modify_StaticAHST(idf, value)
+
+
+class StaticCoolingSetpoint:
+    """OO wrapper for the ACCIS parameter ``static_cooling_setpoint`` (the input ``StaticACST``, accim 1.2.0): the
+    static cooling setpoint (°C) of JPN Aqilah 2025 (comfort standard 23) in all the zones, 28 °C by default, as
+    :class:`StaticHeatingSetpoint`.
+
+    Usage
+    -----
+    Instantiate the class and call :meth:`modify` with ``idf`` and ``value``.
+
+    Examples
+    --------
+    p = StaticCoolingSetpoint()
+    p.modify(idf, 27)
+    """
+
+    def __init__(self):
+        """Initialize the wrapper and expose the canonical parameter name.
+
+        Usage
+        -----
+        Use the instance ``name`` attribute for logging or mapping checks.
+
+        Examples
+        --------
+        StaticCoolingSetpoint().name
+        'static_cooling_setpoint'
+        """
+        self.name = 'static_cooling_setpoint'
+
+    def modify(self, idf, value):
+        """Apply parameter ``static_cooling_setpoint`` to an IDF in place.
+
+        Parameters
+        ----------
+        idf : besos.IDF_class
+            Target building model to edit, with the ACCIS of accim 1.0.0 or later.
+        value : float
+            The static cooling setpoint (°C), written by ``param_accis.modify_StaticACST``.
+
+        Returns
+        -------
+        None
+            The function edits ``idf`` in place.
+
+        Usage
+        -----
+        Call this method before executing parametric or optimisation runs.
+
+        Examples
+        --------
+        StaticCoolingSetpoint().modify(idf, 27)
+        """
+        param_accis.modify_StaticACST(idf, value)
+
+
 class Clo:
     """OO wrapper for the parameter ``clothing_insulation``: the clothing insulation of all the People objects (clo),
     with :func:`accim.sim.apmv.set_pmv_input_parameters` (the schedules ``Sch_Clo_<people>``); it warns outside 0 to 2

@@ -24,14 +24,20 @@ Its outdoor metric (:data:`accim.sim.ems.outdoor_metric.OUTDOOR_METRICS`) is PMO
 running means of EnergyPlus, or Tout_metric, which the EMS code of the outdoor metric of the custom model calculates
 with the inputs ``CustAST_metric``, ``CustAST_alpha`` and ``CustAST_days`` of the zone (:func:`standard_inputs`, which
 the zones of the comfort standard get, :mod:`accim.sim.ems.outdoor_metric`).
+
+The built-in comfort standards of :data:`WEATHER_FILE_METRICS` (JPN Aqilah 2025, 23) have another outdoor metric in
+the models with the values of the weather file of the simulation (the argument ``epw`` of AddAccis or modify_accis):
+their code then reads Tout_metric instead of RMOT (:func:`weather_file_lines`, finding B4-1 of the review of 1.2.0).
 """
 
-from typing import Any, Dict, List, Tuple
+import re
+from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 import numpy as np
 
 __all__ = [
     'ISO7730_STATIC_SETPOINTS',
+    'WEATHER_FILE_METRICS',
     'add_standard_lines',
     'metric_variable',
     'needs_outdoor_metric_code',
@@ -40,6 +46,8 @@ __all__ = [
     'setpoint_lines',
     'standard_branches',
     'standard_inputs',
+    'weather_file_definition',
+    'weather_file_lines',
 ]
 
 #: The static setpoints of ISO 7730 of comfort mode 2 of the built-in comfort standards with the categories 80 and 90
@@ -50,8 +58,22 @@ ISO7730_STATIC_SETPOINTS = {
     80: {'cooling': (25, 27), 'heating': (19, 22)},
     90: {'cooling': (24, 26), 'heating': (20, 23)},
 }
+#: The built-in comfort standards defined by their data whose outdoor metric is another one in the models with the
+#: values of the weather file of the simulation (the programs of the outdoor metric begin with them, argument ``epw`` of
+#: AddAccis or modify_accis): JPN Aqilah 2025 (23), whose running mean outdoor temperature (α = 0.8, equation 7 of
+#: Aqilah et al., 2025) is then the running mean of EN 16798-1:2019 (B.1) with α = 0.8 that the EMS calculates
+#: ('rmot_alpha'), which begins with the values of the weather file, instead of the RMOT of EnergyPlus, whose first
+#: value in a run period is the sum (1 − α)·{Tod−1 + α·Tod−2 + … + α⁶·Tod−7} of equation 19.82 of the Engineering
+#: Reference, not divided by 1 − α⁷ (finding B4-1 of the review of 1.2.0, section 3.1 of
+#: ``notes/PROPUESTAS_MEJORAS_post_1.1.0_v04.md``)
+WEATHER_FILE_METRICS: Dict[int, str] = {23: 'rmot_alpha'}
 #: The variables of the outdoor metrics that EnergyPlus calculates; the EMS calculates the others (Tout_metric)
 _NATIVE_METRICS = {'pmot': 'PMOT', 'rmot': 'RMOT'}
+_CHAIN_PROGRAMS = ('SETCOMFTEMP', 'SETVST')
+_COUNT_HOURS_PREFIX = 'COUNTHOURS_'
+_SUBPROGRAM_PREFIX = 'SETAST_CS'
+_OPENING = ('IF', 'WHILE')
+_CLOSING = ('ENDIF', 'ENDWHILE')
 
 
 def _number(value: float) -> str:
@@ -94,6 +116,83 @@ def standard_inputs(definition) -> Dict[str, Any]:
 
     code = metric_code(definition.outdoor_metric) if needs_outdoor_metric_code(definition) else 0
     return {'CustAST_metric': code, 'CustAST_alpha': definition.alpha, 'CustAST_days': definition.days}
+
+
+def weather_file_definition(number: Any):
+    """The definition of a comfort standard of :data:`WEATHER_FILE_METRICS` with the outdoor metric that it has in the
+    models with the values of the weather file of the simulation (JPN Aqilah 2025: 'rmot_alpha', α = 0.8), or None for
+    the other comfort standards."""
+    import dataclasses
+
+    from accim.sim.standards import definition_of
+
+    try:
+        number = int(number)
+    except (TypeError, ValueError):
+        return None
+    if number not in WEATHER_FILE_METRICS:
+        return None
+    return dataclasses.replace(definition_of(number), outdoor_metric=WEATHER_FILE_METRICS[number])
+
+
+def _branch_header(number: int) -> 're.Pattern':
+    return re.compile(rf'^(IF|ELSEIF)\s+\(?\s*ComfStand\s*==\s*{number}\s*\)?$', re.IGNORECASE)
+
+
+def _replace_in_branches(lines: Iterable[str], number: int, word: 're.Pattern', new: str) -> List[str]:
+    """Some lines with a variable replaced in the branches ``if ComfStand == <n>`` or ``elseif ComfStand == <n>`` of a
+    comfort standard (whose conditions name it alone), at any depth: from the line after the condition to the next
+    ``elseif``, ``else`` or ``endif`` of the same block."""
+    header = _branch_header(number)
+    result: List[str] = []
+    depth = 0
+    branch_depth: Optional[int] = None
+    for line in lines:
+        text = str(line).strip()
+        keyword = text.split(' ', 1)[0].upper()
+        if branch_depth is not None and depth == branch_depth and keyword in ('ELSEIF', 'ELSE', 'ENDIF'):
+            branch_depth = None
+        if branch_depth is not None:
+            line = word.sub(new, str(line))
+        if keyword in _OPENING:
+            depth += 1
+        elif keyword in _CLOSING:
+            depth -= 1
+        if keyword in ('IF', 'ELSEIF') and header.match(text):
+            branch_depth = depth
+        result.append(line)
+    return result
+
+
+def weather_file_lines(name: str, lines: Iterable[str], enabled: bool,
+                       comfort_standards: Optional[Iterable[int]] = None) -> List[str]:
+    """The lines of an EMS program of the ACCIS with the code of the comfort standards of :data:`WEATHER_FILE_METRICS`
+    (of some of them only) with the outdoor metric of the models with the values of the weather file, Tout_metric
+    (``enabled``), or with that of their definition (RMOT): their branches in the chains of SetComfTemp,
+    CountHours_<zone> and SetVST, and their subprograms SetAST_CS<n>_<chunk> (all their lines). The lines of the other
+    programs, and of the other comfort standards, do not change.
+
+    :param name: The name of the program (or of the subprogram whose lines they are).
+    :param lines: Its lines.
+    :param enabled: True for the outdoor metric of the weather file, False for that of the definition.
+    :param comfort_standards: Some comfort standards of :data:`WEATHER_FILE_METRICS`, or None for all of them.
+    """
+    from accim.sim.standards import definition_of
+
+    lines = list(lines)
+    upper_name = str(name).upper()
+    numbers = WEATHER_FILE_METRICS if comfort_standards is None else [
+        number for number in comfort_standards if number in WEATHER_FILE_METRICS]
+    for number in numbers:
+        native = metric_variable(definition_of(number).outdoor_metric)
+        weather = metric_variable(WEATHER_FILE_METRICS[number])
+        old, new = (native, weather) if enabled else (weather, native)
+        word = re.compile(rf'\b{old}\b')
+        if upper_name.startswith(f'{_SUBPROGRAM_PREFIX}{number}_'):
+            lines = [word.sub(new, str(line)) for line in lines]
+        elif upper_name in _CHAIN_PROGRAMS or upper_name.startswith(_COUNT_HOURS_PREFIX):
+            lines = _replace_in_branches(lines, number, word, new)
+    return lines
 
 
 def _comfort_temperature(definition, limit: str = '') -> str:
@@ -139,14 +238,25 @@ def standard_branches(definition) -> Dict[str, Tuple[str, ...]]:
 
 
 def setpoint_lines(definition) -> Dict[int, Tuple[str, ...]]:
-    """The lines of the setpoints of each comfort mode of a comfort standard (without the rounding)."""
+    """The lines of the setpoints of each comfort mode of a comfort standard (without the rounding). The static
+    setpoints of the comfort standards whose standard does not give them (JPN Aqilah 2025) are the inputs StaticAHST
+    and StaticACST of the zone (:mod:`accim.sim.ems.static_setpoints`); those of the others, the numbers of their
+    definition."""
+    from accim.sim.ems.static_setpoints import INPUTS as STATIC_INPUTS, has_static_setpoints
+
     metric = metric_variable(definition.outdoor_metric)
+    if has_static_setpoints(definition.standard.number):
+        static_setpoints = STATIC_INPUTS
+    elif definition.static_setpoints is not None:
+        static_setpoints = tuple(_number(value) for value in definition.static_setpoints)
+    else:
+        static_setpoints = None
     lines: Dict[int, Tuple[str, ...]] = {}
     for mode in definition.standard.comfort_modes:
         mode = int(mode)
         if mode == 0:
-            heating, cooling = definition.static_setpoints
-            lines[mode] = (f'set ACST = {_number(cooling)}+ACSTtol', f'set AHST = {_number(heating)}+AHSTtol')
+            heating, cooling = static_setpoints
+            lines[mode] = (f'set ACST = {cooling}+ACSTtol', f'set AHST = {heating}+AHSTtol')
             continue
         result: List[str] = []
         for setpoint, kind in (('ACST', 'cooling'), ('AHST', 'heating')):
@@ -155,9 +265,9 @@ def setpoint_lines(definition) -> Dict[int, Tuple[str, ...]]:
             result += [f'if ({metric} >= {lower}) && ({metric} <= {upper})',
                        f'set {setpoint} = {_comfort_temperature(definition)}+{offset}+{tolerance}']
             if mode == 1:
-                static = definition.static_setpoints[0 if kind == 'heating' else 1]
-                result += [f'elseif {metric} < {lower}', f'set {setpoint} = {_number(static)}+{tolerance}',
-                           f'elseif {metric} > {upper}', f'set {setpoint} = {_number(static)}+{tolerance}']
+                static = static_setpoints[0 if kind == 'heating' else 1]
+                result += [f'elseif {metric} < {lower}', f'set {setpoint} = {static}+{tolerance}',
+                           f'elseif {metric} > {upper}', f'set {setpoint} = {static}+{tolerance}']
             elif mode == 2:
                 for category in definition.category_offsets:
                     below, above = ISO7730_STATIC_SETPOINTS[category][kind]

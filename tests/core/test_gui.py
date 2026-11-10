@@ -356,6 +356,34 @@ def test_the_forms_take_the_comfort_standards_defined_by_their_data(tmp_path):
         unregister_comfort_standard(101)
 
 
+def test_jpn_aqilah_2025_in_the_form(tmp_path):
+    # Its static setpoints (accim.sim.ems.static_setpoints), with the defaults of AddAccis, only if a zone has it
+    from accim.sim.accis import AddAccis
+
+    defaults = inspect.signature(AddAccis).parameters
+    assert {name: float(forms.ADD_ACCIS_DEFAULTS[name]) for name in forms.STATIC_SETPOINT_FIELDS} == {
+        name: defaults[name].default for name in forms.STATIC_SETPOINT_FIELDS}
+    assert not set(forms.STATIC_SETPOINT_FIELDS) & set(forms.add_accis_arguments(_form(tmp_path)))
+    form = _form(tmp_path, comfort_standard=[23], category='80', comfort_mode='0', static_heating_setpoint='19',
+                 static_cooling_setpoint='26.5')
+    arguments = forms.add_accis_arguments(form)
+    assert (arguments['static_heating_setpoint'], arguments['static_cooling_setpoint']) == (19, 26.5)
+    zones = forms.add_accis_arguments(dict(form, comfort_standard=[1], category='2', comfort_mode='3',
+                                           zone_arguments=[('Zone1', 'comfort_standard=23, category=80')]))
+    assert zones['static_heating_setpoint'] == 19
+    with pytest.raises(FormError, match=r'static_heating_setpoint \(27\) must be lower than static_cooling_setpoint'):
+        forms.add_accis_arguments(dict(form, static_heating_setpoint='27'))
+    # The weather file begins its running mean of EN 16798-1 (finding B4-1 of the review of 1.2.0)
+    assert forms.weather_file_standards([1, 23, 99]) == [23]
+    (tmp_path / 'weather.epw').write_text('')
+    arguments = forms.add_accis_arguments(dict(form, epw='weather.epw'))
+    assert arguments['epw'] == str(tmp_path / 'weather.epw') and 'custom_outdoor_metric' not in arguments
+    [(title, kwargs)] = forms.setpoint_ems_code_calls(dict(form, epw='weather.epw'))
+    assert kwargs['epw'] == str(tmp_path / 'weather.epw') and kwargs['static_cooling_setpoint'] == 26.5
+    assert 'PREDEFINED_MODEL_PARAMETERS' in forms.__all__
+    assert {'static_heating_setpoint', 'static_cooling_setpoint'} <= set(forms.PREDEFINED_MODEL_PARAMETERS)
+
+
 def test_the_outdoor_metric_of_the_custom_model_in_the_form(tmp_path):
     from accim.sim.ems.outdoor_metric import OUTDOOR_METRICS
 

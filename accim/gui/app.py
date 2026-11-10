@@ -585,7 +585,8 @@ class AddAccisTab(_Tab):
                      'opening_factor_max_temp_diff', 'opening_factor_min_temp_diff', 'min_opening_factor',
                      'setpoint_tolerance_start', 'setpoint_tolerance_end', 'setpoint_tolerance_step', 'name_suffix',
                      *forms.CUSTOM_MODEL_FIELDS, 'custom_outdoor_metric', *forms.CUSTOM_OUTDOOR_METRIC_FIELDS, 'epw',
-                     'custom_regimes', *forms.SETPOINT_LIMIT_FIELDS, 'report_hours_below'):
+                     'custom_regimes', *forms.SETPOINT_LIMIT_FIELDS, *forms.STATIC_SETPOINT_FIELDS,
+                     'report_hours_below'):
             self.vars[name] = tk.StringVar(value=defaults[name])
         for name in ('keep_existing_outputs', 'add_building_averages', 'debug_ems', 'report_long_term_discomfort',
                      *forms.EXISTING_HVAC_OPTIONS):
@@ -710,6 +711,9 @@ class AddAccisTab(_Tab):
         self.comfort_widgets.append(_grid_entry(frame, 9, 'heating (°C):', self.vars['category_heating_offset']))
         self.comfort_widgets.append(_grid_entry(frame, 10, 'Accuracy of the setpoints (2: half degrees; 10000: none):',
                                                 self.vars['setpoint_accuracy']))
+        # The static setpoints of JPN Aqilah 2025, whose paper gives none (accim.sim.ems.static_setpoints)
+        for row, (name, (label, _)) in enumerate(forms.STATIC_SETPOINT_FIELDS.items(), start=11):
+            self.comfort_widgets.append(_grid_entry(frame, row, f'{label}:', self.vars[name]))
         return frame
 
     def _mixed_mode_frame(self, parent) -> ttk.LabelFrame:
@@ -954,8 +958,8 @@ class AddAccisTab(_Tab):
         standards = self.selected_standards() if temperature else []
         _set_state(self.custom_widgets, 99 in standards)
         # The weather file also begins the outdoor metric of the comfort standards defined by their data that the EMS
-        # calculates
-        if 99 not in standards and forms.registered_metric_standards(standards):
+        # calculates, and that of JPN Aqilah 2025
+        if 99 not in standards and forms.weather_file_standards(standards):
             _set_state([self.epw_entry, self.epw_button], True)
         self.categories.configure(text=forms.categories_hint(standards))
         self.comfort_modes.configure(text=forms.comfort_modes_hint(standards))

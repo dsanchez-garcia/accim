@@ -139,17 +139,23 @@ def set_comfort_standard_code(idf, comfort_standards: Optional[Iterable[int]] = 
     EnergyPlus stops.
 
     The model has the EMS code of the outdoor metric of the custom model (comfort standard 99) only if it has the code
-    of the custom model and a zone has an outdoor metric other than 'pmot' (``CustAST_metric``); then the programs of
-    the custom model use its outdoor metric instead of PMOT (see
+    of the custom model and a zone has an outdoor metric other than 'pmot' (``CustAST_metric``), or the code of JPN
+    Aqilah 2025, a zone of it and the values of the weather file of the simulation (``epw``, or those of the programs
+    of the model: :func:`accim.sim.ems.outdoor_metric.outdoor_metric_needed`); then the programs of the custom model
+    use its outdoor metric instead of PMOT, and those of JPN Aqilah 2025, with the values of a weather file, the running
+    mean of EN 16798-1 with α = 0.8 instead of RMOT (see
     :func:`accim.sim.ems.outdoor_metric.set_outdoor_metric_code`). Otherwise, the model has neither that code nor the
-    inputs of the outdoor metric, as before accim 1.2.0.
+    inputs of the outdoor metric, as before accim 1.2.0. The models with the code of JPN Aqilah 2025 declare the EMS
+    global variables of its static setpoints, StaticAHST and StaticACST (:mod:`accim.sim.ems.static_setpoints`).
 
-    :param epw: The weather file with which the outdoor metric of the custom model begins (see
-        :func:`accim.sim.ems.outdoor_metric.set_outdoor_metric_code`); None to begin with the running mean of ASHRAE 55
-        of EnergyPlus, or to keep the programs of the outdoor metric of the model.
+    :param epw: The weather file with which the outdoor metric of the custom model (and that of JPN Aqilah 2025)
+        begins (see :func:`accim.sim.ems.outdoor_metric.set_outdoor_metric_code`); None to begin with the running mean
+        of ASHRAE 55 of EnergyPlus, or to keep the programs of the outdoor metric of the model.
     """
     from accim.sim.ems.inputs import input_programs
-    from accim.sim.ems.outdoor_metric import metric_comfort_standards, set_outdoor_metric_code, uses_outdoor_metric
+    from accim.sim.ems.outdoor_metric import (begins_with_weather_file, outdoor_metric_needed, set_outdoor_metric_code,
+                                              set_weather_file_lines)
+    from accim.sim.ems.static_setpoints import set_static_setpoint_variables
 
     if comfort_standards is not None:
         # The models can have them as numbers with decimals (set ComfStand = 1.0)
@@ -158,9 +164,10 @@ def set_comfort_standard_code(idf, comfort_standards: Optional[Iterable[int]] = 
     # the output IDF is
     outdoor_metric = False
     if input_programs(idf):
-        outdoor_metric = ((comfort_standards is None or bool(comfort_standards & metric_comfort_standards()))
-                          and uses_outdoor_metric(idf))
+        outdoor_metric = outdoor_metric_needed(idf, comfort_standards, epw)
         set_outdoor_metric_code(idf, outdoor_metric, epw)
+    # The chains as accim writes them (JPN Aqilah 2025 with RMOT), until the end
+    set_weather_file_lines(idf, False)
 
     def lines_for(lines) -> List[str]:
         if comfort_standards is None:
@@ -186,6 +193,10 @@ def set_comfort_standard_code(idf, comfort_standards: Optional[Iterable[int]] = 
             idf.removeidfobject(program)
         for name, lines in subprograms(comfort_standards, outdoor_metric).items():
             add_program(idf, name, lines)
+    # The static setpoints of JPN Aqilah 2025 are inputs of its zones (accim.sim.ems.static_setpoints)
+    set_static_setpoint_variables(idf)
+    # With the values of a weather file, the code of JPN Aqilah 2025 reads its outdoor metric (finding B4-1 of 1.2.0)
+    set_weather_file_lines(idf, outdoor_metric and begins_with_weather_file(idf))
 
 
 def _set_vst_registered_branches(idf, outdoor_metric: bool, comfort_standards: Optional[Set[int]]) -> None:

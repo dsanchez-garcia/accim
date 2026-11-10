@@ -63,6 +63,9 @@ accim_predef_model_params = {
     # The floor of the heating setpoint and the ceiling of the cooling setpoint (accim 1.2.0)
     'heating_setpoint_floor': param_accis.modify_AHSTfloor,
     'cooling_setpoint_ceiling': param_accis.modify_ACSTceil,
+    # The static setpoints of JPN Aqilah 2025 (accim 1.2.0; the other comfort standards ignore them)
+    'static_heating_setpoint': param_accis.modify_StaticAHST,
+    'static_cooling_setpoint': param_accis.modify_StaticACST,
 }
 accim_custom_model_params = {
     # accim custom models parameters

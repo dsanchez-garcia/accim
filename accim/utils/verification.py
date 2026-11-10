@@ -96,9 +96,12 @@ def verify_accim_simulation(
     Temperature* and *... ASHRAE 55 ...*) are those of :func:`accim.sim.preview.energyplus_running_means`
     (``Check4_RMOT``, ``Check4_PMOT``, ``Check4_ComfTemp``, ``Check4_ACST``, ``Check4_AHST``, ``Check4_ACSTnoTol``
     and ``Check4_AHSTnoTol``). With the custom model and an outdoor metric other than 'pmot'
-    (:mod:`accim.sim.ems.outdoor_metric`), the outdoor metric that the EMS of each zone calculates
+    (:mod:`accim.sim.ems.outdoor_metric`), and with JPN Aqilah 2025 in a model whose programs of the outdoor metric
+    begin with the values of a weather file (its running mean of EN 16798-1 with α = 0.8,
+    :data:`accim.sim.ems.standard_lines.WEATHER_FILE_METRICS`), the outdoor metric that the EMS of each zone calculates
     (``Tout_metric_<zone>``) is that of ``compute_setpoints`` too (``Check4_Tout_metric``), which begins as the programs
-    of the model do (with the values of the weather file given to AddAccis, or with PMOT). With the regimes of the
+    of the model do (with the values of the weather file given to AddAccis, or with PMOT). The static setpoints of JPN
+    Aqilah 2025 are those of the inputs StaticAHST and StaticACST of each zone. With the regimes of the
     custom model (:mod:`accim.sim.ems.custom_regimes`), ``compute_setpoints`` gets those of the program
     ``SelectCustomRegime_<zone>`` of each zone, and the number of the regime that the EMS reports
     (``CustomRegime_<zone>``) is that of ``compute_setpoints`` (``Check4_custom_regime``); the zones whose regimes have
@@ -1177,6 +1180,7 @@ def _setpoint_mismatches(building, data: Mapping[str, pd.DataFrame], epw: str,
     from accim.sim.ems.objects import ZONE_SETPOINT_OUTPUT_VARIABLES
     from accim.sim.ems.outdoor_metric import (OUTPUT_PREFIX, begins_with_weather_file, metric_code,
                                               metric_comfort_standards)
+    from accim.sim.ems.standard_lines import WEATHER_FILE_METRICS
     from accim.sim.preview import SETPOINT_EMS_VARIABLES, compute_setpoints, energyplus_running_means
 
     zone_programs = input_programs(building)
@@ -1274,10 +1278,13 @@ def _setpoint_mismatches(building, data: Mapping[str, pd.DataFrame], epw: str,
             mismatches.extend(new_rows)
             lines.append(line)
         # The outdoor metric that the EMS programs calculate (not with 'pmot', which is PMOT): that of the custom
-        # model, or that of a comfort standard defined by its data (accim.sim.standards)
+        # model, that of a comfort standard defined by its data (accim.sim.standards), or that of JPN Aqilah 2025 with
+        # the values of a weather file (accim.sim.ems.standard_lines.WEATHER_FILE_METRICS)
         found = outputs.get('EMS', f'{OUTPUT_PREFIX}{zone}')
-        if (found is not None and arguments.get('comfort_standard') in metric_comfort_standards()
-                and metric_code(arguments.get('custom_outdoor_metric', 0)) != 0):
+        standard = arguments.get('comfort_standard')
+        if found is not None and ((standard in metric_comfort_standards()
+                                   and metric_code(arguments.get('custom_outdoor_metric', 0)) != 0)
+                                  or (standard in WEATHER_FILE_METRICS and metric_start == 'epw')):
             expected = np.where(inside, preview['Tout_metric'].to_numpy(dtype=float), np.nan)
             new_rows, line = _mismatch_rows(timestamps, found[rows], expected, zone, 'Check4_Tout_metric',
                                             f'{OUTPUT_PREFIX}{zone} of compute_setpoints', tolerance)

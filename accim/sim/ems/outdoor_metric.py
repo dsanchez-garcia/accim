@@ -32,6 +32,12 @@ A model has these EMS objects only if a zone has a metric other than ``'pmot'``
 programs of the custom model use ``Tout_metric`` instead of PMOT. Otherwise, the custom model uses PMOT and the model
 is as with accim 1.1.0 (the output IDFs of the comfort standards and of ``'pmot'`` do not change).
 
+JPN Aqilah 2025 (comfort standard 23) reads the RMOT of EnergyPlus, whose first value in a run period is lower than the
+running mean of EN 16798-1 (equation 19.82 of the Engineering Reference is not divided by 1 − α⁷); with the weather file
+of the simulation (argument ``epw`` of AddAccis or modify_accis), its zones get these EMS objects too, with the metric
+'rmot_alpha' (α = 0.8) that begins with the values of the weather file, and its code reads ``Tout_metric`` (finding B4-1
+of the review of 1.2.0, :data:`accim.sim.ems.standard_lines.WEATHER_FILE_METRICS`).
+
 The equations (section 11.4 of ``notes/PROPUESTAS_MEJORAS_post_1.1.0_v03.md``): EN 16798-1:2019, Annex B, formula
 (B.1), Θrm = (1 − α)·{Θed−1 + α·Θed−2 + α²·Θed−3 + ...}, in its recursive form Θrm = (1 − α)·Θed−1 + α·Θrm−1, with α
 recommended 0.8, and its approximate formula (B.2), (Θed−1 + 0.8·Θed−2 + 0.6·Θed−3 + 0.5·Θed−4 + 0.4·Θed−5 +
@@ -66,9 +72,12 @@ __all__ = [
     'metric_code',
     'metric_comfort_standards',
     'metric_name',
+    'outdoor_metric_needed',
     'ring_days',
     'set_outdoor_metric_code',
+    'set_weather_file_lines',
     'uses_outdoor_metric',
+    'weather_file_zones',
     'zone_program_lines',
 ]
 
@@ -360,10 +369,98 @@ def begins_with_weather_file(idf) -> bool:
 
 def uses_outdoor_metric(idf) -> bool:
     """True if a zone of the model has an outdoor metric other than 'pmot' (``CustAST_metric`` is not 0 in its program
-    SetInputData_<zone>), so that its custom model needs the EMS code of :func:`set_outdoor_metric_code`."""
+    SetInputData_<zone>), so that its custom model needs the EMS code of :func:`set_outdoor_metric_code`. The zones of
+    the comfort standards of :data:`accim.sim.ems.standard_lines.WEATHER_FILE_METRICS` (JPN Aqilah 2025) do not count:
+    their inputs are those of their outdoor metric with the weather file (:func:`outdoor_metric_needed`)."""
     from accim.sim.ems.inputs import input_programs, read_inputs
+    from accim.sim.ems.standard_lines import WEATHER_FILE_METRICS
 
-    return any(read_inputs(program).get(INPUTS[0], 0) != 0 for program in input_programs(idf).values())
+    for program in input_programs(idf).values():
+        inputs = read_inputs(program)
+        if inputs.get(INPUTS[0], 0) != 0 and _number_or_none(inputs.get('ComfStand')) not in WEATHER_FILE_METRICS:
+            return True
+    return False
+
+
+def _number_or_none(value: Any) -> Optional[int]:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def weather_file_zones(idf) -> List[str]:
+    """The zones of a model whose comfort standard is one of
+    :data:`accim.sim.ems.standard_lines.WEATHER_FILE_METRICS` (JPN Aqilah 2025), whose outdoor metric is another one
+    with the values of the weather file of the simulation."""
+    from accim.sim.ems.inputs import input_programs, read_inputs
+    from accim.sim.ems.standard_lines import WEATHER_FILE_METRICS
+
+    return [zone for zone, program in input_programs(idf).items()
+            if _number_or_none(read_inputs(program).get('ComfStand')) in WEATHER_FILE_METRICS]
+
+
+def outdoor_metric_needed(idf, comfort_standards: Optional[Iterable[int]] = None, epw: Union[str, Any, None] = None
+                          ) -> bool:
+    """True if a model needs the EMS code of the outdoor metric (:func:`set_outdoor_metric_code`): if it has the EMS
+    code of the custom model, or of a comfort standard of the registry whose outdoor metric the EMS calculates, and a
+    zone has an outdoor metric other than 'pmot' (:func:`uses_outdoor_metric`); or if it has the EMS code of JPN Aqilah
+    2025 (:data:`accim.sim.ems.standard_lines.WEATHER_FILE_METRICS`) and a zone of it, and the weather file of the
+    simulation is given (``epw``) or the programs of the outdoor metric of the model already begin with its values.
+
+    :param comfort_standards: The comfort standards whose EMS code the model has, or None for all of them.
+    :param epw: The weather file given to the function that writes the code, or None.
+    """
+    from accim.sim.ems.standard_lines import WEATHER_FILE_METRICS
+
+    standards = None if comfort_standards is None else {int(n) for n in comfort_standards}
+    if (standards is None or bool(standards & metric_comfort_standards())) and uses_outdoor_metric(idf):
+        return True
+    if standards is not None and not standards & set(WEATHER_FILE_METRICS):
+        return False
+    return bool(weather_file_zones(idf)) and (epw is not None or begins_with_weather_file(idf))
+
+
+def set_weather_file_lines(idf, enabled: bool) -> None:
+    """Write the code of the comfort standards of :data:`accim.sim.ems.standard_lines.WEATHER_FILE_METRICS` in the
+    programs of a model with the outdoor metric of the weather file, Tout_metric (``enabled``), or with that of their
+    definition, RMOT (:func:`accim.sim.ems.standard_lines.weather_file_lines`)."""
+    from accim.sim.ems.programs import set_program_lines
+    from accim.sim.ems.standard_lines import weather_file_lines
+
+    for program in idf.idfobjects['EnergyManagementSystem:Program']:
+        lines = _program_lines(program)
+        new = weather_file_lines(program.Name, lines, enabled)
+        if new != lines:
+            set_program_lines(program, new)
+
+
+def _set_weather_file_inputs(idf, zone_programs: Mapping[str, Any], rewritten: bool) -> None:
+    """Give the inputs of the outdoor metric of the weather file (``CustAST_metric``, ``CustAST_alpha`` and
+    ``CustAST_days``) to the zones of the comfort standards of
+    :data:`accim.sim.ems.standard_lines.WEATHER_FILE_METRICS`, warning if the alpha of a zone changes and the programs
+    of the model, which begin with the values of a weather file, are not written again (``rewritten``): the running
+    mean of the zone begins with the value of the weather file for its previous alpha."""
+    from accim.sim.ems.inputs import read_inputs, set_inputs
+    from accim.sim.ems.programs import set_program_lines
+    from accim.sim.ems.standard_lines import standard_inputs, weather_file_definition
+
+    changed = []
+    for zone, program in zone_programs.items():
+        current = read_inputs(program)
+        definition = weather_file_definition(current.get('ComfStand'))
+        if definition is None:
+            continue
+        values = standard_inputs(definition)
+        if not rewritten and current.get('CustAST_alpha', values['CustAST_alpha']) != values['CustAST_alpha']:
+            changed.append(zone)
+        missing = set_inputs(program, values)
+        if missing:
+            set_program_lines(program, _program_lines(program) + [f'set {name} = {values[name]}' for name in missing])
+    if changed:
+        warnings.warn(f'The running mean of the zones {changed} of JPN Aqilah 2025 begins with the value of the '
+                      f'weather file for the alpha of their previous outdoor metric: give the weather file of the '
+                      f'simulation (epw) to begin it with the alpha 0.8 of JPN Aqilah 2025.')
 
 
 def metric_comfort_standards() -> set:
@@ -530,7 +627,15 @@ def set_outdoor_metric_code(idf, enabled: bool, epw: Union[str, Any, None] = Non
 
     Without ``enabled``, all of them are removed, and the programs of the custom model use PMOT: the model is as
     before accim 1.2.0. :func:`accim.sim.ems.programs.set_comfort_standard_code` calls this function with
-    ``enabled`` if the model has the code of the custom model and a zone has a metric other than 'pmot'.
+    ``enabled`` if the model has the code of the custom model and a zone has a metric other than 'pmot', or the code
+    of JPN Aqilah 2025, a zone of it and the values of a weather file (:func:`outdoor_metric_needed`).
+
+    JPN Aqilah 2025 (comfort standard 23, :data:`accim.sim.ems.standard_lines.WEATHER_FILE_METRICS`): when the
+    programs begin with the values of a weather file (``epw``, or those of the programs of the model), its zones get
+    the inputs of the running mean of EN 16798-1 with α = 0.8 ('rmot_alpha'), and its code (its branches of
+    SetComfTemp, CountHours_<zone> and SetVST, and its subprograms) reads Tout_metric instead of RMOT (finding B4-1 of
+    the review of 1.2.0, :func:`accim.sim.ems.standard_lines.weather_file_lines`); otherwise its code reads RMOT, and
+    the inputs of the outdoor metric of its zones are not used.
 
     :param idf: The model (eppy), with the ACCIS of accim 1.0.0 or later (programs SetInputData_<zone>).
     :param enabled: True to add or update them, False to remove them.
@@ -547,6 +652,8 @@ def set_outdoor_metric_code(idf, enabled: bool, epw: Union[str, Any, None] = Non
 
     zone_programs = input_programs(idf)
     zones = list(zone_programs)
+    # The code of JPN Aqilah 2025 with RMOT, as accim writes the chains of the programs, until the end
+    set_weather_file_lines(idf, False)
     if not enabled:
         _remove_outdoor_metric_code(idf, zone_programs)
         _set_custom_model_lines(idf, False)
@@ -554,16 +661,21 @@ def set_outdoor_metric_code(idf, enabled: bool, epw: Union[str, Any, None] = Non
 
     # 1. The inputs of the zones
     defaults = {item.variable: item.default for item in INPUT_VARIABLES if item.variable in INPUTS}
-    values: Dict[str, Dict[str, Any]] = {}
     for zone, program in zone_programs.items():
         inputs = read_inputs(program)
         missing = [name for name in INPUTS if name not in inputs]
         if missing:
             set_program_lines(program, _program_lines(program) + [f'set {name} = {defaults[name]}' for name in missing])
-            inputs = read_inputs(program)
-        values[zone] = inputs
+    # The zones of JPN Aqilah 2025 have the inputs of its outdoor metric with the values of the weather file; without
+    # them, its code reads RMOT, and their inputs are not used
+    weather_zones = set(weather_file_zones(idf))
+    with_weather_file = epw is not None or begins_with_weather_file(idf)
+    if with_weather_file and weather_zones:
+        _set_weather_file_inputs(idf, zone_programs, rewritten=epw is not None or rewrite)
+    values: Dict[str, Dict[str, Any]] = {zone: read_inputs(program) for zone, program in zone_programs.items()}
     ring = ring_days(values[zone]['CustAST_days'] for zone in zones)
-    metrics = {metric_code(values[zone]['CustAST_metric']) for zone in zones}
+    metrics = {metric_code(values[zone]['CustAST_metric']) for zone in zones
+               if with_weather_file or zone not in weather_zones}
     monthly = OUTDOOR_METRICS['monthly_mean'] in metrics
 
     # 2. The programs: those of the model stay if they can (without a weather file)
@@ -655,5 +767,7 @@ def set_outdoor_metric_code(idf, enabled: bool, epw: Union[str, Any, None] = Non
                 idf.newidfobject('Output:Variable', Key_Value='*', Variable_Name=name,
                                  Reporting_Frequency=frequency, Schedule_Name='')
 
-    # 7. The programs of the custom model with Tout_metric
+    # 7. The programs of the custom model with Tout_metric, and those of JPN Aqilah 2025 if they begin with the values
+    # of a weather file
     _set_custom_model_lines(idf, True)
+    set_weather_file_lines(idf, begins_with_weather_file(idf))
