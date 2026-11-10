@@ -3072,6 +3072,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             existing_hvac_ideal_loads_backup: bool = False,
             existing_hvac_radiant_setpoints: bool = True,
             report_long_term_discomfort: bool = False,
+            long_term_range: Optional[Sequence[Any]] = None,
     ):
         """Initialize the simulation base instance.
         
@@ -3108,7 +3109,16 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             of the long-term discomfort of each zone and of the building (``Hours Above Upper Limit_<zone>``,
             ``Degree Hours Above Upper Limit_<zone>``..., :mod:`accim.sim.ems.long_term_discomfort`), which the
             reducers ``hours_outside_range`` and ``degree_hours`` of
-            :mod:`accim.parametric_and_optimisation.objectives` read (accim predefined and custom models).
+            :mod:`accim.parametric_and_optimisation.objectives` read (accim predefined and custom models). With
+            'apmv setpoints' and 'epmv setpoints', True adds the PPD-weighted hours of each zone instead, Method C of
+            CEN/TR 16798-2 (``PPD Weighted Hours_<zone>``, ``report_ppd_weighted_hours`` of the functions of
+            :mod:`accim.sim.apmv`), which the reducer ``ppd_weighted_hours`` reads.
+        :param long_term_range: forwarded to ``accim.sim.accis.add_accis_to_idf``, with
+            ``report_long_term_discomfort``: None (the default) for the range of the setpoints without the
+            tolerance, or ``('en16798', category)`` or ``('en16798', category, building_type)`` for the constant
+            limits of EN 16798-1:2019, Table B.2, the same for all the comfort standards of the plan
+            (:func:`accim.sim.ems.long_term_discomfort.long_term_limits`); a ``ValueError`` with 'apmv setpoints'
+            and 'epmv setpoints', whose range is that of their setpoints.
         
         Usage
         -----
@@ -3203,15 +3213,24 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                         existing_hvac_ideal_loads_backup=existing_hvac_ideal_loads_backup,
                         existing_hvac_radiant_setpoints=existing_hvac_radiant_setpoints,
                         report_long_term_discomfort=report_long_term_discomfort,
+                        long_term_range=long_term_range,
                     )
         elif is_apmv_setpoints or is_epmv_setpoints:
+            if long_term_range is not None:
+                raise ValueError("long_term_range is the range of the temperature setpoints of the ACCIS: with "
+                                 "'apmv setpoints' and 'epmv setpoints', report_long_term_discomfort=True counts the "
+                                 "PPD-weighted hours (Method C) with their own setpoints.")
             apply_setpoints = apmv.apply_apmv_setpoints if is_apmv_setpoints else apmv.apply_epmv_setpoints
+            # Method C of CEN/TR 16798-2 is the long-term discomfort of the setpoints based on the PMV
+            report_ppd_weighted_hours = report_long_term_discomfort
             if not bypass_add_accis:
                 if isinstance(buildings, list):
                     for b in buildings:
-                        apply_setpoints(building=b, output_frequencies=output_frequencies)
+                        apply_setpoints(building=b, output_frequencies=output_frequencies,
+                                        report_ppd_weighted_hours=report_ppd_weighted_hours)
                 else:
-                    apply_setpoints(building=buildings, output_frequencies=output_frequencies)
+                    apply_setpoints(building=buildings, output_frequencies=output_frequencies,
+                                    report_ppd_weighted_hours=report_ppd_weighted_hours)
             print('Arguments output_type, keep_existing_outputs, script_type, and supply_air_temp_input_method are only used in accim predefined and custom models, therefore these will not have any effect in this case.')
         elif parameters_type is None:
             self.script_type = None
@@ -13470,6 +13489,7 @@ class ParametricSimulation(SimulationBase):
             existing_hvac_ideal_loads_backup: bool = False,
             existing_hvac_radiant_setpoints: bool = True,
             report_long_term_discomfort: bool = False,
+            long_term_range: Optional[Sequence[Any]] = None,
     ):
         """Initialize a parametric simulation.
         
@@ -13506,7 +13526,16 @@ class ParametricSimulation(SimulationBase):
             of the long-term discomfort of each zone and of the building (``Hours Above Upper Limit_<zone>``,
             ``Degree Hours Above Upper Limit_<zone>``..., :mod:`accim.sim.ems.long_term_discomfort`), which the
             reducers ``hours_outside_range`` and ``degree_hours`` of
-            :mod:`accim.parametric_and_optimisation.objectives` read (accim predefined and custom models).
+            :mod:`accim.parametric_and_optimisation.objectives` read (accim predefined and custom models). With
+            'apmv setpoints' and 'epmv setpoints', True adds the PPD-weighted hours of each zone instead, Method C of
+            CEN/TR 16798-2 (``PPD Weighted Hours_<zone>``, ``report_ppd_weighted_hours`` of the functions of
+            :mod:`accim.sim.apmv`), which the reducer ``ppd_weighted_hours`` reads.
+        :param long_term_range: forwarded to ``accim.sim.accis.add_accis_to_idf``, with
+            ``report_long_term_discomfort``: None (the default) for the range of the setpoints without the
+            tolerance, or ``('en16798', category)`` or ``('en16798', category, building_type)`` for the constant
+            limits of EN 16798-1:2019, Table B.2, the same for all the comfort standards of the plan
+            (:func:`accim.sim.ems.long_term_discomfort.long_term_limits`); a ``ValueError`` with 'apmv setpoints'
+            and 'epmv setpoints', whose range is that of their setpoints.
         
         Usage
         -----
@@ -13544,6 +13573,7 @@ class ParametricSimulation(SimulationBase):
             existing_hvac_ideal_loads_backup=existing_hvac_ideal_loads_backup,
             existing_hvac_radiant_setpoints=existing_hvac_radiant_setpoints,
             report_long_term_discomfort=report_long_term_discomfort,
+            long_term_range=long_term_range,
         )
         # Parametric-specific attributes
         self.outputs_param_simulation = None
@@ -13659,6 +13689,7 @@ class OptimisationSimulation(SimulationBase):
             existing_hvac_ideal_loads_backup: bool = False,
             existing_hvac_radiant_setpoints: bool = True,
             report_long_term_discomfort: bool = False,
+            long_term_range: Optional[Sequence[Any]] = None,
     ):
         """Initialize an optimisation simulation.
         
@@ -13695,7 +13726,16 @@ class OptimisationSimulation(SimulationBase):
             of the long-term discomfort of each zone and of the building (``Hours Above Upper Limit_<zone>``,
             ``Degree Hours Above Upper Limit_<zone>``..., :mod:`accim.sim.ems.long_term_discomfort`), which the
             reducers ``hours_outside_range`` and ``degree_hours`` of
-            :mod:`accim.parametric_and_optimisation.objectives` read (accim predefined and custom models).
+            :mod:`accim.parametric_and_optimisation.objectives` read (accim predefined and custom models). With
+            'apmv setpoints' and 'epmv setpoints', True adds the PPD-weighted hours of each zone instead, Method C of
+            CEN/TR 16798-2 (``PPD Weighted Hours_<zone>``, ``report_ppd_weighted_hours`` of the functions of
+            :mod:`accim.sim.apmv`), which the reducer ``ppd_weighted_hours`` reads.
+        :param long_term_range: forwarded to ``accim.sim.accis.add_accis_to_idf``, with
+            ``report_long_term_discomfort``: None (the default) for the range of the setpoints without the
+            tolerance, or ``('en16798', category)`` or ``('en16798', category, building_type)`` for the constant
+            limits of EN 16798-1:2019, Table B.2, the same for all the comfort standards of the plan
+            (:func:`accim.sim.ems.long_term_discomfort.long_term_limits`); a ``ValueError`` with 'apmv setpoints'
+            and 'epmv setpoints', whose range is that of their setpoints.
         
         Usage
         -----
@@ -13733,6 +13773,7 @@ class OptimisationSimulation(SimulationBase):
             existing_hvac_ideal_loads_backup=existing_hvac_ideal_loads_backup,
             existing_hvac_radiant_setpoints=existing_hvac_radiant_setpoints,
             report_long_term_discomfort=report_long_term_discomfort,
+            long_term_range=long_term_range,
         )
         # Optimization-specific attributes
         self.outputs_optimisation = None
@@ -13976,6 +14017,7 @@ class AccimPredefModelsParamSim(ParametricSimulation):
             existing_hvac_ideal_loads_backup: bool = False,
             existing_hvac_radiant_setpoints: bool = True,
             report_long_term_discomfort: bool = False,
+            long_term_range: Optional[Sequence[Any]] = None,
     ):
         """Initialize the predefined-model parametric wrapper.
         
@@ -14007,7 +14049,16 @@ class AccimPredefModelsParamSim(ParametricSimulation):
             of the long-term discomfort of each zone and of the building (``Hours Above Upper Limit_<zone>``,
             ``Degree Hours Above Upper Limit_<zone>``..., :mod:`accim.sim.ems.long_term_discomfort`), which the
             reducers ``hours_outside_range`` and ``degree_hours`` of
-            :mod:`accim.parametric_and_optimisation.objectives` read (accim predefined and custom models).
+            :mod:`accim.parametric_and_optimisation.objectives` read (accim predefined and custom models). With
+            'apmv setpoints' and 'epmv setpoints', True adds the PPD-weighted hours of each zone instead, Method C of
+            CEN/TR 16798-2 (``PPD Weighted Hours_<zone>``, ``report_ppd_weighted_hours`` of the functions of
+            :mod:`accim.sim.apmv`), which the reducer ``ppd_weighted_hours`` reads.
+        :param long_term_range: forwarded to ``accim.sim.accis.add_accis_to_idf``, with
+            ``report_long_term_discomfort``: None (the default) for the range of the setpoints without the
+            tolerance, or ``('en16798', category)`` or ``('en16798', category, building_type)`` for the constant
+            limits of EN 16798-1:2019, Table B.2, the same for all the comfort standards of the plan
+            (:func:`accim.sim.ems.long_term_discomfort.long_term_limits`); a ``ValueError`` with 'apmv setpoints'
+            and 'epmv setpoints', whose range is that of their setpoints.
         
         Usage
         -----
@@ -14043,6 +14094,7 @@ class AccimPredefModelsParamSim(ParametricSimulation):
             existing_hvac_ideal_loads_backup=existing_hvac_ideal_loads_backup,
             existing_hvac_radiant_setpoints=existing_hvac_radiant_setpoints,
             report_long_term_discomfort=report_long_term_discomfort,
+            long_term_range=long_term_range,
         )
         # The baseline is the custom model with the default coefficients of 'accim custom model'. Without them, its
         # heating setpoint was above the cooling one, so EnergyPlus stopped in the test simulations of the outputs

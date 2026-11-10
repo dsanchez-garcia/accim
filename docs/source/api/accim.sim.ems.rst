@@ -44,6 +44,14 @@ accim.sim.ems.inputs module
    :show-inheritance:
    :undoc-members:
 
+accim.sim.ems.long\_term\_discomfort module
+-------------------------------------------
+
+.. automodule:: accim.sim.ems.long_term_discomfort
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
 accim.sim.ems.objects module
 ----------------------------
 

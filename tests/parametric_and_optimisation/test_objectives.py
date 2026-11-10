@@ -5,7 +5,8 @@ hours_outside_comfort and fraction_outside_comfort are the comfort objectives in
 author chose instead of the EMS metrics of that tag (notes/decisions.md). hours_outside_range, degree_hours and
 deviation_constraint_bound are the long-term comfort objectives of proposal C2 of accim 1.2.0 (Methods A and B of
 CEN/TR 16798-2:2019, Annex D, which the ACCIS counts with report_long_term_discomfort, and the acceptable deviations
-of its Annex E, Table E.1).
+of its Annex E, Table E.1); ppd_weighted_hours is Method C, which the setpoints based on the PMV count with
+report_ppd_weighted_hours (task H3 of the review of accim 1.2.0).
 """
 import shutil
 import subprocess
@@ -19,7 +20,7 @@ import pytest
 from accim.parametric_and_optimisation.objectives import (average_results, checked_sum_results, degree_hours,
                                                           deviation_constraint_bound, fraction_outside_comfort,
                                                           hours_outside_comfort, hours_outside_range,
-                                                          return_time_series, sum_results)
+                                                          ppd_weighted_hours, return_time_series, sum_results)
 
 REPO = Path(__file__).resolve().parents[2]
 SAMPLE_IDF = (REPO / 'accim' / 'sample_files' / 'sample IDFs' / 'input_IDFs'
@@ -263,3 +264,69 @@ def test_the_parametric_module_adds_the_long_term_discomfort(tmp_path, monkeypat
     assert has_long_term_discomfort(simulation.building) is report
     names = {o.Name for o in simulation.building.idfobjects['EnergyManagementSystem:OutputVariable']}
     assert ('Hours Above Upper Limit_Building' in names) is report
+
+
+def test_the_ppd_weighted_hours_reducer():
+    for name in ('EMS,PPD Weighted Hours_Block1_Zone1', 'EMS,PPD WEIGHTED HOURS_BLOCK1_ZONE2'):
+        assert ppd_weighted_hours(_long_term(name, [0.25, 0, 1.5])) == 1.75
+    assert ppd_weighted_hours(SimpleNamespace(data={'Value': [2.0]})) == 2.0
+    with pytest.raises(ValueError, match='ppd_weighted_hours reads the outputs "PPD Weighted Hours_<zone>" of the '
+                                         'setpoints based on the PMV'):
+        ppd_weighted_hours(_long_term('EMS,Hours Above Upper Limit_Block1_Zone1', [1.0]))
+    with pytest.raises(ValueError, match='finite numbers'):
+        ppd_weighted_hours(_long_term('EMS,PPD Weighted Hours_Block1_Zone1', [np.nan]))
+    # The reducers of Methods A and B do not take it
+    with pytest.raises(ValueError, match='hours_outside_range reads the outputs'):
+        hours_outside_range(_long_term('EMS,PPD Weighted Hours_Block1_Zone1', [1.0]))
+
+
+@pytest.mark.skipif(not (ENERGYPLUS_25_1.exists() and SAMPLE_IDF.exists() and SAMPLE_EPW.exists()),
+                    reason='needs EnergyPlus 25.1 and the sample files of the repository')
+@pytest.mark.parametrize('parameters_type', ['apmv setpoints', 'epmv setpoints'])
+@pytest.mark.parametrize('report', [False, True])
+def test_the_parametric_module_adds_the_ppd_weighted_hours(tmp_path, monkeypatch, parameters_type, report):
+    import warnings
+
+    from accim.parametric_and_optimisation.main import ParametricSimulation
+    from accim.sim.accis import load_idf
+
+    shutil.copy(SAMPLE_IDF, tmp_path / 'model.idf')
+    monkeypatch.chdir(tmp_path)
+    building = load_idf(tmp_path / 'model.idf')
+    with warnings.catch_warnings():
+        warnings.simplefilter('ignore')
+        simulation = ParametricSimulation(buildings=[building], epws=[str(SAMPLE_EPW)],
+                                          parameters_type=parameters_type, output_frequencies=['hourly'],
+                                          verbose=False, report_long_term_discomfort=report)
+    # With the setpoints based on the PMV, the long-term discomfort is Method C (task H3 of the review of 1.2.0)
+    programs = {p.Name for p in simulation.building.idfobjects['EnergyManagementSystem:Program']}
+    names = {o.Name for o in simulation.building.idfobjects['EnergyManagementSystem:OutputVariable']}
+    assert ('count_ppd_weighted_hours_Block1_Zone1' in programs) is report
+    assert ('PPD Weighted Hours_Block1_Zone2' in names) is report
+    assert not any(name.startswith('Hours Above Upper Limit') for name in names)
+
+
+@pytest.mark.skipif(not (ENERGYPLUS_25_1.exists() and SAMPLE_IDF.exists() and SAMPLE_EPW.exists()),
+                    reason='needs EnergyPlus 25.1 and the sample files of the repository')
+def test_the_parametric_module_forwards_the_long_term_range(tmp_path, monkeypatch):
+    import warnings
+
+    from accim.parametric_and_optimisation.main import ParametricSimulation
+    from accim.sim.accis import load_idf
+    from accim.sim.ems.long_term_discomfort import model_long_term_limits
+
+    shutil.copy(SAMPLE_IDF, tmp_path / 'model.idf')
+    monkeypatch.chdir(tmp_path)
+    with warnings.catch_warnings():
+        warnings.simplefilter('ignore')
+        simulation = ParametricSimulation(buildings=[load_idf(tmp_path / 'model.idf')], epws=[str(SAMPLE_EPW)],
+                                          parameters_type='accim predefined model', output_frequencies=['hourly'],
+                                          verbose=False, report_long_term_discomfort=True,
+                                          long_term_range=('en16798', 2))
+        assert model_long_term_limits(simulation.building) == {'Block1_Zone1': (20.0, 26.0),
+                                                               'Block1_Zone2': (20.0, 26.0)}
+        # The setpoints based on the PMV have their own range
+        with pytest.raises(ValueError, match='long_term_range is the range of the temperature setpoints of the ACCIS'):
+            ParametricSimulation(buildings=[load_idf(tmp_path / 'model.idf')], epws=[str(SAMPLE_EPW)],
+                                 parameters_type='apmv setpoints', output_frequencies=['hourly'], verbose=False,
+                                 report_long_term_discomfort=True, long_term_range=('en16798', 2))

@@ -85,6 +85,15 @@ def verify_accim_simulation(
       1 in the heating season.
     - ``Check3_CorrectedActivity``: Corrected Activity Level = the activity level without the correction (the output
       *Schedule Value* of its schedule, which must be added to the model to check it) times that factor.
+    - ``Check3_PpdWeightedHours`` (``report_ppd_weighted_hours=True``, each zone): the PPD-weighted hours of Method C
+      of CEN/TR 16798-2:2019, Annex D, ``PPD Weighted Hours_<zone>``: in each occupied timestep (the output
+      ``Occupied hours_<zone>``, its length), PPD(PMV)/PPD(PMVlimit) (ISO 7730:2025, formula (5)) if the PMV of the
+      previous timestep is at or above the upper limit, or below the lower limit, and 0 otherwise; the limits are the
+      setpoints of the index without the tolerances (``<index> Heating Setpoint No Tolerance_<zone>``...) on the scale
+      of the PMV: those of the PMV, aPMV/(1 − λ·aPMV) with the λ of the output ``Adaptive Coefficient_<zone>`` (or,
+      with ``adaptive_coefficient_by='pmv_sign'``, read from the monitor of the zone, the λ of each side of the scale
+      of the program ``set_zone_input_data_<zone>``), and ePMV/e on the side of the scale where the monitor of the
+      zone applies the expectancy factor e of the output ``Expectancy Factor_<zone>``.
 
     **Check 4 – Setpoints against** :func:`accim.sim.preview.compute_setpoints` **(per zone, output IDFs of AddAccis,
     only with** ``epw`` **):**
@@ -135,11 +144,12 @@ def verify_accim_simulation(
     ``Hours Above Upper Limit_<zone>`` and ``Hours Below Lower Limit_<zone>`` are the length of the timestep if the
     operative temperature of the zone of the previous timestep (that which the EMS reads) is above the cooling setpoint
     without the tolerance (``Adaptive Cooling Setpoint Temperature_No Tolerance_<zone>``), or below the heating
-    setpoint without the tolerance, and ``Degree Hours Above Upper Limit_<zone>`` and ``Degree Hours Below Lower
-    Limit_<zone>`` are the difference times that length (Methods A and B of CEN/TR 16798-2:2019, Annex D); in the
-    timesteps without occupants, they are 0 (``Check6_<output>``). The outputs of the building (``..._Building``) are
-    the sums of those of the zones. They are checked with the outputs at timestep frequency; the first timestep of each
-    environment is not checked.
+    setpoint without the tolerance (or above and below the constant limits of ``long_term_range`` that the program of
+    the zone has, those of EN 16798-1, Table B.2), and ``Degree Hours Above Upper Limit_<zone>`` and
+    ``Degree Hours Below Lower Limit_<zone>`` are the difference times that length (Methods A and B of CEN/TR
+    16798-2:2019, Annex D); in the timesteps without occupants, they are 0 (``Check6_<output>``). The outputs of the
+    building (``..._Building``) are the sums of those of the zones. They are checked with the outputs at timestep
+    frequency; the first timestep of each environment is not checked.
 
     :param eso_file_path: Path to the eplusout.eso file.
     :type eso_file_path: str
@@ -970,8 +980,10 @@ def _pmv_index_mismatches(building, frame: Optional[pd.DataFrame], tolerance: fl
     :return: The mismatches, and the lines of the summary (none if the model has no setpoints based on the PMV).
     """
     from accim.constants import EPMV_MET_REDUCTION_PER_PMV
+    from accim.data.postprocessing.long_term_discomfort import ppd_from_pmv
     from accim.sim.ems.erl import ErlProgramSet
-    from accim.sim.pmv_index import _MAX_METABOLIC_PMV, PMV_INDICES, metabolic_correction_names
+    from accim.sim.pmv_index import (_MAX_METABOLIC_PMV, PMV_INDICES, PPD_WEIGHTED_HOURS_PROGRAM,
+                                     metabolic_correction_names)
     from accim.sim.targets import resolve_targets, sanitize_ems_name
     from accim.utils.people import get_people_objects
 
@@ -1066,6 +1078,62 @@ def _pmv_index_mismatches(building, frame: Optional[pd.DataFrame], tolerance: fl
                 check(found, pmv, suffix, 'Check3_PMV', 'PMV of the previous timestep')
             else:
                 lines.append(f"  '{suffix}': no check for the index {name}.")
+
+        # The PPD-weighted hours of Method C of CEN/TR 16798-2 (report_ppd_weighted_hours), of each zone with them
+        for pmv_index, suffix in zones:
+            if f'{PPD_WEIGHTED_HOURS_PROGRAM}{suffix}'.upper() not in programs:
+                continue
+            name = pmv_index.name
+            found = outputs.get('EMS', f'PPD Weighted Hours_{suffix}')
+            hours = outputs.get('EMS', f'Occupied hours_{suffix}')
+            lower, upper = (outputs.get('EMS', f'{name} {side} Setpoint No Tolerance_{suffix}')
+                            for side in ('Heating', 'Cooling'))
+            pmv = pmv_of_zones.get(suffix)
+            monitor = programs.get(f'MONITOR_{name}_{suffix}'.upper())
+            # The monitor of the aPMV has an 'if' with adaptive_coefficient_by='pmv_sign' (that of the ePMV, without
+            # apply_to_heating), as in the checks of the indices above
+            monitor_if = monitor is not None and any(line.lower().startswith('if') for line in _program_lines(monitor))
+            missing = ''
+            if found is None:
+                missing = f"the output 'PPD Weighted Hours_{suffix}' at timestep frequency"
+            elif hours is None or lower is None or upper is None:
+                missing = (f"the outputs 'Occupied hours_{suffix}' and '{name} Heating (and Cooling) Setpoint No "
+                           f"Tolerance_{suffix}' at timestep frequency")
+            elif pmv is None:
+                missing = 'the PMV of the zone'
+            elif pmv_index.key == 'apmv' and monitor_if:
+                inputs = programs.get(f'SET_ZONE_INPUT_DATA_{suffix}'.upper())
+                values = {}
+                for line in (_program_lines(inputs) if inputs is not None else []):
+                    target, _, value = line[len('set '):].partition('=')
+                    values[target.strip().upper()] = value.strip()
+                try:
+                    coefficients = [float(values[f'ADAP_COEFF_{side}_{suffix}'.upper()])
+                                    for side in ('HEATING', 'COOLING')]
+                except (KeyError, ValueError):
+                    missing = f'the adaptive coefficients of the program set_zone_input_data_{suffix}'
+            elif pmv_index.coefficient_output and outputs.get(
+                    'EMS', f'{pmv_index.coefficient_output}_{suffix}') is None:
+                missing = f"the output '{pmv_index.coefficient_output}_{suffix}' at timestep frequency"
+            if missing:
+                lines.append(f"  '{suffix}' Check3_PpdWeightedHours: not checked, without {missing}.")
+                continue
+            if pmv_index.key == 'apmv':
+                # The PMV whose aPMV = PMV/(1 + lambda*PMV) is the setpoint (Yao et al., 2009)
+                if monitor_if:
+                    heating, cooling = coefficients
+                else:
+                    heating = cooling = outputs.get('EMS', f'{pmv_index.coefficient_output}_{suffix}')
+                lower, upper = lower / (1 - heating * lower), upper / (1 - cooling * upper)
+            elif pmv_index.key == 'epmv':
+                # ePMV = e*PMV on the warm side (on both sides with apply_to_heating, whose monitor has no 'if')
+                factor = outputs.get('EMS', f'{pmv_index.coefficient_output}_{suffix}')
+                lower, upper = (lower if monitor_if else lower / factor), upper / factor
+            ppd = ppd_from_pmv(pmv)
+            weight = (np.where(pmv >= upper, ppd / ppd_from_pmv(upper), 0.0)
+                      + np.where(pmv < lower, ppd / ppd_from_pmv(lower), 0.0))
+            check(found, np.where(np.isnan(pmv), np.nan, weight * hours), suffix, 'Check3_PpdWeightedHours',
+                  'PPD(PMV)/PPD(PMV limit) times the occupied hours, Method C of CEN/TR 16798-2')
 
         # The metabolic correction of the ePMV, of each People object
         corrected_people = []
@@ -1391,12 +1459,14 @@ def _long_term_mismatches(building, data: Mapping[str, pd.DataFrame],
                           tolerance: float) -> Tuple[List[dict], List[str]]:
     """Check 6 of :func:`verify_accim_simulation`: the long-term discomfort of each zone with the program
     CountLongTermDiscomfort_<zone> (:mod:`accim.sim.ems.long_term_discomfort`), from its occupied hours, its operative
-    temperature of the previous timestep and its setpoints without the tolerance, and that of the building, the sums of
-    the zones, in the outputs at timestep frequency.
+    temperature of the previous timestep and its setpoints without the tolerance (or the constant limits of its
+    program, ``long_term_range``), and that of the building, the sums of the zones, in the outputs at timestep
+    frequency.
 
     :return: The mismatches, and the lines of the summary (none if the model has no long-term discomfort).
     """
-    from accim.sim.ems.long_term_discomfort import BUILDING, BUILDING_PROGRAM, OUTPUTS, PROGRAM_PREFIX
+    from accim.sim.ems.long_term_discomfort import (BUILDING, BUILDING_PROGRAM, OUTPUTS, PROGRAM_PREFIX,
+                                                    model_long_term_limits)
 
     zones = [str(p.Name)[len(PROGRAM_PREFIX):] for p in building.idfobjects['EnergyManagementSystem:Program']
              if str(p.Name).upper().startswith(PROGRAM_PREFIX.upper())
@@ -1413,10 +1483,16 @@ def _long_term_mismatches(building, data: Mapping[str, pd.DataFrame],
     mismatches: List[dict] = []
     lines = ['  Timestep outputs']
     totals: Dict[str, List[np.ndarray]] = {output: [] for output in OUTPUTS}
+    constant_limits = model_long_term_limits(building)
     for zone in zones:
         hours = outputs.get('EMS', f'Occupied Hours_{zone}')
-        upper = outputs.get('EMS', f'Adaptive Cooling Setpoint Temperature_No Tolerance_{zone}')
-        lower = outputs.get('EMS', f'Adaptive Heating Setpoint Temperature_No Tolerance_{zone}')
+        limits = constant_limits.get(zone)
+        if limits is None:
+            upper = outputs.get('EMS', f'Adaptive Cooling Setpoint Temperature_No Tolerance_{zone}')
+            lower = outputs.get('EMS', f'Adaptive Heating Setpoint Temperature_No Tolerance_{zone}')
+        else:
+            lower, upper = limits
+            lines.append(f"  '{zone}': the constant range of long_term_range, {lower} to {upper} °C.")
         sensor = sensors.get(f'{zone}_OpT'.upper())
         temperature = None if sensor is None else outputs.get(*sensor)
         found = {output: outputs.get('EMS', f'{output}_{zone}') for output in OUTPUTS}

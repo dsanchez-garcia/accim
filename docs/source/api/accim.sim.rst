@@ -150,6 +150,14 @@ accim.sim.results\_size module
    :show-inheritance:
    :undoc-members:
 
+accim.sim.schedule\_files module
+--------------------------------
+
+.. automodule:: accim.sim.schedule_files
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
 accim.sim.standards module
 --------------------------
 

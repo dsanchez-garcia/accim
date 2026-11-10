@@ -4,7 +4,8 @@
 CEN/TR 16798-2:2019, Annex D: Method A (the occupied hours outside the range, above its upper limit and below its lower
 limit) and Method B (the degree hours, wf = abs(Θo − Θo,limit) times the time outside the range), which the functions
 of proposal D1 (:mod:`accim.data.postprocessing.long_term_discomfort`) calculate from the outputs; the EMS counts them
-in each timestep with the setpoints without the tolerance as the limits (``report_long_term_discomfort``). The unit
+in each timestep with the setpoints without the tolerance as the limits (``report_long_term_discomfort``), or with the
+constant limits of EN 16798-1, Table B.2 (``long_term_range``, finding C2-1 of the review of accim 1.2.0). The unit
 tests run the EMS programs with the Erl interpreter of accim and compare them with the functions of D1; the last tests
 simulate output IDFs of AddAccis with EnergyPlus 25.1 (a winter and a summer week, verify_accim_simulation, and both
 backends).
@@ -84,6 +85,71 @@ def test_the_counters_of_a_zone_are_methods_a_and_b_of_d1(occupants, temperature
     assert found['Degree Hours Below Lower Limit'] == pytest.approx(method_b['cold_Kh'], abs=1e-12)
 
 
+# The constant range of EN 16798-1, Table B.2 (long_term_range) ------------------------------------------------------
+
+@pytest.mark.parametrize('long_term_range, limits', [
+    (('en16798', 1), (21.0, 25.5)),
+    (('en16798', 2), (20.0, 26.0)),
+    (['EN16798', 2, 'Office'], (20.0, 26.0)),
+    (('en16798', 3, 'residential'), (18.0, 27.0)),
+    (('en16798', 3, 'office'), (19.0, 27.0)),
+    (('en16798', 4, 'residential'), (16.0, 28.0)),
+    (('en16798', 4, 'office'), (18.0, 28.0)),
+    (None, None),
+])
+def test_the_constant_limits_of_table_b2(long_term_range, limits):
+    from accim.constants import EN16798_TABLE_B2
+
+    assert ltd.long_term_limits(long_term_range) == limits
+    if long_term_range is not None and len(long_term_range) == 3:
+        assert limits == EN16798_TABLE_B2[long_term_range[2].lower(), long_term_range[1]]
+
+
+@pytest.mark.parametrize('long_term_range, message', [
+    (('en16798', 3), r"category 3 of EN 16798-1, Table B.2, depend on the building type \(residential: "
+                     r"\(18.0, 27.0\), office: \(19.0, 27.0\)\)"),
+    (('en16798', 4), 'category 4 of EN 16798-1, Table B.2, depend on the building type'),
+    (('en16798', 0), 'The category of long_term_range must be 1, 2, 3 or 4'),
+    (('en16798', 5), 'The category of long_term_range must be 1, 2, 3 or 4'),
+    (('en16798', 2.0), 'The category of long_term_range must be 1, 2, 3 or 4'),
+    (('en16798', True), 'The category of long_term_range must be 1, 2, 3 or 4'),
+    (('en16798', 2, 'hospital'), "The building type of long_term_range must be one of \\['residential', 'office'\\]"),
+    (('iso7730', 2), "The range of long_term_range must be one of \\['en16798'\\]"),
+    ('en16798', 'long_term_range must be None or'),
+    (('en16798',), 'long_term_range must be None or'),
+    (('en16798', 2, 'office', 1), 'long_term_range must be None or'),
+    (2, 'long_term_range must be None or'),
+])
+def test_the_constant_range_is_checked(long_term_range, message):
+    with pytest.raises(ValueError, match=message):
+        ltd.long_term_limits(long_term_range)
+
+
+@pytest.mark.parametrize('occupants, temperature', [(2, 27.5), (1, 18.25), (3, 23.0), (1, 26.0), (1, 20.0),
+                                                     (0, 30.0), (0, 15.0)])
+def test_the_counters_with_a_constant_range_are_methods_a_and_b_of_d1(occupants, temperature):
+    lines = ltd.zone_lines('Z', (20.0, 26.0))
+    # The constants replace the setpoints without the tolerance, which the program no longer reads
+    assert not any('noTol' in line for line in lines)
+    assert 'if Z_OpT > 26' in lines and 'if Z_OpT < 20' in lines
+    assert 'set DegreeHoursAboveUpperLimit_Z = (Z_OpT-26)*ZoneTimeStep' in lines
+    assert 'set DegreeHoursBelowLowerLimit_Z = (20-Z_OpT)*ZoneTimeStep' in lines
+    assert ltd.zone_lines('Z', (19.0, 25.5))[1] == 'if Z_OpT > 25.5'
+    names = [ltd.long_term_variable(output, 'Z') for output in OUTPUTS]
+    erl = ErlProgramSet({f'{ltd.PROGRAM_PREFIX}Z': lines}, global_variables=['Occ_count_Z', 'Z_OpT'] + names)
+    erl.set('ZoneTimeStep', 0.25)
+    erl.set('Occ_count_Z', occupants)
+    erl.set('Z_OpT', temperature)
+    erl.run(f'{ltd.PROGRAM_PREFIX}Z')
+    found = {output: erl.get(ltd.long_term_variable(output, 'Z')) for output in OUTPUTS}
+    method_a = hours_outside_range([temperature], [20.0], [26.0], occupied=[occupants], timestep_h=0.25)
+    method_b = degree_hours([temperature], [20.0], [26.0], occupied=[occupants], timestep_h=0.25)
+    assert found['Hours Above Upper Limit'] == pytest.approx(method_a['hot_h'], abs=1e-12)
+    assert found['Hours Below Lower Limit'] == pytest.approx(method_a['cold_h'], abs=1e-12)
+    assert found['Degree Hours Above Upper Limit'] == pytest.approx(method_b['hot_Kh'], abs=1e-12)
+    assert found['Degree Hours Below Lower Limit'] == pytest.approx(method_b['cold_Kh'], abs=1e-12)
+
+
 def test_the_building_adds_up_its_zones():
     zones = ['Z1', 'Z2', 'Z3']
     erl = _erl(zones)
@@ -137,15 +203,17 @@ def _model(tmp_path, **arguments):
     return idf
 
 
-def _check_the_objects(idf, frequencies):
+def _check_the_objects(idf, frequencies, limits=None):
     from accim.sim.ems.inputs import input_programs
 
     programs = _programs(idf)
     declared = _declared(idf)
     ems_outputs = {o.Name: o for o in idf.idfobjects['EnergyManagementSystem:OutputVariable']}
     requested = {(o.Variable_Name, o.Reporting_Frequency) for o in idf.idfobjects['Output:Variable']}
+    # The range of each zone, as verify_accim_simulation reads it
+    assert ltd.model_long_term_limits(idf) == dict.fromkeys(ZONES, limits)
     for zone in ZONES:
-        assert programs[f'{ltd.PROGRAM_PREFIX}{zone}'] == ltd.zone_lines(zone)
+        assert programs[f'{ltd.PROGRAM_PREFIX}{zone}'] == ltd.zone_lines(zone, limits)
         run = programs[f'RunACCIS_{zone}']
         assert run[run.index(f'run CountHoursNoApp_{zone}') + 1] == f'run {ltd.PROGRAM_PREFIX}{zone}'
     # The zones in the order of their programs SetInputData_<zone>
@@ -189,6 +257,25 @@ def test_without_the_argument_the_models_have_no_long_term_discomfort(tmp_path):
     assert names == {zone: [f'{output}_{zone}' for output in OUTPUTS] for zone in names}
     assert sorted(names) == sorted(ZONES + [ltd.BUILDING]) and list(names)[-1] == ltd.BUILDING
     _check_the_objects(idf, ['Daily'])
+
+
+@needs_idd
+def test_add_accis_to_idf_with_a_constant_range(tmp_path):
+    idf = _model(tmp_path, output_frequencies=['hourly'], report_long_term_discomfort=True,
+                 long_term_range=('en16798', 3, 'office'))
+    _check_the_objects(idf, ['Hourly'], limits=(19.0, 27.0))
+    # The other programs are those without the range
+    for name in ('without', 'no'):
+        (tmp_path / name).mkdir()
+    without = _model(tmp_path / 'without', report_long_term_discomfort=True)
+    assert {name: lines for name, lines in _programs(idf).items() if not name.startswith(ltd.PROGRAM_PREFIX)} == {
+        name: lines for name, lines in _programs(without).items() if not name.startswith(ltd.PROGRAM_PREFIX)}
+    # The range needs the long-term discomfort, and is checked
+    with pytest.raises(ValueError, match='long_term_range is the range of the long-term discomfort: it needs '
+                                         'report_long_term_discomfort=True'):
+        _model(tmp_path / 'no', long_term_range=('en16798', 2))
+    with pytest.raises(ValueError, match='depend on the building type'):
+        _model(tmp_path / 'no', report_long_term_discomfort=True, long_term_range=('en16798', 4))
 
 
 @needs_idd
@@ -244,7 +331,36 @@ def test_add_accis_adds_the_long_term_discomfort(tmp_path, monkeypatch, output_t
 def test_add_accis_checks_the_long_term_discomfort(tmp_path, monkeypatch):
     with pytest.raises(ValueError, match="report_long_term_discomfort needs setpoint_type 'temperature'"):
         _add_accis(tmp_path, monkeypatch, setpoint_type='pmv', report_long_term_discomfort=True)
+    with pytest.raises(ValueError, match='long_term_range is the range of the long-term discomfort'):
+        _add_accis(tmp_path, monkeypatch, long_term_range=('en16798', 2))
+    with pytest.raises(ValueError, match='The category of long_term_range must be 1, 2, 3 or 4'):
+        _add_accis(tmp_path, monkeypatch, report_long_term_discomfort=True, long_term_range=('en16798', 'II'))
     assert not list(tmp_path.glob('TestModel[[]*.idf'))
+
+
+@needs_idd
+def test_add_accis_with_a_constant_range(tmp_path, monkeypatch):
+    from accim.sim.accis import AddAccis, load_idf
+
+    paths = _add_accis(tmp_path / 'two', monkeypatch, report_long_term_discomfort=True, long_term_range=['en16798', 2],
+                       comfort_standard=[1, 2], category=[2, 80])
+    assert len(paths) == 2
+    # The same range in the models of both comfort standards
+    for path in paths:
+        _check_the_objects(load_idf(path), ['Hourly'], limits=(20.0, 26.0))
+    # The argument of the instance
+    folder = tmp_path / 'one'
+    folder.mkdir()
+    shutil.copy(SAMPLE_IDF, folder / 'TestModel.idf')
+    monkeypatch.chdir(folder)
+    with warnings.catch_warnings():
+        warnings.simplefilter('ignore')
+        accis = AddAccis(script_type='vrf_ac', supply_air_temp_input_method='temperature difference',
+                         output_type='standard', output_frequencies=['hourly'], keep_existing_outputs=False,
+                         energyplus_version='auto', setpoint_type='temperature', comfort_standard=[1], category=[2],
+                         comfort_mode=[3], confirm=True, verbose=False, report_long_term_discomfort=True,
+                         long_term_range=('en16798', 2))
+    assert accis.arguments['long_term_range'] == ('en16798', 2)
 
 
 # EnergyPlus ---------------------------------------------------------------------------------------------------------
@@ -344,6 +460,54 @@ def test_the_long_term_discomfort_in_energyplus(tmp_path, monkeypatch, capsys, w
     # Some discomfort to count: the warm side in summer
     if week == 'summer':
         assert totals['Hours Above Upper Limit'] > 0 and totals['Degree Hours Above Upper Limit'] > 0
+
+
+@needs_energyplus
+def test_the_constant_range_in_energyplus_with_both_backends(tmp_path, monkeypatch, capsys):
+    from accim.sim.energyplus_api import run_simulations
+    from accim.utils.verification import verify_accim_simulation
+
+    # A summer week at timestep frequency, with the limits of category II of EN 16798-1, Table B.2
+    model = _output_idf(tmp_path / 'model', monkeypatch, (7, 15), (7, 21), 'timestep', report_long_term_discomfort=True,
+                        long_term_range=('en16798', 2))
+    results = _run_energyplus(model, tmp_path / 'ems')
+    assert len(results) == 7 * 24 * STEPS
+    api = run_simulations([(model, EPW, {'output_directory': tmp_path / 'api', 'output_prefix': 'run'})],
+                          processes=1)
+    assert api[0].success, api[0].error
+    pd.testing.assert_frame_equal(pd.read_csv(tmp_path / 'api' / 'run.csv'), results, check_exact=True)
+
+    # Check 6 of verify_accim_simulation, with the constant range of the programs
+    mismatches = verify_accim_simulation(str(tmp_path / 'ems' / 'run.eso'), str(model), epw=str(EPW))
+    output = capsys.readouterr().out
+    assert len(mismatches) == 0
+    for zone in ZONES:
+        assert f"'{zone}': the constant range of long_term_range, 20.0 to 26.0 °C." in output
+        for name in OUTPUTS:
+            assert f"'{zone}' Check6_{name} ({name}_{zone} from the operative temperature of the previous " \
+                   f"timestep): 0 mismatch(es) in {7 * 24 * STEPS - 1} timesteps" in output
+
+    # The totals of the week are those of the functions of D1 with the constant limits
+    for zone in ZONES:
+        key = zone.replace('_', ':').upper()
+        previous = results[f'{key}:Zone Operative Temperature [C](TimeStep)'].shift(1)
+        hours = results[f'EMS:Occupied Hours_{zone} [H](TimeStep)']
+        rows = slice(1, None)
+        lower = pd.Series(20.0, index=previous.index)[rows]
+        upper = pd.Series(26.0, index=previous.index)[rows]
+        method_a = hours_outside_range(previous[rows], lower, upper, occupied=hours[rows], timestep_h=hours[rows])
+        method_b = degree_hours(previous[rows], lower, upper, occupied=hours[rows], timestep_h=hours[rows])
+        expected = {'Hours Above Upper Limit': method_a['hot_h'], 'Hours Below Lower Limit': method_a['cold_h'],
+                    'Degree Hours Above Upper Limit': method_b['hot_Kh'],
+                    'Degree Hours Below Lower Limit': method_b['cold_Kh']}
+        for output, (_, units) in ltd.OUTPUTS.items():
+            found = results[f'EMS:{output}_{zone} [{units.upper()}](TimeStep)']
+            assert found.iloc[1:].sum() == pytest.approx(expected[output], abs=1e-6)
+        # Above 26 °C some hours in which the operative temperature is below the cooling setpoint of the ACCIS
+        assert expected['Hours Above Upper Limit'] > 0
+        discomfortable = results[f'EMS:Occupied Discomfortable Hours_No Applicability_{zone} [H](TimeStep)'].sum()
+        assert expected['Hours Above Upper Limit'] + expected['Hours Below Lower Limit'] != pytest.approx(
+            discomfortable)
 
 
 @needs_energyplus

@@ -130,6 +130,11 @@ Lo que ya está en otros documentos no se repite aquí:
   modelos de confort de EnergyPlus (`add_thermal_comfort_outputs`), con su nombre en `Table` (sección 32).
 - **H2.** T0 de `te_ref_nl` es la media de la máxima y la mínima del día completo: con el EPW, un `Schedule:File`
   (`accim.sim.schedule_files`) leído por un sensor; sin él, la del día anterior, con aviso (sección 33).
+- **H3.** El disconfort de largo plazo admite un rango constante (`long_term_range=('en16798', categoría[, tipo de
+  edificio])`, los límites de la tabla B.2 de EN 16798-1); las consignas basadas en el PMV cuentan el método C, las
+  horas ponderadas por el PPD (`report_ppd_weighted_hours`, salida `PPD Weighted Hours_<zona>`), y el reductor
+  `ppd_weighted_hours` las lee; el método C de D1 sigue el texto literal (veredicto #20); `Table` con
+  `source_frequency='timestep'` conserva las salidas y agrupa los pasos en su hora (sección 34).
 - Las categorías del PMV y la aproximación de la corrección del metabolismo se han comprobado en ISO 7730:2025 y
   EN 16798-1:2019, y el modelo dinámico de vestimenta de A5, en Schiavon y Lee (2013) y ASHRAE 55-2020 (sección 6).
 - Lo que quedaba abierto se ha comprobado: el golden master y las pruebas de EnergyPlus 26.1 y 26.2, también la de A5
@@ -1890,3 +1895,52 @@ del paso antes de cerrar la primera hora).
   el golden master no tiene ninguno.
 - Pruebas: `tests/core/test_outdoor_metric.py` (la prueba de la ATG con la definición nueva, el código EMS, AddAccis,
   modify_accis, EnergyPlus con los dos backends) y `tests/core/test_schedule_files.py`.
+
+## 34. El rango constante del disconfort de largo plazo, el método C y `Table` por pasos de tiempo (H3)
+
+Tarea H3 de la revisión v04 (hallazgos C2-1 y D1-1; decisión 5 de su §6 y veredicto #20).
+
+**Antes.** Los contadores de largo plazo del ACCIS (C2) comparaban la temperatura operativa con las consignas sin la
+tolerancia (`AHSTnoTol` y `ACSTnoTol`): miden cuánto falla el control en mantener su banda, que con el modo de confort
+3, las consignas estáticas, el modelo personalizado o el mínimo y el máximo no es la de una norma, y dos modelos con
+normas distintas no se comparan con ellas. El método C (horas ponderadas por el PPD) no se contaba. En D1,
+`ppd_weighted_hours` dejaba dentro del rango un PMV igual al límite superior. `Table` con
+`source_frequency='timestep'` y `standard_outputs=True` descartaba todas las salidas (buscaba `Timestep` en los
+nombres de las columnas, que EnergyPlus escribe `(TimeStep)`), y al agrupar por horas tomaba los pasos de 00:10 a 00:50
+por la hora anterior.
+
+**Ahora.**
+
+- `long_term_range` (en `AddAccis`, `add_accis_to_idf`, `set_long_term_discomfort_code` y las clases del
+  paramétrico), con `report_long_term_discomfort=True`: `None` (por defecto, como antes) o `('en16798', categoría)` /
+  `('en16798', categoría, tipo de edificio)`, el mínimo de calefacción y el máximo de refrigeración de la tabla B.2 de
+  EN 16798-1:2019 (`accim.constants.EN16798_TABLE_B2`); en las categorías III y IV el tipo de edificio es obligatorio
+  (sus mínimos difieren; provisional en `notes/questions.md`). Los programas `CountLongTermDiscomfort_<zona>` comparan
+  con esos números (`long_term_limits`, `zone_lines(zona, límites)`); `model_long_term_limits` los lee de los
+  programas y la comprobación 6 de `verify_accim_simulation` los usa. La GUI tiene la lista de los rangos de la tabla
+  B.2 bajo la casilla del disconfort de largo plazo.
+- El método C en las consignas basadas en el PMV (`report_ppd_weighted_hours=True` en `apply_apmv_setpoints`,
+  `apply_epmv_setpoints`, `apply_pmv_setpoints` y `apply_pmv_index_setpoints`): el programa
+  `count_ppd_weighted_hours_<zona>`, tras los contadores de horas de la zona, y la salida sumada
+  `PPD Weighted Hours_<zona>`: en cada paso ocupado, PPD(PMV)/PPD(PMVlímite) (fórmula (5) de ISO 7730:2025, en Erl
+  con `@Exp` y variables locales, sin un menos tras `*`) si el PMV del paso anterior está en el límite superior o por
+  encima, o por debajo del inferior, por la duración del paso. Los límites son las consignas del índice sin
+  tolerancias en la escala del PMV, con la inversa del índice con la que los termostatos reciben las suyas
+  (`ppd_weighted_hours_lines`, `PPD_WEIGHTED_HOURS_OUTPUTS`, `zone_outputs(..., ppd_weighted_hours=True)`;
+  provisional en `notes/questions.md`). Sin el argumento, los IDF no cambian. El reductor `ppd_weighted_hours` del
+  paramétrico la lee; en el paramétrico, `report_long_term_discomfort=True` con `'apmv setpoints'` y
+  `'epmv setpoints'` la añade (antes no hacía nada con ellos) y `long_term_range` da un `ValueError`. `Table` la llama
+  `<zona>_PPD Weighted Hours (h)`; la comprobación 3 de `verify_accim_simulation`, `Check3_PpdWeightedHours`; la GUI
+  tiene su casilla en la pestaña de las consignas basadas en el PMV.
+- `ppd_weighted_hours` de D1: rango semiabierto, PMVlímite,inferior ≤ PMV < PMVlímite,superior (veredicto #20).
+- `Table` compara la frecuencia de las columnas sin mayúsculas, da a cada hora los pasos que terminan en ella (los de
+  00:10 a 01:00 son la hora 00:00–01:00), comprueba la agregación con los pasos de cada hora y, con
+  `frequency='timestep'`, solo resta una hora a los pasos que terminan una hora. La sección 4.7.4 explica por qué sus
+  indicadores no son los contadores del EMS (la temperatura del paso anterior, por paso).
+- Páginas de la API de `accim.sim.ems.long_term_discomfort` y `accim.sim.schedule_files`, que faltaban.
+- Pruebas: `tests/core/test_long_term_discomfort_counters.py` (los límites, el Erl frente a D1, los modelos, AddAccis y
+  EnergyPlus con los dos backends y la comprobación 6), `tests/core/test_ppd_weighted_hours.py` (nueva: el Erl frente a
+  D1 con los tres índices y sus opciones, los modelos, EnergyPlus con los dos backends y la comprobación 3),
+  `tests/core/test_long_term_discomfort.py` (el método C semiabierto y `Table` por pasos),
+  `tests/core/test_table_pmv_index.py`, `tests/core/test_gui.py` y
+  `tests/parametric_and_optimisation/test_objectives.py`.

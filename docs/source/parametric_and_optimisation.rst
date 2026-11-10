@@ -348,8 +348,15 @@ setpoints without the tolerance, see :ref:`long-term-discomfort-outputs`): Metho
 above the cooling setpoint and below the heating setpoint (``Hours Above Upper Limit_<zone>`` and
 ``Hours Below Lower Limit_<zone>``), and Method B, their degree hours (``Degree Hours Above Upper
 Limit_<zone>`` and ``Degree Hours Below Lower Limit_<zone>``), with the sums of the zones as
-``..._Building``. ``hours_outside_range`` and ``degree_hours`` sum them, and check that the output is
-one of them:
+``..._Building``. ``long_term_range=('en16798', category)`` (or ``('en16798', category,
+building_type)``) replaces the setpoints with the constant limits of EN 16798-1:2019, Table B.2, the
+same for all the comfort standards of the plan, so that the evaluations with different comfort models
+are compared with the same range. With ``'apmv setpoints'`` and ``'epmv setpoints'``,
+``report_long_term_discomfort=True`` adds the PPD-weighted hours of each zone instead (Method C,
+``PPD Weighted Hours_<zone>``, :ref:`ppd-weighted-hours`), which
+:func:`~accim.parametric_and_optimisation.objectives.ppd_weighted_hours` reads (``long_term_range``
+raises a ``ValueError`` with them). ``hours_outside_range`` and ``degree_hours`` sum them, and check that
+the output is one of them:
 
 .. code-block:: python
 

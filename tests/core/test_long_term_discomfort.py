@@ -75,14 +75,17 @@ def test_method_a_counts_the_occupied_hours_outside_the_range():
 def test_method_c_weights_the_hours_with_the_ppd():
     pmv = pd.Series([-1.0, -0.5, 0.0, 0.5, 0.7, 1.0])
     result = ltd.ppd_weighted_hours(pmv, -0.5, 0.5)
-    # wf = PPD(PMV)/PPD(PMVlimit) outside the range, 0 within it (the PMV of the limits included)
+    # wf = PPD(PMV)/PPD(PMVlimit) outside the range, 0 within it: PMVlimit,lower <= PMV < PMVlimit,upper, as the literal
+    # text of Annex D (verdict #20 of the review of 1.2.0), so the PMV of the upper limit is in the warm period, wf = 1
     assert result['cold_h'] == pytest.approx(_ppd(-1) / _ppd(-0.5), abs=1e-12)
-    assert result['hot_h'] == pytest.approx((_ppd(0.7) + _ppd(1.0)) / _ppd(0.5), abs=1e-12)
+    assert result['hot_h'] == pytest.approx(1 + (_ppd(0.7) + _ppd(1.0)) / _ppd(0.5), abs=1e-12)
+    assert ltd.ppd_weighted_hours(pd.Series([0.5]), -0.5, 0.5) == {'hot_h': 1.0, 'cold_h': 0.0}
+    assert ltd.ppd_weighted_hours(pd.Series([-0.5, 0.4999]), -0.5, 0.5) == {'hot_h': 0.0, 'cold_h': 0.0}
     # The PPD weights are larger than the degrees of the PMV beyond the limits
     assert result['hot_h'] > 2
     occupied = pd.Series([True, True, True, True, False, True])
     assert ltd.ppd_weighted_hours(pmv, -0.5, 0.5, occupied, timestep_h=2)['hot_h'] == pytest.approx(
-        2 * _ppd(1.0) / _ppd(0.5), abs=1e-12)
+        2 * (1 + _ppd(1.0) / _ppd(0.5)), abs=1e-12)
 
 
 def test_the_acceptable_deviations_of_table_e1():
@@ -230,3 +233,59 @@ def test_the_table_checks_the_indicators(tmp_path, monkeypatch):
     # The other tables do not have the attribute, so their files do not change
     table = _table(tmp_path, monkeypatch, long_term_indicators=False)
     assert not hasattr(table, 'long_term_indicators') and 'long_term_indicators' not in table._json_content()
+
+
+def _timestep_csv(path, steps=6, hours=2):
+    """A CSV file of timestep outputs, with the names that EnergyPlus gives their columns ('[C](TimeStep)'), of two
+    hours: the operative temperature, the setpoints without the tolerance and the occupied hours of the zones."""
+    rows = steps * hours
+    stamps = [f' 01/01  {(n + 1) * 60 // steps // 60:02d}:{(n + 1) * 60 // steps % 60:02d}:00' for n in range(rows)]
+    columns = {'Environment:Site Outdoor Air Drybulb Temperature [C](TimeStep)': [10.0 + n for n in range(rows)]}
+    values = {}
+    for number, target in enumerate(resolve_targets(BUILDING)):
+        suffix, zone = target.ems_suffix, target.zone_name.upper()
+        temperature = [20.0 + number + 0.5 * n for n in range(rows)]
+        occupied = [1 / steps if n % steps >= 2 else 0.0 for n in range(rows)]
+        columns.update({
+            f'EMS:Comfortable Hours_No Applicability_{suffix} [H](TimeStep)': [0.0] * rows,
+            f'EMS:Adaptive Cooling Setpoint Temperature_No Tolerance_{suffix} [C](TimeStep)': [24.0] * rows,
+            f'EMS:Adaptive Heating Setpoint Temperature_No Tolerance_{suffix} [C](TimeStep)': [21.0] * rows,
+            f'EMS:Occupied Hours_{suffix} [H](TimeStep)': occupied,
+            f'{zone}:Zone Operative Temperature [C](TimeStep)': temperature,
+        })
+        values[target.zone_name] = (temperature, occupied)
+    lines = [','.join(['Date/Time', *columns])]
+    lines += [','.join([stamp, *(str(v[n]) for v in columns.values())]) for n, stamp in enumerate(stamps)]
+    path.write_text('\n'.join(lines) + '\n', encoding='utf-8')
+    return stamps, values
+
+
+def test_the_table_of_timestep_outputs(tmp_path, monkeypatch, capsys):
+    # The P1 entry of TODO.md (finding D1-1 of the review of 1.2.0): EnergyPlus names the columns of the timestep
+    # outputs '(TimeStep)', which the standard outputs did not find, and labels each timestep with its end, so the
+    # timesteps 00:10 to 01:00 are the first hour
+    stamps, values = _timestep_csv(tmp_path / CSV_NAME)
+    assert stamps[:2] == [' 01/01  00:10:00', ' 01/01  00:20:00'] and stamps[5] == ' 01/01  01:00:00'
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(accim.sim.accis, 'load_idf', lambda idf_path: BUILDING)
+    arguments = dict(datasets=[CSV_NAME], source_frequency='timestep', frequency_agg_func='sum',
+                     standard_outputs=True, level=['building'], level_agg_func=['sum'], level_excluded_zones=[],
+                     normalised_energy_units=False, energy_units_in_kwh=False, idf_path='model.idf')
+    table = Table(frequency='hourly', long_term_indicators=True, **arguments)
+    assert table.occupied_zone_list == ['Block1:Zone1', 'Block1:Zone2']
+    # The hours as those of the hourly outputs (Table numbers them by their beginning: 01:00:00 is the hour 00)
+    assert list(table.df['Hour']) == ['00', '01'] and list(table.df['Minute']) == ['00', '00']
+    for zone, (temperature, occupied) in values.items():
+        operative = table.df[f'{zone}_Zone Operative Temperature (°C)'].tolist()
+        assert operative == pytest.approx([np.mean(temperature[:6]), np.mean(temperature[6:])])
+        hours = table.df[[c for c in table.df.columns if c.upper().startswith(f'EMS:OCCUPIED HOURS_{zone.upper()}')]]
+        assert hours.iloc[:, 0].tolist() == pytest.approx([sum(occupied[:6]), sum(occupied[6:])])
+    assert 'have not been correctly aggregated' not in capsys.readouterr().out
+    # The indicators of the hourly means: the second hour is above 24 °C in both zones
+    row = table.long_term_indicators.iloc[0]
+    assert row['Block1:Zone1_Occupied Hours (h)'] == pytest.approx(4 / 3)
+    assert row['Block1:Zone1_Hours Above Upper Limit (h)'] == pytest.approx(2 / 3)
+    # The timesteps keep their rows with frequency 'timestep', in the hour that they are part of (00:10 to 01:00, the
+    # hour 00; before, 00:10 to 00:50 got the hour -1)
+    table = Table(frequency='timestep', **arguments)
+    assert len(table.df) == 12 and list(table.df['Hour']) == ['00'] * 6 + ['01'] * 6

@@ -25,6 +25,12 @@ the PMV of the zone).
 
 :func:`accim.sim.apmv.apply_apmv_setpoints`, :func:`accim.sim.apmv.apply_epmv_setpoints` and
 :func:`accim.sim.apmv.apply_pmv_setpoints` apply them with the arguments of each index.
+
+With ``report_ppd_weighted_hours=True`` (decision 5 of section 6 of the review of accim 1.2.0), each zone also counts
+the PPD-weighted hours of Method C of CEN/TR 16798-2:2019, Annex D (:func:`ppd_weighted_hours_lines`), which the models
+of the ACCIS with temperature setpoints do not calculate (they have no PMV): the output ``PPD Weighted Hours_<zone>``
+(:data:`PPD_WEIGHTED_HOURS_OUTPUTS`), which the reducer
+:func:`accim.parametric_and_optimisation.objectives.ppd_weighted_hours` reads.
 """
 
 import numbers
@@ -48,6 +54,8 @@ __all__ = [
     'METABOLIC_CORRECTION_OUTPUTS',
     'PMV_INDICES',
     'PMV_SETPOINT_SCHEDULES',
+    'PPD_WEIGHTED_HOURS_OUTPUTS',
+    'PPD_WEIGHTED_HOURS_PROGRAM',
     'PmvIndex',
     'apply_pmv_index_setpoints',
     'arguments_table',
@@ -56,6 +64,7 @@ __all__ = [
     'get_adaptive_coefficients',
     'get_pmv_index',
     'metabolic_correction_names',
+    'ppd_weighted_hours_lines',
     'program_names',
     'resolve_adaptive_coefficients',
     'zone_outputs',
@@ -87,6 +96,11 @@ PMV_SETPOINT_SCHEDULES = ('PMV_H_SP', 'PMV_C_SP')
 #: The EMS output variables of the metabolic correction of the ePMV, ``<output>_<People>`` (one per People object), and
 #: their units: the factor of the activity level and the corrected activity level (W/person)
 METABOLIC_CORRECTION_OUTPUTS = (('Metabolic Correction Factor', ''), ('Corrected Activity Level', 'W'))
+#: The EMS output of Method C of CEN/TR 16798-2:2019, Annex D, of each zone (``report_ppd_weighted_hours``), as in
+#: :func:`zone_outputs`: {output: (prefix of its EMS variable, units, type of data)}
+PPD_WEIGHTED_HOURS_OUTPUTS = {'PPD Weighted Hours': ('PpdWeightedHours', 'H', 'Summed')}
+#: The program of Method C of each zone is this prefix and the suffix of the zone
+PPD_WEIGHTED_HOURS_PROGRAM = 'count_ppd_weighted_hours_'
 
 
 @dataclass(frozen=True)
@@ -577,12 +591,14 @@ def get_pmv_index(index: str) -> PmvIndex:
     return pmv_index
 
 
-def zone_outputs(pmv_index: PmvIndex) -> Dict[str, Tuple[str, str, str]]:
+def zone_outputs(pmv_index: PmvIndex, ppd_weighted_hours: bool = False) -> Dict[str, Tuple[str, str, str]]:
     """The EMS output variables that the setpoints of an index report for each zone, ``<output>_<zone>``: the
     coefficient of the season (if the index has one), the index of the zone, its setpoints with and without the
     tolerances, and the hour counters.
 
     :param pmv_index: The index (:data:`PMV_INDICES`).
+    :param ppd_weighted_hours: True to add that of Method C, :data:`PPD_WEIGHTED_HOURS_OUTPUTS`
+        (``report_ppd_weighted_hours``).
     :return: A dictionary {output: (prefix of its EMS variable, units, type of data)}, in the order in which they are
         added to the model.
     """
@@ -598,7 +614,69 @@ def zone_outputs(pmv_index: PmvIndex) -> Dict[str, Tuple[str, str, str]]:
         f'{name} Cooling Setpoint No Tolerance': (f'{name}_C_SP_noTol', '', 'Averaged'),
     })
     outputs.update({output: (variable, 'H', 'Summed') for output, variable in _COUNTERS})
+    if ppd_weighted_hours:
+        outputs.update(PPD_WEIGHTED_HOURS_OUTPUTS)
     return outputs
+
+
+def _ppd_lines(pmv: str, ppd: str, suffix: str) -> List[str]:
+    """The Erl lines that set ``ppd`` to the PPD of the PMV ``pmv`` (Erl variables), PPD = 100 − 95·exp(−0.03353·PMV⁴
+    − 0.2179·PMV²) (ISO 7730:2025, clause 5, formula (5), as
+    :func:`accim.data.postprocessing.long_term_discomfort.ppd_from_pmv`), with local variables: Erl evaluates the
+    operators by groups ('*' before '-' and '+') and rejects a minus sign after '*', so the exponent is built in
+    steps."""
+    square, fourth, exponent = (f'ppd_{part}_{suffix}' for part in ('pmv2', 'pmv4', 'exp'))
+    return [
+        f'set {square} = {pmv}*{pmv}',
+        f'set {fourth} = {square}*{square}',
+        f'set {exponent} = 0.03353*{fourth}+0.2179*{square}',
+        f'set {exponent} = 0-{exponent}',
+        f'set {exponent} = @Exp {exponent}',
+        f'set {ppd} = 100-95*{exponent}',
+    ]
+
+
+def ppd_weighted_hours_lines(pmv_index: PmvIndex, suffix: str, options: Mapping[str, Any]) -> List[str]:
+    """The lines of the program ``count_ppd_weighted_hours_<zone>``: the PPD-weighted hours of the zone in the
+    timestep, Method C of CEN/TR 16798-2:2019, Annex D, as
+    :func:`accim.data.postprocessing.long_term_discomfort.ppd_weighted_hours` calculates them (decision 5 of section 6
+    of the review of accim 1.2.0).
+
+    The range is that of the setpoints of the index without the tolerances (``<index>_H_SP_noTol_<zone>`` and
+    ``<index>_C_SP_noTol_<zone>``, ``pmv_heating_setpoint`` and ``pmv_cooling_setpoint``) on the scale of the PMV: the
+    PMV whose index is each setpoint, the inverse of the index (:attr:`PmvIndex.inverse`, with which the thermostats
+    get their PMV setpoints; the setpoints themselves with the PMV), so that the PMV of the zone (``PMV_<zone>``, the
+    PMV that the EMS reads, of the previous timestep) is outside it when the index is outside the setpoints. In each
+    timestep with occupants, the weighting factor is wf = PPD(PMV)/PPD(PMVlimit) (ISO 7730:2025, formula (5)) in the
+    warm period, PMV ≥ PMVlimit,upper, and in the cold period, PMV < PMVlimit,lower, and 0 within the range (a PMV equal
+    to the upper limit is outside it, with wf = 1, as the literal text of Annex D writes it, verdict #20 of the
+    review); ``PpdWeightedHours_<zone>`` is wf times the length of the timestep (``ZoneTimeStep``), and 0 without
+    occupants.
+
+    :param pmv_index: The index of the setpoints (:data:`PMV_INDICES`).
+    :param suffix: The suffix of the zone in the EMS objects.
+    :param options: The options of the index (the inverse of the aPMV with ``adaptive_coefficient_by='pmv_sign'``
+        takes the coefficient of each side of the scale).
+    """
+    name = pmv_index.name
+    counter = f'{PPD_WEIGHTED_HOURS_OUTPUTS["PPD Weighted Hours"][0]}_{suffix}'
+    ppd, ppd_limit, lower, upper = (f'ppd_{part}_{suffix}' for part in ('pmv', 'limit', 'lower', 'upper'))
+    return [
+        f'set {counter} = 0',
+        f'if People_Occupant_Count_{suffix} > 0',
+        *_ppd_lines(f'PMV_{suffix}', ppd, suffix),
+        f'set {upper} = {pmv_index.inverse("C", f"{name}_C_SP_noTol_{suffix}", suffix, options)}',
+        f'if PMV_{suffix} >= {upper}',
+        *_ppd_lines(upper, ppd_limit, suffix),
+        f'set {counter} = {ppd}/{ppd_limit}*ZoneTimeStep',
+        'endif',
+        f'set {lower} = {pmv_index.inverse("H", f"{name}_H_SP_noTol_{suffix}", suffix, options)}',
+        f'if PMV_{suffix} < {lower}',
+        *_ppd_lines(lower, ppd_limit, suffix),
+        f'set {counter} = {counter}+{ppd}/{ppd_limit}*ZoneTimeStep',
+        'endif',
+        'endif',
+    ]
 
 
 def _resolve_targets(building: IDF) -> List[Dict[str, Any]]:
@@ -667,6 +745,7 @@ def apply_pmv_index_setpoints(
         default_heating_setpoint_tolerance_cooling_season: float = 0.1,
         default_heating_setpoint_tolerance_heating_season: float = 0.1,
         verbose: bool = True,
+        report_ppd_weighted_hours: bool = False,
 ) -> IDF:
     """
     Applies setpoints based on an index derived from the PMV of Fanger (see :data:`PMV_INDICES`).
@@ -704,12 +783,18 @@ def apply_pmv_index_setpoints(
     :param default_pmv_cooling_setpoint: The cooling setpoint of the zones missing in the dict of
         ``pmv_cooling_setpoint`` (and the other ``default_*`` arguments, for the other arguments).
     :param verbose: If True, prints the objects that are added. The warnings are always issued.
+    :param report_ppd_weighted_hours: True to count the PPD-weighted hours of each zone, Method C of CEN/TR
+        16798-2:2019, Annex D, with the setpoints of the index without the tolerances as the range (the program
+        ``count_ppd_weighted_hours_<zone>``, :func:`ppd_weighted_hours_lines`, and the summed output
+        ``PPD Weighted Hours_<zone>``, in hours); False (the default) for none, as before accim 1.2.0.
     :return: The modified IDF object.
-    :raises ValueError: If the index or its parameters are not valid, the model has the setpoints of another index, or,
-        with the aPMV and ``adaptive_coefficient_by='pmv_sign'``, a cooling setpoint is negative or a heating setpoint
-        positive (:func:`check_pmv_sign_setpoints`).
+    :raises ValueError: If the index or its parameters are not valid, ``report_ppd_weighted_hours`` is not a boolean,
+        the model has the setpoints of another index, or, with the aPMV and ``adaptive_coefficient_by='pmv_sign'``, a
+        cooling setpoint is negative or a heating setpoint positive (:func:`check_pmv_sign_setpoints`).
     """
     pmv_index = get_pmv_index(index)
+    if not isinstance(report_ppd_weighted_hours, bool):
+        raise ValueError(f'report_ppd_weighted_hours must be True or False, not {report_ppd_weighted_hours!r}.')
     values, options = _index_values(pmv_index, index_parameters)
     if pmv_index.key == 'apmv' and _by_pmv_sign(options):
         # Each setpoint is converted with the coefficient of its side of the scale (verdict #4 of the review of 1.2.0)
@@ -764,22 +849,24 @@ def apply_pmv_index_setpoints(
     # A. Sensors: the PMV ('Zone Thermal Comfort Fanger Model PMV') and the occupants ('People Occupant Count').
     _add_sensors(building, target_data, verbose)
     # B. Global variables: the arguments, the setpoints, the index, the hour counters...
-    _add_global_variables(building, pmv_index, ems_suffixes, verbose, list(instance_counts))
+    _add_global_variables(building, pmv_index, ems_suffixes, verbose, list(instance_counts),
+                          report_ppd_weighted_hours)
     # C. Actuators: the values of the setpoint schedules of each zone.
     _add_actuators(building, target_data, verbose)
-    # D. Programs: the cooling season, the arguments of each zone, its setpoints, its index and its hours.
+    # D. Programs: the cooling season, the arguments of each zone, its setpoints, its index and its hours (and its
+    # PPD-weighted hours).
     _add_programs(building, pmv_index, options, ems_suffixes, df_arguments, cooling_season_start, cooling_season_end,
-                  verbose, instance_counts)
+                  verbose, instance_counts, report_ppd_weighted_hours)
     # The EMS objects of the index itself (the metabolic correction of the ePMV), whose programs run after those of
     # the zones
-    index_programs = program_names(pmv_index, ems_suffixes, instance_counts)
+    index_programs = program_names(pmv_index, ems_suffixes, instance_counts, report_ppd_weighted_hours)
     if pmv_index.add_objects is not None:
         index_programs += pmv_index.add_objects(building, target_data, options, verbose)
     # E. Program calling managers: the programs run at the beginning of each timestep (BeginTimestepBeforePredictor).
     _add_program_calling_managers(building, verbose, index_programs)
     # F. Outputs: the EMS variables and the standard variables.
     _add_outputs(building, pmv_index, output_frequencies, other_pmv_related_outputs, ems_suffixes, unique_zones,
-                 verbose)
+                 verbose, report_ppd_weighted_hours)
 
     return building
 
@@ -1081,7 +1168,7 @@ def _add_actuators(building: IDF, target_data: List[Dict], verbose: bool):
 
 
 def _add_global_variables(building: IDF, pmv_index: PmvIndex, suffixes: List[str], verbose: bool,
-                          averaged_suffixes: Optional[List[str]] = None):
+                          averaged_suffixes: Optional[List[str]] = None, ppd_weighted_hours: bool = False):
     """
     Adds EnergyManagementSystem:GlobalVariable objects.
     These variables store intermediate calculation results (like the index of each zone)
@@ -1093,6 +1180,7 @@ def _add_global_variables(building: IDF, pmv_index: PmvIndex, suffixes: List[str
     :param verbose: If True, prints success messages. Warnings are always printed.
     :param averaged_suffixes: Suffixes of the targets of zones with several occupant instances,
         whose PMV is a global variable calculated from the PMV of the instances.
+    :param ppd_weighted_hours: True to add the counters of Method C (``PpdWeightedHours_<zone>``).
     """
     # The prefixes of the variables of each zone (the names of the EMS variables of the aPMV keep those of accim 0.x).
     # The index of the zone is a global variable unless it is the PMV, which is the sensor PMV_<zone>.
@@ -1120,6 +1208,9 @@ def _add_global_variables(building: IDF, pmv_index: PmvIndex, suffixes: List[str
     # 2. Per-Target Variables (Specific to each Zone/Space), and the PMV of the zones with several instances
     per_target = [f'{prefix}_{suffix}' for prefix in prefixes for suffix in suffixes]
     per_target += [f'PMV_{suffix}' for suffix in (averaged_suffixes or [])]
+    if ppd_weighted_hours:
+        per_target += [f'{variable}_{suffix}' for variable, _, _ in PPD_WEIGHTED_HOURS_OUTPUTS.values()
+                       for suffix in suffixes]
     for gv in per_target:
         if gv not in existing:
             building.newidfobject('EnergyManagementSystem:GlobalVariable', Erl_Variable_1_Name=gv)
@@ -1131,7 +1222,7 @@ def _add_global_variables(building: IDF, pmv_index: PmvIndex, suffixes: List[str
 
 def _add_programs(building: IDF, pmv_index: PmvIndex, options: Mapping[str, Any], suffixes: List[str],
                   df_arguments: pd.DataFrame, cool_start: int, cool_end: int, verbose: bool,
-                  instance_counts: Optional[Dict[str, int]] = None):
+                  instance_counts: Optional[Dict[str, int]] = None, ppd_weighted_hours: bool = False):
     """
     Adds EnergyManagementSystem:Program objects.
     This contains the actual Erl (EnergyPlus Runtime Language) code that executes the control logic.
@@ -1148,6 +1239,8 @@ def _add_programs(building: IDF, pmv_index: PmvIndex, options: Mapping[str, Any]
         ({suffix: number}). The PMV of these zones is the average of the PMV of their instances,
         weighted by their occupants (the simple average while the zone is unoccupied), as the
         PeopleAverage method of the Fanger thermostats.
+    :param ppd_weighted_hours: True to add the programs of Method C (:func:`ppd_weighted_hours_lines`), after the
+        hour counters of each zone.
     """
     instance_counts = instance_counts or {}
     name = pmv_index.name
@@ -1279,15 +1372,20 @@ def _add_programs(building: IDF, pmv_index: PmvIndex, options: Mapping[str, Any]
             f'set discomfhour_{suffix} = discomfhour_cold_{suffix} + discomfhour_heat_{suffix}',
         ])
 
+        # --- PROGRAM 7: The PPD-weighted hours (Method C of CEN/TR 16798-2) ---
+        if ppd_weighted_hours:
+            add(f'{PPD_WEIGHTED_HOURS_PROGRAM}{suffix}', ppd_weighted_hours_lines(pmv_index, suffix, options))
+
 
 def program_names(pmv_index: PmvIndex, suffixes: Sequence[str],
-                  instance_counts: Optional[Mapping[str, int]] = None) -> List[str]:
+                  instance_counts: Optional[Mapping[str, int]] = None, ppd_weighted_hours: bool = False) -> List[str]:
     """The names of the EMS programs of the setpoints of an index (those of :func:`apply_pmv_index_setpoints`, without
     those of :attr:`PmvIndex.add_objects`).
 
     :param pmv_index: The index (see :func:`get_pmv_index`).
     :param suffixes: The suffixes of the zones in the EMS objects.
     :param instance_counts: The number of occupant instances of the zones with several, by suffix.
+    :param ppd_weighted_hours: True with the programs of Method C (``report_ppd_weighted_hours``).
     """
     name = pmv_index.name
     names = ['set_cooling_season_input_data', 'set_cooling_season']
@@ -1298,6 +1396,8 @@ def program_names(pmv_index: PmvIndex, suffixes: Sequence[str],
         if pmv_index.monitor is not None:
             names.append(f'monitor_{name}_{suffix}')
         names.append(f'count_{name}_comfort_hours_{suffix}')
+        if ppd_weighted_hours:
+            names.append(f'{PPD_WEIGHTED_HOURS_PROGRAM}{suffix}')
     return names
 
 
@@ -1327,7 +1427,8 @@ def _add_program_calling_managers(building: IDF, verbose: bool, index_programs: 
 
 
 def _add_outputs(building: IDF, pmv_index: PmvIndex, output_frequencies: Sequence[str],
-                 other_pmv_related_outputs: bool, suffixes: List[str], unique_zones: List[str], verbose: bool):
+                 other_pmv_related_outputs: bool, suffixes: List[str], unique_zones: List[str], verbose: bool,
+                 ppd_weighted_hours: bool = False):
     """
     Adds Output:Variable objects to report EMS calculations and standard results.
 
@@ -1338,9 +1439,10 @@ def _add_outputs(building: IDF, pmv_index: PmvIndex, output_frequencies: Sequenc
     :param suffixes: List of sanitized suffixes for EMS variables.
     :param unique_zones: List of RAW zone names for Schedule outputs.
     :param verbose: If True, prints success messages. Warnings are always printed.
+    :param ppd_weighted_hours: True with the output of Method C (``PPD Weighted Hours_<zone>``).
     """
     # 1. Define EMS Output Variables (Mapping internal vars to output names)
-    for key, val in zone_outputs(pmv_index).items():
+    for key, val in zone_outputs(pmv_index, ppd_weighted_hours).items():
         for suffix in suffixes:
             out_name = f'{key}_{suffix}'
             if building.getobject('EnergyManagementSystem:OutputVariable', out_name) is None:

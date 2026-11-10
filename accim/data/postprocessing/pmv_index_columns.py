@@ -10,7 +10,9 @@ The setpoints of the indices derived from the PMV (:mod:`accim.sim.pmv_index`, a
 - for each occupied zone, the EMS outputs of :func:`accim.sim.pmv_index.zone_outputs`: the coefficient of the season
   (``Adaptive Coefficient_<zone>`` or ``Expectancy Factor_<zone>``), the index of the zone (``aPMV_<zone>``,
   ``ePMV_<zone>`` or ``PMV_<zone>``), the setpoints of the index with and without the tolerances
-  (``<index> Heating Setpoint_<zone>``...) and the hour counters (``Comfortable Hours_<zone>``...);
+  (``<index> Heating Setpoint_<zone>``...), the hour counters (``Comfortable Hours_<zone>``...) and, with
+  ``report_ppd_weighted_hours``, the PPD-weighted hours of Method C of CEN/TR 16798-2 (``PPD Weighted Hours_<zone>``,
+  :data:`accim.sim.pmv_index.PPD_WEIGHTED_HOURS_OUTPUTS`), which Table names ``<zone>_PPD Weighted Hours (h)``;
 - the PMV setpoints of the thermal comfort thermostats, the schedules ``PMV_H_SP_<zone>`` and ``PMV_C_SP_<zone>``;
 - the mean air temperature of the zones (``Zone Mean Air Temperature``), with the other outputs of the comfort of the
   zones;
@@ -68,7 +70,7 @@ def _zone_outputs() -> Dict[str, Tuple[str, bool, bool]]:
 
     outputs = {}
     for pmv_index in PMV_INDICES.values():
-        for output, (_, units, data_type) in zone_outputs(pmv_index).items():
+        for output, (_, units, data_type) in zone_outputs(pmv_index, ppd_weighted_hours=True).items():
             name = _table_name(pmv_index, output, units)
             outputs[output] = (name, data_type == 'Averaged', bool(name))
     for output, units in METABOLIC_CORRECTION_OUTPUTS:

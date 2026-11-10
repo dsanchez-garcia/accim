@@ -492,6 +492,21 @@ def _check_long_term_discomfort(report_long_term_discomfort: Any, setpoint_type:
     return report_long_term_discomfort
 
 
+def _check_long_term_range(long_term_range: Any, report_long_term_discomfort: bool) -> Any:
+    """Check ``long_term_range`` (:func:`accim.sim.ems.long_term_discomfort.long_term_limits`), which needs
+    ``report_long_term_discomfort``.
+
+    :raises ValueError: If it is not valid, or it is given without ``report_long_term_discomfort``.
+    """
+    from accim.sim.ems.long_term_discomfort import long_term_limits
+
+    long_term_limits(long_term_range)
+    if long_term_range is not None and not report_long_term_discomfort:
+        raise ValueError('long_term_range is the range of the long-term discomfort: it needs '
+                         'report_long_term_discomfort=True.')
+    return None if long_term_range is None else tuple(long_term_range)
+
+
 def _check_outdoor_metric(metric: Any, alpha: Any, days: Any, zone_arguments: Dict[Any, Dict[str, Any]],
                           epw: Optional[Union[str, os.PathLike]]) -> Optional[str]:
     """Check the arguments of the outdoor metric of the custom model, of all the zones and of those of
@@ -716,6 +731,13 @@ class AddAccis:
         ``output_type`` but 'custom', which keeps the outputs chosen. The parametric and optimisation module reads them
         as objectives and constraints (:mod:`accim.parametric_and_optimisation.objectives`). False (the default) for
         none, as before accim 1.2.0. It needs ``setpoint_type`` 'temperature'.
+    :param long_term_range: With ``report_long_term_discomfort``, the range of the long-term discomfort: None (the
+        default) for the setpoints without the tolerance of the ACCIS (how well the control keeps its own band), or
+        ``('en16798', category)`` (1 to 4) or ``('en16798', category, building_type)`` ('residential' or 'office',
+        needed in categories III and IV) for the constant limits of EN 16798-1:2019, Table B.2, the minimum for heating
+        and the maximum for cooling of the category (20.0 and 26.0 °C in category II), so that models with different
+        comfort standards are compared with the same range (finding C2-1 of the review of accim 1.2.0;
+        :func:`accim.sim.ems.long_term_discomfort.long_term_limits`).
     :param static_heating_setpoint: The static heating setpoint (°C) of the comfort standards whose standard does not
         give it, in comfort mode 0 and out of the applicability limits in comfort mode 1: only JPN Aqilah 2025
         (comfort standard 23), whose paper gives no static setpoints (decision D2 of the brief of 1.2.0); 20.0 by
@@ -831,6 +853,7 @@ class AddAccis:
         report_hours_below: Optional[Sequence[Number]] = None,
         custom_regimes: Optional[Sequence[CustomRegime]] = None,
         report_long_term_discomfort: bool = False,
+        long_term_range: Optional[Sequence[Any]] = None,
         static_heating_setpoint: Number = STATIC_SETPOINT_DEFAULTS[0],
         static_cooling_setpoint: Number = STATIC_SETPOINT_DEFAULTS[1],
         drift_mode: Optional[str] = DRIFT_DEFAULTS['drift_mode'],
@@ -890,6 +913,7 @@ class AddAccis:
             raise ValueError("The conditions 'hvac_off' and 'hvac_on' of custom_regimes need mixed mode (script_type "
                              f"'vrf_mm' or 'ex_mm'), not {script_type!r}.")
         report_long_term_discomfort = _check_long_term_discomfort(report_long_term_discomfort, setpoint_type)
+        long_term_range = _check_long_term_range(long_term_range, report_long_term_discomfort)
         if verbose:
             _print_model_arguments(script_type, supply_air_temp_input_method, output_type, output_frequencies,
                                    energyplus_version, setpoint_type)
@@ -969,7 +993,7 @@ class AddAccis:
                               existing_hvac_radiant_setpoints=existing_hvac_radiant_setpoints)
             # The occupied hours below some temperatures, before the outputs (the standard outputs have them)
             set_hours_below_code(idf, hours_below)
-            long_term_outputs = (sum(set_long_term_discomfort_code(idf).values(), [])
+            long_term_outputs = (sum(set_long_term_discomfort_code(idf, long_term_range=long_term_range).values(), [])
                                  if report_long_term_discomfort else [])
             add_outputs(model, output_type, output_frequencies, keep_existing_outputs, outputs_dataframe, file=stem)
             if hours_below and output_type == 'simplified':
@@ -1018,7 +1042,7 @@ class AddAccis:
         self.arguments.update({k: v for k, v in vars(generation).items()})
         self.arguments.update(verbose=verbose, confirm=confirm, zone_arguments=zone_arguments, epw=epw,
                               report_hours_below=hours_below or None, custom_regimes=list(regimes) or None,
-                              report_long_term_discomfort=report_long_term_discomfort)
+                              report_long_term_discomfort=report_long_term_discomfort, long_term_range=long_term_range)
         if regimes and CUSTOM_COMFORT_STANDARD not in generation.comfort_standard and not any(
                 arguments.get('comfort_standard') == CUSTOM_COMFORT_STANDARD
                 for arguments in checked_zone_arguments.values()):
@@ -1150,6 +1174,7 @@ def add_accis_to_idf(
     existing_hvac_ideal_loads_backup: bool = False,
     existing_hvac_radiant_setpoints: bool = True,
     report_long_term_discomfort: bool = False,
+    long_term_range: Optional[Sequence[Any]] = None,
 ) -> AccimModel:
     """Add the ACCIS to an IDF object of eppy or besos (in place).
 
@@ -1164,6 +1189,9 @@ def add_accis_to_idf(
     :param energyplus_version: The EnergyPlus version of the model; None or 'auto' to take that of its IDD.
     :param report_long_term_discomfort: True to report the long-term thermal discomfort of the occupied hours of each
         zone and of the building (see :class:`AddAccis`); False (the default) for none.
+    :param long_term_range: With ``report_long_term_discomfort``, its range: None (the default) for the setpoints
+        without the tolerance, or ``('en16798', category[, building_type])`` for the constant limits of EN 16798-1,
+        Table B.2 (see :class:`AddAccis`).
     :return: The model, whose attributes give its occupied zones and windows.
     :raises ValueError: If an argument is missing or not valid.
     """
@@ -1180,6 +1208,7 @@ def add_accis_to_idf(
     output_type, output_frequencies, setpoint_type = _check_model_arguments(
         script_type, supply_air_temp_input_method, output_type, output_frequencies, setpoint_type)
     report_long_term_discomfort = _check_long_term_discomfort(report_long_term_discomfort, setpoint_type)
+    long_term_range = _check_long_term_range(long_term_range, report_long_term_discomfort)
     if verbose:
         _print_model_arguments(script_type, supply_air_temp_input_method, output_type, output_frequencies,
                                energyplus_version, setpoint_type)
@@ -1197,7 +1226,8 @@ def add_accis_to_idf(
                       existing_hvac_widen_outdoor_temperature_limits=existing_hvac_widen_outdoor_temperature_limits,
                       existing_hvac_ideal_loads_backup=existing_hvac_ideal_loads_backup,
                       existing_hvac_radiant_setpoints=existing_hvac_radiant_setpoints)
-    long_term_outputs = sum(set_long_term_discomfort_code(idf).values(), []) if report_long_term_discomfort else []
+    long_term_outputs = (sum(set_long_term_discomfort_code(idf, long_term_range=long_term_range).values(), [])
+                         if report_long_term_discomfort else [])
     add_outputs(model, output_type, output_frequencies, keep_existing_outputs, outputs_dataframe)
     if long_term_outputs and output_type == 'simplified':
         _request_outputs(idf, long_term_outputs, output_frequencies)

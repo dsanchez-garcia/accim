@@ -588,7 +588,7 @@ class AddAccisTab(_Tab):
                      'setpoint_tolerance_start', 'setpoint_tolerance_end', 'setpoint_tolerance_step', 'name_suffix',
                      *forms.CUSTOM_MODEL_FIELDS, 'custom_outdoor_metric', *forms.CUSTOM_OUTDOOR_METRIC_FIELDS, 'epw',
                      'custom_regimes', *forms.SETPOINT_LIMIT_FIELDS, *forms.STATIC_SETPOINT_FIELDS,
-                     *forms.DRIFT_FIELDS, 'report_hours_below'):
+                     *forms.DRIFT_FIELDS, 'report_hours_below', 'long_term_range'):
             self.vars[name] = tk.StringVar(value=defaults[name])
         for name in ('keep_existing_outputs', 'add_building_averages', 'debug_ems', 'report_long_term_discomfort',
                      *forms.EXISTING_HVAC_OPTIONS):
@@ -825,19 +825,23 @@ class AddAccisTab(_Tab):
                                     variable=self.vars['report_long_term_discomfort'])
         long_term.grid(row=4, column=0, columnspan=2, sticky='w')
         self.limit_widgets.append(long_term)
+        self.limit_widgets.append(_grid_combo(frame, 5, 'Range of the long-term discomfort (empty: the setpoints):',
+                                              self.vars['long_term_range'], ('', *forms.LONG_TERM_RANGE_CHOICES),
+                                              width=34))
         ttk.Label(frame, text='The heating setpoint is not lower than the minimum, and the cooling setpoint not '
                               'higher than the maximum, whatever the comfort standard and comfort mode, with and '
                               'without the tolerance (the setpoints that they bound are the minimum and the maximum). '
                               'The PMV-based setpoints have neither. '
                               'The long-term discomfort reports the occupied hours and degree hours of each zone '
                               'and of the building above the cooling setpoint and below the heating setpoint '
-                              'without the tolerance.',
-                  wraplength=760, foreground='gray25').grid(row=5, column=0, columnspan=2, sticky='w', pady=(2, 0))
+                              'without the tolerance, or outside the constant range of EN 16798-1, Table B.2, chosen '
+                              '(long_term_range), the same for all the comfort standards.',
+                  wraplength=760, foreground='gray25').grid(row=6, column=0, columnspan=2, sticky='w', pady=(2, 0))
         # The limiter of the drift of the setpoints (accim.sim.ems.drift_limiter, task F2 of block F)
-        self.drift_mode_combo = _grid_combo(frame, 6, f"{forms.DRIFT_FIELDS['drift_mode'][0]}:",
+        self.drift_mode_combo = _grid_combo(frame, 7, f"{forms.DRIFT_FIELDS['drift_mode'][0]}:",
                                             self.vars['drift_mode'], ('', 'rate', 'window'), width=10)
         self.limit_widgets.append(self.drift_mode_combo)
-        for row, name in enumerate(list(forms.DRIFT_FIELDS)[1:], start=7):
+        for row, name in enumerate(list(forms.DRIFT_FIELDS)[1:], start=8):
             self.limit_widgets.append(_grid_entry(frame, row, f'{forms.DRIFT_FIELDS[name][0]}:', self.vars[name],
                                                   width=8))
         ttk.Label(frame, text='The limiter of the drift (Parkinson, de Dear and Brager, 2020): rate, the setpoints of '
@@ -845,7 +849,7 @@ class AddAccisTab(_Tab):
                               'setpoints within T_rm_in minus and plus the distances, T_rm_in being the daily running '
                               'mean of the operative temperature of the occupied hours of the zone. It limits the '
                               'setpoints of any comfort standard, before the minimum and maximum.',
-                  wraplength=760, foreground='gray25').grid(row=12, column=0, columnspan=2, sticky='w', pady=(2, 0))
+                  wraplength=760, foreground='gray25').grid(row=13, column=0, columnspan=2, sticky='w', pady=(2, 0))
         return frame
 
     def _table_b2_chosen(self) -> None:
@@ -1025,7 +1029,7 @@ class AddAccisTab(_Tab):
             # The fields of the minimum and maximum of the setpoints, of the regimes of the custom model and of the
             # long-term discomfort are disabled
             values.update(dict.fromkeys(forms.SETPOINT_LIMIT_FIELDS, ''), custom_regimes='',
-                          report_long_term_discomfort=False, drift_mode='')
+                          report_long_term_discomfort=False, long_term_range='', drift_mode='')
         return values
 
     def state(self) -> Dict[str, Any]:
@@ -1165,7 +1169,8 @@ class ApmvTab(_Tab):
                      'adaptive_coefficients', *forms.APMV_OPTIONS, *forms.APMV_SETPOINT_FIELDS,
                      'cooling_season_start', 'cooling_season_end', *forms.PMV_INPUT_FIELDS):
             self.vars[name] = tk.StringVar(value=defaults[name])
-        for name in ('add_vrf_system', 'always_occupied', 'other_pmv_related_outputs', *forms.EPMV_OPTIONS):
+        for name in ('add_vrf_system', 'always_occupied', 'other_pmv_related_outputs', 'report_ppd_weighted_hours',
+                     *forms.EPMV_OPTIONS):
             self.vars[name] = tk.BooleanVar(value=defaults[name])
         self.frequencies = {f: tk.BooleanVar(value=f in defaults['output_frequencies'])
                             for f in forms.OUTPUT_FREQUENCIES}
@@ -1192,6 +1197,9 @@ class ApmvTab(_Tab):
                                                                            sticky='w', padx=(0, 6))
         ttk.Checkbutton(model, text='Other outputs of the PMV (Fanger PMV and PPD...)',
                         variable=self.vars['other_pmv_related_outputs']).grid(row=7, column=0, columnspan=2,
+                                                                              sticky='w')
+        ttk.Checkbutton(model, text='PPD-weighted hours, Method C of CEN/TR 16798-2 (report_ppd_weighted_hours)',
+                        variable=self.vars['report_ppd_weighted_hours']).grid(row=8, column=0, columnspan=2,
                                                                               sticky='w')
 
         setpoints = ttk.LabelFrame(body, text='Setpoints (of all the zones, except those of the table below)',

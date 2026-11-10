@@ -15,6 +15,22 @@ This log is a lightweight, session-scoped complement to the repository's
 existing tracking files — it does not replace them (see
 [[decisions.md#2026-09-13 — `notes/work-log.md` complements, not replaces, existing tracking files|the related decision]]).
 
+## 2026-11-10 — H3: the constant long-term range, Method C and Table by timestep (branch `v1.2.0`, on the server)
+
+- **Objective**: task H3 of v04 §7 (findings C2-1 and D1-1, decision 5 of §6, verdict #20): `long_term_range` with the
+  constant limits of EN 16798-1, Table B.2; Method C (the PPD-weighted hours) for the setpoints based on the PMV;
+  `Table` with `source_frequency='timestep'`; the hourly indicators of `Table` against the timestep EMS counters.
+- **Affected files**: `accim/sim/ems/long_term_discomfort.py`, `accim/sim/accis.py`, `accim/sim/pmv_index.py`,
+  `accim/sim/apmv.py`, `accim/utils/verification.py`, `accim/parametric_and_optimisation/objectives.py` and `main.py`,
+  `accim/data/postprocessing/main.py`, `long_term_discomfort.py` and `pmv_index_columns.py`, the GUI,
+  [[../docs/source/4_detailed use.md]] (4.2.6, 4.7.3, 4.7.4, 4.8.2 new, 4.6.1, 4.10), [[../CHANGELOG.md]],
+  [[../CAMBIOS_CODIGO_v1.2.0.md]] (§34), [[../DEVLOG.md]], [[../TODO.md]], [[questions.md]].
+- **Finding or decision**: Method C compares the PMV of the previous timestep with the setpoints of the index converted
+  to the scale of the PMV by the inverse of the index (as the thermostats); the building type is required for
+  categories III and IV of Table B.2 (two provisional choices in [[questions.md]]).
+- **Validation**: see the entry of H3 in [[../DEVLOG.md]] (EnergyPlus 25.1, both backends, checks 3 and 6).
+- **Next step**: H4 (the saturation of the ATHB setpoints and the rest of A4).
+
 ## 2026-11-10 — H2: T0 of te_ref_nl from the weather file (branch `v1.2.0`, on the server)
 
 - **Objective**: task H2 of v04 §7: T0 of `te_ref_nl` is the mean of the maximum and minimum of the whole day (verdict

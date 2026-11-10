@@ -212,6 +212,12 @@ EN16798_TABLE_B2_CHOICES = {
     f'{building.capitalize()}, category {_ROMAN.get(category, category)}: {minimum} / {maximum} °C': (minimum, maximum)
     for (building, category), (minimum, maximum) in EN16798_TABLE_B2.items()
 }
+#: The constant ranges of the long-term discomfort (``long_term_range`` of AddAccis, the limits of EN 16798-1, Table
+#: B.2): the label of :data:`EN16798_TABLE_B2_CHOICES` -> ``('en16798', category, building type)``.
+LONG_TERM_RANGE_CHOICES = {
+    label: ('en16798', category, building)
+    for label, (building, category) in zip(EN16798_TABLE_B2_CHOICES, EN16798_TABLE_B2)
+}
 #: The options of the existing HVAC systems (script types 'ex_ac' and 'ex_mm') that are booleans: argument -> label.
 EXISTING_HVAC_OPTIONS = {
     'existing_hvac_operative_temperature_control': 'The thermostats control the operative temperature',
@@ -279,6 +285,7 @@ ADD_ACCIS_DEFAULTS = {
     **{name: default for name, (_, default) in DRIFT_FIELDS.items()},
     'report_hours_below': '',
     'report_long_term_discomfort': False,
+    'long_term_range': '',
     **EXISTING_HVAC_DEFAULTS,
 }
 #: The initial values of the form of run_ep (``simulate``: estimate the size of the results with a simulation).
@@ -337,6 +344,7 @@ APMV_DEFAULTS = {
     'always_occupied': False,
     'output_frequencies': ['hourly'],
     'other_pmv_related_outputs': True,
+    'report_ppd_weighted_hours': False,
     'index': 'apmv',
     'adaptive_coefficients': '',
     'adaptive_coefficient_by': 'season',
@@ -781,10 +789,11 @@ def add_accis_arguments(form: Mapping[str, Any]) -> Dict[str, Any]:
         systems ('ex_ac' and 'ex_mm'), their arguments (:func:`existing_hvac_arguments`); the minimum and maximum of
         the setpoints and ``report_hours_below``, if their fields are not empty (:func:`setpoint_limit_arguments`);
         and ``report_long_term_discomfort=True`` if its box (the boolean ``report_long_term_discomfort`` of the form)
-        is checked.
+        is checked, with its ``long_term_range`` if the field ``long_term_range`` (a label of
+        :data:`LONG_TERM_RANGE_CHOICES`) is not empty.
     :raises FormError: If a value is missing or not valid, the arguments of a zone give no setpoints in some
-        output IDFs (:func:`zone_arguments_problems`), or ``report_long_term_discomfort`` is checked with the
-        PMV-based setpoints.
+        output IDFs (:func:`zone_arguments_problems`), ``report_long_term_discomfort`` is checked with the
+        PMV-based setpoints, or ``long_term_range`` is chosen without it.
     """
     _folder(form, 'the input IDFs')
     idfs = list(form.get('idfs') or [])
@@ -867,6 +876,15 @@ def add_accis_arguments(form: Mapping[str, Any]) -> Dict[str, Any]:
             raise FormError('report_long_term_discomfort: the long-term discomfort needs the adaptive setpoint '
                             'temperatures (setpoint_type temperature); uncheck it.')
         arguments['report_long_term_discomfort'] = True
+    long_term_range = str(form.get('long_term_range') or '').strip()
+    if long_term_range:
+        if long_term_range not in LONG_TERM_RANGE_CHOICES:
+            raise FormError(f'long_term_range: choose a range of EN 16798-1, Table B.2, or none, not '
+                            f'{long_term_range!r}.')
+        if not arguments.get('report_long_term_discomfort'):
+            raise FormError('long_term_range: the range of the long-term discomfort needs its box '
+                            '(report_long_term_discomfort) checked; check it or choose no range.')
+        arguments['long_term_range'] = LONG_TERM_RANGE_CHOICES[long_term_range]
     zones = zone_arguments(form.get('zone_arguments') or [])
     if zones:
         if setpoint_type != 'temperature':
@@ -1430,7 +1448,8 @@ def apmv_arguments(form: Mapping[str, Any]) -> Dict[str, Any]:
         ``supply_air_temp_input_method`` (:func:`accim.sim.apmv.add_vrf_system`), ``always_occupied``
         (:func:`accim.sim.apmv.set_zones_always_occupied`), ``apmv`` (the keyword arguments of the function of the
         index, such as :func:`accim.sim.apmv.apply_apmv_setpoints`, with the setpoints of the index
-        (:func:`index_setpoint_fields`) and, for the ePMV, the options of :data:`EPMV_OPTIONS`: each setpoint that
+        (:func:`index_setpoint_fields`), ``report_ppd_weighted_hours=True`` if its box is checked (Method C of
+        CEN/TR 16798-2) and, for the ePMV, the options of :data:`EPMV_OPTIONS`: each setpoint that
         some zones of the table change is a dictionary ``{zone: value}``, with the value of the form as its
         ``default_*`` argument, for the other zones; :func:`accim.gui.tasks.apply_apmv` gives these dictionaries the
         keys of the zones in the model) and ``pmv_inputs`` (those of :func:`accim.sim.apmv.set_pmv_input_parameters`
@@ -1458,6 +1477,8 @@ def apmv_arguments(form: Mapping[str, Any]) -> Dict[str, Any]:
                 cooling_season_start=_day(form, 'cooling_season_start'),
                 cooling_season_end=_day(form, 'cooling_season_end'),
                 verbose=True)
+    if form.get('report_ppd_weighted_hours'):
+        apmv['report_ppd_weighted_hours'] = True
     if index == 'epmv':
         apmv.update({name: bool(form.get(name)) for name in EPMV_OPTIONS})
     if index == 'apmv':

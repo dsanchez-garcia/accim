@@ -28,9 +28,10 @@ comfort status that EnergyPlus reports for each People object into a comfort
 objective that does not depend on the comfort model that accim controls.
 ``hours_outside_range`` and ``degree_hours`` read the long-term discomfort of
 the occupied hours that the ACCIS counts (Methods A and B of CEN/TR 16798-2:2019,
-Annex D, with ``report_long_term_discomfort``), and
-``deviation_constraint_bound`` gives the bound of a constraint with the
-acceptable deviations of its Annex E (Table E.1).
+Annex D, with ``report_long_term_discomfort``), ``ppd_weighted_hours`` the
+PPD-weighted hours that the setpoints based on the PMV count (Method C, with
+``report_ppd_weighted_hours``), and ``deviation_constraint_bound`` gives the
+bound of a constraint with the acceptable deviations of its Annex E (Table E.1).
 
 Examples
 --------
@@ -40,6 +41,7 @@ checked_total = checked_sum_results(result)
 series = return_time_series(result)
 hours = hours_outside_comfort(result)
 hot_hours = hours_outside_range(result)
+weighted_hours = ppd_weighted_hours(result)
 bound = deviation_constraint_bound(occupied_hours=2100, period='yearly', level='6%')
 """
 import numpy as np
@@ -255,18 +257,23 @@ def _long_term_outputs(units):
     return tuple(f'{output}_' for output, (_, output_units) in OUTPUTS.items() if output_units == units)
 
 
-def _long_term_sum(result, units, method):
-    """The checked sum of an output of the long-term discomfort of the ACCIS, after checking its name if the result
-    has it (``'EMS,<output>_<zone>'`` in the results of besos)."""
-    prefixes = _long_term_outputs(units)
+def _named_sum(result, prefixes, method, outputs):
+    """The checked sum of an output, after checking that its name, if the result has it (``'EMS,<output>_<zone>'``
+    in the results of besos), begins with one of some prefixes; ``outputs`` says which outputs they are."""
     name = getattr(result, 'name', None)
     if isinstance(name, str) and name.strip():
         variable = name.split(',', 1)[-1].strip().upper()
         if not variable.startswith(tuple(prefix.upper() for prefix in prefixes)):
             expected = ' or '.join(f'"{prefix}<zone>"' for prefix in prefixes)
-            raise ValueError(f'{method} reads the outputs {expected} (or "..._Building") of the ACCIS '
-                             f'(report_long_term_discomfort=True), not "{name}".')
+            raise ValueError(f'{method} reads the outputs {expected} {outputs}, not "{name}".')
     return checked_sum_results(result)
+
+
+def _long_term_sum(result, units, method):
+    """The checked sum of an output of the long-term discomfort of the ACCIS, after checking its name if the result
+    has it (``'EMS,<output>_<zone>'`` in the results of besos)."""
+    return _named_sum(result, _long_term_outputs(units), method,
+                      '(or "..._Building") of the ACCIS (report_long_term_discomfort=True)')
 
 
 def hours_outside_range(result):
@@ -348,6 +355,49 @@ def degree_hours(result):
     warm_degree_hours = degree_hours(result)
     """
     return _long_term_sum(result, 'Kh', 'degree_hours')
+
+
+def ppd_weighted_hours(result):
+    """Compute the PPD-weighted hours of the occupied hours of a zone with the setpoints based on the PMV.
+
+    Method C of CEN/TR 16798-2:2019, Annex D: the weighting factor is wf = PPD(PMV)/PPD(PMVlimit) in the warm period
+    (PMV ≥ PMVlimit,upper) and in the cold period (PMV < PMVlimit,lower), with the PPD of ISO 7730:2025, formula (5),
+    and 0 within the range; the indicator is the sum of wf times the time. The setpoints based on the PMV
+    (:mod:`accim.sim.pmv_index`, those of :func:`accim.sim.apmv.apply_apmv_setpoints`,
+    :func:`accim.sim.apmv.apply_epmv_setpoints` and :func:`accim.sim.apmv.apply_pmv_setpoints`) count it in each
+    timestep with ``report_ppd_weighted_hours=True``, with their setpoints without the tolerances as the range, on the
+    scale of the PMV: the EMS output ``PPD Weighted Hours_<zone>``, summed, in hours (both periods). The models of the
+    ACCIS with temperature setpoints have no PMV, so they do not count it.
+
+    Parameters
+    ----------
+    result : Any
+        BESOS result of this output, at any frequency (each value is the sum of its period).
+
+    Returns
+    -------
+    float
+        The PPD-weighted hours of the simulated period.
+
+    Raises
+    ------
+    ValueError
+        If the values are missing or not valid (see :func:`checked_sum_results`), or the result is not this output.
+
+    Usage
+    -----
+    Use it as the reducer of a VariableReader (or as the ``func`` of a row of the output readers of the parametric
+    module) of this output, whose key is ``EMS``, as an objective or as a constraint of the plans with the setpoints
+    based on the PMV ('apmv setpoints' and 'epmv setpoints', with ``report_long_term_discomfort=True``).
+
+    Examples
+    --------
+    weighted_hours = ppd_weighted_hours(result)
+    """
+    from accim.sim.pmv_index import PPD_WEIGHTED_HOURS_OUTPUTS
+
+    return _named_sum(result, tuple(f'{output}_' for output in PPD_WEIGHTED_HOURS_OUTPUTS), 'ppd_weighted_hours',
+                      'of the setpoints based on the PMV (report_ppd_weighted_hours=True)')
 
 
 def deviation_constraint_bound(occupied_hours, period='yearly', level='6%'):

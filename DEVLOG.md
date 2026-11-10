@@ -36,6 +36,69 @@ Recommended flow: track active work in `TODO.md`, move completed outcomes to `DE
 ## Entries
 
 ### 2026-11-10
+#### [done] H3: the constant long-term range, Method C and `Table` by timestep (branch `v1.2.0`)
+- Context: task H3 of v04 §7: finding C2-1 (the range of the long-term counters of the ACCIS is its own setpoints
+  without the tolerance, so models with different comfort standards are not compared with the same range), decision 5
+  of v04 §6 (Method C, the PPD-weighted hours, only for the setpoints based on the PMV, counter `PpdWeightedHours_<zone>`,
+  wf = PPD(PMV)/PPD(PMV_limit) with formula (5) of ISO 7730:2025 in Erl), verdict #20 (the half-open range of Method C)
+  and finding D1-1 (the P1 TODO of `Table` with `source_frequency='timestep'`, and the difference between its hourly
+  indicators and the EMS counters by timestep).
+- Changes: `accim.sim.ems.long_term_discomfort`: `LONG_TERM_RANGES`, `long_term_limits(long_term_range)` (None, or
+  `('en16798', category[, building_type])` → the minimum for heating and the maximum for cooling of
+  `accim.constants.EN16798_TABLE_B2`; the building type is required in categories III and IV; `ValueError` for the rest),
+  `zone_lines(zone, limits)` (the constants, written with `format_number`, instead of `AHSTnoTol`/`ACSTnoTol`),
+  `model_long_term_limits(idf)` (the range of each program) and `set_long_term_discomfort_code(..., long_term_range)`;
+  `long_term_range` in `AddAccis`, `add_accis_to_idf` (`_check_long_term_range`: `ValueError` without
+  `report_long_term_discomfort`) and the four classes of the parametric module; check 6 of `verify_accim_simulation`
+  with the limits of each program; the GUI list of the ranges of Table B.2 (`forms.LONG_TERM_RANGE_CHOICES`).
+  `accim.sim.pmv_index`: `report_ppd_weighted_hours` (`apply_pmv_index_setpoints` and the three functions of
+  `accim.sim.apmv`), `PPD_WEIGHTED_HOURS_OUTPUTS` (`PPD Weighted Hours`, `PpdWeightedHours`, H, summed),
+  `PPD_WEIGHTED_HOURS_PROGRAM`, `ppd_weighted_hours_lines` (the PPD with local variables and `@Exp`, the limits with the
+  inverse of the index, after the hour counters of the zone), `zone_outputs(..., ppd_weighted_hours)`,
+  `program_names(..., ppd_weighted_hours)`; the reducer `objectives.ppd_weighted_hours` (with `_named_sum`, shared with
+  Methods A and B); in the parametric module, `report_long_term_discomfort=True` with 'apmv setpoints' and 'epmv
+  setpoints' adds Method C, and `long_term_range` raises a `ValueError` with them; `Check3_PpdWeightedHours` in
+  `verify_accim_simulation`; `Table` names it `<zone>_PPD Weighted Hours (h)` (`pmv_index_columns`); the box of the GUI
+  in the tab of the PMV-based setpoints. D1: `ppd_weighted_hours` half-open (a PMV on the upper limit, wf = 1).
+  `Table`: the frequency token of the columns compared in any case (`standard_outputs` and `output_cols_to_keep`), the
+  timesteps relabelled with the hour they end in before the hourly aggregation (`Minute`/`Second` 00 after it),
+  `timesteps_per_hour` in the checks of the aggregation, and, with `frequency='timestep'`, only the rows that end an
+  hour get the hour before. Docs: 4.2.6, 4.7.3, 4.7.4 (the indicators of `Table` against the EMS counters), 4.8.2
+  (new), 4.6.1, 4.10, `parametric_and_optimisation.rst`, and the API pages of `accim.sim.ems.long_term_discomfort` and
+  `accim.sim.schedule_files`, which were missing.
+- Measured with EnergyPlus 25.1 (the sample model in Seville): in 15-21 July (INT EN16798, category II, comfort mode 3),
+  the occupied hours above the upper limit were 5.8 and 13.2 h (of 60) with the setpoints without the tolerance, and
+  55.0 and 53.2 h (151 and 148 Kh) with `long_term_range=('en16798', 2)`, 26 °C, which the adaptive band of the ACCIS
+  exceeds; the PPD-weighted hours were 23.2 and 2.6 h (of 60 occupied hours) with the aPMV setpoints in 1-7 July, and
+  2.4 and 5.4 h (of 36) with the PMV setpoints in 10-14 January.
+- Provisional choices (`notes/questions.md`): the building type required in categories III and IV; Method C on the
+  scale of the PMV with the inverse of the index, one output per zone with both periods and no building total, and the
+  parametric argument `report_long_term_discomfort` for it.
+- Files: `accim/sim/ems/long_term_discomfort.py`, `accim/sim/accis.py`, `accim/sim/pmv_index.py`, `accim/sim/apmv.py`,
+  `accim/utils/verification.py`, `accim/parametric_and_optimisation/objectives.py`,
+  `accim/parametric_and_optimisation/main.py`, `accim/data/postprocessing/main.py`,
+  `accim/data/postprocessing/long_term_discomfort.py`, `accim/data/postprocessing/pmv_index_columns.py`,
+  `accim/gui/forms.py`, `accim/gui/app.py`, `tests/core/test_long_term_discomfort_counters.py`,
+  `tests/core/test_ppd_weighted_hours.py` (new), `tests/core/test_long_term_discomfort.py`,
+  `tests/core/test_table_pmv_index.py`, `tests/core/test_gui.py`, `tests/parametric_and_optimisation/test_objectives.py`,
+  `docs/source/4_detailed use.md`, `docs/source/parametric_and_optimisation.rst`, `docs/source/api/accim.sim.rst`,
+  `docs/source/api/accim.sim.ems.rst`, `CHANGELOG.md`, `TODO.md`, `CAMBIOS_CODIGO_v1.2.0.md` (§34),
+  `notes/questions.md`, `notes/work-log.md`.
+- Verification: `tests/core/test_long_term_discomfort_counters.py` 52 passed (the limits of Table B.2 and their errors,
+  the Erl programs with the constants against D1, the models of `add_accis_to_idf` and AddAccis, and, with EnergyPlus
+  25.1, a summer week with `long_term_range=('en16798', 2)` whose sums are those of D1 with 20 and 26 °C, check 6
+  without mismatches and the EMS and API backends identical); `tests/core/test_ppd_weighted_hours.py` 49 passed (the
+  Erl program against `ppd_weighted_hours` of D1 with the PMV, the aPMV by season and by sign and the ePMV with and
+  without `apply_to_heating`, the half-open range, the models without the argument unchanged, and, with EnergyPlus 25.1,
+  a July week with the aPMV and five January days with the PMV: sums equal to D1, `Check3_PpdWeightedHours` without
+  mismatches, the EMS outputs identical with both backends but those calculated from the PMV, within 1e-9, the
+  rounding of the thermal comfort thermostats); `tests/core/test_long_term_discomfort.py` 10 passed (Method C
+  half-open, `Table` of timestep outputs); `tests/core` 1469 passed, 2 skipped (golden master byte-identical);
+  `tests/parametric_and_optimisation` 517 passed; the Sphinx build with the same 35 warnings; the modified modules
+  compile with Python 3.9.
+- Next step: H4.
+
+### 2026-11-10
 #### [done] H2: T0 of `te_ref_nl` from the weather file (branch `v1.2.0`)
 - Context: task H2 of v04 §7 (finding B1-1, verdict #8 in `notes/decisions.md`): van der Linden et al. (2006) define Ti
   with the maximum and minimum of the whole day ("the day under study and the three preceding days", v03 §11), and the

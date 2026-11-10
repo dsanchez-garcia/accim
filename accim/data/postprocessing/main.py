@@ -373,7 +373,9 @@ class Table:
     :param source_frequency: Used to inform accim about the frequency
         of the input CSVs. If there are multiple frequencies in a single CSV,
         the columns for the frequencies different to the selected one will be discarded.
-        String can be 'timestep', 'hourly', 'daily', 'monthly' or 'runperiod'.
+        String can be 'timestep', 'hourly', 'daily', 'monthly' or 'runperiod'. With 'timestep', the rows of the
+        timesteps that end within an hour belong to it when they are aggregated (since accim 1.2.0; the timestep
+        that ends at 01:00 is of the hour 00:00-01:00).
     :type source_frequency: str
     :param frequency: Rows will be aggregated based on this frequency.
         String can be 'timestep', 'hourly', 'daily', 'monthly' or 'runperiod'.
@@ -452,7 +454,10 @@ class Table:
         their percentages, and the degree hours above and below (Method B), with the setpoints without the tolerance
         of the ACCIS as the limits. It needs ``frequency`` 'timestep' or 'hourly', and the operative temperature, the
         setpoints without the tolerance and the occupied hours of each zone (the standard outputs of AddAccis). False
-        by default (since accim 1.2.0).
+        by default (since accim 1.2.0). They are not the outputs that the EMS counts with
+        ``report_long_term_discomfort`` (:mod:`accim.sim.ems.long_term_discomfort`), which compare the operative
+        temperature of the previous timestep with the setpoints of each timestep, whereas these compare those of the
+        same row (with hourly rows, the means of the hour; finding D1-1 of the review of accim 1.2.0).
     :type long_term_indicators: bool
     :param indoor_adaptation_indicators: True to calculate the indicators of the adaptation to the indoor climate of
         each simulation (task F3 of block F of accim 1.2.0), for each occupied zone and the building, in the attribute
@@ -644,6 +649,8 @@ class Table:
                 'Date/Time',
                 'Source',
             ]
+        # The timesteps of each hour of the CSV files of timestep outputs (found when they are read)
+        timesteps_per_hour = 1
 
         # Step: generating concatenated dataframe.
         # If source_concatenated_csv_filepath is None, then specified csv files on list format
@@ -749,13 +756,17 @@ class Table:
                 # that starts exactly at the end of one of its 256 KiB read blocks (' 07/23  15:00:00')
                 df = pd.DataFrame(pd.read_csv(file, skip_blank_lines=False))
 
+                # The frequency of the columns, as EnergyPlus writes it in the CSV files ('(Hourly)', '(TimeStep)'): in
+                # any case (before, the columns of the timestep outputs, '(TimeStep)', were not found)
+                frequency_token = f'({SFdict[source_frequency]})'.upper()
+
                 # Step: filtering outputs to only standards
                 if standard_outputs:
                     keeplist = []
                     for i in cleaned_columns:
                         for j in df.columns:
                             if i in j:
-                                if SFdict[source_frequency] in j:
+                                if frequency_token in j.upper():
                                     keeplist.append(j)
                     keeplist = list(dict.fromkeys(keeplist))
                     keeplist.append('Date/Time')
@@ -767,7 +778,7 @@ class Table:
                     for i in output_cols_to_keep:
                         for j in df.columns:
                             if i == j:
-                                if SFdict[source_frequency] in j:
+                                if frequency_token in j.upper():
                                     keeplist.append(j)
                     keeplist = list(dict.fromkeys(keeplist))
                     keeplist.append('Date/Time')
@@ -786,6 +797,18 @@ class Table:
                     df = df.drop(['TBD1', 'TBD2'], axis=1)
                     df[['Month', 'Day']] = df['Month/Day'].str.split('/', expand=True)
                     df[['Hour', 'Minute', 'Second']] = df['Hour'].str.split(':', expand=True)
+                    if source_frequency == 'timestep' and frequency != 'timestep':
+                        # EnergyPlus labels each timestep with its end: '00:10:00' to '01:00:00' are the first hour,
+                        # which its hourly outputs label '01:00:00', so the timesteps that do not end an hour are those
+                        # of the next one (before, they were grouped with the previous hour)
+                        hours = pd.to_numeric(df['Hour'], errors='coerce')
+                        within = pd.to_numeric(df['Minute'], errors='coerce').fillna(0) > 0
+                        hours = hours + within.astype(int)
+                        df['Hour'] = [f'{int(hour):02d}' if pd.notna(hour) else hour for hour in hours]
+                        df['Date/Time'] = ' ' + df['Month/Day'] + '  ' + df['Hour'] + ':00:00'
+                        sizes = df.groupby(['Month/Day', 'Hour']).size()
+                        if len(sizes):
+                            timesteps_per_hour = int(sizes.mode().iloc[0])
                 elif source_frequency == 'daily':
                     df['Month/Day'] = df['Date/Time']
                     df[['Month', 'Day']] = df['Date/Time'].str.split('/', expand=True)
@@ -852,6 +875,9 @@ class Table:
                     if frequency == 'hourly':
                         if minute_df_len > 0:
                             df = df.groupby(['Source', 'Month', 'Day', 'Hour'], as_index=False).agg(agg_dict)
+                            # The rows of the hours, as those of the hourly outputs of EnergyPlus
+                            df['Minute'] = '00'
+                            df['Second'] = '00'
                             print(f'Input data frequency in file {file} is timestep '
                                   f'and requested frequency is hourly, '
                                   f'therefore aggregation will be performed. '
@@ -921,15 +947,17 @@ class Table:
             if name_export_rows_with_nan is not None:
                 rows_with_NaN.to_excel(f'{name_export_rows_with_nan}[source_freq-{source_frequency}[freq-{frequency}[Rows_with_NaNs.xlsx')
 
+        # The rows of each hour of the CSV files of timestep outputs (1 for those of hourly outputs)
+        rows_per_hour = timesteps_per_hour if source_frequency == 'timestep' else 1
         if self.frequency == 'hourly':
-            not_correct_agg = df[df['count'] != 1]
+            not_correct_agg = df[df['count'] != rows_per_hour]
             # if len(not_correct_agg) > 0:
             #     print('The following rows have not been correctly aggregated:')
             #     print(not_correct_agg)
 
         if self.frequency == 'daily':
-            if source_frequency == 'hourly':
-                not_correct_agg = df[df['count'] != 24]
+            if source_frequency in ('hourly', 'timestep'):
+                not_correct_agg = df[df['count'] != 24 * rows_per_hour]
             if source_frequency == 'daily':
                 not_correct_agg = df[df['count'] != 1]
 
@@ -957,11 +985,11 @@ class Table:
             #     not_correct_agg_list.append(monthly_df)
             # not_correct_agg = pd.concat(not_correct_agg_list)
 
-            if source_frequency == 'hourly':
+            if source_frequency in ('hourly', 'timestep'):
                 not_correct_agg = df[
-                    (df['count'] != 28 * 24) &
-                    (df['count'] != 30 * 24) &
-                    (df['count'] != 31 * 24)
+                    (df['count'] != 28 * 24 * rows_per_hour) &
+                    (df['count'] != 30 * 24 * rows_per_hour) &
+                    (df['count'] != 31 * 24 * rows_per_hour)
                     ]
             if source_frequency == 'daily':
                 not_correct_agg = df[
@@ -974,8 +1002,8 @@ class Table:
             #     print(not_correct_agg)
 
         if self.frequency == 'runperiod':
-            if source_frequency == 'hourly':
-                not_correct_agg = df[df['count'] != 8760]
+            if source_frequency in ('hourly', 'timestep'):
+                not_correct_agg = df[df['count'] != 8760 * rows_per_hour]
             if source_frequency == 'daily':
                 not_correct_agg = df[df['count'] != 365]
             if source_frequency == 'monthly':
@@ -1566,8 +1594,15 @@ class Table:
         df = df.set_index([pd.RangeIndex(len(df))])
 
         # df['Hour_mod'] = df['HOUR'].copy()
-        if 'hourly' in self.frequency or 'timestep' in self.frequency:
+        if 'hourly' in self.frequency:
             df['HOUR'] = (pd.to_numeric(df['HOUR']) - 1).astype(str).str.pad(width=2, side='left', fillchar='0')
+        elif 'timestep' in self.frequency:
+            # The hour that each timestep is part of: EnergyPlus labels the timesteps with their end, so those that end
+            # an hour (minute 00, such as 01:00) are the last ones of the hour before (before, those that do not end an
+            # hour, such as 00:10, got the hour -1)
+            ends_an_hour = pd.to_numeric(df['MINUTE'], errors='coerce').fillna(0) == 0
+            df['HOUR'] = (pd.to_numeric(df['HOUR']) - ends_an_hour.astype(int)).astype(str).str.pad(
+                width=2, side='left', fillchar='0')
         # df['Hour_mod'] = df['Hour_mod'].str.replace('.0', '').str.pad(width=2, side='left', fillchar='0')
         # df['HOUR'] = df['Hour_mod']
 

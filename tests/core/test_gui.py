@@ -491,6 +491,20 @@ def test_the_long_term_discomfort_in_the_form(tmp_path):
     with pytest.raises(FormError, match='report_long_term_discomfort: the long-term discomfort needs the adaptive '
                                         'setpoint temperatures'):
         forms.add_accis_arguments(_form(tmp_path, setpoint_type='pmv', report_long_term_discomfort=True))
+    # Its range: the setpoints without the tolerance by default, or a constant range of EN 16798-1, Table B.2
+    assert forms.ADD_ACCIS_DEFAULTS['long_term_range'] == ''
+    assert 'long_term_range' not in arguments
+    assert list(forms.LONG_TERM_RANGE_CHOICES) == list(forms.EN16798_TABLE_B2_CHOICES)
+    arguments = forms.add_accis_arguments(_form(tmp_path, report_long_term_discomfort=True,
+                                                long_term_range='Office, category III: 19.0 / 27.0 °C'))
+    assert arguments['long_term_range'] == ('en16798', 3, 'office')
+    from accim.sim.ems.long_term_discomfort import long_term_limits
+    assert all(long_term_limits(value) == forms.EN16798_TABLE_B2_CHOICES[label]
+               for label, value in forms.LONG_TERM_RANGE_CHOICES.items())
+    with pytest.raises(FormError, match=r'long_term_range: the range of the long-term discomfort needs its box'):
+        forms.add_accis_arguments(_form(tmp_path, long_term_range='Office, category III: 19.0 / 27.0 °C'))
+    with pytest.raises(FormError, match='long_term_range: choose a range of EN 16798-1, Table B.2, or none'):
+        forms.add_accis_arguments(_form(tmp_path, report_long_term_discomfort=True, long_term_range='Category II'))
 
 
 def test_the_regimes_of_the_custom_model_in_the_form(tmp_path):
@@ -910,6 +924,15 @@ def test_the_apmv_setpoints_of_the_form_on_the_sample_model(tmp_path, monkeypatc
     assert tasks.apply_apmv(forms.apmv_arguments(_apmv_form(tmp_path))) == 'model_aPMV.idf'
     text = (tmp_path / 'model_aPMV.idf').read_text(encoding='latin-1')
     assert 'apply_aPMV_' in text and 'set_zone_input_data_' in text
+    assert 'count_ppd_weighted_hours_' not in text
+    # Method C of CEN/TR 16798-2, with its box (task H3 of the review of accim 1.2.0)
+    assert forms.APMV_DEFAULTS['report_ppd_weighted_hours'] is False
+    assert 'report_ppd_weighted_hours' not in forms.apmv_arguments(_apmv_form(tmp_path))['apmv']
+    arguments = forms.apmv_arguments(_apmv_form(tmp_path, index='pmv', report_ppd_weighted_hours=True))
+    assert arguments['apmv']['report_ppd_weighted_hours'] is True
+    assert tasks.apply_apmv(arguments) == 'model_PMV.idf'
+    text = (tmp_path / 'model_PMV.idf').read_text(encoding='latin-1')
+    assert 'count_ppd_weighted_hours_Block1_Zone1' in text and 'PPD Weighted Hours_Block1_Zone2' in text
 
 
 def test_the_task_of_the_epmv_setpoints(tmp_path, monkeypatch):
@@ -1268,10 +1291,12 @@ def test_the_window_gives_the_minimum_and_maximum_of_the_setpoints(app, tmp_path
     assert (tab.vars['heating_setpoint_minimum'].get(), tab.vars['cooling_setpoint_maximum'].get()) == ('19.0', '27.0')
     tab.vars['report_hours_below'].set('18 17')
     tab.vars['report_long_term_discomfort'].set(True)
+    tab.vars['long_term_range'].set('Residential, category II: 20.0 / 26.0 °C')
     arguments = forms.add_accis_arguments(tab.form())
     assert (arguments['heating_setpoint_minimum'], arguments['cooling_setpoint_maximum']) == (19.0, 27.0)
     assert arguments['report_hours_below'] == [18, 17]
     assert arguments['report_long_term_discomfort'] is True
+    assert arguments['long_term_range'] == ('en16798', 2, 'residential')
     # The PMV-based setpoints have neither minimum nor maximum, nor the long-term discomfort of the ACCIS: their fields
     # are disabled and left out
     tab.vars['setpoint_type'].set('pmv')
@@ -1279,7 +1304,7 @@ def test_the_window_gives_the_minimum_and_maximum_of_the_setpoints(app, tmp_path
     assert str(tab.table_b2_combo.cget('state')) == 'disabled'
     arguments = forms.add_accis_arguments(tab.form())
     assert 'heating_setpoint_minimum' not in arguments and arguments['report_hours_below'] == [18, 17]
-    assert 'report_long_term_discomfort' not in arguments
+    assert 'report_long_term_discomfort' not in arguments and 'long_term_range' not in arguments
     tab.vars['setpoint_type'].set('temperature')
     assert not tab.limit_widgets[1].instate(['disabled']) and not tab.limit_widgets[-1].instate(['disabled'])
     # A session file of the development of accim 1.2.0, with the old names of the fields (task H1)
@@ -1653,6 +1678,10 @@ def test_the_tab_of_the_apmv_setpoints(app, tmp_path):
     assert arguments['apmv']['default_pmv_cooling_setpoint'] == 0.5
     tab.zone_table.other.set('activity_level=100')
     assert not tab.zone_table.set_zone() and "'activity_level' is not a PMV-based setpoint of a zone" in app.errors[-1]
+    # The box of Method C of CEN/TR 16798-2
+    assert tab.vars['report_ppd_weighted_hours'].get() is False
+    tab.vars['report_ppd_weighted_hours'].set(True)
+    assert forms.apmv_arguments(tab.form())['apmv']['report_ppd_weighted_hours'] is True
     tab.vars['idf'].set('')
     assert tab.find_zones() is False and app.errors[-1] == 'Choose the input IDF first.'
 

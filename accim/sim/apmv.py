@@ -118,6 +118,7 @@ def apply_apmv_setpoints(
         verbose: bool = True,
         adaptive_coefficient_by: str = 'season',
         adaptive_coefficients: Optional[str] = None,
+        report_ppd_weighted_hours: bool = False,
 ) -> IDF:
     """
     Applies setpoints based on the Adaptive Predicted Mean Vote (aPMV) index.
@@ -181,6 +182,10 @@ def apply_apmv_setpoints(
         None (the default) for those of ``adaptive_coefficient_cooling`` and ``adaptive_coefficient_heating``, which
         must then keep their defaults (a ``ValueError`` otherwise). An entry without one of the coefficients raises a
         ``ValueError``.
+    :param report_ppd_weighted_hours: True to count the PPD-weighted hours of each zone, Method C of CEN/TR
+        16798-2:2019, Annex D, with the setpoints without the tolerances as the range, on the scale of the PMV (the
+        output ``PPD Weighted Hours_<zone>``, see :func:`accim.sim.pmv_index.ppd_weighted_hours_lines`); False (the
+        default) for none.
     :return: The modified BESOS IDF object with EMS controls added.
 
     The arguments had other names before accim 1.0.0 (outputs_freq, other_PMV_related_outputs, adap_coeff_cooling,
@@ -217,6 +222,7 @@ def apply_apmv_setpoints(
         default_heating_setpoint_tolerance_cooling_season=default_heating_setpoint_tolerance_cooling_season,
         default_heating_setpoint_tolerance_heating_season=default_heating_setpoint_tolerance_heating_season,
         verbose=verbose,
+        report_ppd_weighted_hours=report_ppd_weighted_hours,
     )
 
 
@@ -243,6 +249,7 @@ def apply_epmv_setpoints(
         default_heating_setpoint_tolerance_cooling_season: float = 0.1,
         default_heating_setpoint_tolerance_heating_season: float = 0.1,
         verbose: bool = True,
+        report_ppd_weighted_hours: bool = False,
 ) -> IDF:
     """
     Applies setpoints based on the PMV with the expectancy factor (ePMV) of Fanger and Toftum (2002), ePMV = e·PMV,
@@ -293,6 +300,10 @@ def apply_epmv_setpoints(
     :param default_expectancy_factor: The expectancy factor of the zones missing in the dict of ``expectancy_factor``
         (and the other ``default_*`` arguments, for the other arguments).
     :param verbose: If True, prints the objects that are added. The warnings are always issued.
+    :param report_ppd_weighted_hours: True to count the PPD-weighted hours of each zone, Method C of CEN/TR
+        16798-2:2019, Annex D, with the setpoints without the tolerances as the range, on the scale of the PMV (the
+        output ``PPD Weighted Hours_<zone>``, see :func:`accim.sim.pmv_index.ppd_weighted_hours_lines`); False (the
+        default) for none.
     :return: The modified IDF object.
     :raises ValueError: If an expectancy factor is not between 0.5 and 1.
     """
@@ -322,6 +333,7 @@ def apply_epmv_setpoints(
         default_heating_setpoint_tolerance_cooling_season=default_heating_setpoint_tolerance_cooling_season,
         default_heating_setpoint_tolerance_heating_season=default_heating_setpoint_tolerance_heating_season,
         verbose=verbose,
+        report_ppd_weighted_hours=report_ppd_weighted_hours,
     )
 
 
@@ -344,6 +356,7 @@ def apply_pmv_setpoints(
         default_heating_setpoint_tolerance_cooling_season: float = 0.1,
         default_heating_setpoint_tolerance_heating_season: float = 0.1,
         verbose: bool = True,
+        report_ppd_weighted_hours: bool = False,
 ) -> IDF:
     """
     Applies setpoints based on the predicted mean vote (PMV) of Fanger, for instance those of the categories of
@@ -371,6 +384,10 @@ def apply_pmv_setpoints(
     :param default_pmv_cooling_setpoint: The cooling setpoint of the zones missing in the dict of
         ``pmv_cooling_setpoint`` (and the other ``default_*`` arguments, for the other arguments).
     :param verbose: If True, prints the objects that are added. The warnings are always issued.
+    :param report_ppd_weighted_hours: True to count the PPD-weighted hours of each zone, Method C of CEN/TR
+        16798-2:2019, Annex D, with the setpoints without the tolerances as the range, on the scale of the PMV (the
+        output ``PPD Weighted Hours_<zone>``, see :func:`accim.sim.pmv_index.ppd_weighted_hours_lines`); False (the
+        default) for none.
     :return: The modified IDF object.
     """
     return apply_pmv_index_setpoints(
@@ -393,6 +410,7 @@ def apply_pmv_setpoints(
         default_heating_setpoint_tolerance_cooling_season=default_heating_setpoint_tolerance_cooling_season,
         default_heating_setpoint_tolerance_heating_season=default_heating_setpoint_tolerance_heating_season,
         verbose=verbose,
+        report_ppd_weighted_hours=report_ppd_weighted_hours,
     )
 
 

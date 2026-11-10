@@ -14,9 +14,9 @@ from measured or simulated data, and the acceptable deviations of its Annex E:
   (degree hours), separately for the warm period (Θo > Θo,limit,upper) and the cold period (Θo < Θo,limit,lower).
 - Method C, PPD weighted (:func:`ppd_weighted_hours`): the weighting factor is 0 within the range,
   PMVlimit,lower ≤ PMV < PMVlimit,upper, and wf = PPD(PMV)/PPD(PMVlimit) outside it, with the PPD of ISO 7730:2025,
-  formula (5) (:func:`ppd_from_pmv`); the sum of wf times the time, for the warm period (PMV > PMVlimit,upper) and the
-  cold period (PMV < PMVlimit,lower). A PMV equal to the upper limit, which Annex D leaves in neither case, is taken as
-  within the range (as in Method B).
+  formula (5) (:func:`ppd_from_pmv`); the sum of wf times the time, for the warm period (PMV ≥ PMVlimit,upper) and the
+  cold period (PMV < PMVlimit,lower). A PMV equal to the upper limit is outside the range, as the literal text of
+  Annex D writes it (verdict #20 of the review of accim 1.2.0), and so in the warm period, with wf = 1.
 - Annex E, Table E.1 (:func:`deviation_check`, :func:`deviation_limit`): the acceptable deviations, as percentages of
   the occupied hours of a week (20 % or 50 %), a month (12 % or 25 %) or a year (3 % or 6 %); "it is allowed on the
   6 % level to have temperatures above the criteria for 126 h during a year but not more than 20 h during a working
@@ -153,9 +153,11 @@ def degree_hours(top: Values, lower: Values, upper: Values, occupied: Any = None
 def ppd_weighted_hours(pmv: Values, pmv_lower: Values, pmv_upper: Values, occupied: Any = None,
                        timestep_h: Any = 1.0) -> Dict[str, float]:
     """Method C of CEN/TR 16798-2:2019, Annex D: the PPD-weighted hours of the occupied hours, the sums of the
-    weighting factor wf = PPD(PMV)/PPD(PMVlimit) times the time, for the warm period (PMV > PMVlimit,upper, with the
-    upper limit) and the cold period (PMV < PMVlimit,lower, with the lower limit); wf is 0 within the range
-    (PMVlimit,lower ≤ PMV ≤ PMVlimit,upper). The PPD is that of ISO 7730:2025, formula (5) (:func:`ppd_from_pmv`).
+    weighting factor wf = PPD(PMV)/PPD(PMVlimit) times the time, for the warm period (PMV ≥ PMVlimit,upper, with the
+    upper limit) and the cold period (PMV < PMVlimit,lower, with the lower limit); wf is 0 within the range,
+    PMVlimit,lower ≤ PMV < PMVlimit,upper, as the literal text writes it (verdict #20 of the review of accim 1.2.0: a
+    PMV equal to the upper limit is in the warm period, with wf = 1). The PPD is that of ISO 7730:2025, formula (5)
+    (:func:`ppd_from_pmv`).
 
     :param pmv: The PMV of each row.
     :param pmv_lower: The lower limit of the PMV (a number, such as −0.5 for category II of EN 16798-1, Table B.1, or
@@ -167,7 +169,7 @@ def ppd_weighted_hours(pmv: Values, pmv_lower: Values, pmv_upper: Values, occupi
     """
     rows = _frame({'pmv': pmv, 'lower': pmv_lower, 'upper': pmv_upper}, occupied, timestep_h)
     ppd = ppd_from_pmv(rows['pmv'].to_numpy())
-    hot = rows['pmv'] > rows['upper']
+    hot = rows['pmv'] >= rows['upper']
     cold = rows['pmv'] < rows['lower']
     hot_h = (ppd[hot.to_numpy()] / ppd_from_pmv(rows.loc[hot, 'upper'].to_numpy())) * rows.loc[hot, 'hours']
     cold_h = (ppd[cold.to_numpy()] / ppd_from_pmv(rows.loc[cold, 'lower'].to_numpy())) * rows.loc[cold, 'hours']

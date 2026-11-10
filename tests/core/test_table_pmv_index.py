@@ -338,6 +338,38 @@ def test_comfort_hours_table(tmp_path, monkeypatch):
         assert not [c for c in table.val_cols if 'OCCUPIED' in c.upper()]
 
 
+@MODELS
+def test_the_ppd_weighted_hours(tmp_path, monkeypatch, model):
+    # Method C of CEN/TR 16798-2 (report_ppd_weighted_hours, task H3 of the review of accim 1.2.0): summed, named after
+    # the zone with its units, with block and building values, in the comfort hours, and no name contains another one
+    columns, of_zone = _outputs(model, 'apmv')
+    targets = resolve_targets(model['building'])
+    for number, (zone, target) in enumerate(zip(model['zone_names'], targets)):
+        column = f'EMS:PPD Weighted Hours_{target.ems_suffix} [H](Hourly)'
+        columns[column] = [0.25 * (number + 1), 0.5]
+        of_zone[zone, 'PPD Weighted Hours'] = column
+    assert pmv_index_columns._table_name(PMV_INDICES['apmv'], 'PPD Weighted Hours', 'H') == 'PPD Weighted Hours (h)'
+    assert 'PPD Weighted Hours (h)' in pmv_index_columns.comfort_hours()
+    zones = model['zone_names']
+    daily = _table(tmp_path, monkeypatch, model, columns, frequency='daily', frequency_agg_func='sum')
+    for zone in zones:
+        assert _values(daily, f'{zone}_PPD Weighted Hours (h)') == [pytest.approx(
+            sum(columns[of_zone[zone, 'PPD Weighted Hours']]))]
+    table = _table(tmp_path, monkeypatch, model, columns)
+    summed = [sum(hour) for hour in zip(*[columns[of_zone[zone, 'PPD Weighted Hours']] for zone in zones])]
+    for group in (model['block'], 'Building'):
+        assert _values(table, f'{group}_Total_PPD Weighted Hours (h) (summed)') == pytest.approx(summed)
+    names = [c for c in table.df.columns if c.startswith(tuple(f'{zone}_' for zone in zones))
+             or c.startswith(('Block', 'Building', model['block']))]
+    for name in names:
+        assert [other for other in names if name.lower() in other.lower()] == [name], name
+    table.format_table(type_of_table='comfort hours')
+    assert [c for c in table.val_cols if c.endswith('_PPD Weighted Hours (h)')] == [
+        f'{zone}_PPD Weighted Hours (h)' for zone in zones]
+    # Kept with standard_outputs=True
+    assert 'EMS:PPD Weighted Hours_' in pmv_index_columns.standard_outputs()
+
+
 def test_csv_files_of_other_idfs(tmp_path, monkeypatch):
     columns, _ = _outputs(DESIGNBUILDER, 'pmv')
     table = _table(tmp_path, monkeypatch, DESIGNBUILDER, columns, csv_name='TestModel_PMV[Seville_Present.csv')

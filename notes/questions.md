@@ -24,6 +24,39 @@ it here as answered).
 
 ## Open
 
+## 2026-11-10 — H3: the building type of long_term_range in categories III and IV
+- Context: the decision of C2-1 (v04 §3.3, task H3) is `long_term_range=('en16798', category)`, with the constant
+  limits of EN 16798-1:2019, Table B.2 (`accim.constants.EN16798_TABLE_B2`), whose minimum for heating differs between
+  the residential and the office buildings in categories III (18.0 and 19.0 °C) and IV (16.0 and 18.0 °C).
+- Why it matters: with `('en16798', 3)`, the lower limit is not defined by the category alone.
+- Options considered: (i) `('en16798', category)` for categories I and II, whose limits are the same for both types,
+  and `('en16798', category, building_type)` for any category, with a `ValueError` that lists both limits when the type
+  is missing in categories III and IV (implemented: no limit is chosen for the user); (ii) the residential limits by
+  default; (iii) the office limits by default.
+- Owner: the author.
+- Status: open; option (i) implemented provisionally (`accim.sim.ems.long_term_discomfort.long_term_limits`).
+
+## 2026-11-10 — H3: the range of Method C on the scale of the PMV, and its output
+- Context: decision 5 of v04 §6 asks for Method C in the models of `pmv_index` "with the limits pmv_heating_setpoint/
+  pmv_cooling_setpoint without the tolerance and the PMV of the zone that the EMS already measures", wf =
+  PPD(PMV)/PPD(PMV_limit), and a counter `PpdWeightedHours_<zone>`. With the aPMV and the ePMV, those setpoints are on
+  the scale of the index, not of the PMV.
+- Why it matters: the PPD of formula (5) of ISO 7730:2025 is that of the PMV; comparing the PMV with setpoints of the
+  aPMV (or the PPD of an aPMV) mixes scales.
+- Options considered: (i) the limits converted to the scale of the PMV with the inverse of the index, as the thermostats
+  get their PMV setpoints (aPMV/(1 − λ·aPMV) with the λ of the timestep, or of each side with
+  `adaptive_coefficient_by='pmv_sign'`; ePMV/e on the side where e applies), so that the PMV is outside the range when
+  the index is outside the setpoints (implemented; with the PMV setpoints, the setpoints themselves); (ii) the index of
+  the zone against its setpoints, with the PPD of the index (not a PPD of ISO 7730). Also: one output per zone with both
+  periods added up, `PPD Weighted Hours_<zone>` (the decision names one counter; `ppd_weighted_hours` of D1 gives each
+  period after the simulations), without a total of the building (the outputs of the setpoints based on the PMV have
+  none; the parametric module takes one objective per zone); the PMV of the previous timestep, as the hour counters of
+  the index; and, in the parametric module, `report_long_term_discomfort=True` with 'apmv setpoints' and 'epmv
+  setpoints' adds Method C (before, it did nothing with them) instead of a new argument of its classes.
+- Owner: the author.
+- Status: open; option (i), one output per zone without the building and the parametric argument implemented
+  provisionally (`accim.sim.pmv_index.ppd_weighted_hours_lines`).
+
 ## 2026-11-10 — H2: where the CSV file of T0 of te_ref_nl is written
 - Context: verdict #8 (task H2) asks for "the daily (Tmax+Tmin)/2 of the current day from the EPW as a Schedule:File
   read by a Schedule Value sensor"; the Schedule:File object needs a CSV file and its path.
