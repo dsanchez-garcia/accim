@@ -77,6 +77,14 @@ class GenerationArguments:
     #: :mod:`accim.sim.ems.static_setpoints`)
     static_heating_setpoint: Number = 20.0
     static_cooling_setpoint: Number = 28.0
+    #: The limiter of the drift of the setpoints (task F2 of block F, see :mod:`accim.sim.ems.drift_limiter`); None for
+    #: none (the zones without drift_mode have none of its inputs)
+    drift_mode: Optional[str] = None
+    max_drift_rate: Number = 0.5
+    alpha_indoor: Number = 0.8
+    delta_cool: Number = 1.0
+    delta_heat: Number = 1.0
+    initial_T_rm_in: Optional[Number] = None  # noqa: N815
 
     def __post_init__(self):
         self.comfort_standard = as_list(self.comfort_standard)
@@ -261,6 +269,8 @@ def zone_input_arguments(args: GenerationArguments, combination: Combination,
         custom_outdoor_metric=a.custom_outdoor_metric, custom_alpha=a.custom_alpha, custom_days=a.custom_days,
         heating_setpoint_minimum=a.heating_setpoint_minimum, cooling_setpoint_maximum=a.cooling_setpoint_maximum,
         static_heating_setpoint=a.static_heating_setpoint, static_cooling_setpoint=a.static_cooling_setpoint,
+        drift_mode=a.drift_mode, max_drift_rate=a.max_drift_rate, alpha_indoor=a.alpha_indoor,
+        delta_cool=a.delta_cool, delta_heat=a.delta_heat, initial_T_rm_in=a.initial_T_rm_in,
         opening_factor_max_temp_diff=a.opening_factor_max_temp_diff,
         opening_factor_min_temp_diff=a.opening_factor_min_temp_diff, min_opening_factor=a.min_opening_factor,
     )

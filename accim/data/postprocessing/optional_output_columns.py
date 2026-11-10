@@ -24,7 +24,11 @@ of the ATHB add EMS outputs to the zones (``<output>_<zone>``, with the EMS suff
   each zone, ``SET_<zone>`` (°C), averaged;
 - :func:`accim.sim.comfort_hooks.apply_sun2026_setpoints` (comfort standard 24, task F1): also the causal TSV of each
   zone, ``TSV_causal_<zone>``, averaged, and its occupied hours with the SET within the band of TSV,
-  ``HoursInCausalBand_<zone>`` (h), summed.
+  ``HoursInCausalBand_<zone>`` (h), summed;
+- ``drift_mode`` (:mod:`accim.sim.ems.drift_limiter`, task F2): the running mean of the operative temperature of the
+  occupied hours of each zone, ``T_rm_in_<zone>``, the targets and the setpoints applied by the limiter,
+  ``DriftTargetAHST_<zone>``, ``DriftTargetACST_<zone>``, ``DriftAppliedAHST_<zone>`` and ``DriftAppliedACST_<zone>``
+  (°C), averaged, and the occupied hours in which it changed a setpoint, ``DriftLimitedHours_<zone>`` (h), summed.
 
 ``Table`` averages over time those that are averaged (:func:`averaged_outputs`) and gives ``frequency_agg_func`` to the
 others, keeps them with ``standard_outputs=True`` (:func:`standard_outputs`), and names those of the zones as its other
@@ -58,6 +62,12 @@ ZONE_OUTPUTS = {
     'SET': ('SET (°C)', True, True),
     'TSV_causal': ('TSV_causal', True, True),
     'HoursInCausalBand': ('HoursInCausalBand (h)', False, True),
+    'T_rm_in': ('T_rm_in (°C)', True, True),
+    'DriftTargetAHST': ('DriftTargetAHST (°C)', True, True),
+    'DriftTargetACST': ('DriftTargetACST (°C)', True, True),
+    'DriftAppliedAHST': ('DriftAppliedAHST (°C)', True, True),
+    'DriftAppliedACST': ('DriftAppliedACST (°C)', True, True),
+    'DriftLimitedHours': ('DriftLimitedHours (h)', False, True),
 }
 #: The occupied hours below a temperature T of each zone, ``HoursBelow_<T>_<zone>``, are ``<zone>_HoursBelow_<T> (h)``,
 #: summed over time, with block and building values

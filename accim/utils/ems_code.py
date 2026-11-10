@@ -15,6 +15,7 @@ from typing import Dict, Iterable, List, Optional, Sequence, Union
 from accim._deprecation import accepts_legacy_kwargs
 from accim.sim.arguments import DEPRECATED_ARGUMENT_NAMES, CustomRegime, check_custom_regimes
 from accim.sim.ems import custom_regimes as cr
+from accim.sim.ems import drift_limiter as dl
 from accim.sim.ems import outdoor_metric as om
 from accim.sim.ems import program_lines as pl
 from accim.sim.ems import setpoint_limits as sl
@@ -82,6 +83,17 @@ _LIMIT_LEGEND = (
     '! zone (heating_setpoint_minimum and cooling_setpoint_maximum), whatever the comfort standard and comfort mode;',
     '! ApplySetpointLimits_<zone>, after SetASTnoTol, bounds AHST and ACST and rounds them again (the setpoints',
     '! bounded by the minimum or the maximum are the minimum or the maximum), and bounds AHSTnoTol and ACSTnoTol too.',
+)
+_DRIFT_LEGEND = (
+    '! ApplyDriftLimiter_<zone>: the limiter of the drift of the setpoints (drift_mode, task F2 of block F), after',
+    '! SetAST and before SetASTnoTol, out of the warm-up days (WarmupFlag). DriftTargetAHST_<zone> and',
+    '! DriftTargetACST_<zone>: the setpoints without the tolerance (the targets). sum_T_occ_<zone> and n_occ_<zone>:',
+    '! the operative temperatures of the occupied timesteps of the day (<zone>_OpT, Occ_count_<zone>), flushed at the',
+    '! change of DayOfYear into T_rm_in_<zone> = (1-AlphaIndoor)*mean+AlphaIndoor*T_rm_in_<zone>. DriftMode 1',
+    '! (rate): the setpoints within MaxDriftRate of those applied at the end of the previous day (DriftRefAHST_<zone>',
+    '! and DriftRefACST_<zone>), once a day has been occupied; 2 (window): within T_rm_in_<zone>-DeltaHeat and',
+    '! T_rm_in_<zone>+DeltaCool. Where it changes them, AHST and ACST are those of the limiter plus the tolerance,',
+    '! rounded again. InitDriftLimiter resets its variables at the beginning of each environment.',
 )
 _REGIME_LEGEND = (
     '! SelectCustomRegime_<zone>: the regimes of the custom model (custom_regimes), in their order of priority. The',
@@ -187,8 +199,9 @@ def _input_lines(comfort_standard: int, category: Optional[Number], comfort_mode
         weather = weather_file_definition(comfort_standard)
         if weather is not None:
             values.update(standard_inputs(weather))
-    # The minimum and maximum of the setpoints, if they are given, and the static setpoints of JPN Aqilah 2025
-    wanted |= set(sl.INPUTS)
+    # The minimum and maximum of the setpoints, if they are given, the limiter of the drift, if it is given, and the
+    # static setpoints of JPN Aqilah 2025
+    wanted |= set(sl.INPUTS) | set(dl.INPUTS)
     if ss.has_static_setpoints(comfort_standard):
         wanted |= set(ss.INPUTS)
     lines = []
@@ -211,6 +224,17 @@ def _limit_program(arguments: dict) -> List[str]:
     if minimum is None and maximum is None:
         return []
     return sl.limit_program_lines(minimum is not None, maximum is not None)
+
+
+def _drift_programs(arguments: dict) -> Dict[str, List[str]]:
+    """The programs of the limiter of the drift of the setpoints of a zone (none without ``drift_mode``):
+    ``InitDriftLimiter`` and ``ApplyDriftLimiter_<zone>`` (:mod:`accim.sim.ems.drift_limiter`)."""
+    given = {name: arguments.get(name) for name in dl.ARGUMENTS}
+    dl.check_drift_arguments(**given)
+    if given['drift_mode'] is None:
+        return {}
+    return {dl.INIT_PROGRAM: dl.init_program_lines([_ZONE]),
+            f'{dl.PROGRAM_PREFIX}{_ZONE}': dl.program_lines(_ZONE, initial=given['initial_T_rm_in'] is not None)}
 
 
 def _check_static_setpoints(comfort_standard: int, arguments: dict) -> None:
@@ -331,6 +355,12 @@ def get_setpoint_ems_code(
     script_type: Optional[str] = None,
     static_heating_setpoint: Number = ss.DEFAULTS[0],
     static_cooling_setpoint: Number = ss.DEFAULTS[1],
+    drift_mode: Optional[str] = None,
+    max_drift_rate: Number = dl.DEFAULTS['max_drift_rate'],
+    alpha_indoor: Number = dl.DEFAULTS['alpha_indoor'],
+    delta_cool: Number = dl.DEFAULTS['delta_cool'],
+    delta_heat: Number = dl.DEFAULTS['delta_heat'],
+    initial_T_rm_in: Optional[Number] = None,  # noqa: N803
 ) -> str:
     """The EMS code with which the ACCIS calculates the setpoints of a comfort standard, category and comfort mode, to
     read it before adding the ACCIS to a model (:func:`print_setpoint_ems_code` prints it).
@@ -346,8 +376,9 @@ def get_setpoint_ems_code(
     after the inputs of the zone; see :mod:`accim.sim.ems.outdoor_metric`). With the regimes of the custom model, the
     program ``SelectCustomRegime_<zone>`` comes before ``SetAppLimits`` (see :mod:`accim.sim.ems.custom_regimes`).
     With a minimum heating setpoint or a maximum cooling setpoint, the program
-    ``ApplySetpointLimits_<zone>`` follows ``SetASTnoTol`` (see :mod:`accim.sim.ems.setpoint_limits`). Comments (lines
-    that begin with ``!``) explain the variables.
+    ``ApplySetpointLimits_<zone>`` follows ``SetASTnoTol`` (see :mod:`accim.sim.ems.setpoint_limits`). With
+    ``drift_mode``, the program ``ApplyDriftLimiter_<zone>`` comes before ``SetASTnoTol``, and ``InitDriftLimiter``
+    first (see :mod:`accim.sim.ems.drift_limiter`). Comments (lines that begin with ``!``) explain the variables.
 
     The arguments are those of :func:`accim.sim.accis.modify_accis`, with one value each, and the same defaults.
 
@@ -400,6 +431,9 @@ def get_setpoint_ems_code(
     :param static_heating_setpoint: JPN Aqilah 2025: its static heating setpoint (°C), the input ``StaticAHST`` of the
         zone (:mod:`accim.sim.ems.static_setpoints`); the other comfort standards ignore it.
     :param static_cooling_setpoint: JPN Aqilah 2025: its static cooling setpoint (°C), the input ``StaticACST``.
+    :param drift_mode: The limiter of the drift of the setpoints ('rate' or 'window'), or None for none; and its
+        arguments ``max_drift_rate``, ``alpha_indoor``, ``delta_cool``, ``delta_heat`` and ``initial_T_rm_in`` (see
+        :class:`accim.sim.accis.AddAccis`).
     :return: The lines of the programs, one after the other, separated by a comment with the name of each one.
     :raises ValueError: If the comfort standard does not exist, the category is not one of the comfort standard, or
         the comfort standard has no setpoints with the comfort mode (as in :class:`accim.sim.accis.AddAccis`), or the
@@ -423,12 +457,15 @@ def get_setpoint_ems_code(
         custom_alpha=custom_alpha, custom_days=custom_days, heating_setpoint_minimum=heating_setpoint_minimum,
         cooling_setpoint_maximum=cooling_setpoint_maximum, custom_regimes=custom_regimes, script_type=script_type,
         static_heating_setpoint=static_heating_setpoint, static_cooling_setpoint=static_cooling_setpoint,
+        drift_mode=drift_mode, max_drift_rate=max_drift_rate, alpha_indoor=alpha_indoor, delta_cool=delta_cool,
+        delta_heat=delta_heat, initial_T_rm_in=initial_T_rm_in,
     )
     metric_programs = _outdoor_metric_programs(comfort_standard, arguments, epw, start_date)
     outdoor_metric = bool(metric_programs)
     # JPN Aqilah 2025 with the weather file reads its outdoor metric, Tout_metric (finding B4-1 of accim 1.2.0)
     weather_file = outdoor_metric and comfort_standard in WEATHER_FILE_METRICS
     limit_lines = _limit_program(arguments)
+    drift_programs = _drift_programs(arguments)
     _check_static_setpoints(comfort_standard, arguments)
     regime_lines = _regime_program(comfort_standard, arguments, outdoor_metric)
 
@@ -442,9 +479,14 @@ def get_setpoint_ems_code(
         lines += _OUTDOOR_METRIC_LEGEND
     if regime_lines:
         lines += _REGIME_LEGEND
+    if drift_programs:
+        lines += _DRIFT_LEGEND
     if limit_lines:
         lines += _LIMIT_LEGEND
     lines.append('')
+    if drift_programs:
+        lines += _section(f'{dl.INIT_PROGRAM}: at the beginning of each environment, the limiter of the drift restarts',
+                          drift_programs[dl.INIT_PROGRAM])
     if outdoor_metric:
         lines += _section('InitOutdoorMetric: at the beginning of each environment, the outdoor metric restarts',
                           metric_programs[om.INIT_PROGRAM])
@@ -476,6 +518,9 @@ def get_setpoint_ems_code(
         for name, subprogram in subprograms([comfort_standard], outdoor_metric).items():
             lines += _section(f'{name}: the setpoints, and their rounding',
                               weather_file_lines(name, subprogram, weather_file))
+    if drift_programs:
+        lines += _section(f'{dl.PROGRAM_PREFIX}{_ZONE}: after the setpoints, the limiter of their drift',
+                          drift_programs[f'{dl.PROGRAM_PREFIX}{_ZONE}'])
     lines += _section('SetASTnoTol: the setpoints without the tolerance (for the hour counters)', pl.SET_AST_NO_TOL)
     if limit_lines:
         lines += _section(f'{sl.PROGRAM_PREFIX}{_ZONE}: after SetASTnoTol, the minimum heating setpoint and the '
@@ -525,6 +570,12 @@ def get_setpoint_ems_programs(
     script_type: Optional[str] = None,
     static_heating_setpoint: Number = ss.DEFAULTS[0],
     static_cooling_setpoint: Number = ss.DEFAULTS[1],
+    drift_mode: Optional[str] = None,
+    max_drift_rate: Number = dl.DEFAULTS['max_drift_rate'],
+    alpha_indoor: Number = dl.DEFAULTS['alpha_indoor'],
+    delta_cool: Number = dl.DEFAULTS['delta_cool'],
+    delta_heat: Number = dl.DEFAULTS['delta_heat'],
+    initial_T_rm_in: Optional[Number] = None,  # noqa: N803
 ) -> Dict[str, List[str]]:
     """The EMS programs with which the ACCIS calculates the setpoints of a comfort standard, category and comfort mode,
     as they are in the output IDFs of :class:`accim.sim.accis.AddAccis`, to run them with the Erl interpreter of
@@ -538,7 +589,9 @@ def get_setpoint_ems_programs(
     come first: ``InitOutdoorMetric``, ``SetOutdoorMetric`` and ``SetOutdoorMetric_<zone>``, whose lines name the
     variables of the zone with '<zone>'. With the regimes of the custom model, ``SelectCustomRegime_<zone>`` runs
     before ``SetAppLimits``. With a minimum or a maximum of the setpoints, ``ApplySetpointLimits_<zone>`` runs after
-    ``SetASTnoTol``.
+    ``SetASTnoTol``. With ``drift_mode``, ``InitDriftLimiter`` comes first and ``ApplyDriftLimiter_<zone>`` before
+    ``SetASTnoTol``; it reads the operative temperature and the occupants of the zone (the sensors ``<zone>_OpT`` and
+    ``Occ_count_<zone>``) and the built-in variables WarmupFlag and DayOfYear.
 
     :param comfort_standard: The comfort standard (see :func:`get_setpoint_ems_code`).
     :param category: The category.
@@ -563,6 +616,8 @@ def get_setpoint_ems_programs(
         custom_alpha=custom_alpha, custom_days=custom_days, heating_setpoint_minimum=heating_setpoint_minimum,
         cooling_setpoint_maximum=cooling_setpoint_maximum, custom_regimes=custom_regimes, script_type=script_type,
         static_heating_setpoint=static_heating_setpoint, static_cooling_setpoint=static_cooling_setpoint,
+        drift_mode=drift_mode, max_drift_rate=max_drift_rate, alpha_indoor=alpha_indoor, delta_cool=delta_cool,
+        delta_heat=delta_heat, initial_T_rm_in=initial_T_rm_in,
     )
     comfort_standard = int(comfort_standard)
     if category is None and COMFORT_STANDARDS[comfort_standard].categories:
@@ -600,6 +655,10 @@ def get_setpoint_ems_programs(
     })
     programs.update({name: weather_file_lines(name, lines, weather_file)
                      for name, lines in subprograms([comfort_standard], outdoor_metric).items()})
+    drift_programs = _drift_programs(arguments)
+    if drift_programs:
+        programs = {dl.INIT_PROGRAM: drift_programs[dl.INIT_PROGRAM], **programs,
+                    f'{dl.PROGRAM_PREFIX}{_ZONE}': drift_programs[f'{dl.PROGRAM_PREFIX}{_ZONE}']}
     programs['SetASTnoTol'] = list(pl.SET_AST_NO_TOL)
     limit_lines = _limit_program(arguments)
     if limit_lines:

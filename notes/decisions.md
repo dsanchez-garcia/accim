@@ -11,6 +11,39 @@ Durable architectural/process decisions for this repository and its Obsidian
 vault. Newest first. Use [[templates/decision-record.md|the decision-record
 template]] to add a new entry.
 
+## 2026-11-10 — The limiter of the drift of the setpoints is an option of the ACCIS of each zone, in Erl (F2)
+
+- **Status**: accepted (task F2 of block F; decisions 6 and 7 of the author of 2026-11-10,
+  `notes/PROPUESTA_ADAPTACION_INTERIOR_v03.md` §6, copied here as the prompt of F2 asks, not reopened)
+- **Context**: Parkinson, de Dear & Brager (2020), Energy and Buildings 206, 109559: the occupants adapt to the mean
+  indoor temperature they are exposed to (Fig. 6), and the changes of the setpoints should be spread over days to
+  weeks (section 4.3.2).
+- **Decisions of the author (copied)**: (6) `drift_mode` None by default (the IDF and the results of every comfort
+  standard unchanged); `'rate'`: |setpoint(d) − setpoint_applied(d − 1)| ≤ `max_drift_rate`, 0.5 K/day by default, the
+  first occupied day without limit, and then the state is the setpoint applied the previous day; `'window'`: the
+  target clipped to [T_rm_in − `delta_heat`, T_rm_in + `delta_cool`], 1.0 K each by default, T_rm_in(d) = (1 −
+  `alpha_indoor`)·T_occ_mean(d − 1) + `alpha_indoor`·T_rm_in(d − 1) of the operative temperature of the zone in its
+  occupied hours, `alpha_indoor` 0.8, inactive until one full occupied day, whose mean starts T_rm_in,
+  `initial_T_rm_in` (None) overriding the start; the limiter applies to the heating and the cooling setpoints of any
+  comfort standard (adaptive, PMV-derived temperatures and the SET of comfort standard 24); (7) only on request.
+- **Implementation**: `accim.sim.ems.drift_limiter`: the inputs `DriftMode` (1 rate, 2 window, 0 none),
+  `MaxDriftRate`, `AlphaIndoor`, `DeltaCool`, `DeltaHeat` and `InitTrmIn` of the zones with the limiter only
+  (`accim.sim.ems.inputs`, optional); the program `ApplyDriftLimiter_<zone>`, run by `RunACCIS_<zone>` after `SetAST`
+  and the program of a hook and before `SetASTnoTol` (so before the minimum and maximum of B5, "before the existing
+  clipping" of the prompt), with the Erl accumulators `sum_T_occ_<zone>` and `n_occ_<zone>` (the operative
+  temperature `<zone>_OpT` of the timesteps with `Occ_count_<zone>` > 0) flushed at the change of `DayOfYear`, out of
+  the warm-up days (`WarmupFlag`, so the warm-up does not count, as decision 6 wants), without `TrendVariable`; the
+  targets are the setpoints without the tolerance, and where the limiter changes them `AHST`/`ACST` get its setpoints
+  plus the tolerance, rounded again; `InitDriftLimiter` at `BeginNewEnvironment`; the outputs `T_rm_in_<zone>`,
+  `DriftTargetAHST_<zone>`, `DriftTargetACST_<zone>`, `DriftAppliedAHST_<zone>`, `DriftAppliedACST_<zone>`
+  (averaged) and `DriftLimitedHours_<zone>` (summed). The setpoints of the PMV (`setpoint_type='pmv'`,
+  `accim.sim.pmv_index`) have none (decision D5: they are not temperatures). Three choices that the decisions do
+  not fix are provisional in `notes/questions.md`.
+- **Consequences**: with `'window'`, both setpoints are clipped to the window, so the band is at most 2 K wide around
+  T_rm_in: in the first 12 days of a run period from 1 April in Seville (the sample model, INT EN16798, category II,
+  comfort mode 3, EnergyPlus 25.1), T_rm_in was 25.6–26.3 °C and the heating setpoint 24.6–25.3 °C instead of
+  19–20.8 °C. `compute_setpoints` cannot calculate the limiter; `verify_accim_simulation` checks its targets.
+
 ## 2026-11-10 — Comfort standard 24, INT Sun2026 SET, is a thin layer on the hook of the SET by bisection (F1)
 
 - **Status**: accepted (task F1 of block F; decisions 1 to 5 and 8 of the author of 2026-11-10,

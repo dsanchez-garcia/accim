@@ -104,7 +104,13 @@ def test_the_optional_outputs_are_those_of_accim_sim():
         ['HoursBelow_18_Z', 'HoursBelow_17p5_Z', 'HoursBelow_m2_Z']
     # The outputs that are added up, and those that are averaged (see the docstring of the module)
     assert [output for output, (_, averaged, _) in ooc.ZONE_OUTPUTS.items() if not averaged] == LONG_TERM + [
-        'HoursInCausalBand']
+        'HoursInCausalBand', 'DriftLimitedHours']
+    # The outputs of the limiter of the drift of the setpoints (task F2 of block F), with their units
+    from accim.sim.ems import drift_limiter
+
+    assert {output: ooc.ZONE_OUTPUTS[output][0] for output in drift_limiter.OUTPUTS} == {
+        output: f"{output} ({'h' if units == 'H' else '°C'})" for output, (units, _) in drift_limiter.OUTPUTS.items()}
+    assert [output for output, (_, kind) in drift_limiter.OUTPUTS.items() if kind == 'Summed'] == ['DriftLimitedHours']
 
 
 @MODELS

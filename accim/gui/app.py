@@ -588,7 +588,7 @@ class AddAccisTab(_Tab):
                      'setpoint_tolerance_start', 'setpoint_tolerance_end', 'setpoint_tolerance_step', 'name_suffix',
                      *forms.CUSTOM_MODEL_FIELDS, 'custom_outdoor_metric', *forms.CUSTOM_OUTDOOR_METRIC_FIELDS, 'epw',
                      'custom_regimes', *forms.SETPOINT_LIMIT_FIELDS, *forms.STATIC_SETPOINT_FIELDS,
-                     'report_hours_below'):
+                     *forms.DRIFT_FIELDS, 'report_hours_below'):
             self.vars[name] = tk.StringVar(value=defaults[name])
         for name in ('keep_existing_outputs', 'add_building_averages', 'debug_ems', 'report_long_term_discomfort',
                      *forms.EXISTING_HVAC_OPTIONS):
@@ -833,6 +833,19 @@ class AddAccisTab(_Tab):
                               'and of the building above the cooling setpoint and below the heating setpoint '
                               'without the tolerance.',
                   wraplength=760, foreground='gray25').grid(row=5, column=0, columnspan=2, sticky='w', pady=(2, 0))
+        # The limiter of the drift of the setpoints (accim.sim.ems.drift_limiter, task F2 of block F)
+        self.drift_mode_combo = _grid_combo(frame, 6, f"{forms.DRIFT_FIELDS['drift_mode'][0]}:",
+                                            self.vars['drift_mode'], ('', 'rate', 'window'), width=10)
+        self.limit_widgets.append(self.drift_mode_combo)
+        for row, name in enumerate(list(forms.DRIFT_FIELDS)[1:], start=7):
+            self.limit_widgets.append(_grid_entry(frame, row, f'{forms.DRIFT_FIELDS[name][0]}:', self.vars[name],
+                                                  width=8))
+        ttk.Label(frame, text='The limiter of the drift (Parkinson, de Dear and Brager, 2020): rate, the setpoints of '
+                              'each day within the largest change of those applied the day before; window, the '
+                              'setpoints within T_rm_in minus and plus the distances, T_rm_in being the daily running '
+                              'mean of the operative temperature of the occupied hours of the zone. It limits the '
+                              'setpoints of any comfort standard, before the minimum and maximum.',
+                  wraplength=760, foreground='gray25').grid(row=12, column=0, columnspan=2, sticky='w', pady=(2, 0))
         return frame
 
     def _table_b2_chosen(self) -> None:
@@ -1012,7 +1025,7 @@ class AddAccisTab(_Tab):
             # The fields of the minimum and maximum of the setpoints, of the regimes of the custom model and of the
             # long-term discomfort are disabled
             values.update(dict.fromkeys(forms.SETPOINT_LIMIT_FIELDS, ''), custom_regimes='',
-                          report_long_term_discomfort=False)
+                          report_long_term_discomfort=False, drift_mode='')
         return values
 
     def state(self) -> Dict[str, Any]:

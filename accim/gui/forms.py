@@ -58,6 +58,7 @@ __all__ = [
     'RUN_DEFAULTS',
     'SAMPLINGS',
     'SCRIPT_TYPES',
+    'DRIFT_FIELDS',
     'SETPOINT_LIMIT_FIELDS',
     'SETPOINT_TYPES',
     'STATIC_SETPOINT_FIELDS',
@@ -103,6 +104,7 @@ __all__ = [
     'results_size_arguments',
     'run_ep_arguments',
     'setpoint_ems_code_calls',
+    'drift_arguments',
     'setpoint_limit_arguments',
     'simulation_csvs',
     'simulations',
@@ -184,6 +186,16 @@ SETPOINT_LIMIT_FIELDS = {
     'heating_setpoint_minimum': ('Minimum heating setpoint (°C; empty: none)', ''),
     'cooling_setpoint_maximum': ('Maximum cooling setpoint (°C; empty: none)', ''),
 }
+#: The limiter of the drift of the setpoints (accim.sim.ems.drift_limiter, task F2 of block F): argument -> (label,
+#: default); with drift_mode empty, there is no limiter and the other fields are not used.
+DRIFT_FIELDS = {
+    'drift_mode': ('Limiter of the drift (empty: none; rate or window)', ''),
+    'max_drift_rate': ('rate: largest change from one day to the next (K/day)', '0.5'),
+    'alpha_indoor': ('window: alpha of the running mean T_rm_in', '0.8'),
+    'delta_cool': ('window: distance above T_rm_in (K)', '1.0'),
+    'delta_heat': ('window: distance below T_rm_in (K)', '1.0'),
+    'initial_T_rm_in': ('window: first T_rm_in (°C; empty: the first occupied day)', ''),
+}
 #: The static setpoints of JPN Aqilah 2025 (accim.sim.ems.static_setpoints), whose paper gives none: argument ->
 #: (label, default).
 STATIC_SETPOINT_FIELDS = {
@@ -264,6 +276,7 @@ ADD_ACCIS_DEFAULTS = {
     'custom_regimes': '',
     **{name: default for name, (_, default) in SETPOINT_LIMIT_FIELDS.items()},
     **{name: default for name, (_, default) in STATIC_SETPOINT_FIELDS.items()},
+    **{name: default for name, (_, default) in DRIFT_FIELDS.items()},
     'report_hours_below': '',
     'report_long_term_discomfort': False,
     **EXISTING_HVAC_DEFAULTS,
@@ -383,12 +396,14 @@ PREDEFINED_MODEL_PARAMETERS = (
     'opening_factor_max_temp_diff', 'opening_factor_min_temp_diff', 'min_opening_factor',
     'ventilation_setpoint_offset', 'min_outdoor_temp_offset', 'max_wind_speed', 'setpoint_tolerance',
     'heating_setpoint_minimum', 'cooling_setpoint_maximum', 'static_heating_setpoint', 'static_cooling_setpoint',
+    'drift_mode', 'max_drift_rate', 'alpha_indoor', 'delta_cool', 'delta_heat', 'initial_T_rm_in',
 )
 CUSTOM_MODEL_PARAMETERS = (
     'custom_cooling_upper_limit', 'custom_cooling_lower_limit', 'custom_heating_upper_limit',
     'custom_heating_lower_limit', 'custom_upper_limit', 'custom_lower_limit', 'custom_slope', 'custom_intercept',
     'custom_cooling_offset', 'custom_heating_offset', 'custom_offset', 'heating_setpoint_minimum',
-    'cooling_setpoint_maximum', 'custom_outdoor_metric', 'custom_alpha', 'custom_days',
+    'cooling_setpoint_maximum', 'custom_outdoor_metric', 'custom_alpha', 'custom_days', 'drift_mode', 'max_drift_rate',
+    'alpha_indoor', 'delta_cool', 'delta_heat', 'initial_T_rm_in',
 )
 PARAMETERS_TYPES = {'accim predefined model': PREDEFINED_MODEL_PARAMETERS,
                     'accim custom model': CUSTOM_MODEL_PARAMETERS}
@@ -845,6 +860,7 @@ def add_accis_arguments(form: Mapping[str, Any]) -> Dict[str, Any]:
     if arguments['setpoint_tolerance_step'] <= 0:
         raise FormError('setpoint_tolerance_step: enter a number greater than 0.')
     arguments.update(setpoint_limit_arguments(form))
+    arguments.update(drift_arguments(form))
     if form.get('report_long_term_discomfort'):
         if setpoint_type != 'temperature':
             raise FormError('report_long_term_discomfort: the long-term discomfort needs the adaptive setpoint '
@@ -1059,6 +1075,33 @@ def setpoint_limit_arguments(form: Mapping[str, Any], hours_below: bool = True) 
     return arguments
 
 
+def drift_arguments(form: Mapping[str, Any]) -> Dict[str, Any]:
+    """The arguments of the limiter of the drift of the setpoints of :class:`accim.sim.accis.AddAccis`
+    (:mod:`accim.sim.ems.drift_limiter`) from the values of its form: none if ``drift_mode`` is empty; otherwise
+    ``drift_mode`` and the numbers of the other fields (``initial_T_rm_in`` only if it is not empty).
+
+    :raises FormError: If a value is not valid, or the limiter is given with the PMV-based setpoints (setpoint_type
+        'pmv'), whose setpoints are not temperatures.
+    """
+    from accim.sim.ems.drift_limiter import check_drift_arguments
+
+    mode = str(form.get('drift_mode', ADD_ACCIS_DEFAULTS['drift_mode']) or '').strip().lower()
+    if not mode:
+        return {}
+    if form.get('setpoint_type', ADD_ACCIS_DEFAULTS['setpoint_type']) != 'temperature':
+        raise FormError('drift_mode: the PMV-based setpoints have no limiter of the drift (leave this field empty).')
+    arguments: Dict[str, Any] = {'drift_mode': mode}
+    for name in ('max_drift_rate', 'alpha_indoor', 'delta_cool', 'delta_heat', 'initial_T_rm_in'):
+        text = str(form.get(name, ADD_ACCIS_DEFAULTS[name]) or '').strip()
+        if text:
+            arguments[name] = parse_number(text, name)
+    try:
+        check_drift_arguments(**arguments)
+    except ValueError as error:
+        raise FormError(str(error)) from None
+    return arguments
+
+
 def _generation(arguments: Mapping[str, Any]):
     """The arguments of the output IDFs (:class:`accim.sim.generation.GenerationArguments`) of AddAccis with these
     arguments (those of :func:`add_accis_arguments`), as AddAccis makes them."""
@@ -1130,7 +1173,7 @@ def _single(values: List[Number], standard, attribute: str) -> Union[Number, Non
 _EMS_CODE_ARGUMENTS = ('setpoint_tolerance', 'setpoint_accuracy', 'cooling_season_start', 'cooling_season_end',
                        'category_cooling_offset', 'category_heating_offset', *CUSTOM_MODEL_FIELDS,
                        'custom_outdoor_metric', *CUSTOM_OUTDOOR_METRIC_FIELDS, *SETPOINT_LIMIT_FIELDS,
-                       *STATIC_SETPOINT_FIELDS)
+                       *STATIC_SETPOINT_FIELDS, *DRIFT_FIELDS)
 #: Those of the custom model only
 _CUSTOM_EMS_CODE_ARGUMENTS = (*CUSTOM_MODEL_FIELDS, 'custom_outdoor_metric', *CUSTOM_OUTDOOR_METRIC_FIELDS, 'epw',
                               'custom_regimes', 'script_type')
@@ -1164,8 +1207,9 @@ def setpoint_ems_code_calls(form: Mapping[str, Any]) -> List[Tuple[str, Dict[str
         **{name: parse_number(form.get(name, ADD_ACCIS_DEFAULTS[name]), name)
            for name in ('category_cooling_offset', 'category_heating_offset')},
     )
-    # The minimum and maximum of the setpoints, if they are given
+    # The minimum and maximum of the setpoints, and the limiter of their drift, if they are given
     common.update(setpoint_limit_arguments(form, hours_below=False))
+    common.update(drift_arguments(form))
     if 99 in standards or any(values.get('comfort_standard') == 99 for values in zones.values()):
         common.update({name: parse_number(form.get(name, ''), name) for name in CUSTOM_MODEL_FIELDS})
         # With the weather file, the code of the outdoor metric begins with its values on 1 January

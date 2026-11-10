@@ -24,6 +24,39 @@ it here as answered).
 
 ## Open
 
+## 2026-11-10 — F2: the setpoint "applied the previous day" of the rate
+- Context: decision 6 of block F: with `drift_mode='rate'`, |setpoint(d) − setpoint_applied(d − 1)| ≤ `max_drift_rate`
+  and "the state is the applied setpoint of the previous day". The setpoints of the ACCIS change in each timestep (the
+  first timestep of each day reads the running mean of the day before, and those of the hooks follow the humidity
+  and the mean radiant temperature), so "the setpoint of the previous day" needs a definition.
+- Why it matters: it sets the reference of the limit of each day.
+- Options considered: (i) the setpoint applied by the limiter in the last timestep of the previous day (implemented;
+  for the adaptive setpoints, that of the whole day); (ii) the mean of the setpoints applied in the occupied
+  timesteps of the previous day; (iii) that of its last occupied timestep.
+- Owner: the author.
+- Status: open; option (i) implemented provisionally (`DriftLastAHST_<zone>` → `DriftRefAHST_<zone>` at the change of
+  DayOfYear), heating and cooling each one.
+
+## 2026-11-10 — F2: the days without occupied hours in the running mean T_rm_in
+- Context: T_rm_in(d) = (1 − alpha_indoor)·T_occ_mean(d − 1) + alpha_indoor·T_rm_in(d − 1), with T_occ_mean the mean
+  operative temperature of the occupied hours; a day without occupants (a weekend) has no T_occ_mean.
+- Why it matters: with offices, two days a week.
+- Options considered: (i) T_rm_in does not change after a day without occupied hours (implemented: the occupants were
+  not exposed); (ii) the mean of all the hours of that day; (iii) the decay of T_rm_in towards 0 (not meaningful).
+- Owner: the author.
+- Status: open; option (i) implemented provisionally.
+
+## 2026-11-10 — F2: the parameter drift_mode of the parametric module and the limiter off
+- Context: the parametric module takes numbers as options (as `custom_outdoor_metric`, which takes the codes of the
+  metrics), and a plan may combine the limiter with its absence.
+- Why it matters: `modify_accis` cannot remove the limiter (`None` keeps the arguments, as the minimum and maximum of
+  B5), so a sample without it must turn it off in a model that has it.
+- Options considered: (i) the codes 0 (none), 1 ('rate') and 2 ('window'), also their names; 0 sets `DriftMode = 0`
+  in the zones that have the limiter (whose program then changes nothing) and does nothing in a model without it
+  (implemented); (ii) the names only, without an option of none.
+- Owner: the author.
+- Status: open; option (i) implemented provisionally (`param_accis.modify_DriftMode`).
+
 ## 2026-11-10 — F1: the numbers of the comfort modes of comfort standard 24
 - Context: the decision of the author names the comfort modes of comfort standard 24 'SET band' and 'SET neutral
   +/- offset' without numbers; the catalogue of accim (`accim.sim.standards.ComfortStandard.comfort_modes`) numbers

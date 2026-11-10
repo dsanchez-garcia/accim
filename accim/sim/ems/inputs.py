@@ -59,7 +59,8 @@ class InputVariable:
     :ivar outdoor_metric_only: True for the inputs of the outdoor metric of the custom model, which only the models
         with the EMS code of the custom model have (:mod:`accim.sim.ems.outdoor_metric`).
     :ivar optional: True for the inputs that SetInputData_<zone> only has if they are given (the minimum of the heating
-        setpoint and the maximum cooling setpoint, :mod:`accim.sim.ems.setpoint_limits`); their default is None.
+        setpoint and the maximum cooling setpoint, :mod:`accim.sim.ems.setpoint_limits`, and the limiter of the drift
+        of the setpoints, :mod:`accim.sim.ems.drift_limiter`); their default is None.
     :ivar static_only: True for the inputs of the static setpoints of the comfort standards whose standard does not
         give them (JPN Aqilah 2025, :mod:`accim.sim.ems.static_setpoints`), which only the zones of these comfort
         standards have.
@@ -107,6 +108,14 @@ INPUT_VARIABLES = (
     InputVariable('StaticACST', 'static_cooling_setpoint', 28.0, static_only=True),
     InputVariable('AHSTmin', 'heating_setpoint_minimum', None, optional=True),
     InputVariable('ACSTmax', 'cooling_setpoint_maximum', None, optional=True),
+    # The limiter of the drift of the setpoints (task F2 of block F, accim.sim.ems.drift_limiter): only the zones with
+    # drift_mode have them
+    InputVariable('DriftMode', 'drift_mode', None, optional=True),
+    InputVariable('MaxDriftRate', 'max_drift_rate', None, optional=True),
+    InputVariable('AlphaIndoor', 'alpha_indoor', None, optional=True),
+    InputVariable('DeltaCool', 'delta_cool', None, optional=True),
+    InputVariable('DeltaHeat', 'delta_heat', None, optional=True),
+    InputVariable('InitTrmIn', 'initial_T_rm_in', None, optional=True),
     InputVariable('MaxTempDiffVOF', 'opening_factor_max_temp_diff', 6, mixed_mode_only=True),
     InputVariable('MinTempDiffVOF', 'opening_factor_min_temp_diff', 1, mixed_mode_only=True),
     InputVariable('MultiplierVOF', 'min_opening_factor', 0.25, mixed_mode_only=True),
@@ -125,15 +134,19 @@ def input_values(arguments: Mapping) -> Dict[str, Any]:
     The arguments that are None or missing are left out. The tolerance of the cooling setpoint is the negative of
     ``setpoint_tolerance``, and the dates of the cooling season can be 'dd/mm' dates. With a comfort standard defined by
     its data (:mod:`accim.sim.standards`), the inputs of the outdoor metric are those of the comfort standard
-    (:func:`accim.sim.ems.standard_lines.standard_inputs`).
+    (:func:`accim.sim.ems.standard_lines.standard_inputs`). The inputs of the limiter of the drift of the setpoints are
+    only those of a ``drift_mode`` given, with the defaults of the arguments not given
+    (:func:`accim.sim.ems.drift_limiter.drift_inputs`).
 
     :param arguments: The arguments, ``{'comfort_standard': 1, 'setpoint_tolerance': 0.1...}``.
     :return: The values, ``{'ComfStand': 1, 'ACSTtol': -0.1, 'AHSTtol': 0.1...}``.
     """
+    from accim.sim.ems.drift_limiter import INPUTS as DRIFT_INPUTS, drift_inputs
+
     values = {}
     for item in INPUT_VARIABLES:
         value = arguments.get(item.argument)
-        if value is None:
+        if value is None or item.variable in DRIFT_INPUTS:
             continue
         if item.variable == 'ACSTtol':
             value = -value
@@ -143,6 +156,7 @@ def input_values(arguments: Mapping) -> Dict[str, Any]:
             from accim.sim.ems.outdoor_metric import metric_code
             value = metric_code(value)
         values[item.variable] = value
+    values.update(drift_inputs(arguments))
     # The zones of a comfort standard defined by its data have its outdoor metric (accim.sim.standards)
     from accim.sim.standards import comfort_standard_definition
 

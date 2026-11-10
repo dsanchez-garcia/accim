@@ -1978,6 +1978,336 @@ class StaticCoolingSetpoint:
         param_accis.modify_StaticACST(idf, value)
 
 
+# The limiter of the drift of the setpoints (task F2 of block F of accim 1.2.0)
+
+class DriftMode:
+    """OO wrapper for the ACCIS parameter ``drift_mode``: the limiter of the drift of the setpoints by the indoor
+    thermal history (the input ``DriftMode``, task F2 of block F of accim 1.2.0, :mod:`accim.sim.ems.drift_limiter`) of
+    all the zones: 1 ('rate'), 2 ('window') or 0 (none).
+
+    Usage
+    -----
+    Instantiate the class and call :meth:`modify` with ``idf`` and ``value``.
+
+    Examples
+    --------
+    p = DriftMode()
+    p.modify(idf, 1)
+    """
+
+    def __init__(self):
+        """Initialize the wrapper and expose the canonical parameter name.
+
+        Usage
+        -----
+        Use the instance ``name`` attribute for logging or mapping checks.
+
+        Examples
+        --------
+        DriftMode().name
+        'drift_mode'
+        """
+        self.name = 'drift_mode'
+
+    def modify(self, idf, value):
+        """Apply parameter ``drift_mode`` to an IDF in place.
+
+        Parameters
+        ----------
+        idf : besos.IDF_class
+            Target building model to edit, with the ACCIS of accim 1.0.0 or later.
+        value : int
+            The code of the mode (or its name), written by ``param_accis.modify_DriftMode``.
+
+        Returns
+        -------
+        None
+            The function edits ``idf`` in place.
+
+        Usage
+        -----
+        Call this method before executing parametric or optimisation runs.
+
+        Examples
+        --------
+        DriftMode().modify(idf, 1)
+        """
+        param_accis.modify_DriftMode(idf, value)
+
+
+class MaxDriftRate:
+    """OO wrapper for the ACCIS parameter ``max_drift_rate``: the largest change of the setpoints from one day to the
+    next of the limiter of the drift in the mode 'rate' (the input ``MaxDriftRate``, K/day, greater than 0; 0.5 by
+    default) of all the zones.
+
+    Usage
+    -----
+    Instantiate the class and call :meth:`modify` with ``idf`` and ``value``.
+
+    Examples
+    --------
+    p = MaxDriftRate()
+    p.modify(idf, 0.25)
+    """
+
+    def __init__(self):
+        """Initialize the wrapper and expose the canonical parameter name.
+
+        Usage
+        -----
+        Use the instance ``name`` attribute for logging or mapping checks.
+
+        Examples
+        --------
+        MaxDriftRate().name
+        'max_drift_rate'
+        """
+        self.name = 'max_drift_rate'
+
+    def modify(self, idf, value):
+        """Apply parameter ``max_drift_rate`` to an IDF in place.
+
+        Parameters
+        ----------
+        idf : besos.IDF_class
+            Target building model to edit, with the ACCIS of accim 1.0.0 or later.
+        value : float
+            The rate (K/day), written by ``param_accis.modify_MaxDriftRate``.
+
+        Returns
+        -------
+        None
+            The function edits ``idf`` in place.
+
+        Usage
+        -----
+        Call this method before executing parametric or optimisation runs.
+
+        Examples
+        --------
+        MaxDriftRate().modify(idf, 0.25)
+        """
+        param_accis.modify_MaxDriftRate(idf, value)
+
+
+class AlphaIndoor:
+    """OO wrapper for the ACCIS parameter ``alpha_indoor``: the weight of the running mean of the day before of the
+    limiter of the drift in the mode 'window' (the input ``AlphaIndoor``, from 0 to 1, 1 excluded; 0.8 by default) of
+    all the zones.
+
+    Usage
+    -----
+    Instantiate the class and call :meth:`modify` with ``idf`` and ``value``.
+
+    Examples
+    --------
+    p = AlphaIndoor()
+    p.modify(idf, 0.9)
+    """
+
+    def __init__(self):
+        """Initialize the wrapper and expose the canonical parameter name.
+
+        Usage
+        -----
+        Use the instance ``name`` attribute for logging or mapping checks.
+
+        Examples
+        --------
+        AlphaIndoor().name
+        'alpha_indoor'
+        """
+        self.name = 'alpha_indoor'
+
+    def modify(self, idf, value):
+        """Apply parameter ``alpha_indoor`` to an IDF in place.
+
+        Parameters
+        ----------
+        idf : besos.IDF_class
+            Target building model to edit, with the ACCIS of accim 1.0.0 or later.
+        value : float
+            The alpha, written by ``param_accis.modify_AlphaIndoor``.
+
+        Returns
+        -------
+        None
+            The function edits ``idf`` in place.
+
+        Usage
+        -----
+        Call this method before executing parametric or optimisation runs.
+
+        Examples
+        --------
+        AlphaIndoor().modify(idf, 0.9)
+        """
+        param_accis.modify_AlphaIndoor(idf, value)
+
+
+class DeltaCool:
+    """OO wrapper for the ACCIS parameter ``delta_cool``: the largest distance of the setpoints above the running mean
+    of the operative temperature of the occupied hours of the limiter of the drift in the mode 'window' (the input
+    ``DeltaCool``, K, 0 or more; 1.0 by default) of all the zones.
+
+    Usage
+    -----
+    Instantiate the class and call :meth:`modify` with ``idf`` and ``value``.
+
+    Examples
+    --------
+    p = DeltaCool()
+    p.modify(idf, 1.5)
+    """
+
+    def __init__(self):
+        """Initialize the wrapper and expose the canonical parameter name.
+
+        Usage
+        -----
+        Use the instance ``name`` attribute for logging or mapping checks.
+
+        Examples
+        --------
+        DeltaCool().name
+        'delta_cool'
+        """
+        self.name = 'delta_cool'
+
+    def modify(self, idf, value):
+        """Apply parameter ``delta_cool`` to an IDF in place.
+
+        Parameters
+        ----------
+        idf : besos.IDF_class
+            Target building model to edit, with the ACCIS of accim 1.0.0 or later.
+        value : float
+            The distance (K), written by ``param_accis.modify_DeltaCool``.
+
+        Returns
+        -------
+        None
+            The function edits ``idf`` in place.
+
+        Usage
+        -----
+        Call this method before executing parametric or optimisation runs.
+
+        Examples
+        --------
+        DeltaCool().modify(idf, 1.5)
+        """
+        param_accis.modify_DeltaCool(idf, value)
+
+
+class DeltaHeat:
+    """OO wrapper for the ACCIS parameter ``delta_heat``: the largest distance of the setpoints below the running mean
+    of the operative temperature of the occupied hours of the limiter of the drift in the mode 'window' (the input
+    ``DeltaHeat``, K, 0 or more; 1.0 by default) of all the zones.
+
+    Usage
+    -----
+    Instantiate the class and call :meth:`modify` with ``idf`` and ``value``.
+
+    Examples
+    --------
+    p = DeltaHeat()
+    p.modify(idf, 1.5)
+    """
+
+    def __init__(self):
+        """Initialize the wrapper and expose the canonical parameter name.
+
+        Usage
+        -----
+        Use the instance ``name`` attribute for logging or mapping checks.
+
+        Examples
+        --------
+        DeltaHeat().name
+        'delta_heat'
+        """
+        self.name = 'delta_heat'
+
+    def modify(self, idf, value):
+        """Apply parameter ``delta_heat`` to an IDF in place.
+
+        Parameters
+        ----------
+        idf : besos.IDF_class
+            Target building model to edit, with the ACCIS of accim 1.0.0 or later.
+        value : float
+            The distance (K), written by ``param_accis.modify_DeltaHeat``.
+
+        Returns
+        -------
+        None
+            The function edits ``idf`` in place.
+
+        Usage
+        -----
+        Call this method before executing parametric or optimisation runs.
+
+        Examples
+        --------
+        DeltaHeat().modify(idf, 1.5)
+        """
+        param_accis.modify_DeltaHeat(idf, value)
+
+
+class InitialTRmIn:
+    """OO wrapper for the ACCIS parameter ``initial_T_rm_in``: the first running mean of the limiter of the drift in the
+    mode 'window' (the input ``InitTrmIn``, °C), with which it is active from the first day, in all the zones.
+
+    Usage
+    -----
+    Instantiate the class and call :meth:`modify` with ``idf`` and ``value``.
+
+    Examples
+    --------
+    p = InitialTRmIn()
+    p.modify(idf, 24)
+    """
+
+    def __init__(self):
+        """Initialize the wrapper and expose the canonical parameter name.
+
+        Usage
+        -----
+        Use the instance ``name`` attribute for logging or mapping checks.
+
+        Examples
+        --------
+        InitialTRmIn().name
+        'initial_T_rm_in'
+        """
+        self.name = 'initial_T_rm_in'
+
+    def modify(self, idf, value):
+        """Apply parameter ``initial_T_rm_in`` to an IDF in place.
+
+        Parameters
+        ----------
+        idf : besos.IDF_class
+            Target building model to edit, with the ACCIS of accim 1.0.0 or later.
+        value : float
+            The running mean (°C), written by ``param_accis.modify_InitTrmIn``.
+
+        Returns
+        -------
+        None
+            The function edits ``idf`` in place.
+
+        Usage
+        -----
+        Call this method before executing parametric or optimisation runs.
+
+        Examples
+        --------
+        InitialTRmIn().modify(idf, 24)
+        """
+        param_accis.modify_InitTrmIn(idf, value)
+
 class Clo:
     """OO wrapper for the parameter ``clothing_insulation``: the clothing insulation of all the People objects (clo),
     with :func:`accim.sim.apmv.set_pmv_input_parameters` (the schedules ``Sch_Clo_<people>``); it warns outside 0 to 2

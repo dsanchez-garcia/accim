@@ -108,7 +108,12 @@ def verify_accim_simulation(
     the conditions 'hvac_off' or 'hvac_on', which depend on the HVAC system, are not checked. They are checked with the
     outputs at timestep frequency, or else hourly, of the last environment of the outputs (the run period). The zones
     whose setpoints a hook of the API backend sets (the setpoints of the ATHB and of the SET of
-    :mod:`accim.sim.comfort_hooks`, with the program ``ApplyHookSetpoints_<zone>``) are not checked. The running mean
+    :mod:`accim.sim.comfort_hooks`, with the program ``ApplyHookSetpoints_<zone>``) are not checked. In the zones with
+    the limiter of the drift of the setpoints (:mod:`accim.sim.ems.drift_limiter`), the setpoints applied depend on the
+    indoor temperatures of the simulation, so its targets (``DriftTargetAHST_<zone>`` and ``DriftTargetACST_<zone>``,
+    the setpoints of the comfort standard without the tolerance, before the minimum and maximum of the setpoints) are
+    those of ``compute_setpoints`` without the minimum and maximum (``Check4_DriftTargetAHST`` and
+    ``Check4_DriftTargetACST``), and the setpoints applied are not checked. The running mean
     of ASHRAE 55 of a run period that begins between the 2nd and the 30th of January is that of EnergyPlus 25.1 (with
     the mean of 31 December in place of that of the day before the run period, see
     :func:`accim.sim.preview.energyplus_running_means`); with a .stat file next to the weather file, EnergyPlus takes it
@@ -1154,14 +1159,17 @@ def _compute_setpoints_arguments(values: Mapping[str, Any]) -> Dict[str, Any]:
     import inspect
     import math
 
+    from accim.sim.ems.drift_limiter import INPUTS as DRIFT_INPUTS
     from accim.sim.ems.inputs import INPUT_VARIABLES
     from accim.utils.ems_code import get_setpoint_ems_code
 
     accepted = set(inspect.signature(get_setpoint_ems_code).parameters)
     arguments = {}
     for item in INPUT_VARIABLES:
-        # setpoint_tolerance is AHSTtol, and ACSTtol its opposite
-        if item.argument in accepted and item.variable in values and item.variable != 'ACSTtol':
+        # setpoint_tolerance is AHSTtol, and ACSTtol its opposite; compute_setpoints cannot calculate the limiter of the
+        # drift of the setpoints, whose targets are its setpoints
+        if (item.argument in accepted and item.variable in values and item.variable != 'ACSTtol'
+                and item.variable not in DRIFT_INPUTS):
             arguments[item.argument] = values[item.variable]
     if 'ACSTtol' in values and 'AHSTtol' in values and not math.isclose(values['ACSTtol'], -values['AHSTtol']):
         raise ValueError(f"ACSTtol ({values['ACSTtol']}) is not the opposite of AHSTtol ({values['AHSTtol']})")
@@ -1258,7 +1266,14 @@ def _setpoint_mismatches(building, data: Mapping[str, pd.DataFrame], epw: str,
                          f"{HOOK_PROGRAM_PREFIX}{zone}).")
             continue
         try:
-            arguments = _compute_setpoints_arguments(read_inputs(program))
+            inputs = read_inputs(program)
+            arguments = _compute_setpoints_arguments(inputs)
+            # The limiter of the drift (accim.sim.ems.drift_limiter): its targets are the setpoints of the comfort
+            # standard before the minimum and maximum of the setpoints
+            drift = 'DriftMode' in inputs
+            if drift:
+                arguments.pop('heating_setpoint_minimum', None)
+                arguments.pop('cooling_setpoint_maximum', None)
             # The regimes of the custom model of the zone (accim.sim.ems.custom_regimes)
             regime_program = building.getobject('EnergyManagementSystem:Program', f'{PROGRAM_PREFIX}{zone}')
             if regime_program is not None:
@@ -1273,7 +1288,21 @@ def _setpoint_mismatches(building, data: Mapping[str, pd.DataFrame], epw: str,
             continue
         preview = previews[key].reindex(datetimes)
         inside = preview['Tout'].notna().to_numpy()
+        if drift:
+            lines.append(f"  '{zone}': the limiter of the drift of the setpoints: its targets are checked, not the "
+                         f"setpoints applied.")
+            for column, target in (('AHSTnoTol', 'DriftTargetAHST'), ('ACSTnoTol', 'DriftTargetACST')):
+                found = outputs.get('EMS', f'{target}_{zone}')
+                if found is None:
+                    continue
+                expected = np.where(inside, preview[column].to_numpy(dtype=float), np.nan)
+                new_rows, line = _mismatch_rows(timestamps, found[rows], expected, zone, f'Check4_{target}',
+                                                f'{column} of compute_setpoints', tolerance)
+                mismatches.extend(new_rows)
+                lines.append(line)
         for column, output in outputs_of_columns.items():
+            if drift and column in ('ACST', 'AHST', 'ACSTnoTol', 'AHSTnoTol'):
+                continue
             found = outputs.get('EMS', f'{output}_{zone}')
             if found is None:
                 continue

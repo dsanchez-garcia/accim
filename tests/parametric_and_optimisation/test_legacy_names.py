@@ -25,7 +25,8 @@ def _simulation(**kwargs):
 #: setpoints have the names of the development of accim 1.2.0)
 PARAMETERS_WITHOUT_LEGACY_NAMES = {'expectancy_factor', 'clothing_insulation', 'activity_level', 'air_velocity',
                                    'custom_outdoor_metric', 'custom_alpha', 'custom_days', 'static_heating_setpoint',
-                                   'static_cooling_setpoint'}
+                                   'static_cooling_setpoint', 'drift_mode', 'max_drift_rate', 'alpha_indoor',
+                                   'delta_cool', 'delta_heat', 'initial_T_rm_in'}
 
 
 def test_the_legacy_names_are_those_of_all_the_parameters():

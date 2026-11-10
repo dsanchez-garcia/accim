@@ -15,6 +15,23 @@ This log is a lightweight, session-scoped complement to the repository's
 existing tracking files — it does not replace them (see
 [[decisions.md#2026-09-13 — `notes/work-log.md` complements, not replaces, existing tracking files|the related decision]]).
 
+## 2026-11-10 — F2: the limiter of the drift of the setpoints (branch `v1.2.0`, on the server)
+
+- **Objective**: task F2 of block F: `drift_mode` 'rate' or 'window' (Parkinson, de Dear & Brager, 2020), an option of
+  the ACCIS of each zone in Erl, for every comfort standard and the hooks.
+- **Affected files**: `accim/sim/ems/drift_limiter.py` (new), `accim/sim/ems/inputs.py`, `accim/sim/generation.py`,
+  `accim/sim/accis.py`, `accim/utils/ems_code.py`, `accim/sim/preview.py`, `accim/utils/verification.py`, the
+  parametric module, the GUI, `Table`, [[../docs/source/4_detailed use.md]], [[../CHANGELOG.md]],
+  [[../CAMBIOS_CODIGO_v1.2.0.md]] (§31), [[../DEVLOG.md]], [[../TODO.md]], [[decisions.md]], [[questions.md]].
+- **Finding or decision**: See
+  [[decisions.md#2026-11-10 — The limiter of the drift of the setpoints is an option of the ACCIS of each zone, in Erl (F2)|the decision]].
+  The window clips both setpoints, so its band is 2 K wide around T_rm_in by default; three provisional choices in
+  [[questions.md]].
+- **Validation**: `tests/core/test_drift_limiter.py` 11 passed (both backends identical with EnergyPlus 25.1, T_rm_in
+  of pandas within 1e-4 K); `drift_mode=None` gives byte-identical output IDFs; `tests/core` 1356 passed, 2 skipped;
+  `tests/parametric_and_optimisation` 511 passed; docs with the same 35 warnings.
+- **Next step**: F3 (the indicators in `Table`).
+
 ## 2026-11-10 — F1: comfort standard 24, INT Sun2026 SET (branch `v1.2.0`, on the server)
 
 - **Objective**: task F1 of block F: the causal SET model of Sun, Brager & Schiavon (2026) as comfort standard 24, a

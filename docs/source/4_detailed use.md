@@ -565,6 +565,40 @@ accis.AddAccis(
 
 In the parametric module, the reducers `hours_outside_range` (Method A) and `degree_hours` (Method B) of `accim.parametric_and_optimisation.objectives` read these outputs, and `deviation_constraint_bound(occupied_hours, period, level)` gives the bound of a constraint with the acceptable deviations of Table E.1 of CEN/TR 16798-2 (`'<=126.0'` with 2100 occupied hours, `'yearly'` and `'6%'`), see {doc}`parametric_and_optimisation`.
 
+(drift-limiter)=
+### 4.2.7 The limiter of the drift of the setpoints
+
+The occupants adapt to the mean indoor temperature they are exposed to, and the changes of the setpoints should be spread over days to weeks (Parkinson, de Dear and Brager, 2020, *Nudging the adaptive thermal comfort model*, Energy and Buildings 206, 109559, Fig. 6 and section 4.3.2). Since accim 1.2.0 (task F2 of block F), the argument `drift_mode` of `AddAccis`, `modify_accis` and `zone_arguments` adds to the zones a limiter of the drift of their setpoints, with these decisions of the author (`notes/decisions.md`):
+
+| Argument | Default | |
+| :--- | :--- | :--- |
+| `drift_mode` | `None` | No limiter: the output IDFs are those without it. `'rate'`: the setpoints of each day within `max_drift_rate` of those applied at the end of the day before, \|setpoint(d) − applied(d − 1)\| ≤ `max_drift_rate`; on the first occupied day, the targets are applied without limit. `'window'`: the setpoints within [T_rm_in − `delta_heat`, T_rm_in + `delta_cool`], T_rm_in being the exponentially weighted daily running mean of the operative temperature of the zone in its occupied hours, T_rm_in(d) = (1 − `alpha_indoor`)·T_occ_mean(d − 1) + `alpha_indoor`·T_rm_in(d − 1); inactive until one full occupied day, whose mean starts T_rm_in |
+| `max_drift_rate` | 0.5 | `'rate'`: K/day, greater than 0 (about 5 K "over a couple of weeks", Parkinson et al., 2020, section 4.3.2, is 0.36 to 0.5 K/day) |
+| `alpha_indoor` | 0.8 | `'window'`: from 0 to 1 (1 excluded), the α of the running mean of EN 16798-1 (a time constant of about 4.5 days) |
+| `delta_cool`, `delta_heat` | 1.0, 1.0 | `'window'`: K above and below T_rm_in |
+| `initial_T_rm_in` | `None` | `'window'`: the first T_rm_in (°C), with which the limiter is active from the first day |
+
+The targets are the setpoints of the comfort standard of the zone (adaptive, static, those of a hook of the API backend such as those of the SET of comfort standard 24, section {ref}`sun2026-set`) without the tolerance, and the limiter applies to the heating and the cooling setpoint, each one; the minimum and maximum of the setpoints (section {ref}`setpoint-limits`) bound them after it. With `'window'`, both setpoints are clipped to the window, so the band between them is at most `delta_heat` + `delta_cool` wide (2 K by default) around T_rm_in: in the first 12 days of a run period from 1 April in Seville (the sample model, INT EN16798, category II, comfort mode 3, EnergyPlus 25.1), T_rm_in was 25.6 to 26.3 °C, and the heating setpoint 24.6 to 25.3 °C instead of 19 to 20.8 °C. The PMV-based setpoints have no limiter (their thermostats have setpoints of the PMV): `AddAccis` raises a `ValueError` with `setpoint_type='pmv'`.
+
+The EMS calculates it in the program `ApplyDriftLimiter_<zone>`, which `RunACCIS_<zone>` runs after `SetAST` (and after the program of the setpoints of a hook, `ApplyHookSetpoints_<zone>`) and before `SetASTnoTol`, out of the warm-up days of EnergyPlus (`WarmupFlag`), without `TrendVariable` objects, so that the backend of the Python API also runs it (both backends give identical results): in each timestep with occupants (`Occ_count_<zone>`), it adds the operative temperature of the zone (`<zone>_OpT`; as in the hour counters of the ACCIS, the EMS reads at the beginning of the timestep the occupants of the timestep and the operative temperature of the previous one) to the accumulators `sum_T_occ_<zone>` and `n_occ_<zone>`, and at the change of `DayOfYear` it updates T_rm_in (the days without occupants do not change it) and the state of the rate. Where the limiter changes the targets, `AHST` and `ACST` are its setpoints plus the tolerance, rounded again, so the thermostats, the setpoints without the tolerance, the hour counters and the outputs of the setpoints follow them. `InitDriftLimiter` resets its variables at the beginning of each environment. The inputs of the zone are `DriftMode` (1, `'rate'`; 2, `'window'`; 0, none), `MaxDriftRate`, `AlphaIndoor`, `DeltaCool`, `DeltaHeat` and `InitTrmIn`, and its outputs:
+
+| Output | Units | |
+| :--- | :--- | :--- |
+| `T_rm_in_<zone>` | °C | The running mean of the operative temperature of the occupied hours (averaged) |
+| `DriftTargetAHST_<zone>`, `DriftTargetACST_<zone>` | °C | The targets, without the tolerance (averaged) |
+| `DriftAppliedAHST_<zone>`, `DriftAppliedACST_<zone>` | °C | The setpoints of the limiter, without the tolerance, before the minimum and maximum (averaged) |
+| `DriftLimitedHours_<zone>` | H | The occupied hours in which the limiter changed a setpoint (summed) |
+
+```python
+accis.AddAccis(
+    ...,
+    comfort_standard=[1], category=[2], comfort_mode=[3],
+    drift_mode='rate', max_drift_rate=0.5,
+)
+```
+
+`modify_accis` keeps the arguments of the limiter that are `None`: `drift_mode` gives it to the zones (with the arguments given, those that they have, or the defaults), and the other arguments change those of the zones that have it. `print_setpoint_ems_code` prints its programs with `drift_mode`; `compute_setpoints` cannot calculate it (it depends on the indoor temperatures of the simulation), and `verify_accim_simulation` checks its targets against `compute_setpoints` (check 4), not the setpoints applied. In the parametric module, the parameters `drift_mode` (the codes 0, 1 and 2 as options), `max_drift_rate`, `alpha_indoor`, `delta_cool`, `delta_heat` and `initial_T_rm_in` (see {doc}`parametric_and_optimisation`). `Table` names its outputs `<zone>_T_rm_in (°C)`, `<zone>_DriftTargetAHST (°C)`... and `<zone>_DriftLimitedHours (h)` (section {ref}`table-optional-outputs`).
+
 (setpoint-ems-code)=
 ## 4.3 Full list of setpoint temperatures
 
@@ -1219,6 +1253,8 @@ Since accim 1.2.0, `Table` also takes the EMS outputs that some arguments of `Ad
 | `SET_<zone>` (°C) | `apply_set_setpoints(method='bisection')` (section {ref}`set-setpoints`) and `apply_sun2026_setpoints` (section {ref}`sun2026-set`) | `Block1:Zone1_SET (°C)` | mean | yes |
 | `TSV_causal_<zone>` | `apply_sun2026_setpoints` (section {ref}`sun2026-set`) | `Block1:Zone1_TSV_causal` | mean | yes |
 | `HoursInCausalBand_<zone>` (h) | `apply_sun2026_setpoints` (section {ref}`sun2026-set`) | `Block1:Zone1_HoursInCausalBand (h)` | `frequency_agg_func` | yes |
+| `T_rm_in_<zone>`, `DriftTargetAHST_<zone>`, `DriftTargetACST_<zone>`, `DriftAppliedAHST_<zone>`, `DriftAppliedACST_<zone>` (°C) | `drift_mode` (section {ref}`drift-limiter`) | `Block1:Zone1_T_rm_in (°C)`, `Block1:Zone1_DriftTargetAHST (°C)`... | mean | yes |
+| `DriftLimitedHours_<zone>` (h) | `drift_mode` (section {ref}`drift-limiter`) | `Block1:Zone1_DriftLimitedHours (h)` | `frequency_agg_func` | yes |
 
 - The outdoor metric of each zone keeps its EMS name, as the comfort temperature and the setpoints of each zone of the ACCIS (`Comfort Temperature_<zone>`...), so that no name contains another one: the figures of `Table`, `format_table(type_of_table='custom')` and `wrangled_table` take the columns whose names contain the names they are given, so `Tout_metric (°C)` only takes the outdoor metric of the model (that of the zone that runs last, the same as those of the zones if all of them have the same arguments).
 - The block and building values are those of the other outputs (`level`, `level_agg_func` and `level_excluded_zones`), such as `Building_Total_HoursBelow_18 (h) (summed)` and `Building_Total_ATHB_PMV (mean)`. As for the other outputs, `level_agg_func` gives every output both values, also those of the quantities that are not additive, such as the outdoor metric, the regime, the PMV of the ATHB, its clothing and metabolic rate and the SET: their sums over the zones (`... (summed)`) have no physical meaning, so use their means. The outputs of the building of `report_long_term_discomfort` (`Building_Hours Above Upper Limit (h)`...) are the sums of all the zones that the EMS adds up, also those of the excluded zones; without excluded zones, they are the same as `Building_Total_<name> (summed)`. The names of the hours and degree hours are those of the indicators of `Table(long_term_indicators=True)` (section {ref}`long-term-discomfort`), which are their sums over each simulation.

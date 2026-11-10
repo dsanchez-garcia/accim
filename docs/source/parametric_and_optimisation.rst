@@ -138,7 +138,9 @@ the object does to each model when it is created:
        ``setpoint_tolerance`` and the other arguments of :func:`~accim.sim.accis.modify_accis`, with
        their names (see :doc:`4_detailed use`); since accim 1.2.0, also ``heating_setpoint_minimum`` and
        ``cooling_setpoint_maximum`` (the minimum heating setpoint and the maximum of the cooling
-       setpoint of all the zones)
+       setpoint of all the zones), and the limiter of the drift of the setpoints: ``drift_mode`` (the codes
+       0, none; 1, ``'rate'``; 2, ``'window'``, as options), ``max_drift_rate``, ``alpha_indoor``,
+       ``delta_cool``, ``delta_heat`` and ``initial_T_rm_in``
    * - ``'accim custom model'``
      - Adds accim to each model, with the custom adaptive model
      - ``custom_slope`` (slope of the comfort temperature), ``custom_intercept`` (intercept),
@@ -146,7 +148,8 @@ the object does to each model when it is created:
        ``custom_lower_limit``/``custom_upper_limit`` (applicability limits of the running mean
        outdoor temperature); the offsets and limits can also be set separately for cooling and
        heating (``custom_cooling_offset``, ``custom_heating_offset``, ``custom_cooling_lower_limit``...);
-       since accim 1.2.0, also ``heating_setpoint_minimum`` and ``cooling_setpoint_maximum``, and the outdoor
+       since accim 1.2.0, also ``heating_setpoint_minimum`` and ``cooling_setpoint_maximum``, the parameters of
+       the limiter of the drift of the setpoints (``drift_mode``...), and the outdoor
        metric of the custom model: ``custom_outdoor_metric`` (the codes of the metrics, 0 to 7, as options),
        ``custom_alpha`` and ``custom_days`` (rounded to whole days); and the coefficients of the regimes of the
        custom model, ``custom_regime_<regime>_<field>`` (such as ``custom_regime_1_slope``), once the model has

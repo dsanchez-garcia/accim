@@ -357,8 +357,8 @@ def compute_setpoints(epw: PathLike, comfort_standard: int, category: Optional[N
         scalar arguments; the mean of the hour, as the output ``CustomRegime_<zone>``). Values that the programs do not
         set (such as the comfort temperature of static setpoints) are NaN.
     :raises ValueError: If the arguments are not valid (as in :func:`accim.utils.get_setpoint_ems_programs` and
-        :func:`energyplus_running_means`), or a regime of ``custom_regimes`` has the condition 'hvac_off' or
-        'hvac_on'.
+        :func:`energyplus_running_means`), a regime of ``custom_regimes`` has the condition 'hvac_off' or 'hvac_on', or
+        ``drift_mode`` is given (the limiter of the drift depends on the indoor temperature of the simulation).
     """
     from accim.sim.arguments import check_custom_regimes
     from accim.sim.ems import custom_regimes as cr
@@ -375,6 +375,9 @@ def compute_setpoints(epw: PathLike, comfort_standard: int, category: Optional[N
     if cr.uses_hvac_conditions(check_custom_regimes(custom_arguments.get('custom_regimes'))):
         raise ValueError("compute_setpoints cannot evaluate the conditions 'hvac_off' and 'hvac_on' of custom_regimes: "
                          "they depend on the HVAC system of the simulation in the previous timestep.")
+    if custom_arguments.get('drift_mode') is not None:
+        raise ValueError('compute_setpoints cannot calculate the limiter of the drift of the setpoints (drift_mode): '
+                         'it depends on the operative temperature and the occupants of the zone in the simulation.')
     programs = get_setpoint_ems_programs(comfort_standard, category, comfort_mode,
                                          epw=epw if outdoor_metric_start == 'epw' else None, start_date=start_date,
                                          **custom_arguments)

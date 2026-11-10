@@ -69,6 +69,13 @@ accim_predef_model_params = {
     # The static setpoints of JPN Aqilah 2025 (accim 1.2.0; the other comfort standards ignore them)
     'static_heating_setpoint': param_accis.modify_StaticAHST,
     'static_cooling_setpoint': param_accis.modify_StaticACST,
+    # The limiter of the drift of the setpoints (task F2 of block F, accim 1.2.0; drift_mode takes the codes 0, 1, 2)
+    'drift_mode': param_accis.modify_DriftMode,
+    'max_drift_rate': param_accis.modify_MaxDriftRate,
+    'alpha_indoor': param_accis.modify_AlphaIndoor,
+    'delta_cool': param_accis.modify_DeltaCool,
+    'delta_heat': param_accis.modify_DeltaHeat,
+    'initial_T_rm_in': param_accis.modify_InitTrmIn,
 }
 accim_custom_model_params = {
     # accim custom models parameters
@@ -90,6 +97,13 @@ accim_custom_model_params = {
     'custom_outdoor_metric': param_accis.modify_CustAST_metric,
     'custom_alpha': param_accis.modify_CustAST_alpha,
     'custom_days': param_accis.modify_CustAST_days,
+    # The limiter of the drift of the setpoints (task F2 of block F, accim 1.2.0; drift_mode takes the codes 0, 1, 2)
+    'drift_mode': param_accis.modify_DriftMode,
+    'max_drift_rate': param_accis.modify_MaxDriftRate,
+    'alpha_indoor': param_accis.modify_AlphaIndoor,
+    'delta_cool': param_accis.modify_DeltaCool,
+    'delta_heat': param_accis.modify_DeltaHeat,
+    'initial_T_rm_in': param_accis.modify_InitTrmIn,
 }
 apmv_setpoints_params = {
     # apmv setpoints parameters

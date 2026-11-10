@@ -122,6 +122,9 @@ Lo que ya está en otros documentos no se repite aquí:
 - **F1 (bloque F).** El estándar de confort 24, INT Sun2026 SET (el modelo causal de Sun, Brager y Schiavon, 2026:
   TSV = 0,11·SET − 2,6), es un gancho del SET por bisección con las entradas de los objetos People y la temperatura
   radiante media de la zona (`apply_sun2026_setpoints`); no tiene código EMS (sección 30).
+- **F2 (bloque F).** El limitador de la deriva de las consignas por la historia térmica interior (`drift_mode`
+  'rate' o 'window', con `max_drift_rate`, `alpha_indoor`, `delta_cool`, `delta_heat` e `initial_T_rm_in`), en Erl y
+  solo en las zonas que lo piden (sección 31).
 - Las categorías del PMV y la aproximación de la corrección del metabolismo se han comprobado en ISO 7730:2025 y
   EN 16798-1:2019, y el modelo dinámico de vestimenta de A5, en Schiavon y Lee (2013) y ASHRAE 55-2020 (sección 6).
 - Lo que quedaba abierto se ha comprobado: el golden master y las pruebas de EnergyPlus 26.1 y 26.2, también la de A5
@@ -1796,3 +1799,33 @@ temperatura operativa con la radiante media igual a la del aire.
   AHSTaul/all" del encargo son límites de aplicabilidad de la métrica exterior y no se aplican a las consignas; la
   vestimenta del modelo dinámico se lee de su salida.
 - Pruebas: `tests/core/test_sun2026_set.py` (18).
+
+## 31. El limitador de la deriva de las consignas (F2, bloque F)
+
+Parkinson, de Dear y Brager (2020), Energy and Buildings 206, 109559: los ocupantes se adaptan a la temperatura
+interior media a la que están expuestos (Fig. 6), y los cambios de consigna deben repartirse en días o semanas (§4.3.2).
+El bloque F (`notes/PROPUESTA_ADAPTACION_INTERIOR_v03.md` §4 y §6) pide un limitador opcional.
+
+**Antes.** Las consignas de cada día eran las del estándar de confort, sin límite de su variación.
+
+**Ahora.**
+
+- Argumentos `drift_mode` (None por defecto: sin limitador y sin cambios en los IDF), `max_drift_rate` (0,5 K/día),
+  `alpha_indoor` (0,8), `delta_cool` y `delta_heat` (1,0 K) e `initial_T_rm_in` (None) en `AddAccis`, `modify_accis`
+  (None los conserva) y `zone_arguments` (`accim.sim.ems.drift_limiter`).
+- 'rate': las consignas de cada día quedan a `max_drift_rate` como mucho de las aplicadas al final del día anterior (el
+  primer día ocupado sin límite). 'window': las consignas quedan en [T_rm_in − `delta_heat`, T_rm_in + `delta_cool`],
+  con T_rm_in(d) = (1 − α)·T_occ_media(d − 1) + α·T_rm_in(d − 1) de la temperatura operativa de las horas ocupadas,
+  inactivo hasta un día ocupado completo salvo con `initial_T_rm_in`.
+- Las zonas con limitador reciben las entradas `DriftMode`, `MaxDriftRate`, `AlphaIndoor`, `DeltaCool`, `DeltaHeat` (e
+  `InitTrmIn`), el programa `ApplyDriftLimiter_<zone>` (tras `SetAST` y el gancho, antes de `SetASTnoTol` y del mínimo y
+  máximo de B5; acumuladores Erl `sum_T_occ_<zone>` y `n_occ_<zone>` volcados al cambiar `DayOfYear`, fuera del
+  calentamiento, sin `TrendVariable`), `InitDriftLimiter` y las salidas `T_rm_in_<zone>`, `DriftTarget*_<zone>`,
+  `DriftApplied*_<zone>` y `DriftLimitedHours_<zone>`.
+- `print_setpoint_ems_code` muestra sus programas; `compute_setpoints` da un `ValueError`; `verify_accim_simulation`
+  comprueba los objetivos del limitador. Parámetros del paramétrico (`drift_mode` con los códigos 0, 1 y 2...), campos
+  de la interfaz gráfica y nombres en `Table`.
+- Con EnergyPlus 25.1, los dos backends dan resultados idénticos y T_rm_in coincide con su cálculo en pandas.
+- Decisiones provisionales en `notes/questions.md`: la consigna aplicada del día anterior es la de su último paso; los
+  días sin horas ocupadas no cambian T_rm_in; el código 0 del parámetro `drift_mode` lo desactiva.
+- Pruebas: `tests/core/test_drift_limiter.py` (11) y `tests/parametric_and_optimisation/test_drift_parameters.py` (2).

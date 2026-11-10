@@ -29,13 +29,8 @@ Active short-term tasks.
   - Definition of done: the tests that only read models use `accim.sim.accis.load_idf` (eppy), and those of the parametric module call `pytest.importorskip('besos')` first; `py -m pytest tests/core` without besos (a plugin that sets `sys.modules['besos'] = None`) skips them and fails none.
   - References: `notes/PROPUESTAS_MEJORAS_post_1.1.0_v04.md` (§3.4), `tests/core/test_setpoint_limits.py` and `tests/core/test_jpn_aqilah2025.py` (the four tests).
 
-- [ ] [P1][todo] Block F: F2 (the limiter of the setpoint drift)
-  - Context: `notes/PROPUESTA_ADAPTACION_INTERIOR_v03.md` (§3, §4, §6) and its prompts (`notes/PROMPTS_COPILOT_bloque_F_v02.md`), for the paper with Ruiji Sun. E-F1 and F1 are done (2026-11-10, `notes/decisions.md`): comfort standard 24, INT Sun2026 SET, is `accim.sim.comfort_hooks.apply_sun2026_setpoints`; F2 applies to its setpoints too.
-  - Definition of done: as the prompts of v02 say, one commit each.
-  - References: `notes/PROPUESTAS_MEJORAS_post_1.1.0_v04.md` (§4, §7), `notes/PROPUESTA_ADAPTACION_INTERIOR_v03.md`, `notes/PROMPTS_COPILOT_bloque_F_v02.md`.
-
 - [ ] [P2][todo] Block F: F3, the indicators of the indoor adaptation and the design of the validation study
-  - Context: `notes/PROPUESTA_ADAPTACION_INTERIOR_v03.md` §4 (F3): the columns of `Table` for the SET, the causal TSV, the hours within the causal band and `T_rm_in`, and an indicator of overcooling; the diagnostic `Tn_exp` of Parkinson et al. (2020, Fig. 6); the parametric study of the paper. F1 (2026-11-10) already gave `Table` the names of `SET_<zone>`, `TSV_causal_<zone>` and `HoursInCausalBand_<zone>` (`<zone>_SET (°C)`, `<zone>_TSV_causal`, `<zone>_HoursInCausalBand (h)`, `accim.data.postprocessing.optional_output_columns`), not yet in the table of `format_table(type_of_table='comfort hours')`.
+  - Context: `notes/PROPUESTA_ADAPTACION_INTERIOR_v03.md` §4 (F3): the columns of `Table` for the SET, the causal TSV, the hours within the causal band and `T_rm_in`, and an indicator of overcooling; the diagnostic `Tn_exp` of Parkinson et al. (2020, Fig. 6); the parametric study of the paper. F1 (2026-11-10) already gave `Table` the names of `SET_<zone>`, `TSV_causal_<zone>` and `HoursInCausalBand_<zone>` (`<zone>_SET (°C)`, `<zone>_TSV_causal`, `<zone>_HoursInCausalBand (h)`, `accim.data.postprocessing.optional_output_columns`), not yet in the table of `format_table(type_of_table='comfort hours')`; F2 (2026-11-10) gave it `<zone>_T_rm_in (°C)`, the targets and setpoints of the limiter of the drift and `<zone>_DriftLimitedHours (h)`.
   - Definition of done: the indicators in `Table` (D1/D2), with tests; the study is a design for the paper.
   - References: `notes/PROPUESTA_ADAPTACION_INTERIOR_v03.md` (§4 F3, §7).
 

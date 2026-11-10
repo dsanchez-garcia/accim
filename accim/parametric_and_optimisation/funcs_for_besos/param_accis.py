@@ -1219,3 +1219,185 @@ def modify_MultiplierVOF(idf: besos.IDF_class, value: int):
     """
     _set_inputs(idf, {'MultiplierVOF': value})
 
+
+# The limiter of the drift of the setpoints (task F2 of block F, accim.sim.ems.drift_limiter) ----------------------
+
+def _drift_mode_code(value) -> int:
+    """The code of a mode of the limiter of the drift (the input DriftMode): 1 or 'rate', 2 or 'window', and 0 for
+    none (0, None, NaN or 'none')."""
+    import math
+
+    from accim.sim.ems.drift_limiter import DRIFT_MODES
+
+    if value is None or (isinstance(value, float) and math.isnan(value)):
+        return 0
+    if isinstance(value, str):
+        text = value.strip().lower()
+        if text in ('', 'none'):
+            return 0
+        if text in DRIFT_MODES:
+            return DRIFT_MODES[text]
+    elif not isinstance(value, bool) and value in (0, 1, 2):
+        return int(value)
+    raise ValueError(f"drift_mode must be 0 or 'none', 1 or 'rate', or 2 or 'window', not {value!r}.")
+
+
+def _set_drift_input(idf, variable: str, value) -> None:
+    """Set an input of the limiter of the drift of the setpoints (:mod:`accim.sim.ems.drift_limiter`) in all the zones
+    of a model of accim 1.0.0 or later, adding the line to the programs SetInputData_<zone> that do not have it, and
+    write the EMS code of the limiter of the zones with DriftMode (the other inputs wait in the zones without it for a
+    parameter ``drift_mode``, which can come later in the plan).
+
+    :raises ValueError: If the model has the ACCIS of an earlier version.
+    """
+    from accim.sim.ems.drift_limiter import set_drift_limiter_code
+    from accim.sim.accis import _ems_output_frequencies
+
+    zone_programs = input_programs(idf)
+    if not zone_programs:
+        raise ValueError('The model has the ACCIS of an earlier version of accim, which has no limiter of the drift of '
+                         'the setpoints. Add the ACCIS with this version of accim to the model without it.')
+    for program in zone_programs.values():
+        if set_inputs(program, {variable: value}):
+            set_program_lines(program, [str(line).strip() for line in program.fieldvalues[2:]]
+                              + [f'set {variable} = {value}'])
+    set_drift_limiter_code(idf, _ems_output_frequencies(idf))
+
+
+def modify_DriftMode(idf: besos.IDF_class, value):
+    """Modifies the limiter of the drift of the setpoints (``drift_mode``, the input DriftMode) of all the zones (task
+    F2 of block F, :mod:`accim.sim.ems.drift_limiter`): its code or its name, 1 or 'rate', 2 or 'window', and 0 or
+    'none' for none (the zones keep the program of the limiter, inactive), such as the options of the parametric module
+    (numbers). The zones that get it have the other arguments of the limiter given before by other parameters, or their
+    defaults (0.5 K/day, 0.8, 1.0 K and 1.0 K).
+
+    :param idf: The eppy or besos IDF class instance, with the ACCIS of accim 1.0.0 or later.
+    :param value: The code or the name of the mode.
+
+    Usage
+    -----
+    Use `modify_DriftMode` within ACCIM parametric and optimisation workflows.
+
+    Examples
+    --------
+    result = modify_DriftMode(idf=..., value=1)
+    """
+    from accim.sim.ems.drift_limiter import ARGUMENTS, DEFAULTS, INPUTS
+
+    code = _drift_mode_code(value)
+    zone_programs = input_programs(idf)
+    if code == 0 and not any('DriftMode' in read_inputs(program) for program in zone_programs.values()):
+        return
+    _set_drift_input(idf, 'DriftMode', code)
+    # The other inputs of the zones that get the limiter now, with their defaults
+    for program in zone_programs.values():
+        current = read_inputs(program)
+        missing = [f'set {variable} = {DEFAULTS[argument]}' for argument, variable in zip(ARGUMENTS[1:5], INPUTS[1:5])
+                   if variable not in current]
+        if missing:
+            set_program_lines(program, [str(line).strip() for line in program.fieldvalues[2:]] + missing)
+
+
+def modify_MaxDriftRate(idf: besos.IDF_class, value: float):
+    """Modifies the largest change of the setpoints from one day to the next of the limiter of the drift in the mode
+    'rate' (``max_drift_rate``, the input MaxDriftRate, K/day, greater than 0) of all the zones.
+
+    :param idf: The eppy or besos IDF class instance, with the ACCIS of accim 1.0.0 or later.
+    :param value: The rate (K/day).
+
+    Usage
+    -----
+    Use `modify_MaxDriftRate` within ACCIM parametric and optimisation workflows.
+
+    Examples
+    --------
+    result = modify_MaxDriftRate(idf=..., value=0.25)
+    """
+    from accim.sim.ems.drift_limiter import check_drift_arguments
+
+    check_drift_arguments(max_drift_rate=value)
+    _set_drift_input(idf, 'MaxDriftRate', value)
+
+
+def modify_AlphaIndoor(idf: besos.IDF_class, value: float):
+    """Modifies the weight of the running mean of the day before of the limiter of the drift in the mode 'window'
+    (``alpha_indoor``, the input AlphaIndoor, from 0 to 1, 1 excluded) of all the zones.
+
+    :param idf: The eppy or besos IDF class instance, with the ACCIS of accim 1.0.0 or later.
+    :param value: The alpha.
+
+    Usage
+    -----
+    Use `modify_AlphaIndoor` within ACCIM parametric and optimisation workflows.
+
+    Examples
+    --------
+    result = modify_AlphaIndoor(idf=..., value=0.9)
+    """
+    from accim.sim.ems.drift_limiter import check_drift_arguments
+
+    check_drift_arguments(alpha_indoor=value)
+    _set_drift_input(idf, 'AlphaIndoor', value)
+
+
+def modify_DeltaCool(idf: besos.IDF_class, value: float):
+    """Modifies the largest distance of the setpoints above the running mean of the limiter of the drift in the mode
+    'window' (``delta_cool``, the input DeltaCool, K, 0 or more) of all the zones.
+
+    :param idf: The eppy or besos IDF class instance, with the ACCIS of accim 1.0.0 or later.
+    :param value: The distance (K).
+
+    Usage
+    -----
+    Use `modify_DeltaCool` within ACCIM parametric and optimisation workflows.
+
+    Examples
+    --------
+    result = modify_DeltaCool(idf=..., value=1.5)
+    """
+    from accim.sim.ems.drift_limiter import check_drift_arguments
+
+    check_drift_arguments(delta_cool=value)
+    _set_drift_input(idf, 'DeltaCool', value)
+
+
+def modify_DeltaHeat(idf: besos.IDF_class, value: float):
+    """Modifies the largest distance of the setpoints below the running mean of the limiter of the drift in the mode
+    'window' (``delta_heat``, the input DeltaHeat, K, 0 or more) of all the zones.
+
+    :param idf: The eppy or besos IDF class instance, with the ACCIS of accim 1.0.0 or later.
+    :param value: The distance (K).
+
+    Usage
+    -----
+    Use `modify_DeltaHeat` within ACCIM parametric and optimisation workflows.
+
+    Examples
+    --------
+    result = modify_DeltaHeat(idf=..., value=1.5)
+    """
+    from accim.sim.ems.drift_limiter import check_drift_arguments
+
+    check_drift_arguments(delta_heat=value)
+    _set_drift_input(idf, 'DeltaHeat', value)
+
+
+def modify_InitTrmIn(idf: besos.IDF_class, value: float):
+    """Modifies the first running mean of the limiter of the drift in the mode 'window' (``initial_T_rm_in``, the input
+    InitTrmIn, °C) of all the zones, with which the limiter is active from the first day.
+
+    :param idf: The eppy or besos IDF class instance, with the ACCIS of accim 1.0.0 or later.
+    :param value: The running mean (°C).
+
+    Usage
+    -----
+    Use `modify_InitTrmIn` within ACCIM parametric and optimisation workflows.
+
+    Examples
+    --------
+    result = modify_InitTrmIn(idf=..., value=24)
+    """
+    from accim.sim.ems.drift_limiter import check_drift_arguments
+
+    check_drift_arguments(initial_T_rm_in=value)
+    _set_drift_input(idf, 'InitTrmIn', value)
