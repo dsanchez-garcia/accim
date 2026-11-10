@@ -597,6 +597,8 @@ class AddAccisTab(_Tab):
         self.ventilation_controls = {c: tk.BooleanVar(value=c in defaults['ventilation_control'])
                                      for c in forms.VENTILATION_CONTROLS}
         self.standards = forms.comfort_standard_choices()
+        #: The YAML files of the comfort standards defined by their data loaded in the tab (kept in the session files)
+        self.standard_files: List[str] = []
         #: The window of the last EMS code of the setpoints shown
         self.ems_code_window: Optional[_TextWindow] = None
 
@@ -674,6 +676,11 @@ class AddAccisTab(_Tab):
                                       command=lambda: self.scroll.see(self.zone_frame))
         self.zone_button.pack(side='right')
         self.comfort_widgets.append(self.zone_button)
+        # The comfort standards defined by their data (accim.sim.standards.load_comfort_standards)
+        self.load_standards_button = ttk.Button(header, text='Load comfort standards (YAML)...',
+                                                command=self.load_comfort_standards)
+        self.load_standards_button.pack(side='right', padx=(0, 6))
+        self.comfort_widgets.append(self.load_standards_button)
         lines = ttk.Frame(frame)
         lines.grid(row=1, column=0, columnspan=2, sticky='ew', pady=(0, 4))
         lines.columnconfigure(0, weight=1)
@@ -861,6 +868,56 @@ class AddAccisTab(_Tab):
     def selected_standards(self) -> List[int]:
         return [self.standards[index][0] for index in self.standard_list.curselection()]
 
+    def load_comfort_standards(self) -> bool:
+        """Register the comfort standards defined by their data of some YAML files, for the rest of the session
+        (:func:`accim.sim.standards.load_comfort_standards`), and list them with the others."""
+        paths = filedialog.askopenfilenames(parent=self.app.root, initialdir=self.folder.get() or None,
+                                            filetypes=[('YAML files', '*.yaml *.yml'), ('All files', '*.*')],
+                                            title='The YAML files of the comfort standards')
+        if not paths:
+            return False
+        titles, errors = self._load_standard_files(paths)
+        if titles:
+            self.app.log_text(f'Comfort standards registered for this session: {", ".join(titles)}\n')
+        if errors:
+            self.app.show_error('Load comfort standards', '\n'.join(errors))
+        return not errors
+
+    def _load_standard_files(self, paths) -> Tuple[List[str], List[str]]:
+        """Register the comfort standards of some YAML files (the valid ones), and list them.
+
+        :return: The titles of the comfort standards, and the messages of the files that are not valid.
+        """
+        titles, errors = [], []
+        for path in paths:
+            try:
+                titles += tasks.load_comfort_standards([path])
+            except (ValueError, ImportError) as error:
+                errors.append(str(error))
+                continue
+            path = os.path.abspath(path)
+            if path not in self.standard_files:
+                self.standard_files.append(path)
+        self.refresh_standards()
+        return titles, errors
+
+    def refresh_standards(self) -> None:
+        """List the comfort standards again (with those of the registry), keeping the selection, and give them to the
+        table of the zones."""
+        selected = self.selected_standards()
+        self.standards = forms.comfort_standard_choices()
+        state = str(self.standard_list.cget('state'))
+        self.standard_list.configure(state='normal')
+        self.standard_list.delete(0, 'end')
+        for index, (number, title) in enumerate(self.standards):
+            self.standard_list.insert('end', title)
+            if number in selected:
+                self.standard_list.selection_set(index)
+        self.standard_list.configure(state=state)
+        self.zone_table.fields['comfort_standard'].configure(values=forms.zone_field_choices('comfort_standard'))
+        self._zone_standard_changed()
+        self.update_state()
+
     def refresh_idfs(self) -> None:
         """List the input IDFs of the folder, all selected."""
         _fill_list(self.idf_list, forms.input_idfs(self.folder.get()))
@@ -885,6 +942,10 @@ class AddAccisTab(_Tab):
         self.zone_table.set_state(temperature, () if mixed_mode else ('hvac_mode', 'ventilation_control'))
         standards = self.selected_standards() if temperature else []
         _set_state(self.custom_widgets, 99 in standards)
+        # The weather file also begins the outdoor metric of the comfort standards defined by their data that the EMS
+        # calculates
+        if 99 not in standards and forms.registered_metric_standards(standards):
+            _set_state([self.epw_entry, self.epw_button], True)
         self.categories.configure(text=forms.categories_hint(standards))
         self.comfort_modes.configure(text=forms.comfort_modes_hint(standards))
 
@@ -941,6 +1002,7 @@ class AddAccisTab(_Tab):
             idfs=_selected(self.idf_list),
             output_frequencies=_checks_state(self.frequencies),
             comfort_standard=self.selected_standards(),
+            comfort_standard_files=list(self.standard_files),
             hvac_mode=_checks_state(self.hvac_modes),
             ventilation_control=_checks_state(self.ventilation_controls),
             zone_arguments=self.zone_rows(),
@@ -955,6 +1017,16 @@ class AddAccisTab(_Tab):
                              ('ventilation_control', self.ventilation_controls)):
             if name in state:
                 _restore_checks(checks, state[name])
+        # The comfort standards defined by their data of the session, before they are selected
+        files = list(state.get('comfort_standard_files') or [])
+        found = [path for path in files if os.path.isfile(path)]
+        messages += [f'Comfort standards of "1. Add the ACCIS": {path} not found.' for path in files
+                     if path not in found]
+        if found:
+            titles, errors = self._load_standard_files(found)
+            messages += [f'Comfort standards of "1. Add the ACCIS": {error}' for error in errors]
+            if titles:
+                self.app.log_text(f'Comfort standards registered for this session: {", ".join(titles)}\n')
         if 'comfort_standard' in state:
             # A disabled list (with PMV setpoints) does not change its selection
             self.standard_list.configure(state='normal')
@@ -962,6 +1034,11 @@ class AddAccisTab(_Tab):
             for index, (number, _) in enumerate(self.standards):
                 if number in state['comfort_standard']:
                     self.standard_list.selection_set(index)
+            missing = [number for number in state['comfort_standard']
+                       if number not in [listed for listed, _ in self.standards]]
+            if missing:
+                messages.append(f'Comfort standards of "1. Add the ACCIS": {", ".join(str(n) for n in missing)} not '
+                                f'found (load the YAML files of the comfort standards defined by their data first).')
         if 'zone_arguments' in state:
             _set_rows(self.zone_tree, state['zone_arguments'])
         self.update_state()

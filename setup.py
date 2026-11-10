@@ -146,7 +146,9 @@ setuptools.setup(
         # pulp.apis.*_api modules that PuLP 4.0 renamed.
         'pulp<4',
         'SALib',
-        'seaborn'
+        'seaborn',
+        # The YAML files of the comfort standards defined by their data (accim.sim.standards.load_comfort_standards)
+        'pyyaml',
         # 'shutil',
         # 'glob'
         ],

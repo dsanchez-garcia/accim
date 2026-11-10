@@ -64,6 +64,7 @@ the names follow the conventions of Python, and the old names still work.
    jupyter_notebooks/research_paper_case_study/research_paper_case_study.ipynb
    jupyter_notebooks/example_apmv_setpoints_paper/using_apmv_setpoints.ipynb
    jupyter_notebooks/example_epmv_setpoints/using_epmv_setpoints.ipynb
+   jupyter_notebooks/comfort_standards_registry/using_comfort_standard_registry.ipynb
 
 .. toctree::
    :maxdepth: 2

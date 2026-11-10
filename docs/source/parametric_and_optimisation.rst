@@ -192,6 +192,11 @@ coefficient of the regime in all the zones, which keeps its condition. ``custom_
 classes of the coefficients of the first ``n`` regimes (``CustAST_m_1``, ``CustAST_n_1``, ``CustAST_ACSToffset_1``,
 ``CustAST_AHSToffset_1``, ``CustAST_ACSTall_1``, ``CustAST_ACSTaul_1``, ``CustAST_AHSTall_1``, ``CustAST_AHSTaul_1``,
 ``CustAST_m_2``...).
+The comfort standards defined by their data (section 4.2.5 of :doc:`4_detailed use`) are options of
+``comfort_standard`` once they are registered (before sampling the plan): the plans keep their categories and comfort
+modes only, the models get their EMS code, the zones get their outdoor metric (which the EMS begins with the running
+mean of ASHRAE 55 of EnergyPlus, if it calculates it) and the parallel simulations, which run in other processes, get
+the comfort standards of the registry.
 For the aPMV and ePMV setpoints, apply them yourself
 with explicit values, as in step 1 (for the ePMV, with ``apply_epmv_setpoints()``, section 4.8 of
 :doc:`4_detailed use`), and pass ``bypass_add_accis=True``: the parameters of the study

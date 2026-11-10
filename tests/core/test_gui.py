@@ -324,6 +324,38 @@ def test_the_ems_code_of_the_setpoints_of_the_form(tmp_path):
         forms.setpoint_ems_code_calls(_form(tmp_path, setpoint_type='pmv'))
 
 
+def test_the_forms_take_the_comfort_standards_defined_by_their_data(tmp_path):
+    from accim.sim.standards import load_comfort_standards, unregister_comfort_standard
+
+    title = '101 = JPN Aqilah 2025 (dwellings, free-running)'
+    (tmp_path / 'model.idf').write_text('')
+    (tmp_path / 'weather.epw').write_text('')
+    assert forms.registered_metric_standards([1, 99, 101]) == []
+    load_comfort_standards(REPO / 'accim' / 'sample_files' / 'comfort_standards' / 'jpn_aqilah2025_fr.yaml')
+    try:
+        assert forms.comfort_standard_choices()[-1] == (101, title)
+        assert forms.zone_field_choices('comfort_standard')[-1] == title
+        assert forms.zone_field_choices('category', title) == ['', '80', '90']
+        assert forms.zone_field_choices('comfort_mode', title) == ['', '0', '1', '2', '3']
+        assert forms.categories_hint([101]) == f'{title}: 90, 80'
+        # Its outdoor metric is calculated by the EMS, which the weather file begins
+        assert forms.registered_metric_standards([1, 99, 101]) == [101]
+        form = _form(tmp_path, comfort_standard=[101], category='80', comfort_mode='1', epw='weather.epw')
+        arguments = forms.add_accis_arguments(form)
+        assert arguments['epw'] == str(tmp_path / 'weather.epw') and 'custom_slope' not in arguments
+        assert 'epw' not in forms.add_accis_arguments(dict(form, epw=''))
+        with pytest.raises(FormError, match='epw: .* is not a file'):
+            forms.add_accis_arguments(dict(form, epw='missing.epw'))
+        [(call, kwargs)] = forms.setpoint_ems_code_calls(form)
+        assert call == f'{title}: category 80, comfort mode 1'
+        assert kwargs['epw'] == str(tmp_path / 'weather.epw') and 'custom_outdoor_metric' not in kwargs
+        # The weather file is not that of the other comfort standards
+        calls = dict(forms.setpoint_ems_code_calls(dict(form, comfort_standard=[1, 101], category='1 80')))
+        assert 'epw' not in calls['1 = INT EN16798: category 1, comfort mode 1']
+    finally:
+        unregister_comfort_standard(101)
+
+
 def test_the_outdoor_metric_of_the_custom_model_in_the_form(tmp_path):
     from accim.sim.ems.outdoor_metric import OUTDOOR_METRICS
 
@@ -1205,6 +1237,75 @@ def test_the_window_gives_the_regimes_of_the_custom_model(app, tmp_path):
     tab.vars['setpoint_type'].set('pmv')
     assert regimes.instate(['disabled']) and tab.form()['custom_regimes'] == ''
     tab.vars['setpoint_type'].set('temperature')
+
+
+def test_the_window_loads_comfort_standards_defined_by_their_data(app, tmp_path, monkeypatch):
+    from accim.gui import app as app_module
+    from accim.sim.standards import registered_comfort_standards, unregister_comfort_standard
+
+    samples = REPO / 'accim' / 'sample_files' / 'comfort_standards'
+    title = '101 = JPN Aqilah 2025 (dwellings, free-running)'
+    (tmp_path / 'model.idf').write_text('')
+    app.folder.set(str(tmp_path))
+    tab = app.add_accis
+    logged = []
+    monkeypatch.setattr(app, 'log_text', logged.append)
+    try:
+        tab.standard_list.selection_clear(0, 'end')
+        tab.standard_list.selection_set(2)
+        # Cancelled
+        monkeypatch.setattr(app_module.filedialog, 'askopenfilenames', lambda **kwargs: '')
+        assert tab.load_comfort_standards() is False
+        monkeypatch.setattr(app_module.filedialog, 'askopenfilenames',
+                            lambda **kwargs: (str(samples / 'jpn_aqilah2025_fr.yaml'),))
+        assert tab.load_comfort_standards() is True
+        assert logged == [f'Comfort standards registered for this session: {title}\n']
+        # The lists of the window have it, and the selection is kept
+        assert tab.standards[-1] == (101, title) and tab.standard_list.get('end') == title
+        assert tab.selected_standards() == [2]
+        assert title in tab.zone_table.fields['comfort_standard'].cget('values')
+        tab.standard_list.selection_set('end')
+        tab.update_state()
+        assert f'{title}: 90, 80' in tab.categories.cget('text')
+        # The weather file begins its outdoor metric; the other fields of the custom model stay disabled
+        assert not tab.epw_button.instate(['disabled']) and tab.custom_widgets[0].instate(['disabled'])
+        (tmp_path / 'weather.epw').write_text('')
+        tab.vars['epw'].set('weather.epw')
+        arguments = forms.add_accis_arguments(tab.form())
+        assert arguments['comfort_standard'] == [2, 101] and arguments['epw'] == str(tmp_path / 'weather.epw')
+        # Loading it again replaces it
+        assert tab.load_comfort_standards() is True and [n for n, _ in tab.standards].count(101) == 1
+        # A file that is not valid is not loaded, and the message names it
+        monkeypatch.setattr(app_module.filedialog, 'askopenfilenames',
+                            lambda **kwargs: (str(samples / 'qat_indraganti2018_hvac.yaml'),))
+        assert tab.load_comfort_standards() is False
+        assert app.errors[-1].startswith('qat_indraganti2018_hvac.yaml: the keys')
+        assert sorted(registered_comfort_standards()) == [101]
+        # The session keeps the files loaded
+        state = tab.state()
+        assert state['comfort_standard_files'] == [str(samples / 'jpn_aqilah2025_fr.yaml')]
+        assert state['comfort_standard'] == [2, 101]
+    finally:
+        for number in list(registered_comfort_standards()):
+            unregister_comfort_standard(number)
+    tab.refresh_standards()
+    assert 101 not in [n for n, _ in tab.standards] and tab.selected_standards() == [2]
+    # Opening the session loads them again, and selects them
+    logged.clear()
+    try:
+        assert tab.restore(state) == []
+        assert tab.selected_standards() == [2, 101] and logged == [
+            f'Comfort standards registered for this session: {title}\n']
+    finally:
+        for number in list(registered_comfort_standards()):
+            unregister_comfort_standard(number)
+    tab.refresh_standards()
+    # A session whose files are not found
+    messages = tab.restore(dict(state, comfort_standard_files=[str(tmp_path / 'missing.yaml')]))
+    assert messages == [f'Comfort standards of "1. Add the ACCIS": {tmp_path / "missing.yaml"} not found.',
+                        'Comfort standards of "1. Add the ACCIS": 101 not found (load the YAML files of the comfort '
+                        'standards defined by their data first).']
+    assert tab.selected_standards() == [2]
 
 
 def test_wrong_values_are_shown_and_nothing_runs(app, tmp_path):

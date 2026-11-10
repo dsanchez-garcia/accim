@@ -2,12 +2,40 @@
 # Copyright (C) 2021-2026 Daniel Sánchez-García
 # Distributed under the GNU General Public License v3 or later.
 
-"""Catalogue of the comfort standards (ComfStand) of accim, with their categories and comfort modes."""
+"""Catalogue of the comfort standards (ComfStand) of accim, with their categories and comfort modes, and the registry
+of the comfort standards defined by their data (proposal B3).
 
+The built-in comfort standards (0 to 22, and the custom model, 99) have their EMS code in
+:mod:`accim.sim.ems.program_lines` and :mod:`accim.sim.ems.setpoint_lines`. Other comfort standards can be defined by
+their data, a :class:`ComfortStandardDefinition` (a comfort temperature that is a straight line of an outdoor metric
+of :mod:`accim.sim.ems.outdoor_metric`, its applicability limits, the offsets of its categories and its static
+setpoints), and registered with :func:`register_comfort_standard`, or read from YAML files with
+:func:`load_comfort_standards`, with the numbers 100 or more (decision D1 of the brief of 1.2.0): accim then writes
+their EMS code (:mod:`accim.sim.ems.standard_lines`), and :class:`accim.sim.accis.AddAccis`, ``modify_accis``,
+``print_setpoint_ems_code``, ``compute_setpoints`` and the graphical user interface take them as the built-in ones.
+The registry is that of the Python session: the comfort standards are registered again in each session.
+"""
+
+import math
+import numbers
+import os
 from dataclasses import dataclass, field
-from typing import Dict, Union
+from typing import Any, Dict, Iterable, List, Mapping, Optional, Tuple, Union
 
-__all__ = ['COMFORT_STANDARDS', 'ComfortStandard', 'get_comfort_standard']
+__all__ = [
+    'COMFORT_STANDARDS',
+    'ComfortStandard',
+    'ComfortStandardDefinition',
+    'DEFINITION_COMFORT_MODES',
+    'FIRST_REGISTRY_NUMBER',
+    'comfort_standard_definition',
+    'definition_from_mapping',
+    'get_comfort_standard',
+    'load_comfort_standards',
+    'register_comfort_standard',
+    'registered_comfort_standards',
+    'unregister_comfort_standard',
+]
 
 Number = Union[int, float]
 
@@ -162,3 +190,335 @@ def get_comfort_standard(number: int) -> ComfortStandard:
         return COMFORT_STANDARDS[number]
     except KeyError:
         raise ValueError(f'{number!r} is not a valid ComfStand. Valid values: {list(COMFORT_STANDARDS)}.') from None
+
+
+# The comfort standards defined by their data (proposal B3) ------------------------------------------------------------
+
+#: The first number of the comfort standards of the registry: the numbers 100 or more are those of the comfort
+#: standards defined by their data (decision D1 of the brief of 1.2.0; 23 is reserved for JPN Aqilah 2025, B4)
+FIRST_REGISTRY_NUMBER = 100
+#: The comfort modes of the comfort standards defined by their data: 0, static setpoints; 1, adaptive setpoints when
+#: applicable, otherwise the static setpoints; 2, otherwise the static setpoints of ISO 7730 that the built-in comfort
+#: standards use with the categories 80 and 90; 3, otherwise the adaptive setpoints horizontally extended
+DEFINITION_COMFORT_MODES = (0, 1, 2, 3)
+#: The categories with the static setpoints of ISO 7730 of comfort mode 2 (accim.sim.ems.standard_lines)
+_ISO7730_CATEGORIES = (80, 90)
+#: The keys of the YAML files of the comfort standards: those that must have a value, and the others
+_REQUIRED_KEYS = ('number', 'label', 'title', 'citation', 'outdoor_metric', 'comfort_temperature', 'applicability',
+                  'categories', 'comfort_modes', 'evidence')
+_OPTIONAL_KEYS = ('alpha', 'days', 'static_setpoints')
+#: The characters that the labels cannot have: they name the output IDFs ('[' separates their arguments)
+_LABEL_CHARACTERS = '[]\\/:*?"<>|'
+_REGISTRY: Dict[int, 'ComfortStandardDefinition'] = {}
+
+
+def _is_number(value: Any) -> bool:
+    return isinstance(value, numbers.Real) and not isinstance(value, bool) and math.isfinite(value)
+
+
+@dataclass(frozen=True)
+class ComfortStandardDefinition:
+    """A comfort standard defined by its data (proposal B3), which :func:`register_comfort_standard` adds to accim.
+
+    Its comfort temperature is a straight line of an outdoor metric (slope · metric + intercept), within the
+    applicability limits of the metric; the setpoints are the comfort temperature plus the offsets of the category (and
+    those of the regime, 0 in the YAML files), and, out of the applicability limits, as its comfort modes say
+    (:data:`DEFINITION_COMFORT_MODES`).
+
+    :ivar standard: Its number (100 or more to register it), label (in the names of the output IDFs), title,
+        categories (with their descriptions) and comfort modes (with their descriptions).
+    :ivar outdoor_metric: The outdoor metric of its comfort temperature and applicability, a name of
+        :data:`accim.sim.ems.outdoor_metric.OUTDOOR_METRICS`: 'pmot' and 'rmot' are the running means of EnergyPlus,
+        and the EMS calculates the others (:mod:`accim.sim.ems.outdoor_metric`).
+    :ivar regimes: Its comfort temperature, offsets and applicability limits, as a regime of the custom model
+        (:class:`accim.sim.arguments.CustomRegime`); one regime 'always' in this version.
+    :ivar category_offsets: The offsets of the cooling and heating setpoints of each category, which can be
+        asymmetric: ``{category: (cooling_offset, heating_offset)}``.
+    :ivar static_setpoints: The static setpoints, ``(heating, cooling)`` (°C), of comfort modes 0 and 1.
+    :ivar evidence: The statistics of the comfort model (number of votes, R², standard error, range of the metric,
+        type of building, mode of operation...), which ``print_setpoint_ems_code`` prints; it cannot be empty
+        (decision D11 of the brief of 1.2.0).
+    :ivar citation: The source of the comfort model.
+    :ivar alpha: The alpha of the outdoor metric 'rmot_alpha'.
+    :ivar days: The days of the outdoor metric 'ndrm'.
+    :raises ValueError: If a value is not valid.
+    """
+
+    standard: ComfortStandard
+    outdoor_metric: str
+    regimes: Tuple[Any, ...]
+    category_offsets: Dict[Number, Tuple[float, float]]
+    static_setpoints: Optional[Tuple[float, float]] = None
+    evidence: Dict[str, Any] = field(default_factory=dict)
+    citation: str = ''
+    alpha: float = 0.8
+    days: int = 30
+
+    def __post_init__(self):
+        from accim.sim.arguments import check_custom_regimes
+        from accim.sim.ems.outdoor_metric import check_outdoor_metric_arguments, metric_name
+
+        standard = self.standard
+        if not isinstance(standard, ComfortStandard):
+            raise ValueError(f'standard must be a ComfortStandard, not {standard!r}.')
+        where = f'comfort standard {standard.number}'
+        if isinstance(standard.number, bool) or not isinstance(standard.number, int):
+            raise ValueError(f'The number of a comfort standard must be an integer, not {standard.number!r}.')
+        if not standard.label or any(character in standard.label for character in _LABEL_CHARACTERS):
+            raise ValueError(f'The label of the {where} names the output IDFs: it cannot be empty, nor have the '
+                             f'characters {_LABEL_CHARACTERS} ({standard.label!r}).')
+        try:
+            code = check_outdoor_metric_arguments(self.outdoor_metric, self.alpha, self.days)
+        except ValueError as error:
+            raise ValueError(f'The outdoor metric of the {where}: {error}') from None
+        object.__setattr__(self, 'outdoor_metric', metric_name(code))
+        try:
+            regimes = check_custom_regimes(self.regimes)
+        except ValueError:
+            regimes = ()
+        if len(regimes) != 1 or regimes[0].condition != 'always':
+            raise ValueError(f'The {where} must have one regime (a CustomRegime), with the condition \'always\': '
+                             f'several regimes of a comfort standard are not available yet (custom_regimes gives them '
+                             f'to the custom model), not {self.regimes!r}.')
+        object.__setattr__(self, 'regimes', regimes)
+        offsets = {}
+        for category, pair in dict(self.category_offsets).items():
+            if (not isinstance(pair, (list, tuple)) or len(pair) != 2 or not all(_is_number(v) for v in pair)
+                    or not _is_number(category)):
+                raise ValueError(f'The offsets of the category {category!r} of the {where} must be two numbers, '
+                                 f'(cooling_offset, heating_offset), not {pair!r}.')
+            offsets[category] = (pair[0], pair[1])
+        if not offsets or set(offsets) != set(standard.categories):
+            raise ValueError(f'The {where} must have the offsets of each one of its categories '
+                             f'({sorted(standard.categories)}), not those of {sorted(offsets)}.')
+        object.__setattr__(self, 'category_offsets', offsets)
+        modes = list(standard.comfort_modes)
+        if not modes or any(mode not in DEFINITION_COMFORT_MODES for mode in modes):
+            raise ValueError(f'The comfort modes of the {where} must be some of {list(DEFINITION_COMFORT_MODES)}, not '
+                             f'{modes}.')
+        if {0, 1} & set(modes):
+            static = self.static_setpoints
+            if (not isinstance(static, (list, tuple)) or len(static) != 2 or not all(_is_number(v) for v in static)
+                    or not static[0] < static[1]):
+                raise ValueError(f'The comfort modes 0 and 1 of the {where} need its static setpoints, (heating, '
+                                 f'cooling) with the heating setpoint lower, not {static!r}.')
+            object.__setattr__(self, 'static_setpoints', (static[0], static[1]))
+        if 2 in modes and not set(offsets) <= set(_ISO7730_CATEGORIES):
+            raise ValueError(f'The comfort mode 2 of the {where} uses the static setpoints of ISO 7730 that accim has '
+                             f'for the categories {list(_ISO7730_CATEGORIES)} only, not for {sorted(offsets)}.')
+        if not isinstance(self.evidence, Mapping) or not self.evidence:
+            raise ValueError(f'The {where} must have its evidence: the statistics of the comfort model (decision D11 '
+                             f'of the brief of 1.2.0).')
+        object.__setattr__(self, 'evidence', dict(self.evidence))
+        if not isinstance(self.citation, str) or not self.citation.strip():
+            raise ValueError(f'The {where} must have the citation of its source.')
+
+    @property
+    def number(self) -> int:
+        """The number of the comfort standard (ComfStand)."""
+        return self.standard.number
+
+
+def _comfort_mode_descriptions(label: str, modes: Iterable[int],
+                               static: Optional[Tuple[float, float]]) -> Dict[Number, str]:
+    """The descriptions of the comfort modes of a comfort standard defined by its data."""
+    descriptions = {
+        0: f'{label} Static setpoints ({static[0] if static else None} for heating and '
+           f'{static[1] if static else None} for cooling)',
+        1: f'{label} Model Adaptive setpoints when applicable, otherwise {label} Static setpoints',
+        2: f'{label} Model Adaptive setpoints when applicable, otherwise {_STATIC_ISO}',
+        3: f'{label} Model Adaptive setpoints when applicable, otherwise {_HORIZONTAL}',
+    }
+    return {mode: descriptions[mode] for mode in modes}
+
+
+def definition_from_mapping(data: Any, source: str = '') -> ComfortStandardDefinition:
+    """The definition of a comfort standard from a mapping with the keys of the YAML files (those of
+    :func:`load_comfort_standards`).
+
+    :param data: The mapping.
+    :param source: The file (or other source) of the mapping, for the messages.
+    :raises ValueError: If a key is missing or unknown, or a value is not valid; the message names the source.
+    """
+    from accim.sim.arguments import CustomRegime
+
+    prefix = f'{source}: ' if source else ''
+
+    def fail(message: str) -> ValueError:
+        return ValueError(f'{prefix}{message}')
+
+    if not isinstance(data, Mapping):
+        raise fail(f'a comfort standard must be a mapping with the keys {list(_REQUIRED_KEYS)} (and optionally '
+                   f'{list(_OPTIONAL_KEYS)}), not {type(data).__name__}.')
+    unknown = [key for key in data if key not in _REQUIRED_KEYS + _OPTIONAL_KEYS]
+    if unknown:
+        raise fail(f'unknown keys {unknown}; the keys are {list(_REQUIRED_KEYS + _OPTIONAL_KEYS)}.')
+    missing = [key for key in _REQUIRED_KEYS if data.get(key) is None]
+    if missing:
+        raise fail(f'the keys {missing} are missing or empty.')
+
+    def numbers_of(key: str, names: Tuple[str, ...]) -> List[float]:
+        value = data[key]
+        if not isinstance(value, Mapping) or set(value) != set(names) or not all(_is_number(value[n]) for n in names):
+            raise fail(f'{key} must be a mapping with the numbers {list(names)}, not {value!r}.')
+        return [value[name] for name in names]
+
+    number = data['number']
+    if isinstance(number, bool) or not isinstance(number, int) or number < FIRST_REGISTRY_NUMBER:
+        raise fail(f'number must be an integer of {FIRST_REGISTRY_NUMBER} or more (decision D1), not {number!r}.')
+    for key in ('label', 'title', 'citation'):
+        if not isinstance(data[key], str) or not data[key].strip():
+            raise fail(f'{key} must be a text, not {data[key]!r}.')
+    slope, intercept = numbers_of('comfort_temperature', ('slope', 'intercept'))
+    lower, upper = numbers_of('applicability', ('metric_min', 'metric_max'))
+    if not lower < upper:
+        raise fail(f'applicability: metric_min ({lower}) must be lower than metric_max ({upper}).')
+    categories, offsets = {}, {}
+    if not isinstance(data['categories'], Mapping) or not data['categories']:
+        raise fail(f"categories must be a mapping {{category: {{cooling_offset: ..., heating_offset: ..., "
+                   f"description: ...}}}}, not {data['categories']!r}.")
+    for category, values in data['categories'].items():
+        allowed = {'cooling_offset', 'heating_offset', 'description'}
+        if (not _is_number(category) or not isinstance(values, Mapping) or not set(values) <= allowed
+                or not all(_is_number(values.get(name)) for name in ('cooling_offset', 'heating_offset'))):
+            raise fail(f'the category {category!r} must have the numbers cooling_offset and heating_offset (and '
+                       f'optionally a description), not {values!r}.')
+        categories[category] = str(values.get('description', category))
+        offsets[category] = (values['cooling_offset'], values['heating_offset'])
+    modes = data['comfort_modes']
+    if (not isinstance(modes, (list, tuple)) or not modes
+            or any(not _is_number(mode) or mode not in DEFINITION_COMFORT_MODES for mode in modes)
+            or len(set(modes)) != len(modes)):
+        raise fail(f'comfort_modes must be a list of some of {list(DEFINITION_COMFORT_MODES)}, not {modes!r}.')
+    static = None
+    if data.get('static_setpoints') is not None:
+        static = tuple(numbers_of('static_setpoints', ('heating', 'cooling')))
+    if not isinstance(data['evidence'], Mapping):
+        raise fail(f"evidence must be a mapping with the statistics of the comfort model, not {data['evidence']!r}.")
+    label = data['label'].strip()
+    standard = ComfortStandard(number, label, data['title'].strip(), categories,
+                               _comfort_mode_descriptions(label, [int(mode) for mode in modes], static))
+    arguments = {name: data[name] for name in ('alpha', 'days') if data.get(name) is not None}
+    try:
+        regime = CustomRegime(slope, intercept, 0, 0, lower, upper, lower, upper)
+        return ComfortStandardDefinition(standard, data['outdoor_metric'], (regime,), offsets, static,
+                                         dict(data['evidence']), data['citation'].strip(), **arguments)
+    except ValueError as error:
+        raise fail(str(error)) from None
+
+
+def registered_comfort_standards() -> Dict[int, ComfortStandardDefinition]:
+    """The comfort standards of the registry, by number."""
+    return dict(_REGISTRY)
+
+
+def comfort_standard_definition(number: Any) -> Optional[ComfortStandardDefinition]:
+    """The definition of a comfort standard of the registry, or None if the number is not one of them."""
+    try:
+        return _REGISTRY.get(int(number))
+    except (TypeError, ValueError):
+        return None
+
+
+def register_comfort_standard(definition: ComfortStandardDefinition, replace: bool = False) -> None:
+    """Add a comfort standard defined by its data to accim, for the rest of the Python session: to
+    :data:`COMFORT_STANDARDS`, and its EMS code to the programs of the ACCIS (:mod:`accim.sim.ems.standard_lines`).
+
+    :param definition: The definition, with a number of 100 or more (decision D1 of the brief of 1.2.0).
+    :param replace: True to replace a comfort standard of the registry with the same number.
+    :raises ValueError: If the number is lower than 100, or that of a comfort standard already registered (without
+        ``replace``), or the label is that of another comfort standard.
+    """
+    from accim.sim.ems.standard_lines import add_standard_lines, remove_standard_lines
+
+    if not isinstance(definition, ComfortStandardDefinition):
+        raise ValueError(f'definition must be a ComfortStandardDefinition, not {definition!r}.')
+    number = definition.number
+    if number < FIRST_REGISTRY_NUMBER:
+        raise ValueError(f'The comfort standards defined by their data have the numbers {FIRST_REGISTRY_NUMBER} or '
+                         f'more (decision D1), not {number}.')
+    if number in _REGISTRY and not replace:
+        raise ValueError(f'The comfort standard {number} is registered already: give replace=True to replace it.')
+    if number in COMFORT_STANDARDS and number not in _REGISTRY:
+        raise ValueError(f'The comfort standard {number} is a built-in comfort standard.')
+    others = [s.number for s in COMFORT_STANDARDS.values()
+              if s.label.upper() == definition.standard.label.upper() and s.number != number]
+    if others:
+        raise ValueError(f'The label {definition.standard.label!r} is that of the comfort standard {others[0]}: the '
+                         f'labels name the output IDFs.')
+    if number in _REGISTRY:
+        remove_standard_lines(number)
+    add_standard_lines(definition)
+    _REGISTRY[number] = definition
+    COMFORT_STANDARDS[number] = definition.standard
+
+
+def unregister_comfort_standard(number: int) -> None:
+    """Remove a comfort standard of the registry (and its EMS code) from accim.
+
+    :raises ValueError: If the number is not that of a comfort standard of the registry.
+    """
+    from accim.sim.ems.standard_lines import remove_standard_lines
+
+    if number not in _REGISTRY:
+        raise ValueError(f'{number!r} is not a comfort standard of the registry ({sorted(_REGISTRY)}).')
+    remove_standard_lines(number)
+    del _REGISTRY[number]
+    del COMFORT_STANDARDS[number]
+
+
+def load_comfort_standards(path: Union[str, os.PathLike], register: bool = True,
+                           replace: bool = False) -> List[ComfortStandardDefinition]:
+    """Read the comfort standards of a YAML file, or of the YAML files (``.yaml`` and ``.yml``) of a folder, and
+    register them (:func:`register_comfort_standard`).
+
+    Each file has one comfort standard (a mapping) or a list of them, with the keys (as in
+    ``accim/sample_files/comfort_standards/jpn_aqilah2025_fr.yaml``): ``number`` (100 or more), ``label`` (in the
+    names of the output IDFs), ``title``, ``citation``, ``outdoor_metric`` (a name of
+    :data:`accim.sim.ems.outdoor_metric.OUTDOOR_METRICS`, with ``alpha`` for 'rmot_alpha' and ``days`` for 'ndrm',
+    optional), ``comfort_temperature`` (``slope`` and ``intercept``), ``applicability`` (``metric_min`` and
+    ``metric_max``, the limits of the outdoor metric), ``categories`` (``{category: {cooling_offset: ...,
+    heating_offset: ..., description: ...}}``), ``comfort_modes`` (a list of 0, 1, 2 and 3, see
+    :data:`DEFINITION_COMFORT_MODES`), ``static_setpoints`` (``heating`` and ``cooling``, which comfort modes 0 and 1
+    need) and ``evidence`` (the statistics of the comfort model, which cannot be empty: decision D11).
+
+    :param path: The YAML file, or a folder.
+    :param register: False to read them only.
+    :param replace: True to replace the comfort standards of the registry with the same numbers.
+    :return: The definitions, in the order of the files.
+    :raises ValueError: If a file is not valid (the message names the file and the key), or the folder has no YAML
+        files.
+    :raises ImportError: If PyYAML is not installed.
+    """
+    try:
+        import yaml
+    except ImportError:
+        raise ImportError('load_comfort_standards needs PyYAML: pip install pyyaml') from None
+
+    path = os.fspath(path)
+    if os.path.isdir(path):
+        files = sorted(os.path.join(path, name) for name in os.listdir(path)
+                       if name.lower().endswith(('.yaml', '.yml')))
+        if not files:
+            raise ValueError(f'The folder {path} has no YAML files (.yaml or .yml).')
+    elif os.path.isfile(path):
+        files = [path]
+    else:
+        raise ValueError(f'{path} is not a file or a folder.')
+    definitions = []
+    for file in files:
+        with open(file, encoding='utf-8') as stream:
+            try:
+                data = yaml.safe_load(stream)
+            except yaml.YAMLError as error:
+                raise ValueError(f'{file}: it is not a valid YAML file ({error}).') from None
+        items = data if isinstance(data, list) else [data]
+        definitions += [definition_from_mapping(item, os.path.basename(file)) for item in items]
+    numbers_found = [definition.number for definition in definitions]
+    repeated = sorted({number for number in numbers_found if numbers_found.count(number) > 1})
+    if repeated:
+        raise ValueError(f'The comfort standards {repeated} are defined more than once in {path}.')
+    if register:
+        for definition in definitions:
+            register_comfort_standard(definition, replace=replace)
+    return definitions

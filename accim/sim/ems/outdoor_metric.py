@@ -64,6 +64,7 @@ __all__ = [
     'init_program_lines',
     'initial_values',
     'metric_code',
+    'metric_comfort_standards',
     'metric_name',
     'ring_days',
     'set_outdoor_metric_code',
@@ -365,6 +366,15 @@ def uses_outdoor_metric(idf) -> bool:
     return any(read_inputs(program).get(INPUTS[0], 0) != 0 for program in input_programs(idf).values())
 
 
+def metric_comfort_standards() -> set:
+    """The comfort standards that use the EMS code of the outdoor metric: the custom model (99), and the registered
+    comfort standards whose outdoor metric EnergyPlus does not calculate (:mod:`accim.sim.standards`)."""
+    from accim.sim.ems.setast import CUSTOM_COMFORT_STANDARD
+    from accim.sim.ems.standard_lines import outdoor_metric_standards
+
+    return {CUSTOM_COMFORT_STANDARD} | outdoor_metric_standards()
+
+
 def _remove(idf, objects) -> None:
     for obj in list(objects):
         idf.removeidfobject(obj)
@@ -426,26 +436,32 @@ def _set_custom_model_lines(idf, enabled: bool) -> None:
             replace(program, [word.sub(new, line) for line in _program_lines(program)])
         elif name.upper().startswith(_COUNT_HOURS_PREFIX.upper()):
             zone = name[len(_COUNT_HOURS_PREFIX):]
-            base = pl.format_lines(pl.COUNT_HOURS, zone=zone)
-            variant = pl.format_lines(pl.COUNT_HOURS_OUTDOOR_METRIC, zone=zone)
-            source, target = (base, variant) if enabled else (variant, base)
             lines = _program_lines(program)
-            if lines == source:
-                replace(program, target)
-                continue
-            try:
-                standards = pl.chain_comfort_standards(lines)
-            except ValueError:
-                continue
-            # The hour counters of some comfort standards only (the output IDFs of AddAccis)
-            if (standards is not None and CUSTOM_COMFORT_STANDARD in standards
-                    and lines == pl.for_comfort_standards(source, standards)):
-                replace(program, pl.for_comfort_standards(target, standards))
+            # Those of the built-in comfort standards, or with the branches of the registered ones (accim.sim.standards)
+            for base_lines, variant_lines in ((pl.COUNT_HOURS, pl.COUNT_HOURS_OUTDOOR_METRIC),
+                                              (pl.count_hours_lines(False), pl.count_hours_lines(True))):
+                base, variant = (pl.format_lines(base_lines, zone=zone), pl.format_lines(variant_lines, zone=zone))
+                source, target = (base, variant) if enabled else (variant, base)
+                if lines == source:
+                    replace(program, target)
+                    break
+            else:
+                try:
+                    standards = pl.chain_comfort_standards(lines)
+                except ValueError:
+                    continue
+                # The hour counters of some comfort standards only (the output IDFs of AddAccis)
+                base = pl.format_lines(pl.count_hours_lines(False), zone=zone)
+                variant = pl.format_lines(pl.count_hours_lines(True), zone=zone)
+                source, target = (base, variant) if enabled else (variant, base)
+                if (standards is not None and CUSTOM_COMFORT_STANDARD in standards
+                        and lines == pl.for_comfort_standards(source, standards)):
+                    replace(program, pl.for_comfort_standards(target, standards))
         elif name.upper() == 'SETVST':
-            source, target = (pl.SET_VST, pl.SET_VST_OUTDOOR_METRIC) if enabled else (pl.SET_VST_OUTDOOR_METRIC,
-                                                                                       pl.SET_VST)
-            if _program_lines(program) == list(source):
-                replace(program, target)
+            lines = _program_lines(program)
+            present = pl.registered_standards_in(lines)
+            if lines == list(pl.set_vst_lines(not enabled, present)):
+                replace(program, pl.set_vst_lines(enabled, present))
 
 
 def _remove_outdoor_metric_code(idf, zone_programs: Mapping[str, Any]) -> None:

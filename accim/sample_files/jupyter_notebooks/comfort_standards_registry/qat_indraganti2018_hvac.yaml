@@ -1,0 +1,20 @@
+# QAT Indraganti & Boussaa 2018: the adaptive relationship of the offices with HVAC in Qatar, as a comfort standard
+# defined by its data (accim.sim.standards.load_comfort_standards; proposal B3 of accim 1.2.0). Its R2 is almost 0
+# (the comfort temperature hardly depends on the outdoor temperature), which its evidence shows.
+# The data are those of notes/PROPUESTAS_MEJORAS_post_1.1.0_v03.md (B3 and section 11.5), verified there in
+# Indraganti & Boussaa (2018), equation 5 and Table 10.
+# INCOMPLETE: those sources give neither the outdoor metric of the model (Tr, a running mean of the outdoor
+# temperature, without its alpha), nor its comfort band (the offsets of the categories), nor its applicability limits,
+# nor its comfort modes and static setpoints, so load_comfort_standards rejects this file until they are added from
+# the article (TODO.md of accim).
+number: 102
+label: QAT Indraganti2018 HVAC
+title: 102 = QAT Indraganti and Boussaa 2018 (offices, HVAC)
+citation: "Indraganti, M., Boussaa, D. (2018). An adaptive relationship of thermal comfort for the Gulf Cooperation Council (GCC) Countries: The case of offices in Qatar. Energy and Buildings."
+outdoor_metric: null   # Tr, the running mean outdoor temperature: its alpha is not in the sources of accim
+comfort_temperature: {slope: 0.049, intercept: 22.5}
+applicability: null    # not in the sources of accim
+categories: null       # the comfort band is not in the sources of accim
+comfort_modes: null
+evidence: {N: 3742, R2: 0.015, SE: 0.007, p: "<0.001", building_type: offices, mode: HVAC,
+           outdoor_metric_mean: 30.7, outdoor_metric_sd: 6.4, comfort_temperature_mean: 24.0}

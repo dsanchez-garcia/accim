@@ -24,6 +24,57 @@ it here as answered).
 
 ## Open
 
+## 2026-11-09 — B3: the data of the comfort model of Qatar of the sample files
+- Context: decision D11 asks that the YAML files of B3 ship with the two examples of v03, JPN Aqilah 2025 and Qatar
+  (Indraganti & Boussaa 2018, offices with HVAC). For Qatar, v03 (B3 and §11.5) gives the comfort temperature
+  (`Tc = 0.049·Tr + 22.5`), the citation and the statistics (N = 3742, R² = 0.015, SE = 0.007, p < 0.001; `Tr` with mean
+  30.7 °C and SD 6.4; mean comfort temperature 24.0 °C), but writes "—" for its band, its applicability and its metric:
+  `Tr` is "a running mean outdoor temperature", without α or days. The article is not one of the sources of this
+  session, and the EMS cannot calculate setpoints without a metric, a band and limits.
+- Options considered: (a) ship the file with the data of v03 and the missing keys empty (null), so
+  `load_comfort_standards` rejects it with a message that names the keys, until the author adds them; (b) fill the
+  missing keys with assumed values (a metric, the band of ASHRAE 55, limits from the range of `Tr`); (c) ship only the
+  file of JPN Aqilah 2025.
+- Owner: the author.
+- Status: open; option (a) decided provisionally (nothing invented, D11 kept), pending author. `TODO.md` has the task.
+
+## 2026-11-09 — B3: one regime for each comfort standard defined by its data
+- Context: the design of B3 gives `ComfortStandardDefinition` `regimes: Tuple[CustomRegime, ...]  # B2; one regime for
+  a single line`, but its YAML schema has one comfort temperature, one applicability and no conditions, and neither v03
+  nor the brief say how comfort modes 0 to 3 apply with several regimes (which limits give the static or the extended
+  setpoints), nor how a YAML file writes them.
+- Options considered: (a) one regime with the condition 'always' (several, or another condition, raise a
+  `ValueError`), whose offsets are added to those of the categories; the YAML files give it with
+  `comfort_temperature` and `applicability`; (b) several regimes, written into the branches of SetComfTemp, SetAppLimits
+  and ApplyCAT with the conditions of B2.
+- Owner: the author.
+- Status: open; option (a) decided provisionally, pending author. `TODO.md` has the task.
+
+## 2026-11-09 — B3: comfort mode 2 and the outdoor metric of the comfort standards defined by their data
+- Context: the comfort modes of the built-in comfort standards are 0 (static setpoints), 1 (adaptive when applicable,
+  otherwise static), 2 (otherwise the static setpoints of ISO 7730) and 3 (otherwise horizontally extended); v03 lists
+  `comfort_modes: [0, 1, 2, 3]` for JPN Aqilah 2025 but defines only `static_setpoints` (modes 0 and 1). The code has
+  ISO 7730 static setpoints for comfort mode 2 only for the categories 80 and 90 (25/27 °C cooling and 19/22 °C heating
+  with 80; 24/26 and 20/23 °C with 90, below/above the limits, the same in comfort standards 2, 3, 6, 9–12, 15, 16 and
+  21). The metrics of B1 other than PMOT and RMOT are calculated by the EMS code of the custom model with the inputs
+  `CustAST_metric`, `CustAST_alpha` and `CustAST_days` of the zone.
+- Options considered: comfort mode 2 (a) only with the categories 80 and 90, with those values (`ValueError`
+  otherwise), or (b) a key with the static setpoints of comfort mode 2; the metric (a) through the inputs of the zone
+  (the zones of a registered comfort standard get those of its metric; a zone keeps them when `modify_accis` gives it
+  another comfort standard), or (b) an EMS variable of its own for each registered comfort standard.
+- Owner: the author.
+- Status: open; options (a) and (a) decided provisionally (the code's ISO 7730 values; one EMS code of the outdoor
+  metric for all), pending author.
+
+## 2026-11-09 — B3: what `load_comfort_standards` does by default
+- Context: the prompt asks for `load_comfort_standards(yaml_path)` returning the definitions, and
+  `register_comfort_standard(definition)`; it does not say whether loading registers them.
+- Options considered: (a) `register=True` by default (loading a file makes its comfort standards usable, as the GUI
+  needs), `register=False` to only read them, `replace=False` (a number already registered raises a `ValueError`);
+  (b) only read, and register with `register_comfort_standard`.
+- Owner: the author.
+- Status: open; option (a) decided provisionally, pending author.
+
 ## 2026-11-09 — B2: an outdoor metric for each regime of the custom model
 - Context: the design of B2 in v03 gives `CustomRegime` the field `outdoor_metric: Optional[str] = None  # overrides
   custom_outdoor_metric for this regime (B1)`, and its prompt only says "optional outdoor_metric". Neither says which

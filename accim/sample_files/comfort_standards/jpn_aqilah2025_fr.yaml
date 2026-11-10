@@ -1,0 +1,20 @@
+# JPN Aqilah 2025: the adaptive comfort model of Japanese dwellings in free-running mode, as a comfort standard
+# defined by its data (accim.sim.standards.load_comfort_standards; proposal B3 of accim 1.2.0).
+# The data are those of notes/PROPUESTAS_MEJORAS_post_1.1.0_v03.md (B3, B4 and section 11.5), verified there in
+# Aqilah et al. (2025): equation 8, section 3.4.2 and Conclusions 5-6.
+number: 101
+label: JPN Aqilah2025 FR
+title: 101 = JPN Aqilah 2025 (dwellings, free-running)
+citation: "Aqilah, Rijal, Yoshida & Nicol (2025) Energy & Buildings 335, 115469, doi:10.1016/j.enbuild.2025.115469"
+# The running mean of the daily mean outdoor temperatures with alpha 0.8 (McCartney & Nicol, equation 7 of the paper)
+outdoor_metric: rmot_alpha
+alpha: 0.8
+comfort_temperature: {slope: 0.38, intercept: 16.9}
+applicability: {metric_min: 5.0, metric_max: 30.0}
+categories:
+  90: {cooling_offset: 1.5, heating_offset: -1.5, description: "90 % comfort band"}
+  80: {cooling_offset: 2.0, heating_offset: -2.0, description: "80 % comfort band"}
+comfort_modes: [0, 1, 2, 3]
+static_setpoints: {heating: 20.0, cooling: 28.0}   # user choice; the paper gives no static values
+evidence: {N: 11566, R2: 0.67, SE: 0.003, p: "<0.001", houses: 64, votes_total: 32988, mode: FR,
+           within_band: {90: 0.66, 80: 0.79}, comfort_temperature_range: [14.5, 30.0]}

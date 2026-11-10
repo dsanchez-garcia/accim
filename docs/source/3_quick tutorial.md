@@ -72,6 +72,7 @@ Although the main use of accim is the implementation of adaptive setpoint temper
 - setpoints based on the PMV with the expectancy factor (ePMV) of Fanger and Toftum (`accim.sim.apmv.apply_epmv_setpoints`): {doc}`jupyter_notebooks/example_epmv_setpoints/using_epmv_setpoints`;
 - renaming EPW files for the data analysis (`accim.data.preprocessing.rename_epw_files`): {doc}`jupyter_notebooks/rename_epw_files/using_rename_epw_files`;
 - changing the arguments of the ACCIS of an output IDF, also its comfort standard (`accim.sim.accis.modify_accis`): {doc}`jupyter_notebooks/addAccis/using_addAccis`;
+- comfort standards defined by their data in YAML files, which accim then takes as the built-in ones (`accim.sim.load_comfort_standards`): {doc}`jupyter_notebooks/comfort_standards_registry/using_comfort_standard_registry`;
 - running the simulations (`accim.run.run_ep`), with the Energy Management System of EnergyPlus or through its Python API, and estimating the size of their results before running them (`accim.run.estimate_results_size`): {doc}`jupyter_notebooks/runEp/using_runEp` and {ref}`python-api-backend`;
 - tables and figures of the results (`accim.data.postprocessing.main.Table`): {doc}`jupyter_notebooks/Table/using_Table`;
 - parametric simulation and optimisation (`accim.parametric_and_optimisation`): {doc}`parametric_and_optimisation`.

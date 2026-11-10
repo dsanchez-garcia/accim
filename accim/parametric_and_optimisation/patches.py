@@ -137,6 +137,31 @@ def _ensure_run_energyplus_copies_in_idf():
     eplus_funcs.run_energyplus = _patched_run_energyplus
     eplus_funcs._accim_copy_in_idf_patched = True
 
+def _register_comfort_standards(definitions) -> None:
+    """Register in this process the comfort standards defined by their data (:mod:`accim.sim.standards`) of the main
+    process, which the processes of the parallel simulations do not have (each Python process has its own registry).
+
+    Parameters
+    ----------
+    definitions : Iterable[accim.sim.standards.ComfortStandardDefinition]
+        The comfort standards of the registry of the main process.
+
+    Usage
+    -----
+    Called by the workers of ``run_parametric_simulation`` and by ``_patched_eval_func`` before the parameters of a
+    sample (such as ``comfort_standard`` 101) are written into the model.
+
+    Examples
+    --------
+    _register_comfort_standards(registered_comfort_standards().values())
+    """
+    from accim.sim.standards import comfort_standard_definition, register_comfort_standard
+
+    for definition in definitions or ():
+        if comfort_standard_definition(definition.number) != definition:
+            register_comfort_standard(definition, replace=True)
+
+
 def _patched_eval_func(evaluator, all_outputs):
     """Evaluate one candidate while storing ACCIM optimisation metadata.
 
@@ -164,6 +189,8 @@ def _patched_eval_func(evaluator, all_outputs):
     if mn_filter_map is not None:
         # m-n filter (set_mn_filter): map custom_intercept into the band of published adaptive models.
         all_outputs = mn_filter_map.map_inputs(all_outputs)
+    # The comfort standards defined by their data of the main process (in the processes of platypus)
+    _register_comfort_standards(getattr(evaluator, '_accim_comfort_standards', None))
     _ensure_run_energyplus_copies_in_idf()
     if getattr(evaluator, 'out_dir', None) is not None:
         if not hasattr(evaluator, '_out_dir_patched'):

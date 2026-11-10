@@ -12,9 +12,10 @@ runs, so that the window opens quickly.
 import os
 from typing import Any, Dict, List, Mapping, Tuple
 
-__all__ = ['FIGURE_ANSWERS', 'RENAME_EPWS_ANSWERS', 'SESSION_FORMS', 'apmv_target_keys', 'apply_apmv', 'make_figure',
-           'make_table', 'occupied_zones', 'open_session', 'open_table', 'parametric_study', 'rename_epws',
-           'results_size', 'save_session', 'save_table', 'setpoint_ems_code', 'table_format']
+__all__ = ['FIGURE_ANSWERS', 'RENAME_EPWS_ANSWERS', 'SESSION_FORMS', 'apmv_target_keys', 'apply_apmv',
+           'load_comfort_standards', 'make_figure', 'make_table', 'occupied_zones', 'open_session', 'open_table',
+           'parametric_study', 'rename_epws', 'results_size', 'save_session', 'save_table', 'setpoint_ems_code',
+           'table_format']
 
 #: The questions of rename_epw_files that the interface answers (the beginning of the question -> the answer): no
 #: amendments of the names of the cities and no exclusions. The others (a city or country that OpenStreetMap does not
@@ -65,6 +66,23 @@ def setpoint_ems_code(calls) -> str:
             code = f'! No EMS code: {error}'
         parts.append(f'! {"=" * 100}\n! {title}\n! {"=" * 100}\n{code}')
     return '\n\n'.join(parts) + '\n'
+
+
+def load_comfort_standards(paths) -> List[str]:
+    """Register the comfort standards defined by their data of some YAML files
+    (:func:`accim.sim.standards.load_comfort_standards`, replacing those with the same numbers), for the rest of the
+    session.
+
+    :param paths: The YAML files (or folders).
+    :return: The titles of the comfort standards.
+    :raises ValueError: If a file is not valid (nothing of that file is registered).
+    """
+    from accim.sim.standards import load_comfort_standards as load
+
+    titles = []
+    for path in paths:
+        titles += [definition.standard.title for definition in load(path, replace=True)]
+    return titles
 
 
 def results_size(arguments: Mapping[str, Any]) -> Tuple[Any, str]:

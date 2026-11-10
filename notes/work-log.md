@@ -15,6 +15,30 @@ This log is a lightweight, session-scoped complement to the repository's
 existing tracking files — it does not replace them (see
 [[decisions.md#2026-09-13 — `notes/work-log.md` complements, not replaces, existing tracking files|the related decision]]).
 
+## 2026-11-09 — B3: comfort standards defined by their data (branch `v1.2.0`, on the server)
+
+- **Objective**: B3, after B2, in the order of the author (with decisions D1 and D11).
+- **Affected files**: `accim/sim/standards.py`, `accim/sim/ems/standard_lines.py` (new),
+  `accim/sim/ems/program_lines.py`, `accim/sim/ems/programs.py`, `accim/sim/ems/outdoor_metric.py`,
+  `accim/sim/ems/inputs.py`, `accim/sim/accis.py`, `accim/sim/generation.py`, `accim/sim/__init__.py`,
+  `accim/sim/preview.py`, `accim/utils/ems_code.py`, `accim/utils/verification.py`,
+  `accim/parametric_and_optimisation/` (`main.py`, `patches.py`, `funcs_for_besos/param_accis.py`), `accim/gui/`
+  (`app.py`, `forms.py`, `tasks.py`), `setup.py`, `accim/sample_files/comfort_standards/` (new),
+  `accim/sample_files/jupyter_notebooks/comfort_standards_registry/` (new), `docs/prepare_howto_notebooks.py`, the
+  docs (4.2.5 and its references, the How-to page, `index.rst`, `api/accim.sim.ems.rst`), the tests,
+  [[../CHANGELOG.md]], [[../CAMBIOS_CODIGO_v1.2.0.md]] (§16), [[../DEVLOG.md]], [[../TODO.md]], [[decisions.md]],
+  [[questions.md]].
+- **Finding or decision**: See
+  [[decisions.md#2026-11-09 — Comfort standards defined by their data are registered for the session, and their EMS code is added at the end of the chains of the built-in ones (B3)|the decision]].
+  The Erl interpreter of accim rejected `PMOT*(-0.2)` ("Minus sign used on the right side of multiplication sign", as
+  EnergyPlus), so negative slopes are written with the intercept first. The workers of the parallel simulations are
+  new processes without the registry, so they receive the definitions. The Qatar example waits for its data
+  ([[questions.md]], [[../TODO.md]]).
+- **Validation**: the new tests (core, parametric and GUI); EnergyPlus 25.1: a week of April (check 4, 0 mismatches,
+  also `Tout_metric`), a year in the How-to notebook (0 mismatches in 8760 hours), and three models with the EMS and
+  API backends (identical); the whole suite; the documentation build.
+- **Next step**: B4.
+
 ## 2026-11-09 — B2: several regimes of the custom model (branch `v1.2.0`, on the server)
 
 - **Objective**: B2, after D1, in the order of the author (with decision D6).

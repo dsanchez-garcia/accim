@@ -51,6 +51,7 @@ notebook and the input files it uses (IDFs, EPWs...):
 | `full_example_IBPSA` | Full example, from the input files to the figures | {doc}`jupyter_notebooks/full_example_IBPSA/full_example_IBPSA` |
 | `example_apmv_setpoints_paper` | aPMV setpoints | {doc}`jupyter_notebooks/example_apmv_setpoints_paper/using_apmv_setpoints` |
 | `example_epmv_setpoints` | ePMV setpoints (since accim 1.2.0) | {doc}`jupyter_notebooks/example_epmv_setpoints/using_epmv_setpoints` |
+| `comfort_standards_registry` | Comfort standards defined by their data, in YAML files (since accim 1.2.0) | {doc}`jupyter_notebooks/comfort_standards_registry/using_comfort_standard_registry` |
 | `research_paper_case_study_v0-7-3` | Case study of a research paper | {doc}`jupyter_notebooks/research_paper_case_study/research_paper_case_study` |
 | `parametric_and_optimisation_examples` | Parametric simulation and optimisation: tutorials `00`-`10` and complete workflows `wf1`-`wf5` | {doc}`jupyter_notebooks/parametric_and_optimisation_examples/index` |
 

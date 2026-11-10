@@ -116,7 +116,9 @@ def input_values(arguments: Mapping) -> Dict[str, Any]:
     """The values of the EMS variables set by some arguments of :func:`accim.sim.accis.modify_accis`.
 
     The arguments that are None or missing are left out. The tolerance of the cooling setpoint is the negative of
-    ``setpoint_tolerance``, and the dates of the cooling season can be 'dd/mm' dates.
+    ``setpoint_tolerance``, and the dates of the cooling season can be 'dd/mm' dates. With a comfort standard defined by
+    its data (:mod:`accim.sim.standards`), the inputs of the outdoor metric are those of the comfort standard
+    (:func:`accim.sim.ems.standard_lines.standard_inputs`).
 
     :param arguments: The arguments, ``{'comfort_standard': 1, 'setpoint_tolerance': 0.1...}``.
     :return: The values, ``{'ComfStand': 1, 'ACSTtol': -0.1, 'AHSTtol': 0.1...}``.
@@ -134,6 +136,13 @@ def input_values(arguments: Mapping) -> Dict[str, Any]:
             from accim.sim.ems.outdoor_metric import metric_code
             value = metric_code(value)
         values[item.variable] = value
+    # The zones of a comfort standard defined by its data have its outdoor metric (accim.sim.standards)
+    from accim.sim.standards import comfort_standard_definition
+
+    definition = comfort_standard_definition(arguments.get('comfort_standard'))
+    if definition is not None:
+        from accim.sim.ems.standard_lines import standard_inputs
+        values.update(standard_inputs(definition))
     return values
 
 

@@ -11,6 +11,29 @@ Durable architectural/process decisions for this repository and its Obsidian
 vault. Newest first. Use [[templates/decision-record.md|the decision-record
 template]] to add a new entry.
 
+## 2026-11-09 — Comfort standards defined by their data are registered for the session, and their EMS code is added at the end of the chains of the built-in ones (B3)
+
+- **Status**: accepted (proposal B3 of `notes/PROPUESTAS_MEJORAS_post_1.1.0_v03.md` with decisions D1 and D11 of the
+  brief; four details decided provisionally, see questions.md)
+- **Context**: adding a comfort model needed changes in the catalogue, the chains of the EMS programs, the setpoint
+  lines and the GUI, and a release. The prompt asks for `ComfortStandardDefinition`, `register_comfort_standard()`,
+  `load_comfort_standards()` with the YAML schema of v03, Erl built from the registry for the numbers 100 or more while
+  the built-in comfort standards keep their literal lines (byte-identical output IDFs), the two YAML examples of v03,
+  a How-to notebook, the GUI lists from the registry and `print_setpoint_ems_code` with the evidence.
+- **Decision**: `accim.sim.standards` keeps the registry of the Python session (`register_comfort_standard`,
+  `load_comfort_standards`, which registers by default); the new module `accim.sim.ems.standard_lines` writes the
+  branches `elseif ComfStand == <n>` of a definition (SetComfTemp, SetAppLimits, ApplyCAT and, with a metric other
+  than PMOT, CountHours and SetVST) and its setpoint lines, as those of the built-in comfort standards, and
+  `accim.sim.ems.program_lines` adds them at the end of the literal chains, which do not change; the metrics that the
+  EMS calculates use the EMS code of the outdoor metric of the custom model (B1), through the inputs of the zones of
+  the comfort standard; a definition has one regime 'always'; comfort mode 2 uses the ISO 7730 values of the code
+  (categories 80 and 90 only); a negative slope is written with the intercept first (Erl takes no minus sign after a
+  multiplication sign); the processes of the parallel simulations of the parametric module receive the definitions.
+- **Consequences**: the output IDFs of the built-in comfort standards do not change, with or without registered ones
+  (golden master; each output IDF of `AddAccis` only has the code of its comfort standards), while the models of
+  `add_accis_to_idf` have the code of those registered when they are made; the registry must be loaded again in each
+  session; the Qatar example is incomplete and rejected until the author gives its metric, band and limits.
+
 ## 2026-11-09 — The custom model has several regimes, selected in each timestep by a program of each zone (B2)
 
 - **Status**: accepted (proposal B2 of `notes/PROPUESTAS_MEJORAS_post_1.1.0_v03.md` with decision D6 of the brief;

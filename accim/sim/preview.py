@@ -275,7 +275,7 @@ def _metric(comfort_standard: int, comfort_mode: Optional[Number]) -> Optional[s
         lines = get_setpoint_lines(comfort_standard, comfort_mode)
     else:
         lines = [line for program in subprograms([comfort_standard]).values() for line in program]
-    for candidates in (lines, pl.for_comfort_standards(pl.SET_COMF_TEMP, [comfort_standard])):
+    for candidates in (lines, pl.for_comfort_standards(pl.set_comf_temp_lines(), [comfort_standard])):
         found = {name for name in ('RMOT', 'PMOT')
                  if any(re.search(rf'\b{name}\b', line) for line in candidates if not line.strip().startswith('!'))}
         if len(found) == 1:
@@ -366,8 +366,7 @@ def compute_setpoints(epw: PathLike, comfort_standard: int, category: Optional[N
     zone_metric = f'{om.ZONE_PROGRAM_PREFIX}{_ZONE}'
     # The hour counters of the zone tell whether the running mean is within the applicability limits
     counter = f'CountHours_{_ZONE}'
-    programs[counter] = pl.format_lines(pl.COUNT_HOURS_OUTDOOR_METRIC if outdoor_metric else pl.COUNT_HOURS,
-                                        zone=_ZONE)
+    programs[counter] = pl.format_lines(pl.count_hours_lines(outdoor_metric), zone=_ZONE)
     names = set().union(*variables_in_programs(programs).values())
     erl = ErlProgramSet(programs, global_variables=names)
     order = ['SetAppLimits', 'ApplyCAT', 'SetComfTemp', 'SetAST', 'SetASTnoTol', counter]
@@ -456,7 +455,11 @@ def compute_setpoints(epw: PathLike, comfort_standard: int, category: Optional[N
     days = len(running_means)
     day_index = np.repeat(np.arange(days), 24 * n)
     if outdoor_metric:
-        metric = om.metric_name(custom_arguments.get('custom_outdoor_metric', 'pmot'))
+        from accim.sim.standards import comfort_standard_definition
+
+        definition = comfort_standard_definition(comfort_standard)
+        metric = (definition.outdoor_metric if definition is not None
+                  else om.metric_name(custom_arguments.get('custom_outdoor_metric', 'pmot')))
     else:
         metric = _metric(int(comfort_standard), comfort_mode)
     starts = hourly.iloc[24 * first:]

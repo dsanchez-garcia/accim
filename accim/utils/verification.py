@@ -1147,8 +1147,8 @@ def _setpoint_mismatches(building, data: Mapping[str, pd.DataFrame], epw: str,
     from accim.sim.ems.custom_regimes import OUTPUT_PREFIX as REGIME_OUTPUT_PREFIX, PROGRAM_PREFIX, parse_regime_program
     from accim.sim.ems.inputs import input_programs, read_inputs
     from accim.sim.ems.objects import ZONE_SETPOINT_OUTPUT_VARIABLES
-    from accim.sim.ems.outdoor_metric import OUTPUT_PREFIX, begins_with_weather_file, metric_code
-    from accim.sim.ems.setast import CUSTOM_COMFORT_STANDARD
+    from accim.sim.ems.outdoor_metric import (OUTPUT_PREFIX, begins_with_weather_file, metric_code,
+                                              metric_comfort_standards)
     from accim.sim.preview import SETPOINT_EMS_VARIABLES, compute_setpoints, energyplus_running_means
 
     zone_programs = input_programs(building)
@@ -1232,9 +1232,10 @@ def _setpoint_mismatches(building, data: Mapping[str, pd.DataFrame], epw: str,
                                             f'{output} of compute_setpoints', tolerance)
             mismatches.extend(new_rows)
             lines.append(line)
-        # The outdoor metric of the custom model that its EMS programs calculate (not with 'pmot', which is PMOT)
+        # The outdoor metric that the EMS programs calculate (not with 'pmot', which is PMOT): that of the custom
+        # model, or that of a comfort standard defined by its data (accim.sim.standards)
         found = outputs.get('EMS', f'{OUTPUT_PREFIX}{zone}')
-        if (found is not None and arguments.get('comfort_standard') == CUSTOM_COMFORT_STANDARD
+        if (found is not None and arguments.get('comfort_standard') in metric_comfort_standards()
                 and metric_code(arguments.get('custom_outdoor_metric', 0)) != 0):
             expected = np.where(inside, preview['Tout_metric'].to_numpy(dtype=float), np.nan)
             new_rows, line = _mismatch_rows(timestamps, found[rows], expected, zone, 'Check4_Tout_metric',

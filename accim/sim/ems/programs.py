@@ -75,9 +75,10 @@ _WINDOW_PROGRAM_PREFIXES = ('SetMyVOF_', 'SetWindowOperation_')
 INDENTATION = '    '
 _OPENING_KEYWORDS = ('IF', 'ELSEIF', 'ELSE', 'WHILE')
 _CLOSING_KEYWORDS = ('ELSEIF', 'ELSE', 'ENDIF', 'ENDWHILE')
-#: The programs whose lines are a chain ``if ComfStand == ... endif`` (and CountHours_<zone>, of each zone).
-_COMFORT_STANDARD_PROGRAMS = {'SetComfTemp': pl.SET_COMF_TEMP, 'SetAppLimits': pl.SET_APP_LIMITS,
-                              'ApplyCAT': pl.APPLY_CAT}
+#: The programs whose lines are a chain ``if ComfStand == ... endif`` (and CountHours_<zone>, of each zone), with the
+#: branches of the registered comfort standards (accim.sim.standards)
+_COMFORT_STANDARD_PROGRAMS = {'SetComfTemp': pl.set_comf_temp_lines, 'SetAppLimits': pl.set_app_limits_lines,
+                              'ApplyCAT': pl.apply_cat_lines}
 _COUNT_HOURS_PREFIX = 'CountHours_'
 
 
@@ -148,7 +149,7 @@ def set_comfort_standard_code(idf, comfort_standards: Optional[Iterable[int]] = 
         of EnergyPlus, or to keep the programs of the outdoor metric of the model.
     """
     from accim.sim.ems.inputs import input_programs
-    from accim.sim.ems.outdoor_metric import set_outdoor_metric_code, uses_outdoor_metric
+    from accim.sim.ems.outdoor_metric import metric_comfort_standards, set_outdoor_metric_code, uses_outdoor_metric
 
     if comfort_standards is not None:
         # The models can have them as numbers with decimals (set ComfStand = 1.0)
@@ -157,7 +158,7 @@ def set_comfort_standard_code(idf, comfort_standards: Optional[Iterable[int]] = 
     # the output IDF is
     outdoor_metric = False
     if input_programs(idf):
-        outdoor_metric = ((comfort_standards is None or CUSTOM_COMFORT_STANDARD in comfort_standards)
+        outdoor_metric = ((comfort_standards is None or bool(comfort_standards & metric_comfort_standards()))
                           and uses_outdoor_metric(idf))
         set_outdoor_metric_code(idf, outdoor_metric, epw)
 
@@ -167,17 +168,17 @@ def set_comfort_standard_code(idf, comfort_standards: Optional[Iterable[int]] = 
         return pl.for_comfort_standards(lines, comfort_standards) or ['return']
 
     programs = idf.idfobjects['EnergyManagementSystem:Program']
-    for name, lines in _COMFORT_STANDARD_PROGRAMS.items():
+    for name, lines_of in _COMFORT_STANDARD_PROGRAMS.items():
         program = idf.getobject('EnergyManagementSystem:Program', name)
         if program is not None:
-            if name == 'SetComfTemp' and outdoor_metric:
-                lines = pl.SET_COMF_TEMP_OUTDOOR_METRIC
+            lines = lines_of(outdoor_metric) if name == 'SetComfTemp' else lines_of()
             set_program_lines(program, lines_for(lines))
-    count_hours = pl.COUNT_HOURS_OUTDOOR_METRIC if outdoor_metric else pl.COUNT_HOURS
+    count_hours = pl.count_hours_lines(outdoor_metric)
     for program in programs:
         if program.Name.upper().startswith(_COUNT_HOURS_PREFIX.upper()):
             zone = program.Name[len(_COUNT_HOURS_PREFIX):]
             set_program_lines(program, lines_for(pl.format_lines(count_hours, zone=zone)))
+    _set_vst_registered_branches(idf, outdoor_metric, comfort_standards)
     master = idf.getobject('EnergyManagementSystem:Program', 'SetAST_Master')
     if master is not None:
         set_program_lines(master, master_program_lines(comfort_standards))
@@ -187,14 +188,29 @@ def set_comfort_standard_code(idf, comfort_standards: Optional[Iterable[int]] = 
             add_program(idf, name, lines)
 
 
-def add_comfort_standard_code(idf, comfort_standards: Iterable[int]) -> None:
+def _set_vst_registered_branches(idf, outdoor_metric: bool, comfort_standards: Optional[Set[int]]) -> None:
+    """Write the program SetVST of a model in mixed mode with the branches of the registered comfort standards
+    (:mod:`accim.sim.standards`) of the model only (of all of them with None), if its lines are those of accim."""
+    program = idf.getobject('EnergyManagementSystem:Program', 'SetVST')
+    if program is None:
+        return
+    lines = [str(value).strip() for value in program.fieldvalues[2:]]
+    present = pl.registered_standards_in(lines)
+    if lines not in (list(pl.set_vst_lines(False, present)), list(pl.set_vst_lines(True, present))):
+        return
+    target = list(pl.set_vst_lines(outdoor_metric, comfort_standards))
+    if target != lines:
+        set_program_lines(program, target)
+
+
+def add_comfort_standard_code(idf, comfort_standards: Iterable[int], epw=None) -> None:
     """Add to the EMS programs of ACCIS of a model the code of some comfort standards, if it does not have it (the
     output IDFs of :class:`accim.sim.accis.AddAccis` only have that of the comfort standards of their zones), and keep
-    that of the others (see :func:`set_comfort_standard_code`)."""
+    that of the others (see :func:`set_comfort_standard_code`, which takes ``epw``)."""
     with_code = subprogram_comfort_standards(idf)
     wanted = {int(n) for n in comfort_standards}
     if not wanted <= with_code:
-        set_comfort_standard_code(idf, with_code | wanted)
+        set_comfort_standard_code(idf, with_code | wanted, epw)
 
 
 def code_comfort_standards(idf) -> Optional[Set[int]]:
@@ -204,7 +220,8 @@ def code_comfort_standards(idf) -> Optional[Set[int]]:
     program = idf.getobject('EnergyManagementSystem:Program', 'SetComfTemp')
     if program is not None:
         lines = [str(value).strip() for value in program.fieldvalues[2:]]
-        if lines in (list(pl.SET_COMF_TEMP), list(pl.SET_COMF_TEMP_OUTDOOR_METRIC)):
+        if lines in (list(pl.SET_COMF_TEMP), list(pl.SET_COMF_TEMP_OUTDOOR_METRIC), list(pl.set_comf_temp_lines()),
+                     list(pl.set_comf_temp_lines(True))):
             return None
     return subprogram_comfort_standards(idf)
 
@@ -257,9 +274,9 @@ def accis_programs(model: AccimModel) -> List[Tuple[str, List[str]]]:
     """
     zones = model.ems_names
     mixed_mode = model.is_mixed_mode
-    programs = [('SetComfTemp', list(pl.SET_COMF_TEMP))]
-    programs += [(f'CountHours_{z}', pl.format_lines(pl.COUNT_HOURS, zone=z)) for z in zones]
-    programs += [('SetAppLimits', list(pl.SET_APP_LIMITS)), ('ApplyCAT', list(pl.APPLY_CAT))]
+    programs = [('SetComfTemp', list(pl.set_comf_temp_lines()))]
+    programs += [(f'CountHours_{z}', pl.format_lines(pl.count_hours_lines(), zone=z)) for z in zones]
+    programs += [('SetAppLimits', list(pl.set_app_limits_lines())), ('ApplyCAT', list(pl.apply_cat_lines()))]
     programs += [('SetAST_Master', master_program_lines())]
     programs += list(subprograms().items())
     programs += [('SetAST', list(pl.SET_AST)), ('SetASTnoTol', list(pl.SET_AST_NO_TOL)),
@@ -275,7 +292,7 @@ def accis_programs(model: AccimModel) -> List[Tuple[str, List[str]]]:
         existing_hvac = getattr(model, 'script_type', None) == 'ex_mm'
         apply_ast = pl.APPLY_AST_MIXED_MODE_EXISTING_HVAC if existing_hvac else pl.APPLY_AST_MIXED_MODE
         window_operation = pl.SET_WINDOW_OPERATION_EXISTING_HVAC if existing_hvac else pl.SET_WINDOW_OPERATION
-        programs += [('SetVST', list(pl.SET_VST))]
+        programs += [('SetVST', list(pl.set_vst_lines()))]
         programs += [(f'ApplyAST_{z}', pl.format_lines(apply_ast, zone=z)) for z in zones]
         for w in model.windows:
             programs += [(f'SetMyVOF_{w}', pl.format_lines(pl.SET_MY_VOF, window=w)),

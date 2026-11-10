@@ -28,7 +28,8 @@ from accim.sim.ems.setast import (
     subprogram_name,
     subprograms,
 )
-from accim.sim.standards import COMFORT_STANDARDS
+from accim.sim.ems.standard_lines import metric_variable, needs_outdoor_metric_code
+from accim.sim.standards import COMFORT_STANDARDS, comfort_standard_definition
 
 __all__ = ['get_setpoint_ems_code', 'get_setpoint_ems_programs', 'print_setpoint_ems_code']
 
@@ -58,11 +59,12 @@ _LEGEND = (
     '! the heating setpoint up).',
 )
 _OUTDOOR_METRIC_LEGEND = (
-    '! Tout_metric: the outdoor metric of the custom model (custom_outdoor_metric), with which it calculates its',
-    '! comfort temperature, setpoints and applicability. SetOutdoorMetric runs in each timestep before the programs',
-    '! of the zones, and InitOutdoorMetric at the beginning of each environment; OutT is the outdoor dry-bulb',
-    '! temperature (Site Outdoor Air Drybulb Temperature). Without the weather file (argument epw of AddAccis),',
-    '! the daily means begin with PMOT; with it, with those of the weather file.',
+    '! Tout_metric: the outdoor metric of the custom model (custom_outdoor_metric), or of a comfort standard defined',
+    '! by its data, with which it calculates its comfort temperature, setpoints and applicability. SetOutdoorMetric',
+    '! runs in each timestep before the programs of the zones, and InitOutdoorMetric at the beginning of each',
+    '! environment; OutT is the outdoor dry-bulb temperature (Site Outdoor Air Drybulb Temperature). Without the',
+    '! weather file (argument epw of AddAccis), the daily means begin with PMOT; with it, with those of the weather',
+    '! file.',
 )
 _LIMIT_LEGEND = (
     '! AHSTfloor and ACSTceil: the floor of the heating setpoint and the ceiling of the cooling setpoint of the',
@@ -108,6 +110,37 @@ def _header(comfort_standard: int, category: Optional[Number], comfort_mode: Opt
     else:
         lines.append(f'! Comfort mode (ComfMod): {_number(comfort_mode)} = '
                      f'{standard.comfort_modes.get(comfort_mode, "")}')
+    lines += _definition_lines(comfort_standard)
+    return lines
+
+
+def _evidence_text(value) -> str:
+    """A value of the evidence of a comfort standard, in one line."""
+    if isinstance(value, dict):
+        return '{' + ', '.join(f'{key}: {_evidence_text(item)}' for key, item in value.items()) + '}'
+    if isinstance(value, (list, tuple)):
+        return '[' + ', '.join(_evidence_text(item) for item in value) + ']'
+    return str(value)
+
+
+def _definition_lines(comfort_standard: int) -> List[str]:
+    """The comments with the source, the outdoor metric and the evidence of a comfort standard defined by its data
+    (:mod:`accim.sim.standards`), or none."""
+    definition = comfort_standard_definition(comfort_standard)
+    if definition is None:
+        return []
+    metric = definition.outdoor_metric
+    if metric == 'rmot_alpha':
+        metric += f' (alpha {definition.alpha})'
+    elif metric == 'ndrm':
+        metric += f' ({definition.days} days)'
+    lines = [f'! Comfort standard defined by its data (accim.sim.standards): {definition.citation}',
+             f'! Outdoor metric: {metric}, in the EMS {metric_variable(definition.outdoor_metric)}']
+    if definition.static_setpoints is not None:
+        lines.append(f'! Static setpoints: {definition.static_setpoints[0]} for heating and '
+                     f'{definition.static_setpoints[1]} for cooling')
+    lines.append('! Evidence:')
+    lines += [f'!     {key}: {_evidence_text(value)}' for key, value in definition.evidence.items()]
     return lines
 
 
@@ -165,10 +198,17 @@ def _regime_program(comfort_standard: int, arguments: dict, outdoor_metric: bool
 def _outdoor_metric_programs(comfort_standard: int, arguments: dict, epw, start_date) -> Dict[str, List[str]]:
     """The programs of the outdoor metric of the custom model, as in the output IDFs of AddAccis with the weather file
     ``epw`` and a RunPeriod that begins on ``start_date`` (none if the comfort standard is not the custom model or its
-    metric is 'pmot')."""
-    if comfort_standard != _CUSTOM:
+    metric is 'pmot'), or those of the outdoor metric of a comfort standard defined by its data (none if EnergyPlus
+    calculates it)."""
+    definition = comfort_standard_definition(comfort_standard)
+    if definition is not None:
+        if not needs_outdoor_metric_code(definition):
+            return {}
+        metric, alpha, days = definition.outdoor_metric, definition.alpha, definition.days
+    elif comfort_standard != _CUSTOM:
         return {}
-    metric, alpha, days = (arguments[name] for name in ('custom_outdoor_metric', 'custom_alpha', 'custom_days'))
+    else:
+        metric, alpha, days = (arguments[name] for name in ('custom_outdoor_metric', 'custom_alpha', 'custom_days'))
     code = om.check_outdoor_metric_arguments(metric, alpha, days)
     if code == 0:
         return {}
@@ -353,10 +393,10 @@ def get_setpoint_ems_code(
                                in enumerate(check_custom_regimes(arguments['custom_regimes']), start=1))
         lines += _section(f'{cr.PROGRAM_PREFIX}{_ZONE}: the regime of the custom model of the timestep ({conditions}), '
                           f'which sets its inputs', regime_lines)
-    lines += _section('SetAppLimits: the applicability limits', branches(pl.SET_APP_LIMITS))
-    lines += _section('ApplyCAT: the offsets of the category', branches(pl.APPLY_CAT))
+    lines += _section('SetAppLimits: the applicability limits', branches(pl.set_app_limits_lines()))
+    lines += _section('ApplyCAT: the offsets of the category', branches(pl.apply_cat_lines()))
     lines += _section('SetComfTemp: the comfort temperature',
-                      branches(pl.SET_COMF_TEMP_OUTDOOR_METRIC if outdoor_metric else pl.SET_COMF_TEMP))
+                      branches(pl.set_comf_temp_lines(outdoor_metric)))
     lines += _section('SetAST: the setpoints', pl.SET_AST)
     lines += _section('SetAST_Master: the cooling season, and the subprograms of the comfort standard',
                       master_program_lines([comfort_standard]))
@@ -473,9 +513,9 @@ def get_setpoint_ems_programs(
     if regime_lines:
         programs[f'{cr.PROGRAM_PREFIX}{_ZONE}'] = regime_lines
     programs.update({
-        'SetAppLimits': branches(pl.SET_APP_LIMITS),
-        'ApplyCAT': branches(pl.APPLY_CAT),
-        'SetComfTemp': branches(pl.SET_COMF_TEMP_OUTDOOR_METRIC if outdoor_metric else pl.SET_COMF_TEMP),
+        'SetAppLimits': branches(pl.set_app_limits_lines()),
+        'ApplyCAT': branches(pl.apply_cat_lines()),
+        'SetComfTemp': branches(pl.set_comf_temp_lines(outdoor_metric)),
         'SetAST': list(pl.SET_AST),
         'SetAST_Master': master_program_lines([comfort_standard]),
     })

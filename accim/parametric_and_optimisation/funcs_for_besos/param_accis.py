@@ -232,8 +232,19 @@ def get_valid_param_combinations():
         21: [[80, 90], [2, 3]],
         22: [[1, 2, 3], [0]],
     }
+    # The comfort standards defined by their data (accim.sim.standards): their categories and comfort modes
+    CS_CA_CM_list_dict.update(_registered_param_combinations())
 
     return CS_CA_CM_list_dict
+
+
+def _registered_param_combinations() -> dict:
+    """The categories and comfort modes of the registered comfort standards (:mod:`accim.sim.standards`), as in
+    :func:`get_valid_param_combinations`."""
+    from accim.sim.standards import registered_comfort_standards
+
+    return {number: [list(definition.standard.categories), list(definition.standard.comfort_modes)]
+            for number, definition in registered_comfort_standards().items()}
 
 def drop_invalid_param_combinations(samples_df):
     """Filter sampled rows that violate ACCIS parameter compatibility rules.
@@ -293,6 +304,7 @@ def drop_invalid_param_combinations(samples_df):
         21: [[80, 90], [2, 3]],
         22: [[1, 2, 3], [0]],
     }
+    valid_params.update(_registered_param_combinations())
 
     # The columns of the parameters: their names since accim 1.0.0, or those of accim 0.x
     legacy_names = {
@@ -356,7 +368,8 @@ def modify_ComfStand(idf: besos.IDF_class, value: int):
     """Modifies the ComfStand argument to match the entered value.
 
     The model gets the EMS code of this comfort standard if it does not have it (the output IDFs of ``AddAccis`` only
-    have that of the comfort standards of their zones).
+    have that of the comfort standards of their zones). With a comfort standard defined by its data
+    (:mod:`accim.sim.standards`), the zones also get its outdoor metric (and its EMS code, if the EMS calculates it).
     
     :param idf: The eppy or besos IDF class instance.
     :param value: The value to be applied in the argument.
@@ -370,9 +383,15 @@ def modify_ComfStand(idf: besos.IDF_class, value: int):
     --------
     result = modify_ComfStand(idf=..., value=...)
     """
+    from accim.sim.standards import comfort_standard_definition
+
     _set_inputs(idf, {'ComfStand': value})
     if input_programs(idf):
         add_comfort_standard_code(idf, [value])
+        definition = comfort_standard_definition(value)
+        if definition is not None:
+            from accim.sim.ems.standard_lines import standard_inputs
+            _set_outdoor_metric_inputs(idf, standard_inputs(definition))
 
 
 def _set_setpoint_limit(idf, variable: str, value: float) -> None:
@@ -452,10 +471,15 @@ def _set_outdoor_metric_input(idf, variable: str, value) -> None:
 
     :raises ValueError: If the model has the ACCIS of an earlier version, or a value is not valid.
     """
+    _set_outdoor_metric_inputs(idf, {variable: value})
+
+
+def _set_outdoor_metric_inputs(idf, inputs: dict) -> None:
+    """Set some inputs of the outdoor metric (``{EMS variable: value}``) in all the zones of a model, and write the EMS
+    code of the outdoor metric where the model needs it (see :func:`_set_outdoor_metric_input`)."""
     from accim.sim.ems.outdoor_metric import (check_outdoor_metric_arguments, has_outdoor_metric_code,
-                                              set_outdoor_metric_code, uses_outdoor_metric)
+                                              metric_comfort_standards, set_outdoor_metric_code, uses_outdoor_metric)
     from accim.sim.ems.programs import code_comfort_standards
-    from accim.sim.ems.setast import CUSTOM_COMFORT_STANDARD
 
     zone_programs = input_programs(idf)
     if not zone_programs:
@@ -464,15 +488,17 @@ def _set_outdoor_metric_input(idf, variable: str, value) -> None:
     defaults = {'CustAST_metric': 'pmot', 'CustAST_alpha': 0.8, 'CustAST_days': 30}
     for zone, program in zone_programs.items():
         values = {name: read_inputs(program).get(name, default) for name, default in defaults.items()}
-        values[variable] = value
+        values.update(inputs)
         check_outdoor_metric_arguments(values['CustAST_metric'], values['CustAST_alpha'], values['CustAST_days'],
                                        where=zone)
     for program in zone_programs.values():
-        if set_inputs(program, {variable: value}):
+        missing = set_inputs(program, inputs)
+        if missing:
             set_program_lines(program, [str(line).strip() for line in program.fieldvalues[2:]]
-                              + [f'set {variable} = {value}'])
+                              + [f'set {variable} = {inputs[variable]}' for variable in inputs if variable in missing])
     standards = code_comfort_standards(idf)
-    enabled = (standards is None or CUSTOM_COMFORT_STANDARD in standards) and uses_outdoor_metric(idf)
+    enabled = ((standards is None or bool(set(standards) & metric_comfort_standards()))
+               and uses_outdoor_metric(idf))
     if enabled or has_outdoor_metric_code(idf):
         set_outdoor_metric_code(idf, enabled)
 

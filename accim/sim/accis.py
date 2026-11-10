@@ -65,6 +65,7 @@ from accim.sim.ems.outdoor_metric import (
     OUTDOOR_METRICS,
     check_outdoor_metric_arguments,
     metric_code,
+    metric_comfort_standards,
     set_outdoor_metric_code,
     uses_outdoor_metric,
 )
@@ -91,6 +92,7 @@ from accim.sim.ems.setpoint_limits import (
     set_hours_below_code,
     set_setpoint_limits_code,
 )
+from accim.sim.ems.standard_lines import outdoor_metric_standards, standard_inputs
 from accim.sim.generation import (
     GenerationArguments,
     OutputIdfs,
@@ -103,6 +105,7 @@ from accim.sim.generation import (
 from accim.sim.model import AccimModel, hvac_template_types
 from accim.sim.outputs import OUTPUT_DATAFRAME_COLUMNS, enable_sizing_calculations, output_variables_dataframe
 from accim.sim.results_size import SIZE_COLUMNS, SimulationSize, estimate_simulation_size, format_size
+from accim.sim.standards import comfort_standard_definition
 from accim.sim.targets import resolve_targets
 
 __all__ = ['AddAccis', 'add_accis_to_idf', 'addAccis', 'gen_outputs_df', 'load_idf', 'modify_accis']
@@ -1203,6 +1206,11 @@ def modify_accis(
         _check_zone_custom_regimes(idf, zone_programs, regimes, comfort_standard, resolved)
     for zone, program in zone_programs.items():
         values = input_values({**arguments, **outdoor_metric, **limits, **resolved.get(zone, {})})
+        # The zones that keep a comfort standard defined by its data keep its outdoor metric (accim.sim.standards)
+        definition = (comfort_standard_definition(read_inputs(program).get('ComfStand')) if 'ComfStand' not in values
+                      else None)
+        if definition is not None:
+            values.update(standard_inputs(definition))
         not_set = set_inputs(program, values)
         # The inputs of the outdoor metric of the models without its EMS code, and the floor and ceiling of the
         # setpoints of the zones without them
@@ -1214,11 +1222,14 @@ def modify_accis(
         set_setpoint_limits_code(idf)
     if regimes is not None:
         set_custom_regimes(idf, regimes)
-    add_comfort_standard_code(idf, zone_comfort_standards(idf))
-    if metric_given:
+    add_comfort_standard_code(idf, zone_comfort_standards(idf), epw)
+    # The comfort standards defined by their data whose outdoor metric the EMS calculates need its EMS code
+    registered_metric = bool({int(n) for n in zone_comfort_standards(idf)} & outdoor_metric_standards())
+    if metric_given or registered_metric:
         standards = code_comfort_standards(idf)
-        enabled = (standards is None or CUSTOM_COMFORT_STANDARD in standards) and uses_outdoor_metric(idf)
-        set_outdoor_metric_code(idf, enabled, epw, rewrite=True)
+        enabled = ((standards is None or bool(set(standards) & metric_comfort_standards()))
+                   and uses_outdoor_metric(idf))
+        set_outdoor_metric_code(idf, enabled, epw, rewrite=metric_given)
     indent_programs(idf)
 
 

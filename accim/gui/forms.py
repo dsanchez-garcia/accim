@@ -95,6 +95,7 @@ __all__ = [
     'parse_numbers',
     'parse_parameter_values',
     'parse_zone_arguments',
+    'registered_metric_standards',
     'rename_epws_arguments',
     'results_size_arguments',
     'run_ep_arguments',
@@ -105,6 +106,7 @@ __all__ = [
     'split_apmv_zone_setpoints',
     'split_zone_arguments',
     'table_arguments',
+    'weather_file_arguments',
     'zone_arguments',
     'zone_arguments_problems',
     'zone_field_choices',
@@ -779,6 +781,9 @@ def add_accis_arguments(form: Mapping[str, Any]) -> Dict[str, Any]:
         arguments.update({name: parse_number(form.get(name, ''), name) for name in CUSTOM_MODEL_FIELDS})
         arguments.update(custom_outdoor_metric_arguments(form))
         arguments.update(custom_regime_arguments(form, script_type))
+    elif registered_metric_standards(comfort_standard):
+        # The outdoor metric of the comfort standards defined by their data that the EMS calculates begins with it
+        arguments.update(weather_file_arguments(form))
     if script_type in MIXED_MODE_SCRIPT_TYPES:
         hvac_mode = sorted(int(mode) for mode in form.get('hvac_mode') or [])
         ventilation_control = sorted(int(control) for control in form.get('ventilation_control') or [])
@@ -844,17 +849,38 @@ def custom_outdoor_metric_arguments(form: Mapping[str, Any]) -> Dict[str, Any]:
         raise FormError('custom_alpha: enter a number between 0 and 1 (not included).')
     if not isinstance(arguments['custom_days'], int) or arguments['custom_days'] < 1:
         raise FormError('custom_days: enter an integer of at least 1.')
-    epw = str(form.get('epw') or '').strip()
-    if epw:
-        if not os.path.isabs(epw) and form.get('folder'):
-            epw = os.path.join(str(form['folder']), epw)
-        if not os.path.isfile(epw):
-            raise FormError(f'epw: {epw} is not a file (the weather file of the simulations).')
-        arguments['epw'] = epw
-    elif metric == 'monthly_mean':
+    epw = weather_file_arguments(form)
+    arguments.update(epw)
+    if not epw and metric == 'monthly_mean':
         raise FormError("epw: the outdoor metric 'monthly_mean' needs the weather file of the simulations, whose "
                         "monthly means the EMS programs keep.")
     return arguments
+
+
+def weather_file_arguments(form: Mapping[str, Any]) -> Dict[str, Any]:
+    """``epw``, the weather file of the simulations (relative to the ``folder`` of the form), with which the outdoor
+    metric of the custom model, and that of the comfort standards defined by their data that the EMS calculates
+    (:func:`registered_metric_standards`), begin; nothing if the form has none.
+
+    :raises FormError: If the weather file does not exist.
+    """
+    epw = str(form.get('epw') or '').strip()
+    if not epw:
+        return {}
+    if not os.path.isabs(epw) and form.get('folder'):
+        epw = os.path.join(str(form['folder']), epw)
+    if not os.path.isfile(epw):
+        raise FormError(f'epw: {epw} is not a file (the weather file of the simulations).')
+    return {'epw': epw}
+
+
+def registered_metric_standards(standards: Iterable[Any]) -> List[int]:
+    """The comfort standards defined by their data (:mod:`accim.sim.standards`) among some, whose outdoor metric the
+    EMS calculates (as that of the custom model): the weather file of the simulations (``epw``) begins it."""
+    from accim.sim.ems.standard_lines import outdoor_metric_standards
+
+    found = outdoor_metric_standards()
+    return [int(number) for number in standards if isinstance(number, (int, float)) and int(number) in found]
 
 
 def parse_custom_regimes(text: Any) -> List[Any]:
@@ -1070,6 +1096,9 @@ def setpoint_ems_code_calls(form: Mapping[str, Any]) -> List[Tuple[str, Dict[str
         regimes = custom_regime_arguments(form, script_type)
         if regimes:
             common.update(regimes, script_type=script_type)
+    elif registered_metric_standards(standards + [values.get('comfort_standard') for values in zones.values()]):
+        # The outdoor metric of the comfort standards defined by their data that the EMS calculates
+        common.update(weather_file_arguments(form))
 
     def call(title: str, number: int, category, comfort_mode, extra: Mapping[str, Any]) -> Tuple[str, Dict[str, Any]]:
         if number == 0:
@@ -1077,8 +1106,11 @@ def setpoint_ems_code_calls(form: Mapping[str, Any]) -> List[Tuple[str, Dict[str
             category = comfort_mode = None
         kwargs = dict(common, comfort_standard=number, category=category, comfort_mode=comfort_mode, **extra)
         if number != 99:
+            # The weather file also begins the outdoor metric of the comfort standards defined by their data
+            kept = ('epw',) if registered_metric_standards([number]) else ()
             for name in _CUSTOM_EMS_CODE_ARGUMENTS:
-                kwargs.pop(name, None)
+                if name not in kept:
+                    kwargs.pop(name, None)
         described = ', '.join(f'{name.replace("_", " ")} {"(all)" if kwargs[name] is None else kwargs[name]}'
                               for name in ('category', 'comfort_mode'))
         return f'{title}: {described}', kwargs

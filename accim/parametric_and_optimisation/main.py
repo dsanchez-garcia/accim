@@ -45,12 +45,15 @@ from accim.parametric_and_optimisation.utils import (
 from accim._deprecation import accepts_legacy_kwargs, warn_deprecated
 import accim.sim.accis as accis
 import accim.sim.apmv as apmv
+from accim.sim.standards import registered_comfort_standards
 import accim.parametric_and_optimisation.funcs_for_besos.param_accis as bf_accim
 import accim.parametric_and_optimisation.funcs_for_besos.param_apmv as bf_apmv
 import accim.parametric_and_optimisation.parameters as params
 from accim.parametric_and_optimisation.analysis import AnalysisMixin
 from accim.parametric_and_optimisation.plotting import PlottingMixin
-from accim.parametric_and_optimisation.patches import GlobalAllCapsDict, _patched_eval_func, _patched_to_platypus, _ensure_run_energyplus_copies_in_idf
+from accim.parametric_and_optimisation.patches import (GlobalAllCapsDict, _ensure_run_energyplus_copies_in_idf,
+                                                       _patched_eval_func, _patched_to_platypus,
+                                                       _register_comfort_standards)
 from accim.parametric_and_optimisation.mn_filter import MNFilter, MNFilterMapping
 from accim.parametric_and_optimisation.file_cleanup import normalize_sim_file_cleanup_options, sim_file_policy_will_remove_extension, prune_simulation_output_files
 from accim.parametric_and_optimisation._pareto import non_dominated_mask
@@ -328,6 +331,7 @@ def _run_single_evaluation_worker(
     sim_files_extensions: Optional[tuple[str, ...]],
     sim_files_policy: str,
     additional_params: Optional[list] = None,
+    comfort_standards: Optional[list] = None,
 ) -> dict:
     """Run one evaluation in a worker process and return output values.
 
@@ -366,6 +370,10 @@ def _run_single_evaluation_worker(
     additional_params : Optional[list]
         BESOS ``Parameter`` objects of the problem that are not accim parameters (for
         example a ``FieldSelector`` on a material); the BESOS evaluator applies them.
+    comfort_standards : Optional[list]
+        The comfort standards defined by their data of the main process
+        (``accim.sim.standards.ComfortStandardDefinition``), which a new process does not
+        have: they are registered before the parameters are written.
 
     Returns
     -------
@@ -404,6 +412,7 @@ def _run_single_evaluation_worker(
     # Ensure each sampled value is really written into the IDF/EMS before the run.
     # In multiprocessing mode we reconstruct a lightweight EPProblem in the worker;
     # applying setters here guarantees custom ACCIS parameters are not lost.
+    _register_comfort_standards(comfort_standards)
     available_setters = {k.lower(): v for (k, v) in params_dicts.all_params.items()}
     for (param_name, param_value) in row_dict.items():
         setter = available_setters.get(str(param_name).lower())
@@ -8908,6 +8917,11 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         backup_paths = []
         if hasattr(self, 'idf_backup_path') and self.idf_backup_path:
             backup_paths = self.idf_backup_path if isinstance(self.idf_backup_path, list) else [self.idf_backup_path]
+        # The workers get the BESOS parameters that are not accim parameters, and the comfort standards defined by
+        # their data of this process (accim.sim.standards), which a new process does not have
+        worker_kwargs = {'additional_params': additional_params} if additional_params else {}
+        if registered_comfort_standards():
+            worker_kwargs['comfort_standards'] = list(registered_comfort_standards().values())
 
         # What identifies the tasks besides their parameters, for the checkpoints: the contents of the IDF and the
         # EPW (computed once for each file) and the names of the outputs
@@ -8968,7 +8982,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                             sim_files_extensions,
                             sim_files_policy,
                         ),
-                        'worker_kwargs': {'additional_params': additional_params} if additional_params else {},
+                        'worker_kwargs': dict(worker_kwargs),
                     }
 
     @staticmethod
@@ -10574,6 +10588,9 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                     evaluator._sim_files_policy = sim_files_policy_normalized
                     evaluator._optimisation_eval_records = []
                     evaluator._store_optimisation_records_in_memory = bool(keep_sim_files == 'non-dominated')
+                    # The comfort standards defined by their data of this process (accim.sim.standards), for the
+                    # processes of platypus (_patched_eval_func registers them)
+                    evaluator._accim_comfort_standards = list(registered_comfort_standards().values())
                     # EPWs given as paths ('D:\\...\\Seville') cannot be part of a file name
                     log_tag = re.sub(r'[^A-Za-z0-9_.-]+', '_', f'{idf_basename}_{epwname}')
                     evaluator._optimisation_log_base = os.path.join(out_dir, f'optim_eval_log_{log_tag}_{os.getpid()}')

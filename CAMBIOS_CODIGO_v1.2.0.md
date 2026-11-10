@@ -6,12 +6,12 @@ documentación de uso. Recoge las propuestas del bloque A de `notes/PROPUESTAS_M
 esta versión: las P1, A2, A1 y A5, en este orden; y después D2 (sección 7), que el autor incluyó en la 1.2.0 el
 2026-11-09 con E2 y E1, y las demás propuestas de la v03 (`notes/PROPUESTAS_MEJORAS_post_1.1.0_v03.md`), en el orden
 del autor (`notes/COPILOT_BRIEF_v1.2.0_v01.md`): E1 (sección 8), E2 (sección 9), A3 (sección 10), B1 (sección 11),
-B5 (sección 12), C1 (sección 13), D1 (sección 14), B2 (sección 15)...
+B5 (sección 12), C1 (sección 13), D1 (sección 14), B2 (sección 15), B3 (sección 16)...
 
 Lo que ya está en otros documentos no se repite aquí:
 
 - `CHANGELOG.md` (sección Unreleased): los cambios que ve el usuario.
-- `docs/source/4_detailed use.md`, secciones 4.2.2, 4.2.3, 4.3.1, 4.6.1, 4.7.3, 4.8 y 4.8.1: el uso.
+- `docs/source/4_detailed use.md`, secciones 4.2.2, 4.2.3, 4.2.4, 4.2.5, 4.3.1, 4.6.1, 4.7.3, 4.8 y 4.8.1: el uso.
 - `DEVLOG.md`: el registro del trabajo, con cómo se comprobó.
 - `notes/decisions.md`: las decisiones y sus motivos.
 
@@ -59,6 +59,11 @@ Lo que ya está en otros documentos no se repite aquí:
   con sus coeficientes y la condición en que se aplica (siempre, estación, HVAC apagado o encendido en modo mixto, o la
   métrica exterior por debajo, por encima o entre dos valores); el programa `SelectCustomRegime_<zona>` pone las
   entradas del modelo del primero que se cumple, y la salida `CustomRegime_<zona>` dice cuál (sección 15).
+- **B3.** Normas de confort definidas por sus datos (`ComfortStandardDefinition`, en YAML con
+  `load_comfort_standards`), con números ≥ 100: accim añade sus ramas al final de las cadenas de las normas integradas,
+  que no cambian, y sus subprogramas, y `AddAccis`, `modify_accis`, el código EMS (con su evidencia),
+  `compute_setpoints`, la verificación, el paramétrico y la GUI las toman como las integradas; ejemplos de JPN Aqilah
+  2025 y de Qatar (este, incompleto) y un cuaderno How-to (sección 16).
 - Las categorías del PMV y la aproximación de la corrección del metabolismo se han comprobado en ISO 7730:2025 y
   EN 16798-1:2019, y el modelo dinámico de vestimenta de A5, en Schiavon y Lee (2013) y ASHRAE 55-2020 (sección 6).
 - Lo que quedaba abierto se ha comprobado: el golden master y las pruebas de EnergyPlus 26.1 y 26.2, también la de A5
@@ -1017,3 +1022,107 @@ de la categoría) y que `SetComfTemp` y `SetAST_CS99_*` usan.
   (`backend='ems'` y `'api'`, por paso de tiempo), los modelos de abril (`vrf_ac`, 1008 filas × 102 columnas) y de junio
   (`vrf_mm`, 1008 × 113) tienen una diferencia máxima de 0,0 (ems 4,7 y 4,3 s; api 6,3 y 6,9 s). Suite completa: 1644
   pasan, 1 omitida; el golden master no cambia.
+
+## 16. Las normas de confort definidas por sus datos (B3)
+
+La propuesta B3 pide un registro de normas de confort en `accim/sim/standards.py`: `ComfortStandardDefinition`
+(`standard`, `outdoor_metric`, `regimes`, `category_offsets` con compensaciones asimétricas, `static_setpoints`,
+`evidence` y `citation`), `register_comfort_standard()` y `load_comfort_standards(yaml_path)` con el esquema YAML de
+la propuesta (con mensajes de error claros); que `program_lines.py` (`SET_COMF_TEMP`, `SET_APP_LIMITS`, `APPLY_CAT`,
+`COUNT_HOURS`) y `setpoint_lines.py` construyan su Erl desde el registro para los números ≥ 100, mientras las normas
+0–22 y 99 conservan sus líneas literales (prueba de regresión: los IDF de salida de los modelos de ejemplo, idénticos
+byte a byte); los archivos `accim/sample_files/comfort_standards/jpn_aqilah2025_fr.yaml` y
+`qat_indraganti2018_hvac.yaml` con los datos de la propuesta; un cuaderno How-to; las listas de la GUI desde el
+registro; `print_setpoint_ems_code` con el bloque `evidence`; la documentación, `CHANGELOG.md` y `DEVLOG.md`. Las
+decisiones D1 (el 23 es para JPN Aqilah 2025 integrada, B4; los números ≥ 100, para las normas de YAML) y D11 (los dos
+ejemplos de la v03; el bloque `evidence`, obligatorio) del brief la completan.
+
+**Antes.** Una norma nueva exigía tocar `standards.py` (`COMFORT_STANDARDS`), las cadenas `if ComfStand == ...` de
+`program_lines.py` (`SET_COMF_TEMP`, `SET_APP_LIMITS`, `APPLY_CAT`, `COUNT_HOURS`, `SET_VST`), las líneas de sus
+modos de confort en `setpoint_lines.py` (`SETPOINT_LINES`) y `MODULAR_COMFORT_MODES` de `setast.py`, y publicar una
+versión.
+
+**Ahora.**
+
+- `accim/sim/standards.py`: `FIRST_REGISTRY_NUMBER = 100`, `DEFINITION_COMFORT_MODES = (0, 1, 2, 3)`;
+  `ComfortStandardDefinition` (congelada; `__post_init__` comprueba el número, la etiqueta, que da nombre a los IDF de
+  salida y no puede llevar `[]\/:*?"<>|`, la métrica (con `alpha` y `days`, campos añadidos), un solo régimen
+  `'always'`, las compensaciones de cada categoría, las consignas estáticas que piden los modos 0 y 1 (calefacción
+  menor que refrigeración), el modo 2 solo con las categorías 80 y 90, la evidencia no vacía y la cita);
+  `definition_from_mapping` (las claves de los YAML: `number`, `label`, `title`, `citation`, `outdoor_metric`,
+  `comfort_temperature`, `applicability`, `categories`, `comfort_modes`, `evidence`; opcionales `alpha`, `days`,
+  `static_setpoints`; los mensajes nombran el archivo y la clave); `register_comfort_standard(definition,
+  replace=False)` (`ValueError` con un número < 100, uno ya registrado sin `replace` o la etiqueta de otra norma),
+  `unregister_comfort_standard`, `registered_comfort_standards`, `comfort_standard_definition`; y
+  `load_comfort_standards(path, register=True, replace=False)` (un archivo o una carpeta; importa `yaml` solo al usarse,
+  con un `ImportError` que dice cómo instalarlo; nada de un archivo o carpeta que no es válido se registra). También
+  `accim.sim.load_comfort_standards`, `register_comfort_standard` y `ComfortStandardDefinition`. `setup.py` pide
+  `pyyaml` (besos ya lo instalaba).
+- `accim/sim/ems/standard_lines.py` (nuevo): `standard_branches` escribe las ramas `elseif ComfStand == <n>` de
+  `SetComfTemp` (`<métrica>*<pendiente>+<ordenada>`; con pendiente negativa, `<ordenada>-<métrica>*<-pendiente>`,
+  porque Erl no admite un signo menos tras un signo de multiplicar, ni entre paréntesis: lo comprobó el intérprete de
+  Erl de accim, que reproduce el error de EnergyPlus), `SetAppLimits`, `ApplyCAT` (las compensaciones de las
+  categorías más las del régimen, y `CATcoolOffset`/`CATheatOffset`) y, si la métrica no es PMOT, `CountHours` y
+  `SetVST`; `setpoint_lines`, las de sus modos de confort, como las de las normas integradas (el modo 2, con las
+  consignas estáticas de ISO 7730 del código, `ISO7730_STATIC_SETPOINTS`: con la métrica PMOT y los coeficientes de
+  ASHRAE 55 dan exactamente `SETPOINT_LINES[(2, 2)]`, y el modo 3 con los de JPN Rijal, `SETPOINT_LINES[(3, 3)]`);
+  `add_standard_lines` y `remove_standard_lines` las ponen y quitan de `REGISTERED_BRANCHES`, `SETPOINT_LINES` y
+  `MODULAR_COMFORT_MODES`; `metric_variable` (PMOT, RMOT o `Tout_metric`), `needs_outdoor_metric_code`,
+  `outdoor_metric_standards` y `standard_inputs` (las entradas `CustAST_metric`, `CustAST_alpha` y `CustAST_days` de las
+  zonas de la norma: las de su métrica si la calcula el EMS, y 'pmot' si no).
+- `accim/sim/ems/program_lines.py`: `REGISTERED_BRANCHES` y las funciones `set_comf_temp_lines`,
+  `set_app_limits_lines`, `apply_cat_lines`, `count_hours_lines` y `set_vst_lines` (las cadenas literales con las ramas
+  del registro al final: antes del último `endif` o del `else`; en `SetVST`, antes de la rama genérica de PMOT), y
+  `registered_standards_in`. Sin normas registradas devuelven las constantes de siempre.
+- `accim/sim/ems/programs.py`: `set_comfort_standard_code`, `code_comfort_standards` y `accis_programs` usan esas
+  funciones; `_set_vst_registered_branches` deja en `SetVST` las ramas de las normas del IDF; `add_comfort_standard_code`
+  toma `epw` (así `modify_accis` con `epw` ya no avisa de que la métrica empieza con PMOT antes de escribirla con el
+  EPW).
+- `accim/sim/ems/outdoor_metric.py`: `metric_comfort_standards()` (99 y las registradas cuya métrica calcula el EMS),
+  y `_set_custom_model_lines` respeta las ramas del registro en `CountHours` y `SetVST`.
+- `accim/sim/ems/inputs.py`: `input_values` da a las zonas de una norma registrada las entradas de su métrica.
+  `accim/sim/accis.py`: `modify_accis` se las da también a las zonas que la conservan, y escribe el código EMS de la
+  métrica cuando alguna zona lo necesita. `accim/sim/generation.py`: las categorías y modos de las registradas.
+- `accim/utils/ems_code.py`: la cabecera del código EMS da la cita, la métrica, las consignas estáticas y la
+  evidencia (`_definition_lines`), y el código, los programas de la métrica (con `epw`, empezando con el EPW).
+  `accim/sim/preview.py` (`compute_setpoints`) y `accim/utils/verification.py` (comprobación 4, también
+  `Check4_Tout_metric`) funcionan con ellas.
+- Paramétrico: `param_accis.modify_ComfStand` da a las zonas la métrica de la norma registrada (`_set_outdoor_metric_inputs`);
+  `get_valid_param_combinations` y `drop_invalid_param_combinations` incluyen sus categorías y modos; y los procesos de
+  las simulaciones en paralelo, que no tienen el registro del proceso principal, lo reciben: `run_parametric_simulation`
+  pasa las definiciones a `_run_single_evaluation_worker` (`comfort_standards`) y `run_optimisation` las deja en el
+  evaluador (`_accim_comfort_standards`), que `_patched_eval_func` registra (`patches._register_comfort_standards`).
+- GUI: el botón *Load comfort standards (YAML)...* de la pestaña *1. Add the ACCIS* (`tasks.load_comfort_standards`,
+  con `replace=True`; los errores, en un diálogo) y `refresh_standards`, que rehace la lista (conservando la selección)
+  y las opciones de la tabla de zonas; el EPW se habilita con las normas registradas cuya métrica calcula el EMS
+  (`forms.registered_metric_standards`, `weather_file_arguments`), también para el código EMS de la ventana; la
+  sesión guarda los YAML cargados (`comfort_standard_files`) y, al abrirla, los carga de nuevo y lista los que no
+  encuentra y las normas que siguen sin registrar.
+- Ejemplos: `accim/sample_files/comfort_standards/jpn_aqilah2025_fr.yaml` (101, con los datos de la v03: métrica
+  `rmot_alpha` con α 0,8, `Tc = 0,38·Trm + 16,9`, aplicabilidad de 5 a 30 °C, ±1,5 K (90 %) y ±2,0 K (80 %), modos 0 a
+  3, consignas estáticas 20/28 °C de D2 y la evidencia) y `qat_indraganti2018_hvac.yaml` (102, con la ecuación, la
+  cita y la evidencia de la v03, y vacías la métrica, la aplicabilidad, las categorías y los modos, que la v03 no da:
+  `load_comfort_standards` lo rechaza; tarea bloqueada en `TODO.md`). El cuaderno How-to
+  `jupyter_notebooks/comfort_standards_registry/using_comfort_standard_registry.ipynb` (con copias del modelo, el EPW
+  y los dos YAML) registra JPN Aqilah 2025, muestra el rechazo de Qatar y el código EMS con la evidencia, compara sus
+  consignas con las de JPN Rijal (3) sin EnergyPlus, simula un año con las dos (EnergyPlus 25.1, `vrf_mm`) y lo
+  verifica (comprobación 4 sin discrepancias en 8760 horas, también `Tout_metric`); su página está en las How-to
+  Guides.
+- Desviaciones de la v03 (en `notes/questions.md`, decididas provisionalmente): un solo régimen `'always'` por norma;
+  el modo 2 solo con las categorías 80 y 90, con las consignas de ISO 7730 del código; las métricas que calcula el EMS,
+  a través de las entradas de la zona del modelo personalizado (una zona las conserva si `modify_accis` le da otra
+  norma); `load_comfort_standards` registra por defecto; el YAML de Qatar, incompleto; y, además de lo que pide el
+  prompt, las ramas de `SetVST`, los campos `alpha` y `days`, el paramétrico y sus procesos en paralelo.
+- Pruebas: `tests/core/test_comfort_standard_registry.py` (los dos YAML; el esquema, con 22 errores; las definiciones;
+  la carga de archivos y carpetas; el registro; las líneas Erl, también con pendiente negativa en el intérprete; que
+  las cadenas de las normas integradas no cambian y su código EMS tampoco; la evidencia; `compute_setpoints` frente a
+  la fórmula y en los cuatro modos fuera de los límites; `AddAccis`, cuyos IDF de la norma 1 son idénticos byte a byte
+  con y sin el registro; `modify_accis`; dos con EnergyPlus 25.1: la comprobación 4 y los dos backends),
+  `tests/parametric_and_optimisation/test_registered_comfort_standards.py` (combinaciones válidas, los procesos de las
+  simulaciones en paralelo y de la optimización, `modify_ComfStand` y un plan generado con `EvaluatorEP`) y 2 de la
+  GUI.
+- Backends con `run_ep` (`ems` y `api`, por paso de tiempo, 1008 filas, sin cargar el registro): JPN Aqilah 2025 en
+  abril (`vrf_ac`, categoría 80, modo 1; 103 columnas), en junio (`vrf_mm`, 90, modo 3; 114) y una norma 102 con RMOT
+  y límites 15–25 °C en enero (`vrf_ac`, 90, modo 2: las estáticas de ISO 7730, 24/20 °C; 100): diferencia máxima 0,0
+  en todas las columnas. Suite completa: 1695 pasan, 1 omitida (y después, con la sesión de la GUI, las 130 pruebas de
+  la GUI); el golden master no cambia.
