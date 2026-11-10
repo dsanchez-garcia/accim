@@ -20,6 +20,14 @@ accim.sim.ems.erl module
    :show-inheritance:
    :undoc-members:
 
+accim.sim.ems.hook\_setpoints module
+------------------------------------
+
+.. automodule:: accim.sim.ems.hook_setpoints
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
 accim.sim.ems.inputs module
 ---------------------------
 

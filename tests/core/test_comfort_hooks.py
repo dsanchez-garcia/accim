@@ -77,8 +77,9 @@ def test_the_bisection_brackets_the_setpoints():
 class _Controller:
     """A fake ErlController: get and set of the variables of a dictionary (in upper case, as Erl)."""
 
-    def __init__(self, values):
+    def __init__(self, values, after_programs=()):
         self.values = {name.upper(): value for name, value in values.items()}
+        self.after_programs = list(after_programs)
 
     def get(self, name, program=None):
         return self.values.get(name.upper())
@@ -87,20 +88,30 @@ class _Controller:
         self.values[name.upper()] = value
 
 
+def _given(controller, zone):
+    """The setpoints that a hook gave to the ACCIS of a zone (accim.sim.ems.hook_setpoints), or None."""
+    if controller.get(f'HookSetpoints_{zone}') != 1:
+        return None
+    return controller.get(f'HookAHST_{zone}'), controller.get(f'HookACST_{zone}')
+
+
 def test_the_hook_sets_the_setpoints_and_the_outputs():
     pytest.importorskip('pythermalcomfort')
     hook = ch.AthbSetpointHook(ZONES, athb_cooling_setpoint=0.7, athb_heating_setpoint=-0.7, met=1.2, air_speed=0.15)
+    assert hook.runs_before_programs
     controller = _Controller({'RMOT': 21.0, 'ATHB_MAT_Block1_Zone1': 26.0, 'ATHB_MRT_Block1_Zone1': 27.0,
                               'ATHB_RH_Block1_Zone1': 55.0, 'ATHB_MAT_Block1_Zone2': 22.0,
                               'ATHB_MRT_Block1_Zone2': 21.5, 'ATHB_RH_Block1_Zone2': 40.0})
-    # Only at the beginning of the timesteps, after the programs of the ACCIS
+    # Only at the beginning of the timesteps, before the programs of the ACCIS
     hook(controller, 'BEGINNEWENVIRONMENT')
-    assert 'ACST_ACT_BLOCK1_ZONE1' not in controller.values
+    assert _given(controller, 'Block1_Zone1') is None
     hook(controller, CALLING_POINT)
     for zone, (air, radiant, humidity) in {'Block1_Zone1': (26.0, 27.0, 55.0),
                                            'Block1_Zone2': (22.0, 21.5, 40.0)}.items():
         heating, cooling = hook.operative_temperatures(humidity, 21.0)
-        assert (controller.get(f'AHST_Act_{zone}'), controller.get(f'ACST_Act_{zone}')) == (heating, cooling)
+        # The setpoints go to the ACCIS (the program ApplyHookSetpoints_<zone>), not to the actuators
+        assert _given(controller, zone) == (heating, cooling)
+        assert controller.get(f'ACST_Act_{zone}') is None
         assert hook.setpoints[zone] == (heating, cooling)
         assert controller.get(f'ATHB_PMV_{zone}') == ch.athb_pmv(air, radiant, 0.15, humidity, 1.2, 21.0)
         assert controller.get(f'ATHB_clo_{zone}') == ch.athb_clo(1.2, 21.0)
@@ -113,6 +124,10 @@ def test_the_hook_sets_the_setpoints_and_the_outputs():
     empty = _Controller({'RMOT': 21.0})
     hook(empty, CALLING_POINT)
     assert empty.values == {'RMOT': 21.0}
+    # After the programs, the ACCIS would not take its setpoints in the timestep
+    late = _Controller({'RMOT': 21.0}, after_programs=[hook])
+    with pytest.raises(RuntimeError, match='must run before the EMS programs'):
+        hook(late, CALLING_POINT)
 
 
 def test_the_arguments_of_the_hook_are_checked():
@@ -213,6 +228,152 @@ def test_run_ep_runs_the_hooks_with_the_api_backend_only(tmp_path, monkeypatch):
                hooks=[ch.AthbSetpointHook(['Z'])])
 
 
+def test_run_ep_runs_the_hooks_of_the_setpoints_before_the_programs(tmp_path, monkeypatch):
+    import accim.sim.energyplus_api as energyplus_api
+    from accim.run import run_ep
+
+    calls = {}
+
+    def fake_run_simulations(jobs, processes=2, **kwargs):
+        calls.update(kwargs)
+        return []
+
+    def other_hook(controller, calling_point):
+        return None
+
+    monkeypatch.setattr(energyplus_api, 'run_simulations', fake_run_simulations)
+    monkeypatch.chdir(tmp_path)
+    hook = ch.AthbSetpointHook(['Z'])
+    run_ep(only_accim_idfs=False, confirm=True, backend='api', hooks=[hook, other_hook])
+    assert calls == {'before_programs': [hook], 'after_programs': [other_hook]}
+
+
+def _program_lines(idf, name):
+    program = idf.getobject('EnergyManagementSystem:Program', name)
+    return None if program is None else [str(value).strip() for value in program.fieldvalues[2:]]
+
+
+@needs_idd
+def test_the_hooks_give_their_setpoints_to_the_accis_right_after_setast(tmp_path):
+    from accim.sim.accis import modify_accis
+    from accim.sim.ems import hook_setpoints as hs
+
+    # The floor and ceiling of the setpoints given before the hook, and after it
+    before = _model(tmp_path)
+    modify_accis(before, heating_setpoint_floor=21.0, cooling_setpoint_ceiling=26.0)
+    ch.apply_athb_setpoints(before)
+    (tmp_path / 'after').mkdir()
+    after = _model(tmp_path / 'after')
+    ch.apply_set_setpoints(after, set_cooling_setpoint=27, set_heating_setpoint=21, met=1.1, clo=0.5, air_speed=0.1)
+    modify_accis(after, heating_setpoint_floor=21.0, cooling_setpoint_ceiling=26.0)
+    for idf in (before, after):
+        assert sorted(hs.hook_zones(idf)) == ZONES
+        declared = {str(name).upper() for g in idf.idfobjects['EnergyManagementSystem:GlobalVariable']
+                    for name in g.fieldvalues[1:]}
+        for zone in ZONES:
+            assert _program_lines(idf, f'ApplyHookSetpoints_{zone}') == hs.program_lines(zone)
+            assert {name.upper() for name in hs.zone_variables(zone)} <= declared
+            # The setpoints of the hook replace those of SetAST, and the floor and ceiling bound them
+            run = _program_lines(idf, f'RunACCIS_{zone}')
+            position = run.index('run SetAST')
+            assert run[position + 1:position + 4] == [f'run ApplyHookSetpoints_{zone}',
+                                                      f'run ApplySetpointLimits_{zone}', 'run SetASTnoTol']
+        assert sorted(_program_lines(idf, 'InitHookSetpoints')) == sorted(hs.init_program_lines(ZONES))
+        manager = idf.getobject('EnergyManagementSystem:ProgramCallingManager', 'InitHookSetpoints')
+        assert (manager.EnergyPlus_Model_Calling_Point, manager.Program_Name_1) == ('BeginNewEnvironment',
+                                                                                     'InitHookSetpoints')
+    # Written again, the objects are not repeated
+    counts = {kind: len(before.idfobjects[kind]) for kind in ('EnergyManagementSystem:Program',
+                                                             'EnergyManagementSystem:GlobalVariable',
+                                                             'EnergyManagementSystem:ProgramCallingManager')}
+    hs.set_hook_setpoints_code(before, ZONES)
+    assert {kind: len(before.idfobjects[kind]) for kind in counts} == counts
+    assert _program_lines(before, f'RunACCIS_{ZONES[0]}').count(f'run ApplyHookSetpoints_{ZONES[0]}') == 1
+
+
+def _hook_erl(**arguments):
+    """The programs of the ACCIS of one zone, Zone1 (INT EN16798, category II, comfort mode 3, a tolerance of the
+    setpoints of 0.1 and full air-conditioning, with the long-term discomfort of C2), with the program that gives the
+    setpoints of a hook to the zone and, with a floor or a ceiling, the program of the setpoint limits after it, at the
+    beginning of an environment; compiled by the Erl interpreter."""
+    from types import SimpleNamespace
+
+    from accim.sim.ems import hook_setpoints as hs, long_term_discomfort as ltd, setpoint_limits as sl
+    from accim.sim.ems.erl import ErlProgramSet, variables_in_programs
+    from accim.sim.ems.inputs import input_lines, input_values
+    from accim.sim.ems.programs import accis_programs
+
+    model = SimpleNamespace(ems_names=['Zone1'], ems_zones=['Zone1'], is_mixed_mode=False, windows=[],
+                            window_zones=[])
+    programs = dict(accis_programs(model))
+    values = input_values(dict(dict(comfort_standard=1, category=2, comfort_mode=3, setpoint_tolerance=0.1),
+                               **arguments))
+    programs['SetInputData_Zone1'] = input_lines(values, mixed_mode=False)
+    programs['ApplyHookSetpoints_Zone1'] = hs.program_lines('Zone1')
+    programs['InitHookSetpoints'] = hs.init_program_lines(['Zone1'])
+    programs['CountLongTermDiscomfort_Zone1'] = ltd.zone_lines('Zone1')
+    extra = ['run ApplyHookSetpoints_Zone1']
+    floor, ceiling = (values.get(name) is not None for name in sl.INPUTS)
+    if floor or ceiling:
+        programs['ApplySetpointLimits_Zone1'] = sl.limit_program_lines(floor, ceiling)
+        extra.append('run ApplySetpointLimits_Zone1')
+    run = list(programs['RunACCIS_Zone1'])
+    position = run.index('run SetAST') + 1
+    run = run[:position] + extra + run[position:]
+    run.insert(run.index('run CountHoursNoApp_Zone1') + 1, 'run CountLongTermDiscomfort_Zone1')
+    programs['RunACCIS_Zone1'] = run
+    erl = ErlProgramSet(programs, global_variables=set().union(*variables_in_programs(programs).values()))
+    erl.strict = True
+    erl.run('InitASTvariables')
+    erl.run('InitHookSetpoints')
+    return erl
+
+
+def _hook_timestep(erl, setpoints=None, operative=26.5, occupants=1.0, outdoor=20.0):
+    """A timestep of the ACCIS of Zone1 in which a hook gives it some setpoints (heating, cooling), or none."""
+    for name, value in dict(RMOT=outdoor, PMOT=outdoor, DayOfYear=180.0, CurrentTime=12.0, ZoneTimeStep=0.25,
+                            Zone1_OpT=operative, Occ_count_Zone1=occupants).items():
+        erl.set(name, value)
+    if setpoints is not None:
+        erl.set('HookAHST_Zone1', setpoints[0])
+        erl.set('HookACST_Zone1', setpoints[1])
+        erl.set('HookSetpoints_Zone1', 1.0)
+    erl.run('RunACCIS_Zone1')
+    return {name: erl.get(name) for name in (
+        'AHST_Act_Zone1', 'ACST_Act_Zone1', 'AHSTnoTol_Zone1', 'ACSTnoTol_Zone1', 'roundedAHST_Zone1',
+        'roundedACST_Zone1', 'ComfHoursNoApp_Zone1', 'OccDiscomfHoursNoApp_Zone1', 'DiscomfAppHotHours_Zone1',
+        'HoursAboveUpperLimit_Zone1', 'DegreeHoursAboveUpperLimit_Zone1', 'HookSetpoints_Zone1')}
+
+
+def test_the_accis_follows_the_setpoints_of_the_hook():
+    erl = _hook_erl()
+    # Without the hook: the setpoints of INT EN16798, category II (28.4 and 21.4 °C without the tolerance with a
+    # running mean of 20 °C), within which 26.5 °C is comfortable
+    adaptive = _hook_timestep(erl)
+    assert (adaptive['ACSTnoTol_Zone1'], adaptive['AHSTnoTol_Zone1']) == pytest.approx((28.4, 21.4))
+    assert adaptive['ACST_Act_Zone1'] == pytest.approx(28.3) and adaptive['ComfHoursNoApp_Zone1'] == 0.25
+    # With the setpoints 22 and 26 °C of a hook: the thermostats get them with the tolerance, the setpoints without it
+    # are those of the hook, and the hour counters (also those of C2) follow them
+    hooked = _hook_timestep(erl, setpoints=(22.0, 26.0))
+    assert (hooked['AHST_Act_Zone1'], hooked['ACST_Act_Zone1']) == pytest.approx((22.1, 25.9))
+    assert (hooked['AHSTnoTol_Zone1'], hooked['ACSTnoTol_Zone1']) == pytest.approx((22.0, 26.0))
+    # Rounded as the setpoints of SetAST (those with the tolerance; the cooling one downwards, strictly)
+    assert (hooked['roundedAHST_Zone1'], hooked['roundedACST_Zone1']) == pytest.approx((22.1, 25.8999))
+    assert hooked['ComfHoursNoApp_Zone1'] == 0 and hooked['OccDiscomfHoursNoApp_Zone1'] == 0.25
+    assert hooked['DiscomfAppHotHours_Zone1'] == 0.25
+    assert hooked['HoursAboveUpperLimit_Zone1'] == 0.25
+    assert hooked['DegreeHoursAboveUpperLimit_Zone1'] == pytest.approx(0.5 * 0.25)
+    # The flag is used once: in the next timestep without the hook, the setpoints are those of the ACCIS again
+    assert hooked['HookSetpoints_Zone1'] == 0
+    assert _hook_timestep(erl) == adaptive
+
+
+def test_the_floor_and_ceiling_bound_the_setpoints_of_the_hook():
+    erl = _hook_erl(heating_setpoint_floor=23.0, cooling_setpoint_ceiling=25.0)
+    hooked = _hook_timestep(erl, setpoints=(22.0, 26.0))
+    assert (hooked['AHST_Act_Zone1'], hooked['ACST_Act_Zone1']) == pytest.approx((23.0, 25.0))
+
+
 # EnergyPlus ---------------------------------------------------------------------------------------------------------
 
 def _energyplus_with_api():
@@ -287,19 +448,34 @@ def test_the_athb_setpoints_in_energyplus(tmp_path, monkeypatch):
         heating = column(f'AHST_SCH_{zone}:Schedule Value')
         cooling = column(f'ACST_SCH_{zone}:Schedule Value')
         expected = np.array([hook.operative_temperatures(humidity[t], running_mean[t]) for t in range(1, len(results))])
-        # The setpoints of the schedules are those of the bisection with the sensors of the zone (to its tolerance)
-        assert np.abs(heating.iloc[1:].to_numpy() - expected[:, 0]).max() <= hook.tolerance_k
-        assert np.abs(cooling.iloc[1:].to_numpy() - expected[:, 1]).max() <= hook.tolerance_k
+        # The setpoints without the tolerance are those of the bisection with the sensors of the zone (to its
+        # tolerance), and the thermostats get them with the tolerance of the setpoints of the ACCIS (0.1 K)
+        no_tolerance = np.column_stack([
+            column(f'EMS:Adaptive Heating Setpoint Temperature_No Tolerance_{zone} [').iloc[1:].to_numpy(),
+            column(f'EMS:Adaptive Cooling Setpoint Temperature_No Tolerance_{zone} [').iloc[1:].to_numpy()])
+        assert np.abs(no_tolerance - expected).max() <= hook.tolerance_k
+        np.testing.assert_allclose(heating.iloc[1:].to_numpy(), no_tolerance[:, 0] + 0.1, atol=1e-4)
+        np.testing.assert_allclose(cooling.iloc[1:].to_numpy(), no_tolerance[:, 1] - 0.1, atol=1e-4)
         # The adapted clothing and metabolic rate of the running mean
         clo = column(f'EMS:ATHB_clo_{zone}').iloc[1:].to_numpy()
         met = column(f'EMS:ATHB_met_{zone}').iloc[1:].to_numpy()
         np.testing.assert_allclose(clo, [ch.athb_clo(1.1, value) for value in running_mean.iloc[1:]], atol=1e-5)
         np.testing.assert_allclose(met, [ch.athb_met(1.1, value) for value in running_mean.iloc[1:]], atol=1e-5)
-        # The ATHB setpoints replace the adaptive setpoints of the ACCIS (category II of EN 16798-1)
-        adaptive = column(f'EMS:Adaptive Cooling Setpoint Temperature_{zone} [')
-        assert (np.abs(cooling - adaptive).iloc[1:] > 0.1).mean() > 0.9
+        # The ATHB setpoints replace the adaptive setpoints of the ACCIS (category II of EN 16798-1) in its outputs
+        adaptive = 0.33 * running_mean + 18.8 + 3
+        reported = column(f'EMS:Adaptive Cooling Setpoint Temperature_No Tolerance_{zone} [')
+        assert (np.abs(reported - adaptive).iloc[1:] > 0.1).mean() > 0.9
         pmv = column(f'EMS:ATHB_PMV_{zone}')
         assert pmv.iloc[1:].between(-3, 3).all()
+        # The hour counters of the ACCIS follow the setpoints of the ATHB: occupied and comfortable if the operative
+        # temperature of the previous timestep (that which the EMS reads) is within the setpoints without the
+        # tolerance (the rows within 1e-3 K of a setpoint are not checked: the CSV has 6 significant digits)
+        operative = column(f'{key}:Zone Operative Temperature').shift(1).iloc[1:].to_numpy()
+        occupied = column(f'EMS:Occupied Hours_{zone} [').iloc[1:].to_numpy() > 0
+        comfortable = column(f'EMS:Occupied Comfortable Hours_No Applicability_{zone} [').iloc[1:].to_numpy() > 0
+        within = (operative <= no_tolerance[:, 1]) & (operative >= no_tolerance[:, 0])
+        clear = np.minimum(np.abs(operative - no_tolerance[:, 0]), np.abs(operative - no_tolerance[:, 1])) > 1e-3
+        assert occupied.any() and (comfortable[clear] == (within & occupied)[clear]).all()
 
 
 @needs_energyplus
@@ -369,12 +545,15 @@ def test_the_set_hook_sets_the_setpoints_of_its_table():
     assert hook.setpoints_of_humidity(120) == hook.setpoints_of_humidity(100)
     controller = _Controller({'SET_RH_Block1_Zone1': 55.0, 'SET_RH_Block1_Zone2': 35.5})
     hook(controller, 'ENDOFZONETIMESTEPBEFOREZONEREPORTING')
-    assert 'ACST_ACT_BLOCK1_ZONE1' not in controller.values
+    assert _given(controller, 'Block1_Zone1') is None
     hook(controller, CALLING_POINT)
     for zone, humidity in {'Block1_Zone1': 55.0, 'Block1_Zone2': 35.5}.items():
         heating, cooling = hook.setpoints_of_humidity(humidity)
-        assert (controller.get(f'AHST_Act_{zone}'), controller.get(f'ACST_Act_{zone}')) == (heating, cooling)
+        assert _given(controller, zone) == (heating, cooling)
         assert hook.setpoints[zone] == (heating, cooling)
+    assert hook.runs_before_programs
+    with pytest.raises(RuntimeError, match='must run before the EMS programs'):
+        hook(_Controller({'SET_RH_Block1_Zone1': 55.0}, after_programs=[hook]), CALLING_POINT)
     copy = pickle.loads(pickle.dumps(hook))
     assert copy.position == 'sitting' and copy.table == hook.table
 
@@ -404,7 +583,9 @@ def test_apply_set_setpoints_prepares_the_model(tmp_path):
     hook = ch.apply_set_setpoints(idf, set_cooling_setpoint=27, set_heating_setpoint=21, met=1.1, clo=0.5,
                                   air_speed=0.1)
     assert isinstance(hook, ch.SetSetpointHook) and sorted(hook.zones) == ZONES
-    # Only the sensors of the relative humidity: no global variables or outputs of the SET
+    # The sensors of the relative humidity and the variables of the setpoints of the hook (one global variable object
+    # for each zone, accim.sim.ems.hook_setpoints): no outputs of the SET
+    counts['EnergyManagementSystem:GlobalVariable'] += len(ZONES)
     assert {kind: len(idf.idfobjects[kind]) for kind in counts} == counts
     sensors = {s.Name: s for s in idf.idfobjects['EnergyManagementSystem:Sensor']}
     ems_outputs = {o.Name for o in idf.idfobjects['EnergyManagementSystem:OutputVariable']}
@@ -453,11 +634,71 @@ def test_the_set_setpoints_in_energyplus(tmp_path, monkeypatch):
         humidity = column(f'{zone.replace("_", ":").upper()}:Zone Air Relative Humidity').shift(1)
         interpolated = np.array([hook.setpoints_of_humidity(humidity[t]) for t in range(1, len(results))])
         exact = np.array([hook.operative_temperatures(humidity[t]) for t in range(1, len(results), 50)])
-        heating = column(f'AHST_SCH_{zone}:Schedule Value').iloc[1:].to_numpy()
-        cooling = column(f'ACST_SCH_{zone}:Schedule Value').iloc[1:].to_numpy()
+        heating = column(f'EMS:Adaptive Heating Setpoint Temperature_No Tolerance_{zone} [').iloc[1:].to_numpy()
+        cooling = column(f'EMS:Adaptive Cooling Setpoint Temperature_No Tolerance_{zone} [').iloc[1:].to_numpy()
         # The setpoints of the table of the hook, interpolated with the humidity of the previous timestep (that which
         # the sensor reads), within the tolerance of the bisection of the exact setpoints
         assert np.abs(heating - interpolated[:, 0]).max() <= 1e-3
         assert np.abs(cooling - interpolated[:, 1]).max() <= 1e-3
         assert np.abs(heating[::50] - exact[:, 0]).max() <= hook.tolerance_k + 1e-3
         assert np.abs(cooling[::50] - exact[:, 1]).max() <= hook.tolerance_k + 1e-3
+        # The thermostats get them with the tolerance of the setpoints of the ACCIS (0.1 K)
+        np.testing.assert_allclose(column(f'AHST_SCH_{zone}:Schedule Value').iloc[1:].to_numpy(), heating + 0.1,
+                                   atol=1e-4)
+        np.testing.assert_allclose(column(f'ACST_SCH_{zone}:Schedule Value').iloc[1:].to_numpy(), cooling - 0.1,
+                                   atol=1e-4)
+
+
+class _ConstantHook:
+    """A hook of the setpoints (as those of accim.sim.comfort_hooks) that gives constant setpoints to the zones."""
+
+    runs_before_programs = True
+
+    def __init__(self, zones, heating, cooling):
+        self.zones, self.heating, self.cooling = list(zones), heating, cooling
+
+    def __call__(self, controller, calling_point):
+        if calling_point == CALLING_POINT:
+            for zone in self.zones:
+                ch._give_setpoints(controller, zone, self.heating, self.cooling)
+
+
+@needs_energyplus
+def test_the_setpoints_of_a_hook_are_the_same_with_both_backends(tmp_path, monkeypatch):
+    from accim.sim.accis import load_idf
+    from accim.sim.ems.programs import set_program_lines
+    from accim.sim.energyplus_api import run_simulations
+
+    model, _ = _athb_model(tmp_path / 'model', monkeypatch)
+    # The EMS backend cannot run the hook: the programs of the model give the same setpoints (21.5 and 26.5 °C) at the
+    # beginning of RunACCIS_<zone>, as the hook does before the programs with the backend of the API
+    emulated = load_idf(model)
+    for zone in ZONES:
+        program = emulated.getobject('EnergyManagementSystem:Program', f'RunACCIS_{zone}')
+        lines = [str(value).strip() for value in program.fieldvalues[2:]]
+        set_program_lines(program, [f'set HookAHST_{zone} = 21.5', f'set HookACST_{zone} = 26.5',
+                                    f'set HookSetpoints_{zone} = 1'] + lines)
+    emulated.saveas(str(tmp_path / 'emulated.idf'))
+    energyplus = _energyplus_with_api() / 'energyplus.exe'
+    ems = subprocess.run([str(energyplus), '-d', str(tmp_path / 'ems'), '-p', 'run', '-s', 'C', '-r', '-x', '-w',
+                          str(EPW), str(tmp_path / 'emulated.idf')], capture_output=True, text=True)
+    assert ems.returncode == 0, ems.stdout[-3000:]
+    [result] = run_simulations([(model, EPW, {'output_directory': tmp_path / 'api', 'output_prefix': 'run'})],
+                               processes=1, before_programs=[_ConstantHook(ZONES, 21.5, 26.5)])
+    assert result.success, result.error
+    ems_results = pd.read_csv(tmp_path / 'ems' / 'run.csv')
+    api_results = pd.read_csv(tmp_path / 'api' / 'run.csv')
+    pd.testing.assert_frame_equal(api_results, ems_results, check_exact=True)
+    # The applied setpoints, the setpoints without the tolerance and the hour counters follow those of the hook
+    for zone in ZONES:
+        assert (ems_results[f'ACST_SCH_{zone.upper()}:Schedule Value [](TimeStep)'].iloc[1:] == 26.4).all()
+        assert (ems_results[f'AHST_SCH_{zone.upper()}:Schedule Value [](TimeStep)'].iloc[1:] == 21.6).all()
+        no_tolerance = ems_results[f'EMS:Adaptive Cooling Setpoint Temperature_No Tolerance_{zone} [C](TimeStep)']
+        assert (no_tolerance.iloc[1:] == 26.5).all()
+        key = zone.replace('_', ':').upper()
+        operative = ems_results[f'{key}:Zone Operative Temperature [C](TimeStep)'].shift(1).iloc[1:]
+        occupied = ems_results[f'EMS:Occupied Hours_{zone} [H](TimeStep)'].iloc[1:] > 0
+        comfortable = ems_results[f'EMS:Occupied Comfortable Hours_No Applicability_{zone} [H](TimeStep)'].iloc[1:] > 0
+        within = (operative <= 26.5) & (operative >= 21.5)
+        clear = (np.minimum(np.abs(operative - 21.5), np.abs(operative - 26.5)) > 1e-3).to_numpy()
+        assert (comfortable[clear] == (within & occupied)[clear]).all()

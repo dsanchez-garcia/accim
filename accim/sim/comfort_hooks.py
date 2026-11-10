@@ -23,17 +23,21 @@ are those of the models "Trm * METad" of the clothing and "Lad * Trm * METad" of
 The EMS cannot calculate it: it needs the whole PMV (with the iteration of the temperature of the clothing surface)
 with the adapted clothing and metabolic rate in each timestep, and EnergyPlus only calculates the PMV with the
 parameters of the People objects. :func:`apply_athb_setpoints` prepares a model with the ACCIS and returns an
-:class:`AthbSetpointHook`, which the backend of the Python API runs after the EMS programs at the beginning of each
-timestep (``run_ep(backend='api', hooks=[hook])``, or ``run_simulation(..., after_programs=[hook])``): for each zone,
+:class:`AthbSetpointHook`, which the backend of the Python API runs at the beginning of each timestep before the EMS
+programs (``run_ep(backend='api', hooks=[hook])``, or ``run_simulation(..., before_programs=[hook])``): for each zone,
 it finds by bisection the operative temperatures whose ATHB_PMV (with the air temperature and the mean radiant
 temperature equal to them, and the relative humidity of the zone) is the heating and the cooling setpoints of the
-ATHB, and gives them to the setpoint schedules of the ACCIS (``AHST_Act_<zone>`` and ``ACST_Act_<zone>``) instead of
-the adaptive setpoints; it also reports the ATHB_PMV of each zone (``ATHB_PMV_<zone>``, from its mean air and mean
-radiant temperatures and relative humidity) and the adapted clothing and metabolic rate (``ATHB_clo_<zone>`` and
-``ATHB_met_<zone>``). As the other sensors of the EMS at the beginning of the timestep, those of the zone are those of
-the previous timestep, and trm is the running mean outdoor temperature of CEN 15251 of EnergyPlus (the sensor ``RMOT``
-of the ACCIS, α = 0.8, as EN 16798-1). pythermalcomfort is optional (``pip install accim[comfort]``, Python 3.11 or
-later); the EMS backend cannot run the hook (``run_ep(backend='ems', hooks=...)`` raises ``NotImplementedError``).
+ATHB, and gives them to the ACCIS instead of the adaptive setpoints (:mod:`accim.sim.ems.hook_setpoints`: the program
+``ApplyHookSetpoints_<zone>``, which ``RunACCIS_<zone>`` runs right after SetAST, takes them as the limits of the
+comfort band, so that the thermostats get them with the tolerance of the setpoints of the zone, and the floor and
+ceiling of the setpoints, the hour counters and the outputs of the setpoints of the zone follow them); it also reports
+the ATHB_PMV of each zone (``ATHB_PMV_<zone>``, from its mean air and mean radiant temperatures and relative humidity)
+and the adapted clothing and metabolic rate (``ATHB_clo_<zone>`` and ``ATHB_met_<zone>``). As the other sensors of the
+EMS at the beginning of the timestep, those of the zone are those of the previous timestep, and trm is the running mean
+outdoor temperature of CEN 15251 of EnergyPlus (the sensor ``RMOT`` of the ACCIS, α = 0.8, as EN 16798-1).
+pythermalcomfort is optional (``pip install accim[comfort]``, Python 3.11 or later); the EMS backend cannot run the hook
+(``run_ep(backend='ems', hooks=...)`` raises ``NotImplementedError``), and without it the setpoints are those of the
+ACCIS.
 
 The setpoints of the standard effective temperature (SET), proposal A6, work in the same way
 (:func:`apply_set_setpoints`, :class:`SetSetpointHook`): the operative temperatures whose SET of pythermalcomfort
@@ -155,6 +159,26 @@ def _check_number(name: str, value: Any, low: Optional[float] = None, high: Opti
     return float(value)
 
 
+def _check_before_programs(hook, controller) -> None:
+    """Stop if a hook of the setpoints runs after the EMS programs: the program ApplyHookSetpoints_<zone> reads its
+    setpoints in the programs of the timestep (:mod:`accim.sim.ems.hook_setpoints`)."""
+    if any(item is hook for item in getattr(controller, 'after_programs', ())):
+        raise RuntimeError(f'{type(hook).__name__} must run before the EMS programs: pass it as before_programs of '
+                           f"run_simulation (run_ep(backend='api', hooks=[hook]) does it), since the program "
+                           f'ApplyHookSetpoints_<zone> gives its setpoints to the ACCIS.')
+
+
+def _give_setpoints(controller, zone: str, heating: float, cooling: float) -> None:
+    """Give the setpoints of a hook to the ACCIS of a zone (the global variables of
+    :mod:`accim.sim.ems.hook_setpoints`, which the program ApplyHookSetpoints_<zone> reads)."""
+    from accim.sim.ems.hook_setpoints import zone_variables
+
+    flag, heating_variable, cooling_variable = zone_variables(zone)
+    controller.set(heating_variable, heating)
+    controller.set(cooling_variable, cooling)
+    controller.set(flag, 1.0)
+
+
 def _bisect(index, targets: Tuple[float, float], temperature_range: Tuple[float, float], tolerance: float,
             max_iterations: int) -> Tuple[float, float]:
     """The operative temperatures at which an index that grows with them is each of two targets, by one bisection of
@@ -186,14 +210,18 @@ class AthbSetpointHook:
     the ATHB in the zones of a model with the ACCIS (see the module); :func:`apply_athb_setpoints` prepares the model
     and returns it.
 
-    It runs after the EMS programs at the beginning of each timestep (``after_programs`` of
-    :func:`accim.sim.energyplus_api.run_simulation`): for each zone, it reads the running mean outdoor temperature
-    (``RMOT``) and the mean air temperature, mean radiant temperature and relative humidity of the zone (the sensors
+    It runs at the beginning of each timestep before the EMS programs (``before_programs`` of
+    :func:`accim.sim.energyplus_api.run_simulation`; :func:`accim.run.run_ep` passes it so, since
+    :attr:`runs_before_programs` is True): for each zone, it reads the running mean outdoor temperature (``RMOT``) and
+    the mean air temperature, mean radiant temperature and relative humidity of the zone (the sensors
     ``ATHB_MAT_<zone>``, ``ATHB_MRT_<zone>`` and ``ATHB_RH_<zone>``), finds by bisection the operative temperatures
     whose ATHB_PMV is ``athb_heating_setpoint`` and ``athb_cooling_setpoint`` (the ATHB_PMV grows with the operative
-    temperature), within ``temperature_range`` and to ``tolerance_k``, gives them to the actuators of the setpoint
-    schedules of the ACCIS (``AHST_Act_<zone>`` and ``ACST_Act_<zone>``) and sets the global variables
-    ``ATHB_PMV_<zone>``, ``ATHB_clo_<zone>`` and ``ATHB_met_<zone>``, which EnergyPlus reports.
+    temperature), within ``temperature_range`` and to ``tolerance_k``, gives them to the ACCIS as the limits of the
+    comfort band (the variables of :mod:`accim.sim.ems.hook_setpoints`: the program ``ApplyHookSetpoints_<zone>``, run
+    right after SetAST, gives the thermostats these setpoints with the tolerance of the setpoints of the zone, and the
+    floor and ceiling of the setpoints, the hour counters and the outputs of the setpoints of the zone follow them) and
+    sets the global variables ``ATHB_PMV_<zone>``, ``ATHB_clo_<zone>`` and ``ATHB_met_<zone>``, which EnergyPlus
+    reports.
 
     :param zones: The zones, by their names in the EMS objects (``Block1_Zone1``...).
     :param athb_cooling_setpoint: The cooling setpoint of the ATHB_PMV.
@@ -206,8 +234,11 @@ class AthbSetpointHook:
     :param max_iterations: The largest number of iterations of the bisection.
     :param temperature_range: The range of the operative temperature of the setpoints (°C,
         :data:`ATHB_TEMPERATURE_RANGE`).
-    :ivar setpoints: The last setpoints of each zone, ``{zone: (heating, cooling)}``.
+    :ivar setpoints: The last setpoints of each zone, ``{zone: (heating, cooling)}``, without the tolerance.
     """
+
+    #: The hook runs before the EMS programs (:func:`accim.run.run_ep` passes it as ``before_programs``)
+    runs_before_programs = True
 
     def __init__(self, zones: Sequence[str], athb_cooling_setpoint: float = 0.5, athb_heating_setpoint: float = -0.5,
                  met: float = 1.1, air_speed: float = 0.1, clo: Any = 'adaptive', tolerance_k: float = 0.1,
@@ -263,6 +294,7 @@ class AthbSetpointHook:
     def __call__(self, controller, calling_point: str) -> None:
         if calling_point != _CALLING_POINT:
             return
+        _check_before_programs(self, controller)
         t_running_mean = controller.get('RMOT')
         if t_running_mean is None:
             return
@@ -274,8 +306,7 @@ class AthbSetpointHook:
                 continue
             heating, cooling = self.operative_temperatures(humidity, t_running_mean)
             self.setpoints[zone] = (heating, cooling)
-            controller.set(f'AHST_Act_{zone}', heating)
-            controller.set(f'ACST_Act_{zone}', cooling)
+            _give_setpoints(controller, zone, heating, cooling)
             controller.set(f'ATHB_PMV_{zone}', athb_pmv(air, radiant, self.air_speed, humidity, self.met,
                                                         t_running_mean, self.clo))
             controller.set(f'ATHB_clo_{zone}', clo_adapted)
@@ -321,7 +352,10 @@ def _model_zones(building, what: str, prefixes: Sequence[str], running_mean: boo
 def _add_hook_objects(building, keys: Dict[str, str], sensors: Dict[str, str], outputs: Dict[str, str],
                       output_frequencies: Sequence[str]) -> None:
     """Add to each zone the EMS sensors of a hook, and its global variables and averaged EMS output variables, with
-    Output:Variable objects at the frequencies given."""
+    Output:Variable objects at the frequencies given, and the EMS objects with which the hook gives its setpoints to
+    the ACCIS (:func:`accim.sim.ems.hook_setpoints.set_hook_setpoints_code`)."""
+    from accim.sim.ems.hook_setpoints import set_hook_setpoints_code
+
     for zone, key in keys.items():
         for prefix, variable in sensors.items():
             building.newidfobject('EnergyManagementSystem:Sensor', Name=f'{prefix}_{zone}',
@@ -338,6 +372,7 @@ def _add_hook_objects(building, keys: Dict[str, str], sensors: Dict[str, str], o
             for frequency in output_frequencies:
                 building.newidfobject('Output:Variable', Key_Value='*', Variable_Name=name,
                                       Reporting_Frequency=str(frequency).capitalize(), Schedule_Name='')
+    set_hook_setpoints_code(building, list(keys))
 
 
 def apply_athb_setpoints(building, athb_cooling_setpoint: float = 0.5, athb_heating_setpoint: float = -0.5,
@@ -352,10 +387,15 @@ def apply_athb_setpoints(building, athb_cooling_setpoint: float = 0.5, athb_heat
     Its zones get the EMS sensors of their mean air temperature, mean radiant temperature and relative humidity
     (``ATHB_MAT_<zone>``, ``ATHB_MRT_<zone>`` and ``ATHB_RH_<zone>``), and the global variables and outputs
     ``ATHB_PMV_<zone>``, ``ATHB_clo_<zone>`` and ``ATHB_met_<zone>`` (averaged, with Output:Variable objects at the
-    frequencies given); the thermostats of the ACCIS (dual setpoints of the operative temperature, whose schedules the
-    actuators ``AHST_Act_<zone>`` and ``ACST_Act_<zone>`` set) are those that the hook controls. The model must be
-    simulated with the backend of the Python API and the hook (``run_ep(backend='api', hooks=[hook])``): with the EMS,
-    its setpoints are those of the ACCIS and the outputs of the ATHB are 0.
+    frequencies given), and the program ``ApplyHookSetpoints_<zone>`` with which the hook gives its setpoints to the
+    ACCIS (:mod:`accim.sim.ems.hook_setpoints`, run by ``RunACCIS_<zone>`` right after SetAST): the thermostats of the
+    ACCIS (dual setpoints of the operative temperature) get them with the tolerance of the setpoints of the zone, as
+    the adaptive setpoints, and the floor and ceiling of the setpoints, the hour counters (also those of the long-term
+    discomfort) and the outputs of the setpoints of the zone (``Adaptive Cooling Setpoint Temperature_<zone>``, with and
+    without the tolerance...) are those of the ATHB; the comfort temperature and the applicability limits stay those of
+    the comfort standard of the zone. The model must be simulated with the backend of the Python API and the hook
+    (``run_ep(backend='api', hooks=[hook])``): without the hook (with the EMS backend, for instance), its setpoints are
+    those of the ACCIS and the outputs of the ATHB are 0.
 
     :param building: The model (eppy), changed in place.
     :param output_frequencies: The reporting frequencies of the outputs of the ATHB ('timestep', 'hourly'...).
@@ -423,11 +463,13 @@ class SetSetpointHook:
     (:meth:`operative_temperatures`); with the other inputs fixed, they depend on the relative humidity only. The SET of
     pythermalcomfort cannot be calculated in the callbacks of EnergyPlus (the process stops with an access violation at
     the first call, with pythermalcomfort 4.8.1 and EnergyPlus 25.1, while the ATHB_PMV can), so the hook calculates
-    them for each relative humidity from 0 to 100 % (every 1 %) when it is made, and, after the EMS programs at the
-    beginning of each timestep, interpolates them linearly with the relative humidity of each zone (the sensor
-    ``SET_RH_<zone>``, :meth:`setpoints_of_humidity`) and gives them to the actuators of the setpoint schedules of the
-    ACCIS (``AHST_Act_<zone>`` and ``ACST_Act_<zone>``). There is no output of the SET of the zones: calculate it after
-    the simulation from their outputs (mean air and radiant temperatures and relative humidity).
+    them for each relative humidity from 0 to 100 % (every 1 %) when it is made, and, at the beginning of each timestep
+    before the EMS programs (as :class:`AthbSetpointHook`, :attr:`runs_before_programs`), interpolates them linearly
+    with the relative humidity of each zone (the sensor ``SET_RH_<zone>``, :meth:`setpoints_of_humidity`) and gives
+    them to the ACCIS as the limits of the comfort band (:mod:`accim.sim.ems.hook_setpoints`: the thermostats get them
+    with the tolerance of the setpoints of the zone, and the floor and ceiling of the setpoints, the hour counters and
+    the outputs of the setpoints of the zone follow them). There is no output of the SET of the zones: calculate it
+    after the simulation from their outputs (mean air and radiant temperatures and relative humidity).
 
     :param zones: The zones, by their names in the EMS objects.
     :param set_cooling_setpoint: The cooling setpoint of the SET (°C).
@@ -440,9 +482,12 @@ class SetSetpointHook:
     :param max_iterations: The largest number of iterations of the bisection.
     :param temperature_range: The range of the operative temperature of the setpoints (°C,
         :data:`SET_TEMPERATURE_RANGE`); the setpoints out of it are its limits.
-    :ivar setpoints: The last setpoints of each zone, ``{zone: (heating, cooling)}``.
+    :ivar setpoints: The last setpoints of each zone, ``{zone: (heating, cooling)}``, without the tolerance.
     :raises ImportError: If pythermalcomfort is not installed.
     """
+
+    #: The hook runs before the EMS programs (:func:`accim.run.run_ep` passes it as ``before_programs``)
+    runs_before_programs = True
 
     def __init__(self, zones: Sequence[str], set_cooling_setpoint: float, set_heating_setpoint: float, met: float,
                  clo: float, air_speed: float, position: str = 'standing', tolerance_k: float = 0.1,
@@ -520,14 +565,14 @@ class SetSetpointHook:
     def __call__(self, controller, calling_point: str) -> None:
         if calling_point != _CALLING_POINT:
             return
+        _check_before_programs(self, controller)
         for zone in self.zones:
             humidity = controller.get(f'SET_RH_{zone}')
             if humidity is None:
                 continue
             heating, cooling = self.setpoints_of_humidity(humidity)
             self.setpoints[zone] = (heating, cooling)
-            controller.set(f'AHST_Act_{zone}', heating)
-            controller.set(f'ACST_Act_{zone}', cooling)
+            _give_setpoints(controller, zone, heating, cooling)
 
 
 def apply_set_setpoints(building, set_cooling_setpoint: float, set_heating_setpoint: float, met: float, clo: float,
@@ -539,9 +584,11 @@ def apply_set_setpoints(building, set_cooling_setpoint: float, set_heating_setpo
     (:class:`SetSetpointHook`, proposal A6).
 
     Its zones get the EMS sensor ``SET_RH_<zone>`` (relative humidity), with which the hook interpolates the setpoints
-    of its table (see :class:`SetSetpointHook`). The setpoints of the SET, the metabolic rate, the clothing insulation
-    and the air speed have no default: they are those of the study. The model must be simulated with the backend of
-    the Python API and the hook (``run_ep(backend='api', hooks=[hook])``).
+    of its table (see :class:`SetSetpointHook`), and the program ``ApplyHookSetpoints_<zone>`` with which the hook gives
+    them to the ACCIS (:mod:`accim.sim.ems.hook_setpoints`; see :func:`apply_athb_setpoints`). The setpoints of the SET,
+    the metabolic rate, the clothing insulation and the air speed have no default: they are those of the study. The
+    model must be simulated with the backend of the Python API and the hook (``run_ep(backend='api', hooks=[hook])``):
+    without it, its setpoints are those of the ACCIS.
 
     :param building: The model (eppy), changed in place.
     :return: The hook, with the other arguments (there is no output of the SET, so, unlike

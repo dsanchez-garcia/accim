@@ -11,6 +11,26 @@ Durable architectural/process decisions for this repository and its Obsidian
 vault. Newest first. Use [[templates/decision-record.md|the decision-record
 template]] to add a new entry.
 
+## 2026-11-10 — The hooks of the setpoints run before the EMS programs and give their setpoints to the ACCIS through a program of each zone (G1)
+
+- **Status**: accepted (task G1 of `notes/PROPUESTAS_MEJORAS_post_1.1.0_v04.md` §7, option (a) of finding A4/A6-1; the
+  tolerance decided provisionally, see [[questions.md]]); supersedes the way the hooks of A4 and A6 set the setpoints
+  (the decisions of A4 and A6 of 2026-11-10 below)
+- **Context**: the hooks of the ATHB and of the SET wrote the actuators of the setpoint schedules after the programs of
+  the ACCIS, so its hour counters, the long-term discomfort of C2 and the outputs of the setpoints of the zones were
+  those of the adaptive setpoints that the thermostats no longer followed. The counters run inside `RunACCIS_<zone>`,
+  with the variables of the zone, after SetAST.
+- **Decision**: option (a): the hooks run before the EMS programs (`runs_before_programs`, which `run_ep` routes to
+  `before_programs`; as `after_programs` they stop the simulation) and set `HookAHST_<zone>`, `HookACST_<zone>` and
+  `HookSetpoints_<zone>`; the program `ApplyHookSetpoints_<zone>` (`accim.sim.ems.hook_setpoints`), run by
+  `RunACCIS_<zone>` right after SetAST (and before the floor and ceiling of B5), sets `AHST`/`ACST` to them plus the
+  tolerance and rounds them, so SetASTnoTol, the counters, ApplyAST and the outputs follow the hook; `InitHookSetpoints`
+  sets the flags to 0 at each new environment. Option (b) (counters of their own) was not needed.
+- **Consequences**: the comfortable hours, the long-term discomfort and the outputs of the setpoints of the zones are
+  those of the ATHB or the SET; the floor and ceiling of B5 bound them (D5); the thermostats get the setpoints of the
+  hook with the tolerance of the setpoints of the zone; check 4 of `verify_accim_simulation` skips these zones; the
+  comfort temperature and the applicability limits stay those of the comfort standard of the zone.
+
 ## 2026-11-10 — With tr_mode='zone', the inverted SET setpoint of air temperature is written as an operative-temperature setpoint
 
 - **Status**: accepted (the author, in the task of the session of 2026-11-10, answering the open question of
@@ -682,7 +702,10 @@ template]] to add a new entry.
 ## 2026-11-10 — The setpoints of the SET are a hook of the API backend with a table by relative humidity (A6)
 
 - **Status**: accepted (proposal A6 of `notes/PROPUESTAS_MEJORAS_post_1.1.0_v03.md`, way (b); decided provisionally,
-  answered on 2026-11-10, see [[decisions.md#2026-11-10 — The verdicts of the author on the 36 provisional decisions of the proposals of 1.2.0|the verdicts of 2026-11-10]])
+  answered on 2026-11-10, see [[decisions.md#2026-11-10 — The verdicts of the author on the 36 provisional decisions of the proposals of 1.2.0|the verdicts of 2026-11-10]]);
+  partly superseded: the way the hook gives its setpoints, by
+  [[decisions.md#2026-11-10 — The hooks of the setpoints run before the EMS programs and give their setpoints to the ACCIS through a program of each zone (G1)|G1]],
+  and the rest by the convergence plan A6 → F1 (verdict #35)
 - **Context**: v03 gives the SET setpoints by Erl (approximate) or by a hook with pythermalcomfort (exact), and the PPD
   through the PMV setpoints; the SET of pythermalcomfort stops EnergyPlus when it is calculated in its callbacks.
 - **Decision**: `apply_set_setpoints` and `SetSetpointHook` in `accim.sim.comfort_hooks`, as the ATHB, with the setpoints
@@ -694,7 +717,9 @@ template]] to add a new entry.
 ## 2026-11-10 — The setpoints of the ATHB are a hook of the backend of the Python API on the setpoints of the ACCIS (A4)
 
 - **Status**: accepted (proposal A4 of `notes/PROPUESTAS_MEJORAS_post_1.1.0_v03.md`, its prompt, the adjustment of the
-  brief and D10; details decided provisionally, answered on 2026-11-10, see [[decisions.md#2026-11-10 — The verdicts of the author on the 36 provisional decisions of the proposals of 1.2.0|the verdicts of 2026-11-10]])
+  brief and D10; details decided provisionally, answered on 2026-11-10, see [[decisions.md#2026-11-10 — The verdicts of the author on the 36 provisional decisions of the proposals of 1.2.0|the verdicts of 2026-11-10]]);
+  partly superseded: the way the hook gives its setpoints, by
+  [[decisions.md#2026-11-10 — The hooks of the setpoints run before the EMS programs and give their setpoints to the ACCIS through a program of each zone (G1)|G1]]
 - **Context**: the ATHB (Schweiker, 2022) needs the whole PMV with the adapted clothing and metabolic rate in each
   timestep, which the EMS cannot calculate; the backend of the Python API of accim 1.0.0 runs Python hooks after the
   EMS programs.

@@ -145,10 +145,12 @@ def run_ep(
         from the IDFs; None to ask. With ``backend='api'``, the version of each IDF is used.
     :param backend: 'ems' to run the EMS programs with the EMS of EnergyPlus (through eppy), or 'api' to run
         them in Python through the API of EnergyPlus (EnergyPlus 24.2 or later), with the same results.
-    :param hooks: With ``backend='api'`` (since accim 1.2.0), functions called after the EMS programs at each calling
-        point of each simulation, as ``hook(controller, calling_point)`` (the ``after_programs`` of
-        :func:`accim.sim.energyplus_api.run_simulation`), such as the hooks of the setpoints of the ATHB and of the SET
-        (:func:`accim.sim.comfort_hooks.apply_athb_setpoints` and :func:`accim.sim.comfort_hooks.apply_set_setpoints`);
+    :param hooks: With ``backend='api'`` (since accim 1.2.0), functions called at each calling point of each simulation,
+        as ``hook(controller, calling_point)``: after the EMS programs (the ``after_programs`` of
+        :func:`accim.sim.energyplus_api.run_simulation`), or before them if their attribute ``runs_before_programs`` is
+        True (``before_programs``), as the hooks of the setpoints of the ATHB and of the SET
+        (:func:`accim.sim.comfort_hooks.apply_athb_setpoints` and :func:`accim.sim.comfort_hooks.apply_set_setpoints`),
+        whose setpoints the EMS programs of the timestep take;
         the same hooks run in every simulation of the folder; they run in the processes of the simulations, so they
         must be objects that can be pickled (functions or instances of classes defined at the top level of a module).
     :return: With ``backend='api'``, the results of the simulations
@@ -188,7 +190,9 @@ def run_ep(
         jobs = [(idf, epw, {'output_directory': os.getcwd(), 'output_prefix': simulation_name(idf, epw)})
                 for idf, epw in pairs]
         if hooks:
-            return run_simulations(jobs, processes=processes, after_programs=list(hooks))
+            before = [hook for hook in hooks if getattr(hook, 'runs_before_programs', False)]
+            after = [hook for hook in hooks if not getattr(hook, 'runs_before_programs', False)]
+            return run_simulations(jobs, processes=processes, before_programs=before, after_programs=after)
         return run_simulations(jobs, processes=processes)
 
     if energyplus_version.lower() == 'auto':

@@ -8,7 +8,8 @@ esta versión: las P1, A2, A1 y A5, en este orden; y después D2 (sección 7), q
 del autor (`notes/COPILOT_BRIEF_v1.2.0_v01.md`): E1 (sección 8), E2 (sección 9), A3 (sección 10), B1 (sección 11),
 B5 (sección 12), C1 (sección 13), D1 (sección 14), B2 (sección 15), B3 (sección 16), B4 (sección 17), C2 (sección
 18), E4 (sección 19), A4 (sección 20) y A6 (sección 21); y, al final, lo que faltaba de D2: las salidas opcionales
-del ACCIS y del ATHB en `Table` (sección 22).
+del ACCIS y del ATHB en `Table` (sección 22). Después, las tareas de la revisión independiente de la 1.2.0
+(`notes/PROPUESTAS_MEJORAS_post_1.1.0_v04.md`, §7), en el orden del autor: G1 (sección 23) y las siguientes.
 
 Lo que ya está en otros documentos no se repite aquí:
 
@@ -90,6 +91,10 @@ Lo que ya está en otros documentos no se repite aquí:
   `CustomRegime_<zona>`, `HoursBelow_<T>_<zona>`, las horas y grados-hora de largo plazo de las zonas y del edificio y
   `ATHB_PMV/clo/met_<zona>`): las promedia o les aplica `frequency_agg_func`, las conserva con
   `standard_outputs=True`, les da nombres de `Table` y valores de bloque y de edificio (sección 22).
+- **G1 (revisión v04).** Los ganchos del ATHB y de la SET se ejecutan antes de los programas del EMS y dan sus
+  consignas al ACCIS con el programa `ApplyHookSetpoints_<zona>`, justo después de SetAST: la tolerancia, el redondeo,
+  el suelo y el techo, los contadores de horas (también los de largo plazo) y las salidas de las consignas de cada zona
+  son ya los del gancho (sección 23).
 - Las categorías del PMV y la aproximación de la corrección del metabolismo se han comprobado en ISO 7730:2025 y
   EN 16798-1:2019, y el modelo dinámico de vestimenta de A5, en Schiavon y Lee (2013) y ASHRAE 55-2020 (sección 6).
 - Lo que quedaba abierto se ha comprobado: el golden master y las pruebas de EnergyPlus 26.1 y 26.2, también la de A5
@@ -1455,3 +1460,53 @@ del ATHB, EnergyPlus 25.1 y el backend de la API, con un script fuera del reposi
   diarios son las medias o sumas del CSV). No cambia ningún IDF ni el código del EMS. Suite completa: 1783 pasan y 2
   omitidas (la prueba con el jar del Future Weather Generator y la de EnergyPlus 26.1, que no están en esta máquina);
   la documentación, con los mismos 59 avisos.
+
+## 23. Los ganchos del ATHB y de la SET y los contadores y salidas del ACCIS (G1, revisión v04)
+
+La revisión v04 (§3.1, hallazgo A4/A6-1) encontró que los ganchos de A4 y A6 solo escribían los actuadores de las
+consignas (`AHST_Act_<zona>`, `ACST_Act_<zona>`) después de los programas del ACCIS, de modo que los contadores de
+horas (`CountHours_<zona>`, `CountHoursNoApp_<zona>`), los de largo plazo de C2 y las salidas `Adaptive ... Setpoint
+Temperature_<zona>` seguían siendo los de las consignas adaptativas que los termostatos ya no seguían. La tarea G1 pide
+la opción (a): que el gancho actualice `ACST`, `AHST`, `ACSTnoTol`, `AHSTnoTol` y las redondeadas, y que los
+contadores se ejecuten después.
+
+**Antes.** El controlador de la API ejecuta los ganchos `after_programs` después de todos los programas del punto de
+llamada; los contadores se ejecutan dentro de `RunACCIS_<zona>`, con las variables de cada zona, justo después de
+SetAST y SetASTnoTol; así que, cuando el gancho escribía, las horas ya estaban contadas.
+
+**Ahora.**
+
+- `accim/sim/ems/hook_setpoints.py` (nuevo): el programa `ApplyHookSetpoints_<zona>`, que `RunACCIS_<zona>` ejecuta
+  justo después de `run SetAST`: si `HookSetpoints_<zona>` es 1, pone `AHST = HookAHST_<zona>+AHSTtol` y
+  `ACST = HookACST_<zona>+ACSTtol` y las redondea (las líneas de ROUNDING), y vuelve a poner la marca a 0;
+  `InitHookSetpoints` (con su gestor de llamadas en BeginNewEnvironment) pone las variables a 0 al empezar cada
+  entorno; `set_hook_setpoints_code()` añade todo (es idempotente: los ganchos del ATHB y de la SET comparten los
+  objetos).
+- `accim/sim/comfort_hooks.py`: los dos ganchos tienen `runs_before_programs = True`, se ejecutan antes de los
+  programas (con los sensores ya leídos) y dan sus consignas con esas variables, no con los actuadores; si se ejecutan
+  después de los programas, paran la simulación con un `RuntimeError`, porque los programas del paso no las tomarían.
+- `accim/run/run.py`: `run_ep(hooks=...)` pasa los ganchos con `runs_before_programs` como `before_programs`, y los
+  demás como `after_programs`.
+- `accim/sim/ems/setpoint_limits.py`: `ApplySetpointLimits_<zona>` se ejecuta después de `ApplyHookSetpoints_<zona>`
+  si la zona lo tiene, de modo que el suelo y el techo de B5 acotan también las consignas del gancho (D5), se añadan
+  antes o después.
+- `accim/utils/verification.py`: la comprobación 4 no comprueba las zonas cuyas consignas pone un gancho.
+- Así, todo lo que el ACCIS hace después de SetAST sigue al gancho: la tolerancia, el redondeo, el suelo y el techo,
+  las consignas sin tolerancia (las del gancho), los contadores de horas y de largo plazo, los termostatos y las
+  salidas de las consignas de cada zona. La temperatura de confort y los límites de aplicabilidad con los que
+  `CountHours_<zona>` reparte sus horas siguen siendo los de la norma de confort de la zona.
+- Decisión provisional (en `notes/questions.md`): las consignas del gancho son los límites de la banda de confort (las
+  consignas sin tolerancia), y los termostatos las reciben con la tolerancia de las consignas de la zona, como las
+  adaptativas; por tanto, las consignas de los termostatos de A4 y A6 (aún no publicadas) cambian en la tolerancia
+  (0,1 K por defecto); con `setpoint_tolerance=0`, los termostatos reciben las del gancho tal cual.
+- Documentación: las secciones 4.9, 4.9.1, 4.9.2 y 4.6.1 del uso detallado y la API del módulo nuevo.
+- Pruebas: `tests/core/test_comfort_hooks.py` (23: 5 nuevas y 6 cambiadas): el controlador falso; el reparto de los
+  ganchos de `run_ep`; el modelo (los programas y su orden después de SetAST y antes del suelo y el techo, añadidos
+  antes o después del gancho); el intérprete de Erl con los programas de una zona (sin gancho, las adaptativas; con
+  22/26 °C, los termostatos a 22,1/25,9 °C, las sin tolerancia a 22/26 °C, las redondeadas a 22,1/25,8999 °C y las
+  horas contadas con ellas; la marca se usa una vez; el suelo y el techo las acotan); y con EnergyPlus 25.1: las
+  consignas sin tolerancia son las de la bisección del ATHB (y las de la tabla de la SET), las de los termostatos las
+  de con tolerancia, y las horas ocupadas confortables las de la temperatura operativa dentro de ellas; los dos
+  backends dan resultados idénticos sin gancho y con unas consignas constantes dadas por un gancho (API) y por las
+  mismas líneas en los programas (EMS), `check_exact=True`. Los archivos de pruebas afectados (límites, verificación,
+  golden master, API, largo plazo): 119 pasan; el golden master no cambia.

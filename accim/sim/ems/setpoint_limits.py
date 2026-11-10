@@ -12,7 +12,9 @@ cooling systems, whose adaptive limits (Figure B.1) apply in summer and the mid-
 limits change the equation of the setpoints (comfort modes 1, 2 and 3), but they do not bound them.
 
 - ``heating_setpoint_floor`` and ``cooling_setpoint_ceiling`` (the inputs ``AHSTfloor`` and ``ACSTceil`` of the program
-  SetInputData_<zone>): the program ``ApplySetpointLimits_<zone>``, which RunACCIS_<zone> runs right after SetAST, sets
+  SetInputData_<zone>): the program ``ApplySetpointLimits_<zone>``, which RunACCIS_<zone> runs right after SetAST (and
+  after the program that gives the setpoints of a hook of the API backend to the zone,
+  :mod:`accim.sim.ems.hook_setpoints`, if it has one), sets
   the heating setpoint AHST to AHSTfloor if it is lower, and the cooling setpoint ACST to ACSTceil if it is higher, and
   then rounds them again as the subprograms of SetAST do (:data:`accim.sim.ems.setpoint_lines.ROUNDING`, with
   SetpointAcc): the setpoints are those of bounding AHST and ACST before their rounding, whatever the comfort standard
@@ -162,6 +164,20 @@ def _insert_run_line(idf, zone: str, line: str, after: str) -> None:
     set_program_lines(run_program, lines[:index] + [line] + lines[index:])
 
 
+def _after_setpoints(idf, zone: str) -> str:
+    """The line of RunACCIS_<zone> after which ApplySetpointLimits_<zone> runs: that of the program that gives the
+    setpoints of a hook to the zone (:mod:`accim.sim.ems.hook_setpoints`, run right after SetAST), if it has one, so
+    that the floor and ceiling also bound the setpoints of the hook; otherwise, SetAST."""
+    from accim.sim.ems.hook_setpoints import PROGRAM_PREFIX as HOOK_PROGRAM_PREFIX
+    from accim.sim.ems.inputs import RUN_PROGRAM_PREFIX
+
+    hook_line = f'{_RUN_PREFIX}{HOOK_PROGRAM_PREFIX}{zone}'
+    run_program = idf.getobject('EnergyManagementSystem:Program', f'{RUN_PROGRAM_PREFIX}{zone}')
+    if run_program is not None and hook_line.lower() in (line.lower() for line in _program_lines(run_program)):
+        return hook_line
+    return 'run SetAST'
+
+
 def _remove_run_line(idf, zone: str, line: str) -> None:
     from accim.sim.ems.inputs import RUN_PROGRAM_PREFIX
     from accim.sim.ems.programs import set_program_lines
@@ -187,7 +203,8 @@ def has_setpoint_limits(idf) -> bool:
 def set_setpoint_limits_code(idf) -> None:
     """Write the programs ApplySetpointLimits_<zone> of the zones of a model (of accim 1.0.0 or later) with the inputs
     ``AHSTfloor`` or ``ACSTceil`` in their programs SetInputData_<zone>, with the lines of the inputs that they have
-    (and the line that runs them in RunACCIS_<zone>, after SetAST), and remove those of the other zones; the EMS global
+    (and the line that runs them in RunACCIS_<zone>, after SetAST, or after the program of the setpoints of a hook if
+    the zone has it), and remove those of the other zones; the EMS global
     variables AHSTfloor and ACSTceil are declared if a zone has them."""
     from accim.sim.ems.inputs import input_programs, read_inputs
     from accim.sim.ems.programs import add_program, set_program_lines
@@ -206,7 +223,7 @@ def set_setpoint_limits_code(idf) -> None:
                 add_program(idf, name, lines)
             elif _program_lines(existing) != lines:
                 set_program_lines(existing, lines)
-            _insert_run_line(idf, zone, run_line, 'run SetAST')
+            _insert_run_line(idf, zone, run_line, _after_setpoints(idf, zone))
         else:
             if existing is not None:
                 idf.removeidfobject(existing)

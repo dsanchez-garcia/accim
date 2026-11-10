@@ -15,6 +15,23 @@ This log is a lightweight, session-scoped complement to the repository's
 existing tracking files — it does not replace them (see
 [[decisions.md#2026-09-13 — `notes/work-log.md` complements, not replaces, existing tracking files|the related decision]]).
 
+## 2026-11-10 — G1: the hooks of the ATHB and of the SET and the counters of the ACCIS (branch `v1.2.0`, on the server)
+
+- **Objective**: task G1 of the review v04 (finding A4/A6-1): the hour counters and outputs of the ACCIS follow the
+  setpoints of the hooks.
+- **Affected files**: `accim/sim/ems/hook_setpoints.py` (new), `accim/sim/comfort_hooks.py`,
+  `accim/sim/ems/setpoint_limits.py`, `accim/run/run.py`, `accim/utils/verification.py`,
+  `tests/core/test_comfort_hooks.py`, [[../docs/source/4_detailed use.md]] (§4.9, §4.9.1, §4.9.2, §4.6.1),
+  [[../CHANGELOG.md]], [[../CAMBIOS_CODIGO_v1.2.0.md]] (§23), [[../DEVLOG.md]], [[../TODO.md]], [[decisions.md]],
+  [[questions.md]].
+- **Finding or decision**: See
+  [[decisions.md#2026-11-10 — The hooks of the setpoints run before the EMS programs and give their setpoints to the ACCIS through a program of each zone (G1)|the decision]].
+  Option (a) works by running the hooks before the programs and taking their setpoints right after SetAST; the
+  thermostats get them with the tolerance (provisional, [[questions.md]]).
+- **Validation**: 23 tests of the hooks (with EnergyPlus 25.1; both backends identical with and without the setpoints
+  of a hook); 119 tests of the affected files; golden master unchanged.
+- **Next step**: G2.
+
 ## 2026-11-10 — Step 0 of the review v04: the verdicts of the author and the unblocked tasks (branch `v1.2.0`, on the server)
 
 - **Objective**: the step 0 of the task of the session: the 36 provisional decisions to [[decisions.md]] with the

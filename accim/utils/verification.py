@@ -103,7 +103,9 @@ def verify_accim_simulation(
     ``SelectCustomRegime_<zone>`` of each zone, and the number of the regime that the EMS reports
     (``CustomRegime_<zone>``) is that of ``compute_setpoints`` (``Check4_custom_regime``); the zones whose regimes have
     the conditions 'hvac_off' or 'hvac_on', which depend on the HVAC system, are not checked. They are checked with the
-    outputs at timestep frequency, or else hourly, of the last environment of the outputs (the run period).
+    outputs at timestep frequency, or else hourly, of the last environment of the outputs (the run period). The zones
+    whose setpoints a hook of the API backend sets (the setpoints of the ATHB and of the SET of
+    :mod:`accim.sim.comfort_hooks`, with the program ``ApplyHookSetpoints_<zone>``) are not checked.
 
     **Check 5 – The floor and ceiling of the setpoints (per zone, output IDFs of AddAccis):**
     The heating setpoint of each zone with a floor (``heating_setpoint_floor``, the input ``AHSTfloor`` of its program
@@ -1166,6 +1168,7 @@ def _setpoint_mismatches(building, data: Mapping[str, pd.DataFrame], epw: str,
     :return: The mismatches, and the lines of the summary.
     """
     from accim.sim.ems.custom_regimes import OUTPUT_PREFIX as REGIME_OUTPUT_PREFIX, PROGRAM_PREFIX, parse_regime_program
+    from accim.sim.ems.hook_setpoints import PROGRAM_PREFIX as HOOK_PROGRAM_PREFIX, hook_zones
     from accim.sim.ems.inputs import input_programs, read_inputs
     from accim.sim.ems.objects import ZONE_SETPOINT_OUTPUT_VARIABLES
     from accim.sim.ems.outdoor_metric import (OUTPUT_PREFIX, begins_with_weather_file, metric_code,
@@ -1226,7 +1229,14 @@ def _setpoint_mismatches(building, data: Mapping[str, pd.DataFrame], epw: str,
     previews: Dict[Tuple, pd.DataFrame] = {}
     # The outdoor metric of the custom model begins with the values of the weather file of AddAccis, or with PMOT
     metric_start = 'epw' if begins_with_weather_file(building) else 'pmot'
+    # The setpoints of the zones whose setpoints a hook of the API backend sets (accim.sim.ems.hook_setpoints) are not
+    # those of compute_setpoints
+    hooked = {zone.upper() for zone in hook_zones(building)}
     for zone, program in zone_programs.items():
+        if zone.upper() in hooked:
+            lines.append(f"  '{zone}': not checked (its setpoints are those of a hook of the API backend, "
+                         f"{HOOK_PROGRAM_PREFIX}{zone}).")
+            continue
         try:
             arguments = _compute_setpoints_arguments(read_inputs(program))
             # The regimes of the custom model of the zone (accim.sim.ems.custom_regimes)
