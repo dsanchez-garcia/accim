@@ -34,6 +34,15 @@ radiant temperatures and relative humidity) and the adapted clothing and metabol
 the previous timestep, and trm is the running mean outdoor temperature of CEN 15251 of EnergyPlus (the sensor ``RMOT``
 of the ACCIS, α = 0.8, as EN 16798-1). pythermalcomfort is optional (``pip install accim[comfort]``, Python 3.11 or
 later); the EMS backend cannot run the hook (``run_ep(backend='ems', hooks=...)`` raises ``NotImplementedError``).
+
+The setpoints of the standard effective temperature (SET), proposal A6, work in the same way
+(:func:`apply_set_setpoints`, :class:`SetSetpointHook`): the operative temperatures whose SET of pythermalcomfort
+(``pythermalcomfort.models.set_tmp``, :func:`standard_effective_temperature`) is the heating and the cooling setpoints
+of the SET, which depend on the relative humidity of the zone only; since pythermalcomfort cannot calculate the SET in
+the callbacks of EnergyPlus, the hook calculates them for each relative humidity when it is made, and interpolates
+them. Those of the predicted percentage of dissatisfied (PPD) of the categories of ISO 7730:2025 (Table A.1:
+PPD < 6, 10, 15 and 25 %) are those of the PMV of :func:`accim.sim.apmv.apply_pmv_setpoints` (−0.2 and 0.2, −0.5 and
+0.5, −0.7 and 0.7, and −1.0 and 1.0), which the EMS controls.
 """
 
 import math
@@ -43,10 +52,14 @@ from typing import Any, Dict, List, Optional, Sequence, Tuple
 __all__ = [
     'ATHB_TEMPERATURE_RANGE',
     'AthbSetpointHook',
+    'SET_TEMPERATURE_RANGE',
+    'SetSetpointHook',
     'apply_athb_setpoints',
+    'apply_set_setpoints',
     'athb_clo',
     'athb_met',
     'athb_pmv',
+    'standard_effective_temperature',
     'zone_outputs',
 ]
 
@@ -64,6 +77,18 @@ _SENSORS = {
 }
 #: The EMS output variables of each zone: prefix (of the global variable and the output) -> units
 _OUTPUTS = {'ATHB_PMV': '', 'ATHB_clo': 'clo', 'ATHB_met': 'met'}
+#: The range of the operative temperature (°C) within which the hook of the SET looks for its setpoints: the air and
+#: mean radiant temperatures of 10 to 40 °C, the limits of the inputs of the SET of pythermalcomfort
+#: (``pythermalcomfort.models.set_tmp``, 4.8.1); the setpoints out of it are its limits.
+SET_TEMPERATURE_RANGE = (10.0, 40.0)
+#: The EMS sensor that apply_set_setpoints adds to each zone (the setpoints of the SET depend on its relative humidity;
+#: pythermalcomfort cannot calculate the SET in the callbacks of EnergyPlus, so there is no output of the SET)
+_SET_SENSORS = {
+    'SET_RH': 'Zone Air Relative Humidity',
+}
+_SET_OUTPUTS: Dict[str, str] = {}
+#: The relative humidities (%) of the table of the setpoints of the SET of each hook
+_SET_HUMIDITIES = tuple(float(value) for value in range(0, 101))
 
 
 def athb_met(met: float, t_running_mean: float) -> float:
@@ -128,6 +153,32 @@ def _check_number(name: str, value: Any, low: Optional[float] = None, high: Opti
     if (low is not None and value < low) or (high is not None and value > high):
         raise ValueError(f'{name} must be between {low} and {high}, not {value!r}.')
     return float(value)
+
+
+def _bisect(index, targets: Tuple[float, float], temperature_range: Tuple[float, float], tolerance: float,
+            max_iterations: int) -> Tuple[float, float]:
+    """The operative temperatures at which an index that grows with them is each of two targets, by one bisection of
+    both: ``index(temperatures)`` gives the index of an array of two temperatures. The targets out of the range give
+    its limits.
+
+    :return: The two temperatures, in the order of the targets.
+    """
+    import numpy as np
+
+    targets = np.asarray(targets, dtype=float)
+    low = np.full(2, temperature_range[0])
+    high = np.full(2, temperature_range[1])
+    below_range = index(low) >= targets
+    above_range = index(high) <= targets
+    for _ in range(max_iterations):
+        if float(np.max(high - low)) <= tolerance:
+            break
+        middle = (low + high) / 2
+        higher = index(middle) < targets
+        low = np.where(higher, middle, low)
+        high = np.where(higher, high, middle)
+    result = np.where(below_range, temperature_range[0], np.where(above_range, temperature_range[1], (low + high) / 2))
+    return float(result[0]), float(result[1])
 
 
 class AthbSetpointHook:
@@ -202,26 +253,12 @@ class AthbSetpointHook:
         """
         import numpy as np
 
-        targets = np.array([self.athb_heating_setpoint, self.athb_cooling_setpoint])
-        low = np.full(2, self.temperature_range[0])
-        high = np.full(2, self.temperature_range[1])
-
         def athb(temperatures):
             return np.asarray(athb_pmv(temperatures, temperatures, self.air_speed, relative_humidity, self.met,
                                        t_running_mean, self.clo), dtype=float).reshape(2)
 
-        below_range = athb(low) >= targets
-        above_range = athb(high) <= targets
-        for _ in range(self.max_iterations):
-            if float(np.max(high - low)) <= self.tolerance_k:
-                break
-            middle = (low + high) / 2
-            higher = athb(middle) < targets
-            low = np.where(higher, middle, low)
-            high = np.where(higher, high, middle)
-        result = np.where(below_range, self.temperature_range[0],
-                          np.where(above_range, self.temperature_range[1], (low + high) / 2))
-        return float(result[0]), float(result[1])
+        return _bisect(athb, (self.athb_heating_setpoint, self.athb_cooling_setpoint), self.temperature_range,
+                       self.tolerance_k, self.max_iterations)
 
     def __call__(self, controller, calling_point: str) -> None:
         if calling_point != _CALLING_POINT:
@@ -245,6 +282,64 @@ class AthbSetpointHook:
             controller.set(f'ATHB_met_{zone}', met_adapted)
 
 
+def _model_zones(building, what: str, prefixes: Sequence[str], running_mean: bool) -> Dict[str, str]:
+    """The zones of a model with the ACCIS of accim 1.0.0 or later and full air-conditioning, with the key of the
+    sensor of the operative temperature of each one, checked for the setpoints of a hook.
+
+    :param what: The setpoints, for the messages ('the ATHB'...).
+    :param prefixes: The prefixes of the sensors of the zones of the hooks, which the model must not have.
+    :param running_mean: True if the hook needs the sensor RMOT of the ACCIS.
+    :raises ValueError: If the model is not valid for the hook.
+    """
+    from accim.sim.ems.inputs import input_programs
+
+    zones = list(input_programs(building))
+    if not zones:
+        raise ValueError(f'The setpoints of {what} need the ACCIS of accim 1.0.0 or later (the programs '
+                         f'SetInputData_<zone>): add it with AddAccis or add_accis_to_idf first.')
+    if building.getobject('EnergyManagementSystem:Program', 'SetVST') is not None:
+        raise ValueError(f'The setpoints of {what} need full air-conditioning (script_type vrf_ac or ex_ac): in mixed '
+                         f'mode, the windows follow the setpoints of the ACCIS.')
+    sensors = {str(s.Name).upper(): s for s in building.idfobjects['EnergyManagementSystem:Sensor']}
+    actuators = {str(a.Name).upper() for a in building.idfobjects['EnergyManagementSystem:Actuator']}
+    if running_mean and 'RMOT' not in sensors:
+        raise ValueError('The model has no sensor RMOT (the running mean outdoor temperature of the ACCIS).')
+    keys: Dict[str, str] = {}
+    for zone in zones:
+        missing = [name for name in (f'AHST_Act_{zone}', f'ACST_Act_{zone}') if name.upper() not in actuators]
+        operative = sensors.get(f'{zone}_OpT'.upper())
+        if missing or operative is None:
+            raise ValueError(f'The zone {zone} has not the actuators of the setpoints and the sensor of the operative '
+                             f'temperature of the ACCIS ({", ".join(missing) or zone + "_OpT"}).')
+        if any(f'{prefix}_{zone}'.upper() in sensors for prefix in prefixes):
+            raise ValueError(f'The model already has the setpoints of the ATHB or of the SET (the sensors '
+                             f'ATHB_*_{zone} or SET_*_{zone}), which set the same thermostats.')
+        keys[zone] = str(operative.OutputVariable_or_OutputMeter_Index_Key_Name)
+    return keys
+
+
+def _add_hook_objects(building, keys: Dict[str, str], sensors: Dict[str, str], outputs: Dict[str, str],
+                      output_frequencies: Sequence[str]) -> None:
+    """Add to each zone the EMS sensors of a hook, and its global variables and averaged EMS output variables, with
+    Output:Variable objects at the frequencies given."""
+    for zone, key in keys.items():
+        for prefix, variable in sensors.items():
+            building.newidfobject('EnergyManagementSystem:Sensor', Name=f'{prefix}_{zone}',
+                                  OutputVariable_or_OutputMeter_Index_Key_Name=key,
+                                  OutputVariable_or_OutputMeter_Name=variable)
+        names = [f'{prefix}_{zone}' for prefix in outputs]
+        if names:
+            building.newidfobject('EnergyManagementSystem:GlobalVariable',
+                                  **{f'Erl_Variable_{n}_Name': name for n, name in enumerate(names, start=1)})
+        for prefix, units in outputs.items():
+            name = f'{prefix}_{zone}'
+            building.newidfobject('EnergyManagementSystem:OutputVariable', Name=name, EMS_Variable_Name=name,
+                                  Type_of_Data_in_Variable='Averaged', Update_Frequency='ZoneTimestep', Units=units)
+            for frequency in output_frequencies:
+                building.newidfobject('Output:Variable', Key_Value='*', Variable_Name=name,
+                                      Reporting_Frequency=str(frequency).capitalize(), Schedule_Name='')
+
+
 def apply_athb_setpoints(building, athb_cooling_setpoint: float = 0.5, athb_heating_setpoint: float = -0.5,
                          met: float = 1.1, air_speed: float = 0.1, clo: Any = 'adaptive',
                          output_frequencies: Sequence[str] = ('hourly',), tolerance_k: float = 0.1,
@@ -266,53 +361,198 @@ def apply_athb_setpoints(building, athb_cooling_setpoint: float = 0.5, athb_heat
     :param output_frequencies: The reporting frequencies of the outputs of the ATHB ('timestep', 'hourly'...).
     :return: The hook (:class:`AthbSetpointHook`), with the other arguments.
     :raises ValueError: If the model has no ACCIS of accim 1.0.0 or later, is in mixed mode (whose windows follow the
-        setpoints of the ACCIS), has already the objects of the ATHB, or an argument is not valid.
+        setpoints of the ACCIS), has already the objects of the ATHB or of the SET (:func:`apply_set_setpoints`), or
+        an argument is not valid.
     """
-    from accim.sim.ems.inputs import input_programs
-
-    zones = list(input_programs(building))
-    if not zones:
-        raise ValueError('The setpoints of the ATHB need the ACCIS of accim 1.0.0 or later (the programs '
-                         'SetInputData_<zone>): add it with AddAccis or add_accis_to_idf first.')
-    if building.getobject('EnergyManagementSystem:Program', 'SetVST') is not None:
-        raise ValueError('The setpoints of the ATHB need full air-conditioning (script_type vrf_ac or ex_ac): in mixed '
-                         'mode, the windows follow the setpoints of the ACCIS.')
-    hook = AthbSetpointHook(zones, athb_cooling_setpoint=athb_cooling_setpoint,
+    keys = _model_zones(building, 'the ATHB', list(_SENSORS) + list(_SET_SENSORS), running_mean=True)
+    hook = AthbSetpointHook(list(keys), athb_cooling_setpoint=athb_cooling_setpoint,
                             athb_heating_setpoint=athb_heating_setpoint, met=met, air_speed=air_speed, clo=clo,
                             tolerance_k=tolerance_k, max_iterations=max_iterations,
                             temperature_range=temperature_range)
-    sensors = {str(s.Name).upper(): s for s in building.idfobjects['EnergyManagementSystem:Sensor']}
-    actuators = {str(a.Name).upper() for a in building.idfobjects['EnergyManagementSystem:Actuator']}
-    if 'RMOT' not in sensors:
-        raise ValueError('The model has no sensor RMOT (the running mean outdoor temperature of the ACCIS).')
-    keys: Dict[str, str] = {}
-    for zone in zones:
-        missing = [name for name in (f'AHST_Act_{zone}', f'ACST_Act_{zone}') if name.upper() not in actuators]
-        operative = sensors.get(f'{zone}_OpT'.upper())
-        if missing or operative is None:
-            raise ValueError(f'The zone {zone} has not the actuators of the setpoints and the sensor of the operative '
-                             f'temperature of the ACCIS ({", ".join(missing) or zone + "_OpT"}).')
-        if any(f'{prefix}_{zone}'.upper() in sensors for prefix in _SENSORS):
-            raise ValueError(f'The model already has the setpoints of the ATHB (the sensors ATHB_*_{zone}).')
-        keys[zone] = str(operative.OutputVariable_or_OutputMeter_Index_Key_Name)
-    for zone in zones:
-        for prefix, variable in _SENSORS.items():
-            building.newidfobject('EnergyManagementSystem:Sensor', Name=f'{prefix}_{zone}',
-                                  OutputVariable_or_OutputMeter_Index_Key_Name=keys[zone],
-                                  OutputVariable_or_OutputMeter_Name=variable)
-        names = [f'{prefix}_{zone}' for prefix in _OUTPUTS]
-        building.newidfobject('EnergyManagementSystem:GlobalVariable',
-                              **{f'Erl_Variable_{n}_Name': name for n, name in enumerate(names, start=1)})
-        for prefix, units in _OUTPUTS.items():
-            name = f'{prefix}_{zone}'
-            building.newidfobject('EnergyManagementSystem:OutputVariable', Name=name, EMS_Variable_Name=name,
-                                  Type_of_Data_in_Variable='Averaged', Update_Frequency='ZoneTimestep', Units=units)
-            for frequency in output_frequencies:
-                building.newidfobject('Output:Variable', Key_Value='*', Variable_Name=name,
-                                      Reporting_Frequency=str(frequency).capitalize(), Schedule_Name='')
+    _add_hook_objects(building, keys, _SENSORS, _OUTPUTS, output_frequencies)
     return hook
 
 
 def zone_outputs(zone: str) -> List[str]:
     """The names of the outputs of the ATHB of a zone."""
     return [f'{prefix}_{zone}' for prefix in _OUTPUTS]
+
+
+# The standard effective temperature (SET), proposal A6 -------------------------------------------------------------
+
+def standard_effective_temperature(air_temperature, mean_radiant_temperature, air_speed, relative_humidity, met, clo,
+                                   position: str = 'standing'):
+    """The standard effective temperature (SET, °C) of pythermalcomfort (``pythermalcomfort.models.set_tmp``, 4.8.1,
+    Gagge et al., 1986): the temperature of an imaginary environment at 50 % of relative humidity, with an air speed
+    below 0.1 m/s and the mean radiant temperature equal to the air temperature, in which the total heat loss from the
+    skin of an imaginary occupant is the same as in the actual environment with the actual clothing and activity. It is
+    calculated without the limits of the inputs of pythermalcomfort (``limit_inputs=False``, which would give NaN out of
+    10 < tdb < 40 °C, 10 < tr < 40 °C, 0 < v < 2 m/s, 1 < met < 4 and 0 < clo < 1.5) and without rounding.
+
+    :param air_temperature: The air temperature (°C), a number or an array.
+    :param mean_radiant_temperature: The mean radiant temperature (°C).
+    :param air_speed: The air speed (m/s).
+    :param relative_humidity: The relative humidity (%).
+    :param met: The metabolic rate (met).
+    :param clo: The clothing insulation (clo).
+    :param position: 'standing' (the default of pythermalcomfort) or 'sitting'.
+    :return: The SET (a number, or an array for arrays).
+    :raises ImportError: If pythermalcomfort is not installed.
+    """
+    try:
+        from pythermalcomfort.models import set_tmp
+    except ImportError as error:
+        raise ImportError('The setpoints of the SET need pythermalcomfort (4.8 or later, Python 3.11 or later): '
+                          'install it with pip install accim[comfort] (or pip install pythermalcomfort).') from error
+    result = set_tmp(tdb=air_temperature, tr=mean_radiant_temperature, v=air_speed, rh=relative_humidity, met=met,
+                     clo=clo, position=position, limit_inputs=False, round_output=False).set
+    try:
+        return float(result)
+    except TypeError:
+        return result
+
+
+class SetSetpointHook:
+    """The hook of the backend of the Python API of EnergyPlus that sets the setpoints of the operative temperature of
+    the standard effective temperature (SET) in the zones of a model with the ACCIS; :func:`apply_set_setpoints`
+    prepares the model and returns it (proposal A6).
+
+    The setpoints are the operative temperatures whose SET (with the air temperature and the mean radiant temperature
+    equal to them, :func:`standard_effective_temperature`, which grows with them) is ``set_heating_setpoint`` and
+    ``set_cooling_setpoint``, found by bisection within ``temperature_range`` and to ``tolerance_k``
+    (:meth:`operative_temperatures`); with the other inputs fixed, they depend on the relative humidity only. The SET of
+    pythermalcomfort cannot be calculated in the callbacks of EnergyPlus (the process stops with an access violation at
+    the first call, with pythermalcomfort 4.8.1 and EnergyPlus 25.1, while the ATHB_PMV can), so the hook calculates
+    them for each relative humidity from 0 to 100 % (every 1 %) when it is made, and, after the EMS programs at the
+    beginning of each timestep, interpolates them linearly with the relative humidity of each zone (the sensor
+    ``SET_RH_<zone>``, :meth:`setpoints_of_humidity`) and gives them to the actuators of the setpoint schedules of the
+    ACCIS (``AHST_Act_<zone>`` and ``ACST_Act_<zone>``). There is no output of the SET of the zones: calculate it after
+    the simulation from their outputs (mean air and radiant temperatures and relative humidity).
+
+    :param zones: The zones, by their names in the EMS objects.
+    :param set_cooling_setpoint: The cooling setpoint of the SET (°C).
+    :param set_heating_setpoint: The heating setpoint of the SET (°C), lower than the cooling one.
+    :param met: The metabolic rate of the occupants (met); out of 1 to 4 met (the limits of pythermalcomfort), it warns.
+    :param clo: The clothing insulation (clo); out of 0 to 1.5 clo, it warns.
+    :param air_speed: The air speed (m/s); out of 0 to 2 m/s, it warns.
+    :param position: 'standing' (the default of pythermalcomfort) or 'sitting'.
+    :param tolerance_k: The largest width of the interval of the bisection (K).
+    :param max_iterations: The largest number of iterations of the bisection.
+    :param temperature_range: The range of the operative temperature of the setpoints (°C,
+        :data:`SET_TEMPERATURE_RANGE`); the setpoints out of it are its limits.
+    :ivar setpoints: The last setpoints of each zone, ``{zone: (heating, cooling)}``.
+    :raises ImportError: If pythermalcomfort is not installed.
+    """
+
+    def __init__(self, zones: Sequence[str], set_cooling_setpoint: float, set_heating_setpoint: float, met: float,
+                 clo: float, air_speed: float, position: str = 'standing', tolerance_k: float = 0.1,
+                 max_iterations: int = 20, temperature_range: Optional[Tuple[float, float]] = None):
+        import warnings
+
+        self.zones = [str(zone) for zone in zones]
+        if not self.zones:
+            raise ValueError('zones must name at least one zone.')
+        self.set_cooling_setpoint = _check_number('set_cooling_setpoint', set_cooling_setpoint)
+        self.set_heating_setpoint = _check_number('set_heating_setpoint', set_heating_setpoint)
+        if not self.set_heating_setpoint < self.set_cooling_setpoint:
+            raise ValueError(f'set_heating_setpoint ({set_heating_setpoint}) must be lower than set_cooling_setpoint '
+                             f'({set_cooling_setpoint}).')
+        self.met = _check_number('met', met, 0.0)
+        self.clo = _check_number('clo', clo, 0.0)
+        self.air_speed = _check_number('air_speed', air_speed, 0.0)
+        for name, value, (low, high) in (('met', self.met, (1.0, 4.0)), ('clo', self.clo, (0.0, 1.5)),
+                                         ('air_speed', self.air_speed, (0.0, 2.0))):
+            if not low <= value <= high:
+                warnings.warn(f'{name} = {value} is out of the range of the SET of pythermalcomfort ({low} to {high}).',
+                              UserWarning, stacklevel=2)
+        if position not in ('standing', 'sitting'):
+            raise ValueError(f"position must be 'standing' or 'sitting', not {position!r}.")
+        self.position = position
+        self.tolerance_k = _check_number('tolerance_k', tolerance_k, 0.0)
+        if self.tolerance_k <= 0:
+            raise ValueError('tolerance_k must be greater than 0.')
+        if isinstance(max_iterations, bool) or not isinstance(max_iterations, int) or max_iterations < 1:
+            raise ValueError(f'max_iterations must be a positive integer, not {max_iterations!r}.')
+        self.max_iterations = max_iterations
+        temperature_range = SET_TEMPERATURE_RANGE if temperature_range is None else temperature_range
+        low, high = (_check_number('temperature_range', value) for value in temperature_range)
+        if not low < high:
+            raise ValueError(f'temperature_range must be (lower, higher), not {temperature_range!r}.')
+        self.temperature_range = (low, high)
+        self.setpoints: Dict[str, Tuple[float, float]] = {}
+        # The setpoints of each relative humidity of the table, calculated now (out of the callbacks of EnergyPlus)
+        self.table = [self.operative_temperatures(humidity) for humidity in _SET_HUMIDITIES]
+
+    def __repr__(self) -> str:
+        return (f'SetSetpointHook(zones={self.zones!r}, set_cooling_setpoint={self.set_cooling_setpoint}, '
+                f'set_heating_setpoint={self.set_heating_setpoint}, met={self.met}, clo={self.clo}, '
+                f'air_speed={self.air_speed}, position={self.position!r})')
+
+    def setpoints_of_humidity(self, relative_humidity: float) -> Tuple[float, float]:
+        """The setpoints of a relative humidity (%), interpolated linearly in the table of the hook (from 0 to 100 %,
+        every 1 %; the humidities out of it take those of its ends).
+
+        :return: (heating, cooling).
+        """
+        import numpy as np
+
+        humidity = min(max(float(relative_humidity), _SET_HUMIDITIES[0]), _SET_HUMIDITIES[-1])
+        return (float(np.interp(humidity, _SET_HUMIDITIES, [row[0] for row in self.table])),
+                float(np.interp(humidity, _SET_HUMIDITIES, [row[1] for row in self.table])))
+
+    def operative_temperatures(self, relative_humidity: float) -> Tuple[float, float]:
+        """The operative temperatures (°C) whose SET is the heating and the cooling setpoints, found by bisection (both
+        at once), within the range of the temperatures (its limits, if the SET of the setpoint is out of it).
+
+        :param relative_humidity: The relative humidity of the zone (%).
+        :return: (heating, cooling).
+        """
+        import numpy as np
+
+        def standard(temperatures):
+            return np.asarray(standard_effective_temperature(temperatures, temperatures, self.air_speed,
+                                                             relative_humidity, self.met, self.clo, self.position),
+                              dtype=float).reshape(2)
+
+        return _bisect(standard, (self.set_heating_setpoint, self.set_cooling_setpoint), self.temperature_range,
+                       self.tolerance_k, self.max_iterations)
+
+    def __call__(self, controller, calling_point: str) -> None:
+        if calling_point != _CALLING_POINT:
+            return
+        for zone in self.zones:
+            humidity = controller.get(f'SET_RH_{zone}')
+            if humidity is None:
+                continue
+            heating, cooling = self.setpoints_of_humidity(humidity)
+            self.setpoints[zone] = (heating, cooling)
+            controller.set(f'AHST_Act_{zone}', heating)
+            controller.set(f'ACST_Act_{zone}', cooling)
+
+
+def apply_set_setpoints(building, set_cooling_setpoint: float, set_heating_setpoint: float, met: float, clo: float,
+                        air_speed: float, position: str = 'standing', tolerance_k: float = 0.1,
+                        max_iterations: int = 20,
+                        temperature_range: Optional[Tuple[float, float]] = None) -> SetSetpointHook:
+    """Prepare a model with the ACCIS (temperature setpoints and full air-conditioning, as :func:`apply_athb_setpoints`)
+    for the setpoints of the standard effective temperature (SET), and return the hook that sets them
+    (:class:`SetSetpointHook`, proposal A6).
+
+    Its zones get the EMS sensor ``SET_RH_<zone>`` (relative humidity), with which the hook interpolates the setpoints
+    of its table (see :class:`SetSetpointHook`). The setpoints of the SET, the metabolic rate, the clothing insulation
+    and the air speed have no default: they are those of the study. The model must be simulated with the backend of
+    the Python API and the hook (``run_ep(backend='api', hooks=[hook])``).
+
+    :param building: The model (eppy), changed in place.
+    :return: The hook, with the other arguments (there is no output of the SET, so, unlike
+        :func:`apply_athb_setpoints`, there are no output frequencies).
+    :raises ValueError: If the model has no ACCIS of accim 1.0.0 or later, is in mixed mode, has already the objects of
+        the SET or of the ATHB (both would set the same thermostats), or an argument is not valid.
+    """
+    keys = _model_zones(building, 'the SET', list(_SENSORS) + list(_SET_SENSORS), running_mean=False)
+    hook = SetSetpointHook(list(keys), set_cooling_setpoint=set_cooling_setpoint,
+                           set_heating_setpoint=set_heating_setpoint, met=met, clo=clo, air_speed=air_speed,
+                           position=position, tolerance_k=tolerance_k, max_iterations=max_iterations,
+                           temperature_range=temperature_range)
+    _add_hook_objects(building, keys, _SET_SENSORS, _SET_OUTPUTS, ())
+    return hook

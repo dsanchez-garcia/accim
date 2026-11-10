@@ -11,6 +11,18 @@ Durable architectural/process decisions for this repository and its Obsidian
 vault. Newest first. Use [[templates/decision-record.md|the decision-record
 template]] to add a new entry.
 
+## 2026-11-10 — The setpoints of the SET are a hook of the API backend with a table by relative humidity (A6)
+
+- **Status**: accepted (proposal A6 of `notes/PROPUESTAS_MEJORAS_post_1.1.0_v03.md`, way (b); decided provisionally,
+  see questions.md)
+- **Context**: v03 gives the SET setpoints by Erl (approximate) or by a hook with pythermalcomfort (exact), and the PPD
+  through the PMV setpoints; the SET of pythermalcomfort stops EnergyPlus when it is calculated in its callbacks.
+- **Decision**: `apply_set_setpoints` and `SetSetpointHook` in `accim.sim.comfort_hooks`, as the ATHB, with the setpoints
+  calculated by bisection for each relative humidity (0–100 %, every 1 %) when the hook is made and interpolated in the
+  callbacks; no output of the SET; the PPD documented as the PMV setpoints of `apply_pmv_setpoints`.
+- **Consequences**: the hook takes about 1.5 s to be made, and nothing of pythermalcomfort runs in the callbacks; the
+  SET of the zones is calculated after the simulations; the Erl way and the cooling effect wait for the author.
+
 ## 2026-11-10 — The setpoints of the ATHB are a hook of the backend of the Python API on the setpoints of the ACCIS (A4)
 
 - **Status**: accepted (proposal A4 of `notes/PROPUESTAS_MEJORAS_post_1.1.0_v03.md`, its prompt, the adjustment of the

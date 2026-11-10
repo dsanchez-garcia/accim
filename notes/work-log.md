@@ -15,6 +15,20 @@ This log is a lightweight, session-scoped complement to the repository's
 existing tracking files — it does not replace them (see
 [[decisions.md#2026-09-13 — `notes/work-log.md` complements, not replaces, existing tracking files|the related decision]]).
 
+## 2026-11-10 — A6: the setpoints of the SET and the PPD (branch `v1.2.0`, on the server)
+
+- **Objective**: A6, the last proposal of the list of the author.
+- **Affected files**: `accim/sim/comfort_hooks.py`, `tests/core/test_comfort_hooks.py`, `setup.py`, `accim/run/run.py`,
+  [[../docs/source/4_detailed use.md]] (§4.8, §4.9.2), [[../CHANGELOG.md]], [[../CAMBIOS_CODIGO_v1.2.0.md]] (§21),
+  [[../DEVLOG.md]], [[../TODO.md]], [[decisions.md]], [[questions.md]].
+- **Finding or decision**: See
+  [[decisions.md#2026-11-10 — The setpoints of the SET are a hook of the API backend with a table by relative humidity (A6)|the decision]].
+  `pythermalcomfort.models.set_tmp` stops EnergyPlus with an access violation at its first call in a callback (not the
+  stack, not the compilation), so the hook tabulates its setpoints by humidity before the simulation.
+- **Validation**: 6 new tests (one with EnergyPlus 25.1 through `run_ep(backend='api', hooks=[hook])`); the whole suite
+  (1765 passed, 2 skipped); the documentation build (59 warning lines, as before).
+- **Next step**: R-06 in `ROADMAP.md`, and the report of the session.
+
 ## 2026-11-10 — A4: the setpoints of the ATHB with the Python API (branch `v1.2.0`, on the server)
 
 - **Objective**: A4, after E4, in the order of the author (with D10 and the adjustment of the brief: `help(ErlController)`

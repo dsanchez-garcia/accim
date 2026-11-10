@@ -147,8 +147,9 @@ def run_ep(
         them in Python through the API of EnergyPlus (EnergyPlus 24.2 or later), with the same results.
     :param hooks: With ``backend='api'`` (since accim 1.2.0), functions called after the EMS programs at each calling
         point of each simulation, as ``hook(controller, calling_point)`` (the ``after_programs`` of
-        :func:`accim.sim.energyplus_api.run_simulation`), such as the hook of the setpoints of the ATHB
-        (:func:`accim.sim.comfort_hooks.apply_athb_setpoints`); they run in the processes of the simulations, so they
+        :func:`accim.sim.energyplus_api.run_simulation`), such as the hooks of the setpoints of the ATHB and of the SET
+        (:func:`accim.sim.comfort_hooks.apply_athb_setpoints` and :func:`accim.sim.comfort_hooks.apply_set_setpoints`);
+        the same hooks run in every simulation of the folder; they run in the processes of the simulations, so they
         must be objects that can be pickled (functions or instances of classes defined at the top level of a module).
     :return: With ``backend='api'``, the results of the simulations
         (:class:`accim.sim.energyplus_api.SimulationResult`); otherwise, None.

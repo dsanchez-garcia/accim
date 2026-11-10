@@ -24,6 +24,19 @@ it here as answered).
 
 ## Open
 
+## 2026-11-10 — A6: which setpoints of SET, PPD or cooling effect
+- Context: v03 (A6, no prompt) gives two ways for the setpoints of the SET, (a) a proportional control in Erl of the
+  setpoint from the SET of the previous timestep (k ≈ 0.8, with saturation; "sencillo pero con retardo y posible
+  oscilación") and (b) a hook of the API backend with `pythermalcomfort.models.set_tmp` and bisection ("exacto"); the
+  PPD through A2 (the PMV setpoints of the categories of ISO 7730:2025, Table A.1); and names the cooling effect
+  without a design; it gives no defaults for the SET setpoints, the metabolic rate, the clothing or the air speed.
+- Options considered: (b) only, as A4, with required arguments (chosen); (a) also; the cooling effect with some index
+  and setpoints (not designed in v03). The SET of pythermalcomfort crashes in the callbacks of EnergyPlus, so (b) became
+  a table of the setpoints by relative humidity (every 1 %, interpolated), without an output of the SET.
+- Owner: the author.
+- Status: open; (b) with the table decided provisionally; (a) and the cooling effect wait for the author (blocked task
+  in `TODO.md`).
+
 ## 2026-11-10 — A4: the models, hours and range of the setpoints of the ATHB
 - Context: the prompt of A4 asks for the hook of the backend of the Python API that sets the operative temperatures of
   the ATHB setpoints "to the setpoint schedule actuators used by the ACCIS", and `apply_athb_setpoints` that prepares

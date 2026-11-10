@@ -7,13 +7,13 @@ esta versión: las P1, A2, A1 y A5, en este orden; y después D2 (sección 7), q
 2026-11-09 con E2 y E1, y las demás propuestas de la v03 (`notes/PROPUESTAS_MEJORAS_post_1.1.0_v03.md`), en el orden
 del autor (`notes/COPILOT_BRIEF_v1.2.0_v01.md`): E1 (sección 8), E2 (sección 9), A3 (sección 10), B1 (sección 11),
 B5 (sección 12), C1 (sección 13), D1 (sección 14), B2 (sección 15), B3 (sección 16), B4 (sección 17), C2 (sección
-18), E4 (sección 19), A4 (sección 20)...
+18), E4 (sección 19), A4 (sección 20) y A6 (sección 21).
 
 Lo que ya está en otros documentos no se repite aquí:
 
 - `CHANGELOG.md` (sección Unreleased): los cambios que ve el usuario.
 - `docs/source/4_detailed use.md`, secciones 4.2.2, 4.2.3, 4.2.4, 4.2.5, 4.2.6, 4.3.1, 4.5.1, 4.6.1, 4.7.3, 4.7.4, 4.8,
-  4.8.1, 4.9 y 4.9.1: el uso.
+  4.8.1, 4.9, 4.9.1 y 4.9.2: el uso.
 - `DEVLOG.md`: el registro del trabajo, con cómo se comprobó.
 - `notes/decisions.md`: las decisiones y sus motivos.
 
@@ -82,6 +82,9 @@ Lo que ya está en otros documentos no se repite aquí:
   ACCIS y devuelve un gancho del backend de la API de Python que, en cada paso, busca por bisección las temperaturas
   operativas cuyo ATHB_PMV (pythermalcomfort) es cada consigna y las da a los programas de consignas del ACCIS;
   `run_ep(..., hooks=[...])` solo con `backend='api'`; el extra `accim[comfort]` (sección 20).
+- **A6.** Las consignas de la temperatura efectiva estándar (SET), con un gancho como el del ATHB que
+  interpola una tabla de las consignas por humedad relativa (el SET de pythermalcomfort detiene EnergyPlus si se
+  calcula en sus callbacks); las del PPD son las del PMV de `apply_pmv_setpoints` (sección 21).
 - Las categorías del PMV y la aproximación de la corrección del metabolismo se han comprobado en ISO 7730:2025 y
   EN 16798-1:2019, y el modelo dinámico de vestimenta de A5, en Schiavon y Lee (2013) y ASHRAE 55-2020 (sección 6).
 - Lo que quedaba abierto se ha comprobado: el golden master y las pruebas de EnergyPlus 26.1 y 26.2, también la de A5
@@ -1359,3 +1362,43 @@ paso.
   hooks=[gancho])`, cuyas consignas son las de la bisección con la humedad y la media móvil del paso anterior, y el
   mismo modelo sin el gancho con los dos backends, idénticos). Suite completa: 1759 pasan y 2 omitidas; la
   documentación, con los mismos avisos que antes (59).
+
+## 21. Las consignas de la temperatura efectiva estándar (SET) y del PPD (A6)
+
+La v03 (A6, sin prompt) da dos vías para las consignas de la SET: (a) un control proporcional en Erl de la consigna a
+partir de la SET del paso anterior (k ≈ 0,8, con saturación; con retardo y posible oscilación) y (b) un gancho del
+backend de la API con `pythermalcomfort.models.set_tmp` y bisección (exacto); las del PPD, con A2 (las consignas del
+PMV de las categorías de ISO 7730:2025, tabla A.1: PPD < 6, 10, 15 y 25 % ↔ PMV ±0,2, 0,5, 0,7 y 1,0); y nombra el
+cooling effect, sin diseño. Prioridad baja hasta tener A4.
+
+**Antes.** No había consignas de la SET; las del PMV (`apply_pmv_setpoints`, A2) ya daban las del PPD de las
+categorías, sin decirlo la documentación (ni la categoría IV).
+
+**Ahora.**
+
+- `accim/sim/comfort_hooks.py`: `standard_effective_temperature` (el `set_tmp` de pythermalcomfort, sin sus límites de
+  entradas ni redondeo); `SET_TEMPERATURE_RANGE` (10–40 °C, los límites de pythermalcomfort); `SetSetpointHook(zonas,
+  set_cooling_setpoint, set_heating_setpoint, met, clo, air_speed, position='standing', ...)` (sin valores por defecto
+  para las consignas, el met, el clo ni la velocidad del aire, que la v03 no da; avisa fuera de los límites de
+  pythermalcomfort); `apply_set_setpoints` (solo el sensor `SET_RH_<zona>`, sin variables globales ni salidas, así que
+  no tiene `output_frequencies`; excluye el ATHB, que fija los mismos termostatos). La bisección y la preparación del
+  modelo se comparten con el ATHB (`_bisect`, `_model_zones`, `_add_hook_objects`).
+- El SET de pythermalcomfort detiene EnergyPlus con una violación de acceso (código -1073741819) en su primera llamada
+  desde un callback de la API (un gancho que solo lo llama), también con un calentamiento previo y en un hilo con una
+  pila de 64 MB; `pmv_athb` sí funciona. Como, con las demás entradas fijas, las consignas solo dependen de la humedad
+  relativa, el gancho las calcula por bisección para cada humedad de 0 a 100 % (cada 1 %) al crearse, en el proceso
+  principal, y en los callbacks las interpola con la humedad de cada zona (`setpoints_of_humidity`). No hay salida de
+  la SET de las zonas (tarea en `TODO.md`).
+- Documentación: la sección 4.9.2 del uso detallado (nueva) y la 4.8 (las categorías del PPD, con la IV); en
+  `accim/run/run.py`, la de `hooks` de `run_ep` (el gancho de la SET; los mismos ganchos en todas las simulaciones de
+  la carpeta).
+- Decisiones provisionales (en `notes/questions.md`): solo la vía (b), con la tabla; la vía (a) y el cooling effect
+  esperan al autor (tarea bloqueada en `TODO.md`). Los argumentos del gancho no se guardan en el modelo (como en A4):
+  ni `verify_accim_simulation` ni la GUI tratan estas consignas (la tarea de A4 y A6 en `TODO.md`).
+- Pruebas: `tests/core/test_comfort_hooks.py` (6 nuevas: la SET frente a pythermalcomfort, también sentado; la
+  bisección y sus límites; la tabla, su interpolación y el gancho con un controlador falso, y pickle; sus argumentos y
+  avisos; `apply_set_setpoints` y la exclusión con el ATHB; y una semana con EnergyPlus 25.1 y
+  `run_ep(backend='api', hooks=[gancho])`, cuyas consignas son las de la tabla con la humedad del paso anterior y,
+  dentro de la tolerancia, las de la bisección exacta). Suite completa: 1765 pasan y 2 omitidas; la documentación, con
+  los mismos avisos que antes (59). El código del EMS no cambia (solo se añaden sensores al aplicar las consignas), así
+  que no hay comparación nueva de backends: la de A4 (el modelo sin gancho, idéntico con los dos) sigue pasando.
