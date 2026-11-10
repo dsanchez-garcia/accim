@@ -15,8 +15,8 @@ F, copied in ``notes/decisions.md``):
 - ``drift_mode=None`` (the default): no limiter; the output IDFs and the results of every comfort standard are those of
   the ACCIS without it.
 - ``drift_mode='rate'``: the setpoints of each day d are those of the comfort standard (the targets), within
-  ``max_drift_rate`` (K/day, 0.5 by default) of the setpoints applied the day before, |setpoint(d) − applied(d − 1)| ≤
-  max_drift_rate: on the first occupied day, the targets are applied without limit, and from then on the state is the
+  ``max_drift_rate`` (K/day, 0.5 by default) of the setpoints applied the day before, abs(setpoint(d) − applied(d − 1))
+  ≤ max_drift_rate: on the first occupied day, the targets are applied without limit, and from then on the state is the
   setpoint applied at the end of the previous day (the heating and the cooling setpoint, each one).
 - ``drift_mode='window'``: the targets are clipped to [T_rm_in − ``delta_heat``, T_rm_in + ``delta_cool``] (1.0 K
   each by default), where T_rm_in is the exponentially weighted daily running mean of the operative temperature of the

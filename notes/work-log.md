@@ -15,6 +15,22 @@ This log is a lightweight, session-scoped complement to the repository's
 existing tracking files — it does not replace them (see
 [[decisions.md#2026-09-13 — `notes/work-log.md` complements, not replaces, existing tracking files|the related decision]]).
 
+## 2026-11-10 — F3: the indicators of the adaptation to the indoor climate (branch `v1.2.0`, on the server)
+
+- **Objective**: task F3 of block F: the indicators of the causal band, the overcooling, T_rm_in and Tn_exp and the
+  cooling effect for every simulation, and the design of the validation study.
+- **Affected files**: `accim/data/postprocessing/indoor_adaptation.py` (new), `accim/data/postprocessing/main.py`,
+  `accim/data/postprocessing/optional_output_columns.py`, `accim/sim/people.py`, the GUI,
+  [[../docs/source/4_detailed use.md]], [[../CHANGELOG.md]], [[../CAMBIOS_CODIGO_v1.2.0.md]] (§32), [[../DEVLOG.md]],
+  [[../TODO.md]], [[decisions.md]], [[questions.md]].
+- **Finding or decision**: See
+  [[decisions.md#2026-11-10 — The indicators of the adaptation to the indoor climate measure every model with the SET of EnergyPlus (F3)|the decision]].
+  The names of the proposal (`SET`, `PMV_SET`) would contain or be contained in others (`SET (°C)` of the hook,
+  `<zone>_PMV`), so they are `SET_Pierce (°C)` and `SET_Pierce_PMV`; four provisional choices in [[questions.md]]; the
+  simulations of the study wait for the author ([[../TODO.md]]).
+- **Validation**: `tests/core/test_indoor_adaptation.py` 20 passed (also with EnergyPlus 25.1); `tests/core` 1377 passed, 2 skipped; docs with the same 35 warnings.
+- **Next step**: H2 (T0 of `te_ref_nl` from the weather file).
+
 ## 2026-11-10 — F2: the limiter of the drift of the setpoints (branch `v1.2.0`, on the server)
 
 - **Objective**: task F2 of block F: `drift_mode` 'rate' or 'window' (Parkinson, de Dear & Brager, 2020), an option of

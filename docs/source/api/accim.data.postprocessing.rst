@@ -4,6 +4,14 @@ accim.data.postprocessing package
 Submodules
 ----------
 
+accim.data.postprocessing.indoor\_adaptation module
+---------------------------------------------------
+
+.. automodule:: accim.data.postprocessing.indoor_adaptation
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
 accim.data.postprocessing.long\_term\_discomfort module
 -------------------------------------------------------
 

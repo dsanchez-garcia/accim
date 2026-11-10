@@ -96,9 +96,11 @@ def standard_outputs() -> Tuple[str, ...]:
 
 def comfort_hours() -> Tuple[str, ...]:
     """The names in Table of the hours of these outputs that ``Table.format_table(type_of_table='comfort hours')`` takes
-    with those of the ACCIS: those of ``report_long_term_discomfort`` (``'Hours Above Upper Limit (h)'``...); the hours
-    below some temperatures are those whose names contain :data:`HOURS_BELOW` and ``'_'``."""
-    return tuple(name for name in LONG_TERM_OUTPUTS.values() if name.endswith(' (h)'))
+    with those of the ACCIS: those of ``report_long_term_discomfort`` (``'Hours Above Upper Limit (h)'``...) and the
+    occupied hours within the causal SET band of comfort standard 24 (``'HoursInCausalBand (h)'``, since task F3 of
+    block F); the hours below some temperatures are those whose names contain :data:`HOURS_BELOW` and ``'_'``."""
+    return tuple(name for name in LONG_TERM_OUTPUTS.values() if name.endswith(' (h)')) + (
+        ZONE_OUTPUTS['HoursInCausalBand'][0],)
 
 
 def zone_columns(columns: Iterable[str], zone_of: Callable[[str], Optional[str]],

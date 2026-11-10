@@ -36,6 +36,46 @@ Recommended flow: track active work in `TODO.md`, move completed outcomes to `DE
 ## Entries
 
 ### 2026-11-10
+#### [done] F3: the indicators of the adaptation to the indoor climate (branch `v1.2.0`)
+- Context: task F3 of block F (`notes/PROPUESTA_ADAPTACION_INTERIOR_v03.md` §4 F3 and §7; it has no prompt of its own in
+  `notes/PROMPTS_COPILOT_bloque_F_v02.md`, and v04 §5 #35 and §6.8 postpone the cooling effect of A6 to it as an
+  indicator, not a setpoint): the columns of `Table` of the SET and the PMV of the SET of EnergyPlus, the causal TSV,
+  the hours within the causal band and T_rm_in, an indicator of overcooling, the neutrality by exposure Tn_exp of
+  Parkinson et al. (2020, Fig. 6) and the design of the validation study.
+- Changes: new module `accim.data.postprocessing.indoor_adaptation` (`ENERGYPLUS_OUTPUTS`, `EXPOSURE_NEUTRAL_TEMPERATURE`,
+  `OVERCOOLING_TEMPERATURE`, `EXPOSURE_DIFFERENCE`, `TABLE_INDICATORS`; `exposure_neutral_temperature`,
+  `indoor_running_mean`, `causal_band_hours`, `overcooling_hours`, `exposure_hours`, `table_indicators`);
+  `Table(indoor_adaptation_indicators=False)` and the attribute `indoor_adaptation_indicators` (in its JSON file); the
+  outputs of the Pierce model and of the cooling effect averaged (`_AVERAGED_OUTPUTS`), kept with
+  `standard_outputs=True`, with block and building values (the longer names in `_LONGER_OUTPUTS`, so that the SET is not
+  added up with the PMV of the SET) and renamed `<zone>_SET_Pierce (°C)`, `<zone>_SET_Pierce_PMV`,
+  `<zone>_CoolingEffect (°C)`, `<zone>_CoolingEffect_PMV` and `<zone>_CoolingEffect_PPD` (not `SET` and `PMV_SET` as
+  the proposal writes: `SET (°C)` is the SET of the hook, and `<zone>_PMV`, the PMV of Fanger, would be part of
+  `<zone>_PMV_SET`); `optional_output_columns.comfort_hours()` adds `HoursInCausalBand (h)`;
+  `accim.sim.people.add_thermal_comfort_outputs` and `THERMAL_COMFORT_OUTPUTS`, and `CoolingEffectASH55` in
+  `THERMAL_COMFORT_MODELS`, checked against the choices of the field in the IDD of the model (the planning of the fields
+  is now `_comfort_model_changes`, so that several models are added or none); the GUI box and log of the indicators;
+  section 4.7.6 of the detailed use (the outputs, the indicators and the design of the validation study mapped to the
+  functions of accim), notes in 4.7.5, 4.9.2 and 4.10; the API pages of `indoor_adaptation` and of
+  `accim.sim.ems.drift_limiter`, which F2 had not added (its docstring had `|...|`, a substitution of reST: now
+  `abs(...)`).
+- Measured: the outputs of the three models exist for each People object of the sample model with EnergyPlus 25.1
+  (2 days of July: cooling effect 0.16–0.25 K with the air velocity schedule of 0.137 m/s; SET 23.5–30.4 °C).
+- Decisions and provisional choices: the record of `notes/decisions.md` (F3); in `notes/questions.md`: the SET of the
+  indicators is that of the Pierce model of EnergyPlus for every simulation; both variants of the overcooling are
+  counted in the cooling season of the ACCIS, with one threshold (22 °C by default, or the reference heating
+  setpoint given); T_rm_in is calculated from the rows of the table for every simulation; the 2.5 K of the band of
+  Tn_exp is the default although the proposal marks it as inferred; case (i) of the validation study.
+- Files: `accim/data/postprocessing/indoor_adaptation.py` (new), `accim/data/postprocessing/main.py`,
+  `accim/data/postprocessing/optional_output_columns.py`, `accim/sim/people.py`, `accim/sim/ems/drift_limiter.py`
+  (docstring), `accim/gui/forms.py`, `accim/gui/app.py`, `tests/core/test_indoor_adaptation.py` (new),
+  `tests/core/test_pierce_set.py`, `tests/core/test_gui.py`, `docs/source/4_detailed use.md`,
+  `docs/source/api/accim.data.postprocessing.rst`, `docs/source/api/accim.sim.ems.rst`, `CHANGELOG.md`, `TODO.md`,
+  `CAMBIOS_CODIGO_v1.2.0.md` (§32), `notes/decisions.md`, `notes/questions.md`, `notes/work-log.md`.
+- Verification: `tests/core/test_indoor_adaptation.py` 20 passed (the formulas of the sources computed in the tests, the running mean against the Erl of the limiter of F2 to 1e-9 K, `Table` with `rename_cols` True and False and two occupant instances in a zone, `add_thermal_comfort_outputs` on the sample model, and a simulation of 4 days with EnergyPlus 25.1 whose indicators are those of the outputs); `tests/core` 1377 passed, 2 skipped (golden master byte-identical: no output IDF changes); the Sphinx build with the same 35 warnings as before; the new and modified modules compile with Python 3.9.
+- Next step: H2.
+
+### 2026-11-10
 #### [done] F2: the limiter of the drift of the setpoints by the indoor thermal history (branch `v1.2.0`)
 - Context: task F2 of block F (`notes/PROMPTS_COPILOT_bloque_F_v02.md`, `notes/PROPUESTA_ADAPTACION_INTERIOR_v03.md` §4 and §6), after Parkinson, de Dear & Brager (2020), Energy and Buildings 206, 109559, with decisions 6 and 7 of the author (copied in `notes/decisions.md`).
 - Changes:

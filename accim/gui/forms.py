@@ -374,6 +374,7 @@ TABLE_DEFAULTS = {
     'level_excluded_zones': '',
     'split_epw_names': False,
     'long_term_indicators': False,
+    'indoor_adaptation_indicators': False,
     'type_of_table': 'all',
     'figure_type': 'scatter',
     'y_axis_label': '',
@@ -1577,6 +1578,13 @@ def table_arguments(form: Mapping[str, Any]) -> Dict[str, Any]:
             raise FormError("long_term_indicators: the indicators need a table of timesteps or hours (frequency "
                             "'timestep' or 'hourly').")
         table['long_term_indicators'] = True
+    if form.get('indoor_adaptation_indicators'):
+        # The indicators of the adaptation to the indoor climate (block F, task F3; accim.data.postprocessing.
+        # indoor_adaptation), from the rows of each timestep or hour
+        if table['frequency'] not in ('timestep', 'hourly'):
+            raise FormError("indoor_adaptation_indicators: the indicators need a table of timesteps or hours "
+                            "(frequency 'timestep' or 'hourly').")
+        table['indoor_adaptation_indicators'] = True
     return dict(table=table, type_of_table=_choice(form, 'type_of_table', TABLE_TYPES))
 
 

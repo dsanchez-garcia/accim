@@ -24,6 +24,53 @@ it here as answered).
 
 ## Open
 
+## 2026-11-10 — F3: the SET of the indicators of the causal band
+- Context: the proposal of block F (§4 F3) asks for the hours within the causal band of every model; the SET can be
+  that of the Pierce model of EnergyPlus (any model, with the outputs of `add_thermal_comfort_outputs`) or that of
+  pythermalcomfort of the hook of comfort standard 24 (`SET_<zone>`, only in its simulations).
+- Why it matters: the SET of the hook is 0.08–0.155 K below that of EnergyPlus on average (E-F1, F1), so the hours of
+  the band of a simulation of comfort standard 24 differ slightly between both.
+- Options considered: (i) the SET of EnergyPlus for every simulation (implemented: the same measure for every model;
+  the hook still reports its own hours, `HoursInCausalBand_<zone>`); (ii) the SET of the hook where it exists.
+- Owner: the author.
+- Status: open; option (i) implemented provisionally.
+
+## 2026-11-10 — F3: the definition of the overcooling
+- Context: the proposal (§4 F3, a design decision) counts the "occupied hours with the operative temperature below the
+  reference heating setpoint or, following Parkinson 2021, below 22 °C in the cooling season", without fixing the
+  season of the first variant nor the reference setpoint.
+- Why it matters: in the heating season, the hours below a heating setpoint are underheating, not overcooling.
+- Options considered: (i) both variants in the cooling season of the ACCIS (from `cooling_season_start` to the day
+  before `cooling_season_end`, 121 and 274 by default, by the date of each row), with one threshold: 22 °C by default,
+  or the reference heating setpoint given as `overcooling_temperature` (implemented); (ii) the first variant in all
+  the occupied hours; (iii) the hours of the cooling season defined by the operation of the cooling system.
+- Owner: the author.
+- Status: open; option (i) implemented provisionally.
+
+## 2026-11-10 — F3: T_rm_in and the band of Tn_exp
+- Context: Tn_exp = 1.06 + 0.951·T_rm_in (Parkinson et al., 2020, Fig. 6, with T_rm_in instead of the mean indoor
+  temperature of the building, Tin), and the hours with abs(To − Tn_exp) > 2.5 K, a threshold that the proposal marks
+  as inferred.
+- Why it matters: the simulations with the limiter of the drift have their own T_rm_in (the EMS, with the operative
+  temperature of the previous timestep); the 2.5 K are not of a published source.
+- Options considered: T_rm_in (i) calculated from the rows of the table for every simulation, with the definition and
+  the start of the limiter (implemented: the same measure for every model), or (ii) the output of the limiter where it
+  exists; the band (i) 2.5 K by default, as the proposal (implemented, documented as inferred, an argument), or (ii)
+  no default.
+- Owner: the author.
+- Status: open; options (i) implemented provisionally; the coefficients of the air-conditioned buildings (AC) by
+  default, as the proposal.
+
+## 2026-11-10 — F3: the static reference of case (i) of the validation study
+- Context: the design of the study (§4 F3) has the case "(i) referencia estática PMV (24–26 / 20–22 °C)".
+- Why it matters: accim has the PMV setpoints of `apply_pmv_setpoints` (category II: −0.5 and 0.5), the static
+  setpoints of comfort mode 0 of the comfort standards (those of ISO 7730 of categories 80 and 90 are 25 and 27 °C or
+  24 and 26 °C for cooling, and 19 and 22 °C or 20 and 23 °C for heating), and fixed thermostats.
+- Options considered: one of them, or fixed setpoints of 24–26 °C and 20–22 °C (which accim would set with the static
+  setpoints of a comfort standard defined by its data, section 4.2.5).
+- Owner: the author.
+- Status: open; section 4.7.6 of the detailed use lists the first two; no simulation run (`TODO.md`).
+
 ## 2026-11-10 — F2: the setpoint "applied the previous day" of the rate
 - Context: decision 6 of block F: with `drift_mode='rate'`, |setpoint(d) − setpoint_applied(d − 1)| ≤ `max_drift_rate`
   and "the state is the applied setpoint of the previous day". The setpoints of the ACCIS change in each timestep (the

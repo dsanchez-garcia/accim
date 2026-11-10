@@ -747,6 +747,21 @@ def test_the_long_term_discomfort_indicators_of_the_table_form(tmp_path):
         forms.table_arguments(dict(form, long_term_indicators=True))
 
 
+def test_the_indoor_adaptation_indicators_of_the_table_form(tmp_path):
+    for name in ('model.idf', 'model[CS_INT EN16798[CA_3[Seville.csv'):
+        (tmp_path / name).write_text('')
+    form = dict(forms.TABLE_DEFAULTS, folder=str(tmp_path), idf_path='model.idf')
+    # Not by default (the arguments of Table are those of before)
+    assert forms.TABLE_DEFAULTS['indoor_adaptation_indicators'] is False
+    assert 'indoor_adaptation_indicators' not in forms.table_arguments(form)['table']
+    table = forms.table_arguments(dict(form, frequency='timestep', source_frequency='timestep',
+                                       indoor_adaptation_indicators=True))['table']
+    assert table['indoor_adaptation_indicators'] is True and table['frequency'] == 'timestep'
+    with pytest.raises(FormError, match="indoor_adaptation_indicators: the indicators need a table of timesteps or "
+                                        "hours"):
+        forms.table_arguments(dict(form, indoor_adaptation_indicators=True))
+
+
 def test_arguments_of_the_figures():
     form = dict(forms.TABLE_DEFAULTS, vars_to_gather_rows=['ComfMod'], vars_to_gather_cols=['EPW'],
                 data_on_x_axis='RMOT (C)', data_on_y_main_axis=['Cooling (kWh/m2)', 'Heating (kWh/m2)'],
@@ -1755,6 +1770,14 @@ def test_the_tab_of_table(app, tmp_path, monkeypatch):
     tab.show_table(table)
     assert 'long-term discomfort indicators of CEN/TR 16798-2' in logged[-1]
     assert 'Building_Occupied Hours (h)' in logged[-1] and 'model[Seville' in logged[-1]
+    # And those of the adaptation to the indoor climate (block F)
+    tab.vars['indoor_adaptation_indicators'].set(True)
+    assert forms.table_arguments(tab.form())['table']['indoor_adaptation_indicators'] is True
+    table.indoor_adaptation_indicators = pd.DataFrame({'Source': ['model[Seville'],
+                                                       'Building_Overcooling Hours (h)': [3.0]})
+    tab.show_table(table)
+    assert 'adaptation to the indoor climate (block F)' in logged[-1]
+    assert 'Building_Overcooling Hours (h)' in logged[-1] and 'model[Seville' in logged[-1]
 
 
 def test_the_tab_of_the_parametric_study(app, tmp_path):

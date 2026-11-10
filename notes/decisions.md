@@ -11,6 +11,27 @@ Durable architectural/process decisions for this repository and its Obsidian
 vault. Newest first. Use [[templates/decision-record.md|the decision-record
 template]] to add a new entry.
 
+## 2026-11-10 — The indicators of the adaptation to the indoor climate measure every model with the SET of EnergyPlus (F3)
+
+- **Status**: accepted (task F3 of block F, `notes/PROPUESTA_ADAPTACION_INTERIOR_v03.md` §4 F3; the cooling effect of A6
+  as an indicator, v04 §5 #35 and §6.8); the choices that the proposal does not fix are provisional in
+  `notes/questions.md`.
+- **Context**: the article of validation of block F compares the setpoints of the comfort standards, of the causal SET
+  model of comfort standard 24 and of the limiter of the drift in the same terms: the hours within the causal band, the
+  overcooling, the neutrality by exposure and the cooling effect.
+- **Decision**: a module of indicators, `accim.data.postprocessing.indoor_adaptation`, with functions of the rows of
+  each timestep or hour (as those of the long-term discomfort, D1) and `Table(indoor_adaptation_indicators=True)`, an
+  attribute with a row for each simulation; the SET of the indicators is that of the Pierce model of EnergyPlus, which
+  any model reports with `accim.sim.people.add_thermal_comfort_outputs` (the models Fanger, Pierce and
+  CoolingEffectASH55 of the People objects, and their outputs for each occupant instance); the cooling effect is the
+  output of EnergyPlus (Engineering Reference 25.2, 19.1.9), not a setpoint; Tn_exp (Parkinson et al., 2020, Fig. 6)
+  is only a diagnostic; the outputs of EnergyPlus get names in `Table` that no other name contains
+  (`SET_Pierce (°C)`, `SET_Pierce_PMV`, `CoolingEffect (°C)`, `CoolingEffect_PMV`, `CoolingEffect_PPD`).
+- **Consequences**: the indicators of the SET need the outputs of `add_thermal_comfort_outputs` before the simulations
+  (without them, NaN and a warning); the indicators are those of the rows of the table (hourly means with hourly rows),
+  and T_rm_in is calculated from them for every simulation; the study itself is a design (section 4.7.6 of the
+  detailed use), whose simulations wait for choices of the author (`TODO.md`).
+
 ## 2026-11-10 — The limiter of the drift of the setpoints is an option of the ACCIS of each zone, in Erl (F2)
 
 - **Status**: accepted (task F2 of block F; decisions 6 and 7 of the author of 2026-11-10,

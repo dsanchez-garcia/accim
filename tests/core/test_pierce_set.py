@@ -79,10 +79,11 @@ def test_add_thermal_comfort_model(tmp_path, monkeypatch):
     add_thermal_comfort_model(idf, 'KSU')
     for people in idf.idfobjects['People']:
         assert _models(people)[:5] == ['AdaptiveASH55', 'AdaptiveCEN15251', 'Pierce', 'KSU', '']
-    with pytest.raises(ValueError, match=r"comfort_model must be one of \['Fanger', 'Pierce', 'KSU'\], not "
-                                         r"'AdaptiveASH55'"):
+    with pytest.raises(ValueError, match=r"comfort_model must be one of \['Fanger', 'Pierce', 'KSU', "
+                                         r"'CoolingEffectASH55'\], not 'AdaptiveASH55'"):
         add_thermal_comfort_model(idf, 'AdaptiveASH55')
-    assert THERMAL_COMFORT_MODELS == ('Fanger', 'Pierce', 'KSU')
+    # CoolingEffectASH55 since task F3 of block F (in the IDDs that have it, as that of EnergyPlus 25.1)
+    assert THERMAL_COMFORT_MODELS == ('Fanger', 'Pierce', 'KSU', 'CoolingEffectASH55')
     # Without an empty field, nothing changes
     people = idf.idfobjects['People'][0]
     for n in range(5, 8):

@@ -12,6 +12,14 @@ accim.sim.ems.custom\_regimes module
    :show-inheritance:
    :undoc-members:
 
+accim.sim.ems.drift\_limiter module
+-----------------------------------
+
+.. automodule:: accim.sim.ems.drift_limiter
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
 accim.sim.ems.erl module
 ------------------------
 

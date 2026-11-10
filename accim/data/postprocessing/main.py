@@ -17,7 +17,7 @@
 from typing import Tuple, Union
 
 from accim._deprecation import accepts_legacy_kwargs
-from accim.data.postprocessing import optional_output_columns, pmv_index_columns
+from accim.data.postprocessing import indoor_adaptation, optional_output_columns, pmv_index_columns
 
 
 def _share_y_axis(reference_ax, ax):
@@ -60,15 +60,19 @@ _AVERAGED_OUTPUTS = [
     'Zone Thermal Comfort CEN 15251 Adaptive Model Running Average Outdoor Air Temperature',
     'Zone Thermal Comfort ASHRAE 55 Adaptive Model Running Average Outdoor Air Temperature',
     'Zone Thermal Comfort Fanger Model PMV',
-    'Zone Thermal Comfort Fanger Model PPD'
+    'Zone Thermal Comfort Fanger Model PPD',
+    # The SET of the Pierce model and the cooling effect of ASHRAE 55 (see indoor_adaptation.ENERGYPLUS_OUTPUTS)
+    *indoor_adaptation.ENERGYPLUS_OUTPUTS,
 ]
 
 
 def _averaged_outputs() -> list:
-    """The outputs that Table averages over time, and over the occupant instances of a zone: those above, those of the
-    setpoints based on the PMV but their hour counters (see :mod:`accim.data.postprocessing.pmv_index_columns`), and the
-    optional outputs of the ACCIS but the hours and degree hours, such as the outdoor metric of the custom model and the
-    outputs of the ATHB (see :mod:`accim.data.postprocessing.optional_output_columns`)."""
+    """The outputs that Table averages over time, and over the occupant instances of a zone: those above (with the
+    outputs of the thermal comfort models of :func:`accim.sim.people.add_thermal_comfort_outputs`, see
+    :data:`accim.data.postprocessing.indoor_adaptation.ENERGYPLUS_OUTPUTS`), those of the setpoints based on the PMV
+    but their hour counters (see :mod:`accim.data.postprocessing.pmv_index_columns`), and the optional outputs of the
+    ACCIS but the hours and degree hours, such as the outdoor metric of the custom model and the outputs of the ATHB
+    (see :mod:`accim.data.postprocessing.optional_output_columns`)."""
     return (_AVERAGED_OUTPUTS + list(pmv_index_columns.averaged_outputs())
             + list(optional_output_columns.averaged_outputs()))
 
@@ -243,9 +247,11 @@ def _varies(column) -> bool:
     return len(values) > 2 or (len(values) == 2 and not any('_X' in value for value in values))
 
 
-# The hour counters of the ACCIS whose names contain the name of another one, and the suffix of the building averages
-# of add_building_averages, which are not outputs of a zone
-_LONGER_OUTPUTS = ('Occupied Comfortable Hours_No Applicability', 'Occupied Discomfortable Hours_No Applicability')
+# The hour counters of the ACCIS and the outputs of the thermal comfort models whose names contain the name of another
+# one, and the suffix of the building averages of add_building_averages, which are not outputs of a zone
+_LONGER_OUTPUTS = ('Occupied Comfortable Hours_No Applicability', 'Occupied Discomfortable Hours_No Applicability',
+                   *(output for output in indoor_adaptation.ENERGYPLUS_OUTPUTS
+                     if any(other != output and other in output for other in indoor_adaptation.ENERGYPLUS_OUTPUTS)))
 _BUILDING_AVERAGE = '_BUILDING_AVERAGE'
 #: The columns of Table with the parts of the dates, which are text ('01'), also in the CSV files of
 #: gen_csv_concatenated
@@ -448,6 +454,18 @@ class Table:
         setpoints without the tolerance and the occupied hours of each zone (the standard outputs of AddAccis). False
         by default (since accim 1.2.0).
     :type long_term_indicators: bool
+    :param indoor_adaptation_indicators: True to calculate the indicators of the adaptation to the indoor climate of
+        each simulation (task F3 of block F of accim 1.2.0), for each occupied zone and the building, in the attribute
+        ``indoor_adaptation_indicators``, with the defaults of
+        :func:`accim.data.postprocessing.indoor_adaptation.table_indicators` (which takes the table, ``Table.df``, and
+        its other arguments): the occupied hours within the causal SET band of Sun, Brager & Schiavon (2026), with the
+        SET of the Pierce model of EnergyPlus, the overcooled hours of the cooling season (below 22 °C), the running
+        mean indoor temperature and the neutral temperature by exposure of Parkinson, de Dear & Brager (2020), the
+        cooling effect of ASHRAE 55 and the hours limited by the limiter of the drift of the setpoints. It needs
+        ``frequency`` 'timestep' or 'hourly' and the operative temperature and the occupied hours of each zone (the
+        standard outputs of AddAccis); the SET and the cooling effect are those of
+        :func:`accim.sim.people.add_thermal_comfort_outputs`. False by default.
+    :type indoor_adaptation_indicators: bool
     :ivar df: The pandas DataFrame instance.
         It is modified when method ``format_table`` is called.
     :ivar df_backup: The full pandas DataFrame instance resulting from class ``Table``.
@@ -470,6 +488,9 @@ class Table:
     :ivar long_term_indicators: With ``long_term_indicators=True``, a DataFrame with a row for each simulation and the
         indicators of the long-term thermal discomfort of each occupied zone and of the building (``<zone>_Hours Above
         Upper Limit (h)``, ``Building_Degree Hours Below Lower Limit (Kh)``...).
+    :ivar indoor_adaptation_indicators: With ``indoor_adaptation_indicators=True``, a DataFrame with a row for each
+        simulation and the indicators of the adaptation to the indoor climate of each occupied zone and of the building
+        (``<zone>_Hours In Causal Band (h)``, ``Building_Overcooling Hours (h)``...).
 
     The method ``save`` saves the table in a pickle file, which ``Table.load`` reads to resume the session without
     reading the CSV files again, and in a JSON file that can be read.
@@ -499,6 +520,7 @@ class Table:
         name_export_rows_with_nan: str = None,
         name_export_rows_not_corr_agg: str = None,
         long_term_indicators: bool = False,
+        indoor_adaptation_indicators: bool = False,
     ):
         """
         Constructor method
@@ -513,6 +535,9 @@ class Table:
         if long_term_indicators and frequency not in ('timestep', 'hourly'):
             raise ValueError("long_term_indicators needs the rows of each timestep or hour (frequency 'timestep' or "
                              f"'hourly'), not frequency {frequency!r}.")
+        if indoor_adaptation_indicators and frequency not in ('timestep', 'hourly'):
+            raise ValueError("indoor_adaptation_indicators needs the rows of each timestep or hour (frequency "
+                             f"'timestep' or 'hourly'), not frequency {frequency!r}.")
 
         if datasets is None:
             datasets = []
@@ -705,9 +730,11 @@ class Table:
                 'Zone Thermal Comfort Fanger Model PMV',
                 'Zone Thermal Comfort Fanger Model PPD'
             ]
-            # And those of the setpoints based on the PMV, and the optional outputs of the ACCIS
+            # And those of the setpoints based on the PMV, the optional outputs of the ACCIS, and the outputs of the
+            # thermal comfort models of add_thermal_comfort_outputs (the SET of Pierce and the cooling effect)
             cleaned_columns.extend(pmv_index_columns.standard_outputs())
             cleaned_columns.extend(optional_output_columns.standard_outputs())
+            cleaned_columns.extend(indoor_adaptation.ENERGYPLUS_OUTPUTS)
 
             summed_dataframes = []
 
@@ -1244,6 +1271,10 @@ class Table:
             'Zone Thermal Comfort Fanger Model PPD': 'PPD (%)',
             # Reported by the setpoints based on the PMV
             pmv_index_columns.MEAN_AIR_TEMPERATURE: f'{pmv_index_columns.MEAN_AIR_TEMPERATURE} (°C)',
+            # The SET of Pierce and the cooling effect of ASHRAE 55 ('SET_Pierce (°C)'...; _of_output does not take
+            # the longer ones, such as 'Zone Thermal Comfort Pierce Model Standard Effective Temperature PMV', for
+            # 'Zone Thermal Comfort Pierce Model Standard Effective Temperature')
+            **indoor_adaptation.ENERGYPLUS_OUTPUTS,
         }
         outputdict_normalisation = {
             'Zone Air Volume': 'Zone Air Volume (m3)',
@@ -1726,7 +1757,10 @@ class Table:
                 'Heating Coil Heating Rate': 'Heating Energy Demand',
                 'Cooling Coil Total Cooling Rate': 'Cooling Energy Demand',
                 'Zone Thermal Comfort Fanger Model PMV': 'PMV',
-                'Zone Thermal Comfort Fanger Model PPD': 'PPD (%)'
+                'Zone Thermal Comfort Fanger Model PPD': 'PPD (%)',
+                # The SET of Pierce and the cooling effect of ASHRAE 55 ('Block1:Zone1_SET_Pierce (°C)'...), the
+                # longer names after the shorter ones that they contain
+                **dict(sorted(indoor_adaptation.ENERGYPLUS_OUTPUTS.items(), key=lambda item: len(item[0]))),
             }
 
             renaming_criteria = {
@@ -1906,6 +1940,12 @@ class Table:
 
             self.long_term_indicators = table_indicators(df, occupied_zone_list)
 
+        if indoor_adaptation_indicators:
+            # The indicators of the adaptation to the indoor climate of each simulation (block F, task F3), only in
+            # the tables that ask for them; the zone of each column is that of the table
+            self.indoor_adaptation_indicators = indoor_adaptation.table_indicators(df, occupied_zone_list,
+                                                                                   zone_of=zone_of)
+
         # df.to_excel('checkpoint_04.xlsx')
 
         # todo pop up when process ends; by default True
@@ -1915,7 +1955,7 @@ class Table:
         'arguments', 'frequency', 'occupied_zone_list', 'hvac_zone_list', 'block_list', 'cols_for_multiindex',
         'suggested_vars_dict', 'type_of_table', 'custom_cols', 'indexcols', 'val_cols', 'df',
         'wrangled_df_pivoted', 'wrangled_df_unstacked', 'wrangled_df_stacked', 'wrangled_df_multiindex',
-        'long_term_indicators',
+        'long_term_indicators', 'indoor_adaptation_indicators',
     )
 
     def _json_content(self) -> dict:

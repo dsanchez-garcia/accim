@@ -125,6 +125,9 @@ Lo que ya está en otros documentos no se repite aquí:
 - **F2 (bloque F).** El limitador de la deriva de las consignas por la historia térmica interior (`drift_mode`
   'rate' o 'window', con `max_drift_rate`, `alpha_indoor`, `delta_cool`, `delta_heat` e `initial_T_rm_in`), en Erl y
   solo en las zonas que lo piden (sección 31).
+- **F3 (bloque F).** Los indicadores de la adaptación al clima interior (`Table(indoor_adaptation_indicators=True)`:
+  horas en la banda causal del SET, sobreenfriamiento, T_rm_in y Tn_exp, efecto de enfriamiento) y las salidas de los
+  modelos de confort de EnergyPlus (`add_thermal_comfort_outputs`), con su nombre en `Table` (sección 32).
 - Las categorías del PMV y la aproximación de la corrección del metabolismo se han comprobado en ISO 7730:2025 y
   EN 16798-1:2019, y el modelo dinámico de vestimenta de A5, en Schiavon y Lee (2013) y ASHRAE 55-2020 (sección 6).
 - Lo que quedaba abierto se ha comprobado: el golden master y las pruebas de EnergyPlus 26.1 y 26.2, también la de A5
@@ -1829,3 +1832,35 @@ El bloque F (`notes/PROPUESTA_ADAPTACION_INTERIOR_v03.md` §4 y §6) pide un lim
 - Decisiones provisionales en `notes/questions.md`: la consigna aplicada del día anterior es la de su último paso; los
   días sin horas ocupadas no cambian T_rm_in; el código 0 del parámetro `drift_mode` lo desactiva.
 - Pruebas: `tests/core/test_drift_limiter.py` (11) y `tests/parametric_and_optimisation/test_drift_parameters.py` (2).
+
+## 32. Los indicadores de la adaptación al clima interior (F3, bloque F)
+
+La propuesta del bloque F (`notes/PROPUESTA_ADAPTACION_INTERIOR_v03.md` §4 F3) pide medir las consignas de todos los
+modelos en los mismos términos: horas dentro de la banda causal del SET, sobreenfriamiento, neutralidad por exposición
+(Parkinson, de Dear y Brager, 2020, Fig. 6) y, por la decisión sobre A6 (v04 §6.8), el efecto de enfriamiento de la
+velocidad del aire como indicador.
+
+**Antes.** `Table` descartaba con `standard_outputs=True` las salidas del modelo Pierce y del efecto de enfriamiento, y
+sin ello las sumaba en el tiempo; no había indicadores de la banda causal, del sobreenfriamiento ni de Tn_exp.
+
+**Ahora.**
+
+- Módulo nuevo `accim.data.postprocessing.indoor_adaptation`: `causal_band_hours` (horas ocupadas con el SET dentro de
+  la banda de TSV ±0,5 de Sun, Brager y Schiavon, 2026, por encima y por debajo), `overcooling_hours` (horas ocupadas
+  de la temporada de refrigeración por debajo de 22 °C o de una consigna de calefacción de referencia),
+  `indoor_running_mean` (T_rm_in con la definición y el arranque del limitador de F2), `exposure_neutral_temperature`
+  (Tn_exp = 1,06 + 0,951·T_rm_in, y los coeficientes MM y NV) y `exposure_hours` (horas con abs(To − Tn_exp) > 2,5 K,
+  umbral inferido por la propuesta), y `table_indicators`.
+- `Table(indoor_adaptation_indicators=True)`: atributo `indoor_adaptation_indicators` con una fila por simulación y los
+  indicadores de cada zona y del edificio; casilla en la interfaz gráfica.
+- `accim.sim.people.add_thermal_comfort_outputs`: añade los modelos Fanger, Pierce y CoolingEffectASH55 a los objetos
+  People y pide sus salidas por instancia de ocupantes; `add_thermal_comfort_model` acepta CoolingEffectASH55 si el IDD
+  del modelo lo tiene (el de EnergyPlus 9.4 no).
+- `Table` promedia esas salidas, las conserva con `standard_outputs=True`, les da valores de bloque y edificio y las
+  llama `<zone>_SET_Pierce (°C)`, `<zone>_SET_Pierce_PMV`, `<zone>_CoolingEffect (°C)`, `<zone>_CoolingEffect_PMV` y
+  `<zone>_CoolingEffect_PPD` (ningún nombre contiene otro); la tabla 'comfort hours' incluye `HoursInCausalBand (h)`.
+- Documentación: sección 4.7.6 (también el diseño del estudio de validación, con las funciones de accim de cada caso).
+- Decisiones provisionales en `notes/questions.md`: el SET de los indicadores es el de EnergyPlus; el sobreenfriamiento
+  se cuenta en la temporada de refrigeración del ACCIS con un único umbral; T_rm_in se calcula de las filas de la tabla
+  y la banda de Tn_exp es de 2,5 K por defecto; el caso (i) del estudio.
+- Pruebas: `tests/core/test_indoor_adaptation.py` (20, también con EnergyPlus 25.1).
