@@ -24,6 +24,42 @@ it here as answered).
 
 ## Open
 
+## 2026-11-10 — C2: how the long-term comfort objectives reach the optimisation, and with which range
+- Context: v03 (C2) asks for `hours_outside_range` (Method A), `degree_hours` (Method B) and `ppd_weighted_hours`
+  (Method C) of CEN/TR 16798-2:2019, Annex D, in `objectives.py`, by zone and building and by warm and cold period,
+  "with the categories of EN 16798-1 as ranges", and the deviations of Table E.1 as constraints; it has no prompt, and
+  the brief no adjustment. The reducers of besos get one output (`EPResults`) each, so they cannot combine the
+  operative temperature, the limits and the occupants that the functions of D1 need.
+- Options considered: (a) the EMS counts the indicators in each timestep (summed EMS outputs of each zone and of the
+  building), opt-in, and the reducers sum them; (b) only after the simulations (`Table(long_term_indicators=True)` of
+  D1), which a parametric study can use but an optimisation cannot; (c) reducers of the operative temperature with fixed
+  limits, which cannot leave out the hours without occupants. For the range: (i) the setpoints without the tolerance of
+  the ACCIS (`AHSTnoTol`, `ACSTnoTol`), those of the hour counters of accim and of `Table(long_term_indicators=True)`,
+  which are the limits of the categories of EN 16798-1 with INT EN16798 (1) within its applicability; (ii) fixed ranges
+  of the categories (Table B.2 of EN 16798-1, for instance), independent of the comfort model of the control. For the
+  building: (1) the sums of the zones, as D1; (2) their means, as `add_building_averages`.
+- Owner: the author.
+- Status: open; (a), (i) and (1) decided provisionally (`report_long_term_discomfort=False` by default, so the output
+  IDFs do not change; the same limits as D1 and the other hour counters; the EnergyPlus comfort status of
+  `hours_outside_comfort` stays the objective independent of the control), pending author. The constraint bound of
+  `deviation_constraint_bound` is that of the simulated period (the yearly criterion); the weekly and monthly ones are
+  checked after the simulations (`TODO.md`). The setpoints based on the PMV are left out (`ValueError`): their zones do
+  not keep the setpoints of the ACCIS.
+
+## 2026-11-10 — C2: Method C (the PPD-weighted hours) as an objective
+- Context: Method C weighs each occupied hour outside the range with PPD(PMV)/PPD(PMVlimit) (ISO 7730:2025, formula
+  (5)). The models with temperature setpoints do not calculate the PMV (the Fanger model of their People objects only
+  with `setpoint_type='pmv'`), and the setpoints based on the PMV control an index (aPMV, ePMV or PMV) whose setpoints
+  are not PMV limits but for the PMV index.
+- Options considered: (a) not counted until the author chooses (blocked task in `TODO.md`); (b) the EMS of
+  `accim.sim.pmv_index` counts it with the PMV of each zone and the PMV setpoints of its thermostats without the
+  tolerance (the inverse of the setpoints of the index), only for the PMV index or for all; (c) the models with
+  temperature setpoints get the Fanger model and fixed PMV limits of a category of EN 16798-1 (their output IDFs change,
+  and their PMV depends on clothing, activity and air speed that they do not set).
+- Owner: the author.
+- Status: open; (a) decided provisionally (the most conservative: no output IDF changes and no choice of PMV or limits
+  is made for the author), pending author.
+
 ## 2026-11-09 — B4: the running mean of JPN Aqilah 2025 (comfort standard 23)
 - Context: the model of Aqilah et al. (2025, equation 8) uses `Trm = α·Trm−1 + (1 − α)·Tod−1` with α = 0.8 (McCartney
   & Nicol, equation 7), "started a week before the day of the survey" (v03, B4). EnergyPlus calculates the running mean

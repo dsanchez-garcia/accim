@@ -3071,6 +3071,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             existing_hvac_widen_outdoor_temperature_limits: bool = False,
             existing_hvac_ideal_loads_backup: bool = False,
             existing_hvac_radiant_setpoints: bool = True,
+            report_long_term_discomfort: bool = False,
     ):
         """Initialize the simulation base instance.
         
@@ -3103,6 +3104,11 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         :param existing_hvac_widen_outdoor_temperature_limits: forwarded to ``accim.sim.accis.add_accis_to_idf``.
         :param existing_hvac_ideal_loads_backup: forwarded to ``accim.sim.accis.add_accis_to_idf``.
         :param existing_hvac_radiant_setpoints: forwarded to ``accim.sim.accis.add_accis_to_idf``.
+        :param report_long_term_discomfort: forwarded to ``accim.sim.accis.add_accis_to_idf``: True to add the outputs
+            of the long-term discomfort of each zone and of the building (``Hours Above Upper Limit_<zone>``,
+            ``Degree Hours Above Upper Limit_<zone>``..., :mod:`accim.sim.ems.long_term_discomfort`), which the
+            reducers ``hours_outside_range`` and ``degree_hours`` of
+            :mod:`accim.parametric_and_optimisation.objectives` read (accim predefined and custom models).
         
         Usage
         -----
@@ -3196,6 +3202,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                         existing_hvac_widen_outdoor_temperature_limits=existing_hvac_widen_outdoor_temperature_limits,
                         existing_hvac_ideal_loads_backup=existing_hvac_ideal_loads_backup,
                         existing_hvac_radiant_setpoints=existing_hvac_radiant_setpoints,
+                        report_long_term_discomfort=report_long_term_discomfort,
                     )
         elif is_apmv_setpoints or is_epmv_setpoints:
             apply_setpoints = apmv.apply_apmv_setpoints if is_apmv_setpoints else apmv.apply_epmv_setpoints
@@ -13462,6 +13469,7 @@ class ParametricSimulation(SimulationBase):
             existing_hvac_widen_outdoor_temperature_limits: bool = False,
             existing_hvac_ideal_loads_backup: bool = False,
             existing_hvac_radiant_setpoints: bool = True,
+            report_long_term_discomfort: bool = False,
     ):
         """Initialize a parametric simulation.
         
@@ -13494,6 +13502,11 @@ class ParametricSimulation(SimulationBase):
         :param existing_hvac_widen_outdoor_temperature_limits: forwarded to ``accim.sim.accis.add_accis_to_idf``.
         :param existing_hvac_ideal_loads_backup: forwarded to ``accim.sim.accis.add_accis_to_idf``.
         :param existing_hvac_radiant_setpoints: forwarded to ``accim.sim.accis.add_accis_to_idf``.
+        :param report_long_term_discomfort: forwarded to ``accim.sim.accis.add_accis_to_idf``: True to add the outputs
+            of the long-term discomfort of each zone and of the building (``Hours Above Upper Limit_<zone>``,
+            ``Degree Hours Above Upper Limit_<zone>``..., :mod:`accim.sim.ems.long_term_discomfort`), which the
+            reducers ``hours_outside_range`` and ``degree_hours`` of
+            :mod:`accim.parametric_and_optimisation.objectives` read (accim predefined and custom models).
         
         Usage
         -----
@@ -13530,6 +13543,7 @@ class ParametricSimulation(SimulationBase):
             existing_hvac_widen_outdoor_temperature_limits=existing_hvac_widen_outdoor_temperature_limits,
             existing_hvac_ideal_loads_backup=existing_hvac_ideal_loads_backup,
             existing_hvac_radiant_setpoints=existing_hvac_radiant_setpoints,
+            report_long_term_discomfort=report_long_term_discomfort,
         )
         # Parametric-specific attributes
         self.outputs_param_simulation = None
@@ -13644,6 +13658,7 @@ class OptimisationSimulation(SimulationBase):
             existing_hvac_widen_outdoor_temperature_limits: bool = False,
             existing_hvac_ideal_loads_backup: bool = False,
             existing_hvac_radiant_setpoints: bool = True,
+            report_long_term_discomfort: bool = False,
     ):
         """Initialize an optimisation simulation.
         
@@ -13676,6 +13691,11 @@ class OptimisationSimulation(SimulationBase):
         :param existing_hvac_widen_outdoor_temperature_limits: forwarded to ``accim.sim.accis.add_accis_to_idf``.
         :param existing_hvac_ideal_loads_backup: forwarded to ``accim.sim.accis.add_accis_to_idf``.
         :param existing_hvac_radiant_setpoints: forwarded to ``accim.sim.accis.add_accis_to_idf``.
+        :param report_long_term_discomfort: forwarded to ``accim.sim.accis.add_accis_to_idf``: True to add the outputs
+            of the long-term discomfort of each zone and of the building (``Hours Above Upper Limit_<zone>``,
+            ``Degree Hours Above Upper Limit_<zone>``..., :mod:`accim.sim.ems.long_term_discomfort`), which the
+            reducers ``hours_outside_range`` and ``degree_hours`` of
+            :mod:`accim.parametric_and_optimisation.objectives` read (accim predefined and custom models).
         
         Usage
         -----
@@ -13712,6 +13732,7 @@ class OptimisationSimulation(SimulationBase):
             existing_hvac_widen_outdoor_temperature_limits=existing_hvac_widen_outdoor_temperature_limits,
             existing_hvac_ideal_loads_backup=existing_hvac_ideal_loads_backup,
             existing_hvac_radiant_setpoints=existing_hvac_radiant_setpoints,
+            report_long_term_discomfort=report_long_term_discomfort,
         )
         # Optimization-specific attributes
         self.outputs_optimisation = None
@@ -13954,6 +13975,7 @@ class AccimPredefModelsParamSim(ParametricSimulation):
             existing_hvac_widen_outdoor_temperature_limits: bool = False,
             existing_hvac_ideal_loads_backup: bool = False,
             existing_hvac_radiant_setpoints: bool = True,
+            report_long_term_discomfort: bool = False,
     ):
         """Initialize the predefined-model parametric wrapper.
         
@@ -13981,6 +14003,11 @@ class AccimPredefModelsParamSim(ParametricSimulation):
         :param existing_hvac_widen_outdoor_temperature_limits: forwarded to ``accim.sim.accis.add_accis_to_idf``.
         :param existing_hvac_ideal_loads_backup: forwarded to ``accim.sim.accis.add_accis_to_idf``.
         :param existing_hvac_radiant_setpoints: forwarded to ``accim.sim.accis.add_accis_to_idf``.
+        :param report_long_term_discomfort: forwarded to ``accim.sim.accis.add_accis_to_idf``: True to add the outputs
+            of the long-term discomfort of each zone and of the building (``Hours Above Upper Limit_<zone>``,
+            ``Degree Hours Above Upper Limit_<zone>``..., :mod:`accim.sim.ems.long_term_discomfort`), which the
+            reducers ``hours_outside_range`` and ``degree_hours`` of
+            :mod:`accim.parametric_and_optimisation.objectives` read (accim predefined and custom models).
         
         Usage
         -----
@@ -14015,6 +14042,7 @@ class AccimPredefModelsParamSim(ParametricSimulation):
             existing_hvac_widen_outdoor_temperature_limits=existing_hvac_widen_outdoor_temperature_limits,
             existing_hvac_ideal_loads_backup=existing_hvac_ideal_loads_backup,
             existing_hvac_radiant_setpoints=existing_hvac_radiant_setpoints,
+            report_long_term_discomfort=report_long_term_discomfort,
         )
         # The baseline is the custom model with the default coefficients of 'accim custom model'. Without them, its
         # heating setpoint was above the cooling one, so EnergyPlus stopped in the test simulations of the outputs

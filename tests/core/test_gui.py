@@ -446,6 +446,18 @@ def test_the_floor_and_ceiling_of_the_setpoints_in_the_form(tmp_path):
     assert 'set ACST = ACSTceil' not in text
 
 
+def test_the_long_term_discomfort_in_the_form(tmp_path):
+    # Not reported by default, as in AddAccis
+    assert 'report_long_term_discomfort' not in forms.add_accis_arguments(_form(tmp_path))
+    assert forms.ADD_ACCIS_DEFAULTS['report_long_term_discomfort'] is False
+    arguments = forms.add_accis_arguments(_form(tmp_path, report_long_term_discomfort=True))
+    assert arguments['report_long_term_discomfort'] is True
+    # It needs the adaptive setpoint temperatures
+    with pytest.raises(FormError, match='report_long_term_discomfort: the long-term discomfort needs the adaptive '
+                                        'setpoint temperatures'):
+        forms.add_accis_arguments(_form(tmp_path, setpoint_type='pmv', report_long_term_discomfort=True))
+
+
 def test_the_regimes_of_the_custom_model_in_the_form(tmp_path):
     from accim.gui import tasks
     from accim.sim.arguments import CustomRegime
@@ -1205,17 +1217,21 @@ def test_the_window_gives_the_floor_and_ceiling_of_the_setpoints(app, tmp_path):
     tab.table_b2.set('Office, category III: 19.0 / 27.0 °C')
     assert (tab.vars['heating_setpoint_floor'].get(), tab.vars['cooling_setpoint_ceiling'].get()) == ('19.0', '27.0')
     tab.vars['report_hours_below'].set('18 17')
+    tab.vars['report_long_term_discomfort'].set(True)
     arguments = forms.add_accis_arguments(tab.form())
     assert (arguments['heating_setpoint_floor'], arguments['cooling_setpoint_ceiling']) == (19.0, 27.0)
     assert arguments['report_hours_below'] == [18, 17]
-    # The PMV-based setpoints have neither floor nor ceiling: their fields are disabled and left out
+    assert arguments['report_long_term_discomfort'] is True
+    # The PMV-based setpoints have neither floor nor ceiling, nor the long-term discomfort of the ACCIS: their fields
+    # are disabled and left out
     tab.vars['setpoint_type'].set('pmv')
     assert all(widget.instate(['disabled']) for widget in tab.limit_widgets[1:])
     assert str(tab.table_b2_combo.cget('state')) == 'disabled'
     arguments = forms.add_accis_arguments(tab.form())
     assert 'heating_setpoint_floor' not in arguments and arguments['report_hours_below'] == [18, 17]
+    assert 'report_long_term_discomfort' not in arguments
     tab.vars['setpoint_type'].set('temperature')
-    assert not tab.limit_widgets[1].instate(['disabled'])
+    assert not tab.limit_widgets[1].instate(['disabled']) and not tab.limit_widgets[-1].instate(['disabled'])
 
 
 def test_the_window_gives_the_regimes_of_the_custom_model(app, tmp_path):

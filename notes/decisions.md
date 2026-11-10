@@ -11,6 +11,23 @@ Durable architectural/process decisions for this repository and its Obsidian
 vault. Newest first. Use [[templates/decision-record.md|the decision-record
 template]] to add a new entry.
 
+## 2026-11-10 — The long-term comfort objectives are EMS counters of the ACCIS with the range of its setpoints, opt-in (C2)
+
+- **Status**: accepted (proposal C2 of `notes/PROPUESTAS_MEJORAS_post_1.1.0_v03.md`, which has no prompt; the design
+  decided provisionally, see questions.md)
+- **Context**: v03 asks for the indicators of CEN/TR 16798-2:2019 (Annex D: Methods A, B and C) as objectives of the
+  parametric and optimisation module, reusing D1, and the deviations of Table E.1 as constraints. The reducers of besos
+  get one output each, while the indicators need the operative temperature, the limits and the occupants together.
+- **Decision**: with `report_long_term_discomfort=True` (False by default), the EMS of each zone counts Methods A and B
+  in each timestep with the setpoints without the tolerance as the limits, as the hour counters of the ACCIS and
+  `Table(long_term_indicators=True)` of D1 (`accim.sim.ems.long_term_discomfort`), with the sums of the zones for the
+  building; `hours_outside_range` and `degree_hours` sum these outputs, and `deviation_constraint_bound` gives the
+  bound of a constraint with Table E.1 (`deviation_limit` of D1). Method C is not counted (it needs a PMV and limits
+  that the author has to choose).
+- **Consequences**: the output IDFs do not change unless it is asked; the objectives follow the comfort model of the
+  control (the comfort status of EnergyPlus stays the objective independent of it); the setpoints based on the PMV
+  cannot have them; the weekly and monthly deviations of Table E.1 are checked after the simulations.
+
 ## 2026-11-09 — JPN Aqilah 2025 is the built-in comfort standard 23, defined by its data, with the running mean of EnergyPlus (B4)
 
 - **Status**: accepted (proposal B4 of `notes/PROPUESTAS_MEJORAS_post_1.1.0_v03.md` with decisions D1 and D2 of the

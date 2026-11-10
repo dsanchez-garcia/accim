@@ -26,6 +26,11 @@ configurations when you need a mean, a sum, or the raw time series.
 ``hours_outside_comfort`` and ``fraction_outside_comfort`` turn the adaptive
 comfort status that EnergyPlus reports for each People object into a comfort
 objective that does not depend on the comfort model that accim controls.
+``hours_outside_range`` and ``degree_hours`` read the long-term discomfort of
+the occupied hours that the ACCIS counts (Methods A and B of CEN/TR 16798-2:2019,
+Annex D, with ``report_long_term_discomfort``), and
+``deviation_constraint_bound`` gives the bound of a constraint with the
+acceptable deviations of its Annex E (Table E.1).
 
 Examples
 --------
@@ -34,6 +39,8 @@ total = sum_results(result)
 checked_total = checked_sum_results(result)
 series = return_time_series(result)
 hours = hours_outside_comfort(result)
+hot_hours = hours_outside_range(result)
+bound = deviation_constraint_bound(occupied_hours=2100, period='yearly', level='6%')
 """
 import numpy as np
 
@@ -238,6 +245,157 @@ def fraction_outside_comfort(result):
     """
     occupied = _comfort_status(result, ('timestep', 'hourly'))
     return float((1 - occupied).mean()) if len(occupied) else 0.0
+
+
+def _long_term_outputs(units):
+    """The prefixes of the outputs of the long-term discomfort of the ACCIS with some units ('H' for Method A, 'Kh'
+    for Method B), ``<output>_`` (:data:`accim.sim.ems.long_term_discomfort.OUTPUTS`)."""
+    from accim.sim.ems.long_term_discomfort import OUTPUTS
+
+    return tuple(f'{output}_' for output, (_, output_units) in OUTPUTS.items() if output_units == units)
+
+
+def _long_term_sum(result, units, method):
+    """The checked sum of an output of the long-term discomfort of the ACCIS, after checking its name if the result
+    has it (``'EMS,<output>_<zone>'`` in the results of besos)."""
+    prefixes = _long_term_outputs(units)
+    name = getattr(result, 'name', None)
+    if isinstance(name, str) and name.strip():
+        variable = name.split(',', 1)[-1].strip().upper()
+        if not variable.startswith(tuple(prefix.upper() for prefix in prefixes)):
+            expected = ' or '.join(f'"{prefix}<zone>"' for prefix in prefixes)
+            raise ValueError(f'{method} reads the outputs {expected} (or "..._Building") of the ACCIS '
+                             f'(report_long_term_discomfort=True), not "{name}".')
+    return checked_sum_results(result)
+
+
+def hours_outside_range(result):
+    """Compute the occupied hours outside the comfort range of a zone (or of the building) of the ACCIS.
+
+    Method A of CEN/TR 16798-2:2019, Annex D: the number of occupied hours with the operative temperature outside
+    the range, above its upper limit (the warm period) or below its lower limit (the cold period). The ACCIS counts
+    them in each timestep with ``report_long_term_discomfort=True`` (:mod:`accim.sim.ems.long_term_discomfort`), with
+    the setpoints without the tolerance as the limits: the EMS outputs ``Hours Above Upper Limit_<zone>`` and
+    ``Hours Below Lower Limit_<zone>`` (and ``..._Building``, the sums of the zones), summed, in hours.
+
+    Parameters
+    ----------
+    result : Any
+        BESOS result of one of these outputs, at any frequency (each value is the sum of its period).
+
+    Returns
+    -------
+    float
+        The occupied hours outside the range in the simulated period. Divided by the occupied hours (the sum of
+        ``Occupied Hours_<zone>``, which do not change from one evaluation to another), they are the percentage of
+        Method A.
+
+    Raises
+    ------
+    ValueError
+        If the values are missing or not valid (see :func:`checked_sum_results`), or the result is not one of these
+        outputs.
+
+    Usage
+    -----
+    Use it as the reducer of a VariableReader (or as the ``func`` of a row of the output readers of the parametric
+    module) of these outputs, whose key is ``EMS``, as an objective or as a constraint, whose bound
+    ``deviation_constraint_bound`` gives with the acceptable deviations of CEN/TR 16798-2:2019, Annex E.
+
+    Examples
+    --------
+    hot_hours = hours_outside_range(result)
+    """
+    return _long_term_sum(result, 'H', 'hours_outside_range')
+
+
+def degree_hours(result):
+    """Compute the degree hours of the occupied hours outside the comfort range of a zone (or of the building) of the
+    ACCIS.
+
+    Method B of CEN/TR 16798-2:2019, Annex D: the weighting factor is 0 within the range,
+    Θo,limit,lower ≤ Θo ≤ Θo,limit,upper, and wf = abs(Θo − Θo,limit) outside it; the indicator is the sum of wf
+    times the time, separately for the warm period (Θo > Θo,limit,upper) and the cold period
+    (Θo < Θo,limit,lower). The ACCIS counts it in each timestep with ``report_long_term_discomfort=True``
+    (:mod:`accim.sim.ems.long_term_discomfort`), with the setpoints without the tolerance as the limits: the EMS
+    outputs ``Degree Hours Above Upper Limit_<zone>`` and ``Degree Hours Below Lower Limit_<zone>`` (and
+    ``..._Building``, the sums of the zones), summed, in degree hours (Kh).
+
+    Parameters
+    ----------
+    result : Any
+        BESOS result of one of these outputs, at any frequency (each value is the sum of its period).
+
+    Returns
+    -------
+    float
+        The degree hours of the simulated period (K·h).
+
+    Raises
+    ------
+    ValueError
+        If the values are missing or not valid (see :func:`checked_sum_results`), or the result is not one of these
+        outputs.
+
+    Usage
+    -----
+    Use it as the reducer of a VariableReader (or as the ``func`` of a row of the output readers of the parametric
+    module) of these outputs, whose key is ``EMS``, to minimise how far the operative temperature goes outside the
+    range, not only how long.
+
+    Examples
+    --------
+    warm_degree_hours = degree_hours(result)
+    """
+    return _long_term_sum(result, 'Kh', 'degree_hours')
+
+
+def deviation_constraint_bound(occupied_hours, period='yearly', level='6%'):
+    """Compute the bound of a constraint on the occupied hours outside the comfort range with the acceptable
+    deviations of CEN/TR 16798-2:2019, Annex E, Table E.1.
+
+    Table E.1 accepts the occupied hours outside the range up to 20 % (or 50 %) of the occupied hours of a week,
+    12 % (25 %) of a month, or 3 % (6 %) of a year (the levels '3%' and '6%', named after their yearly percentages,
+    :data:`accim.data.postprocessing.long_term_discomfort.DEVIATION_LIMITS`): with 2100 occupied hours a year, 63 h
+    on the 3 % level and 126 h on the 6 % level.
+
+    Parameters
+    ----------
+    occupied_hours : float
+        The occupied hours of the period: those of the simulated period (the sum of ``Occupied Hours_<zone>``, or of
+        those of all the zones for the building), which do not change from one evaluation to another with the same
+        model and weather file.
+    period : str
+        'yearly', 'monthly' or 'weekly', the period of Table E.1 that ``occupied_hours`` are.
+    level : str
+        '3%' or '6%'.
+
+    Returns
+    -------
+    str
+        The bound, in the format of the constraint bounds of besos and platypus: ``'<=126.0'`` for 2100 h, 'yearly'
+        and '6%' (:func:`accim.data.postprocessing.long_term_discomfort.deviation_limit`).
+
+    Raises
+    ------
+    ValueError
+        If the period or the level is not one of Table E.1.
+
+    Usage
+    -----
+    Give it as the bound of a constraint whose reducer is ``hours_outside_range`` (``constraint_bounds`` of
+    ``set_problem``): an evaluation whose hours outside the range in the simulated period are more than the
+    deviation of Table E.1 does not meet the constraint. The weekly and monthly deviations need the occupied hours of
+    each week or month, so they are checked after the simulations (``deviation_check`` of
+    ``accim.data.postprocessing.long_term_discomfort``).
+
+    Examples
+    --------
+    bound = deviation_constraint_bound(occupied_hours=2100, period='yearly', level='6%')
+    """
+    from accim.data.postprocessing.long_term_discomfort import deviation_limit
+
+    return f'<={deviation_limit(occupied_hours, period, level)!r}'
 
 
 def return_time_series(result):

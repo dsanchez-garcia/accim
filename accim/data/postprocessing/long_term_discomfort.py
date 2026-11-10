@@ -17,14 +17,18 @@ from measured or simulated data, and the acceptable deviations of its Annex E:
   formula (5) (:func:`ppd_from_pmv`); the sum of wf times the time, for the warm period (PMV > PMVlimit,upper) and the
   cold period (PMV < PMVlimit,lower). A PMV equal to the upper limit, which Annex D leaves in neither case, is taken as
   within the range (as in Method B).
-- Annex E, Table E.1 (:func:`deviation_check`): the acceptable deviations, as percentages of the occupied hours of a
-  week (20 % or 50 %), a month (12 % or 25 %) or a year (3 % or 6 %); "it is allowed on the 6 % level to have
-  temperatures above the criteria for 126 h during a year but not more than 20 h during a working week and 44 h
-  during a working month".
+- Annex E, Table E.1 (:func:`deviation_check`, :func:`deviation_limit`): the acceptable deviations, as percentages of
+  the occupied hours of a week (20 % or 50 %), a month (12 % or 25 %) or a year (3 % or 6 %); "it is allowed on the
+  6 % level to have temperatures above the criteria for 126 h during a year but not more than 20 h during a working
+  week and 44 h during a working month".
 
 ISO 7730:2025 has left out its sections on the long-term evaluation, so the reference of these indicators is
 CEN/TR 16798-2. :func:`hours_below` gives the occupied hours below some temperatures, as the outputs
-``HoursBelow_<T>_<zone>`` of the ACCIS (``report_hours_below`` of :class:`accim.sim.accis.AddAccis`).
+``HoursBelow_<T>_<zone>`` of the ACCIS (``report_hours_below`` of :class:`accim.sim.accis.AddAccis`). The ACCIS also
+counts those of Methods A and B in the simulations, with the setpoints without the tolerance as the limits
+(``report_long_term_discomfort`` of :class:`accim.sim.accis.AddAccis`, :mod:`accim.sim.ems.long_term_discomfort`), so
+that the parametric and optimisation module can read them as objectives and constraints
+(:mod:`accim.parametric_and_optimisation.objectives`).
 
 The functions take pandas Series (or arrays) of the same length, one value per row (a timestep or an hour), and the
 occupancy: ``occupied`` (None: all the rows are occupied; or a Series of booleans, or of numbers such as the
@@ -43,6 +47,7 @@ __all__ = [
     'DEVIATION_LIMITS',
     'degree_hours',
     'deviation_check',
+    'deviation_limit',
     'hours_below',
     'hours_outside_range',
     'ppd_from_pmv',
@@ -169,10 +174,30 @@ def ppd_weighted_hours(pmv: Values, pmv_lower: Values, pmv_upper: Values, occupi
     return {'hot_h': float(hot_h.sum()), 'cold_h': float(cold_h.sum())}
 
 
+def deviation_limit(occupied_hours: float, period: str = 'yearly', level: str = '6%') -> float:
+    """The largest number of occupied hours outside the range within the acceptable deviation of CEN/TR 16798-2:2019,
+    Annex E, Table E.1, for a period: 20 % (or 50 %) of the occupied hours of a week, 12 % (25 %) of a month, or 3 %
+    (6 %) of a year (:data:`DEVIATION_LIMITS`).
+
+    :param occupied_hours: The occupied hours of the period.
+    :param period: 'weekly', 'monthly' or 'yearly'.
+    :param level: The level of Table E.1, named after its yearly percentage: '3%' (20 %, 12 % and 3 %) or '6%'
+        (50 %, 25 % and 6 %).
+    :return: The hours (the percentage of the period times its occupied hours).
+    :raises ValueError: If the period or the level is not one of Table E.1.
+    """
+    if level not in DEVIATION_LIMITS:
+        raise ValueError(f'level must be one of {list(DEVIATION_LIMITS)} (the yearly percentages of Table E.1 of '
+                         f'CEN/TR 16798-2), not {level!r}.')
+    if period not in DEVIATION_LIMITS[level]:
+        raise ValueError(f'period must be one of {list(DEVIATION_LIMITS[level])}, not {period!r}.')
+    return DEVIATION_LIMITS[level][period] / 100.0 * float(occupied_hours)
+
+
 def deviation_check(hours_outside: float, occupied_hours: float, period: str = 'yearly', level: str = '6%') -> bool:
     """Whether the hours outside the range are within the acceptable deviation of CEN/TR 16798-2:2019, Annex E,
     Table E.1, for a period: at most 20 % (or 50 %) of the occupied hours of a week, 12 % (25 %) of a month, or
-    3 % (6 %) of a year (:data:`DEVIATION_LIMITS`).
+    3 % (6 %) of a year (:data:`DEVIATION_LIMITS`, :func:`deviation_limit`).
 
     :param hours_outside: The occupied hours outside the range in the period (for instance, those above the upper
         limit, ``hot_h`` of :func:`hours_outside_range`).
@@ -183,12 +208,7 @@ def deviation_check(hours_outside: float, occupied_hours: float, period: str = '
     :return: True if the hours outside are not more than the percentage of the occupied hours.
     :raises ValueError: If the period or the level is not one of Table E.1.
     """
-    if level not in DEVIATION_LIMITS:
-        raise ValueError(f'level must be one of {list(DEVIATION_LIMITS)} (the yearly percentages of Table E.1 of '
-                         f'CEN/TR 16798-2), not {level!r}.')
-    if period not in DEVIATION_LIMITS[level]:
-        raise ValueError(f'period must be one of {list(DEVIATION_LIMITS[level])}, not {period!r}.')
-    return float(hours_outside) <= DEVIATION_LIMITS[level][period] / 100.0 * float(occupied_hours)
+    return float(hours_outside) <= deviation_limit(occupied_hours, period, level)
 
 
 def hours_below(temp: Values, thresholds: Iterable[float] = (18, 17, 16), occupied: Any = None,

@@ -587,7 +587,8 @@ class AddAccisTab(_Tab):
                      *forms.CUSTOM_MODEL_FIELDS, 'custom_outdoor_metric', *forms.CUSTOM_OUTDOOR_METRIC_FIELDS, 'epw',
                      'custom_regimes', *forms.SETPOINT_LIMIT_FIELDS, 'report_hours_below'):
             self.vars[name] = tk.StringVar(value=defaults[name])
-        for name in ('keep_existing_outputs', 'add_building_averages', 'debug_ems', *forms.EXISTING_HVAC_OPTIONS):
+        for name in ('keep_existing_outputs', 'add_building_averages', 'debug_ems', 'report_long_term_discomfort',
+                     *forms.EXISTING_HVAC_OPTIONS):
             self.vars[name] = tk.BooleanVar(value=defaults[name])
         self.vars['existing_hvac_availability_schedule'] = tk.StringVar(
             value=defaults['existing_hvac_availability_schedule'])
@@ -799,8 +800,9 @@ class AddAccisTab(_Tab):
         return frame
 
     def _setpoint_limits_frame(self, parent) -> ttk.LabelFrame:
-        frame = ttk.LabelFrame(parent, text='Floor and ceiling of the setpoints (setpoint type temperature), and '
-                                            'occupied hours below some temperatures', padding=6)
+        frame = ttk.LabelFrame(parent, text='Floor and ceiling of the setpoints (setpoint type temperature), '
+                                            'occupied hours below some temperatures, and long-term discomfort',
+                               padding=6)
         # The values of Table B.2 of EN 16798-1 fill both fields (accim.constants.EN16798_TABLE_B2)
         self.table_b2 = tk.StringVar(value='')
         self.table_b2_combo = _grid_combo(frame, 0, 'EN 16798-1, Table B.2 (fills the floor and ceiling):',
@@ -811,10 +813,19 @@ class AddAccisTab(_Tab):
             self.limit_widgets.append(_grid_entry(frame, row, f'{label}:', self.vars[name], width=8))
         _grid_entry(frame, 3, 'Occupied hours below (°C, such as 18 17 16; empty: none):',
                     self.vars['report_hours_below'], width=8)
+        # The long-term discomfort needs the setpoints of the ACCIS, so it is disabled with those based on the PMV
+        long_term = ttk.Checkbutton(frame, text='Long-term discomfort of the occupied hours, Methods A and B of '
+                                                'CEN/TR 16798-2 (report_long_term_discomfort)',
+                                    variable=self.vars['report_long_term_discomfort'])
+        long_term.grid(row=4, column=0, columnspan=2, sticky='w')
+        self.limit_widgets.append(long_term)
         ttk.Label(frame, text='The heating setpoint is not lower than the floor, and the cooling setpoint not higher '
                               'than the ceiling, whatever the comfort standard and comfort mode (the cooling '
-                              'setpoint is rounded down, below the ceiling). The PMV-based setpoints have neither.',
-                  wraplength=760, foreground='gray25').grid(row=4, column=0, columnspan=2, sticky='w', pady=(2, 0))
+                              'setpoint is rounded down, below the ceiling). The PMV-based setpoints have neither. '
+                              'The long-term discomfort reports the occupied hours and degree hours of each zone '
+                              'and of the building above the cooling setpoint and below the heating setpoint '
+                              'without the tolerance.',
+                  wraplength=760, foreground='gray25').grid(row=5, column=0, columnspan=2, sticky='w', pady=(2, 0))
         return frame
 
     def _table_b2_chosen(self) -> None:
@@ -991,9 +1002,10 @@ class AddAccisTab(_Tab):
             # The comfort models are not used with PMV control, but AddAccis needs them
             values['comfort_standard'] = forms.ADD_ACCIS_DEFAULTS['comfort_standard']
         if values['setpoint_type'] != 'temperature':
-            # The fields of the floor and ceiling of the setpoints, and of the regimes of the custom model, are
-            # disabled
-            values.update(dict.fromkeys(forms.SETPOINT_LIMIT_FIELDS, ''), custom_regimes='')
+            # The fields of the floor and ceiling of the setpoints, of the regimes of the custom model and of the
+            # long-term discomfort are disabled
+            values.update(dict.fromkeys(forms.SETPOINT_LIMIT_FIELDS, ''), custom_regimes='',
+                          report_long_term_discomfort=False)
         return values
 
     def state(self) -> Dict[str, Any]:

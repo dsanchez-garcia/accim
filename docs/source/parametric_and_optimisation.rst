@@ -334,6 +334,43 @@ Each row is a zone (its ``People`` object), so an optimisation gets an objective
 rows of the zones that matter. As with the other readers, the hours of the design days count too when
 the model simulates its sizing periods.
 
+**Long-term comfort objectives (CEN/TR 16798-2).** With ``report_long_term_discomfort=True`` (accim
+predefined and custom models), the models report the long-term discomfort of the occupied hours that
+CEN/TR 16798-2:2019 (Annex D) defines, with the range of the comfort model of accim (between the
+setpoints without the tolerance, see :ref:`long-term-discomfort-outputs`): Method A, the occupied hours
+above the cooling setpoint and below the heating setpoint (``Hours Above Upper Limit_<zone>`` and
+``Hours Below Lower Limit_<zone>``), and Method B, their degree hours (``Degree Hours Above Upper
+Limit_<zone>`` and ``Degree Hours Below Lower Limit_<zone>``), with the sums of the zones as
+``..._Building``. ``hours_outside_range`` and ``degree_hours`` sum them, and check that the output is
+one of them:
+
+.. code-block:: python
+
+    from accim.parametric_and_optimisation.objectives import degree_hours, hours_outside_range, sum_results
+
+    sim = ParametricSimulation(..., parameters_type='accim custom model', report_long_term_discomfort=True)
+    selection = sim.select_outputs(meters=['Electricity:HVAC'],
+                                   variables=['Hours Above Upper Limit_Building',
+                                              'Degree Hours Above Upper Limit_Building'],
+                                   on_missing='raise')
+    sim.apply_outputs_preflight(df_meters_sel=selection['meters'], df_vars_sel=selection['variables'],
+                                clean_mode='all')
+
+    readers_meters = selection['meters'].copy()
+    readers_meters['func'] = [sum_results] * len(readers_meters)
+    readers_long_term = selection['variables'].copy()
+    readers_long_term['func'] = [degree_hours if name.startswith('Degree') else hours_outside_range
+                                 for name in readers_long_term['variable_name']]
+    readers_long_term['name'] = readers_long_term['variable_name']
+    sim.set_output_readers(df_output_meter=readers_meters, df_output_variable=readers_long_term)
+
+Since these outputs follow the comfort model of accim, a study that changes it (the custom model, for
+instance) measures each evaluation against its own range; the comfort status of EnergyPlus above does
+not depend on it. Method C (the PPD-weighted hours) needs the PMV, which these models do not calculate.
+The weekly and monthly deviations of Annex E, and the percentages of Method A, are calculated after the
+simulations (:func:`~accim.data.postprocessing.long_term_discomfort.deviation_check`, and
+``Table(long_term_indicators=True)``).
+
 :doc:`jupyter_notebooks/parametric_and_optimisation_examples/04_outputs_preflight_and_output_control`
 shows the other methods for output objects, for example to find and remove duplicates.
 
@@ -453,6 +490,26 @@ reported:
 meets the constraints dominates any that does not (as the algorithms of platypus compare them), so
 the ``pareto-optimal`` column of the results and ``keep_sim_files='non-dominated'`` only keep, among
 the evaluations with the smallest violation, those that are not dominated in the objectives.
+
+The acceptable deviations of CEN/TR 16798-2:2019 (Annex E, Table E.1) can be the bound of a constraint
+on the occupied hours outside the range of the long-term discomfort (``report_long_term_discomfort=True``,
+above): at most 3 % or 6 % of the occupied hours of a year (the levels ``'3%'`` and ``'6%'``), 12 % or
+25 % of those of a month, and 20 % or 50 % of those of a week.
+:func:`~accim.parametric_and_optimisation.objectives.deviation_constraint_bound` gives the bound from
+the occupied hours of the simulated period, which do not change from one evaluation to another with the
+same model and weather file (the sum of ``Occupied Hours_<zone>`` of the zones in a first simulation):
+
+.. code-block:: python
+
+    from besos.objectives import VariableReader
+    from accim.parametric_and_optimisation.objectives import deviation_constraint_bound, hours_outside_range
+
+    occupied_hours = 2100   # the occupied hours of the building in a year (all its zones)
+    warm_hours = VariableReader(key_value='EMS', variable_name='Hours Above Upper Limit_Building',
+                                frequency='Hourly', func=hours_outside_range,
+                                name='Hours Above Upper Limit_Building')
+    optim.set_problem(minimize_outputs=[True], constraints=[warm_hours],
+                      constraint_bounds=[deviation_constraint_bound(occupied_hours, 'yearly', '6%')])  # '<=126.0'
 
 6. Run the simulations
 ----------------------

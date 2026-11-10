@@ -15,6 +15,27 @@ This log is a lightweight, session-scoped complement to the repository's
 existing tracking files — it does not replace them (see
 [[decisions.md#2026-09-13 — `notes/work-log.md` complements, not replaces, existing tracking files|the related decision]]).
 
+## 2026-11-10 — C2: the long-term comfort objectives (branch `v1.2.0`, on the server)
+
+- **Objective**: C2, after B4, in the order of the author.
+- **Affected files**: `accim/sim/ems/long_term_discomfort.py` (new), `accim/sim/accis.py`,
+  `accim/parametric_and_optimisation/objectives.py`, `accim/parametric_and_optimisation/main.py`,
+  `accim/data/postprocessing/long_term_discomfort.py`, `accim/utils/verification.py`, `accim/gui/app.py`,
+  `accim/gui/forms.py`, `tests/core/test_long_term_discomfort_counters.py` (new) and three test files,
+  [[../docs/source/4_detailed use.md]], `docs/source/parametric_and_optimisation.rst`, [[../CHANGELOG.md]],
+  [[../CAMBIOS_CODIGO_v1.2.0.md]] (§18), [[../DEVLOG.md]], [[../TODO.md]], [[decisions.md]], [[questions.md]].
+- **Finding or decision**: See
+  [[decisions.md#2026-11-10 — The long-term comfort objectives are EMS counters of the ACCIS with the range of its setpoints, opt-in (C2)|the decision]].
+  The reducers of besos get one output each, so the indicators are counted by the EMS; EnergyPlus writes the units of
+  the EMS output variables in capitals (`Kh` is reported as `[KH]`). Method C and the weekly and monthly constraints
+  wait ([[questions.md]], [[../TODO.md]]).
+- **Validation**: 22 new tests of the counters, 6 of the reducers and the parametric module, and 1 new (and 1 extended)
+  of the GUI; EnergyPlus 25.1: a winter and a
+  summer week (check 6, 0 mismatches; the totals of the functions of D1), the other outputs unchanged, three models
+  with the EMS and API backends (identical), and a parametric study of two simulations with the new reducers; the golden
+  master (unchanged); the whole suite; the documentation build.
+- **Next step**: E4.
+
 ## 2026-11-09 — B4: JPN Aqilah 2025, comfort standard 23 (branch `v1.2.0`, on the server)
 
 - **Objective**: B4, after B3, in the order of the author (with decisions D1 and D2).

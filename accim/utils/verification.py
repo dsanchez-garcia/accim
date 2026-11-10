@@ -111,6 +111,18 @@ def verify_accim_simulation(
     cooling setpoint of each zone with a ceiling (``cooling_setpoint_ceiling``, ``ACSTceil``) is not above it
     (``Check5_ACSTceil``), in the outputs at timestep frequency, or else hourly.
 
+    **Check 6 – The long-term discomfort (per zone and building, output IDFs of AddAccis with**
+    ``report_long_term_discomfort=True`` **, see** :mod:`accim.sim.ems.long_term_discomfort` **):**
+    In each timestep with occupants (the output ``Occupied Hours_<zone>``, the length of the timestep), the outputs
+    ``Hours Above Upper Limit_<zone>`` and ``Hours Below Lower Limit_<zone>`` are the length of the timestep if the
+    operative temperature of the zone of the previous timestep (that which the EMS reads) is above the cooling setpoint
+    without the tolerance (``Adaptive Cooling Setpoint Temperature_No Tolerance_<zone>``), or below the heating
+    setpoint without the tolerance, and ``Degree Hours Above Upper Limit_<zone>`` and ``Degree Hours Below Lower
+    Limit_<zone>`` are the difference times that length (Methods A and B of CEN/TR 16798-2:2019, Annex D); in the
+    timesteps without occupants, they are 0 (``Check6_<output>``). The outputs of the building (``..._Building``) are
+    the sums of those of the zones. They are checked with the outputs at timestep frequency; the first timestep of each
+    environment is not checked.
+
     :param eso_file_path: Path to the eplusout.eso file.
     :type eso_file_path: str
     :param idf_path: Path to the IDF file used for simulation (to read accim args and window names).
@@ -800,6 +812,15 @@ def verify_accim_simulation(
     mismatch_rows.extend(rows)
 
     # ─────────────────────────────────────────────
+    # 5.F CHECK 6 – THE LONG-TERM DISCOMFORT
+    # ─────────────────────────────────────────────
+    rows, messages = _long_term_mismatches(building, eso['data'], calculation_tolerance)
+    if messages:
+        print("\n--- Check 6: The long-term discomfort of the occupied hours ---")
+        print('\n'.join(messages))
+    mismatch_rows.extend(rows)
+
+    # ─────────────────────────────────────────────
     # 6. RETURN RESULTS
     # ─────────────────────────────────────────────
     result_df = pd.DataFrame(mismatch_rows)
@@ -1296,6 +1317,79 @@ def _setpoint_limit_mismatches(building, data: Mapping[str, pd.DataFrame],
                                             tolerance)
             mismatches.extend(new_rows)
             lines.append(line)
+    return mismatches, lines
+
+
+def _long_term_mismatches(building, data: Mapping[str, pd.DataFrame],
+                          tolerance: float) -> Tuple[List[dict], List[str]]:
+    """Check 6 of :func:`verify_accim_simulation`: the long-term discomfort of each zone with the program
+    CountLongTermDiscomfort_<zone> (:mod:`accim.sim.ems.long_term_discomfort`), from its occupied hours, its operative
+    temperature of the previous timestep and its setpoints without the tolerance, and that of the building, the sums of
+    the zones, in the outputs at timestep frequency.
+
+    :return: The mismatches, and the lines of the summary (none if the model has no long-term discomfort).
+    """
+    from accim.sim.ems.long_term_discomfort import BUILDING, BUILDING_PROGRAM, OUTPUTS, PROGRAM_PREFIX
+
+    zones = [str(p.Name)[len(PROGRAM_PREFIX):] for p in building.idfobjects['EnergyManagementSystem:Program']
+             if str(p.Name).upper().startswith(PROGRAM_PREFIX.upper())
+             and str(p.Name).upper() != BUILDING_PROGRAM.upper()]
+    if not zones:
+        return [], []
+    frame = data.get('Timestep')
+    if frame is None or frame.empty:
+        return [], ['  Not checked: it needs the outputs at timestep frequency.']
+    outputs = _Outputs(frame)
+    sensors = {str(sensor.Name).upper(): (str(sensor.OutputVariable_or_OutputMeter_Index_Key_Name),
+                                          str(sensor.OutputVariable_or_OutputMeter_Name))
+               for sensor in building.idfobjects['EnergyManagementSystem:Sensor']}
+    mismatches: List[dict] = []
+    lines = ['  Timestep outputs']
+    totals: Dict[str, List[np.ndarray]] = {output: [] for output in OUTPUTS}
+    for zone in zones:
+        hours = outputs.get('EMS', f'Occupied Hours_{zone}')
+        upper = outputs.get('EMS', f'Adaptive Cooling Setpoint Temperature_No Tolerance_{zone}')
+        lower = outputs.get('EMS', f'Adaptive Heating Setpoint Temperature_No Tolerance_{zone}')
+        sensor = sensors.get(f'{zone}_OpT'.upper())
+        temperature = None if sensor is None else outputs.get(*sensor)
+        found = {output: outputs.get('EMS', f'{output}_{zone}') for output in OUTPUTS}
+        for output, values in found.items():
+            totals[output].append(values)
+        if any(values is None for values in (hours, upper, lower, temperature)):
+            lines.append(f"  '{zone}': not checked, without its occupied hours, setpoints without the tolerance or "
+                         f"operative temperature at timestep frequency.")
+            continue
+        previous = outputs.previous(temperature)
+        occupied = hours > 0
+        above = occupied & (previous > upper)
+        below = occupied & (previous < lower)
+        expected = {
+            'Hours Above Upper Limit': np.where(above, hours, 0.0),
+            'Hours Below Lower Limit': np.where(below, hours, 0.0),
+            'Degree Hours Above Upper Limit': np.where(above, (previous - upper) * hours, 0.0),
+            'Degree Hours Below Lower Limit': np.where(below, (lower - previous) * hours, 0.0),
+        }
+        for output, values in found.items():
+            if values is None:
+                lines.append(f"  '{zone}' Check6_{output}: not checked, without the output {output}_{zone}.")
+                continue
+            # The first timestep of each environment, whose previous temperature is that of the warm-up days
+            reference = np.where(np.isnan(previous), np.nan, expected[output])
+            new_rows, line = _mismatch_rows(outputs.timestamps, values, reference, zone, f'Check6_{output}',
+                                            f'{output}_{zone} from the operative temperature of the previous '
+                                            f'timestep', tolerance)
+            mismatches.extend(new_rows)
+            lines.append(line)
+    for output, values in totals.items():
+        found = outputs.get('EMS', f'{output}_{BUILDING}')
+        if found is None or any(value is None for value in values):
+            lines.append(f"  '{BUILDING}' Check6_{output}: not checked, without the outputs of the building and of "
+                         f"all the zones.")
+            continue
+        new_rows, line = _mismatch_rows(outputs.timestamps, found, sum(values), BUILDING, f'Check6_{output}',
+                                        f'{output}_{BUILDING}, the sum of the zones', tolerance)
+        mismatches.extend(new_rows)
+        lines.append(line)
     return mismatches, lines
 
 

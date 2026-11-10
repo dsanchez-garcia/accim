@@ -6,12 +6,14 @@ documentación de uso. Recoge las propuestas del bloque A de `notes/PROPUESTAS_M
 esta versión: las P1, A2, A1 y A5, en este orden; y después D2 (sección 7), que el autor incluyó en la 1.2.0 el
 2026-11-09 con E2 y E1, y las demás propuestas de la v03 (`notes/PROPUESTAS_MEJORAS_post_1.1.0_v03.md`), en el orden
 del autor (`notes/COPILOT_BRIEF_v1.2.0_v01.md`): E1 (sección 8), E2 (sección 9), A3 (sección 10), B1 (sección 11),
-B5 (sección 12), C1 (sección 13), D1 (sección 14), B2 (sección 15), B3 (sección 16), B4 (sección 17)...
+B5 (sección 12), C1 (sección 13), D1 (sección 14), B2 (sección 15), B3 (sección 16), B4 (sección 17), C2 (sección
+18)...
 
 Lo que ya está en otros documentos no se repite aquí:
 
 - `CHANGELOG.md` (sección Unreleased): los cambios que ve el usuario.
-- `docs/source/4_detailed use.md`, secciones 4.2.2, 4.2.3, 4.2.4, 4.2.5, 4.3.1, 4.6.1, 4.7.3, 4.8 y 4.8.1: el uso.
+- `docs/source/4_detailed use.md`, secciones 4.2.2, 4.2.3, 4.2.4, 4.2.5, 4.2.6, 4.3.1, 4.6.1, 4.7.3, 4.7.4, 4.8 y
+  4.8.1: el uso.
 - `DEVLOG.md`: el registro del trabajo, con cómo se comprobó.
 - `notes/decisions.md`: las decisiones y sus motivos.
 
@@ -67,6 +69,11 @@ Lo que ya está en otros documentos no se repite aquí:
 - **B4.** JPN Aqilah 2025 es la norma integrada 23 (`0,38·RMOT + 16,9`, de 5 a 30 °C, ±2,0 K (80) y ±1,5 K (90),
   estáticas de 20/28 °C, elección del usuario por D2), con su código al final de las cadenas, de modo que los IDF de
   las demás normas no cambian; los modelos con el código de todas las normas lo incluyen (sección 17).
+- **C2.** Con `report_long_term_discomfort=True`, el EMS cuenta en cada paso de tiempo los indicadores de largo plazo
+  de los métodos A y B de CEN/TR 16798-2 (horas ocupadas y grados-hora por encima de la consigna de refrigeración y por
+  debajo de la de calefacción sin la tolerancia) de cada zona y del edificio, y el paramétrico los lee con los
+  reductores `hours_outside_range` y `degree_hours`; `deviation_constraint_bound` da la cota de una restricción con la
+  tabla E.1; el método C queda pendiente del autor (sección 18).
 - Las categorías del PMV y la aproximación de la corrección del metabolismo se han comprobado en ISO 7730:2025 y
   EN 16798-1:2019, y el modelo dinámico de vestimenta de A5, en Schiavon y Lee (2013) y ASHRAE 55-2020 (sección 6).
 - Lo que quedaba abierto se ha comprobado: el golden master y las pruebas de EnergyPlus 26.1 y 26.2, también la de A5
@@ -1186,3 +1193,69 @@ como norma definida por sus datos (el YAML 101 de B3).
   columnas. Suite completa: 1707 pasan, 1 omitida y 2 fallan, dos pruebas más que tomaban la 23 como norma inexistente
   (`test_zone_arguments.py`, ahora la 24) y las cadenas de un modelo de `add_accis_to_idf` como las literales
   (`test_outdoor_metric.py`); corregidas, sus dos archivos pasan (65).
+
+## 18. Los objetivos de confort de largo plazo (C2)
+
+La v03 pide en `objectives.py`, reutilizando D1, `hours_outside_range` (método A), `degree_hours` (método B) y
+`ppd_weighted_hours` (método C) de CEN/TR 16798-2:2019 (anexo D), por zona y edificio y por periodo cálido y frío, con
+las categorías de EN 16798-1 como rangos, y los criterios de desviación admisible de la tabla E.1 (3 %/6 % anual,
+12 %/25 % mensual, 20 %/50 % semanal) como restricciones de la optimización; sin prompt, y el brief no la ajusta.
+
+**Antes.** Los indicadores de largo plazo solo se calculaban después de las simulaciones (D1:
+`accim.data.postprocessing.long_term_discomfort` y `Table(long_term_indicators=True)`), y los reductores de
+`objectives.py` (sumas, medias y el estado de confort de EnergyPlus) no los daban.
+
+**Ahora.**
+
+- El problema: los reductores de besos reciben una sola salida (`EPResults`) cada uno, y los indicadores necesitan a la
+  vez la temperatura operativa, los límites y los ocupantes. Así que los cuenta el EMS.
+- `accim/sim/ems/long_term_discomfort.py` (nuevo): con `report_long_term_discomfort=True`, cada zona tiene el programa
+  `CountLongTermDiscomfort_<zona>`, que `RunACCIS_<zona>` ejecuta justo después de `CountHoursNoApp_<zona>`, y que en
+  cada paso ocupado pone `Hours Above Upper Limit_<zona>` y `Hours Below Lower Limit_<zona>` (método A: la duración del
+  paso si la temperatura operativa supera la consigna de refrigeración sin la tolerancia, `ACSTnoTol`, o queda por
+  debajo de la de calefacción, `AHSTnoTol`) y `Degree Hours Above Upper Limit_<zona>` y `Degree Hours Below Lower
+  Limit_<zona>` (método B: la diferencia por esa duración, en Kh), y 0 sin ocupantes; son salidas sumadas. El edificio
+  tiene las sumas de sus zonas (`..._Building`), que suma el programa `CountLongTermDiscomfort_Building` (una zona por
+  línea), cuyo gestor de llamadas va después de los de las zonas (los gestores del mismo punto de llamada se ejecutan
+  en el orden del IDF, como ya supone `programs.py`). Los límites son los de los contadores de horas del ACCIS y de
+  `Table(long_term_indicators=True)` de D1; con INT EN16798 (1), los de las categorías de EN 16798-1 dentro de su
+  aplicabilidad. `set_long_term_discomfort_code(idf, frequencies)` los añade a un modelo de `add_accis_to_idf`.
+- `accim/sim/accis.py`: el argumento `report_long_term_discomfort` (False por defecto) de `AddAccis` y
+  `add_accis_to_idf` (`ValueError` si no es booleano o con `setpoint_type='pmv'`, cuyas zonas no siguen las consignas
+  del ACCIS); con `output_type` 'simplified' se añaden sus `Output:Variable` (`_request_outputs`, que ahora usa también
+  `_add_hours_below_outputs`); 'standard' y 'detailed' ya piden todas las salidas del EMS, y 'custom' conserva las
+  elegidas.
+- `accim/parametric_and_optimisation/objectives.py`: los reductores `hours_outside_range` (método A) y `degree_hours`
+  (método B) suman esas salidas: comprueban que la salida es una de ellas (por el nombre `EMS,<salida>_<zona>` de besos)
+  y sus valores como `checked_sum_results`; `deviation_constraint_bound(horas ocupadas, periodo, nivel)` da la cota de
+  una restricción en el formato de besos y platypus (`'<=126.0'` con 2100 h, `'yearly'` y `'6%'`), con la nueva
+  `deviation_limit` de D1, que ahora usa `deviation_check` (mismo resultado). `accim/parametric_and_optimisation/main.py`:
+  las cuatro clases del paramétrico pasan `report_long_term_discomfort` a `add_accis_to_idf`.
+- `accim/utils/verification.py`: la comprobación 6 de `verify_accim_simulation` (cada zona, desde sus horas ocupadas,
+  su temperatura operativa del paso anterior y sus consignas sin la tolerancia; el edificio, como la suma de sus zonas;
+  por paso de tiempo, sin el primer paso de cada entorno).
+- GUI: una casilla en el marco del suelo y el techo de las consignas de la pestaña de `AddAccis`, desactivada (y
+  omitida) con las consignas basadas en el PMV.
+- EnergyPlus escribe en mayúsculas las unidades de las variables de salida del EMS (el campo no tiene `\retaincase`):
+  los grados-hora salen como `[KH]`.
+- Documentación: la sección 4.2.6 del uso detallado (nueva) y las 4.2 (tabla de argumentos), 4.6.1 (comprobación 6),
+  4.7.4 y 4.10; la página del paramétrico (los objetivos y la restricción con la tabla E.1).
+- Decisiones provisionales (en `notes/questions.md`): el EMS cuenta los indicadores, a petición, con el rango de las
+  consignas sin la tolerancia del ACCIS y las sumas de las zonas para el edificio; la cota de la restricción es la del
+  periodo simulado (el criterio anual), y los criterios semanal y mensual se comprueban después de las simulaciones
+  (tarea en `TODO.md`); el método C no se cuenta, porque necesita un PMV y unos límites que debe elegir el autor
+  (tarea bloqueada en `TODO.md`); TM52 y TM59, fuera de alcance (D12, tarea en `TODO.md`).
+- Pruebas: `tests/core/test_long_term_discomfort_counters.py` (22: las líneas Erl frente a las funciones de D1 en el
+  intérprete de accim, también con la consigna de calefacción por encima de la de refrigeración; el edificio como suma;
+  los objetos de `add_accis_to_idf` y de `AddAccis` con 'standard' y 'simplified'; los errores; los modelos de
+  versiones anteriores; y con EnergyPlus 25.1: una semana de invierno y otra de verano por paso de tiempo, con la
+  comprobación 6 sin discrepancias y los totales de las funciones de D1; las demás salidas no cambian; y los dos
+  backends); `tests/parametric_and_optimisation/test_objectives.py` (6: los reductores, sus errores, las cotas de la
+  tabla E.1 también con platypus, los reductores con los resultados de besos de una semana simulada y las clases del
+  paramétrico); `tests/core/test_long_term_discomfort.py` (`deviation_limit`); y la GUI. El golden master no cambia.
+- Backends con `run_ep` (`ems` y `api`, por paso de tiempo, 1008 filas): enero (`vrf_ac`, INT EN16798, categoría 2,
+  modo 3; 112 columnas), abril (`vrf_mm`, categoría 1, modo 2, HVACmode 1; 123) y julio (`vrf_mm`, INT ASHRAE55,
+  categoría 80, modo 3, HVACmode 2; 123): diferencia máxima 0,0 en todas las columnas. Un estudio paramétrico de dos
+  simulaciones (categorías I y III, del 1 al 7 de julio) con los reductores nuevos da los totales de los CSV de cada
+  simulación (10,17 h y 2,31 Kh por encima con la categoría I; 0 con la III). Suite completa: 1738 pasan y 1 omitida;
+  la documentación, con los mismos avisos que antes (59).

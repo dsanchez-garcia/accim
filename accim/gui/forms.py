@@ -250,6 +250,7 @@ ADD_ACCIS_DEFAULTS = {
     'custom_regimes': '',
     **{name: default for name, (_, default) in SETPOINT_LIMIT_FIELDS.items()},
     'report_hours_below': '',
+    'report_long_term_discomfort': False,
     **EXISTING_HVAC_DEFAULTS,
 }
 #: The initial values of the form of run_ep (``simulate``: estimate the size of the results with a simulation).
@@ -727,10 +728,13 @@ def add_accis_arguments(form: Mapping[str, Any]) -> Dict[str, Any]:
     :return: The keyword arguments of AddAccis, with all the arguments that it would otherwise ask in the prompt,
         ``confirm=True`` and ``idfs`` (the names of the selected input IDFs, to run in the folder); with the VRF
         systems ('vrf_ac' and 'vrf_mm'), also their availability schedule, EER and COP; with the existing HVAC
-        systems ('ex_ac' and 'ex_mm'), their arguments (:func:`existing_hvac_arguments`); and the floor and ceiling of
-        the setpoints and ``report_hours_below``, if their fields are not empty (:func:`setpoint_limit_arguments`).
-    :raises FormError: If a value is missing or not valid, or the arguments of a zone give no setpoints in some
-        output IDFs (:func:`zone_arguments_problems`).
+        systems ('ex_ac' and 'ex_mm'), their arguments (:func:`existing_hvac_arguments`); the floor and ceiling of
+        the setpoints and ``report_hours_below``, if their fields are not empty (:func:`setpoint_limit_arguments`);
+        and ``report_long_term_discomfort=True`` if its box (the boolean ``report_long_term_discomfort`` of the form)
+        is checked.
+    :raises FormError: If a value is missing or not valid, the arguments of a zone give no setpoints in some
+        output IDFs (:func:`zone_arguments_problems`), or ``report_long_term_discomfort`` is checked with the
+        PMV-based setpoints.
     """
     _folder(form, 'the input IDFs')
     idfs = list(form.get('idfs') or [])
@@ -806,6 +810,11 @@ def add_accis_arguments(form: Mapping[str, Any]) -> Dict[str, Any]:
     if arguments['setpoint_tolerance_step'] <= 0:
         raise FormError('setpoint_tolerance_step: enter a number greater than 0.')
     arguments.update(setpoint_limit_arguments(form))
+    if form.get('report_long_term_discomfort'):
+        if setpoint_type != 'temperature':
+            raise FormError('report_long_term_discomfort: the long-term discomfort needs the adaptive setpoint '
+                            'temperatures (setpoint_type temperature); uncheck it.')
+        arguments['report_long_term_discomfort'] = True
     zones = zone_arguments(form.get('zone_arguments') or [])
     if zones:
         if setpoint_type != 'temperature':

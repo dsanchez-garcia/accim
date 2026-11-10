@@ -100,6 +100,14 @@ def test_the_acceptable_deviations_of_table_e1():
         ltd.deviation_check(1, 100, level='5%')
     with pytest.raises(ValueError, match='period must be one of'):
         ltd.deviation_check(1, 100, period='daily')
+    # The largest hours outside the range (the bounds of the constraints of the optimisation, proposal C2)
+    assert ltd.deviation_limit(2100) == 126.0 and ltd.deviation_limit(2100, level='3%') == 63.0
+    assert ltd.deviation_limit(40, 'weekly') == 20.0 and ltd.deviation_limit(40, 'weekly', '3%') == 8.0
+    assert ltd.deviation_limit(175, 'monthly') == 43.75 and ltd.deviation_limit(175, 'monthly', '3%') == 21.0
+    with pytest.raises(ValueError, match='level must be one of'):
+        ltd.deviation_limit(100, level='5%')
+    with pytest.raises(ValueError, match='period must be one of'):
+        ltd.deviation_limit(100, period='daily')
 
 
 def test_the_hours_below_some_temperatures():

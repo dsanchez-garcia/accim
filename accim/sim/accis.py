@@ -60,6 +60,7 @@ from accim.sim.ems.inputs import (
     zone_comfort_standards,
     zone_names,
 )
+from accim.sim.ems.long_term_discomfort import set_long_term_discomfort_code
 from accim.sim.ems.outdoor_metric import (
     INPUTS as OUTDOOR_METRIC_INPUTS,
     OUTDOOR_METRICS,
@@ -392,6 +393,12 @@ def _add_hours_below_outputs(idf, frequencies: Iterable[str]) -> None:
     frequencies, for the outputs that do not have them (output_type 'simplified')."""
     names = [o.Name for o in idf.idfobjects['EnergyManagementSystem:OutputVariable']
              if str(o.Name).startswith(HOURS_BELOW_PREFIX)]
+    _request_outputs(idf, names, frequencies)
+
+
+def _request_outputs(idf, names: Iterable[str], frequencies: Iterable[str]) -> None:
+    """Add the Output:Variable objects of some outputs at some frequencies that the model does not have."""
+    names = list(names)
     requested = {(str(o.Variable_Name).upper(), str(o.Reporting_Frequency).upper())
                  for o in idf.idfobjects['Output:Variable']}
     for frequency in frequencies:
@@ -399,6 +406,20 @@ def _add_hours_below_outputs(idf, frequencies: Iterable[str]) -> None:
             if (name.upper(), frequency.upper()) not in requested:
                 idf.newidfobject('Output:Variable', Key_Value='*', Variable_Name=name,
                                  Reporting_Frequency=frequency.capitalize(), Schedule_Name='')
+
+
+def _check_long_term_discomfort(report_long_term_discomfort: Any, setpoint_type: str) -> bool:
+    """Check ``report_long_term_discomfort``: a boolean, and only with ``setpoint_type`` 'temperature'.
+
+    :raises ValueError: If it is not valid.
+    """
+    if not isinstance(report_long_term_discomfort, bool):
+        raise ValueError(f'report_long_term_discomfort must be True or False, not {report_long_term_discomfort!r}.')
+    if report_long_term_discomfort and setpoint_type == 'pmv':
+        raise ValueError("report_long_term_discomfort needs setpoint_type 'temperature': with 'pmv', the Fanger "
+                         "thermostats control the zones, and the range of the long-term discomfort (the setpoints of "
+                         "the ACCIS) is not that of the control.")
+    return report_long_term_discomfort
 
 
 def _check_outdoor_metric(metric: Any, alpha: Any, days: Any, zone_arguments: Dict[Any, Dict[str, Any]],
@@ -604,6 +625,14 @@ class AddAccis:
         ``CustomRegime_<zone>``, the number of the regime of each timestep (0 for the scalar arguments); see
         :mod:`accim.sim.ems.custom_regimes`. It needs ``comfort_standard`` 99 (in the output IDFs or in
         ``zone_arguments``) and ``setpoint_type`` 'temperature'.
+    :param report_long_term_discomfort: True to report the long-term thermal discomfort of the occupied hours of each
+        zone and of the building, Methods A and B of CEN/TR 16798-2:2019, Annex D, with the range between the setpoints
+        without the tolerance of the ACCIS (:mod:`accim.sim.ems.long_term_discomfort`): the outputs ``Hours Above Upper
+        Limit_<zone>``, ``Hours Below Lower Limit_<zone>`` (in hours), ``Degree Hours Above Upper Limit_<zone>`` and
+        ``Degree Hours Below Lower Limit_<zone>`` (in degree hours, Kh), and their sums ``..._Building``, with every
+        ``output_type`` but 'custom', which keeps the outputs chosen. The parametric and optimisation module reads them
+        as objectives and constraints (:mod:`accim.parametric_and_optimisation.objectives`). False (the default) for
+        none, as before accim 1.2.0. It needs ``setpoint_type`` 'temperature'.
     :ivar arguments: The arguments, after asking the missing ones.
     :ivar input_idfs: The input IDFs, {'input IDF name': IDF object}.
     :ivar occupied_zones: The occupied zones of each input IDF, as in the EMS objects.
@@ -688,6 +717,7 @@ class AddAccis:
         cooling_setpoint_ceiling: Optional[Number] = None,
         report_hours_below: Optional[Sequence[Number]] = None,
         custom_regimes: Optional[Sequence[CustomRegime]] = None,
+        report_long_term_discomfort: bool = False,
     ):
         files = _input_files(idfs)
         print(BANNER)
@@ -731,6 +761,7 @@ class AddAccis:
         if regimes and uses_hvac_conditions(regimes) and not is_mixed_mode(script_type):
             raise ValueError("The conditions 'hvac_off' and 'hvac_on' of custom_regimes need mixed mode (script_type "
                              f"'vrf_mm' or 'ex_mm'), not {script_type!r}.")
+        report_long_term_discomfort = _check_long_term_discomfort(report_long_term_discomfort, setpoint_type)
         if verbose:
             _print_model_arguments(script_type, supply_air_temp_input_method, output_type, output_frequencies,
                                    energyplus_version, setpoint_type)
@@ -810,9 +841,13 @@ class AddAccis:
                               existing_hvac_radiant_setpoints=existing_hvac_radiant_setpoints)
             # The occupied hours below some temperatures, before the outputs (the standard outputs have them)
             set_hours_below_code(idf, hours_below)
+            long_term_outputs = (sum(set_long_term_discomfort_code(idf).values(), [])
+                                 if report_long_term_discomfort else [])
             add_outputs(model, output_type, output_frequencies, keep_existing_outputs, outputs_dataframe, file=stem)
             if hours_below and output_type == 'simplified':
                 _add_hours_below_outputs(idf, output_frequencies)
+            if long_term_outputs and output_type == 'simplified':
+                _request_outputs(idf, long_term_outputs, output_frequencies)
             if make_outputs_dataframe:
                 dataframes.append(output_variables_dataframe(idf, file=stem))
             enable_sizing_calculations(model)
@@ -853,7 +888,8 @@ class AddAccis:
             cooling_setpoint_ceiling=cooling_setpoint_ceiling)
         self.arguments.update({k: v for k, v in vars(generation).items()})
         self.arguments.update(verbose=verbose, confirm=confirm, zone_arguments=zone_arguments, epw=epw,
-                              report_hours_below=hours_below or None, custom_regimes=list(regimes) or None)
+                              report_hours_below=hours_below or None, custom_regimes=list(regimes) or None,
+                              report_long_term_discomfort=report_long_term_discomfort)
         if regimes and CUSTOM_COMFORT_STANDARD not in generation.comfort_standard and not any(
                 arguments.get('comfort_standard') == CUSTOM_COMFORT_STANDARD
                 for arguments in checked_zone_arguments.values()):
@@ -975,6 +1011,7 @@ def add_accis_to_idf(
     existing_hvac_widen_outdoor_temperature_limits: bool = False,
     existing_hvac_ideal_loads_backup: bool = False,
     existing_hvac_radiant_setpoints: bool = True,
+    report_long_term_discomfort: bool = False,
 ) -> AccimModel:
     """Add the ACCIS to an IDF object of eppy or besos (in place).
 
@@ -987,6 +1024,8 @@ def add_accis_to_idf(
 
     :param idf: The IDF object.
     :param energyplus_version: The EnergyPlus version of the model; None or 'auto' to take that of its IDD.
+    :param report_long_term_discomfort: True to report the long-term thermal discomfort of the occupied hours of each
+        zone and of the building (see :class:`AddAccis`); False (the default) for none.
     :return: The model, whose attributes give its occupied zones and windows.
     :raises ValueError: If an argument is missing or not valid.
     """
@@ -1002,6 +1041,7 @@ def add_accis_to_idf(
         energyplus_version = _idf_version(idf)
     output_type, output_frequencies, setpoint_type = _check_model_arguments(
         script_type, supply_air_temp_input_method, output_type, output_frequencies, setpoint_type)
+    report_long_term_discomfort = _check_long_term_discomfort(report_long_term_discomfort, setpoint_type)
     if verbose:
         _print_model_arguments(script_type, supply_air_temp_input_method, output_type, output_frequencies,
                                energyplus_version, setpoint_type)
@@ -1019,7 +1059,10 @@ def add_accis_to_idf(
                       existing_hvac_widen_outdoor_temperature_limits=existing_hvac_widen_outdoor_temperature_limits,
                       existing_hvac_ideal_loads_backup=existing_hvac_ideal_loads_backup,
                       existing_hvac_radiant_setpoints=existing_hvac_radiant_setpoints)
+    long_term_outputs = sum(set_long_term_discomfort_code(idf).values(), []) if report_long_term_discomfort else []
     add_outputs(model, output_type, output_frequencies, keep_existing_outputs, outputs_dataframe)
+    if long_term_outputs and output_type == 'simplified':
+        _request_outputs(idf, long_term_outputs, output_frequencies)
     if script_type.startswith('vrf'):
         # EnergyPlus cannot run the VRF systems without sizing them (they are autosized). The existing HVAC systems
         # are the user's, so their sizing does not change (in accim 0.x, this function did not change it either)

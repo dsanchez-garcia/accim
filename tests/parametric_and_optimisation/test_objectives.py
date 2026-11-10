@@ -2,7 +2,10 @@
 
 checked_sum_results comes from the tag archive/feat-comfort-metrics-experiment-api (notes/branch-reviews.md, 2.2).
 hours_outside_comfort and fraction_outside_comfort are the comfort objectives independent of the control that the
-author chose instead of the EMS metrics of that tag (notes/decisions.md).
+author chose instead of the EMS metrics of that tag (notes/decisions.md). hours_outside_range, degree_hours and
+deviation_constraint_bound are the long-term comfort objectives of proposal C2 of accim 1.2.0 (Methods A and B of
+CEN/TR 16798-2:2019, Annex D, which the ACCIS counts with report_long_term_discomfort, and the acceptable deviations
+of its Annex E, Table E.1).
 """
 import shutil
 import subprocess
@@ -13,8 +16,9 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from accim.parametric_and_optimisation.objectives import (average_results, checked_sum_results,
-                                                          fraction_outside_comfort, hours_outside_comfort,
+from accim.parametric_and_optimisation.objectives import (average_results, checked_sum_results, degree_hours,
+                                                          deviation_constraint_bound, fraction_outside_comfort,
+                                                          hours_outside_comfort, hours_outside_range,
                                                           return_time_series, sum_results)
 
 REPO = Path(__file__).resolve().parents[2]
@@ -144,3 +148,118 @@ def test_the_comfort_reducers_with_the_status_that_energyplus_reports(tmp_path):
             assert hours_outside_comfort(hourly) == pytest.approx(outside / timesteps_per_hour)
             assert fraction_outside_comfort(hourly) == pytest.approx(outside / (outside + inside))
             assert fraction_outside_comfort(each_timestep) == pytest.approx(outside / (outside + inside))
+
+
+# The long-term discomfort (proposal C2) -----------------------------------------------------------------------------
+
+def _long_term(name, values, units='H'):
+    """A BESOS result (EPResults) of an output of the long-term discomfort of the ACCIS."""
+    return SimpleNamespace(name=name, frequency='Hourly', units=units, data=pd.DataFrame({'Value': values}))
+
+
+def test_the_long_term_reducers_sum_their_outputs():
+    for name in ('EMS,Hours Above Upper Limit_Block1_Zone1', 'EMS,Hours Below Lower Limit_Block1_Zone1',
+                 'EMS,Hours Above Upper Limit_Building', 'EMS,HOURS BELOW LOWER LIMIT_BLOCK1_ZONE2'):
+        assert hours_outside_range(_long_term(name, [0.5, 0, 1.0])) == 1.5
+    for name in ('EMS,Degree Hours Above Upper Limit_Block1_Zone1', 'EMS,Degree Hours Below Lower Limit_Building'):
+        assert degree_hours(_long_term(name, [0.25, 1.5], units='KH')) == 1.75
+    # Without the name of a BESOS result, only the values are checked
+    assert hours_outside_range(SimpleNamespace(data={'Value': [1.0, 2.0]})) == 3.0
+    assert degree_hours(SimpleNamespace(data={'Value': [0.5]})) == 0.5
+
+
+def test_the_long_term_reducers_check_their_outputs():
+    with pytest.raises(ValueError, match='hours_outside_range reads the outputs "Hours Above Upper Limit_<zone>" or '
+                                         '"Hours Below Lower Limit_<zone>"'):
+        hours_outside_range(_long_term('EMS,Degree Hours Above Upper Limit_Block1_Zone1', [1.0]))
+    with pytest.raises(ValueError, match='degree_hours reads the outputs "Degree Hours Above Upper Limit_<zone>"'):
+        degree_hours(_long_term('EMS,Hours Above Upper Limit_Block1_Zone1', [1.0]))
+    with pytest.raises(ValueError, match='report_long_term_discomfort=True'):
+        hours_outside_range(_long_term('BLOCK1:ZONE1,Zone Operative Temperature', [21.0]))
+    # The values as checked_sum_results checks them: an incomplete simulation is not a valid objective
+    with pytest.raises(ValueError, match='finite numbers'):
+        hours_outside_range(_long_term('EMS,Hours Above Upper Limit_Building', [1.0, np.nan]))
+
+
+def test_the_constraint_bounds_of_the_acceptable_deviations_of_table_e1():
+    # CEN/TR 16798-2:2019, Annex E, Table E.1: with 2100 occupied hours a year, 63 h on the 3 % level and 126 h on the
+    # 6 % level; 20 % or 50 % of the 40 h of a week, 8 h or 20 h; 12 % or 25 % of the 175 h of a month
+    assert deviation_constraint_bound(2100) == '<=126.0'
+    assert deviation_constraint_bound(2100, level='3%') == '<=63.0'
+    assert deviation_constraint_bound(40, 'weekly', '3%') == '<=8.0'
+    assert deviation_constraint_bound(40, 'weekly') == '<=20.0'
+    assert deviation_constraint_bound(175, 'monthly', '3%') == '<=21.0'
+    assert deviation_constraint_bound(175, 'monthly') == '<=43.75'
+    with pytest.raises(ValueError, match='level must be one of'):
+        deviation_constraint_bound(2100, level='5%')
+    with pytest.raises(ValueError, match='period must be one of'):
+        deviation_constraint_bound(2100, period='daily')
+    # The constraints of the optimisation are those of platypus: no violation within the bound, and the hours beyond it
+    import platypus
+
+    assert platypus.Constraint(deviation_constraint_bound(2100))(126.0) == 0
+    assert platypus.Constraint(deviation_constraint_bound(2100))(130.0) == pytest.approx(4.0)
+
+
+@pytest.mark.skipif(not (ENERGYPLUS_25_1.exists() and SAMPLE_IDF.exists() and SAMPLE_EPW.exists()),
+                    reason='needs EnergyPlus 25.1 and the sample files of the repository')
+def test_the_long_term_reducers_with_the_outputs_that_energyplus_reports(tmp_path):
+    from besos.eppy_funcs import get_building
+    from besos.objectives import read_eso
+
+    from accim.sim import accis
+
+    shutil.copy(SAMPLE_IDF, tmp_path / 'model.idf')
+    building = get_building(str(tmp_path / 'model.idf'))
+    accis.add_accis_to_idf(building, script_type='vrf_ac', supply_air_temp_input_method='temperature difference',
+                           output_type='standard', output_frequencies=['hourly'], setpoint_type='temperature',
+                           verbose=False, report_long_term_discomfort=True)
+    run_period = building.idfobjects['RunPeriod'][0]
+    run_period.Begin_Month, run_period.Begin_Day_of_Month = 7, 10
+    run_period.End_Month, run_period.End_Day_of_Month = 7, 16
+    building.saveas(str(tmp_path / 'model.idf'))
+    subprocess.run([str(ENERGYPLUS_25_1), '-d', str(tmp_path / 'out'), '-w', str(SAMPLE_EPW),
+                    str(tmp_path / 'model.idf')], capture_output=True, check=True)
+    results = read_eso(str(tmp_path / 'out'))
+
+    for output, reducer in (('Hours Above Upper Limit', hours_outside_range),
+                            ('Hours Below Lower Limit', hours_outside_range),
+                            ('Degree Hours Above Upper Limit', degree_hours),
+                            ('Degree Hours Below Lower Limit', degree_hours)):
+        zones = [reducer(results[(f'EMS,{output}_Block1_Zone{n}', 'Hourly')]) for n in (1, 2)]
+        building_total = reducer(results[(f'EMS,{output}_Building', 'Hourly')])
+        assert building_total == pytest.approx(sum(zones))
+        assert building_total == pytest.approx(results[(f'EMS,{output}_Building', 'Hourly')].data['Value'].sum())
+    # A week of July in Seville: hours above the cooling setpoint (without the tolerance) when occupied
+    assert hours_outside_range(results[('EMS,Hours Above Upper Limit_Building', 'Hourly')]) > 0
+    # Method A: the hours above and below are the discomfortable occupied hours of the ACCIS
+    for n in (1, 2):
+        outside = sum(hours_outside_range(results[(f'EMS,{output}_Block1_Zone{n}', 'Hourly')])
+                      for output in ('Hours Above Upper Limit', 'Hours Below Lower Limit'))
+        discomfortable = results[(f'EMS,Occupied Discomfortable Hours_No Applicability_Block1_Zone{n}', 'Hourly')]
+        assert outside == pytest.approx(checked_sum_results(discomfortable))
+    with pytest.raises(ValueError, match='degree_hours reads the outputs'):
+        degree_hours(results[('EMS,Hours Above Upper Limit_Building', 'Hourly')])
+
+
+@pytest.mark.skipif(not (ENERGYPLUS_25_1.exists() and SAMPLE_IDF.exists() and SAMPLE_EPW.exists()),
+                    reason='needs EnergyPlus 25.1 and the sample files of the repository')
+@pytest.mark.parametrize('report', [False, True])
+def test_the_parametric_module_adds_the_long_term_discomfort(tmp_path, monkeypatch, report):
+    import warnings
+
+    from accim.parametric_and_optimisation.main import ParametricSimulation
+    from accim.sim.accis import load_idf
+    from accim.sim.ems.long_term_discomfort import has_long_term_discomfort
+
+    shutil.copy(SAMPLE_IDF, tmp_path / 'model.idf')
+    monkeypatch.chdir(tmp_path)
+    building = load_idf(tmp_path / 'model.idf')
+    with warnings.catch_warnings():
+        warnings.simplefilter('ignore')
+        simulation = ParametricSimulation(buildings=[building], epws=[str(SAMPLE_EPW)],
+                                          parameters_type='accim predefined model', output_frequencies=['hourly'],
+                                          verbose=False, report_long_term_discomfort=report)
+    assert has_long_term_discomfort(simulation.building) is report
+    names = {o.Name for o in simulation.building.idfobjects['EnergyManagementSystem:OutputVariable']}
+    assert ('Hours Above Upper Limit_Building' in names) is report
