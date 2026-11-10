@@ -30,6 +30,11 @@ the Future Weather Generator, and pyweatherfiles, which generates typical
 meteorological years and EPW files (section {ref}`future-weather-files`). The
 Future Weather Generator itself (a jar file) and Java are installed apart.
 
+**ATHB setpoints** (optional, since accim 1.2.0): `pip install "accim[comfort]"`
+installs pythermalcomfort (4.8 or later, which needs Python 3.11 or later), with
+which `accim.sim.comfort_hooks` sets the setpoints of the adaptive thermal heat
+balance (section {ref}`athb-setpoints`).
+
 To install some specific version, execute the same code followed by
 "==version number". For instance, to install version 0.6.11:
 

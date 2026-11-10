@@ -7,13 +7,13 @@ esta versión: las P1, A2, A1 y A5, en este orden; y después D2 (sección 7), q
 2026-11-09 con E2 y E1, y las demás propuestas de la v03 (`notes/PROPUESTAS_MEJORAS_post_1.1.0_v03.md`), en el orden
 del autor (`notes/COPILOT_BRIEF_v1.2.0_v01.md`): E1 (sección 8), E2 (sección 9), A3 (sección 10), B1 (sección 11),
 B5 (sección 12), C1 (sección 13), D1 (sección 14), B2 (sección 15), B3 (sección 16), B4 (sección 17), C2 (sección
-18), E4 (sección 19)...
+18), E4 (sección 19), A4 (sección 20)...
 
 Lo que ya está en otros documentos no se repite aquí:
 
 - `CHANGELOG.md` (sección Unreleased): los cambios que ve el usuario.
-- `docs/source/4_detailed use.md`, secciones 4.2.2, 4.2.3, 4.2.4, 4.2.5, 4.2.6, 4.3.1, 4.5.1, 4.6.1, 4.7.3, 4.7.4, 4.8
-  y 4.8.1: el uso.
+- `docs/source/4_detailed use.md`, secciones 4.2.2, 4.2.3, 4.2.4, 4.2.5, 4.2.6, 4.3.1, 4.5.1, 4.6.1, 4.7.3, 4.7.4, 4.8,
+  4.8.1, 4.9 y 4.9.1: el uso.
 - `DEVLOG.md`: el registro del trabajo, con cómo se comprobó.
 - `notes/decisions.md`: las decisiones y sus motivos.
 
@@ -78,6 +78,10 @@ Lo que ya está en otros documentos no se repite aquí:
   (`pyfwg.morph_epw_global`, versiones 3, 4 y 5 de la herramienta), con los mismos nombres de los EPW futuros que
   con Java (el motor por defecto, que no cambia); el extra `accim[weather]` instala pyfwg y pyweatherfiles; el
   cuaderno espera al jar de la herramienta (sección 19).
+- **A4.** Las consignas del balance térmico adaptativo (ATHB): `apply_athb_setpoints` prepara un modelo con el
+  ACCIS y devuelve un gancho del backend de la API de Python que, en cada paso, busca por bisección las temperaturas
+  operativas cuyo ATHB_PMV (pythermalcomfort) es cada consigna y las da a los programas de consignas del ACCIS;
+  `run_ep(..., hooks=[...])` solo con `backend='api'`; el extra `accim[comfort]` (sección 20).
 - Las categorías del PMV y la aproximación de la corrección del metabolismo se han comprobado en ISO 7730:2025 y
   EN 16798-1:2019, y el modelo dinámico de vestimenta de A5, en Schiavon y Lee (2013) y ASHRAE 55-2020 (sección 6).
 - Lo que quedaba abierto se ha comprobado: el golden master y las pruebas de EnergyPlus 26.1 y 26.2, también la de A5
@@ -1303,3 +1307,55 @@ los EPW de cada escenario (`<EPW>_<escenario>.epw`) y los devolvía a la carpeta
   carpeta, sus opciones y `pyfwg_arguments`, los errores, la herramienta global, los fallos, sin pyfwg; los argumentos y
   las constantes frente a pyfwg 0.4.0 instalado; y una con la herramienta, omitida sin `ACCIM_FWG_JAR`). Las 9 de antes
   pasan sin cambios. `tests/core`: 1240 pasan y 2 omitidas; la documentación, con los mismos avisos que antes (59).
+
+## 20. Las consignas del balance térmico adaptativo, ATHB (A4)
+
+La v03 pide (con su prompt, el ajuste del brief y D10) `accim/sim/comfort_hooks.py` con `AthbSetpointHook`, un gancho
+`after_programs` del backend de la API de Python que calcula el ATHB-PMV de cada zona con
+`pythermalcomfort.models.pmv_athb` (importación perezosa; extra `accim[comfort]`) y busca por bisección (0,1 K) las
+temperaturas operativas cuyo ATHB_PMV es la consigna de calefacción y la de refrigeración, escribiéndolas en los
+actuadores de las consignas del ACCIS; `apply_athb_setpoints(building, ...)`, que prepara el IDF y devuelve el gancho;
+y el argumento `hooks` de `run_ep`, solo con `backend='api'` (`NotImplementedError` en otro caso). Antes de escribirlo
+se ha leído `help(ErlController)`: `get(nombre, programa)`, `set(nombre, valor)` y los ganchos
+`hook(controller, calling_point)`.
+
+**Antes.** Las consignas basadas en el PMV eran las de `accim.sim.pmv_index` (aPMV, ePMV y PMV, con termostatos de
+Fanger y el EMS); el EMS no puede calcular el ATHB, que necesita el PMV completo con el clo y el met adaptados en cada
+paso.
+
+**Ahora.**
+
+- `accim/sim/comfort_hooks.py` (nuevo): las ecuaciones del ATHB de pythermalcomfort 4.8.1 (comprobadas en su código
+  instalado; son las de la v03): `athb_met` (met − 0,234·trm/58,2), `athb_clo` (10^(−0,17168 − 0,000485·trm +
+  0,08176·met_adaptado − 0,00527·trm·met_adaptado)) y `athb_pmv` (el `pmv_athb` del paquete, con un `ImportError`
+  que dice cómo instalarlo). `AthbSetpointHook(zonas, athb_cooling_setpoint=0.5, athb_heating_setpoint=-0.5, met=1.1,
+  air_speed=0.1, clo='adaptive', tolerance_k=0.1, max_iterations=20, temperature_range=(10, 30))`: en
+  `BEGINTIMESTEPBEFOREPREDICTOR`, tras los programas del ACCIS, lee `RMOT` y los sensores de cada zona, busca por
+  bisección (las dos consignas a la vez, con arrays de numpy) las temperaturas operativas cuyo ATHB_PMV (con la
+  temperatura del aire y la radiante iguales a ella y la humedad de la zona) es cada consigna, dentro del rango (sus
+  límites fuera de él; el de ISO 7730:2025 para el PMV), y las da a `AHST_Act_<zona>` y `ACST_Act_<zona>`; pone
+  `ATHB_PMV_<zona>` (de la temperatura del aire y la radiante de la zona), `ATHB_clo_<zona>` y `ATHB_met_<zona>`. Se
+  puede enviar a los procesos de las simulaciones (pickle). `apply_athb_setpoints`: con el ACCIS de accim 1.0.0 o
+  posterior y climatización completa (`ValueError` en modo mixto, cuyas ventanas siguen las consignas del ACCIS, sin el
+  ACCIS o dos veces), añade los sensores `ATHB_MAT_<zona>`, `ATHB_MRT_<zona>` y `ATHB_RH_<zona>` (con la clave del
+  sensor `<zona>_OpT`), las variables globales y las salidas del EMS (promediadas) y sus `Output:Variable`.
+- `accim/run/run.py`: `run_ep(..., hooks=None)`; con `backend='api'`, los pasa como `after_programs` a
+  `run_simulations`; con `'ems'`, `NotImplementedError`.
+- `setup.py`: el extra `comfort` (`pythermalcomfort>=4.8; python_version >= "3.11"`): pythermalcomfort 4.8.1 exige
+  Python 3.11 o posterior, y accim admite 3.9.
+- Documentación: la sección 4.9.1 del uso detallado (nueva) y la 4.9 (`hooks`), la sección 2 (el extra) y la API.
+- Decisiones provisionales (en `notes/questions.md`): solo climatización completa; las consignas en todos los pasos
+  (como el ACCIS); el rango de 10 a 30 °C; el ATHB_PMV de cada zona con su temperatura del aire y radiante; en el
+  primer paso de cada entorno la media móvil es 0, como para el ACCIS; sin la caché de la v03 (rendimiento: ~1 ms por
+  zona y paso). Desviación de la prueba (3) de la v03 (ATHB_PMV dentro de las consignas en las horas con climatización):
+  en el modelo de ejemplo el VRF supera la consigna de refrigeración hasta 1 K mientras refrigera (como con las
+  consignas del ACCIS), y el ATHB_PMV de la zona usa su temperatura del aire y radiante, así que no se cumple de forma
+  estricta; las pruebas comprueban en su lugar que las consignas de las schedules son las de la bisección con los
+  sensores de la zona, y el clo y el met los de la media móvil. Los argumentos del gancho no se guardan en el modelo:
+  `verify_accim_simulation` no comprueba estas consignas (tarea en `TODO.md`).
+- Pruebas: `tests/core/test_comfort_hooks.py` (12: las ecuaciones, también frente a pythermalcomfort; la bisección y
+  sus límites; el gancho con un controlador falso; sus argumentos; pickle; sin pythermalcomfort; `apply_athb_setpoints`
+  y sus errores; `run_ep` con `hooks` y el EMS; y con EnergyPlus 25.1: una semana con `run_ep(backend='api',
+  hooks=[gancho])`, cuyas consignas son las de la bisección con la humedad y la media móvil del paso anterior, y el
+  mismo modelo sin el gancho con los dos backends, idénticos). Suite completa: 1759 pasan y 2 omitidas; la
+  documentación, con los mismos avisos que antes (59).

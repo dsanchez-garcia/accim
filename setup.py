@@ -157,6 +157,8 @@ setuptools.setup(
         # The future weather files with pyfwg (accim.data.morphing.morph_epws(engine='pyfwg')), and the typical
         # meteorological years and EPW files of pyweatherfiles
         'weather': ['pyfwg>=0.4.0', 'pyweatherfiles'],
+        # The setpoints of the ATHB (accim.sim.comfort_hooks), with pmv_athb of pythermalcomfort (Python 3.11 or later)
+        'comfort': ['pythermalcomfort>=4.8; python_version >= "3.11"'],
         },
     # The graphical user interface (accim.gui, with tkinter)
     entry_points={

@@ -11,6 +11,22 @@ Durable architectural/process decisions for this repository and its Obsidian
 vault. Newest first. Use [[templates/decision-record.md|the decision-record
 template]] to add a new entry.
 
+## 2026-11-10 — The setpoints of the ATHB are a hook of the backend of the Python API on the setpoints of the ACCIS (A4)
+
+- **Status**: accepted (proposal A4 of `notes/PROPUESTAS_MEJORAS_post_1.1.0_v03.md`, its prompt, the adjustment of the
+  brief and D10; details decided provisionally, see questions.md)
+- **Context**: the ATHB (Schweiker, 2022) needs the whole PMV with the adapted clothing and metabolic rate in each
+  timestep, which the EMS cannot calculate; the backend of the Python API of accim 1.0.0 runs Python hooks after the
+  EMS programs.
+- **Decision**: `accim.sim.comfort_hooks.apply_athb_setpoints` adds to a model with the ACCIS (full air-conditioning)
+  the sensors and outputs of the ATHB and returns `AthbSetpointHook`, which sets the actuators of the setpoint
+  schedules of the ACCIS to the operative temperatures of the ATHB setpoints, found by bisection with
+  `pythermalcomfort.models.pmv_athb` (imported only then, the extra `accim[comfort]`); `run_ep` gets `hooks` (API
+  backend only).
+- **Consequences**: the ACCIS keeps its programs, thermostats and outputs, and the hook replaces its setpoints; the
+  model needs the API backend and the hook (the EMS gives the ACCIS setpoints); pythermalcomfort needs Python 3.11 or
+  later, so the setpoints of the ATHB too; the arguments of the hook are not in the model (`TODO.md`).
+
 ## 2026-11-10 — morph_epws delegates in pyfwg on request, for the global tool, and pyfwg and pyweatherfiles are the extra accim[weather] (E4)
 
 - **Status**: accepted (proposal E4 of `notes/PROPUESTAS_MEJORAS_post_1.1.0_v03.md`, which has no prompt; the design

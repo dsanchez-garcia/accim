@@ -24,6 +24,23 @@ it here as answered).
 
 ## Open
 
+## 2026-11-10 — A4: the models, hours and range of the setpoints of the ATHB
+- Context: the prompt of A4 asks for the hook of the backend of the Python API that sets the operative temperatures of
+  the ATHB setpoints "to the setpoint schedule actuators used by the ACCIS", and `apply_athb_setpoints` that prepares
+  the IDF; it does not say which models (mixed mode, whose windows follow the setpoints of the ACCIS), whether the
+  setpoints apply without occupants, nor the range of the bisection.
+- Options considered: models: (a) full air-conditioning only (`ValueError` in mixed mode), (b) also mixed mode (the
+  windows would follow the adaptive setpoints and the HVAC the ATHB ones); hours: (i) every timestep, as the ACCIS in
+  full air-conditioning, (ii) only with occupants (the PMV-based setpoints of accim set back the thermostats without
+  occupants); range: 10–30 °C (the air temperatures with which ISO 7730:2025 uses the PMV, v03 C1), with its limits as
+  the setpoints out of it, or a wider one.
+- Owner: the author.
+- Status: open; (a), (i) and 10–30 °C (an argument, `temperature_range`) decided provisionally (the most conservative:
+  the ACCIS keeps controlling everything but the setpoints of the HVAC, and the PMV is used within its range), pending
+  author. Also provisional: the ATHB_PMV of each zone is reported from its air and mean radiant temperatures (the
+  setpoints, for both equal to the operative temperature); at the first timestep of each environment the running mean
+  is 0, as for the ACCIS; the cache or table of v03 (performance) is not needed (about 1 ms per zone and timestep).
+
 ## 2026-11-10 — E4: how morph_epws delegates in pyfwg, and what "accepts TMY of pyweatherfiles" means
 - Context: v03 (E4): "`morph_epws()` delega opcionalmente en `pyfwg` (Future Weather Generator) y acepta TMY de
   `pyweatherfiles`; sólo si están instalados (`accim[weather]`)", with a notebook; no prompt, and the brief no

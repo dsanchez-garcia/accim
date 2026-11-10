@@ -1352,6 +1352,35 @@ result = run_simulation('TestModel[CS_INT EN16798[CA_3[CM_3[HM_2[VC_0[VO_0.0[MT_
 
 The variables are those of the EMS programs (`controller.get(name, program)` reads the local variables of a program). The actuators are set as the EMS sets them: the integer ones (for instance, the status of a window shading control) to the number rounded down, and the logical ones to true only for 1, while the Python API itself would round the integers and take as true the numbers within 1e-5 of 1. The messages of `@WarnEP`, `@SevereWarnEP` and `@FatalHaltEP` go to the error file of EnergyPlus, and `@FatalHaltEP` stops the simulation. The API backend supports the EMS objects that accim writes, and most of those of other models; it does not support `EnergyManagementSystem:TrendVariable`, `EnergyManagementSystem:CurveOrTableIndexVariable`, `EnergyManagementSystem:ConstructionIndexVariable`, the external interface, Python plugins, the calling point `UserDefinedComponentModel` and the psychrometric and curve functions of the EMS, and it raises an error for them: run those models with the EMS backend.
 
+Since accim 1.2.0, `run_ep(backend='api', hooks=[...])` runs the hooks (as `after_programs`) in all the simulations of the folder; they must be objects that can be sent to the processes of the simulations (functions or instances of classes defined at the top level of a module). With `backend='ems'`, `hooks` raises a `NotImplementedError`.
+
+(athb-setpoints)=
+### 4.9.1 The setpoints of the adaptive thermal heat balance (ATHB)
+
+The adaptive thermal heat balance (ATHB) framework (Schweiker & Wagner, 2015; Schweiker, 2022) adds the physiological, behavioural and psychological adaptation of the occupants to the heat balance model of Fanger, with the running mean outdoor temperature trm. Since accim 1.2.0, `accim.sim.comfort_hooks` sets the setpoints of the operative temperature of the ATHB with the backend of the Python API, with the ATHB_PMV of pythermalcomfort (`pythermalcomfort.models.pmv_athb`, version 4.8.1, installed with `pip install "accim[comfort]"`, Python 3.11 or later):
+
+| Adaptation | Equation (pythermalcomfort 4.8.1; Schweiker, 2022) |
+| :--- | :--- |
+| Physiological | met_adapted = met − 0.234·trm/58.2 (`athb_met`) |
+| Behavioural | clo_adapted = 10^(−0.17168 − 0.000485·trm + 0.08176·met_adapted − 0.00527·trm·met_adapted) (`athb_clo`), unless the clothing insulation is given |
+| Psychological | ATHB_PMV = 1.484 + 0.0276·L − 0.9602·met_adapted − 0.0342·trm + 0.0002264·L·trm + 0.018696·met_adapted·trm − 0.0002909·L·met_adapted·trm, with the thermal load L = PMV/ts of the PMV of Fanger with met_adapted and clo_adapted, and ts = 0.303·exp(−0.036·met_adapted·58.15) + 0.028 |
+
+The EMS cannot calculate it, since it needs the whole PMV with the adapted clothing and metabolic rate in each timestep, while EnergyPlus calculates the PMV of the parameters of the People objects. `apply_athb_setpoints(building, ...)` prepares a model with the ACCIS (an output IDF of `AddAccis()` or a model of `add_accis_to_idf()`, with `setpoint_type='temperature'` and full air-conditioning, `vrf_ac` or `ex_ac`: in mixed mode, the windows follow the setpoints of the ACCIS) and returns the hook, an `AthbSetpointHook`: its zones get the sensors of their mean air temperature, mean radiant temperature and relative humidity (`ATHB_MAT_<zone>`, `ATHB_MRT_<zone>`, `ATHB_RH_<zone>`) and the outputs `ATHB_PMV_<zone>`, `ATHB_clo_<zone>` and `ATHB_met_<zone>`. At the beginning of each timestep, after the programs of the ACCIS, the hook finds by bisection (to `tolerance_k`, 0.1 K by default) the operative temperatures whose ATHB_PMV, with the air and mean radiant temperatures equal to them and the relative humidity of the zone, is `athb_heating_setpoint` and `athb_cooling_setpoint` (−0.5 and 0.5 by default), within `temperature_range` (10 to 30 °C by default, the air temperatures with which ISO 7730:2025 uses the PMV; out of it, its limits), and gives them to the setpoint schedules of the ACCIS (`AHST_Act_<zone>` and `ACST_Act_<zone>`), which the operative temperature thermostats follow, instead of the adaptive setpoints; it reports the ATHB_PMV of each zone, from its mean air and mean radiant temperatures and relative humidity, and the adapted clothing and metabolic rate. The other arguments are the metabolic rate `met` (1.1 met), the relative air speed `air_speed` (0.1 m/s) and `clo` (`'adaptive'`, or a clothing insulation without the behavioural adaptation). As the other sensors of the EMS at the beginning of a timestep, those of the zone are those of the previous timestep, and trm is the running mean outdoor temperature of CEN 15251 of EnergyPlus (the sensor `RMOT` of the ACCIS, α = 0.8), which is 0 at the first timestep of each environment, as for the ACCIS.
+
+```python
+from accim.sim.comfort_hooks import apply_athb_setpoints
+from accim.sim.accis import load_idf
+from accim.run import run
+
+building = load_idf('TestModel[CS_INT EN16798[CA_2[CM_3[HM_0[VC_X[VO_X[MT_X[MW_X[AT_0.1[NS_X.idf')
+hook = apply_athb_setpoints(building, athb_cooling_setpoint=0.5, athb_heating_setpoint=-0.5, met=1.1,
+                            air_speed=0.1, output_frequencies=['hourly'])
+building.saveas('TestModel_ATHB[CS_INT EN16798[CA_2[CM_3[HM_0[VC_X[VO_X[MT_X[MW_X[AT_0.1[NS_X.idf')
+results = run.run_ep(only_accim_idfs=True, confirm=True, backend='api', hooks=[hook])
+```
+
+The model must run with the hook: with the EMS (or without the hook), its setpoints are those of the ACCIS and the outputs of the ATHB are 0. `run_ep` runs the hooks in all the IDFs of the folder, so keep there only the models prepared with `apply_athb_setpoints` (in a model without its sensors, the hook does nothing). The hook computes about ten ATHB_PMV for each zone and timestep (a week of the sample model with two zones takes about 15 s). `verify_accim_simulation` does not check these setpoints (the model does not keep the arguments of the hook).
+
 
 
 (graphical-user-interface)=

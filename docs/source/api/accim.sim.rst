@@ -70,6 +70,14 @@ accim.sim.build module
    :show-inheritance:
    :undoc-members:
 
+accim.sim.comfort\_hooks module
+-------------------------------
+
+.. automodule:: accim.sim.comfort_hooks
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
 accim.sim.chile\_funcs module
 -----------------------------
 

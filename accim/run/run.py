@@ -16,7 +16,7 @@ Two backends run the EMS programs of the output IDFs of accim:
 
 import os
 import re
-from typing import List, Optional, Sequence
+from typing import Callable, List, Optional, Sequence
 
 from eppy.modeleditor import IDDAlreadySetError, IDF
 from eppy.runner.run_functions import runIDFs
@@ -133,6 +133,7 @@ def run_ep(
     processes: int = 2,
     energyplus_version: Optional[str] = None,
     backend: str = 'ems',
+    hooks: Optional[Sequence[Callable]] = None,
 ):
     """Run the simulations of the IDFs and EPWs in the working folder, with the EnergyPlus version of each IDF.
 
@@ -144,13 +145,23 @@ def run_ep(
         from the IDFs; None to ask. With ``backend='api'``, the version of each IDF is used.
     :param backend: 'ems' to run the EMS programs with the EMS of EnergyPlus (through eppy), or 'api' to run
         them in Python through the API of EnergyPlus (EnergyPlus 24.2 or later), with the same results.
+    :param hooks: With ``backend='api'`` (since accim 1.2.0), functions called after the EMS programs at each calling
+        point of each simulation, as ``hook(controller, calling_point)`` (the ``after_programs`` of
+        :func:`accim.sim.energyplus_api.run_simulation`), such as the hook of the setpoints of the ATHB
+        (:func:`accim.sim.comfort_hooks.apply_athb_setpoints`); they run in the processes of the simulations, so they
+        must be objects that can be pickled (functions or instances of classes defined at the top level of a module).
     :return: With ``backend='api'``, the results of the simulations
         (:class:`accim.sim.energyplus_api.SimulationResult`); otherwise, None.
+    :raises NotImplementedError: If ``hooks`` are given with ``backend='ems'``, whose EMS runs the programs in
+        EnergyPlus.
 
     :func:`accim.run.estimate_results_size` estimates the size of the results before running them.
     """
     if backend not in BACKENDS:
         raise ValueError(f'{backend!r} is not a valid backend. Valid values: {list(BACKENDS)}.')
+    if hooks and backend != 'api':
+        raise NotImplementedError("hooks need run_ep(backend='api'): the EMS of EnergyPlus cannot run Python code (the "
+                                  "setpoints of the ATHB, for instance).")
     if backend == 'api':
         energyplus_version = energyplus_version or 'auto'
     energyplus_version = _ask_version(energyplus_version)
@@ -175,6 +186,8 @@ def run_ep(
         from accim.sim.energyplus_api import run_simulations
         jobs = [(idf, epw, {'output_directory': os.getcwd(), 'output_prefix': simulation_name(idf, epw)})
                 for idf, epw in pairs]
+        if hooks:
+            return run_simulations(jobs, processes=processes, after_programs=list(hooks))
         return run_simulations(jobs, processes=processes)
 
     if energyplus_version.lower() == 'auto':

@@ -15,6 +15,23 @@ This log is a lightweight, session-scoped complement to the repository's
 existing tracking files — it does not replace them (see
 [[decisions.md#2026-09-13 — `notes/work-log.md` complements, not replaces, existing tracking files|the related decision]]).
 
+## 2026-11-10 — A4: the setpoints of the ATHB with the Python API (branch `v1.2.0`, on the server)
+
+- **Objective**: A4, after E4, in the order of the author (with D10 and the adjustment of the brief: `help(ErlController)`
+  read first).
+- **Affected files**: `accim/sim/comfort_hooks.py` (new), `accim/run/run.py`, `setup.py`,
+  `tests/core/test_comfort_hooks.py` (new), [[../docs/source/4_detailed use.md]] (§4.9.1),
+  `docs/source/2_installation.md`, `docs/source/api/accim.sim.rst`, [[../CHANGELOG.md]],
+  [[../CAMBIOS_CODIGO_v1.2.0.md]] (§20), [[../DEVLOG.md]], [[../TODO.md]], [[decisions.md]], [[questions.md]].
+- **Finding or decision**: See
+  [[decisions.md#2026-11-10 — The setpoints of the ATHB are a hook of the backend of the Python API on the setpoints of the ACCIS (A4)|the decision]].
+  The equations of v03 are those of the installed pythermalcomfort 4.8.1 (read in its source), which needs Python 3.11
+  or later. The sensors of the zones read the last values of the previous timestep, while the outputs are the means of
+  each timestep, so the ATHB_PMV of the outputs cannot be recalculated exactly from them; the setpoints can.
+- **Validation**: 12 new tests (a fake controller, and EnergyPlus 25.1 with `run_ep(backend='api', hooks=[hook])` and
+  both backends without the hook); the whole suite; the documentation build.
+- **Next step**: A6.
+
 ## 2026-11-10 — E4: the future weather files with pyfwg (branch `v1.2.0`, on the server)
 
 - **Objective**: E4, after C2, in the order of the author.
