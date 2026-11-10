@@ -19,7 +19,7 @@ from accim.constants import APMV_ADAPTIVE_COEFFICIENTS, EN16798_TABLE_B2, SUPPOR
 from accim.sim.arguments import (DEPRECATED_ARGUMENT_NAMES, MIXED_MODE_SCRIPT_TYPES, OUTPUT_FREQUENCIES,
                                  REGIME_CONDITIONS, SUPPLY_AIR_TEMP_INPUT_METHODS)
 from accim.sim.ems.inputs import ZONE_ARGUMENTS, check_zone_arguments
-from accim.sim.standards import COMFORT_STANDARDS
+from accim.sim.standards import COMFORT_STANDARDS, HOOK_COMFORT_STANDARDS
 
 __all__ = [
     'ADAPTIVE_COEFFICIENT_BY',
@@ -453,8 +453,11 @@ def parse_numbers(text: Any, name: str, integers: bool = False) -> List[Number]:
 
 
 def comfort_standard_choices() -> List[Tuple[int, str]]:
-    """The comfort standards, as (comfort_standard, '1 = INT EN16798')."""
-    return [(number, standard.title) for number, standard in COMFORT_STANDARDS.items()]
+    """The comfort standards with EMS code, which AddAccis writes, as (comfort_standard, '1 = INT EN16798'): not those
+    whose setpoints a hook of the API backend sets (:data:`accim.sim.standards.HOOK_COMFORT_STANDARDS`, comfort standard
+    24, task F1)."""
+    return [(number, standard.title) for number, standard in COMFORT_STANDARDS.items()
+            if number not in HOOK_COMFORT_STANDARDS]
 
 
 def _hint(standards: Iterable[int], attribute: str, empty: str) -> str:

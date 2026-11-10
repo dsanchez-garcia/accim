@@ -11,6 +11,60 @@ Durable architectural/process decisions for this repository and its Obsidian
 vault. Newest first. Use [[templates/decision-record.md|the decision-record
 template]] to add a new entry.
 
+## 2026-11-10 — Comfort standard 24, INT Sun2026 SET, is a thin layer on the hook of the SET by bisection (F1)
+
+- **Status**: accepted (task F1 of block F; decisions 1 to 5 and 8 of the author of 2026-11-10,
+  `notes/PROPUESTA_ADAPTACION_INTERIOR_v03.md` §6, copied here as the prompt of F1 asks, not reopened; the conversion
+  of `tr_mode='zone'` is the decision of 2026-11-10 below; the plan of `notes/PROPUESTAS_MEJORAS_post_1.1.0_v04.md`
+  §4.6: the hook of the SET generalised, and comfort standard 24 a thin layer on it)
+- **Context**: the causal SET model of Sun, Brager & Schiavon (2026), Energy and Buildings 370, 118097, Fig. 7a:
+  TSV = 0.11·SET − 2.6 (the band of TSV ±0.5 is 19.09 to 28.18 °C of SET, 19 and 28 °C in the paper; the neutral SET
+  23.6 °C). EnergyPlus has no thermostat of the SET.
+- **Decisions of the author (copied)**: (1) comfort standard 24, label `INT Sun2026 SET`, title `24 = INT Sun, Brager
+  & Schiavon 2026 (causal SET band)`, with the comfort modes 'SET band' and 'SET neutral +/- offset'; (2) `tsv_limit`
+  0.5 by default, 0.7 and 1.0 accepted with a warning (a linear extrapolation, SET = (±tsv_limit + 2.6)/0.11), and the
+  categories 80 and 90 both give 0.5; (3) no own minimum: the common minimum of B5 (`heating_setpoint_minimum`, H1)
+  after the inversion, None by default, with a warning when the inverted heating setpoint falls below 18 °C without
+  it; (4) `tr_mode` 'zone' (default) or 'equal_air'; (5) the air speed, clothing insulation and metabolic rate of the
+  schedules of the People object, no own air speed; (8) the names of H1.
+- **Implementation**: `accim.sim.comfort_hooks`: `SetSetpointHook` takes `met`, `clo` and `air_speed` None (read from
+  the People object of each zone in each timestep with the sensors `SET_Act_<zone>`, `SET_Clo_<zone>` or
+  `SET_CloValue_<zone>` and `SET_CloMethod_<zone>`, and `SET_Vel_<zone>`; the activity level divided by 58.2 W/m²
+  (Engineering Reference 25.2, equation 19.28) and 1.8 m² (Input Output Reference 25.2, 1.14.2.1.10)) and `tr_mode`;
+  `Sun2026SetpointHook` (method 'bisection', 10–40 °C, 0.05 K) with the outputs `TSV_causal_<zone>` and
+  `HoursInCausalBand_<zone>`; `apply_sun2026_setpoints` (also the Pierce model and its output);
+  `accim.sim.standards.COMFORT_STANDARDS[24]` with `HOOK_COMFORT_STANDARDS`: no EMS code, so `AddAccis`,
+  `modify_accis`, the EMS code and `compute_setpoints` reject it with a `ValueError` (the fallback of the EMS, v03
+  A6a, is a P2 entry of `TODO.md`). The comfort modes are numbered 1 and 2, the "applicability limits" of the prompt
+  are not applied to the setpoints of the SET, and the dynamic clothing model is read from its output: provisional
+  decisions in `notes/questions.md`.
+- **Measurement (scope 6 of the prompt)**: the sample model with the ACCIS (INT EN16798, category II, comfort mode 3,
+  `vrf_ac`, a minimum heating setpoint of 18 °C in Block1:Zone1), Seville, EnergyPlus 25.1, 6 timesteps per hour,
+  the inputs of the People objects (1.06 met; 1.0 clo in winter, 0.5 clo in summer; 0.137 m/s), sitting (the posture
+  of the hook with 1.2 met or less), `tr_mode='zone'`. Differences of the hourly means of `SET_<zone>` (the SET of
+  the hook, with the values that its sensors read at the beginning of each timestep) minus the Pierce SET of
+  EnergyPlus (K):
+
+  | Week | Zone | Mean | Mean absolute | Maximum absolute |
+  |---|---|---|---|---|
+  | 8–14 January | Block1:Zone1 | −0.080 | 0.081 | 0.191 |
+  | 8–14 January | Block1:Zone2 | −0.082 | 0.083 | 0.204 |
+  | 15–21 July | Block1:Zone1 | −0.156 | 0.156 | 0.262 |
+  | 15–21 July | Block1:Zone2 | −0.154 | 0.154 | 0.291 |
+
+  Diagnostics: per timestep, the SET of the hook against the Pierce SET of the previous timestep (whose conditions its
+  sensors read) differs by −0.080/−0.082 K (winter) and −0.156/−0.154 K (summer) on average, at most 0.27–0.40 K;
+  computed standing (the posture of EnergyPlus), by −0.009/−0.010 K (winter) and −0.079/−0.078 K (summer), at most
+  0.17–0.28 K, so the posture accounts for about 0.07 K, as in E-F1. Occupied hours within the band: 60 and 56.3 of 60
+  in winter (the zone with the minimum of 18 °C, all), 27.8 and 34.3 of 60 in summer, when the VRF system of the sample
+  model kept the operative temperature a median 0.45 and 0.71 K above the cooling setpoint in those hours (mean radiant
+  temperature 5.8 and 4.7 K above the air temperature). The heating setpoints of the zone without minimum went down to
+  16.0 °C in winter (the hook warns). `tests/core/test_sun2026_set.py` reproduces the table within 0.001 K.
+- **Consequences**: the SET of the hook is lower than that of EnergyPlus by 0.08–0.16 K on average in these weeks
+  (at most 0.29 K hourly), so the band of accim is reached at slightly warmer conditions than with the Pierce model;
+  a paper with F1 should report the SET of both (the outputs of the hook and of the Pierce model are in every
+  simulation of comfort standard 24).
+
 ## 2026-11-10 — The SET of EnergyPlus (Pierce) against that of pythermalcomfort, measured (E-F1)
 
 - **Status**: accepted (task E-F1 of `notes/PROPUESTA_ADAPTACION_INTERIOR_v03.md` §3 and §5, and of the session of

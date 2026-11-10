@@ -29,15 +29,20 @@ Active short-term tasks.
   - Definition of done: the tests that only read models use `accim.sim.accis.load_idf` (eppy), and those of the parametric module call `pytest.importorskip('besos')` first; `py -m pytest tests/core` without besos (a plugin that sets `sys.modules['besos'] = None`) skips them and fails none.
   - References: `notes/PROPUESTAS_MEJORAS_post_1.1.0_v04.md` (§3.4), `tests/core/test_setpoint_limits.py` and `tests/core/test_jpn_aqilah2025.py` (the four tests).
 
-- [ ] [P1][todo] Block F: F1 and F2 (the causal SET of Sun et al. 2026 as comfort standard 24, and the limiter of the setpoint drift)
-  - Context: `notes/PROPUESTA_ADAPTACION_INTERIOR_v03.md` (§3, §4, §6) and its prompts (`notes/PROMPTS_COPILOT_bloque_F_v02.md`), for the paper with Ruiji Sun; the order of the author for this session: F1 on `SetSetpointHook(method='bisection')` of G3 with the names of H1 and the `tr_mode` decision of 2026-11-10, then F2. E-F1 is done (2026-11-10, `notes/decisions.md`: the SET of pythermalcomfort is 0.045 K below that of EnergyPlus on average, at most 0.20 K, standing; 0.116 K, at most 0.34 K, sitting).
+- [ ] [P1][todo] Block F: F2 (the limiter of the setpoint drift)
+  - Context: `notes/PROPUESTA_ADAPTACION_INTERIOR_v03.md` (§3, §4, §6) and its prompts (`notes/PROMPTS_COPILOT_bloque_F_v02.md`), for the paper with Ruiji Sun. E-F1 and F1 are done (2026-11-10, `notes/decisions.md`): comfort standard 24, INT Sun2026 SET, is `accim.sim.comfort_hooks.apply_sun2026_setpoints`; F2 applies to its setpoints too.
   - Definition of done: as the prompts of v02 say, one commit each.
   - References: `notes/PROPUESTAS_MEJORAS_post_1.1.0_v04.md` (§4, §7), `notes/PROPUESTA_ADAPTACION_INTERIOR_v03.md`, `notes/PROMPTS_COPILOT_bloque_F_v02.md`.
 
 - [ ] [P2][todo] Block F: F3, the indicators of the indoor adaptation and the design of the validation study
-  - Context: `notes/PROPUESTA_ADAPTACION_INTERIOR_v03.md` §4 (F3): the columns of `Table` for the SET, the causal TSV, the hours within the causal band and `T_rm_in`, and an indicator of overcooling; the diagnostic `Tn_exp` of Parkinson et al. (2020, Fig. 6); the parametric study of the paper.
+  - Context: `notes/PROPUESTA_ADAPTACION_INTERIOR_v03.md` §4 (F3): the columns of `Table` for the SET, the causal TSV, the hours within the causal band and `T_rm_in`, and an indicator of overcooling; the diagnostic `Tn_exp` of Parkinson et al. (2020, Fig. 6); the parametric study of the paper. F1 (2026-11-10) already gave `Table` the names of `SET_<zone>`, `TSV_causal_<zone>` and `HoursInCausalBand_<zone>` (`<zone>_SET (°C)`, `<zone>_TSV_causal`, `<zone>_HoursInCausalBand (h)`, `accim.data.postprocessing.optional_output_columns`), not yet in the table of `format_table(type_of_table='comfort hours')`.
   - Definition of done: the indicators in `Table` (D1/D2), with tests; the study is a design for the paper.
   - References: `notes/PROPUESTA_ADAPTACION_INTERIOR_v03.md` (§4 F3, §7).
+
+- [ ] [P2][todo] Comfort standard 24 without the API: the fallback of the EMS (v03 A6a)
+  - Context: task F1 (2026-11-10) implemented comfort standard 24, INT Sun2026 SET, as a hook of the backend of the Python API (`accim.sim.comfort_hooks.apply_sun2026_setpoints`), as its prompt asked; without the hook (the EMS backend), the model has the setpoints of the comfort standard of its zones. v03 A6a proposes an Erl loop on the SET of the previous timestep that EnergyPlus calculates (the output of the Pierce model): `T_sp = T_sp_prev + k·(SET_target − SET_prev)`, saturated, `k ≈ 0.8`, with a delay of one timestep and a risk of oscillation with variable humidity or air speed.
+  - Definition of done: an option of the EMS code for comfort standard 24 with that loop (a sensor of the Pierce SET of the People object of each zone), documented with its delay; tests of its convergence against the hook with EnergyPlus 25.1 (both backends), and the `ValueError` of `AddAccis` replaced by it.
+  - References: `notes/PROPUESTAS_MEJORAS_post_1.1.0_v03.md` (A6, way (a)), `notes/PROPUESTA_ADAPTACION_INTERIOR_v03.md` (§3, §4 F1), `notes/PROMPTS_COPILOT_bloque_F_v02.md` (F1, scope 5).
 
 - [ ] [P2][todo] B1: T0 of `te_ref_nl`, the mean of the maximum and the minimum of the whole day (task H2 of v04 §7)
   - Context: finding B1-1 and verdict #8 (`notes/decisions.md`, 2026-11-10): T0 is the running (max+min)/2 of the hours of the day that have ended, so Te,ref drifts within the day, while van der Linden et al. (2006) define Ti with the maximum and minimum of the whole day.

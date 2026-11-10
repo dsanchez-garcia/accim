@@ -21,7 +21,7 @@ from accim.sim.arguments import as_list, to_day_of_year
 from accim.sim.ems.inputs import input_lines, input_programs, input_values
 from accim.sim.ems.programs import set_program_lines
 from accim.sim.ems.setast import has_setpoints
-from accim.sim.standards import COMFORT_STANDARDS
+from accim.sim.standards import COMFORT_STANDARDS, hook_comfort_standard_error
 
 __all__ = ['Combination', 'GenerationArguments', 'OutputIdfs', 'combinations', 'output_name', 'set_combination',
            'zone_arguments_errors', 'zone_input_arguments']
@@ -91,6 +91,11 @@ class GenerationArguments:
         self.cooling_season_end = to_day_of_year(self.cooling_season_end, 'cooling_season_end')
         if self.name_suffix is None:
             self.name_suffix = ''
+        # Comfort standard 24 (INT Sun2026 SET) is set by a hook of the API backend, without EMS code (task F1)
+        for comfort_standard in self.comfort_standard:
+            reason = hook_comfort_standard_error(comfort_standard)
+            if reason is not None:
+                raise ValueError(f'AddAccis cannot write {reason}.')
 
     @classmethod
     def air_conditioned(cls, **kwargs) -> 'GenerationArguments':
@@ -280,6 +285,8 @@ def zone_arguments_errors(arguments: Mapping[str, Any], mixed_mode: bool) -> Lis
     if comfort_standard not in COMFORT_STANDARDS:
         errors.append(f'comfort_standard {comfort_standard!r} is not a comfort standard '
                       f'(valid: {list(COMFORT_STANDARDS)})')
+    elif hook_comfort_standard_error(comfort_standard) is not None:
+        errors.append(hook_comfort_standard_error(comfort_standard))
     elif comfort_standard != 0:
         categories = COMFORT_STANDARDS[comfort_standard].categories
         if categories and category not in categories:

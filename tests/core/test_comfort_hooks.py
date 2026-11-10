@@ -573,8 +573,15 @@ def test_the_arguments_of_the_set_hook_are_checked():
     for arguments in (dict(met=0.8), dict(clo=2.0), dict(air_speed=2.5)):
         with pytest.warns(UserWarning, match='out of the range of the SET of pythermalcomfort'):
             ch.SetSetpointHook(**{**values, **arguments})
-    with pytest.raises(TypeError):
+    # The metabolic rate, clothing insulation and air speed of the People objects (None) and the mean radiant
+    # temperature of the zones need the bisection (task F1): the table depends on the relative humidity only
+    for arguments in (dict(met=None), dict(clo=None), dict(air_speed=None), dict(tr_mode='zone')):
+        with pytest.raises(ValueError, match="method='table' needs met, clo and air_speed"):
+            ch.SetSetpointHook(**{**values, **arguments})
+    with pytest.raises(ValueError, match="method='table' needs met, clo and air_speed"):
         ch.SetSetpointHook(['Z'], set_cooling_setpoint=27, set_heating_setpoint=21)
+    with pytest.raises(ValueError, match="tr_mode must be one of \\['equal_air', 'zone'\\]"):
+        ch.SetSetpointHook(**{**values, 'method': 'bisection', 'tr_mode': 'surfaces'})
 
 
 def test_the_posture_of_the_set_hook_by_default():
@@ -603,13 +610,14 @@ def test_the_set_hook_by_bisection(monkeypatch):
     assert controller.get('SET_Block1_Zone1') == ch.standard_effective_temperature(25.5, 26.5, 0.1, 55.0, 1.1, 0.5,
                                                                                     'sitting')
     assert controller.get('SET_Block1_Zone2') is None
-    # prepare() calls the SET with numbers and with an array of two values, as the bisection does; not with the table
+    # prepare() calls the SET with numbers and with arrays of two values, as the bisection does (also with the mean
+    # radiant temperature of the zone, a number, task F1); not with the table
     table = ch.SetSetpointHook(['Z'], set_cooling_setpoint=27.0, set_heating_setpoint=21.0, met=1.1, clo=0.5,
                                air_speed=0.1)
     calls = []
     monkeypatch.setattr(ch, 'standard_effective_temperature', lambda *args: calls.append(np.shape(args[0])))
     hook.prepare()
-    assert calls == [(), (2,)]
+    assert calls == [(), (2,), (2,)]
     calls.clear()
     table.prepare()
     assert calls == []

@@ -15,6 +15,23 @@ This log is a lightweight, session-scoped complement to the repository's
 existing tracking files — it does not replace them (see
 [[decisions.md#2026-09-13 — `notes/work-log.md` complements, not replaces, existing tracking files|the related decision]]).
 
+## 2026-11-10 — F1: comfort standard 24, INT Sun2026 SET (branch `v1.2.0`, on the server)
+
+- **Objective**: task F1 of block F: the causal SET model of Sun, Brager & Schiavon (2026) as comfort standard 24, a
+  thin layer on the hook of the SET by bisection, with the inputs of the People objects and `tr_mode`.
+- **Affected files**: `accim/sim/comfort_hooks.py`, `accim/sim/standards.py`, `accim/sim/generation.py`,
+  `accim/sim/prompts.py`, `accim/utils/ems_code.py`, `accim/gui/forms.py`,
+  `accim/data/postprocessing/optional_output_columns.py`, `tests/core/test_sun2026_set.py`,
+  [[../docs/source/4_detailed use.md]], [[../CHANGELOG.md]], [[../CAMBIOS_CODIGO_v1.2.0.md]] (§30), [[../DEVLOG.md]],
+  [[../TODO.md]], [[decisions.md]], [[questions.md]].
+- **Finding or decision**: See
+  [[decisions.md#2026-11-10 — Comfort standard 24, INT Sun2026 SET, is a thin layer on the hook of the SET by bisection (F1)|the decision]].
+  The SET of the hook is 0.08 K (winter) and 0.155 K (summer) below the Pierce SET of EnergyPlus (at most 0.29 K,
+  hourly); three provisional decisions in [[questions.md]].
+- **Validation**: `tests/core/test_sun2026_set.py` 18 passed (two weeks with EnergyPlus 25.1; both backends identical
+  without the hook).
+- **Next step**: F2 (the limiter of the setpoint drift).
+
 ## 2026-11-10 — E-F1: the SET of EnergyPlus (Pierce) against pythermalcomfort (branch `v1.2.0`, on the server)
 
 - **Objective**: task E-F1 of the review v04 and of block F: compare, hour by hour, the SET of EnergyPlus's Pierce

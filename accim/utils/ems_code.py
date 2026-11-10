@@ -39,7 +39,8 @@ from accim.sim.ems.standard_lines import (
     weather_file_definition,
     weather_file_lines,
 )
-from accim.sim.standards import COMFORT_STANDARDS, FIRST_REGISTRY_NUMBER, comfort_standard_definition, definition_of
+from accim.sim.standards import (COMFORT_STANDARDS, FIRST_REGISTRY_NUMBER, comfort_standard_definition, definition_of,
+                                 hook_comfort_standard_error)
 
 __all__ = ['get_setpoint_ems_code', 'get_setpoint_ems_programs', 'print_setpoint_ems_code']
 
@@ -284,6 +285,10 @@ def _checked_arguments(comfort_standard: int, category: Optional[Number], comfor
     if comfort_standard not in COMFORT_STANDARDS:
         raise ValueError(f'comfort_standard {comfort_standard!r} is not a comfort standard '
                          f'(valid: {list(COMFORT_STANDARDS)})')
+    # Comfort standard 24 (INT Sun2026 SET) is set by a hook of the API backend, without EMS code (task F1)
+    reason = hook_comfort_standard_error(comfort_standard)
+    if reason is not None:
+        raise ValueError(f'{reason}.')
     comfort_standard = int(comfort_standard)
     categories = COMFORT_STANDARDS[comfort_standard].categories
     if category is not None and categories and category not in categories:

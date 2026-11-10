@@ -52,8 +52,9 @@ def test_the_comfort_standard_23():
     assert standard.categories == {80: '80% acceptability', 90: '90% acceptability'}
     assert list(standard.comfort_modes) == [0, 1, 2, 3] == MODULAR_COMFORT_MODES[23]
     assert 'a choice of the user' in standard.comfort_modes[0]
-    # Built in, after INT ISO7730 and before the custom model; not one of the registry
-    assert list(st.COMFORT_STANDARDS)[-3:] == [22, 23, 99]
+    # Built in, after INT ISO7730 and before the custom model (and INT Sun2026 SET, 24, task F1); not one of the
+    # registry
+    assert list(st.COMFORT_STANDARDS)[-4:] == [22, 23, 24, 99]
     assert st.comfort_standard_definition(23) is None and 23 not in st.registered_comfort_standards()
     definition = st.definition_of(23)
     assert definition is st.built_in_definitions()[23] and definition.standard is standard

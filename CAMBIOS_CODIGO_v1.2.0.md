@@ -119,6 +119,9 @@ Lo que ya está en otros documentos no se repite aquí:
 - **E-F1 (bloque F).** `add_thermal_comfort_model` añade el modelo Pierce a los objetos People; en un año del modelo de
   ejemplo, el SET de pythermalcomfort queda 0,045 K por debajo del de EnergyPlus de media (máximo 0,20 K) de pie y
   0,116 K (máximo 0,34 K) sentado (sección 29).
+- **F1 (bloque F).** El estándar de confort 24, INT Sun2026 SET (el modelo causal de Sun, Brager y Schiavon, 2026:
+  TSV = 0,11·SET − 2,6), es un gancho del SET por bisección con las entradas de los objetos People y la temperatura
+  radiante media de la zona (`apply_sun2026_setpoints`); no tiene código EMS (sección 30).
 - Las categorías del PMV y la aproximación de la corrección del metabolismo se han comprobado en ISO 7730:2025 y
   EN 16798-1:2019, y el modelo dinámico de vestimenta de A5, en Schiavon y Lee (2013) y ASHRAE 55-2020 (sección 6).
 - Lo que quedaba abierto se ha comprobado: el golden master y las pruebas de EnergyPlus 26.1 y 26.2, también la de A5
@@ -1755,3 +1758,41 @@ invierte el gancho de la SET) a partir de las mismas salidas, y anotar la difere
   y 0,324/0,344 K. El área corporal y la presión no cambian el resultado; la diferencia crece con el SET (de −0,01 K
   por debajo de 26 °C a −0,14 K por encima de 30 °C). La tabla está en `notes/decisions.md` y en la sección 4.9.2.
 - Pruebas: `tests/core/test_pierce_set.py` (el ayudante; la simulación anual reproduce la tabla con 0,001 K).
+
+## 30. El estándar de confort 24, INT Sun2026 SET (F1, bloque F)
+
+El bloque F (`notes/PROPUESTA_ADAPTACION_INTERIOR_v03.md` §4 y §6, `notes/PROMPTS_COPILOT_bloque_F_v02.md`) pide el
+modelo SET causal de Sun, Brager y Schiavon (2026), Energy and Buildings 370, 118097 (TSV = 0,11·SET − 2,6; banda de
+19,1 a 28,2 °C de SET para TSV ±0,5; SET neutro 23,6 °C), como estándar de confort 24, sobre el gancho del SET por
+bisección de G3 (v04 §4.6: el gancho generalizado y el estándar 24 como capa fina).
+
+**Antes.** El gancho del SET (A6, G3) tenía metabolismo, vestimenta y velocidad del aire constantes, y resolvía la
+temperatura operativa con la radiante media igual a la del aire.
+
+**Ahora.**
+
+- `SetSetpointHook` y `apply_set_setpoints` aceptan `met`, `clo` y `air_speed` None (con `method='bisection'`): el
+  gancho los lee en cada paso de los horarios del objeto People de cada zona (sensores `SET_Act_<zone>`, el nivel de
+  actividad entre 104,76 W/met = 58,2 W/m² × 1,8 m²; `SET_Clo_<zone>` o, con el modelo dinámico de vestimenta,
+  `SET_CloValue_<zone>`, la salida *Zone Thermal Comfort Clothing Value*; `SET_CloMethod_<zone>` con
+  CalculationMethodSchedule; `SET_Vel_<zone>`), y `tr_mode`: 'equal_air' (por defecto, como A6) o 'zone' (la
+  temperatura del aire con la radiante media de la zona, que se escribe en los termostatos del ACCIS como operativa,
+  (aire + radiante)/2, decisión del autor del 10/11/2026).
+- `apply_sun2026_setpoints(building, comfort_mode=1, category=80, tsv_limit=None, set_offset=None, tr_mode='zone',
+  ...)` devuelve un `Sun2026SetpointHook`: modo 1 'SET band' (el SET de la banda de TSV ±tsv_limit; 0,5 por defecto y
+  con las categorías 80 y 90; 0,7 y 1,0 con aviso de extrapolación) o modo 2 'SET neutral +/- offset' (23,6 °C ±
+  `set_offset`); bisección entre 10 y 40 °C con tolerancia de 0,05 K; salidas `TSV_causal_<zone>` y
+  `HoursInCausalBand_<zone>` además de `SET_<zone>`; el mínimo y el máximo de B5 acotan sus consignas después, y sin
+  mínimo avisa una vez por zona si la consigna de calefacción baja de 18 °C; añade el modelo Pierce y su salida.
+- El estándar 24 está en el catálogo (`accim.sim.standards`, `HOOK_COMFORT_STANDARDS`) sin código EMS: `AddAccis`,
+  `modify_accis`, `print_setpoint_ems_code` y `compute_setpoints` dan un `ValueError` con él, y la interfaz gráfica y
+  las preguntas de `AddAccis` no lo ofrecen. El respaldo del backend EMS (bucle Erl de v03 A6a) queda en `TODO.md`
+  (P2).
+- `Table` nombra las salidas nuevas (`<zone>_TSV_causal`, `<zone>_HoursInCausalBand (h)`).
+- Medido (dos semanas del modelo de ejemplo en Sevilla, EnergyPlus 25.1): el SET horario del gancho queda por debajo
+  del SET Pierce de EnergyPlus 0,08 K de media en invierno (máximo 0,20 K) y 0,155 K en verano (máximo 0,29 K); de
+  pie y alineado con el paso que leen los sensores, 0,01 y 0,08 K (`notes/decisions.md`).
+- Decisiones provisionales en `notes/questions.md`: los modos son 1 y 2; los "límites CustAST_ACSTaul/all y
+  AHSTaul/all" del encargo son límites de aplicabilidad de la métrica exterior y no se aplican a las consignas; la
+  vestimenta del modelo dinámico se lee de su salida.
+- Pruebas: `tests/core/test_sun2026_set.py` (18).

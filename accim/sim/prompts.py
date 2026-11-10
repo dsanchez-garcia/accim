@@ -9,7 +9,7 @@ from typing import Callable, Dict, Optional
 from accim.constants import SUPPORTED_ENERGYPLUS_VERSIONS
 from accim.sim.arguments import OUTPUT_FREQUENCIES, OUTPUT_TYPES, SCRIPT_TYPES, SUPPLY_AIR_TEMP_INPUT_METHODS, \
     SETPOINT_TYPES, to_day_of_year
-from accim.sim.standards import COMFORT_STANDARDS
+from accim.sim.standards import COMFORT_STANDARDS, HOOK_COMFORT_STANDARDS
 
 __all__ = ['ask_generation_arguments', 'ask_model_arguments']
 
@@ -162,12 +162,13 @@ def ask_generation_arguments(script_type: str, ask: Optional[Callable[[str], str
     """
     ask = ask or input
     print('The information you will be required to enter below will be used to generate the customised output IDFs:')
-    standards = ''.join(f'{s.title};\n' for s in COMFORT_STANDARDS.values()).replace('1 = INT EN16798;',
-                                                                                     '1 = INT EN16798-1;')
+    # Not the comfort standards whose setpoints a hook of the API backend sets (comfort standard 24, task F1)
+    written = {number: s for number, s in COMFORT_STANDARDS.items() if number not in HOOK_COMFORT_STANDARDS}
+    standards = ''.join(f'{s.title};\n' for s in written.values()).replace('1 = INT EN16798;', '1 = INT EN16798-1;')
     args: Dict = {}
     args['comfort_standard'] = _ask_list(
         ask, f'Enter the Comfort Standard numbers separated by space (\n{standards}{_SETPOINT_TABLE}\n): ',
-        '     Enter the Comfort Standard numbers separated by space: ', int, choices=list(COMFORT_STANDARDS),
+        '     Enter the Comfort Standard numbers separated by space: ', int, choices=list(written),
         invalid_message='          Comfort Standard numbers are not correct. Please enter the numbers again.')
 
     custom = {'custom_slope': 0, 'custom_intercept': 0, 'custom_heating_offset': 0, 'custom_cooling_offset': 0,

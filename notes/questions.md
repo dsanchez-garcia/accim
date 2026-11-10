@@ -24,6 +24,46 @@ it here as answered).
 
 ## Open
 
+## 2026-11-10 — F1: the numbers of the comfort modes of comfort standard 24
+- Context: the decision of the author names the comfort modes of comfort standard 24 'SET band' and 'SET neutral
+  +/- offset' without numbers; the catalogue of accim (`accim.sim.standards.ComfortStandard.comfort_modes`) numbers
+  them, and 0 means static setpoints in the other comfort standards.
+- Why it matters: the number is part of the names of the output IDFs of the other comfort standards (`CM_`), and
+  the parametric module numbers the comfort modes.
+- Options considered: (i) 1 = 'SET band', 2 = 'SET neutral +/- offset' (implemented); (ii) 0 and 1; (iii) the names
+  only.
+- Owner: the author.
+- Status: open; option (i) implemented provisionally (`SUN2026_COMFORT_MODES`; the functions take the number or the
+  name): 0 keeps its meaning of static setpoints.
+
+## 2026-11-10 — F1: the "CustAST_ACSTaul/all and AHSTaul/all limits" of the prompt of F1
+- Context: scope 2 of the prompt of F1 asks to apply "the existing CustAST_ACSTaul/all and AHSTaul/all limits and the
+  B5 minimum/maximum" to the inverted setpoints. In the ACCIS, `ACSTaul`, `ACSTall`, `AHSTaul` and `AHSTall` (and the
+  `CustAST_*` inputs of the custom model) are the applicability limits of the outdoor metric (RMOT, PMOT or
+  `Tout_metric`), not limits of the setpoints (the same reading as the question of verdict 13 above).
+- Why it matters: applied to the setpoints of the SET, they would bound an indoor temperature with limits of the
+  outdoor temperature (10 and 30 °C for INT EN16798).
+- Options considered: (i) the setpoints of the SET are bounded by the range of the bisection (10–40 °C) and by the
+  minimum and maximum of B5 in the EMS after the hook, and the applicability limits of the comfort standard of the
+  zone keep their role in the hour counters of the ACCIS (implemented); (ii) bound them with ACSTaul/ACSTall/AHSTaul/
+  AHSTall as temperatures.
+- Owner: the author.
+- Status: open; option (i) implemented provisionally (it changes nothing in the ACCIS).
+
+## 2026-11-10 — F1: the clothing insulation of the dynamic clothing model in the hook
+- Context: the hook of comfort standard 24 reads the clothing insulation of the People objects (decision 5 of block
+  F, "clothing via set_clothing_method of A5"). With the method DynamicClothingModelASHRAE55, EnergyPlus calculates
+  it; the documentation of EnergyPlus lists the output *Zone Thermal Comfort Clothing Value* [clo] of the People
+  objects without saying when it is calculated. Measured with EnergyPlus 25.1 and the Pierce model: with the dynamic
+  model it was 0.75 until 6:00 of 1 January and then 0.534, 0.639...; with the clothing insulation schedule, 0.
+- Why it matters: the hook needs the clothing insulation of each timestep.
+- Options considered: (i) the output of the People object (that of the previous timestep, as the other sensors of
+  the zone; the hook gives no setpoints while it is 0) with the dynamic model, the schedule with
+  ClothingInsulationSchedule, and one of them by the calculation method schedule with CalculationMethodSchedule
+  (implemented); (ii) the equations of the dynamic model of the Engineering Reference (19.1.7) in Python.
+- Owner: the author.
+- Status: open; option (i) implemented provisionally (it reads what EnergyPlus calculates).
+
 ## 2026-11-10 — G5: the warning of verdict 13 compares the floor and ceiling with ACSTaul and AHSTall
 - Context: verdict 13 of `notes/PROPUESTAS_MEJORAS_post_1.1.0_v04.md` (§5) asks for a `ValueError` if the floor of the
   heating setpoint is not lower than the ceiling of the cooling setpoint (there since B5) and a warning in the log if

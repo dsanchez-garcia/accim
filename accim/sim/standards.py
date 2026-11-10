@@ -8,7 +8,11 @@ of the comfort standards defined by their data (proposal B3).
 The built-in comfort standards (0 to 23, and the custom model, 99) have their EMS code in
 :mod:`accim.sim.ems.program_lines` and :mod:`accim.sim.ems.setpoint_lines`; that of JPN Aqilah 2025 (23, proposal B4
 and decisions D1 and D2 of the brief of 1.2.0), a comfort standard defined by its data (:func:`definition_of`), is
-added at the end of the chains of the others, which do not change. Other comfort standards can be defined by
+added at the end of the chains of the others, which do not change. Comfort standard 24, INT Sun2026 SET (the causal
+SET model of Sun, Brager & Schiavon, 2026; task F1 of block F), has no EMS code: its setpoints are those of a hook of
+the backend of the Python API of EnergyPlus (:func:`accim.sim.comfort_hooks.apply_sun2026_setpoints`), so
+:class:`accim.sim.accis.AddAccis`, ``modify_accis``, the functions of the EMS code and ``compute_setpoints`` do not take
+it (:data:`HOOK_COMFORT_STANDARDS`). Other comfort standards can be defined by
 their data, a :class:`ComfortStandardDefinition` (a comfort temperature that is a straight line of an outdoor metric
 of :mod:`accim.sim.ems.outdoor_metric`, its applicability limits, the offsets of its categories and its static
 setpoints), and registered with :func:`register_comfort_standard`, or read from YAML files with
@@ -31,11 +35,13 @@ __all__ = [
     'ComfortStandardDefinition',
     'DEFINITION_COMFORT_MODES',
     'FIRST_REGISTRY_NUMBER',
+    'HOOK_COMFORT_STANDARDS',
     'built_in_definitions',
     'comfort_standard_definition',
     'definition_from_mapping',
     'definition_of',
     'get_comfort_standard',
+    'hook_comfort_standard_error',
     'load_comfort_standards',
     'register_comfort_standard',
     'registered_comfort_standards',
@@ -186,9 +192,36 @@ COMFORT_STANDARDS: Dict[int, ComfortStandard] = {s.number: s for s in [
                      1: 'Aqilah2025 Model Adaptive setpoints when applicable, otherwise Aqilah2025 Static setpoints',
                      2: f'Aqilah2025 Model Adaptive setpoints when applicable, otherwise {_STATIC_ISO}',
                      3: f'Aqilah2025 Model Adaptive setpoints when applicable, otherwise {_HORIZONTAL}'}),
+    ComfortStandard(24, 'INT Sun2026 SET', '24 = INT Sun, Brager & Schiavon 2026 (causal SET band)',
+                    {80: 'TSV within +/-0.5, the band of the paper', 90: 'TSV within +/-0.5, the band of the paper'},
+                    {1: 'SET band: the setpoints whose SET is that of the limits of the band of TSV (19.1 and 28.2 '
+                        'with +/-0.5)',
+                     2: 'SET neutral +/- offset: the setpoints whose SET is the neutral SET (23.6) +/- an offset'}),
     ComfortStandard(99, 'CUSTOM', '99 = CUSTOM', {},
                     {3: f'Custom Model Adaptive setpoints when applicable, otherwise {_HORIZONTAL}'}),
 ]}
+
+
+#: The comfort standards without EMS code, whose setpoints a hook of the backend of the Python API of EnergyPlus sets
+#: (:mod:`accim.sim.comfort_hooks`), and the function that prepares a model for them: 24, INT Sun2026 SET (task F1 of
+#: block F). :class:`accim.sim.accis.AddAccis`, ``modify_accis``, the functions of the EMS code
+#: (``print_setpoint_ems_code``...) and ``compute_setpoints`` do not take them (:func:`hook_comfort_standard_error`).
+HOOK_COMFORT_STANDARDS = {24: 'accim.sim.comfort_hooks.apply_sun2026_setpoints'}
+
+
+def hook_comfort_standard_error(number: Any) -> Optional[str]:
+    """The reason why a comfort standard has no EMS code (one of :data:`HOOK_COMFORT_STANDARDS`), for the messages of
+    the functions that write or read the EMS code; None for the other comfort standards."""
+    try:
+        function = HOOK_COMFORT_STANDARDS.get(number)
+    except TypeError:
+        return None
+    if function is None:
+        return None
+    standard = COMFORT_STANDARDS.get(number)
+    return (f'comfort standard {number} ({standard.title if standard else number}) has no EMS code: its setpoints are '
+            f'those of a hook of the backend of the Python API of EnergyPlus. Generate the model with another comfort '
+            f'standard and prepare it with {function}')
 
 
 def get_comfort_standard(number: int) -> ComfortStandard:

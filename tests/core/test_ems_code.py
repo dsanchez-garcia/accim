@@ -111,7 +111,10 @@ def test_the_inputs_of_the_custom_model():
 
 
 @pytest.mark.parametrize('arguments, message', [
-    (dict(comfort_standard=24), 'comfort_standard 24 is not a comfort standard'),
+    (dict(comfort_standard=25), 'comfort_standard 25 is not a comfort standard'),
+    # INT Sun2026 SET is set by a hook of the API backend, without EMS code (task F1)
+    (dict(comfort_standard=24, category=80, comfort_mode=1),
+     r'comfort standard 24 \(24 = INT Sun, Brager & Schiavon 2026 \(causal SET band\)\) has no EMS code'),
     (dict(comfort_standard=1, category=80),
      r'category 80 is not a category of comfort_standard 1 \(valid: \[1, 2, 3\]\)'),
     (dict(comfort_standard=4, comfort_mode=1),
