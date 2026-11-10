@@ -334,11 +334,25 @@ def test_the_setpoints_against_compute_setpoints(tmp_path):
     # Another weather file
     rows, _ = _setpoint_mismatches(building, data, str(OTHER_EPW), 1e-3)
     assert {row['check'] for row in rows} >= {'Check4_RMOT', 'Check4_PMOT', 'Check4_ACST', 'Check4_AHST'}
+    # A .stat file next to the weather file: EnergyPlus would take PMOT from it, and the summary says so
+    shutil.copy(EPW, tmp_path / 'weather.epw')
+    (tmp_path / 'weather.stat').write_text('', encoding='utf-8')
+    rows, lines = _setpoint_mismatches(building, data, str(tmp_path / 'weather.epw'), 1e-9)
+    assert rows == [] and lines[1].startswith('  Note: weather.stat is next to the weather file')
     # Another run period
     run_period.Begin_Day_of_Month = 11
     rows, lines = _setpoint_mismatches(building, data, str(EPW), 1e-3)
     assert rows == [] and lines == ['  Not checked: the last environment of the outputs begins on 10/03, not on the '
                                     'first day of the RunPeriod (11/03).']
+    # The zones whose setpoints a hook of the API backend sets are not checked (task G1 of the review of 1.2.0)
+    from accim.sim.comfort_hooks import apply_athb_setpoints
+
+    run_period.Begin_Day_of_Month = 10
+    apply_athb_setpoints(building)
+    rows, lines = _setpoint_mismatches(building, data, str(EPW), 1e-9)
+    assert rows == [] and sorted(lines[3:]) == [
+        f"  '{zone}': not checked (its setpoints are those of a hook of the API backend, ApplyHookSetpoints_{zone})."
+        for zone in ('Block1_Zone1', 'Block1_Zone2')]
 
 
 def _run_energyplus(tmp_path, building, begin, end):

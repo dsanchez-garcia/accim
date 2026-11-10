@@ -15,6 +15,19 @@ This log is a lightweight, session-scoped complement to the repository's
 existing tracking files — it does not replace them (see
 [[decisions.md#2026-09-13 — `notes/work-log.md` complements, not replaces, existing tracking files|the related decision]]).
 
+## 2026-11-10 — G2: the running mean of ASHRAE 55 from the 2nd to the 30th of January (branch `v1.2.0`, on the server)
+
+- **Objective**: task G2 of the review v04 (finding E1-1): `compute_setpoints` reproduces the PMOT of EnergyPlus with
+  a run period that begins between the 2nd and the 30th of January.
+- **Affected files**: `accim/sim/preview.py`, `accim/utils/verification.py`, `tests/core/test_preview.py`,
+  `tests/core/test_verification.py`, [[../docs/source/4_detailed use.md]] (§4.3.1, §4.6.1), [[../CHANGELOG.md]],
+  [[../CAMBIOS_CODIGO_v1.2.0.md]] (§24), [[../DEVLOG.md]], [[../TODO.md]].
+- **Finding or decision**: EnergyPlus 25.1 writes the mean of 31 December over the day before such a run period for
+  30 days; accim does the same now (10.574306 °C on 8 January, the value of EnergyPlus).
+- **Validation**: 44 tests (one with EnergyPlus 25.1 from 8 January); the documentation build, the same 59 warnings
+  as before the session (pandoc installed for it).
+- **Next step**: G3.
+
 ## 2026-11-10 — G1: the hooks of the ATHB and of the SET and the counters of the ACCIS (branch `v1.2.0`, on the server)
 
 - **Objective**: task G1 of the review v04 (finding A4/A6-1): the hour counters and outputs of the ACCIS follow the

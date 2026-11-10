@@ -208,7 +208,14 @@ def _energyplus_daily(epw: PathLike, timesteps_per_hour: int, start_date: Union[
 
     def daily_mean(day: int) -> float:
         # The days before the run period are those of the weather file (the last ones for the first days of the year)
-        return simulated[day] if day >= first else file_mean[day % number_of_days]
+        if day >= first:
+            return simulated[day]
+        if day == first - 1 and 1 <= first <= length - 1:
+            # A run period that begins on the 2nd to the 30th of January: ThermalComfort.cc reads the days of January
+            # before it and then the last days of December, and at the first BeginDayFlag writes the last day read (31
+            # December) over the day before the run period, which stays in the 30 days of PMOT for 30 days
+            return file_mean[number_of_days - 1]
+        return file_mean[day % number_of_days]
 
     alpha = ENERGYPLUS_CEN15251_ALPHA
     length = ENERGYPLUS_ASHRAE55_DAYS
@@ -250,8 +257,14 @@ def energyplus_running_means(epw: PathLike, timesteps_per_hour: int = 6, start_d
     temperatures of the first timestep of each hour, which EnergyPlus interpolates between the hourly values of the
     file (on the first day, the hour before the first one is the last hour of the same day). These are the values that
     EnergyPlus 25.1 reports (checked with a simulation of a year of the sample model; its source code,
-    ``ThermalComfort.cc``, does the same). EnergyPlus takes ``PMOT`` from the monthly means of a .stat file instead,
-    if there is one with the weather file (Engineering Reference 25.2, 19.1); that is not reproduced here.
+    ``ThermalComfort.cc``, does the same). With a run period that begins between the 2nd and the 30th of January,
+    ``CalcThermalComfortAdaptiveASH55`` of ``ThermalComfort.cc`` (EnergyPlus 25.1) reads the days of January before it
+    and then the last days of December, and its first ``BeginDayFlag`` writes the mean of the last day read, 31
+    December, over that of the day before the run period, so ``PMOT`` takes the mean of 31 December in its place for 30
+    days; this is reproduced too (finding E1-1 of the review of accim 1.2.0; with ``Seville_Present.epw`` from 8 January,
+    ``PMOT`` is 0.14 °C lower than the mean of the 30 previous days, as EnergyPlus 25.1 reports it). ``RMOT`` has no
+    such step. EnergyPlus takes ``PMOT`` from the monthly means of a .stat file instead, if there is one with the
+    weather file (Engineering Reference 25.2, 19.1); that is not reproduced here.
 
     :param epw: The path of the weather file (EPW), of 365 days.
     :param timesteps_per_hour: The number of timesteps per hour of the model (the object Timestep, 6 by default).
@@ -293,7 +306,9 @@ def compute_setpoints(epw: PathLike, comfort_standard: int, category: Optional[N
     The EMS programs of the output IDFs of :class:`accim.sim.accis.AddAccis` that calculate the setpoints
     (:func:`accim.utils.get_setpoint_ems_programs`, those that :func:`accim.utils.print_setpoint_ems_code` prints) run
     with the Erl interpreter of accim (:mod:`accim.sim.ems.erl`) in each timestep, as the program ``RunACCIS_<zone>`` of a
-    zone runs them, with the running means of EnergyPlus (:func:`energyplus_running_means`): at the first timestep of
+    zone runs them, with the running means of EnergyPlus (:func:`energyplus_running_means`, also those of the run
+    periods that begin between the 2nd and the 30th of January, whose running mean of ASHRAE 55 takes the mean of 31
+    December in place of that of the day before the run period, as EnergyPlus 25.1 does): at the first timestep of
     each day, the EMS still reads those of the previous day (and 0 at the first timestep of the run period), since its
     programs run before EnergyPlus calculates them, as in EnergyPlus 25.1. The hourly values are the means of those of
     the timesteps, as EnergyPlus reports the EMS outputs (``Averaged``), so they are those of the hourly EMS outputs of

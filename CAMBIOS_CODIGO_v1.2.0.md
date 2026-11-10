@@ -95,6 +95,9 @@ Lo que ya está en otros documentos no se repite aquí:
   consignas al ACCIS con el programa `ApplyHookSetpoints_<zona>`, justo después de SetAST: la tolerancia, el redondeo,
   el suelo y el techo, los contadores de horas (también los de largo plazo) y las salidas de las consignas de cada zona
   son ya los del gancho (sección 23).
+- **G2 (revisión v04).** `energyplus_running_means` y `compute_setpoints` reproducen la PMOT de EnergyPlus con un
+  periodo que empieza del 2 al 30 de enero (la media del 31 de diciembre en lugar de la del día anterior durante 30
+  días), y la verificación avisa de un .stat junto al EPW (sección 24).
 - Las categorías del PMV y la aproximación de la corrección del metabolismo se han comprobado en ISO 7730:2025 y
   EN 16798-1:2019, y el modelo dinámico de vestimenta de A5, en Schiavon y Lee (2013) y ASHRAE 55-2020 (sección 6).
 - Lo que quedaba abierto se ha comprobado: el golden master y las pruebas de EnergyPlus 26.1 y 26.2, también la de A5
@@ -1510,3 +1513,32 @@ SetAST y SetASTnoTol; así que, cuando el gancho escribía, las horas ya estaban
   backends dan resultados idénticos sin gancho y con unas consignas constantes dadas por un gancho (API) y por las
   mismas líneas en los programas (EMS), `check_exact=True`. Los archivos de pruebas afectados (límites, verificación,
   golden master, API, largo plazo): 119 pasan; el golden master no cambia.
+
+## 24. La media móvil de ASHRAE 55 de EnergyPlus con un periodo de simulación del 2 al 30 de enero (G2, revisión v04)
+
+La revisión v04 (§3.1, hallazgo E1-1) explicó los 0,14 °C de la tarea P1 encontrada con B5: con un periodo de
+simulación que empieza el día D de enero (2 ≤ D ≤ 30), `CalcThermalComfortAdaptiveASH55` de `ThermalComfort.cc`
+(EnergyPlus 25.1) lee los días 1 a D − 1 de enero y luego los últimos días de diciembre, de modo que la variable
+`avgDryBulbASH` se queda con la media del 31 de diciembre, y el primer `BeginDayFlag` la escribe sobre la media del
+día D − 1, donde se queda 30 días. El 1 de enero y a partir del día 31 no pasa nada, y la RMOT no se ve afectada.
+
+**Antes.** `energyplus_running_means` y `compute_setpoints` daban la media de los 30 días anteriores: con
+`Seville_Present.epw` desde el 8 de enero, una PMOT 0,142361 °C por encima de la de EnergyPlus todos los días de la
+semana, y la comprobación 4 de `verify_accim_simulation` lo daba por discrepancia.
+
+**Ahora.**
+
+- `accim/sim/preview.py` (`_energyplus_daily`): con un comienzo del 2 al 30 de enero, la media del día anterior al
+  periodo es la del 31 de diciembre en las ventanas de la PMOT; los docstrings de `energyplus_running_means` y
+  `compute_setpoints` lo explican.
+- `accim/utils/verification.py`: el docstring dice seis categorías de comprobaciones (no cuatro), y la comprobación 4
+  avisa en su resumen si hay un archivo .stat junto al EPW (EnergyPlus toma entonces la PMOT de sus medias mensuales,
+  que no se reproducen).
+- Documentación: las secciones 4.3.1 y 4.6.1 del uso detallado; las entradas de E1 (también "unos segundos" en vez de
+  "un segundo") y E2 del CHANGELOG.
+- Pruebas: `tests/core/test_preview.py` (2 nuevas: con un EPW cuyas medias diarias son el número del día, desde el 8
+  de enero, la PMOT lleva el 31 de diciembre en lugar del 7 de enero durante sus 30 ventanas, la RMOT no cambia y los
+  comienzos del 1 y 31 de enero y del 1 de marzo tampoco; y con EnergyPlus 25.1, del 8 de enero al 20 de febrero, las
+  consignas de INT EN16798 y de INT ASHRAE 55 son las de `compute_setpoints` y la RMOT y la PMOT las de
+  `energyplus_running_means`, 10,574306 °C el 8 de enero, la cifra de EnergyPlus); `tests/core/test_verification.py`
+  (el aviso del .stat y las zonas con ganchos). 44 pasan. No cambia ningún IDF ni el código del EMS.

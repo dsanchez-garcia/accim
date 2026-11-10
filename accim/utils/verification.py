@@ -35,7 +35,7 @@ def verify_accim_simulation(
     Reads EnergyPlus simulation output and verifies that the ACCIS EMS scripts
     added by AddAccis are working correctly.
 
-    The function performs four categories of checks:
+    The function performs six categories of checks:
 
     **Check 1 – HVAC Setpoint Adherence (per zone):**
     - If cooling is active (CoolCoil > 0): Zone Operative Temperature <= ACST_Sch + tolerance
@@ -105,7 +105,11 @@ def verify_accim_simulation(
     the conditions 'hvac_off' or 'hvac_on', which depend on the HVAC system, are not checked. They are checked with the
     outputs at timestep frequency, or else hourly, of the last environment of the outputs (the run period). The zones
     whose setpoints a hook of the API backend sets (the setpoints of the ATHB and of the SET of
-    :mod:`accim.sim.comfort_hooks`, with the program ``ApplyHookSetpoints_<zone>``) are not checked.
+    :mod:`accim.sim.comfort_hooks`, with the program ``ApplyHookSetpoints_<zone>``) are not checked. The running mean
+    of ASHRAE 55 of a run period that begins between the 2nd and the 30th of January is that of EnergyPlus 25.1 (with
+    the mean of 31 December in place of that of the day before the run period, see
+    :func:`accim.sim.preview.energyplus_running_means`); with a .stat file next to the weather file, EnergyPlus takes it
+    from the monthly means of the .stat file, which check 4 does not reproduce (its summary says so).
 
     **Check 5 – The floor and ceiling of the setpoints (per zone, output IDFs of AddAccis):**
     The heating setpoint of each zone with a floor (``heating_setpoint_floor``, the input ``AHSTfloor`` of its program
@@ -1212,6 +1216,12 @@ def _setpoint_mismatches(building, data: Mapping[str, pd.DataFrame], epw: str,
     datetimes = outputs.datetimes[rows]
     mismatches: List[dict] = []
     lines = [f'  {frequency} outputs from {start_date}, {timesteps_per_hour} timesteps per hour, weather file {epw}']
+    stat_file = os.path.splitext(str(epw))[0] + '.stat'
+    if os.path.isfile(stat_file):
+        lines.append(f'  Note: {os.path.basename(stat_file)} is next to the weather file: if it was next to the weather '
+                     f'file of the simulation, EnergyPlus took the running mean of ASHRAE 55 (PMOT) from its monthly '
+                     f'means, which energyplus_running_means does not reproduce (Check4_PMOT, and the setpoints with '
+                     f'PMOT).')
     # The running means, those of the first People object (all have the same)
     try:
         running_means = energyplus_running_means(epw, timesteps_per_hour, start_date).set_index('date')

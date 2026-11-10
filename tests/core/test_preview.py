@@ -170,6 +170,30 @@ def test_energyplus_running_means_at_the_beginning_of_the_year(tmp_path):
     assert means['RMOT'][1] == pytest.approx(alpha * means['RMOT'][0] + (1 - alpha) * mean[0])
 
 
+def test_energyplus_running_means_of_a_run_period_from_january(tmp_path):
+    # The temperature of each hour is the number of the day (from 0). With a run period that begins between the 2nd and
+    # the 30th of January, EnergyPlus 25.1 (ThermalComfort.cc) writes the daily mean of 31 December (364) over that of
+    # the day before the run period, which stays in the 30 days of PMOT for 30 days (finding E1-1 of the review of
+    # 1.2.0); with one timestep per hour, the daily means of the simulated days are those of the weather file
+    path = _write_epw(tmp_path / 'days.epw', np.repeat(np.arange(DAYS, dtype=float), 24))
+    means = energyplus_running_means(path, timesteps_per_hour=1, start_date='08/01')
+    simulated = means['simulated_daily_mean'].to_numpy()
+    assert simulated[:3] == pytest.approx([7, 8, 9])
+    # The 29 days before 7 January: from 9 December (342) to 6 January (5)
+    before = list(range(DAYS - 23, DAYS)) + list(range(0, 6))
+    assert means['PMOT'][0] == pytest.approx((sum(before) + 364) / 30)
+    for k in range(1, 30):
+        assert means['PMOT'][k] == pytest.approx(np.mean(before[k:] + [364] + list(simulated[:k]))), k
+    assert means['PMOT'][30] == pytest.approx(np.mean(simulated[:30]))
+    # RMOT has no such step
+    alpha = ENERGYPLUS_CEN15251_ALPHA
+    assert means['RMOT'][0] == pytest.approx((1 - alpha) * sum(alpha ** (k - 1) * (7 - k) for k in range(1, 8)))
+    # Nor PMOT from 1 January (the day before is 31 December) or from the 31st (no day of December)
+    for start, first in (('01/01', 0), ('31/01', 30), ('01/03', 59)):
+        other = energyplus_running_means(path, timesteps_per_hour=1, start_date=start)
+        assert other['PMOT'][0] == pytest.approx(np.mean([(first - k) % DAYS for k in range(1, 31)])), start
+
+
 @pytest.mark.parametrize('arguments, message', [
     (dict(timesteps_per_hour=7), 'timesteps_per_hour must be one of'),
     (dict(start_date='31/02'), 'start_date must be'),
@@ -393,3 +417,24 @@ def test_compute_setpoints_as_energyplus_in_timesteps_from_july(tmp_path, monkey
     cen, ashrae_mean = _running_means(results)
     np.testing.assert_allclose(preview_custom['RMOT'][:len(results)], cen, atol=1e-9)
     np.testing.assert_allclose(preview_custom['PMOT'][:len(results)], ashrae_mean, atol=1e-9)
+
+
+@pytest.mark.skipif(_energyplus() is None, reason='needs EnergyPlus 25.1 and the sample files of the repository')
+def test_compute_setpoints_as_energyplus_from_the_8th_of_january(tmp_path, monkeypatch):
+    # INT EN16798-1 (RMOT) in zone 1 and INT ASHRAE 55 (PMOT) in zone 2, from 8 January to 20 February (44 days,
+    # hourly): EnergyPlus 25.1 takes the mean of 31 December in place of that of 7 January in the running mean of ASHRAE
+    # 55 for 30 days (finding E1-1 of the review of 1.2.0), which was 0.14 °C above it before
+    results = _simulate(tmp_path, monkeypatch, (1, 8), (2, 20), 'hourly',
+                        {'Block1:Zone2': {'comfort_standard': 2, 'category': 80, 'comfort_mode': 3}},
+                        comfort_standard=[1], category=[2], comfort_mode=[3])
+    en16798 = compute_setpoints(EPW, 1, 2, 3, start_date='08/01')
+    ashrae = compute_setpoints(EPW, 2, 80, 3, start_date='08/01')
+
+    assert len(results) == 44 * 24
+    _compare(results, 'Block1_Zone1', en16798, 1e-4)
+    _compare(results, 'Block1_Zone2', ashrae, 1e-4)
+    cen, ashrae_mean = _running_means(results)
+    np.testing.assert_allclose(en16798['RMOT'][:len(results)], cen, atol=1e-9)
+    np.testing.assert_allclose(en16798['PMOT'][:len(results)], ashrae_mean, atol=1e-9)
+    daily = energyplus_running_means(EPW, 6, '08/01')['PMOT']
+    assert ashrae_mean[0] == pytest.approx(daily[0]) and ashrae_mean[0] == pytest.approx(10.574306, abs=1e-6)
