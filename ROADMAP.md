@@ -56,3 +56,10 @@ Mid- and long-term technical plan.
 - Exit criteria: the 11 EMS example files of EnergyPlus give the same results with both backends.
 - Dependencies: whether the API of EnergyPlus gives access to the data of these objects (curves, tables, constructions).
 
+### [R-06] Parametric and optimisation module without besos
+- Horizon: Long term (accim 2.0)
+- Objective: Remove besos (and the pins pulp<4, datapackage and the patches of accim/_besos_compat.py) by replacing its Evaluator with an accim class that applies the Parameter objects with eppy, runs run_ep (EMS or API backend) in parallel with concurrent.futures and reads the results with the current readers; platypus directly for run_optimisation and SALib for run_sensitivity_analysis_by_epw.
+- Scope: accim/parametric_and_optimisation/*, accim/_besos_compat.py, setup.py/pyproject.toml, tests/parametric_and_optimisation_full_workflow.
+- Exit criteria: the full-workflow tests give the same results; pip install accim does not install besos; requirements-dev.txt has no inherited pins.
+- Dependencies: E3 (pyproject with extras), regression tests of the full workflow.
+

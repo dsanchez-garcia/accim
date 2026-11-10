@@ -36,6 +36,14 @@ Recommended flow: track active work in `TODO.md`, move completed outcomes to `DE
 ## Entries
 
 ### 2026-11-10
+#### [done] C3: the initiative R-06 in `ROADMAP.md` (branch `v1.2.0`)
+- Context: C3 (to decouple the parametric module from besos) and E3 are out of the scope of the list of the author for this session: only the initiative R-06 goes to `ROADMAP.md`, as v03 (§5, C3) writes it.
+- Changes: `ROADMAP.md`: [R-06] "Parametric and optimisation module without besos" (long term, accim 2.0; dependencies: E3 and the regression tests of the full workflow), with the text of v03 unchanged, after R-05.
+- Files: `ROADMAP.md`, `DEVLOG.md`.
+- Verification: the text is that of v03 (§5, C3), line by line; no code changes.
+- Next step: the report of the session (`notes/INFORME_SESION_v1.2.0_2026-11-10.md`).
+
+### 2026-11-10
 #### [done] A6: the setpoints of the standard effective temperature (SET) and of the PPD with the Python API (branch `v1.2.0`)
 - Context: A6 is the last proposal of the list of the author. v03 (A6, no prompt, and no adjustment in the brief) gives two ways for the setpoints of the SET: (a) a proportional control in Erl of the temperature setpoint from the SET of the previous timestep (`T_sp = T_sp_prev + k·(SET_target − SET_prev)`, with saturation, k ≈ 0.8; "sencillo pero con retardo y posible oscilación") and (b) a hook of the API backend, as A4, with `pythermalcomfort.models.set_tmp` and bisection on the operative temperature ("exacto"); the setpoints of the PPD of the categories of ISO 7730:2025 (Table A.1: I < 6 %, II < 10 %, III < 15 %, IV < 25 %), equivalent to the PMV ±0.2/0.5/0.7/1.0, "se resuelve con A2"; and names the setpoints by cooling effect (the outputs of the model `CoolingEffectASH55` of the People objects) without a design. It gives no defaults for the SET setpoints, the metabolic rate, the clothing or the air speed. pythermalcomfort 4.8.1 was installed for A4.
 - Changes:
