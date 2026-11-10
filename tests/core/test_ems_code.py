@@ -111,7 +111,7 @@ def test_the_inputs_of_the_custom_model():
 
 
 @pytest.mark.parametrize('arguments, message', [
-    (dict(comfort_standard=23), 'comfort_standard 23 is not a comfort standard'),
+    (dict(comfort_standard=24), 'comfort_standard 24 is not a comfort standard'),
     (dict(comfort_standard=1, category=80),
      r'category 80 is not a category of comfort_standard 1 \(valid: \[1, 2, 3\]\)'),
     (dict(comfort_standard=4, comfort_mode=1),

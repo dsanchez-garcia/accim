@@ -105,7 +105,7 @@ from accim.sim.generation import (
 from accim.sim.model import AccimModel, hvac_template_types
 from accim.sim.outputs import OUTPUT_DATAFRAME_COLUMNS, enable_sizing_calculations, output_variables_dataframe
 from accim.sim.results_size import SIZE_COLUMNS, SimulationSize, estimate_simulation_size, format_size
-from accim.sim.standards import comfort_standard_definition
+from accim.sim.standards import comfort_standard_definition, definition_of
 from accim.sim.targets import resolve_targets
 
 __all__ = ['AddAccis', 'add_accis_to_idf', 'addAccis', 'gen_outputs_df', 'load_idf', 'modify_accis']
@@ -466,7 +466,8 @@ class AddAccis:
         8 = IND IMAC C MM; 9 = IND IMAC R 7DRM; 10 = IND IMAC R 30DRM; 11 = IND Dhaka; 12 = ROM Udrea;
         13 = AUS Williamson; 14 = AUS DeDear; 15 = BRA Rupp NV; 16 = BRA Rupp AC; 17 = MEX Oropeza Arid;
         18 = MEX Oropeza DryTropic; 19 = MEX Oropeza Temperate; 20 = MEX Oropeza HumTropic;
-        21 = CHL Perez-Fargallo; 22 = INT ISO7730; 99 = CUSTOM.
+        21 = CHL Perez-Fargallo; 22 = INT ISO7730; 23 = JPN Aqilah2025; 99 = CUSTOM; and those of the comfort standards
+        defined by their data of the registry (100 or more, :mod:`accim.sim.standards`).
     :param category: The categories (a list): 1, 2 or 3 (CAT I, II, III), or 80, 85 or 90 (% of acceptability).
     :param category_cooling_offset: An offset summed to the cooling setpoint offset of the category.
     :param category_heating_offset: An offset summed to the heating setpoint offset of the category.
@@ -1183,6 +1184,11 @@ def modify_accis(
             raise ValueError('The model has the ACCIS of an earlier version of accim, whose custom model has one '
                              'regime. To give several, add the ACCIS with this version of accim to the model without '
                              'it.')
+        if comfort_standard is not None and definition_of(comfort_standard) is not None:
+            raise ValueError(f'The model has the ACCIS of an earlier version of accim, which does not have the EMS '
+                             f'code of the comfort standard {comfort_standard} (JPN Aqilah 2025, and those defined by '
+                             f'their data, are new in accim 1.2.0). To use it, add the ACCIS with this version of '
+                             f'accim to the model without it.')
         _modify_accis_of_earlier_versions(idf, programs, **arguments)
         indent_programs(idf)
         return

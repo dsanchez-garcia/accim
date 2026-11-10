@@ -150,7 +150,7 @@ If you have run `accis.AddAccis()`, you will be asked in the prompt to enter a f
 | `outputs_dataframe` | `Output_take_dataframe` | pandas DataFrame | `None` |
 | `energyplus_version` | `EnergyPlus_version` | `'auto'`, or from `'9.1'` to `'26.2'` | `'auto'` |
 | `setpoint_type` | `TempCtrl` | `'temperature'` (or `'temp'`) or `'pmv'` | asked |
-| `comfort_standard` | `ComfStand` | list of numbers from 0 to 22, or 99 (custom model), or those of the comfort standards defined by their data (100 or more, new in 1.2.0, section {ref}`comfort-standard-registry`) | asked |
+| `comfort_standard` | `ComfStand` | list of numbers from 0 to 23 (23, JPN Aqilah 2025, new in 1.2.0), or 99 (custom model), or those of the comfort standards defined by their data (100 or more, new in 1.2.0, section {ref}`comfort-standard-registry`) | asked |
 | `custom_slope`, `custom_intercept`, `custom_cooling_offset`, `custom_heating_offset`, `custom_cooling_upper_limit`, `custom_cooling_lower_limit`, `custom_heating_upper_limit`, `custom_heating_lower_limit` | `CustAST_m`, `CustAST_n`, `CustAST_ACSToffset`, `CustAST_AHSToffset`, `CustAST_ACSTaul`, `CustAST_ACSTall`, `CustAST_AHSTaul`, `CustAST_AHSTall` | numbers (only used with `comfort_standard=[99]`) | 0 |
 | `custom_outdoor_metric`, `custom_alpha`, `custom_days` (new in 1.2.0) | — (`CustAST_metric`, `CustAST_alpha`, `CustAST_days` in the EMS) | the outdoor metric of the custom model, its alpha and its days (section {ref}`custom-outdoor-metric`) | `'pmot'`, 0.8, 30 |
 | `epw` (new in 1.2.0) | — | the weather file of the simulations, with which the outdoor metric of the custom model begins (and that of the comfort standards defined by their data that the EMS calculates) | `None` |
@@ -230,7 +230,7 @@ accim reads, changes and writes the models with [eppy](https://eppy.readthedocs.
 
 Each argument is explained below:
 
--   comfort_standard (ComfStand): refers to the thermal comfort standard or model to be applied. Enter any number from 0 to 22 or 99 to select the comfort standard or model to be used; you can see which model is each number in the table below. For example, if you enter ‘0 1 2 3’, you’ll get IDFs for CTE, EN16798-1, ASHRAE 55 and the local model developed by Rijal et al for Japanese dwellings. If you enter 99, that means you want to use some custom adaptive model. Therefore, you'll be asked to enter the slope, y-intercept among other parameters; in the function call, these are the arguments `custom_slope` (slope of the neutral temperature against the running mean outdoor temperature), `custom_intercept` (y-intercept), `custom_cooling_offset` and `custom_heating_offset` (offsets of the cooling and heating setpoints from the neutral temperature, positive and negative respectively), and `custom_cooling_upper_limit`, `custom_cooling_lower_limit`, `custom_heating_upper_limit` and `custom_heating_lower_limit` (upper and lower limits of the running mean outdoor temperature in which the adaptive cooling and heating setpoints are applicable). If you don’t enter any number, it’ll ask you to enter the numbers again.
+-   comfort_standard (ComfStand): refers to the thermal comfort standard or model to be applied. Enter any number from 0 to 23 or 99 to select the comfort standard or model to be used; you can see which model is each number in the table below. For example, if you enter ‘0 1 2 3’, you’ll get IDFs for CTE, EN16798-1, ASHRAE 55 and the local model developed by Rijal et al for Japanese dwellings. If you enter 99, that means you want to use some custom adaptive model. Therefore, you'll be asked to enter the slope, y-intercept among other parameters; in the function call, these are the arguments `custom_slope` (slope of the neutral temperature against the running mean outdoor temperature), `custom_intercept` (y-intercept), `custom_cooling_offset` and `custom_heating_offset` (offsets of the cooling and heating setpoints from the neutral temperature, positive and negative respectively), and `custom_cooling_upper_limit`, `custom_cooling_lower_limit`, `custom_heating_upper_limit` and `custom_heating_lower_limit` (upper and lower limits of the running mean outdoor temperature in which the adaptive cooling and heating setpoints are applicable). If you don’t enter any number, it’ll ask you to enter the numbers again.
 
 | comfort_standard | Name | Area | Reference |
 | :--- | :--- | :--- | :--- |
@@ -257,7 +257,22 @@ Each argument is explained below:
 | 20 | MEX Oropeza HumTropic | Mexico | I. Oropeza-Perez, A.H. Petzold-Rodriguez, C. Bonilla-Lopez, Adaptive thermal comfort in the main Mexican climate conditions with and without passive cooling, Energy and Buildings. 145 (2017) 251–258. https://doi.org/10.1016/j.enbuild.2017.04.031. |
 | 21 | CHL Perez-Fargallo | Chile | A. Pérez-Fargallo, J.A. Pulido-Arcas, C. Rubio-Bellido, M. Trebilcock, B. Piderit, S. Attia, Development of a new adaptive comfort model for low income housing in the central-south of chile, Energy Build. 178 (2018) 94–106. https://doi.org/10.1016/j.enbuild.2018.08.030. |
 | 22 | INT ISO7730 | Worldwide | ISO, 2005. ISO 7730: Ergonomics of the thermal environment Analytical determination and interpretation of thermal comfort using calculation of the PMV and PPD indices and local thermal comfort criteria. Management 3, 605–615. https://doi.org/10.1016/j.soildyn.2004.11.005 |
+| 23 | JPN Aqilah2025 | Japan | Aqilah, Rijal, Yoshida & Nicol (2025). Energy & Buildings, 335, 115469. https://doi.org/10.1016/j.enbuild.2025.115469 |
 | 99 | CUSTOM | - | Custom adaptive model, defined by the arguments `custom_*` (`custom_slope`, `custom_intercept`...) |
+
+(jpn-aqilah-2025)=
+Comfort standard 23, JPN Aqilah 2025 (new in accim 1.2.0), is the adaptive comfort model of 64 Japanese dwellings in free-running mode of Aqilah et al. (2025), from 32 988 votes in two years: the comfort temperature Tc = 0.38·Trm + 16.9 (their equation 8; N = 11 566, R² = 0.67), where Trm = α·Trm−1 + (1 − α)·Tod−1, with α = 0.8, is the running mean outdoor temperature of McCartney and Nicol (their equation 7), applicable from 5 to 30 °C, with the comfort bands of the paper (its conclusions 5 and 6): ±1.5 K with 90 % of acceptability and ±2.0 K with 80 %. accim uses the running mean of CEN 15251 that EnergyPlus calculates with α = 0.8 (RMOT), as for INT EN16798 (1). Its comfort modes are 0 (static setpoints), 1 (adaptive setpoints when applicable, otherwise the static setpoints), 2 (otherwise the static setpoints of ISO 7730 of the other comfort standards with the categories 80 and 90) and 3 (otherwise the adaptive setpoints of the limits, horizontally extended). The paper gives no static setpoints: those of comfort modes 0 and 1, 20 °C for heating and 28 °C for cooling, are a choice of the user; for other values, register a comfort standard defined by its data with the same data and other `static_setpoints` (section {ref}`comfort-standard-registry`; the YAML file `jpn_aqilah2025_fr.yaml` of the sample files has these data, with the running mean of EN 16798-1 that the EMS calculates, `rmot_alpha`). JPN Rijal (3), whose published results do not change, is the model of Rijal et al. (2019) from the same database in another period; JPN Aqilah 2025 differs from it in:
+
+| | JPN Rijal (3) | JPN Aqilah 2025 (23) |
+| :--- | :--- | :--- |
+| Comfort temperature | 0.48·Tpma + 14.4 | 0.38·Trm + 16.9 |
+| Outdoor temperature of reference | the prevailing mean outdoor temperature (PMOT of EnergyPlus) | the running mean with α = 0.8 (RMOT of EnergyPlus) |
+| Comfort bands (90 % / 80 %) | ±2.5 / ±3.5 K, those of ASHRAE 55 | ±1.5 / ±2.0 K, those of the paper |
+| Applicability | 5 to 30 °C | 5 to 30 °C (its comfort temperature, 14.5 to 30 °C) |
+| Mode | dwellings in mixed mode (Aqilah et al., 2025, Table 1) | dwellings in free-running mode |
+| Static setpoints of comfort modes 0 and 1 | COOLBIZ: 28 and 27 °C for cooling, 18 and 19 °C for heating (80 and 90) | 20 °C for heating and 28 °C for cooling, a choice of the user |
+
+`print_setpoint_ems_code(comfort_standard=23, ...)` prints its source, its outdoor metric, its static setpoints and the statistics of the model, as those of the comfort standards defined by their data, since accim writes its EMS code from its data (`accim.sim.standards.built_in_definitions()`): its branches are at the end of the chains of `SetComfTemp`, `SetAppLimits`, `ApplyCAT`, `CountHours_<zone>` and `SetVST`, so the output IDFs of the other comfort standards do not change. The models of earlier versions of accim do not have its EMS code: `modify_accis` raises a `ValueError` (add the ACCIS with this version).
 
 -   category (CAT): refers to the category of the thermal comfort model applied. Most of the Comfort Standards work with 80 and 90% acceptability levels, except the European EN 16798-1 (works with Categories 1, 2 and 3), the Chinese GB/T 50785 (works with categories 1 and 2), and the India Model for Adaptive Comfort - Commercial (which works with 80, 85 and 90% acceptability levels). So, for example, if you are going to use the EN16798-1 (comfort_standard = 1), you can enter ‘1 2 3’ to generate setpoint temperatures for Categories 1, 2 and 3. Or, if you are going to use the IMAC Commercial in naturally ventilated mode (comfort_standard = 7), you can enter ‘80 85 90’ to generate setpoint temperatures for these acceptability levels. All categories are referenced in the [full list of setpoint temperatures](https://htmlpreview.github.io/?https://github.com/dsanchez-garcia/accim/blob/master/docs/source/html_files/full_setpoint_table.html) at the end of this section. Please note that the Category values must be consistent with the Comfort Standard values previously entered. If, for instance, you enter ‘1’ in the Comfort Standard value (means you’re asking for EN16798 model), but then enter ‘80’ or ‘90’ in the Category value (which are categories used in ASHRAE55), you won’t get the results you want.
 -   category_cooling_offset (CATcoolOffset): it is an offset in celsius degrees summed to the upper comfort limit. For instance, ASHRAE 55 80% acceptability is +-3.5K; if 1 was entered in category_cooling_offset, then the upper comfort limit would be raised to 4.5K
@@ -483,7 +498,7 @@ accis.AddAccis(
 )
 ```
 
-The YAML file of JPN Aqilah 2025 (`comfort_standards/jpn_aqilah2025_fr.yaml` of the sample files of accim, `pip install accim[samples]`) shows the keys. Its data are those of Aqilah, Rijal, Yoshida & Nicol (2025), *Energy & Buildings* 335, 115469: the adaptive model of 64 Japanese dwellings in free-running mode (equation 8), the running mean outdoor temperature with α = 0.8 (equation 7), its applicability from 5 to 30 °C and its comfort bands of ±1.5 K (90 %) and ±2.0 K (80 %) (conclusions 5 and 6); the paper gives no static setpoints, so those of comfort modes 0 and 1 (20 and 28 °C) are a choice of the user:
+The YAML file of JPN Aqilah 2025 (`comfort_standards/jpn_aqilah2025_fr.yaml` of the sample files of accim, `pip install accim[samples]`) shows the keys. Its data are those of Aqilah, Rijal, Yoshida & Nicol (2025), *Energy & Buildings* 335, 115469: the adaptive model of 64 Japanese dwellings in free-running mode (equation 8), the running mean outdoor temperature with α = 0.8 (equation 7), its applicability from 5 to 30 °C and its comfort bands of ±1.5 K (90 %) and ±2.0 K (80 %) (conclusions 5 and 6); the paper gives no static setpoints, so those of comfort modes 0 and 1 (20 and 28 °C) are a choice of the user. The same model is also the built-in comfort standard 23 ({ref}`JPN Aqilah 2025 in section 4.2 <jpn-aqilah-2025>`), with the running mean of CEN 15251 of EnergyPlus (RMOT) instead of that of the EMS:
 
 ```yaml
 number: 101
@@ -532,6 +547,8 @@ Depending on the arguments comfort_standard, category and comfort_mode, cooling 
 (If it is too small, you can look at it also at the [Github repository](https://htmlpreview.github.io/?https://github.com/dsanchez-garcia/accim/blob/master/docs/source/html_files/full_setpoint_table.html))
 
 ![full_table.png](images/full_table.png)
+
+The table does not have JPN Aqilah 2025 (23, {ref}`section 4.2 <jpn-aqilah-2025>`) nor the comfort standards defined by their data (section {ref}`comfort-standard-registry`): `print_setpoint_ems_code` gives their setpoints.
 
 To see how the ACCIS calculates the setpoints of a comfort standard, category and comfort mode before adding it to a model (which setpoints apply, and what they are out of the applicability limits), print their EMS code with `print_setpoint_ems_code` (`get_setpoint_ems_code` gives it as text). They take the arguments of `modify_accis`, with one value each:
 
@@ -735,6 +752,7 @@ Enter the Comfort Standard numbers separated by space (
 20 = MEX Oropeza HumTropic;
 21 = CHL Perez-Fargallo;
 22 = INT ISO7730;
+23 = JPN Aqilah2025;
 99 = CUSTOM;
 Please refer to the full list of setpoint temperatures at https://htmlpreview.github.io/?https://github.com/dsanchez-garcia/accim/blob/master/docs/source/html_files/full_setpoint_table.html
 ): 1 2 7

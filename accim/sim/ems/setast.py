@@ -58,6 +58,7 @@ MODULAR_COMFORT_MODES: Dict[int, List[Number]] = {
     20: [0, 1, 2, 3],
     21: [2, 3],
     22: [0],
+    23: [0, 1, 2, 3],
     99: [3],
 }
 _CHUNK_SIZE = 3

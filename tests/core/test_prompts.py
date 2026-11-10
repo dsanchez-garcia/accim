@@ -203,7 +203,7 @@ def _replace(steps, expected, *new_steps):
 
 @pytest.mark.parametrize('question, new_steps, message', [
     ('Enter the Comfort Standard numbers',
-     [('Enter the Comfort Standard numbers', '1 23'), ('Enter the Comfort Standard numbers', '1 2')],
+     [('Enter the Comfort Standard numbers', '1 24'), ('Enter the Comfort Standard numbers', '1 2')],
      'Comfort Standard numbers are not correct'),
     ('):', [('):', '1 4'), ('Enter the Category numbers', '1 80')], 'Category numbers are not correct'),
     ('Enter the Comfort Mode numbers',

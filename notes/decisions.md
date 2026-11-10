@@ -11,6 +11,25 @@ Durable architectural/process decisions for this repository and its Obsidian
 vault. Newest first. Use [[templates/decision-record.md|the decision-record
 template]] to add a new entry.
 
+## 2026-11-09 — JPN Aqilah 2025 is the built-in comfort standard 23, defined by its data, with the running mean of EnergyPlus (B4)
+
+- **Status**: accepted (proposal B4 of `notes/PROPUESTAS_MEJORAS_post_1.1.0_v03.md` with decisions D1 and D2 of the
+  brief; two details decided provisionally, see questions.md)
+- **Context**: v03 asks for the adaptive model of Japanese dwellings in free-running mode of Aqilah et al. (2025) as a
+  new comfort standard, without changing JPN Rijal (3); D1 gives it the number 23 and D2 the static setpoints of 20 and
+  28 °C, configurable. A new built-in comfort standard changes the chains of `SetComfTemp`, `SetAppLimits`, `ApplyCAT`,
+  `CountHours_<zone>` and `SetVST`, which the output IDFs of the other comfort standards also have (`SetVST` whole).
+- **Decision**: its EMS code is written as that of the comfort standards defined by their data (B3): literal branches
+  (`program_lines.BUILT_IN_BRANCHES`) added at the end of the literal chains of accim 1.1.0, and its setpoint lines,
+  equal to those that `standard_lines` writes from its definition (`standards.built_in_definitions()`), which also
+  gives its source and evidence to `print_setpoint_ems_code`; its running mean is RMOT of EnergyPlus, as for INT
+  EN16798; its static setpoints are literal (20/28 °C), and other values are given with a comfort standard defined by
+  its data with the same data.
+- **Consequences**: the output IDFs of `AddAccis` of the other comfort standards do not change; the models with the
+  code of all the comfort standards (`add_accis_to_idf`) gain that of 23 (7 golden files written again, only
+  additions); the models of earlier versions cannot be given 23 (`ValueError`); arguments for its static setpoints
+  wait for the author.
+
 ## 2026-11-09 — Comfort standards defined by their data are registered for the session, and their EMS code is added at the end of the chains of the built-in ones (B3)
 
 - **Status**: accepted (proposal B3 of `notes/PROPUESTAS_MEJORAS_post_1.1.0_v03.md` with decisions D1 and D11 of the

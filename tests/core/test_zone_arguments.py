@@ -154,7 +154,7 @@ def test_the_arguments_of_a_zone_in_an_output_idf():
     ({'comfort_standard': 4, 'category': 1, 'comfort_mode': 0}, True, 'comfort_standard 4 has no setpoints with comfort_mode 0'),
     ({'comfort_standard': 22, 'category': 2}, True, None),
     ({'comfort_standard': 0}, True, None),
-    ({'comfort_standard': 23}, True, 'comfort_standard 23 is not a comfort standard'),
+    ({'comfort_standard': 24}, True, 'comfort_standard 24 is not a comfort standard'),
     ({'hvac_mode': 2}, False, 'hvac_mode 2 is not valid with this script type'),
     ({'hvac_mode': 1, 'ventilation_control': 2}, True, 'ventilation_control 2 is not valid with hvac_mode 1'),
 ])

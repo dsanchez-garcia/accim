@@ -135,10 +135,10 @@ class Combination:
 
 def _generates(comfort_standard: int, category: Number, comfort_mode: Number) -> bool:
     """The combinations of ComfStand, CAT and ComfMod that give an output IDF (as in accim 0.x; for the comfort
-    standards defined by their data, those of their categories and comfort modes)."""
-    from accim.sim.standards import comfort_standard_definition
+    standards defined by their data, built in or registered, those of their categories and comfort modes)."""
+    from accim.sim.standards import definition_of
 
-    definition = comfort_standard_definition(comfort_standard)
+    definition = definition_of(comfort_standard)
     if definition is not None:
         return category in definition.standard.categories and comfort_mode in definition.standard.comfort_modes
     if comfort_standard in (1, 4, 5, 22):

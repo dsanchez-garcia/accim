@@ -29,7 +29,7 @@ from accim.sim.ems.setast import (
     subprograms,
 )
 from accim.sim.ems.standard_lines import metric_variable, needs_outdoor_metric_code
-from accim.sim.standards import COMFORT_STANDARDS, comfort_standard_definition
+from accim.sim.standards import COMFORT_STANDARDS, FIRST_REGISTRY_NUMBER, comfort_standard_definition, definition_of
 
 __all__ = ['get_setpoint_ems_code', 'get_setpoint_ems_programs', 'print_setpoint_ems_code']
 
@@ -125,8 +125,8 @@ def _evidence_text(value) -> str:
 
 def _definition_lines(comfort_standard: int) -> List[str]:
     """The comments with the source, the outdoor metric and the evidence of a comfort standard defined by its data
-    (:mod:`accim.sim.standards`), or none."""
-    definition = comfort_standard_definition(comfort_standard)
+    (:mod:`accim.sim.standards`: JPN Aqilah 2025, built in, and those of the registry), or none."""
+    definition = definition_of(comfort_standard)
     if definition is None:
         return []
     metric = definition.outdoor_metric
@@ -134,7 +134,8 @@ def _definition_lines(comfort_standard: int) -> List[str]:
         metric += f' (alpha {definition.alpha})'
     elif metric == 'ndrm':
         metric += f' ({definition.days} days)'
-    lines = [f'! Comfort standard defined by its data (accim.sim.standards): {definition.citation}',
+    kind = 'defined by its data' if definition.number >= FIRST_REGISTRY_NUMBER else 'built in, defined by its data'
+    lines = [f'! Comfort standard {kind} (accim.sim.standards): {definition.citation}',
              f'! Outdoor metric: {metric}, in the EMS {metric_variable(definition.outdoor_metric)}']
     if definition.static_setpoints is not None:
         lines.append(f'! Static setpoints: {definition.static_setpoints[0]} for heating and '
@@ -301,7 +302,7 @@ def get_setpoint_ems_code(
         9 = IND IMAC R 7DRM; 10 = IND IMAC R 30DRM; 11 = IND Dhaka; 12 = ROM Udrea; 13 = AUS Williamson;
         14 = AUS DeDear; 15 = BRA Rupp NV; 16 = BRA Rupp AC; 17 = MEX Oropeza Arid; 18 = MEX Oropeza DryTropic;
         19 = MEX Oropeza Temperate; 20 = MEX Oropeza HumTropic; 21 = CHL Perez-Fargallo; 22 = INT ISO7730;
-        99 = CUSTOM.
+        23 = JPN Aqilah2025; 99 = CUSTOM; and those of the registry (100 or more, :mod:`accim.sim.standards`).
     :param category: The category: 1, 2 or 3 (CAT I, II, III), or 80, 85 or 90 (% of acceptability); None for all
         of them (the offsets of each one are in ApplyCAT).
     :param comfort_mode: The comfort mode: 0 or 0.X = static; 1 or 1.X = adaptive when applicable, otherwise the local

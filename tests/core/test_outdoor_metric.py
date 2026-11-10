@@ -421,10 +421,11 @@ def test_modify_accis_adds_and_removes_the_outdoor_metric(tmp_path):
         modify_accis(idf, comfort_standard=99, comfort_mode=3, custom_outdoor_metric='ndrm', custom_days=40,
                      zone_arguments={'Block1:Zone2': {'custom_outdoor_metric': 'rmot_7day'}})
     programs = _programs(idf)
-    # The models of add_accis_to_idf have the code of all the comfort standards
-    assert programs['SetComfTemp'] == list(pl.SET_COMF_TEMP_OUTDOOR_METRIC)
-    assert programs['CountHours_Block1_Zone1'] == pl.format_lines(pl.COUNT_HOURS_OUTDOOR_METRIC, zone='Block1_Zone1')
-    assert programs['SetVST'] == list(pl.SET_VST_OUTDOOR_METRIC)
+    # The models of add_accis_to_idf have the code of all the comfort standards (with those defined by their data that
+    # are built in, JPN Aqilah 2025, at the end of the chains)
+    assert programs['SetComfTemp'] == list(pl.set_comf_temp_lines(True))
+    assert programs['CountHours_Block1_Zone1'] == pl.format_lines(pl.count_hours_lines(True), zone='Block1_Zone1')
+    assert programs['SetVST'] == list(pl.set_vst_lines(True))
     assert 'set Tday_40 = Tday_39' in programs['SetOutdoorMetric']
     assert 'set CustAST_metric = 3' in programs['SetInputData_Block1_Zone2']
     assert 'set CustAST_metric = 5' in programs['SetInputData_Block1_Zone1']

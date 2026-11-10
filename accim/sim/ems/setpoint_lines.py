@@ -2964,6 +2964,77 @@ set AHST = 22-1+AHSTtol
 endif
 endif
 """),
+    # JPN Aqilah 2025 (Aqilah, Rijal, Yoshida & Nicol, 2025, equation 8): 0.38·RMOT + 16.9, with the static setpoints of
+    # 20 and 28 °C of comfort modes 0 and 1, a choice of the user (decision D2 of the brief of 1.2.0), and those of ISO
+    # 7730 of the categories 80 and 90 in comfort mode 2, as the other comfort standards
+    (23, 0): _lines("""
+set ACST = 28+ACSTtol
+set AHST = 20+AHSTtol
+"""),
+    (23, 1): _lines("""
+if (RMOT >= ACSTall) && (RMOT <= ACSTaul)
+set ACST = RMOT*0.38+16.9+ACSToffset+ACSTtol
+elseif RMOT < ACSTall
+set ACST = 28+ACSTtol
+elseif RMOT > ACSTaul
+set ACST = 28+ACSTtol
+endif
+if (RMOT >= AHSTall) && (RMOT <= AHSTaul)
+set AHST = RMOT*0.38+16.9+AHSToffset+AHSTtol
+elseif RMOT < AHSTall
+set AHST = 20+AHSTtol
+elseif RMOT > AHSTaul
+set AHST = 20+AHSTtol
+endif
+"""),
+    (23, 2): _lines("""
+if (RMOT >= ACSTall) && (RMOT <= ACSTaul)
+set ACST = RMOT*0.38+16.9+ACSToffset+ACSTtol
+elseif CAT==80
+if RMOT < ACSTall
+set ACST = 25+ACSTtol
+elseif RMOT > ACSTaul
+set ACST = 27+ACSTtol
+endif
+elseif CAT==90
+if RMOT < ACSTall
+set ACST = 24+ACSTtol
+elseif RMOT > ACSTaul
+set ACST = 26+ACSTtol
+endif
+endif
+if (RMOT >= AHSTall) && (RMOT <= AHSTaul)
+set AHST = RMOT*0.38+16.9+AHSToffset+AHSTtol
+elseif CAT==80
+if RMOT < AHSTall
+set AHST = 19+AHSTtol
+elseif RMOT > AHSTaul
+set AHST = 22+AHSTtol
+endif
+elseif CAT==90
+if RMOT < AHSTall
+set AHST = 20+AHSTtol
+elseif RMOT > AHSTaul
+set AHST = 23+AHSTtol
+endif
+endif
+"""),
+    (23, 3): _lines("""
+if (RMOT >= ACSTall) && (RMOT <= ACSTaul)
+set ACST = RMOT*0.38+16.9+ACSToffset+ACSTtol
+elseif RMOT < ACSTall
+set ACST = ACSTall*0.38+16.9+ACSToffset+ACSTtol
+elseif RMOT > ACSTaul
+set ACST = ACSTaul*0.38+16.9+ACSToffset+ACSTtol
+endif
+if (RMOT >= AHSTall) && (RMOT <= AHSTaul)
+set AHST = RMOT*0.38+16.9+AHSToffset+AHSTtol
+elseif RMOT < AHSTall
+set AHST = AHSTall*0.38+16.9+AHSToffset+AHSTtol
+elseif RMOT > AHSTaul
+set AHST = AHSTaul*0.38+16.9+AHSToffset+AHSTtol
+endif
+"""),
     (99, 3): _lines("""
 if (PMOT >= ACSTall) && (PMOT <= ACSTaul)
 set ACST = PMOT*m+n+ACSToffset+ACSTtol

@@ -35,6 +35,7 @@ __all__ = [
     'SET_WINDOW_OPERATION',
     'SET_WINDOW_OPERATION_EXISTING_HVAC',
     'APPLY_AST_AIR_CONDITIONED',
+    'BUILT_IN_BRANCHES',
     'COUNT_HOURS_OUTDOOR_METRIC',
     'HVAC_OFF_FROM_COILS',
     'HVAC_OFF_FROM_LOAD',
@@ -970,6 +971,26 @@ set AHST_Act_{zone} = AHST
 
 # The comfort standards defined by their data -------------------------------------------------------------------------
 
+#: The Erl branches of the built-in comfort standards defined by their data
+#: (:func:`accim.sim.standards.built_in_definitions`), by comfort standard and program, as those of
+#: :data:`REGISTERED_BRANCHES`: JPN Aqilah 2025 (23), whose comfort temperature is ``0.38·RMOT + 16.9``, applicable
+#: from 5 to 30 °C, with the offsets ±2.0 K (category 80) and ±1.5 K (category 90) (Aqilah, Rijal, Yoshida & Nicol,
+#: 2025, equation 8 and conclusions 5 and 6). They are added at the end of the chains above, which do not change, so
+#: the output IDFs of the other comfort standards do not change either; :mod:`accim.sim.ems.standard_lines` writes the
+#: same lines from the definition (tested).
+BUILT_IN_BRANCHES: Dict[int, Dict[str, Tuple[str, ...]]] = {
+    23: {
+        'SetComfTemp': ('elseif ComfStand == 23', 'set ComfTemp = RMOT*0.38+16.9'),
+        'SetAppLimits': ('elseif ComfStand == 23', 'set ACSTaul = 30', 'set ACSTall = 5', 'set AHSTaul = 30',
+                         'set AHSTall = 5'),
+        'ApplyCAT': ('elseif ComfStand == 23', 'if (CAT == 80)', 'set ACSToffset = 2+CATcoolOffset',
+                     'set AHSToffset = -2+CATheatOffset', 'elseif (CAT == 90)', 'set ACSToffset = 1.5+CATcoolOffset',
+                     'set AHSToffset = -1.5+CATheatOffset', 'endif'),
+        'CountHours': ('elseif ComfStand == 23', *_count_hours_body('RMOT').split('\n')),
+        'SetVST': ('elseif ComfStand == 23', 'if (RMOT >= AHSTall) && (RMOT <= ACSTaul)',
+                   'set VST = ComfTemp+VSToffset', 'else', 'set VST = (roundedACST+roundedAHST)/2+VSToffset', 'endif'),
+    },
+}
 #: The Erl branches of the comfort standards defined by their data
 #: (:class:`~accim.sim.standards.ComfortStandardDefinition`, those of the registry of :mod:`accim.sim.standards`), by
 #: comfort standard and program ('SetComfTemp', 'SetAppLimits', 'ApplyCAT', 'CountHours' and 'SetVST'): each one is a
@@ -982,13 +1003,20 @@ _VST_GENERIC_BRANCH = ['else', 'if (PMOT >= AHSTall) && (PMOT <= ACSTaul)', 'set
 _REGISTERED_CONDITION = re.compile(r'^elseif\s+ComfStand\s*==\s*(\d+)$', re.IGNORECASE)
 
 
+def _all_branches() -> Dict[int, Dict[str, Tuple[str, ...]]]:
+    """The branches of the built-in comfort standards defined by their data and those of the registry."""
+    return {**BUILT_IN_BRANCHES, **REGISTERED_BRANCHES}
+
+
 def _registered(program: str, comfort_standards: Optional[Iterable[int]] = None) -> List[str]:
-    """The branches of a program of the registered comfort standards (of some of them only), in their order."""
+    """The branches of a program of the comfort standards defined by their data, built in and registered (of some of
+    them only), in the order of their numbers."""
     wanted = None if comfort_standards is None else {int(n) for n in comfort_standards}
+    branches = _all_branches()
     lines: List[str] = []
-    for number in sorted(REGISTERED_BRANCHES):
+    for number in sorted(branches):
         if wanted is None or number in wanted:
-            lines.extend(REGISTERED_BRANCHES[number].get(program, ()))
+            lines.extend(branches[number].get(program, ()))
     return lines
 
 
@@ -1014,33 +1042,34 @@ def _insert_in_chain(lines: Iterable[str], branches: List[str], before_else: boo
 
 
 def set_comf_temp_lines(outdoor_metric: bool = False) -> Tuple[str, ...]:
-    """SET_COMF_TEMP (SET_COMF_TEMP_OUTDOOR_METRIC with ``outdoor_metric``) with the branches of the registered comfort
-    standards (the same lines without them)."""
+    """SET_COMF_TEMP (SET_COMF_TEMP_OUTDOOR_METRIC with ``outdoor_metric``) with the branches of the comfort standards
+    defined by their data, built in (:data:`BUILT_IN_BRANCHES`) and registered (:data:`REGISTERED_BRANCHES`), before
+    its last ``endif``: the chain of all the comfort standards."""
     base = SET_COMF_TEMP_OUTDOOR_METRIC if outdoor_metric else SET_COMF_TEMP
     return _insert_in_chain(base, _registered('SetComfTemp'), before_else=False)
 
 
 def set_app_limits_lines() -> Tuple[str, ...]:
-    """SET_APP_LIMITS with the branches of the registered comfort standards, before its branch ``else``."""
+    """SET_APP_LIMITS with the branches of the comfort standards defined by their data, before its branch ``else``."""
     return _insert_in_chain(SET_APP_LIMITS, _registered('SetAppLimits'), before_else=True)
 
 
 def apply_cat_lines() -> Tuple[str, ...]:
-    """APPLY_CAT with the branches of the registered comfort standards."""
+    """APPLY_CAT with the branches of the comfort standards defined by their data."""
     return _insert_in_chain(APPLY_CAT, _registered('ApplyCAT'), before_else=False)
 
 
 def count_hours_lines(outdoor_metric: bool = False) -> Tuple[str, ...]:
-    """COUNT_HOURS (COUNT_HOURS_OUTDOOR_METRIC with ``outdoor_metric``) with the branches of the registered comfort
-    standards that do not compare PMOT with their limits, before its branch ``else`` (that of PMOT)."""
+    """COUNT_HOURS (COUNT_HOURS_OUTDOOR_METRIC with ``outdoor_metric``) with the branches of the comfort standards
+    defined by their data that do not compare PMOT with their limits, before its branch ``else`` (that of PMOT)."""
     base = COUNT_HOURS_OUTDOOR_METRIC if outdoor_metric else COUNT_HOURS
     return _insert_in_chain(base, _registered('CountHours'), before_else=True)
 
 
 def set_vst_lines(outdoor_metric: bool = False, comfort_standards: Optional[Iterable[int]] = None) -> Tuple[str, ...]:
-    """SET_VST (SET_VST_OUTDOOR_METRIC with ``outdoor_metric``) with the branches of the registered comfort standards
-    that do not compare PMOT with their limits (of some of them only, or of all of them), before the branch of those
-    that compare PMOT."""
+    """SET_VST (SET_VST_OUTDOOR_METRIC with ``outdoor_metric``) with the branches of the comfort standards defined by
+    their data that do not compare PMOT with their limits (of some of them only, or of all of them), before the branch
+    of those that compare PMOT."""
     lines = list(SET_VST_OUTDOOR_METRIC if outdoor_metric else SET_VST)
     branches = _registered('SetVST', comfort_standards)
     if not branches:
@@ -1050,10 +1079,12 @@ def set_vst_lines(outdoor_metric: bool = False, comfort_standards: Optional[Iter
 
 
 def registered_standards_in(lines: Iterable[str]) -> Set[int]:
-    """The registered comfort standards whose branches (``elseif ComfStand == <n>``) some lines have."""
+    """The comfort standards defined by their data, built in or registered, whose branches
+    (``elseif ComfStand == <n>``) some lines have."""
+    branches = _all_branches()
     found = set()
     for line in lines:
         match = _REGISTERED_CONDITION.match(str(line).strip())
-        if match and int(match.group(1)) in REGISTERED_BRANCHES:
+        if match and int(match.group(1)) in branches:
             found.add(int(match.group(1)))
     return found

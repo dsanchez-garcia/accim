@@ -262,11 +262,12 @@ def test_the_zones_get_the_code_of_their_comfort_standards():
     assert subprogram_comfort_standards(idf) == {1, 13}
     assert _lines(idf, 'SetComfTemp') == ['if ComfStand == 1', '    set ComfTemp = RMOT*0.33+18.8',
                                           'elseif ComfStand == 13', '    set ComfTemp = PMOT*0.26+15.9', 'endif']
-    # With None, the programs have the code of all the comfort standards again
+    # With None, the programs have the code of all the comfort standards again (with the built-in comfort standards
+    # defined by their data, JPN Aqilah 2025, at the end of the chains)
     set_comfort_standard_code(idf)
     assert subprogram_comfort_standards(idf) == set(MODULAR_COMFORT_MODES)
-    assert _lines(idf, 'SetAppLimits') == indent_lines(pl.SET_APP_LIMITS)
-    assert _lines(idf, 'CountHours_Zone2') == indent_lines(pl.format_lines(pl.COUNT_HOURS, zone='Zone2'))
+    assert _lines(idf, 'SetAppLimits') == indent_lines(pl.set_app_limits_lines())
+    assert _lines(idf, 'CountHours_Zone2') == indent_lines(pl.format_lines(pl.count_hours_lines(), zone='Zone2'))
 
 
 # modify_accis --------------------------------------------------------------------------------------------------

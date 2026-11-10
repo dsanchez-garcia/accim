@@ -343,26 +343,36 @@ def test_the_chains_of_the_built_in_comfort_standards_do_not_change():
                'CountHours': pl.COUNT_HOURS, 'SetVST': pl.SET_VST}
     functions = {'SetComfTemp': pl.set_comf_temp_lines, 'SetAppLimits': pl.set_app_limits_lines,
                  'ApplyCAT': pl.apply_cat_lines, 'CountHours': pl.count_hours_lines, 'SetVST': pl.set_vst_lines}
-    # Without comfort standards in the registry, the lines of accim 1.1.0
-    assert all(functions[name]() == lines for name, lines in literal.items())
-    assert pl.set_comf_temp_lines(True) == pl.SET_COMF_TEMP_OUTDOOR_METRIC
-    built_in = [(1, 2, 3), (2, 80, 2), (3, 90, 1), (13, 80, 1.3), (22, 2, 0)]
-    codes = [get_setpoint_ems_code(*arguments) for arguments in built_in]
-    [definition] = st.load_comfort_standards(AQILAH)
-    branches = sdl.standard_branches(definition)
-    # The branches of the registry are added at the end of the chains (before their branch else, if they have one)
-    assert pl.set_comf_temp_lines() == pl.SET_COMF_TEMP[:-1] + branches['SetComfTemp'] + ('endif',)
-    assert pl.apply_cat_lines() == pl.APPLY_CAT[:-1] + branches['ApplyCAT'] + ('endif',)
+    # The comfort standards of the literal chains (those of accim 1.1.0), and the branches of JPN Aqilah 2025 (23,
+    # built in), at the end of the chains
     others = list(range(23)) + [99]
+    aqilah = pl.BUILT_IN_BRANCHES[23]
+    assert pl.set_comf_temp_lines() == pl.SET_COMF_TEMP[:-1] + aqilah['SetComfTemp'] + ('endif',)
+    assert pl.set_comf_temp_lines(True) == pl.SET_COMF_TEMP_OUTDOOR_METRIC[:-1] + aqilah['SetComfTemp'] + ('endif',)
     for name in ('SetComfTemp', 'SetAppLimits', 'ApplyCAT', 'CountHours'):
         lines = functions[name]()
         assert pl.for_comfort_standards(lines, others) == pl.for_comfort_standards(literal[name], others), name
+        assert pl.for_comfort_standards(lines, [23]) == ['if ComfStand == 23', *aqilah[name][1:], 'endif'], name
+    assert len(pl.set_vst_lines()) == len(pl.SET_VST) + len(aqilah['SetVST'])
+    built_in = [(1, 2, 3), (2, 80, 2), (3, 90, 1), (13, 80, 1.3), (22, 2, 0), (23, 80, 1)]
+    codes = [get_setpoint_ems_code(*arguments) for arguments in built_in]
+    [definition] = st.load_comfort_standards(AQILAH)
+    branches = sdl.standard_branches(definition)
+    # The branches of the registry are added at the end of the chains (before their branch else, if they have one),
+    # after those of the built-in comfort standards defined by their data
+    assert pl.set_comf_temp_lines() == (pl.SET_COMF_TEMP[:-1] + aqilah['SetComfTemp'] + branches['SetComfTemp']
+                                        + ('endif',))
+    assert pl.apply_cat_lines() == pl.APPLY_CAT[:-1] + aqilah['ApplyCAT'] + branches['ApplyCAT'] + ('endif',)
+    for name in ('SetComfTemp', 'SetAppLimits', 'ApplyCAT', 'CountHours'):
+        lines = functions[name]()
+        assert pl.for_comfort_standards(lines, others) == pl.for_comfort_standards(literal[name], others), name
+        assert pl.for_comfort_standards(lines, [23]) == ['if ComfStand == 23', *aqilah[name][1:], 'endif'], name
         assert pl.for_comfort_standards(lines, [101]) == ['if ComfStand == 101', *branches[name][1:], 'endif'], name
     # SetVST: before the branch of the comfort standards that compare PMOT with their limits
     lines = pl.set_vst_lines()
-    assert len(lines) == len(pl.SET_VST) + len(branches['SetVST'])
+    assert len(lines) == len(pl.SET_VST) + len(aqilah['SetVST']) + len(branches['SetVST'])
     assert pl.set_vst_lines(comfort_standards=[1]) == pl.SET_VST
-    assert pl.registered_standards_in(lines) == {101} and pl.registered_standards_in(pl.SET_VST) == set()
+    assert pl.registered_standards_in(lines) == {23, 101} and pl.registered_standards_in(pl.SET_VST) == set()
     assert [get_setpoint_ems_code(*arguments) for arguments in built_in] == codes
 
 

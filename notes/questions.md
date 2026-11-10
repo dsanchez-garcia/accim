@@ -24,6 +24,33 @@ it here as answered).
 
 ## Open
 
+## 2026-11-09 — B4: the running mean of JPN Aqilah 2025 (comfort standard 23)
+- Context: the model of Aqilah et al. (2025, equation 8) uses `Trm = α·Trm−1 + (1 − α)·Tod−1` with α = 0.8 (McCartney
+  & Nicol, equation 7), "started a week before the day of the survey" (v03, B4). EnergyPlus calculates the running mean
+  of CEN 15251 with α = 0.8 (RMOT, Engineering Reference 19.1, equation 19.82: the same recursion, begun with a sum of 7
+  days that is not divided by 1 − α⁷), which INT EN16798 (1) uses; B1 gives the EMS the exact recursion (`rmot_alpha`,
+  begun with the weather file), which needs the EMS code of the outdoor metric in the output IDFs and `epw`.
+- Options considered: (a) RMOT of EnergyPlus, as INT EN16798: the comfort standard has literal lines, no EMS code of the
+  outdoor metric and no inputs of it in its zones; (b) `rmot_alpha` of B1, as the YAML file of the sample files (101).
+  They differ by less than 0.05 °C after three weeks with `Seville_Present.epw` (section 4.2.2 of the detailed use).
+- Owner: the author.
+- Status: open; option (a) decided provisionally (as the other comfort standards with this running mean; (b) is
+  available as a comfort standard defined by its data), pending author.
+
+## 2026-11-09 — B4: how the static setpoints of JPN Aqilah 2025 are configurable (decision D2)
+- Context: decision D2 says that the static setpoints of comfort mode 1 are 20.0 °C for heating and 28.0 °C for
+  cooling "by default, configurable", documented as a choice of the user; it does not say how. The setpoints of the
+  built-in comfort standards are literal lines of the EMS, and their arguments are those of `AddAccis`.
+- Options considered: (a) 20 and 28 °C in the lines of comfort standard 23 (comfort modes 0 and 1), and other values
+  through a comfort standard defined by its data with the same data and other `static_setpoints` (B3; the YAML file
+  of the sample files is a copy to edit), without new arguments; (b) new arguments of `AddAccis`, `modify_accis` and
+  `zone_arguments` (for instance `static_heating_setpoint` and `static_cooling_setpoint`), inputs of the zones of
+  comfort standard 23 that its lines read, with the GUI and the parametric module; (c) inputs of the zones without
+  arguments (edited in `SetInputData_<zone>`).
+- Owner: the author.
+- Status: open; option (a) decided provisionally (no new arguments, which are hard to take back; (b) can be added
+  later without breaking anything), pending author. `TODO.md` has the task.
+
 ## 2026-11-09 — B3: the data of the comfort model of Qatar of the sample files
 - Context: decision D11 asks that the YAML files of B3 ship with the two examples of v03, JPN Aqilah 2025 and Qatar
   (Indraganti & Boussaa 2018, offices with HVAC). For Qatar, v03 (B3 and §11.5) gives the comfort temperature

@@ -117,7 +117,7 @@ Once you run this code, you will be asked to enter some information at the termi
         outputs_dataframe=pandas Dataframe,
         energyplus_version=str, # '9.1', '9.2', '9.3', '9.4', '9.5', '9.6', '22.1', '22.2', '23.1', '23.2', '24.1', '24.2', '25.1', '25.2', '26.1', '26.2' or 'auto'. For instance: energyplus_version='auto',
         setpoint_type=str, # 'temperature' or 'temp', or 'pmv'. For instance: setpoint_type='temp',
-        comfort_standard=list, # it is the Comfort Standard. Can be any integer from 0 to 22, or 99. For instance: comfort_standard=[0, 1, 2, 3],
+        comfort_standard=list, # it is the Comfort Standard. Can be any integer from 0 to 23, or 99, or 100 or more for those registered (accim.sim.load_comfort_standards). For instance: comfort_standard=[0, 1, 2, 3],
         category=list, # it is the Category. Can be 1, 2, 3, 80, 85 or 90. For instance: category=[3, 80],
         comfort_mode=list, # it is Comfort Mode. Can be 0, 1, 2 or 3. For instance: comfort_mode=[0, 3],
         setpoint_accuracy=float, # it is the accuracy of the setpoint temperatures

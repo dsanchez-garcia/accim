@@ -15,6 +15,25 @@ This log is a lightweight, session-scoped complement to the repository's
 existing tracking files — it does not replace them (see
 [[decisions.md#2026-09-13 — `notes/work-log.md` complements, not replaces, existing tracking files|the related decision]]).
 
+## 2026-11-09 — B4: JPN Aqilah 2025, comfort standard 23 (branch `v1.2.0`, on the server)
+
+- **Objective**: B4, after B3, in the order of the author (with decisions D1 and D2).
+- **Affected files**: `accim/sim/standards.py`, `accim/sim/ems/program_lines.py`, `accim/sim/ems/setpoint_lines.py`,
+  `accim/sim/ems/setast.py`, `accim/sim/generation.py`, `accim/sim/accis.py`, `accim/utils/ems_code.py`,
+  `accim/parametric_and_optimisation/funcs_for_besos/param_accis.py`, `README.md`, `tests/core/test_jpn_aqilah2025.py`
+  (new) and four updated tests, the golden master (7 files and its README), [[../docs/source/4_detailed use.md]],
+  [[../CHANGELOG.md]], [[../CAMBIOS_CODIGO_v1.2.0.md]] (§17), [[../DEVLOG.md]], [[../TODO.md]], [[decisions.md]],
+  [[questions.md]].
+- **Finding or decision**: See
+  [[decisions.md#2026-11-09 — JPN Aqilah 2025 is the built-in comfort standard 23, defined by its data, with the running mean of EnergyPlus (B4)|the decision]].
+  Changing the literal `SET_VST` would have changed every output IDF in mixed mode, so the branches of 23 go at the end
+  of the chains, as those of B3. The running mean and the way to configure the static setpoints wait for the author
+  ([[questions.md]], [[../TODO.md]]).
+- **Validation**: 13 new tests; EnergyPlus 25.1: a week of January (check 4, 0 mismatches; the static setpoint at the
+  first timestep), and three models with the EMS and API backends (identical); the golden master (only additions in
+  the 7 in-memory configurations); the whole suite; the documentation build.
+- **Next step**: C2.
+
 ## 2026-11-09 — B3: comfort standards defined by their data (branch `v1.2.0`, on the server)
 
 - **Objective**: B3, after B2, in the order of the author (with decisions D1 and D11).

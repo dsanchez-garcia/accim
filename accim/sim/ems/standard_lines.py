@@ -43,9 +43,9 @@ __all__ = [
 ]
 
 #: The static setpoints of ISO 7730 of comfort mode 2 of the built-in comfort standards with the categories 80 and 90
-#: (INT ASHRAE55, JPN Rijal, CHN Yang, IND IMAC R, IND Dhaka, ROU Udrea, BRA Rupp, CHL Perez-Fargallo:
-#: :data:`accim.sim.ems.setpoint_lines.SETPOINT_LINES`), out of the applicability limits: {category: {'cooling':
-#: (below the lower limit, above the upper limit), 'heating': (below, above)}}
+#: (INT ASHRAE55, JPN Rijal, CHN Yang, IND IMAC R, IND Dhaka, ROU Udrea, BRA Rupp, CHL Perez-Fargallo and JPN
+#: Aqilah2025: :data:`accim.sim.ems.setpoint_lines.SETPOINT_LINES`), out of the applicability limits: {category:
+#: {'cooling': (below the lower limit, above the upper limit), 'heating': (below, above)}}
 ISO7730_STATIC_SETPOINTS = {
     80: {'cooling': (25, 27), 'heating': (19, 22)},
     90: {'cooling': (24, 26), 'heating': (20, 23)},

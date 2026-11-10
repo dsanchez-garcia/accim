@@ -5,8 +5,10 @@
 """Catalogue of the comfort standards (ComfStand) of accim, with their categories and comfort modes, and the registry
 of the comfort standards defined by their data (proposal B3).
 
-The built-in comfort standards (0 to 22, and the custom model, 99) have their EMS code in
-:mod:`accim.sim.ems.program_lines` and :mod:`accim.sim.ems.setpoint_lines`. Other comfort standards can be defined by
+The built-in comfort standards (0 to 23, and the custom model, 99) have their EMS code in
+:mod:`accim.sim.ems.program_lines` and :mod:`accim.sim.ems.setpoint_lines`; that of JPN Aqilah 2025 (23, proposal B4
+and decisions D1 and D2 of the brief of 1.2.0), a comfort standard defined by its data (:func:`definition_of`), is
+added at the end of the chains of the others, which do not change. Other comfort standards can be defined by
 their data, a :class:`ComfortStandardDefinition` (a comfort temperature that is a straight line of an outdoor metric
 of :mod:`accim.sim.ems.outdoor_metric`, its applicability limits, the offsets of its categories and its static
 setpoints), and registered with :func:`register_comfort_standard`, or read from YAML files with
@@ -28,8 +30,10 @@ __all__ = [
     'ComfortStandardDefinition',
     'DEFINITION_COMFORT_MODES',
     'FIRST_REGISTRY_NUMBER',
+    'built_in_definitions',
     'comfort_standard_definition',
     'definition_from_mapping',
+    'definition_of',
     'get_comfort_standard',
     'load_comfort_standards',
     'register_comfort_standard',
@@ -176,6 +180,11 @@ COMFORT_STANDARDS: Dict[int, ComfortStandard] = {s.number: s for s in [
                     {1: 'Cat A: -0.2 < PMV < 0.2; PPD < 6%', 2: 'Cat B: -0.5 < PMV < 0.5; PPD < 10%',
                      3: 'Cat C: -0.7 < PMV < 0.7; PPD < 15%'},
                     {0: _STATIC_ISO}),
+    ComfortStandard(23, 'JPN Aqilah2025', '23 = JPN Aqilah2025', _ACCEPTABILITY_80_90,
+                    {0: 'Aqilah2025 Static setpoints (20 for heating and 28 for cooling, a choice of the user)',
+                     1: 'Aqilah2025 Model Adaptive setpoints when applicable, otherwise Aqilah2025 Static setpoints',
+                     2: f'Aqilah2025 Model Adaptive setpoints when applicable, otherwise {_STATIC_ISO}',
+                     3: f'Aqilah2025 Model Adaptive setpoints when applicable, otherwise {_HORIZONTAL}'}),
     ComfortStandard(99, 'CUSTOM', '99 = CUSTOM', {},
                     {3: f'Custom Model Adaptive setpoints when applicable, otherwise {_HORIZONTAL}'}),
 ]}
@@ -195,7 +204,7 @@ def get_comfort_standard(number: int) -> ComfortStandard:
 # The comfort standards defined by their data (proposal B3) ------------------------------------------------------------
 
 #: The first number of the comfort standards of the registry: the numbers 100 or more are those of the comfort
-#: standards defined by their data (decision D1 of the brief of 1.2.0; 23 is reserved for JPN Aqilah 2025, B4)
+#: standards defined by their data (decision D1 of the brief of 1.2.0; 23 is JPN Aqilah 2025, built in, B4)
 FIRST_REGISTRY_NUMBER = 100
 #: The comfort modes of the comfort standards defined by their data: 0, static setpoints; 1, adaptive setpoints when
 #: applicable, otherwise the static setpoints; 2, otherwise the static setpoints of ISO 7730 that the built-in comfort
@@ -210,6 +219,8 @@ _OPTIONAL_KEYS = ('alpha', 'days', 'static_setpoints')
 #: The characters that the labels cannot have: they name the output IDFs ('[' separates their arguments)
 _LABEL_CHARACTERS = '[]\\/:*?"<>|'
 _REGISTRY: Dict[int, 'ComfortStandardDefinition'] = {}
+#: The built-in comfort standards defined by their data (built_in_definitions)
+_BUILT_IN_DEFINITIONS: Dict[int, 'ComfortStandardDefinition'] = {}
 
 
 def _is_number(value: Any) -> bool:
@@ -418,6 +429,43 @@ def comfort_standard_definition(number: Any) -> Optional[ComfortStandardDefiniti
         return _REGISTRY.get(int(number))
     except (TypeError, ValueError):
         return None
+
+
+def built_in_definitions() -> Dict[int, ComfortStandardDefinition]:
+    """The built-in comfort standards defined by their data, by number: JPN Aqilah 2025 (23).
+
+    JPN Aqilah 2025 is the adaptive comfort model of 64 Japanese dwellings in free-running mode of Aqilah, Rijal,
+    Yoshida & Nicol (2025), *Energy & Buildings* 335, 115469 (data verified in
+    ``notes/PROPUESTAS_MEJORAS_post_1.1.0_v03.md``, B4 and section 11.5): the comfort temperature
+    ``Tc = 0.38·Trm + 16.9`` (equation 8), where ``Trm = α·Trm−1 + (1 − α)·Tod−1`` with α = 0.8 is the running mean
+    outdoor temperature of McCartney & Nicol (equation 7), applicable from 5 to 30 °C, and the comfort bands of ±1.5 K
+    (90 %) and ±2.0 K (80 %) (conclusions 5 and 6). The running mean is that of CEN 15251 that EnergyPlus calculates
+    (RMOT, α = 0.8), as for INT EN16798 (1). The paper gives no static setpoints: those of comfort modes 0 and 1 are 20
+    and 28 °C, a choice of the user (decision D2 of the brief of 1.2.0), which other values change in a comfort
+    standard defined by its data with the same data (:func:`load_comfort_standards`, as
+    ``accim/sample_files/comfort_standards/jpn_aqilah2025_fr.yaml``).
+    """
+    if not _BUILT_IN_DEFINITIONS:
+        from accim.sim.arguments import CustomRegime
+
+        _BUILT_IN_DEFINITIONS[23] = ComfortStandardDefinition(
+            COMFORT_STANDARDS[23], 'rmot', (CustomRegime(0.38, 16.9, 0, 0, 5.0, 30.0, 5.0, 30.0),),
+            {80: (2.0, -2.0), 90: (1.5, -1.5)}, static_setpoints=(20.0, 28.0),
+            evidence={'N': 11566, 'R2': 0.67, 'SE': 0.003, 'p': '<0.001', 'houses': 64, 'votes_total': 32988,
+                      'mode': 'FR', 'within_band': {90: 0.66, 80: 0.79}, 'comfort_temperature_range': [14.5, 30.0]},
+            citation='Aqilah, Rijal, Yoshida & Nicol (2025) Energy & Buildings 335, 115469, '
+                     'doi:10.1016/j.enbuild.2025.115469')
+    return dict(_BUILT_IN_DEFINITIONS)
+
+
+def definition_of(number: Any) -> Optional[ComfortStandardDefinition]:
+    """The definition of a comfort standard defined by its data: a built-in one (:func:`built_in_definitions`) or one
+    of the registry; None for the other comfort standards."""
+    try:
+        number = int(number)
+    except (TypeError, ValueError):
+        return None
+    return _REGISTRY.get(number) or built_in_definitions().get(number)
 
 
 def register_comfort_standard(definition: ComfortStandardDefinition, replace: bool = False) -> None:

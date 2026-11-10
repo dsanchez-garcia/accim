@@ -6,7 +6,7 @@ documentación de uso. Recoge las propuestas del bloque A de `notes/PROPUESTAS_M
 esta versión: las P1, A2, A1 y A5, en este orden; y después D2 (sección 7), que el autor incluyó en la 1.2.0 el
 2026-11-09 con E2 y E1, y las demás propuestas de la v03 (`notes/PROPUESTAS_MEJORAS_post_1.1.0_v03.md`), en el orden
 del autor (`notes/COPILOT_BRIEF_v1.2.0_v01.md`): E1 (sección 8), E2 (sección 9), A3 (sección 10), B1 (sección 11),
-B5 (sección 12), C1 (sección 13), D1 (sección 14), B2 (sección 15), B3 (sección 16)...
+B5 (sección 12), C1 (sección 13), D1 (sección 14), B2 (sección 15), B3 (sección 16), B4 (sección 17)...
 
 Lo que ya está en otros documentos no se repite aquí:
 
@@ -64,6 +64,9 @@ Lo que ya está en otros documentos no se repite aquí:
   que no cambian, y sus subprogramas, y `AddAccis`, `modify_accis`, el código EMS (con su evidencia),
   `compute_setpoints`, la verificación, el paramétrico y la GUI las toman como las integradas; ejemplos de JPN Aqilah
   2025 y de Qatar (este, incompleto) y un cuaderno How-to (sección 16).
+- **B4.** JPN Aqilah 2025 es la norma integrada 23 (`0,38·RMOT + 16,9`, de 5 a 30 °C, ±2,0 K (80) y ±1,5 K (90),
+  estáticas de 20/28 °C, elección del usuario por D2), con su código al final de las cadenas, de modo que los IDF de
+  las demás normas no cambian; los modelos con el código de todas las normas lo incluyen (sección 17).
 - Las categorías del PMV y la aproximación de la corrección del metabolismo se han comprobado en ISO 7730:2025 y
   EN 16798-1:2019, y el modelo dinámico de vestimenta de A5, en Schiavon y Lee (2013) y ASHRAE 55-2020 (sección 6).
 - Lo que quedaba abierto se ha comprobado: el golden master y las pruebas de EnergyPlus 26.1 y 26.2, también la de A5
@@ -1126,3 +1129,60 @@ versión.
   y límites 15–25 °C en enero (`vrf_ac`, 90, modo 2: las estáticas de ISO 7730, 24/20 °C; 100): diferencia máxima 0,0
   en todas las columnas. Suite completa: 1695 pasan, 1 omitida (y después, con la sesión de la GUI, las 130 pruebas de
   la GUI); el golden master no cambia.
+
+## 17. JPN Aqilah 2025, la norma de confort 23 (B4)
+
+La v03 da la base de la propuesta B4 (Aqilah, Rijal, Yoshida y Nicol, 2025: `Tc = 0,38·Trm + 16,9`, ecuación 8, con
+`Trm` la media móvil de α = 0,8 de McCartney y Nicol, ecuación 7; aplicable de 5 a 30 °C; bandas de ±1,5 K (90 %) y
+±2,0 K (80 %), conclusiones 5 y 6) y su decisión de diseño (la norma 3 no cambia; una norma 23 `JPN Aqilah2025`, o el
+YAML de B3; las diferencias con la 3 en la documentación; consignas estáticas de 20/28 °C como valores del usuario,
+configurables), sin prompt. Las decisiones D1 (la 23 es JPN Aqilah 2025) y D2 (20,0/28,0 °C por defecto,
+configurables, documentadas como elección del usuario) del brief la completan.
+
+**Antes.** Las normas integradas eran la 0 a la 22 y la 99, con su código EMS literal; JPN Aqilah 2025 solo existía
+como norma definida por sus datos (el YAML 101 de B3).
+
+**Ahora.**
+
+- `accim/sim/standards.py`: la norma 23 (`JPN Aqilah2025`, `23 = JPN Aqilah2025`, categorías 80 y 90, modos 0 a 3)
+  entre la 22 y la 99; `built_in_definitions()` con su `ComfortStandardDefinition` (métrica 'rmot', régimen
+  0,38/16,9 con límites 5–30, compensaciones ±2,0 (80) y ±1,5 (90), estáticas (20,0, 28,0), la evidencia y la cita
+  de la v03) y `definition_of(número)` (la integrada o la del registro; `comfort_standard_definition` sigue siendo solo
+  la del registro).
+- `accim/sim/ems/program_lines.py`: `BUILT_IN_BRANCHES[23]` (`SetComfTemp` con `RMOT*0.38+16.9`, `SetAppLimits`,
+  `ApplyCAT`, `CountHours` y `SetVST` con RMOT), que las funciones de B3 añaden al final de las cadenas antes que las
+  del registro (`_all_branches`; `registered_standards_in` también las reconoce); `setpoint_lines.py`:
+  `SETPOINT_LINES[(23, 0..3)]`; `setast.py`: `MODULAR_COMFORT_MODES[23]`. Las cadenas literales de la 1.1.0 no
+  cambian, así que tampoco las cadenas filtradas de los IDF de `AddAccis` de las demás normas (y B1 y B3 siguen
+  reconociendo los modelos de la 1.1.0). Una prueba comprueba que estas líneas literales son las que escribe
+  `accim.sim.ems.standard_lines` desde la definición, y que los modos 2 y 3 son los de JPN Rijal con RMOT y los
+  coeficientes de la ecuación 8.
+- `accim/sim/generation.py` (`_generates` con `definition_of`); `accim/utils/ems_code.py` (la cabecera de la norma
+  integrada definida por sus datos, con su métrica, estáticas y evidencia); `accim/sim/accis.py` y
+  `param_accis.modify_ComfStand` (`ValueError` con los modelos de versiones anteriores, que no tienen el código de la
+  23 ni el del registro); `param_accis.get_valid_param_combinations` y `drop_invalid_param_combinations` (23: [[80, 90],
+  [0, 1, 2, 3]]); las listas de normas de los docstrings y de `README.md`.
+- Golden master: las 22 configuraciones de `AddAccis` no cambian; las de las funciones en memoria (`s01`–`s06` y
+  `s09`), cuyos modelos tienen el código de todas las normas, solo ganan el de la 23 (sin líneas quitadas, comprobado
+  con `difflib`) y se han escrito de nuevo con `--update-golden`; `tests/core/golden_master/README.md` lo explica.
+- Pruebas actualizadas porque cambia el conjunto de normas integradas: `test_comfort_standard_code.py` y
+  `test_outdoor_metric.py` (las cadenas completas son las de las funciones), `test_ems_code.py`, `test_prompts.py` y
+  `test_zone_arguments.py` (24, no 23, como norma que no existe) y `test_comfort_standard_registry.py`.
+- Documentación: la sección 4.2 del uso detallado (tabla de argumentos, lista y tabla de normas, un párrafo y una tabla
+  de las diferencias con JPN Rijal, la transcripción de las preguntas), 4.2.5 y 4.3 (la tabla completa de consignas no
+  tiene la 23: tarea en `TODO.md`).
+- Decisiones provisionales (en `notes/questions.md`): la media móvil es la RMOT de EnergyPlus (CEN 15251, α = 0,8),
+  como en INT EN16798, no la `rmot_alpha` de B1 del YAML; las estáticas se configuran con una norma definida por sus
+  datos con los mismos datos, sin argumentos nuevos (tarea bloqueada en `TODO.md`); sin cuaderno How-to (la v03 no lo
+  pide; el de B3 compara el mismo modelo con JPN Rijal).
+- Pruebas: `tests/core/test_jpn_aqilah2025.py` (13: el catálogo y la definición, igual a la del YAML salvo la
+  métrica; el código EMS literal frente al generador de B3 y frente a JPN Rijal; el código EMS con la evidencia;
+  `compute_setpoints` frente a la fórmula en los modos 0 a 3, con las estáticas en el primer paso; las combinaciones
+  del paramétrico; `AddAccis`, con los IDF de la norma 1 idénticos byte a byte; `modify_accis`; los modelos de
+  versiones anteriores; y dos con EnergyPlus 25.1: del 1 al 7 de enero, la comprobación 4 sin discrepancias en 1008
+  pasos y los 28 °C estáticos en el primer paso; y los dos backends).
+- Backends con `run_ep` (`ems` y `api`, por paso de tiempo, 1008 filas): enero (`vrf_ac`, categoría 90, modo 1; 100
+  columnas), abril (`vrf_mm`, 90, modo 2; 111) y junio (`vrf_mm`, 80, modo 3; 111): diferencia máxima 0,0 en todas las
+  columnas. Suite completa: 1707 pasan, 1 omitida y 2 fallan, dos pruebas más que tomaban la 23 como norma inexistente
+  (`test_zone_arguments.py`, ahora la 24) y las cadenas de un modelo de `add_accis_to_idf` como las literales
+  (`test_outdoor_metric.py`); corregidas, sus dos archivos pasan (65).

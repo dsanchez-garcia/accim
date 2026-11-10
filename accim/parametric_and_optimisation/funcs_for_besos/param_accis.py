@@ -231,6 +231,7 @@ def get_valid_param_combinations():
         20: [[80, 90], [0, 1, 2, 3]],
         21: [[80, 90], [2, 3]],
         22: [[1, 2, 3], [0]],
+        23: [[80, 90], [0, 1, 2, 3]],
     }
     # The comfort standards defined by their data (accim.sim.standards): their categories and comfort modes
     CS_CA_CM_list_dict.update(_registered_param_combinations())
@@ -303,6 +304,7 @@ def drop_invalid_param_combinations(samples_df):
         20: [[80, 90], [0, 1, 2, 3]],
         21: [[80, 90], [2, 3]],
         22: [[1, 2, 3], [0]],
+        23: [[80, 90], [0, 1, 2, 3]],
     }
     valid_params.update(_registered_param_combinations())
 
@@ -368,8 +370,10 @@ def modify_ComfStand(idf: besos.IDF_class, value: int):
     """Modifies the ComfStand argument to match the entered value.
 
     The model gets the EMS code of this comfort standard if it does not have it (the output IDFs of ``AddAccis`` only
-    have that of the comfort standards of their zones). With a comfort standard defined by its data
+    have that of the comfort standards of their zones). With a comfort standard of the registry
     (:mod:`accim.sim.standards`), the zones also get its outdoor metric (and its EMS code, if the EMS calculates it).
+    The models of earlier versions of accim do not have the comfort standards defined by their data (JPN Aqilah 2025,
+    23, and those of the registry): a ``ValueError`` says so.
     
     :param idf: The eppy or besos IDF class instance.
     :param value: The value to be applied in the argument.
@@ -383,8 +387,12 @@ def modify_ComfStand(idf: besos.IDF_class, value: int):
     --------
     result = modify_ComfStand(idf=..., value=...)
     """
-    from accim.sim.standards import comfort_standard_definition
+    from accim.sim.standards import comfort_standard_definition, definition_of
 
+    if not input_programs(idf) and definition_of(value) is not None:
+        raise ValueError(f'The model has the ACCIS of an earlier version of accim, which does not have the EMS code of '
+                         f'the comfort standard {value}. Add the ACCIS with this version of accim to the model without '
+                         f'it.')
     _set_inputs(idf, {'ComfStand': value})
     if input_programs(idf):
         add_comfort_standard_code(idf, [value])

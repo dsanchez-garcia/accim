@@ -8,6 +8,10 @@ existing HVAC systems (`existing_hvac_*`). Since accim 1.1.0, `AddAccis` reads t
 and eppy writes some numbers of the input models in another way (`2.0` as `2`, `0.00000001` as `1e-08`), with the
 same values: the golden files of the 19 `AddAccis` configurations whose numbers changed were written again then,
 after checking that only these numbers changed and that EnergyPlus gives the same results (`b02`, `b11` and `b17`).
+In accim 1.2.0, the models of the in-memory functions with the EMS code of all the comfort standards (`s01` to `s06`
+and `s09`) got that of the new comfort standard JPN Aqilah 2025 (23, at the end of the chains): their golden files
+were written again after checking that only its code was added (the output IDFs of `AddAccis`, which only have the
+code of the comfort standards of their zones, did not change).
 
 | File | What it holds |
 | --- | --- |
