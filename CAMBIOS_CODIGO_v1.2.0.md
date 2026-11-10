@@ -7,13 +7,13 @@ esta versión: las P1, A2, A1 y A5, en este orden; y después D2 (sección 7), q
 2026-11-09 con E2 y E1, y las demás propuestas de la v03 (`notes/PROPUESTAS_MEJORAS_post_1.1.0_v03.md`), en el orden
 del autor (`notes/COPILOT_BRIEF_v1.2.0_v01.md`): E1 (sección 8), E2 (sección 9), A3 (sección 10), B1 (sección 11),
 B5 (sección 12), C1 (sección 13), D1 (sección 14), B2 (sección 15), B3 (sección 16), B4 (sección 17), C2 (sección
-18)...
+18), E4 (sección 19)...
 
 Lo que ya está en otros documentos no se repite aquí:
 
 - `CHANGELOG.md` (sección Unreleased): los cambios que ve el usuario.
-- `docs/source/4_detailed use.md`, secciones 4.2.2, 4.2.3, 4.2.4, 4.2.5, 4.2.6, 4.3.1, 4.6.1, 4.7.3, 4.7.4, 4.8 y
-  4.8.1: el uso.
+- `docs/source/4_detailed use.md`, secciones 4.2.2, 4.2.3, 4.2.4, 4.2.5, 4.2.6, 4.3.1, 4.5.1, 4.6.1, 4.7.3, 4.7.4, 4.8
+  y 4.8.1: el uso.
 - `DEVLOG.md`: el registro del trabajo, con cómo se comprobó.
 - `notes/decisions.md`: las decisiones y sus motivos.
 
@@ -74,6 +74,10 @@ Lo que ya está en otros documentos no se repite aquí:
   debajo de la de calefacción sin la tolerancia) de cada zona y del edificio, y el paramétrico los lee con los
   reductores `hours_outside_range` y `degree_hours`; `deviation_constraint_bound` da la cota de una restricción con la
   tabla E.1; el método C queda pendiente del autor (sección 18).
+- **E4.** `morph_epws(engine='pyfwg')` ejecuta el Future Weather Generator global a través de pyfwg
+  (`pyfwg.morph_epw_global`, versiones 3, 4 y 5 de la herramienta), con los mismos nombres de los EPW futuros que
+  con Java (el motor por defecto, que no cambia); el extra `accim[weather]` instala pyfwg y pyweatherfiles; el
+  cuaderno espera al jar de la herramienta (sección 19).
 - Las categorías del PMV y la aproximación de la corrección del metabolismo se han comprobado en ISO 7730:2025 y
   EN 16798-1:2019, y el modelo dinámico de vestimenta de A5, en Schiavon y Lee (2013) y ASHRAE 55-2020 (sección 6).
 - Lo que quedaba abierto se ha comprobado: el golden master y las pruebas de EnergyPlus 26.1 y 26.2, también la de A5
@@ -1259,3 +1263,43 @@ las categorías de EN 16798-1 como rangos, y los criterios de desviación admisi
   simulaciones (categorías I y III, del 1 al 7 de julio) con los reductores nuevos da los totales de los CSV de cada
   simulación (10,17 h y 2,31 Kh por encima con la categoría I; 0 con la III). Suite completa: 1738 pasan y 1 omitida;
   la documentación, con los mismos avisos que antes (59).
+
+## 19. Los archivos climáticos futuros con pyfwg (E4)
+
+La v03 pide que `accim.data.morphing.morph_epws()` delegue opcionalmente en pyfwg (Future Weather Generator) y acepte
+los TMY de pyweatherfiles, solo si están instalados (`accim[weather]`), y un cuaderno: EPW presente → EPW futuros →
+`run_ep` → `Table` con los indicadores de D1; sin prompt, y el brief no la ajusta.
+
+**Antes.** `morph_epws` ejecutaba el Future Weather Generator con Java desde la línea de órdenes, con 8 argumentos
+posicionales (los de una versión anterior de la herramienta), movía cada EPW a una carpeta con su nombre, renombraba
+los EPW de cada escenario (`<EPW>_<escenario>.epw`) y los devolvía a la carpeta de trabajo.
+
+**Ahora.**
+
+- `accim/data/morphing.py`: el argumento `engine` (`'java'` por defecto, como antes; `'pyfwg'`) y `pyfwg_arguments`.
+  Con `'pyfwg'`, `_morph_with_pyfwg` importa pyfwg (con un `ImportError` que dice cómo instalarlo), comprueba con
+  `pyfwg.detect_fwg_tool` que la herramienta es la global (`ValueError` con la de Europa o las CORDEX; si pyfwg no la
+  identifica, la deja a pyfwg) y llama a `pyfwg.morph_epw_global` para cada EPW, que se queda donde está: la herramienta
+  escribe en una carpeta con su nombre junto a él, y los EPW futuros se renombran y se mueven junto al original con
+  `_move_scenario_epws`, la misma función que usa ahora el motor de Java (sin cambiar lo que hace). Las opciones
+  `fwg_options_*` pasan a pyfwg como `fwg_gcms` (lista), `fwg_create_ensemble`, `fwg_month_transition_hours`,
+  `fwg_use_multithreading`, `fwg_interpolation_method_id` y `fwg_limit_variables`, y se muestra la salida de la
+  herramienta, como con Java; `pyfwg_arguments` da los demás argumentos de `morph_epw_global` (`fwg_version`,
+  `fwg_add_uhi`...), comprobados con su firma, y no los de los archivos, que fija `morph_epws`. Si la herramienta no
+  escribe ningún EPW futuro de un EPW (pyfwg registra el error y sigue), `RuntimeError` al final, después de los demás.
+  Las constantes `SCENARIOS` (los de pyfwg: `GLOBAL_SCENARIOS` × `ALL_POSSIBLE_YEARS`), `DEFAULT_GCMS` (los modelos de
+  antes, todos en `pyfwg.DEFAULT_GLOBAL_GCMS`) y `ENGINES`; una docstring del módulo.
+- `setup.py`: el extra `weather` (`pyfwg>=0.4.0`, `pyweatherfiles`), el de la v03 (E3). accim no importa
+  pyweatherfiles: sus EPW (`HourlyEPWConverter`) se transforman por su ruta con `engine='pyfwg'`.
+- La API de pyfwg se ha leído en su código instalado (0.4.0, de PyPI). Su orden para la versión 3 de la herramienta
+  tiene 12 argumentos (`_build_command_v3`: también el desplazamiento de la desviación típica, el ajuste de la hora
+  solar, el modelo de irradiación difusa y la isla de calor), y las versiones 4 y 5 usan clave y valor: la orden del
+  motor de Java de accim puede no ser la de las versiones actuales (tarea en `TODO.md`, para comprobar con el jar).
+- Documentación: la sección 4.5.1 del uso detallado (nueva) y la sección 2 (el extra); `tests/README.md`.
+- Decisiones provisionales (en `notes/questions.md`): pyfwg a petición (`engine`), no siempre que esté instalado; solo
+  la herramienta global; los TMY de pyweatherfiles, como EPW por su ruta. El cuaderno y la prueba con la herramienta
+  esperan al jar, que no está en este equipo (tarea bloqueada en `TODO.md`).
+- Pruebas: `tests/core/test_morphing.py` (10 nuevas: pyfwg simulado, con EPW de la carpeta de trabajo y de otra
+  carpeta, sus opciones y `pyfwg_arguments`, los errores, la herramienta global, los fallos, sin pyfwg; los argumentos y
+  las constantes frente a pyfwg 0.4.0 instalado; y una con la herramienta, omitida sin `ACCIM_FWG_JAR`). Las 9 de antes
+  pasan sin cambios. `tests/core`: 1240 pasan y 2 omitidas; la documentación, con los mismos avisos que antes (59).

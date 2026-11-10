@@ -15,6 +15,21 @@ This log is a lightweight, session-scoped complement to the repository's
 existing tracking files — it does not replace them (see
 [[decisions.md#2026-09-13 — `notes/work-log.md` complements, not replaces, existing tracking files|the related decision]]).
 
+## 2026-11-10 — E4: the future weather files with pyfwg (branch `v1.2.0`, on the server)
+
+- **Objective**: E4, after C2, in the order of the author.
+- **Affected files**: `accim/data/morphing.py`, `setup.py`, `tests/core/test_morphing.py`, `tests/README.md`,
+  [[../docs/source/4_detailed use.md]] (§4.5.1), `docs/source/2_installation.md`, [[../CHANGELOG.md]],
+  [[../CAMBIOS_CODIGO_v1.2.0.md]] (§19), [[../DEVLOG.md]], [[../TODO.md]], [[decisions.md]], [[questions.md]].
+- **Finding or decision**: See
+  [[decisions.md#2026-11-10 — morph_epws delegates in pyfwg on request, for the global tool, and pyfwg and pyweatherfiles are the extra accim[weather] (E4)|the decision]].
+  The API of pyfwg was read in its installed source (0.4.0, from PyPI); its command for the version 3 of the tool has
+  more arguments than that of `engine='java'` ([[../TODO.md]]). The jar of the tool is not on the server, so the
+  notebook waits.
+- **Validation**: 10 new tests (pyfwg mocked, and the arguments and constants against the installed pyfwg; one with
+  the tool, skipped without its jar); the tests of `tests/core`; the documentation build.
+- **Next step**: A4.
+
 ## 2026-11-10 — C2: the long-term comfort objectives (branch `v1.2.0`, on the server)
 
 - **Objective**: C2, after B4, in the order of the author.

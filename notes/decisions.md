@@ -11,6 +11,21 @@ Durable architectural/process decisions for this repository and its Obsidian
 vault. Newest first. Use [[templates/decision-record.md|the decision-record
 template]] to add a new entry.
 
+## 2026-11-10 — morph_epws delegates in pyfwg on request, for the global tool, and pyfwg and pyweatherfiles are the extra accim[weather] (E4)
+
+- **Status**: accepted (proposal E4 of `notes/PROPUESTAS_MEJORAS_post_1.1.0_v03.md`, which has no prompt; the design
+  decided provisionally, see questions.md)
+- **Context**: `morph_epws` ran the Future Weather Generator with Java from the command line, with the arguments of an
+  earlier version of the tool; v03 asks for an optional delegation in pyfwg and the TMY of pyweatherfiles, only if they
+  are installed (`accim[weather]`, the extra of v03, E3).
+- **Decision**: `engine='pyfwg'` (`'java'` by default) runs the global tool through `pyfwg.morph_epw_global`, with the
+  options of `morph_epws` and `pyfwg_arguments` for the others, and renames and moves the future EPWs as the Java
+  engine does; pyfwg is imported only then. `setup.py` gets the extra `weather` (`pyfwg>=0.4.0`, `pyweatherfiles`);
+  accim does not import pyweatherfiles: its EPWs are morphed by path.
+- **Consequences**: the default behaviour of `morph_epws` does not change; with pyfwg, the versions 3, 4 and 5 of the
+  global tool and EPWs of any folder can be used; the other distributions are run with pyfwg directly; the notebook and
+  the test with the tool wait for its jar.
+
 ## 2026-11-10 — The long-term comfort objectives are EMS counters of the ACCIS with the range of its setpoints, opt-in (C2)
 
 - **Status**: accepted (proposal C2 of `notes/PROPUESTAS_MEJORAS_post_1.1.0_v03.md`, which has no prompt; the design

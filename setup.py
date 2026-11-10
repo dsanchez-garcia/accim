@@ -154,6 +154,9 @@ setuptools.setup(
         ],
     extras_require={
         'samples': [f'{SAMPLES_DIST_NAME}=={accim.__version__}'],
+        # The future weather files with pyfwg (accim.data.morphing.morph_epws(engine='pyfwg')), and the typical
+        # meteorological years and EPW files of pyweatherfiles
+        'weather': ['pyfwg>=0.4.0', 'pyweatherfiles'],
         },
     # The graphical user interface (accim.gui, with tkinter)
     entry_points={

@@ -956,6 +956,22 @@ To run it on your computer, copy the folder `jupyter_notebooks/rename_epw_files`
 
 `rename_epw_files` takes the country and city from the coordinates of each EPW file, which needs an internet connection (it uses the package `geopy`, installed with accim), unless `rename_city_dict` and `country_to_city_dict` give them.
 
+(future-weather-files)=
+### 4.5.1 Future weather files
+
+`accim.data.morphing.morph_epws(fwg_path, epw_filepaths='all', ...)` runs the global Future Weather Generator (<https://future-weather-generator.adai.pt/>, Rodrigues et al.), a Java tool whose jar file is `fwg_path`, on some EPW files (all those of the working folder by default), and keeps an EPW file for each scenario and timeframe of the tool, named after the original one: `<EPW>_<scenario>.epw`, with the scenarios SSP1-2.6, SSP2-4.5, SSP3-7.0 and SSP5-8.5 and the years 2050 and 2080 (`Granada_ssp126_2050.epw`... `Granada_ssp585_2080.epw`, `accim.data.morphing.SCENARIOS`). The arguments `fwg_options_*` are the options of the tool: the global climate models (`fwg_options_gcms`, separated by commas; those of `accim.data.morphing.DEFAULT_GCMS` by default), their ensemble, the hours of the transition between months, the computation in several threads, the interpolation method and the limits of the variables.
+
+By default (`engine='java'`), it runs the tool with Java from the command line, with the arguments that accim has always given it. Since accim 1.2.0, `engine='pyfwg'` runs it through pyfwg (`pyfwg.morph_epw_global`), which checks the parameters and supports the versions 3, 4 and 5 of the global tool; it is installed with `pip install "accim[weather]"` (section 2). With pyfwg, `epw_filepaths` also takes the paths of EPW files of other folders (each EPW stays where it is, and its future EPW files are written next to it), the output of the tool is shown as with Java, and `pyfwg_arguments` gives the other arguments of `pyfwg.morph_epw_global` (its `fwg_*` parameters, such as `fwg_version` or `fwg_add_uhi`), whose defaults are otherwise those of pyfwg; the other distributions of the tool (Europe, CORDEX...) are not run by `morph_epws` (use pyfwg directly). If the tool writes no future EPW for an EPW file, `morph_epws` raises a `RuntimeError` after morphing the others (`pyfwg.enable_console_logging()` shows the errors that pyfwg reports).
+
+```python
+from accim.data.morphing import morph_epws
+
+morph_epws(fwg_path='C:/FWG/FutureWeatherGenerator.jar', epw_filepaths=['Seville.epw'], engine='pyfwg',
+           pyfwg_arguments={'fwg_add_uhi': False})
+```
+
+pyweatherfiles, which `accim[weather]` also installs, generates typical meteorological years from historical weather data (`pyweatherfiles.TMYGenerator`) and writes EPW files from hourly weather data (`pyweatherfiles.hourly_epw_converter.HourlyEPWConverter`): `morph_epws(..., engine='pyfwg')` takes their paths. The future EPW files are then simulated as any other (`rename_epw_files`, section 4.5, and `run_ep`, section 4.6), and `Table(..., long_term_indicators=True)` compares their long-term discomfort (section {ref}`long-term-discomfort`).
+
 (running-simulations)=
 ## 4.6 Running simulations
 

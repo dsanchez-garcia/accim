@@ -24,6 +24,25 @@ it here as answered).
 
 ## Open
 
+## 2026-11-10 — E4: how morph_epws delegates in pyfwg, and what "accepts TMY of pyweatherfiles" means
+- Context: v03 (E4): "`morph_epws()` delega opcionalmente en `pyfwg` (Future Weather Generator) y acepta TMY de
+  `pyweatherfiles`; sólo si están instalados (`accim[weather]`)", with a notebook; no prompt, and the brief no
+  adjustment. pyfwg 0.4.0 (PyPI) runs the global, Europe and CORDEX distributions of the tool
+  (`morph_epw_global`, `morph_epw_europe`, `morph_epw_cordex`), checks the parameters and supports the versions 3, 4
+  and 5 of the global tool; pyweatherfiles generates typical meteorological years (`TMYGenerator`, exported to CSV,
+  TMY or XLSX) and writes EPW files from hourly data (`HourlyEPWConverter`).
+- Options considered: for the delegation, (a) a new argument `engine` ('java' by default, as before; 'pyfwg'), (b)
+  pyfwg whenever it is installed (the default behaviour of `morph_epws` would change with the packages of the
+  environment); for the distributions, (i) the global one only (that of the command of `engine='java'`, with its
+  options), (ii) all those of pyfwg (their options differ); for pyweatherfiles, (1) `morph_epws(engine='pyfwg')` takes
+  paths of EPW files of any folder, such as those that pyweatherfiles writes, and the docs say how to get them, (2)
+  `morph_epws` takes the objects or TMY files of pyweatherfiles and converts them (a base EPW and the columns would be
+  new arguments).
+- Owner: the author.
+- Status: open; (a), (i) and (1) decided provisionally (the default behaviour does not change; `pyfwg_arguments` gives
+  the other arguments of `pyfwg.morph_epw_global`), pending author. The notebook waits for the jar of the tool
+  (`TODO.md`).
+
 ## 2026-11-10 — C2: how the long-term comfort objectives reach the optimisation, and with which range
 - Context: v03 (C2) asks for `hours_outside_range` (Method A), `degree_hours` (Method B) and `ppd_weighted_hours`
   (Method C) of CEN/TR 16798-2:2019, Annex D, in `objectives.py`, by zone and building and by warm and cold period,

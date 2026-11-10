@@ -24,6 +24,12 @@ of the installed sample files, run:
 Up to version 0.7.7, the sample files were always installed together with the
 library.
 
+**Future weather files** (optional, since accim 1.2.0): `pip install "accim[weather]"`
+installs pyfwg, with which `accim.data.morphing.morph_epws(..., engine='pyfwg')` runs
+the Future Weather Generator, and pyweatherfiles, which generates typical
+meteorological years and EPW files (section {ref}`future-weather-files`). The
+Future Weather Generator itself (a jar file) and Java are installed apart.
+
 To install some specific version, execute the same code followed by
 "==version number". For instance, to install version 0.6.11:
 
