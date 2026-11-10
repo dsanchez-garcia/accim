@@ -11,10 +11,664 @@ Durable architectural/process decisions for this repository and its Obsidian
 vault. Newest first. Use [[templates/decision-record.md|the decision-record
 template]] to add a new entry.
 
+## 2026-11-10 — With tr_mode='zone', the inverted SET setpoint of air temperature is written as an operative-temperature setpoint
+
+- **Status**: accepted (the author, in the task of the session of 2026-11-10, answering the open question of
+  `notes/PROPUESTAS_MEJORAS_post_1.1.0_v04.md` §4.4)
+- **Context**: the SET setpoints of A6 are operative temperatures with the air and mean radiant temperatures equal
+  (tr = ta = Top), written to the dual setpoint thermostats of the ACCIS, which control the operative temperature with
+  the radiative fraction 0.5 (`TypOperativeTempControlSch`, 0 on the design days). F1 (decision 4 of block F,
+  `notes/PROPUESTA_ADAPTACION_INTERIOR_v03.md` §6) solves the air temperature whose SET is the target with the mean
+  radiant temperature of the zone (`tr_mode='zone'`, the default) or with tr = ta (`tr_mode='equal_air'`); v04 §4.4
+  asked which thermostat receives the air-temperature setpoint.
+- **Decision**: with `tr_mode='zone'`, the inverted air-temperature setpoint ta_sp is converted to an
+  operative-temperature setpoint, Top_sp = (ta_sp + tr_zone)/2, with the mean radiant temperature of the zone of the
+  previous timestep (that of the sensors of the hooks), and written to the operative-temperature thermostat that the
+  ACCIS already actuates (`AHST_Act_<zone>`, `ACST_Act_<zone>`); with `tr_mode='equal_air'`, the solution of the
+  bisection (ta = tr = Top) is written as it is (the behaviour of A6).
+- **Consequences**: no new thermostat, actuator or HVAC change; the conversion uses the same weighting as the
+  thermostats (0.5), and lags the mean radiant temperature by one timestep, as every input of the hooks.
+
+## 2026-11-10 — The decisions of the author on the blocked tasks of 1.2.0 and the name of the setpoint limits of B5
+
+- **Status**: accepted (the author, `notes/PROPUESTAS_MEJORAS_post_1.1.0_v04.md` §4.5 and §6, made binding by the task of
+  the session of 2026-11-10; §4.5 is decision 8 of block F, `notes/PROPUESTA_ADAPTACION_INTERIOR_v03.md` §6)
+- **Context**: the session of the proposals of 1.2.0 left eight tasks of `TODO.md` blocked on the author, and A5 (the
+  clothing as a function of the outdoor temperature) waiting for him; block F asked to rename the floor and ceiling
+  of B5.
+- **Decision**:
+  - B2, an outdoor metric for each regime (§6.1): the conditions of all the regimes are evaluated with the metric of
+    the zone (`CustAST_metric`), and the selected regime can set its own metric (`outdoor_metric`, `alpha`, `days`; the
+    zone's when None) to calculate `ComfTemp`: `SetOutdoorMetric` calculates every distinct metric of the regimes of
+    the zone (a variable `Tout_metric_<k>` for each one), and `SelectCustomRegime_<zone>` copies that of the selected
+    regime into `Tout_metric`. P2.
+  - B4, the static setpoints of JPN Aqilah 2025 (§6.2): new arguments `static_heating_setpoint` and
+    `static_cooling_setpoint` (20.0 and 28.0 by default; EMS keys `StaticAHST`/`StaticACST`) of `AddAccis`,
+    `modify_accis` and `zone_arguments`, for every comfort standard with comfort mode 1 whose standard does not fix
+    static setpoints of its own (now only 23; the others ignore them, documented); parameters `StaticHeatingSetpoint`
+    and `StaticCoolingSetpoint` of the parametric module.
+  - B3, the data of Qatar (§6.3): `outdoor_metric: rmot_alpha`, `alpha: 0.8` (the article uses a running mean
+    without α: that of EN 16798-1, noted in `evidence`); `comfort_temperature: {slope: 0.049, intercept: 22.5}`;
+    `applicability: {metric_min: 10.0, metric_max: 40.0}` (the range of Tr of the study, mean 30.7 °C, SD 6.4 → about
+    21–40 °C, opened to 10 °C to cover the winter of offices with HVAC, noted as a choice); `categories: {90: ±2.5, 80:
+    ±3.5}` (the bands of ASHRAE 55, as the article compares, noted as "not own"); `comfort_modes: [0, 1, 2, 3]`;
+    `static_setpoints: {heating: 20.0, cooling: 25.5}` (EN 16798-1, Table B.2, offices, category II); `evidence: {N:
+    3742, R2: 0.015, SE: 0.007, p: '<0.001', Tr_mean: 30.7, Tr_sd: 6.4, mode: HVAC, bands: 'ASHRAE 55, not own'}`.
+    The file must load and be the second example.
+  - B3, several regimes in a YAML file (§6.4): a key `regimes:` (a list) with the schema of `CustomRegime` of B2
+    (`slope`, `intercept`, offsets, limits, `condition`, optional `outdoor_metric`); a scalar `comfort_temperature` is
+    one regime `'always'`. It depends on the metric of each regime. P2.
+  - C2, Method C (§6.5): only for the models with setpoints based on the PMV (`pmv_index`), with the limits
+    `pmv_heating_setpoint`/`pmv_cooling_setpoint` without the tolerance and the PMV of the zone that the EMS already
+    measures; wf = PPD(PMV)/PPD(PMV_limit) with formula (5) of ISO 7730:2025 in Erl (`@Exp`); counter
+    `PpdWeightedHours_<zone>`. For the temperature models of the ACCIS, Method C does not apply (no PMV): a documented
+    `ValueError`. P2.
+  - C2 and D1, CIBSE TM52/TM59 (§6.6): still without the texts, blocked.
+  - E4, the notebook and the test with the jar of the Future Weather Generator (§6.7): pending the jar
+    (`ACCIM_FWG_JAR`) and the Java version it needs; the command line of pyfwg (12 arguments for version 3) is the
+    reference for the 8 arguments of the Java engine of accim, to resolve with the jar.
+  - A6, the cooling effect and the Erl way (§6.8): the Erl way is discarded; the cooling effect is postponed to F3
+    (an indicator, not a setpoint); the convergence plan A6 → F1 of v04 §4.6 replaces the task.
+  - A5, the clothing as a function of the outdoor temperature (§6): `clothing_insulation=callable`, written as a
+    `Schedule:File` generated from the weather file with `accim.sim.preview.outdoor_metrics`; no Erl version by
+    sections. P2.
+  - B5, the names of the setpoint limits (§4.5): `heating_setpoint_floor`/`cooling_setpoint_ceiling` become
+    `heating_setpoint_minimum`/`cooling_setpoint_maximum` (EMS keys `AHSTmin`/`ACSTmax`; parameters
+    `HeatingSetpointMinimum`/`CoolingSetpointMaximum`), with deprecated aliases through `accim._deprecation`, before
+    1.2.0 (P1): "floor" can be read as a physical floor (a radiant floor).
+- **Consequences**: the tasks are in [[../TODO.md]] (unblocked), and their order in v04 §7 (G4, G5, H1, H3, H5, H6);
+  CIBSE TM52/TM59 and the notebook of the Future Weather Generator stay blocked.
+
+## 2026-11-10 — The verdicts of the author on the 36 provisional decisions of the proposals of 1.2.0
+
+- **Status**: accepted (the author, `notes/PROPUESTAS_MEJORAS_post_1.1.0_v04.md` §5, made binding by the task of the session of 2026-11-10)
+- **Context**: the session of the proposals of 1.2.0 (2026-11-09 and 2026-11-10,
+  [[INFORME_SESION_v1.2.0_2026-11-10.md]]) left 36 decisions taken provisionally in [[questions.md]], each with the most
+  conservative option. The independent review v04 gave the verdict of the author on each one (§5): accept as is, or
+  with a change that becomes a task of v04 §7.
+- **Decision**: 29 are accepted (some with a note to document) and 7 are changed, completely or in part: #3 (A3, a key
+  of the catalogue: task G5), #8 (B1, T0 of `te_ref_nl`: task H2), #13 (B5, crossed setpoints: task G5), #20 (D1,
+  Method C at the upper limit: task H3), #28 (B3, the data of Qatar: task G5), #29 (B4, the static setpoints: task
+  G4) and #35 (A6: the convergence plan A6 → F1, tasks G3, E-F1 and F1–F3); #30 (B4, the running mean of 23) is
+  accepted without a weather file and changed with one by finding B4-1 (task G4). The 36 entries of
+  [[questions.md]] are below, moved as they were, with their verdicts (numbered as in v04 §5, oldest first).
+- **Consequences**: the decisions of 2026-11-09 and 2026-11-10 that said "decided provisionally" are final, but for
+  the changed details; the tasks of the changes are in [[../TODO.md]] and in v04 §7.
+
+### 2026-11-09 — E1: the running means of the first days of the weather file in outdoor_metrics
+
+- Context: `accim.sim.preview.outdoor_metrics` (E1) calculates the running means of the standards (EN 16798-1 B.1 and
+  B.2, the mean of the n previous days of ASHRAE 55, the reference temperature of the ATG) from the daily means of the
+  previous days, and the first days of the weather file have no previous days in it. v03 and D1-D12 do not say what
+  they get.
+- Why it matters: the values of the first days of January, and the initial values of the running means of B1 (D3).
+- Options considered: (a) a year that repeats: the first days take the last days of the file, as EnergyPlus does for
+  ASHRAE 55 at the beginning of a run period, and B.1 is its infinite sum (a closed form); (b) NaN for the days without
+  enough previous days (B.1 would never be complete); (c) the sums truncated at the first day of the file.
+- Owner: the author.
+- Provisional decision (pending author until 2026-11-10): option (a) decided provisionally, pending author (it is what accim does; `energyplus_running_means`
+  gives the values of EnergyPlus, whatever the answer).
+- Status: answered by the author on 2026-11-10 (accepted; v04 §5, #1).
+- Verdict (v04 §5, #1): Accepted: consistent with the Engineering Reference §19.1 (the running means are "calculated directly from the weather file"); the documentation says that EnergyPlus 25.1 begins the running mean of CEN 15251 without dividing it by 1 − α⁷ and that `compute_setpoints` reproduces it (finding E1-1 adds the start between 2 and 30 January, task G2).
+
+### 2026-11-09 — E2: what the metabolic correction of the ePMV is checked against (the 5.5–6.1 % of the brief)
+
+- Context: the brief asks E2 to check "the metabolic correction with the tolerance of 5.5–6.1 %". The EMS sets the
+  factor of each People object to 1 − 0.067·PMV with the PMV of the previous timestep (exact in EnergyPlus 25.1:
+  differences of 1e-16 with the outputs at timestep frequency); the 5.5–6.1 % is the reduction of the activity level
+  for a PMV of 1 *before* the correction, once the correction converges (section 4.8.1 of the detailed use), and the
+  outputs of a simulation do not have that PMV (EnergyPlus calculates the PMV with the corrected activity level).
+- Why it matters: a check of the reduction against the reported PMV of the same timestep would give about 6.7 %, not
+  5.5–6.1 %, and one against the PMV before the correction needs the PMV calculated again (A6, `accim[comfort]`).
+- Options considered: (a) the relation of the EMS, factor = 1 − 0.067·PMV of the previous timestep (0–3, cooling
+  season), and corrected activity = activity·factor, with `calculation_tolerance` (0.001); (b) a band of 5.5–6.7 % on
+  (1 − factor)/PMV of the same timestep, approximate and also with hourly outputs; (c) the PMV before the correction
+  calculated with pythermalcomfort, and the band 5.5–6.1 %.
+- Owner: the author.
+- Provisional decision (pending author until 2026-11-10): option (a) decided provisionally, pending author (it is exact and catches any other reduction; the
+  5.5–6.1 % stays documented as the result of the correction).
+- Status: answered by the author on 2026-11-10 (accepted; v04 §5, #2).
+- Verdict (v04 §5, #2): Accepted: the band of 5.5–6.1 % is the result of the correction, not the rule.
+
+### 2026-11-09 — A3: does a key of the catalogue in one coefficient also set the other one
+
+- Context: the design of A3 says that a key given in `adaptive_coefficient_cooling` "fills both coefficients at once
+  unless the other is given explicitly"; its prompt only says that the arguments accept a key, and the defaults of the
+  coefficients are numbers (0.293 and −0.293), so an explicit value equal to the default cannot be told apart.
+- Why it matters: `adaptive_coefficient_cooling='yao2009_chongqing_classrooms'` alone gives λ 0.293 and −0.293 (the
+  default) with (a), and 0.293 and −0.125 with (b).
+- Options considered: (a) each argument takes the coefficient of its own side of the key (give the key to both to use
+  the entry); (b) the defaults become None, which takes the other coefficient of a key, or 0.293/−0.293 otherwise (the
+  signature changes, and the GUI and the documentation show other defaults); (c) a new argument with the key for both.
+- Owner: the author.
+- Provisional decision (pending author until 2026-11-10): option (a) decided provisionally, pending author (the conservative, backward-compatible one;
+  documented in the docstring and in section 4.8).
+- Status: answered by the author on 2026-11-10 (changed; v04 §5, #3).
+- Verdict (v04 §5, #3): Changed (finding A3-1, task G5): the catalogue is made of pairs, so a key given on one side only must not pair a sourced λ with the default −0.293/0.293, which has no source: a new argument `adaptive_coefficients=<key>` sets both sides (a `ValueError` if it is combined with explicit numbers), the keys of each side are kept (an explicit number on the other side wins), and a warning is given when one side is a key and the other is left at the numeric default.
+
+### 2026-11-09 — A3: with adaptive_coefficient_by='pmv_sign', which λ converts each setpoint into the PMV setpoint of the thermostat
+
+- Context: the design of A3 gives the Erl of the option, "if PMV_{s} >= 0 set adap_coeff = λ_warm else λ_cool", with
+  the PMV of the previous timestep, but not which λ converts the setpoints of the aPMV into the PMV setpoints of the
+  thermostats (PMV = aPMV/(1 − λ·aPMV), v03 §11.1); with 'season' it is the λ of the season, as in accim 1.1.0.
+- Why it matters: with the λ of the sign of the current PMV, the PMV setpoints of the thermostat would change each
+  time the PMV changes sign (with λ 0.21/−0.49, the heating setpoint −0.5 would be the PMV −0.45 or −0.66).
+- Options considered: (a) each setpoint with the λ of its side of the scale (the heating setpoint, negative where it
+  is converted, with the λ of cool sensations; the cooling one with that of warm sensations), which is the inverse of
+  aPMV(PMV) with λ by the sign; (b) both with the λ of the sign of the PMV of the previous timestep (the Erl of the
+  design applied to the inverse too).
+- Owner: the author.
+- Provisional decision (pending author until 2026-11-10): option (a) decided provisionally, pending author (the monitor and the output `Adaptive
+  Coefficient_<zone>` follow the design).
+- Status: answered by the author on 2026-11-10 (accepted; v04 §5, #4).
+- Verdict (v04 §5, #4): Accepted: the cooling setpoint is an aPMV > 0 (λ of warm sensations) and the heating setpoint an aPMV < 0 (λ of cool sensations); the signs of the setpoints are validated with `pmv_sign` (finding A3-2, task G5).
+
+### 2026-11-09 — B1: does every model of the custom model have the EMS code of the outdoor metric, or only those that need it
+
+- Context: the prompt of B1 says that SetComfTemp, SetAppLimits and COUNT_HOURS of the custom model use `Tout_metric`,
+  a new global variable and EMS output; with the default `'pmot'`, the behaviour must not change.
+- Why it matters: with the code in every model of the custom model (and in the models of `add_accis_to_idf`, which
+  have the code of all the comfort standards), the output IDFs of 1.1.0 with comfort standard 99 would get new
+  programs, global variables and outputs (new columns in the CSV files), although their setpoints would not change.
+- Options considered: (a) always; (b) only if a zone has a metric other than `'pmot'` (`CustAST_metric` ≠ 0) and the
+  model has the code of the custom model; otherwise the custom model uses PMOT, as in 1.1.0.
+- Owner: the author.
+- Provisional decision (pending author until 2026-11-10): option (b) decided provisionally, pending author (the golden master does not change; the parametric
+  parameters of C1 will add the code when they set a metric).
+- Status: answered by the author on 2026-11-10 (accepted; v04 §5, #5).
+- Verdict (v04 §5, #5): Accepted: the output IDFs of 1.1.0 do not change.
+
+### 2026-11-09 — B1: which programs of the custom model use Tout_metric
+
+- Context: the prompt names SetComfTemp, SetAppLimits and COUNT_HOURS. In accim, SetAppLimits only sets the limits of
+  the custom model from its inputs; the outdoor temperature is compared with them in the subprogram of its setpoints
+  (`SetAST_CS99_0`), in `CountHours_<zone>` and, in mixed mode, in `SetVST` (the ventilation setpoint).
+- Why it matters: with PMOT in some of them, the custom model would mix two outdoor temperatures.
+- Options considered: (a) only the programs of the prompt (SetAppLimits unchanged); (b) every program where the
+  custom model uses its outdoor temperature: SetComfTemp, `SetAST_CS99_0`, `CountHours_<zone>` and `SetVST`.
+- Owner: the author.
+- Provisional decision (pending author until 2026-11-10): option (b) decided provisionally, pending author.
+- Status: answered by the author on 2026-11-10 (accepted; v04 §5, #6).
+- Verdict (v04 §5, #6): Accepted: more complete than v03, which forgot SetVST.
+
+### 2026-11-09 — B1: on which day do the programs of the outdoor metric begin with the values of the weather file
+
+- Context: decision D3 says to initialise the running means with the values that accim calculates from the EPW given
+  to AddAccis, but not for which day; the programs keep constants, not the whole year.
+- Why it matters: if the model is simulated from another day (another RunPeriod, or the design days), the constants
+  of the first day would be wrong.
+- Options considered: (a) the constants of the first day of the first RunPeriod of the input IDF, used only if the
+  environment begins on that day (otherwise, the PMOT of EnergyPlus, as without the EPW); (b) the constants of the
+  365 days (more than 10 000 program lines).
+- Owner: the author.
+- Provisional decision (pending author until 2026-11-10): option (a) decided provisionally, pending author.
+- Status: answered by the author on 2026-11-10 (accepted; v04 §5, #7).
+- Verdict (v04 §5, #7): Accepted: as decision D3.
+
+### 2026-11-09 — B1: T0 of te_ref_nl before the first hour of the day has ended
+
+- Context: v03 gives Te,ref = (T0 + 0.8·T−1 + 0.4·T−2 + 0.2·T−3)/2.4 with T0 "the running (max+min)/2 of today"; at
+  the first timesteps of a day, no hourly value of the day has ended.
+- Options considered: (a) the outdoor temperature of the timestep; (b) the mean of the maximum and minimum of the
+  previous day.
+- Owner: the author.
+- Provisional decision (pending author until 2026-11-10): option (a) decided provisionally, pending author.
+- Status: answered by the author on 2026-11-10 (changed; v04 §5, #8).
+- Verdict (v04 §5, #8): Changed (task H2): van der Linden et al. (2006) define Ti as the mean of the maximum and the minimum of the whole day, and the partial value makes Te,ref drift within the day. With the weather file, T0 is the daily value of the weather file, written as a `Schedule:File` read by a sensor `Schedule Value`; without it, the (max+min)/2 of the previous day, with a warning. Until H2, the drift is documented.
+
+### 2026-11-09 — B1: the arguments of the outdoor metric in modify_accis
+
+- Context: the other arguments of the custom model of `modify_accis` (`custom_slope`...) default to 0 and are always
+  written.
+- Options considered: (a) `custom_outdoor_metric='pmot'`, `custom_alpha=0.8`, `custom_days=30` written by every call
+  (a call without them would remove the metric of the zones); (b) `None` by default, keeping the values of each zone,
+  as `comfort_standard` and the other arguments that are None.
+- Owner: the author.
+- Provisional decision (pending author until 2026-11-10): option (b) decided provisionally, pending author (the most conservative: a call without them changes
+  nothing of the outdoor metric).
+- Status: answered by the author on 2026-11-10 (accepted; v04 §5, #9).
+- Verdict (v04 §5, #9): Accepted as is.
+
+### 2026-11-09 — B5: where the floor and ceiling bound the setpoints
+
+- Context: the prompt of B5 puts the lines `if AHST < AHSTfloor ...` and `if ACST > ACSTceil ...` at the end of
+  SetAST, before ROUNDING, for every comfort standard and comfort mode. In accim, SetAST runs SetAST_Master and the
+  subprograms `SetAST_CS<n>_<k>`, shared by all the zones, whose branches of each comfort mode end with ROUNDING;
+  ROUNDING reads ACST and AHST (unrounded) and writes `roundedACST` and `roundedAHST`.
+- Why it matters: lines in the subprograms would change the output IDFs without a floor or a ceiling (they would need
+  a sentinel value for the zones without them, and a Null variable stops EnergyPlus), and they would be repeated in
+  every branch of every comfort mode.
+- Options considered: (a) the lines in every branch of the subprograms, with sentinel values; (b) a program of each
+  zone with a floor or a ceiling, `ApplySetpointLimits_<zone>`, run by `RunACCIS_<zone>` right after `run SetAST`,
+  which bounds ACST and AHST and runs the lines of ROUNDING again: the same setpoints as (a), and the output IDFs
+  without them do not change.
+- Owner: the author.
+- Provisional decision (pending author until 2026-11-10): option (b) decided provisionally, pending author (checked with the Erl interpreter: the setpoints are
+  those of bounding before the rounding; with EnergyPlus 25.1, no mismatch with `compute_setpoints`).
+- Status: answered by the author on 2026-11-10 (accepted; v04 §5, #10).
+- Verdict (v04 §5, #10): Accepted: better than lines in the shared subprograms.
+
+### 2026-11-09 — B5: the floor and ceiling in modify_accis
+
+- Context: `modify_accis` writes the inputs of its arguments that are not None; several of them have numbers as
+  defaults, which every call writes.
+- Options considered: (a) numbers as defaults; (b) `None` by default, keeping the floor and ceiling of each zone, as
+  the arguments of the outdoor metric of B1; there is no way to remove them with `modify_accis` (a model without them
+  is made again with `AddAccis` or `add_accis_to_idf`, or the lines are removed from `SetInputData_<zone>` and
+  `accim.sim.ems.setpoint_limits.set_setpoint_limits_code` is called).
+- Owner: the author.
+- Provisional decision (pending author until 2026-11-10): option (b) decided provisionally, pending author (the most conservative: a call without them changes
+  nothing of the floor and ceiling).
+- Status: answered by the author on 2026-11-10 (accepted; v04 §5, #11).
+- Verdict (v04 §5, #11): Accepted as is.
+
+### 2026-11-09 — B5: the outputs of report_hours_below and the setpoint types
+
+- Context: the prompt asks for the counters `HoursBelow_<T>_<zone>`, but not with which outputs and setpoint types.
+- Options considered: the outputs of every `output_type` but 'custom' (the standard and detailed outputs take all the
+  EMS outputs; with 'simplified', their `Output:Variable` objects are added; with 'custom', the user keeps those
+  chosen); the counters also with `setpoint_type='pmv'`, since they only need the occupants and the operative
+  temperature (only the floor and ceiling are rejected there, D5); the temperatures with decimals named with `p`
+  (`HoursBelow_17p5_<zone>`: the names of the EMS cannot have dots) and `m` for the minus sign.
+- Owner: the author.
+- Provisional decision (pending author until 2026-11-10): these options decided provisionally, pending author.
+- Status: answered by the author on 2026-11-10 (accepted; v04 §5, #12).
+- Verdict (v04 §5, #12): Accepted as is.
+
+### 2026-11-09 — B5: a floor above the cooling setpoint, or a ceiling below the heating setpoint
+
+- Context: the floor only bounds the heating setpoint and the ceiling the cooling setpoint; accim checks that the floor
+  is lower than the ceiling, but a floor above the cooling setpoint of the comfort model (or a ceiling below its heating
+  setpoint) gives a heating setpoint above the cooling setpoint in those timesteps. v03 does not say what to do.
+- Options considered: (a) as v03 writes the lines, documented; (b) also raise the cooling setpoint to the floor and
+  lower the heating setpoint to the ceiling (not in v03).
+- Owner: the author.
+- Provisional decision (pending author until 2026-11-10): option (a) decided provisionally, pending author (documented in section 4.2.3 of the detailed use).
+- Status: answered by the author on 2026-11-10 (changed; v04 §5, #13).
+- Verdict (v04 §5, #13): Changed: a `ValueError` when the model is built if the floor is not lower than the ceiling (as the code already does), and a warning in the log if the floor is above `ACSTaul` or the ceiling below `AHSTall` (crossed setpoints make EnergyPlus warn and give meaningless results; task G5).
+
+### 2026-11-09 — C1: with which parameters types are the inputs of the PMV parameters
+
+- Context: the prompt of C1 asks to register `Clo`, `Met` and `AirVelocity` "in get_available_params_apmv_setpoints()",
+  and the brief points to `get_available_params_epmv_setpoints()` as the recent pattern; with the accim models
+  (temperature setpoints), they would only change the outputs of the PMV.
+- Options considered: (a) the parameters types 'apmv setpoints' and 'epmv setpoints' only; (b) also the accim models.
+- Owner: the author.
+- Provisional decision (pending author until 2026-11-10): option (a) decided provisionally, pending author.
+- Status: answered by the author on 2026-11-10 (accepted; v04 §5, #14).
+- Verdict (v04 §5, #14): Accepted: the models of the ACCIS control temperatures; clo and met are not their parameters.
+
+### 2026-11-09 — C1: the units and range of activity_level
+
+- Context: the brief replaces `met` with `activity_level`, the argument of `set_pmv_input_parameters`, in W/person (as
+  the People objects of EnergyPlus); the prompt warns outside 0.8–4 met (ISO 7730:2025 §4: 46–232 W/m²).
+- Options considered: (a) the parameter in W/person, warning outside 82.8–417.6 W/person (46–232 W/m² times the body
+  surface area of 1.8 m² of ISO 7730:2025 §4 and of EnergyPlus, Engineering Reference 19.1); (b) a parameter in met,
+  converted to W/person.
+- Owner: the author.
+- Provisional decision (pending author until 2026-11-10): option (a) decided provisionally, pending author (the name and units of the argument of accim).
+- Status: answered by the author on 2026-11-10 (accepted; v04 §5, #15).
+- Verdict (v04 §5, #15): Accepted: 82.8 W/person (46 W/m² of ISO 7730:2025 §4 times 1.8 m²) stays the documented bound; 0.8 met × 58.2 W/m² × 1.8 m² = 83.8 W/person would be the bound written in met.
+
+### 2026-11-09 — C1: the outdoor metric of the custom model as a parameter
+
+- Context: the parametric module turns the options into floats, and samples ranges with floats; the modifiers get the
+  model and the value only (not the weather file of the simulation); its parameters are applied one after the other.
+- Options considered: `custom_outdoor_metric` takes the codes of the metrics (0–7) as options (a code that is not
+  whole raises a ValueError); `custom_days` is rounded to the nearest whole day; the metrics begin with PMOT, unless
+  the model was given the weather file with `modify_accis(..., epw=...)` before the study, whose programs are kept
+  ('monthly_mean' needs them); while the metric is 'pmot' and the model has no code of the outdoor metric, the inputs
+  given stay in `SetInputData_<zone>` as local Erl variables, so that `custom_alpha` or `custom_days` given before
+  `custom_outdoor_metric` are kept.
+- Owner: the author.
+- Provisional decision (pending author until 2026-11-10): these options decided provisionally, pending author.
+- Status: answered by the author on 2026-11-10 (accepted; v04 §5, #16).
+- Verdict (v04 §5, #16): Accepted as is.
+
+### 2026-11-09 — C1: the plans with a floor of the heating setpoint not lower than the ceiling
+
+- Context: the prompt asks to update "the plans of `sampling_full_set()`"; the modifiers of B5 reject a floor that is
+  not lower than the ceiling, which stops that simulation.
+- Options considered: `drop_invalid_param_combinations` leaves those rows out, and `sampling_full_set()` also applies it
+  to the accim custom models (before, only to the predefined models; its other rules need columns that the custom
+  models do not have).
+- Owner: the author.
+- Provisional decision (pending author until 2026-11-10): decided provisionally, pending author.
+- Status: answered by the author on 2026-11-10 (accepted; v04 §5, #17).
+- Verdict (v04 §5, #17): Accepted: consistent with the verdict on the floor above the cooling setpoint (#13).
+
+### 2026-11-09 — D1: what are the warm and cold periods of the indicators of Table
+
+- Context: the prompt of D1 asks Table for the indicators "per zone and building for the warm and cold periods, using
+  the ACSTnoTol/AHSTnoTol columns as limits by default"; CEN/TR 16798-2 (Annex D, Methods B and C) calls "warm period"
+  the sum of the time above the upper limit and "cold period" that below the lower limit, while the design of v03
+  also says "por estación cálida/fría definida con cooling_season_start/end".
+- Options considered: (a) the warm and cold periods of the TR (above and below the range), with the setpoints of each
+  hour as the limits (which already follow the cooling season); (b) also split by the cooling and heating seasons.
+- Owner: the author.
+- Provisional decision (pending author until 2026-11-10): option (a) decided provisionally, pending author.
+- Status: answered by the author on 2026-11-10 (accepted; v04 §5, #18).
+- Verdict (v04 §5, #18): Accepted: it is the literal definition of Annex D (the sums above the upper limit and below the lower limit).
+
+### 2026-11-09 — D1: what Table(long_term_indicators=True) gives
+
+- Context: the prompt asks Table for "these indicators per zone and building"; the indicators are sums of each
+  simulation, while the rows of `Table.df` are timesteps or hours (the indicators need them).
+- Options considered: Methods A and B with the temperature (the operative temperature and the setpoints without the
+  tolerance of each zone), the occupied hours of each row (the EMS output `Occupied Hours_<zone>`) as the time, in a
+  new attribute `long_term_indicators` (a row per simulation, columns `<zone>_...` and `Building_...`, the building
+  adding up its zones), only for the tables that ask for it (so the files of the other tables do not change); Method C
+  (which needs the PMV and its limits), the deviations of Table E.1 and the hours below some temperatures with the
+  functions of the module.
+- Owner: the author.
+- Provisional decision (pending author until 2026-11-10): decided provisionally, pending author.
+- Status: answered by the author on 2026-11-10 (accepted; v04 §5, #19).
+- Verdict (v04 §5, #19): Accepted as is.
+
+### 2026-11-09 — D1: the gaps of CEN/TR 16798-2 in Method C and Table E.1
+
+- Context: Method C gives wf = 0 for PMVlimit,lower ≤ PMV < PMVlimit,upper and the weight for PMV < PMVlimit,lower or
+  PMVlimit,upper < PMV, so a PMV equal to the upper limit is in neither; Table E.1 gives 44 h for 25 % of 175 h
+  (43.75 h), and 58 h of 166 h for 50 % of the weekly total time.
+- Options considered: a PMV equal to the upper limit is within the range (as in Method B); `deviation_check` uses the
+  percentages of Table E.1 (43.75 h), not its rounded hours.
+- Owner: the author.
+- Provisional decision (pending author until 2026-11-10): decided provisionally, pending author.
+- Status: answered by the author on 2026-11-10 (accepted in part, changed in part; v04 §5, #20).
+- Verdict (v04 §5, #20): Accepted for the percentages of Table E.1 (its hours do not match, as found). Changed for Method C: the range of wf = 0 follows the literal text of the TR, PMVlimit,lower ≤ PMV < PMVlimit,upper, so a PMV equal to the upper limit is outside the range (task H3).
+
+### 2026-11-09 — B2: an outdoor metric for each regime of the custom model
+
+- Context: the design of B2 in v03 gives `CustomRegime` the field `outdoor_metric: Optional[str] = None  # overrides
+  custom_outdoor_metric for this regime (B1)`, and its prompt only says "optional outdoor_metric". Neither says which
+  metric the conditions `metric_below/above/between` compare when the regimes have different metrics (that of the zone,
+  or that of each regime), nor how the running means of the metrics that the zone does not use begin and are kept
+  (B1 keeps one running mean `RMOTa_<zone>` with the alpha of the zone, and its daily means only if a zone has a
+  metric other than 'pmot').
+- Why it matters: with a metric for each regime, the comfort temperature, the setpoints and the applicability of the
+  custom model would change of variable from one timestep to the next, and the EMS would have to keep the running
+  means of several metrics in each zone.
+- Options considered: (a) not available yet: `outdoor_metric` must be None, and all the regimes use the metric of the
+  zone (`custom_outdoor_metric`); (b) the conditions compare the metric of the zone, and the regime selected sets
+  `Tout_metric` to its own metric (EMS code of B1 for every metric used by a regime, with the alpha and days of the
+  zone); (c) as (b), with the alpha and days of each regime.
+- Owner: the author.
+- Provisional decision (pending author until 2026-11-10): option (a) decided provisionally (a `ValueError` explains it), pending author. `TODO.md` has the task.
+- Status: answered by the author on 2026-11-10 (accepted for now; v04 §5, #21).
+- Verdict (v04 §5, #21): Accepted for now; the decision of v04 §6.1 unblocks it (task H5).
+
+### 2026-11-09 — B2: how the program of the regimes sets the custom model
+
+- Context: the prompt of B2 says that `SelectCustomRegime` "assigns m, n, ACSToffset, AHSToffset, ACSTall, ACSTaul,
+  AHSTall and AHSTaul ... so that SetComfTemp, SetAppLimits, ApplyCAT and the ComfStand 99 setpoint lines do not
+  change"; but SetAppLimits sets ACSTall... from the inputs `CustAST_ACSTall`... of the zone, and ApplyCAT sets
+  ACSToffset to `CustAST_ACSToffset + CATcoolOffset`, so values written in ACSTall or ACSToffset before them are
+  overwritten. Decision D6 says that, if the last regime is not 'always', "accim appends one built from the scalar
+  CustAST_* arguments".
+- Options considered: (a) one program `SelectCustomRegime_<zone>` for each zone of the custom model (the conditions
+  of the HVAC system read the sensors of the zone), run by `RunACCIS_<zone>` right before `SetAppLimits`, that writes
+  the inputs `m`, `n`, `CustAST_ACSToffset`, `CustAST_AHSToffset`, `CustAST_ACSTall`, `CustAST_ACSTaul`,
+  `CustAST_AHSTall` and `CustAST_AHSTaul`, so the programs of the custom model do not change and the offsets of the
+  category still apply; without a last regime 'always', the program has no `else`, so the inputs of
+  `SetInputData_<zone>` (the scalar arguments, which `modify_accis` and the parametric module can still change) are the
+  appended regime; a regime 'always' before the last one raises a `ValueError` (the regimes after it would never
+  apply); the new EMS global and output variable `CustomRegime_<zone>` is the number of the regime (0 for the scalar
+  arguments), which `verify_accim_simulation` checks; (b) one program for all the zones that writes ACSTall... after
+  SetAppLimits and ApplyCAT (they would need changes, and the HVAC conditions are of each zone).
+- Owner: the author.
+- Provisional decision (pending author until 2026-11-10): option (a) decided provisionally, pending author.
+- Status: answered by the author on 2026-11-10 (accepted; v04 §5, #22).
+- Verdict (v04 §5, #22): Accepted as is.
+
+### 2026-11-09 — B2: the meaning of the conditions of the regimes
+
+- Context: the prompt lists the conditions without saying what each one compares, nor whether the limits of the
+  conditions of the outdoor metric are included.
+- Options considered: 'cooling_season' and 'heating_season' are CoolingSeason 1 or 0, calculated with the lines of
+  SetAST_Master and the cooling season of the zone; 'hvac_off' and 'hvac_on' are NoH_NoC_reqs 1 or 0, calculated with
+  the lines with which ApplyAST_<zone> of mixed mode calculates it (the coils of the VRF systems of accim, or the load
+  to the setpoints of the existing HVAC systems, of the previous timestep), so they need 'vrf_mm' or 'ex_mm'
+  (`ValueError` otherwise, as v03 says) and `compute_setpoints` cannot calculate them (`ValueError`);
+  ('metric_below', x) is metric < x, ('metric_above', x) is metric > x, and ('metric_between', (x1, x2)) is
+  x1 <= metric <= x2, as the applicability limits of the ACCIS (`>=` and `<=` within, `<` and `>` outside).
+- Owner: the author.
+- Provisional decision (pending author until 2026-11-10): decided provisionally, pending author.
+- Status: answered by the author on 2026-11-10 (accepted; v04 §5, #23).
+- Verdict (v04 §5, #23): Accepted as is.
+
+### 2026-11-09 — B2: the regimes in the zones and in the parametric module
+
+- Context: v03 does not say whether the regimes can differ between zones, nor which coefficients the factory
+  `custom_regime_parameters(n)` makes parameters ("CustAST_m_1, CustAST_n_1, ...").
+- Options considered: the same regimes in all the zones whose comfort standard is 99 (`zone_arguments` cannot give
+  them); in the parametric module, the eight coefficients of each regime (not the values of its condition), as the
+  parameters `custom_regime_<regime>_<field>` of the accim custom models (accepted by `set_parameters` and
+  `accis_parameter`, applied by BESOS through `param_accis.modify_custom_regime`) and the classes `CustAST_m_1`,
+  `CustAST_n_1`, `CustAST_ACSToffset_1`, `CustAST_AHSToffset_1`, `CustAST_ACSTall_1`, `CustAST_ACSTaul_1`,
+  `CustAST_AHSTall_1` and `CustAST_AHSTaul_1` of the factory.
+- Owner: the author.
+- Provisional decision (pending author until 2026-11-10): decided provisionally, pending author.
+- Status: answered by the author on 2026-11-10 (accepted; v04 §5, #24).
+- Verdict (v04 §5, #24): Accepted; regimes by zone would be a future P2 task, if they are needed.
+
+### 2026-11-09 — B3: what `load_comfort_standards` does by default
+
+- Context: the prompt asks for `load_comfort_standards(yaml_path)` returning the definitions, and
+  `register_comfort_standard(definition)`; it does not say whether loading registers them.
+- Options considered: (a) `register=True` by default (loading a file makes its comfort standards usable, as the GUI
+  needs), `register=False` to only read them, `replace=False` (a number already registered raises a `ValueError`);
+  (b) only read, and register with `register_comfort_standard`.
+- Owner: the author.
+- Provisional decision (pending author until 2026-11-10): option (a) decided provisionally, pending author.
+- Status: answered by the author on 2026-11-10 (accepted; v04 §5, #25).
+- Verdict (v04 §5, #25): Accepted as is.
+
+### 2026-11-09 — B3: comfort mode 2 and the outdoor metric of the comfort standards defined by their data
+
+- Context: the comfort modes of the built-in comfort standards are 0 (static setpoints), 1 (adaptive when applicable,
+  otherwise static), 2 (otherwise the static setpoints of ISO 7730) and 3 (otherwise horizontally extended); v03 lists
+  `comfort_modes: [0, 1, 2, 3]` for JPN Aqilah 2025 but defines only `static_setpoints` (modes 0 and 1). The code has
+  ISO 7730 static setpoints for comfort mode 2 only for the categories 80 and 90 (25/27 °C cooling and 19/22 °C heating
+  with 80; 24/26 and 20/23 °C with 90, below/above the limits, the same in comfort standards 2, 3, 6, 9–12, 15, 16 and
+  21). The metrics of B1 other than PMOT and RMOT are calculated by the EMS code of the custom model with the inputs
+  `CustAST_metric`, `CustAST_alpha` and `CustAST_days` of the zone.
+- Options considered: comfort mode 2 (a) only with the categories 80 and 90, with those values (`ValueError`
+  otherwise), or (b) a key with the static setpoints of comfort mode 2; the metric (a) through the inputs of the zone
+  (the zones of a registered comfort standard get those of its metric; a zone keeps them when `modify_accis` gives it
+  another comfort standard), or (b) an EMS variable of its own for each registered comfort standard.
+- Owner: the author.
+- Provisional decision (pending author until 2026-11-10): options (a) and (a) decided provisionally (the code's ISO 7730 values; one EMS code of the outdoor
+  metric for all), pending author.
+- Status: answered by the author on 2026-11-10 (accepted with a note; v04 §5, #26).
+- Verdict (v04 §5, #26): Accepted with a note: document that comfort mode 2 (the static setpoints of ISO 7730 out of the applicability) is not defined for the categories I–IV of a YAML file (task G5).
+
+### 2026-11-09 — B3: one regime for each comfort standard defined by its data
+
+- Context: the design of B3 gives `ComfortStandardDefinition` `regimes: Tuple[CustomRegime, ...]  # B2; one regime for
+  a single line`, but its YAML schema has one comfort temperature, one applicability and no conditions, and neither v03
+  nor the brief say how comfort modes 0 to 3 apply with several regimes (which limits give the static or the extended
+  setpoints), nor how a YAML file writes them.
+- Options considered: (a) one regime with the condition 'always' (several, or another condition, raise a
+  `ValueError`), whose offsets are added to those of the categories; the YAML files give it with
+  `comfort_temperature` and `applicability`; (b) several regimes, written into the branches of SetComfTemp, SetAppLimits
+  and ApplyCAT with the conditions of B2.
+- Owner: the author.
+- Provisional decision (pending author until 2026-11-10): option (a) decided provisionally, pending author. `TODO.md` has the task.
+- Status: answered by the author on 2026-11-10 (accepted for now; v04 §5, #27).
+- Verdict (v04 §5, #27): Accepted for now; several regimes in a YAML file follow the decision of v04 §6.4 (task H5).
+
+### 2026-11-09 — B3: the data of the comfort model of Qatar of the sample files
+
+- Context: decision D11 asks that the YAML files of B3 ship with the two examples of v03, JPN Aqilah 2025 and Qatar
+  (Indraganti & Boussaa 2018, offices with HVAC). For Qatar, v03 (B3 and §11.5) gives the comfort temperature
+  (`Tc = 0.049·Tr + 22.5`), the citation and the statistics (N = 3742, R² = 0.015, SE = 0.007, p < 0.001; `Tr` with mean
+  30.7 °C and SD 6.4; mean comfort temperature 24.0 °C), but writes "—" for its band, its applicability and its metric:
+  `Tr` is "a running mean outdoor temperature", without α or days. The article is not one of the sources of this
+  session, and the EMS cannot calculate setpoints without a metric, a band and limits.
+- Options considered: (a) ship the file with the data of v03 and the missing keys empty (null), so
+  `load_comfort_standards` rejects it with a message that names the keys, until the author adds them; (b) fill the
+  missing keys with assumed values (a metric, the band of ASHRAE 55, limits from the range of `Tr`); (c) ship only the
+  file of JPN Aqilah 2025.
+- Owner: the author.
+- Provisional decision (pending author until 2026-11-10): option (a) decided provisionally (nothing invented, D11 kept), pending author. `TODO.md` has the task.
+- Status: answered by the author on 2026-11-10 (changed; v04 §5, #28).
+- Verdict (v04 §5, #28): Changed: the YAML file is completed with the data of v04 §6.3, so that it loads (task G5).
+
+### 2026-11-09 — B4: how the static setpoints of JPN Aqilah 2025 are configurable (decision D2)
+
+- Context: decision D2 says that the static setpoints of comfort mode 1 are 20.0 °C for heating and 28.0 °C for
+  cooling "by default, configurable", documented as a choice of the user; it does not say how. The setpoints of the
+  built-in comfort standards are literal lines of the EMS, and their arguments are those of `AddAccis`.
+- Options considered: (a) 20 and 28 °C in the lines of comfort standard 23 (comfort modes 0 and 1), and other values
+  through a comfort standard defined by its data with the same data and other `static_setpoints` (B3; the YAML file
+  of the sample files is a copy to edit), without new arguments; (b) new arguments of `AddAccis`, `modify_accis` and
+  `zone_arguments` (for instance `static_heating_setpoint` and `static_cooling_setpoint`), inputs of the zones of
+  comfort standard 23 that its lines read, with the GUI and the parametric module; (c) inputs of the zones without
+  arguments (edited in `SetInputData_<zone>`).
+- Owner: the author.
+- Provisional decision (pending author until 2026-11-10): option (a) decided provisionally (no new arguments, which are hard to take back; (b) can be added
+  later without breaking anything), pending author. `TODO.md` has the task.
+- Status: answered by the author on 2026-11-10 (changed; v04 §5, #29).
+- Verdict (v04 §5, #29): Changed: new arguments `static_heating_setpoint` and `static_cooling_setpoint` (v04 §6.2; task G4).
+
+### 2026-11-09 — B4: the running mean of JPN Aqilah 2025 (comfort standard 23)
+
+- Context: the model of Aqilah et al. (2025, equation 8) uses `Trm = α·Trm−1 + (1 − α)·Tod−1` with α = 0.8 (McCartney
+  & Nicol, equation 7), "started a week before the day of the survey" (v03, B4). EnergyPlus calculates the running mean
+  of CEN 15251 with α = 0.8 (RMOT, Engineering Reference 19.1, equation 19.82: the same recursion, begun with a sum of 7
+  days that is not divided by 1 − α⁷), which INT EN16798 (1) uses; B1 gives the EMS the exact recursion (`rmot_alpha`,
+  begun with the weather file), which needs the EMS code of the outdoor metric in the output IDFs and `epw`.
+- Options considered: (a) RMOT of EnergyPlus, as INT EN16798: the comfort standard has literal lines, no EMS code of the
+  outdoor metric and no inputs of it in its zones; (b) `rmot_alpha` of B1, as the YAML file of the sample files (101).
+  They differ by less than 0.05 °C after three weeks with `Seville_Present.epw` (section 4.2.2 of the detailed use).
+- Owner: the author.
+- Provisional decision (pending author until 2026-11-10): option (a) decided provisionally (as the other comfort standards with this running mean; (b) is
+  available as a comfort standard defined by its data), pending author.
+- Status: answered by the author on 2026-11-10 (accepted without a weather file; changed with one; v04 §5, #30).
+- Verdict (v04 §5, #30): Accepted for the models without a weather file: Aqilah et al. (2025) use α = 0.8 begun a week before (equation 7), and the RMOT of EnergyPlus is α = 0.8 truncated at 7 days (Engineering Reference 19.82), the same definition in practice, to be documented in the docstring of comfort standard 23. With a weather file given to `AddAccis`, finding B4-1 of v04 §3.1 applies (the RMOT of EnergyPlus begins about 21 % below the running mean, and the deficit decays as 0.8^n): comfort standard 23 uses `rmot_alpha` begun with the weather file, and the RMOT of EnergyPlus otherwise, with a warning (task G4).
+
+### 2026-11-10 — C2: Method C (the PPD-weighted hours) as an objective
+
+- Context: Method C weighs each occupied hour outside the range with PPD(PMV)/PPD(PMVlimit) (ISO 7730:2025, formula
+  (5)). The models with temperature setpoints do not calculate the PMV (the Fanger model of their People objects only
+  with `setpoint_type='pmv'`), and the setpoints based on the PMV control an index (aPMV, ePMV or PMV) whose setpoints
+  are not PMV limits but for the PMV index.
+- Options considered: (a) not counted until the author chooses (blocked task in `TODO.md`); (b) the EMS of
+  `accim.sim.pmv_index` counts it with the PMV of each zone and the PMV setpoints of its thermostats without the
+  tolerance (the inverse of the setpoints of the index), only for the PMV index or for all; (c) the models with
+  temperature setpoints get the Fanger model and fixed PMV limits of a category of EN 16798-1 (their output IDFs change,
+  and their PMV depends on clothing, activity and air speed that they do not set).
+- Owner: the author.
+- Provisional decision (pending author until 2026-11-10): (a) decided provisionally (the most conservative: no output IDF changes and no choice of PMV or limits
+  is made for the author), pending author.
+- Status: answered by the author on 2026-11-10 (accepted for now; v04 §5, #31).
+- Verdict (v04 §5, #31): Accepted for now; the decision of v04 §6.5 unblocks Method C for the setpoints based on the PMV only (task H3).
+
+### 2026-11-10 — C2: how the long-term comfort objectives reach the optimisation, and with which range
+
+- Context: v03 (C2) asks for `hours_outside_range` (Method A), `degree_hours` (Method B) and `ppd_weighted_hours`
+  (Method C) of CEN/TR 16798-2:2019, Annex D, in `objectives.py`, by zone and building and by warm and cold period,
+  "with the categories of EN 16798-1 as ranges", and the deviations of Table E.1 as constraints; it has no prompt, and
+  the brief no adjustment. The reducers of besos get one output (`EPResults`) each, so they cannot combine the
+  operative temperature, the limits and the occupants that the functions of D1 need.
+- Options considered: (a) the EMS counts the indicators in each timestep (summed EMS outputs of each zone and of the
+  building), opt-in, and the reducers sum them; (b) only after the simulations (`Table(long_term_indicators=True)` of
+  D1), which a parametric study can use but an optimisation cannot; (c) reducers of the operative temperature with fixed
+  limits, which cannot leave out the hours without occupants. For the range: (i) the setpoints without the tolerance of
+  the ACCIS (`AHSTnoTol`, `ACSTnoTol`), those of the hour counters of accim and of `Table(long_term_indicators=True)`,
+  which are the limits of the categories of EN 16798-1 with INT EN16798 (1) within its applicability; (ii) fixed ranges
+  of the categories (Table B.2 of EN 16798-1, for instance), independent of the comfort model of the control. For the
+  building: (1) the sums of the zones, as D1; (2) their means, as `add_building_averages`.
+- Owner: the author.
+- Provisional decision (pending author until 2026-11-10): (a), (i) and (1) decided provisionally (`report_long_term_discomfort=False` by default, so the output
+  IDFs do not change; the same limits as D1 and the other hour counters; the EnergyPlus comfort status of
+  `hours_outside_comfort` stays the objective independent of the control), pending author. The constraint bound of
+  `deviation_constraint_bound` is that of the simulated period (the yearly criterion); the weekly and monthly ones are
+  checked after the simulations (`TODO.md`). The setpoints based on the PMV are left out (`ValueError`): their zones do
+  not keep the setpoints of the ACCIS.
+- Status: answered by the author on 2026-11-10 (accepted; v04 §5, #32).
+- Verdict (v04 §5, #32): Accepted as is.
+
+### 2026-11-10 — E4: how morph_epws delegates in pyfwg, and what "accepts TMY of pyweatherfiles" means
+
+- Context: v03 (E4): "`morph_epws()` delega opcionalmente en `pyfwg` (Future Weather Generator) y acepta TMY de
+  `pyweatherfiles`; sólo si están instalados (`accim[weather]`)", with a notebook; no prompt, and the brief no
+  adjustment. pyfwg 0.4.0 (PyPI) runs the global, Europe and CORDEX distributions of the tool
+  (`morph_epw_global`, `morph_epw_europe`, `morph_epw_cordex`), checks the parameters and supports the versions 3, 4
+  and 5 of the global tool; pyweatherfiles generates typical meteorological years (`TMYGenerator`, exported to CSV,
+  TMY or XLSX) and writes EPW files from hourly data (`HourlyEPWConverter`).
+- Options considered: for the delegation, (a) a new argument `engine` ('java' by default, as before; 'pyfwg'), (b)
+  pyfwg whenever it is installed (the default behaviour of `morph_epws` would change with the packages of the
+  environment); for the distributions, (i) the global one only (that of the command of `engine='java'`, with its
+  options), (ii) all those of pyfwg (their options differ); for pyweatherfiles, (1) `morph_epws(engine='pyfwg')` takes
+  paths of EPW files of any folder, such as those that pyweatherfiles writes, and the docs say how to get them, (2)
+  `morph_epws` takes the objects or TMY files of pyweatherfiles and converts them (a base EPW and the columns would be
+  new arguments).
+- Owner: the author.
+- Provisional decision (pending author until 2026-11-10): (a), (i) and (1) decided provisionally (the default behaviour does not change; `pyfwg_arguments` gives
+  the other arguments of `pyfwg.morph_epw_global`), pending author. The notebook waits for the jar of the tool
+  (`TODO.md`).
+- Status: answered by the author on 2026-11-10 (accepted; v04 §5, #33).
+- Verdict (v04 §5, #33): Accepted as is.
+
+### 2026-11-10 — A4: the models, hours and range of the setpoints of the ATHB
+
+- Context: the prompt of A4 asks for the hook of the backend of the Python API that sets the operative temperatures of
+  the ATHB setpoints "to the setpoint schedule actuators used by the ACCIS", and `apply_athb_setpoints` that prepares
+  the IDF; it does not say which models (mixed mode, whose windows follow the setpoints of the ACCIS), whether the
+  setpoints apply without occupants, nor the range of the bisection.
+- Options considered: models: (a) full air-conditioning only (`ValueError` in mixed mode), (b) also mixed mode (the
+  windows would follow the adaptive setpoints and the HVAC the ATHB ones); hours: (i) every timestep, as the ACCIS in
+  full air-conditioning, (ii) only with occupants (the PMV-based setpoints of accim set back the thermostats without
+  occupants); range: 10–30 °C (the air temperatures with which ISO 7730:2025 uses the PMV, v03 C1), with its limits as
+  the setpoints out of it, or a wider one.
+- Owner: the author.
+- Provisional decision (pending author until 2026-11-10): (a), (i) and 10–30 °C (an argument, `temperature_range`) decided provisionally (the most conservative:
+  the ACCIS keeps controlling everything but the setpoints of the HVAC, and the PMV is used within its range), pending
+  author. Also provisional: the ATHB_PMV of each zone is reported from its air and mean radiant temperatures (the
+  setpoints, for both equal to the operative temperature); at the first timestep of each environment the running mean
+  is 0, as for the ACCIS; the cache or table of v03 (performance) is not needed (about 1 ms per zone and timestep).
+- Status: answered by the author on 2026-11-10 (accepted with a note; v04 §5, #34).
+- Verdict (v04 §5, #34): Accepted with a note: the range of 10–30 °C is that of the validity of the PMV (ISO 7730:2025 §4: ta 10–30 °C); the ATHB setpoints in mixed mode stay a P2 task (`TODO.md`).
+
+### 2026-11-10 — A6: which setpoints of SET, PPD or cooling effect
+
+- Context: v03 (A6, no prompt) gives two ways for the setpoints of the SET, (a) a proportional control in Erl of the
+  setpoint from the SET of the previous timestep (k ≈ 0.8, with saturation; "sencillo pero con retardo y posible
+  oscilación") and (b) a hook of the API backend with `pythermalcomfort.models.set_tmp` and bisection ("exacto"); the
+  PPD through A2 (the PMV setpoints of the categories of ISO 7730:2025, Table A.1); and names the cooling effect
+  without a design; it gives no defaults for the SET setpoints, the metabolic rate, the clothing or the air speed.
+- Options considered: (b) only, as A4, with required arguments (chosen); (a) also; the cooling effect with some index
+  and setpoints (not designed in v03). The SET of pythermalcomfort crashes in the callbacks of EnergyPlus, so (b) became
+  a table of the setpoints by relative humidity (every 1 %, interpolated), without an output of the SET.
+- Owner: the author.
+- Provisional decision (pending author until 2026-11-10): (b) with the table decided provisionally; (a) and the cooling effect wait for the author (blocked task
+  in `TODO.md`).
+- Status: answered by the author on 2026-11-10 (changed; v04 §5, #35).
+- Verdict (v04 §5, #35): Changed: the table by relative humidity is replaced by the convergence plan A6 → F1 of v04 §4.6 (the table stays the default method of `SetSetpointHook`, and a method by bisection in the callbacks is added, task G3); the Erl way (a) is discarded, since the author chose the API backend in block F; the cooling effect is postponed to F3 (an indicator, not a setpoint).
+
+### 2026-11-10 — D2 (completed): the names in Table of the optional outputs of the ACCIS and of the ATHB
+
+- Context: v03 (D2) asks Table to recognise `ATHB_PMV_<zone>`, `Tout_metric` and `HoursBelow_*_<zone>` in the renaming
+  and in the figures and `wrangled_table`; it does not give their names in Table, nor those of `Tout_metric_<zone>`,
+  `CustomRegime_<zone>` (B2, added to the task in `TODO.md`) or the outputs of C2, nor their block and building values.
+- Options considered: the outdoor metric of each zone: (a) it keeps its EMS name, as the comfort temperature and the
+  setpoints of each zone of the ACCIS (chosen), or (b) `<zone>_Tout_metric (°C)`, which contains `Tout_metric (°C)`, the
+  name of that of the model, so the figures would take the zones with it; the outputs of C2: (i) the same names as the
+  indicators of `Table(long_term_indicators=True)`, `<zone>_Hours Above Upper Limit (h)`... and `Building_...` for the
+  EMS sums of the building (chosen), or (ii) not renamed (v03 does not list them); block and building values for the
+  hours, the degree hours and the ATHB (as for the index of the PMV-based setpoints), not for the regime and the outdoor
+  metric of the zones (as for the schedules of the thermostats).
+- Owner: the author.
+- Provisional decision (pending author until 2026-11-10): (a), (i) and the levels above decided provisionally (no name contains another one, and the names follow
+  those that Table already gives), pending author.
+- Status: answered by the author on 2026-11-10 (accepted; v04 §5, #36).
+- Verdict (v04 §5, #36): Accepted as is.
+
 ## 2026-11-10 — The optional outputs of the ACCIS and of the ATHB in Table (D2, completed)
 
 - **Status**: accepted (proposal D2 of `notes/PROPUESTAS_MEJORAS_post_1.1.0_v03.md`, the outputs of A4, B1 and B5 that it
-  lists, with those of B2 and C2; the names decided provisionally, see questions.md)
+  lists, with those of B2 and C2; the names decided provisionally, answered on 2026-11-10, see [[decisions.md#2026-11-10 — The verdicts of the author on the 36 provisional decisions of the proposals of 1.2.0|the verdicts of 2026-11-10]])
 - **Context**: D2 was done on 2026-11-09 for the PMV-based setpoints, before the outputs of the other proposals existed;
   Table dropped the optional outputs with `standard_outputs=True`, kept their EMS names in capitals without block and
   building values, and added up the outputs of the ATHB over time.
@@ -28,7 +682,7 @@ template]] to add a new entry.
 ## 2026-11-10 — The setpoints of the SET are a hook of the API backend with a table by relative humidity (A6)
 
 - **Status**: accepted (proposal A6 of `notes/PROPUESTAS_MEJORAS_post_1.1.0_v03.md`, way (b); decided provisionally,
-  see questions.md)
+  answered on 2026-11-10, see [[decisions.md#2026-11-10 — The verdicts of the author on the 36 provisional decisions of the proposals of 1.2.0|the verdicts of 2026-11-10]])
 - **Context**: v03 gives the SET setpoints by Erl (approximate) or by a hook with pythermalcomfort (exact), and the PPD
   through the PMV setpoints; the SET of pythermalcomfort stops EnergyPlus when it is calculated in its callbacks.
 - **Decision**: `apply_set_setpoints` and `SetSetpointHook` in `accim.sim.comfort_hooks`, as the ATHB, with the setpoints
@@ -40,7 +694,7 @@ template]] to add a new entry.
 ## 2026-11-10 — The setpoints of the ATHB are a hook of the backend of the Python API on the setpoints of the ACCIS (A4)
 
 - **Status**: accepted (proposal A4 of `notes/PROPUESTAS_MEJORAS_post_1.1.0_v03.md`, its prompt, the adjustment of the
-  brief and D10; details decided provisionally, see questions.md)
+  brief and D10; details decided provisionally, answered on 2026-11-10, see [[decisions.md#2026-11-10 — The verdicts of the author on the 36 provisional decisions of the proposals of 1.2.0|the verdicts of 2026-11-10]])
 - **Context**: the ATHB (Schweiker, 2022) needs the whole PMV with the adapted clothing and metabolic rate in each
   timestep, which the EMS cannot calculate; the backend of the Python API of accim 1.0.0 runs Python hooks after the
   EMS programs.
@@ -56,7 +710,7 @@ template]] to add a new entry.
 ## 2026-11-10 — morph_epws delegates in pyfwg on request, for the global tool, and pyfwg and pyweatherfiles are the extra accim[weather] (E4)
 
 - **Status**: accepted (proposal E4 of `notes/PROPUESTAS_MEJORAS_post_1.1.0_v03.md`, which has no prompt; the design
-  decided provisionally, see questions.md)
+  decided provisionally, answered on 2026-11-10, see [[decisions.md#2026-11-10 — The verdicts of the author on the 36 provisional decisions of the proposals of 1.2.0|the verdicts of 2026-11-10]])
 - **Context**: `morph_epws` ran the Future Weather Generator with Java from the command line, with the arguments of an
   earlier version of the tool; v03 asks for an optional delegation in pyfwg and the TMY of pyweatherfiles, only if they
   are installed (`accim[weather]`, the extra of v03, E3).
@@ -71,7 +725,7 @@ template]] to add a new entry.
 ## 2026-11-10 — The long-term comfort objectives are EMS counters of the ACCIS with the range of its setpoints, opt-in (C2)
 
 - **Status**: accepted (proposal C2 of `notes/PROPUESTAS_MEJORAS_post_1.1.0_v03.md`, which has no prompt; the design
-  decided provisionally, see questions.md)
+  decided provisionally, answered on 2026-11-10, see [[decisions.md#2026-11-10 — The verdicts of the author on the 36 provisional decisions of the proposals of 1.2.0|the verdicts of 2026-11-10]])
 - **Context**: v03 asks for the indicators of CEN/TR 16798-2:2019 (Annex D: Methods A, B and C) as objectives of the
   parametric and optimisation module, reusing D1, and the deviations of Table E.1 as constraints. The reducers of besos
   get one output each, while the indicators need the operative temperature, the limits and the occupants together.
@@ -88,7 +742,7 @@ template]] to add a new entry.
 ## 2026-11-09 — JPN Aqilah 2025 is the built-in comfort standard 23, defined by its data, with the running mean of EnergyPlus (B4)
 
 - **Status**: accepted (proposal B4 of `notes/PROPUESTAS_MEJORAS_post_1.1.0_v03.md` with decisions D1 and D2 of the
-  brief; two details decided provisionally, see questions.md)
+  brief; two details decided provisionally, answered on 2026-11-10, see [[decisions.md#2026-11-10 — The verdicts of the author on the 36 provisional decisions of the proposals of 1.2.0|the verdicts of 2026-11-10]])
 - **Context**: v03 asks for the adaptive model of Japanese dwellings in free-running mode of Aqilah et al. (2025) as a
   new comfort standard, without changing JPN Rijal (3); D1 gives it the number 23 and D2 the static setpoints of 20 and
   28 °C, configurable. A new built-in comfort standard changes the chains of `SetComfTemp`, `SetAppLimits`, `ApplyCAT`,
@@ -107,7 +761,7 @@ template]] to add a new entry.
 ## 2026-11-09 — Comfort standards defined by their data are registered for the session, and their EMS code is added at the end of the chains of the built-in ones (B3)
 
 - **Status**: accepted (proposal B3 of `notes/PROPUESTAS_MEJORAS_post_1.1.0_v03.md` with decisions D1 and D11 of the
-  brief; four details decided provisionally, see questions.md)
+  brief; four details decided provisionally, answered on 2026-11-10, see [[decisions.md#2026-11-10 — The verdicts of the author on the 36 provisional decisions of the proposals of 1.2.0|the verdicts of 2026-11-10]])
 - **Context**: adding a comfort model needed changes in the catalogue, the chains of the EMS programs, the setpoint
   lines and the GUI, and a release. The prompt asks for `ComfortStandardDefinition`, `register_comfort_standard()`,
   `load_comfort_standards()` with the YAML schema of v03, Erl built from the registry for the numbers 100 or more while
@@ -130,7 +784,7 @@ template]] to add a new entry.
 ## 2026-11-09 — The custom model has several regimes, selected in each timestep by a program of each zone (B2)
 
 - **Status**: accepted (proposal B2 of `notes/PROPUESTAS_MEJORAS_post_1.1.0_v03.md` with decision D6 of the brief;
-  four details decided provisionally and one left open, see questions.md)
+  four details decided provisionally and one left open, answered on 2026-11-10, see [[decisions.md#2026-11-10 — The verdicts of the author on the 36 provisional decisions of the proposals of 1.2.0|the verdicts of 2026-11-10]])
 - **Context**: many comfort models have several equations or limits, each one under some conditions; the custom model
   (comfort standard 99) had one set of coefficients, the inputs `m`, `n`, `CustAST_*` of `SetInputData_<zone>`. The
   prompt asks for `CustomRegime`, `custom_regimes` in `AddAccis`, an Erl chain `if/elseif` in priority order that
@@ -153,7 +807,7 @@ template]] to add a new entry.
 ## 2026-11-09 — The indicators of the long-term discomfort are functions of a module of their own, and Table gives those of the temperature on request (D1)
 
 - **Status**: accepted (proposal D1 of `notes/PROPUESTAS_MEJORAS_post_1.1.0_v03.md` with decision D8 of the brief;
-  three details decided provisionally, see questions.md)
+  three details decided provisionally, answered on 2026-11-10, see [[decisions.md#2026-11-10 — The verdicts of the author on the 36 provisional decisions of the proposals of 1.2.0|the verdicts of 2026-11-10]])
 - **Context**: CEN/TR 16798-2:2019 (Annex D: Methods A, B and C; Annex E: Table E.1) is the reference of the long-term
   evaluation, since ISO 7730:2025 left it out (checked in the TR, pages 68–71, and in ISO 7730:2025, formula 5). The
   prompt asks for pure pandas functions, `Table(long_term_indicators=True)` with the setpoints without tolerance as
@@ -171,7 +825,7 @@ template]] to add a new entry.
 ## 2026-11-09 — The parametric module varies the inputs of the PMV and the outdoor metric of the custom model (C1)
 
 - **Status**: accepted (proposal C1 of `notes/PROPUESTAS_MEJORAS_post_1.1.0_v03.md`, with the adjustment of the brief:
-  `clothing_insulation`/`activity_level` instead of `clo`/`met`; four details decided provisionally, see questions.md)
+  `clothing_insulation`/`activity_level` instead of `clo`/`met`; four details decided provisionally, answered on 2026-11-10, see [[decisions.md#2026-11-10 — The verdicts of the author on the 36 provisional decisions of the proposals of 1.2.0|the verdicts of 2026-11-10]])
 - **Context**: the parametric module had no parameters for the clothing insulation, the activity level or the air
   velocity, nor for the new arguments of B1 and B5; the prompt asks for the classes `Clo`, `Met`, `AirVelocity`,
   `ExpectancyFactor`, `HeatingSetpointFloor`, `CoolingSetpointCeiling`, `CustAST_metric`, `CustAST_alpha` and
@@ -192,7 +846,7 @@ template]] to add a new entry.
 ## 2026-11-09 — The setpoints of the ACCIS can have a floor and a ceiling, and the zones count the occupied hours below some temperatures (B5)
 
 - **Status**: accepted (proposal B5 of `notes/PROPUESTAS_MEJORAS_post_1.1.0_v03.md` with decision D5 of
-  `notes/COPILOT_BRIEF_v1.2.0_v01.md`; four details were decided provisionally, see questions.md)
+  `notes/COPILOT_BRIEF_v1.2.0_v01.md`; four details were decided provisionally, answered on 2026-11-10, see [[decisions.md#2026-11-10 — The verdicts of the author on the 36 provisional decisions of the proposals of 1.2.0|the verdicts of 2026-11-10]])
 - **Context**: EN 16798-1:2019 gives in Table B.2 the default design values of the indoor operative temperature
   (minimum for heating, maximum for cooling) of the buildings with mechanical cooling, and B.2.2 applies them in winter
   to those without it (checked in UNE-EN 16798-1:2020, pages 49 and 51). In accim, the applicability limits change the
@@ -217,7 +871,7 @@ template]] to add a new entry.
 ## 2026-11-09 — The custom model calculates its outdoor metric in Erl, only where a zone needs it (B1)
 
 - **Status**: accepted (proposal B1 of `notes/PROPUESTAS_MEJORAS_post_1.1.0_v03.md` with decisions D3 and D7 of
-  `notes/COPILOT_BRIEF_v1.2.0_v01.md`; four details were decided provisionally, see questions.md)
+  `notes/COPILOT_BRIEF_v1.2.0_v01.md`; four details were decided provisionally, answered on 2026-11-10, see [[decisions.md#2026-11-10 — The verdicts of the author on the 36 provisional decisions of the proposals of 1.2.0|the verdicts of 2026-11-10]])
 - **Context**: B1 asks for `custom_outdoor_metric` ('pmot' by default, 'rmot', 'rmot_alpha' with `custom_alpha`,
   'rmot_7day', 'daily_mean', 'ndrm' with `custom_days`, 'monthly_mean' and 'te_ref_nl') for the custom model, in a new
   Erl program SetOutdoorMetric without `EnergyManagementSystem:TrendVariable`, with `Tout_metric` as a global variable
@@ -257,10 +911,10 @@ template]] to add a new entry.
   programs choose the coefficient in `apply_aPMV_<zone>` (by season) and calculate the aPMV in `monitor_aPMV_<zone>`.
 - **Decision**: the catalogue is in `accim.constants`, with the values of v03 §11.2 and A3. The keys are resolved by
   the engine (a new hook `PmvIndex.resolve`, also used by `generate_df_from_args`), so `apply_pmv_index_setpoints`
-  takes them too; each argument takes the coefficient of its own side (questions.md). With 'pmv_sign', the program
+  takes them too; each argument takes the coefficient of its own side (changed on 2026-11-10: see [[decisions.md#2026-11-10 — The verdicts of the author on the 36 provisional decisions of the proposals of 1.2.0|the verdicts of 2026-11-10]]). With 'pmv_sign', the program
   of the setpoints does not choose the coefficient (the new hook `PmvIndex.seasonal_coefficient`), the monitor chooses
   it by the sign of the PMV of the zone (after `average_PMV_<zone>`, so with the PMV of the previous timestep also in
-  zones with several People objects), and each setpoint is converted with the λ of its side (questions.md). The
+  zones with several People objects), and each setpoint is converted with the λ of its side ([[decisions.md#2026-11-10 — The verdicts of the author on the 36 provisional decisions of the proposals of 1.2.0|the verdicts of 2026-11-10]]). The
   `get_adaptive_coefficients` of `accim.sim.apmv` is that of `accim.sim.pmv_index`. The GUI keeps numbers in its
   fields: the list of the catalogue fills them and shows the grade, source and notes.
 - **Consequences**: the output IDFs of 'season' do not change (golden master); 'pmv_sign' gives the same results with

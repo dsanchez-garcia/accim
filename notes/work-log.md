@@ -15,6 +15,18 @@ This log is a lightweight, session-scoped complement to the repository's
 existing tracking files — it does not replace them (see
 [[decisions.md#2026-09-13 — `notes/work-log.md` complements, not replaces, existing tracking files|the related decision]]).
 
+## 2026-11-10 — Step 0 of the review v04: the verdicts of the author and the unblocked tasks (branch `v1.2.0`, on the server)
+
+- **Objective**: the step 0 of the task of the session: the 36 provisional decisions to [[decisions.md]] with the
+  verdicts of v04 §5, `TODO.md` with v04 §6 and the renaming of B5, and the decision on `tr_mode` (v04 §4.4).
+- **Affected files**: [[decisions.md]], [[questions.md]], [[../TODO.md]], [[../DEVLOG.md]].
+- **Finding or decision**: See
+  [[decisions.md#2026-11-10 — The verdicts of the author on the 36 provisional decisions of the proposals of 1.2.0|the verdicts]],
+  [[decisions.md#2026-11-10 — The decisions of the author on the blocked tasks of 1.2.0 and the name of the setpoint limits of B5|the blocked tasks]]
+  and [[decisions.md#2026-11-10 — With tr_mode='zone', the inverted SET setpoint of air temperature is written as an operative-temperature setpoint|tr_mode]].
+- **Validation**: a script moved the entries and checked one verdict for each; no code changes.
+- **Next step**: G1, then the list of v04 §7 in the order of the author.
+
 ## 2026-11-10 — The report of the session (branch `v1.2.0`, on the server)
 
 - **Objective**: the report that the author asked for at the end of the list of proposals.
