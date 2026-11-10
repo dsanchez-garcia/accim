@@ -128,6 +128,8 @@ Lo que ya está en otros documentos no se repite aquí:
 - **F3 (bloque F).** Los indicadores de la adaptación al clima interior (`Table(indoor_adaptation_indicators=True)`:
   horas en la banda causal del SET, sobreenfriamiento, T_rm_in y Tn_exp, efecto de enfriamiento) y las salidas de los
   modelos de confort de EnergyPlus (`add_thermal_comfort_outputs`), con su nombre en `Table` (sección 32).
+- **H2.** T0 de `te_ref_nl` es la media de la máxima y la mínima del día completo: con el EPW, un `Schedule:File`
+  (`accim.sim.schedule_files`) leído por un sensor; sin él, la del día anterior, con aviso (sección 33).
 - Las categorías del PMV y la aproximación de la corrección del metabolismo se han comprobado en ISO 7730:2025 y
   EN 16798-1:2019, y el modelo dinámico de vestimenta de A5, en Schiavon y Lee (2013) y ASHRAE 55-2020 (sección 6).
 - Lo que quedaba abierto se ha comprobado: el golden master y las pruebas de EnergyPlus 26.1 y 26.2, también la de A5
@@ -1864,3 +1866,27 @@ sin ello las sumaba en el tiempo; no había indicadores de la banda causal, del 
   se cuenta en la temporada de refrigeración del ACCIS con un único umbral; T_rm_in se calcula de las filas de la tabla
   y la banda de Tn_exp es de 2,5 K por defecto; el caso (i) del estudio.
 - Pruebas: `tests/core/test_indoor_adaptation.py` (20, también con EnergyPlus 25.1).
+
+## 33. T0 de te_ref_nl, del día completo (H2)
+
+Van der Linden et al. (2006) definen Ti con la máxima y la mínima del día completo; el EMS tomaba para T0 las de las
+horas del día transcurridas, y Te,ref derivaba dentro del día (hallazgo B1-1, veredicto #8).
+
+**Antes.** `set OutdoorMidRange = (OutdoorMax+OutdoorMin)/2` de las horas cerradas del día (o la temperatura exterior
+del paso antes de cerrar la primera hora).
+
+**Ahora.**
+
+- Con el EPW (`epw` de `AddAccis` o `modify_accis`) y alguna zona con `te_ref_nl`: el `Schedule:File`
+  `ACCIS Outdoor Mid Range`, con un CSV `<epw>_outdoor_mid_range.csv` en la carpeta del modelo (ruta absoluta en el
+  objeto) con la media de la máxima y la mínima del día de cada hora del EPW, y el sensor `OutdoorMidRangeToday` de su
+  *Schedule Value*: `set OutdoorMidRange = OutdoorMidRangeToday`. EnergyPlus 25.1 da el valor del día desde su primer
+  paso, así que Te,ref es constante en cada día.
+- Sin el EPW: `set OutdoorMidRange = Tmid_1` (la del día anterior), con aviso. Los programas que empiezan con los
+  valores de un EPW y no leen el sensor se escriben de nuevo (empezando con PMOT) si una zona pasa a `te_ref_nl` sin él.
+- Módulo nuevo `accim.sim.schedule_files` (también para H6). `compute_setpoints`, `print_setpoint_ems_code` y
+  `verify_accim_simulation` siguen la definición nueva; los dos backends dan los mismos resultados.
+- Los IDF con el código de la métrica exterior cambian en la rama de `te_ref_nl` (sus resultados con otras métricas no);
+  el golden master no tiene ninguno.
+- Pruebas: `tests/core/test_outdoor_metric.py` (la prueba de la ATG con la definición nueva, el código EMS, AddAccis,
+  modify_accis, EnergyPlus con los dos backends) y `tests/core/test_schedule_files.py`.

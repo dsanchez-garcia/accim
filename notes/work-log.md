@@ -15,6 +15,19 @@ This log is a lightweight, session-scoped complement to the repository's
 existing tracking files — it does not replace them (see
 [[decisions.md#2026-09-13 — `notes/work-log.md` complements, not replaces, existing tracking files|the related decision]]).
 
+## 2026-11-10 — H2: T0 of te_ref_nl from the weather file (branch `v1.2.0`, on the server)
+
+- **Objective**: task H2 of v04 §7: T0 of `te_ref_nl` is the mean of the maximum and minimum of the whole day (verdict
+  #8), from the weather file as a `Schedule:File`, or that of the previous day without it.
+- **Affected files**: `accim/sim/schedule_files.py` (new), `accim/sim/ems/outdoor_metric.py`, `accim/utils/ems_code.py`,
+  `accim/sim/preview.py`, [[../docs/source/4_detailed use.md]], [[../CHANGELOG.md]], [[../CAMBIOS_CODIGO_v1.2.0.md]]
+  (§33), [[../DEVLOG.md]], [[../TODO.md]], [[questions.md]].
+- **Finding or decision**: EnergyPlus 25.1 gives the *Schedule Value* of the day from its first timestep at
+  `BeginTimestepBeforePredictor`, so Te,ref is constant within each day and `compute_setpoints` reproduces it exactly;
+  the CSV file goes to the folder of the model with its absolute path (two provisional choices in [[questions.md]]).
+- **Validation**: `tests/core/test_outdoor_metric.py` 42 passed (EnergyPlus 25.1, both backends identical); `tests/core` 1386 passed, 2 skipped; parametric 511 passed; docs with the same 35 warnings.
+- **Next step**: H3 (long-term range of EN 16798 and Method C).
+
 ## 2026-11-10 — F3: the indicators of the adaptation to the indoor climate (branch `v1.2.0`, on the server)
 
 - **Objective**: task F3 of block F: the indicators of the causal band, the overcooling, T_rm_in and Tn_exp and the

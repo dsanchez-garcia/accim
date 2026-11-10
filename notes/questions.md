@@ -24,6 +24,31 @@ it here as answered).
 
 ## Open
 
+## 2026-11-10 — H2: where the CSV file of T0 of te_ref_nl is written
+- Context: verdict #8 (task H2) asks for "the daily (Tmax+Tmin)/2 of the current day from the EPW as a Schedule:File
+  read by a Schedule Value sensor"; the Schedule:File object needs a CSV file and its path.
+- Why it matters: the output IDFs must find the file when they are simulated (by `run_ep`, by the parametric module
+  in temporary folders, or after they are moved).
+- Options considered: (i) the folder of the model (that of its file, or the current folder of AddAccis, where it
+  writes the output IDFs), with the absolute path in the object (implemented: the Input Output Reference recommends a
+  full path; EnergyPlus 25.1 read a path of 139 characters, although the reference says 100 at most); (ii) a relative
+  name (EnergyPlus 25.1 found it next to the IDF), which breaks when the IDF is simulated elsewhere; (iii) the folder
+  of the weather file, which can be a shared library or the repository.
+- Owner: the author.
+- Status: open; option (i) implemented provisionally (`accim.sim.schedule_files`).
+
+## 2026-11-10 — H2: which models get the Schedule:File of T0
+- Context: the programs of the outdoor metric of a model have the branch of every metric, and the parametric module
+  changes the metric of the zones without the weather file (`param_accis.modify_CustAST_metric`).
+- Why it matters: a model made with another metric and `epw` has no schedule; if a sample gives its zones
+  `te_ref_nl`, T0 cannot be that of the day.
+- Options considered: (i) the schedule only when a zone has `te_ref_nl` and the weather file is given, and programs
+  that begin with the values of a weather file but do not read the sensor are written again, beginning with PMOT, with
+  the warnings (implemented: the output IDFs of the other metrics do not get a schedule and a CSV file); (ii) the
+  schedule in every model with the outdoor metric and the weather file.
+- Owner: the author.
+- Status: open; option (i) implemented provisionally.
+
 ## 2026-11-10 — F3: the SET of the indicators of the causal band
 - Context: the proposal of block F (§4 F3) asks for the hours within the causal band of every model; the SET can be
   that of the Pierce model of EnergyPlus (any model, with the outputs of `add_thermal_comfort_outputs`) or that of

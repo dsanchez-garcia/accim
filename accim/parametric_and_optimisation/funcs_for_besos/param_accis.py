@@ -619,7 +619,10 @@ def modify_CustAST_metric(idf: besos.IDF_class, value):
     the parametric module (numbers). The model gets the EMS code of the outdoor metric if a zone needs it (proposal
     B1); the metrics that the EMS calculates begin with the running mean of ASHRAE 55 of EnergyPlus (with a warning),
     unless the model has the programs of the outdoor metric with the values of a weather file
-    (:func:`accim.sim.accis.modify_accis` with ``epw``), and 'monthly_mean' needs them.
+    (:func:`accim.sim.accis.modify_accis` with ``epw``), and 'monthly_mean' needs them. T0 of 'te_ref_nl' is that of the
+    day itself only in the models whose programs read the Schedule:File object of the weather file (those made with
+    'te_ref_nl' and ``epw``); otherwise it is that of the previous day, and programs that begin with the values of a
+    weather file without that object are written again, beginning with PMOT (task H2 of the review of accim 1.2.0).
 
     :param idf: The eppy or besos IDF class instance, with the ACCIS of accim 1.0.0 or later.
     :param value: The name or the code of the metric.

@@ -659,9 +659,11 @@ class AddAccis:
         ``custom_alpha``; 'rmot_7day', its approximate formula (B.2); 'daily_mean', the daily mean of the previous day;
         'ndrm', the arithmetic mean of the daily means of the ``custom_days`` previous days (ASHRAE 55-2020,
         5.4.2.1); 'monthly_mean', the monthly mean of the weather file ``epw``; 'te_ref_nl', the reference
-        temperature of the Dutch ATG (van der Linden et al., 2006). The EMS calculates them from the outdoor dry-bulb
-        temperature (:mod:`accim.sim.ems.outdoor_metric`); with a metric other than 'pmot', the output IDFs of the
-        custom model have these EMS programs, and the outputs ``Tout_metric`` and ``Tout_metric_<zone>``.
+        temperature of the Dutch ATG (van der Linden et al., 2006), whose T0, the mean of the maximum and minimum of
+        the day itself, is that of the weather file ``epw`` (a Schedule:File object whose CSV file is written in the
+        folder of the output IDFs), or that of the previous day without it. The EMS calculates them from the outdoor
+        dry-bulb temperature (:mod:`accim.sim.ems.outdoor_metric`); with a metric other than 'pmot', the output IDFs
+        of the custom model have these EMS programs, and the outputs ``Tout_metric`` and ``Tout_metric_<zone>``.
     :param custom_alpha: Custom model, 'rmot_alpha': the alpha of the running mean, between 0 and 1 (EN 16798-1
         recommends 0.8); outside 0.6 to 0.9 (ASHRAE 55-2020, 5.4.2.1) it warns.
     :param custom_days: Custom model, 'ndrm': the number of previous days (30 by default); outside 7 to 30 (ASHRAE

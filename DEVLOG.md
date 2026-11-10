@@ -36,6 +36,41 @@ Recommended flow: track active work in `TODO.md`, move completed outcomes to `DE
 ## Entries
 
 ### 2026-11-10
+#### [done] H2: T0 of `te_ref_nl` from the weather file (branch `v1.2.0`)
+- Context: task H2 of v04 §7 (finding B1-1, verdict #8 in `notes/decisions.md`): van der Linden et al. (2006) define Ti
+  with the maximum and minimum of the whole day ("the day under study and the three preceding days", v03 §11), and the
+  EMS took for T0 those of the hours of the day so far, so Te,ref drifted within the day.
+- Changes: new module `accim.sim.schedule_files` (`write_schedule_file`, `remove_schedule_file`, `schedule_file_path`,
+  `model_folder`, `SCHEDULE_TYPE_LIMITS`; shared with H6): a CSV file of hourly values (a header row, one column, the
+  values as `repr` writes them) in the folder of the model, and a `Schedule:File` object with its absolute path, Any
+  Number, no interpolation, 60 minutes per item and, where the IDD has the field, Adjust Schedule for Daylight Savings
+  No. `accim.sim.ems.outdoor_metric`: `MID_RANGE_SCHEDULE` ('ACCIS Outdoor Mid Range'), `MID_RANGE_FILE_SUFFIX`,
+  `MID_RANGE_SENSOR` ('OutdoorMidRangeToday'), `mid_range_values(epw)` (the mean of the maximum and minimum of the day
+  of each hour, from 1 January, 8760 or 8784 values; `ValueError` for other weather files), `reads_mid_range(idf)`;
+  `zone_program_lines(..., mid_range_sensor)`: the branch of `te_ref_nl` sets `OutdoorMidRange` to the sensor or to
+  `Tmid_1` (before: the running (max+min)/2 of the day so far, or the outdoor temperature before the end of its first
+  hour); `set_outdoor_metric_code` writes the schedule, the CSV file and the sensor when a zone has `te_ref_nl` and the
+  weather file is given (removes them otherwise, and with the code), warns without it, and writes the programs again
+  (beginning with PMOT) when they begin with the values of a weather file without the sensor and a zone has
+  `te_ref_nl`. `get_setpoint_ems_programs`/`print_setpoint_ems_code` (the branch and the legend), `compute_setpoints`
+  (it gives the sensor the value of the day in each timestep), and the docstrings of AddAccis, `verify_accim_simulation`
+  and `param_accis.modify_CustAST_metric`; section 4.2.2 of the detailed use.
+- Measured with EnergyPlus 25.1: the *Schedule Value* sensor of a `Schedule:File` at `BeginTimestepBeforePredictor` has
+  the value of the day of the timestep from its first timestep (four days of March, 6 timesteps per hour); EnergyPlus
+  read the file with a relative name (next to the IDF, run from another folder) and with an absolute path of 139
+  characters (the Input Output Reference recommends a full path and says 100 characters at most).
+- Provisional choices (`notes/questions.md`): the CSV file in the folder of the model with its absolute path; the
+  schedule only in the models with a zone with `te_ref_nl`, and the programs written again (beginning with PMOT) when
+  they begin with a weather file but do not read it.
+- Files: `accim/sim/schedule_files.py` (new), `accim/sim/ems/outdoor_metric.py`, `accim/utils/ems_code.py`,
+  `accim/sim/preview.py`, `accim/sim/accis.py`, `accim/utils/verification.py`,
+  `accim/parametric_and_optimisation/funcs_for_besos/param_accis.py`, `tests/core/test_outdoor_metric.py`,
+  `tests/core/test_schedule_files.py` (new), `docs/source/4_detailed use.md`, `CHANGELOG.md`, `TODO.md`,
+  `CAMBIOS_CODIGO_v1.2.0.md` (§33), `notes/questions.md`, `notes/work-log.md`.
+- Verification: `tests/core/test_outdoor_metric.py` 42 passed (the reference temperature of the ATG with T0 of the whole day with the weather file and of the previous day without it, against pandas; `mid_range_values`; the EMS code; AddAccis and modify_accis with the schedule, the CSV file and the sensor, and the rewriting of the programs; with EnergyPlus 25.1, `verify_accim_simulation` without mismatches in check 4 and Te,ref of each timestep equal to its equation from the weather file to 1e-9 K, and the EMS and API backends identical with te_ref_nl and the schedule); `tests/core/test_schedule_files.py` 4 passed; `tests/core` 1386 passed, 2 skipped (golden master byte-identical); `tests/parametric_and_optimisation` 511 passed; the Sphinx build with the same 35 warnings; the new and modified modules compile with Python 3.9.
+- Next step: H3.
+
+### 2026-11-10
 #### [done] F3: the indicators of the adaptation to the indoor climate (branch `v1.2.0`)
 - Context: task F3 of block F (`notes/PROPUESTA_ADAPTACION_INTERIOR_v03.md` §4 F3 and §7; it has no prompt of its own in
   `notes/PROMPTS_COPILOT_bloque_F_v02.md`, and v04 §5 #35 and §6.8 postpone the cooling effect of A6 to it as an

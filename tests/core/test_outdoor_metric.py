@@ -198,6 +198,26 @@ def test_the_setpoint_ems_code_of_the_outdoor_metric():
     assert not any(line.startswith('if DayOfYear ==') for line in programs['SetOutdoorMetric'])
 
 
+def test_the_setpoint_ems_code_of_te_ref_nl(epw):
+    # Task H2 of the review of 1.2.0: with the weather file, T0 is the sensor of its Schedule:File; without it, the
+    # mean of the maximum and minimum of the previous day
+    zone = 'SetOutdoorMetric_<zone>'
+    with_file = get_setpoint_ems_programs(99, comfort_mode=3, custom_outdoor_metric='te_ref_nl', epw=epw)[zone]
+    without = get_setpoint_ems_programs(99, comfort_mode=3, custom_outdoor_metric='te_ref_nl')[zone]
+    branch = with_file.index('elseif CustAST_metric == 7')
+    assert with_file[branch:branch + 3] == [
+        'elseif CustAST_metric == 7', 'set OutdoorMidRange = OutdoorMidRangeToday',
+        'set Tout_metric = (OutdoorMidRange+0.8*Tmid_1+0.4*Tmid_2+0.2*Tmid_3)/2.4']
+    assert without[without.index('elseif CustAST_metric == 7') + 1] == 'set OutdoorMidRange = Tmid_1'
+    assert [line for line in with_file if 'OutdoorMidRange' in line] != [line for line in without
+                                                                        if 'OutdoorMidRange' in line]
+    # The other metrics do not read the sensor (their models have no Schedule:File)
+    other = get_setpoint_ems_programs(99, comfort_mode=3, custom_outdoor_metric='rmot_alpha', epw=epw)[zone]
+    assert 'set OutdoorMidRange = Tmid_1' in other and not any(om.MID_RANGE_SENSOR in line for line in other)
+    code = get_setpoint_ems_code(99, comfort_mode=3, custom_outdoor_metric='te_ref_nl', epw=epw)
+    assert 'set OutdoorMidRange = OutdoorMidRangeToday' in code and 'Schedule:File ACCIS Outdoor Mid Range' in code
+
+
 def test_the_setpoint_ems_code_checks_the_outdoor_metric(epw):
     with pytest.raises(ValueError, match="'monthly_mean' needs the weather file"):
         get_setpoint_ems_programs(99, comfort_mode=3, custom_outdoor_metric='monthly_mean')
@@ -298,17 +318,33 @@ def test_the_daily_and_monthly_means(epw, daily):
 
 def test_the_reference_temperature_of_the_atg(epw, daily):
     # van der Linden et al. (2006): (T0 + 0.8*T-1 + 0.4*T-2 + 0.2*T-3)/2.4, with each T the mean of the maximum and
-    # minimum of the day; T0, of the day so far (the hours that have ended)
-    middle = (daily['max'] + daily['min']) / 2
+    # minimum of the day; T0, that of the whole day (task H2 of the review of 1.2.0, verdict #8): with the weather file,
+    # that of the day of the weather file in all the timesteps of the day (the Schedule:File of the output IDFs; the
+    # first days take the last days of the file, with which the programs begin)
+    middle = ((daily['max'] + daily['min']) / 2).to_numpy()
     _, metric = _metric(epw, 'te_ref_nl')
-    expected = (middle + 0.8 * middle.shift(1) + 0.4 * middle.shift(2) + 0.2 * middle.shift(3)) / 2.4
+    expected = (middle + 0.8 * np.roll(middle, 1) + 0.4 * np.roll(middle, 2) + 0.2 * np.roll(middle, 3)) / 2.4
+    assert (np.ptp(metric, axis=1) == 0).all()
+    np.testing.assert_allclose(metric[:, 0], expected, rtol=0, atol=1e-9)
+    # Without it, T0 is that of the previous day (the daily values begin with PMOT)
+    _, metric = _metric(epw, 'te_ref_nl', outdoor_metric_start='pmot')
+    expected = (1.8 * np.roll(middle, 1) + 0.4 * np.roll(middle, 2) + 0.2 * np.roll(middle, 3)) / 2.4
+    np.testing.assert_allclose(metric[3:, 0], expected[3:], rtol=0, atol=1e-9)
     np.testing.assert_allclose(metric[3:, -1], expected[3:], rtol=0, atol=1e-9)
-    hourly = pd.read_csv(epw, skiprows=8, header=None)[6].to_numpy(dtype=float).reshape(DAYS, 24)
-    previous = (0.8 * middle.shift(1) + 0.4 * middle.shift(2) + 0.2 * middle.shift(3)).to_numpy()
-    for hour in (0, 5, 17):
-        so_far = (hourly[:, :hour + 1].max(axis=1) + hourly[:, :hour + 1].min(axis=1)) / 2
-        np.testing.assert_allclose(metric[3:, STEPS * hour + STEPS - 1], ((so_far + previous) / 2.4)[3:], rtol=0,
-                                   atol=1e-9)
+
+
+def test_the_mean_of_the_maximum_and_minimum_of_each_day(tmp_path, epw, daily):
+    # The values of the Schedule:File of T0 of te_ref_nl: those of the day of each hour, from 1 January
+    values = om.mid_range_values(epw)
+    assert len(values) == DAYS * 24
+    np.testing.assert_array_equal(values, np.repeat(((daily['max'] + daily['min']) / 2).to_numpy(), 24))
+    # A weather file that does not begin on 1 January
+    lines = epw.read_text(encoding='utf-8').splitlines()
+    partial = tmp_path / 'from_february.epw'
+    partial.write_text('\n'.join(lines[:8] + lines[8 + 31 * 24:]) + '\n', encoding='utf-8')
+    with pytest.raises(ValueError, match=r"'te_ref_nl' needs a weather file of a whole year from 1 January .* "
+                                         r"\(334 days from 01/02\)"):
+        om.mid_range_values(partial)
 
 
 def test_the_native_running_mean_of_cen_15251(epw):
@@ -472,6 +508,103 @@ def test_modify_accis_adds_and_removes_the_outdoor_metric(tmp_path):
     assert 'set CustAST_metric = 7' in _programs(idf)['SetInputData_Block1_Zone1']
 
 
+def _mid_range_objects(idf):
+    """The Schedule:File object of T0 of te_ref_nl and its sensor, or None."""
+    return (idf.getobject('Schedule:File', om.MID_RANGE_SCHEDULE),
+            idf.getobject('EnergyManagementSystem:Sensor', om.MID_RANGE_SENSOR))
+
+
+@needs_idd
+def test_add_accis_writes_the_schedule_of_te_ref_nl(tmp_path, monkeypatch):
+    from accim.sim.accis import load_idf
+
+    # te_ref_nl in Block1:Zone2 with the weather file: the Schedule:File of the mean of the maximum and minimum of each
+    # day, its CSV file in the folder of the output IDFs (the current folder of AddAccis) and its sensor
+    outputs = _add_accis(tmp_path / 'with', monkeypatch, comfort_standard=[99], custom_outdoor_metric='rmot_alpha',
+                         zone_arguments={'Block1:Zone2': {'custom_outdoor_metric': 'te_ref_nl'}}, epw=str(EPW))
+    [path] = outputs.values()
+    idf = load_idf(path)
+    schedule, sensor = _mid_range_objects(idf)
+    csv = tmp_path / 'with' / f'{EPW.stem}{om.MID_RANGE_FILE_SUFFIX}'
+    assert csv.is_file() and str(schedule.File_Name) == str(csv)
+    assert (schedule.Schedule_Type_Limits_Name, schedule.Column_Number, schedule.Rows_to_Skip_at_Top,
+            schedule.Number_of_Hours_of_Data, schedule.Column_Separator, schedule.Interpolate_to_Timestep,
+            schedule.Minutes_per_Item, schedule.Adjust_Schedule_for_Daylight_Savings) == (
+        'Any Number', 1, 1, 8760, 'Comma', 'No', 60, 'No')
+    assert idf.getobject('ScheduleTypeLimits', 'Any Number') is not None
+    lines = csv.read_text(encoding='utf-8').splitlines()
+    assert lines[0] == om.MID_RANGE_SCHEDULE
+    assert [float(value) for value in lines[1:]] == om.mid_range_values(EPW)
+    assert (sensor.OutputVariable_or_OutputMeter_Index_Key_Name, sensor.OutputVariable_or_OutputMeter_Name) == (
+        om.MID_RANGE_SCHEDULE, 'Schedule Value')
+    for zone in ('Block1_Zone1', 'Block1_Zone2'):
+        assert 'set OutdoorMidRange = OutdoorMidRangeToday' in _programs(idf)[f'SetOutdoorMetric_{zone}']
+    # Without te_ref_nl, or without the weather file (with a warning), the models have neither
+    [path] = _add_accis(tmp_path / 'other', monkeypatch, comfort_standard=[99], custom_outdoor_metric='rmot_alpha',
+                        epw=str(EPW)).values()
+    assert _mid_range_objects(load_idf(path)) == (None, None)
+    assert not list((tmp_path / 'other').glob('*.csv'))
+    from accim.sim.accis import AddAccis
+
+    (tmp_path / 'without').mkdir()
+    shutil.copy(SAMPLE_IDF, tmp_path / 'without' / 'TestModel.idf')
+    monkeypatch.chdir(tmp_path / 'without')
+    with pytest.warns(UserWarning, match="'te_ref_nl' takes as T0 the mean of the maximum and minimum of the previous "
+                                         "day without the weather file"):
+        AddAccis(script_type='vrf_mm', supply_air_temp_input_method='temperature difference', output_type='standard',
+                 output_frequencies=['hourly'], keep_existing_outputs=False, energyplus_version='auto',
+                 setpoint_type='temperature', comfort_standard=[99], category=[1], comfort_mode=[3], hvac_mode=[2],
+                 ventilation_control=[0], confirm=True, verbose=False, custom_outdoor_metric='te_ref_nl', **CUSTOM)
+    [path] = (tmp_path / 'without').glob('TestModel[[]*.idf')
+    idf = load_idf(path)
+    assert _mid_range_objects(idf) == (None, None)
+    assert 'set OutdoorMidRange = Tmid_1' in _programs(idf)['SetOutdoorMetric_Block1_Zone1']
+
+
+@needs_idd
+def test_modify_accis_and_the_schedule_of_te_ref_nl(tmp_path):
+    from accim.sim.accis import add_accis_to_idf, load_idf, modify_accis
+    from accim.sim.ems.inputs import input_programs, set_inputs
+
+    shutil.copy(SAMPLE_IDF, tmp_path / 'model.idf')
+    idf = load_idf(tmp_path / 'model.idf')
+    with warnings.catch_warnings():
+        warnings.simplefilter('ignore')
+        add_accis_to_idf(idf, script_type='vrf_mm', supply_air_temp_input_method='temperature difference',
+                         output_type='standard', output_frequencies=['hourly'], keep_existing_outputs=False,
+                         setpoint_type='temperature', verbose=False)
+    # The CSV file in the folder of the model
+    modify_accis(idf, comfort_standard=99, comfort_mode=3, custom_outdoor_metric='te_ref_nl', epw=str(EPW))
+    schedule, sensor = _mid_range_objects(idf)
+    assert sensor is not None and str(schedule.File_Name) == str(tmp_path / f'{EPW.stem}{om.MID_RANGE_FILE_SUFFIX}')
+    # The programs are kept with their sensor when the outdoor metric is written again without the weather file
+    om.set_outdoor_metric_code(idf, True)
+    assert om.reads_mid_range(idf) and om.begins_with_weather_file(idf)
+    # Another metric without the weather file: the programs begin with PMOT, and the model loses the schedule (the CSV
+    # file stays, other models can read it)
+    with pytest.warns(UserWarning, match='begins with the running mean of ASHRAE 55'):
+        modify_accis(idf, custom_outdoor_metric='rmot_alpha')
+    assert _mid_range_objects(idf) == (None, None) and not om.begins_with_weather_file(idf)
+    assert (tmp_path / f'{EPW.stem}{om.MID_RANGE_FILE_SUFFIX}').is_file()
+    # Programs that begin with the values of a weather file and do not read the sensor are written again when a zone
+    # gets te_ref_nl without it (as the parametric module does), beginning with PMOT
+    modify_accis(idf, custom_outdoor_metric='rmot_alpha', epw=str(EPW))
+    assert om.begins_with_weather_file(idf) and not om.reads_mid_range(idf)
+    set_inputs(input_programs(idf)['Block1_Zone2'], {'CustAST_metric': 7})
+    with pytest.warns(UserWarning) as caught:
+        om.set_outdoor_metric_code(idf, True)
+    messages = ' '.join(str(warning.message) for warning in caught)
+    assert "'te_ref_nl' takes as T0 the mean of the maximum and minimum of the previous day" in messages
+    assert 'begins with the running mean of ASHRAE 55' in messages
+    assert not om.begins_with_weather_file(idf) and not om.reads_mid_range(idf)
+    assert 'set OutdoorMidRange = Tmid_1' in _programs(idf)['SetOutdoorMetric_Block1_Zone2']
+    # Without the outdoor metric, the model has neither
+    modify_accis(idf, epw=str(EPW), custom_outdoor_metric='te_ref_nl')
+    assert om.reads_mid_range(idf)
+    modify_accis(idf, custom_outdoor_metric='pmot', zone_arguments={'Block1:Zone2': {'custom_outdoor_metric': 'pmot'}})
+    assert _mid_range_objects(idf) == (None, None) and not om.has_outdoor_metric_code(idf)
+
+
 @needs_idd
 @pytest.mark.skipif(LEGACY_IDF is None, reason='needs the output IDF of accim 0.x of the repository')
 def test_the_models_of_earlier_versions_only_have_pmot(tmp_path):
@@ -533,9 +666,8 @@ def _expected_metric(metric, days, custom_days=30, alpha=0.8):
     """The outdoor metric of each timestep of the first days of the year of the weather file of the simulations,
     with numpy and pandas from its hourly values, as an array of days x timesteps (NaN where it is not calculated):
     the days before the run period are the last ones of the file, with which the programs begin (decision D3). The
-    daily metrics have the value of the day in all its timesteps; te_ref_nl, whose T0 is the mean of the maximum and
-    the minimum of the hours of the day that have ended, only at the end of each hour (before the end of the first
-    hour of the day, T0 is the outdoor temperature of the timestep)."""
+    daily metrics, and te_ref_nl, whose T0 is the mean of the maximum and minimum of the day of the weather file (task
+    H2), have the value of the day in all its timesteps."""
     hourly = pd.read_csv(EPW, skiprows=8, header=None)[6].to_numpy(dtype=float).reshape(-1, 24)
     means = hourly.mean(axis=1)
     year = len(means)
@@ -560,14 +692,9 @@ def _expected_metric(metric, days, custom_days=30, alpha=0.8):
         daily = daily.to_numpy()[custom_days:]
     else:
         # van der Linden et al. (2006): (T0 + 0.8*T-1 + 0.4*T-2 + 0.2*T-3)/2.4, with each T the mean of the maximum and
-        # the minimum of the day (T0, of the hours of the day that have ended)
+        # the minimum of the day (T0, of the day itself, from the weather file)
         middle = (hourly.max(axis=1) + hourly.min(axis=1)) / 2
-        previous = 0.8 * before(middle, 1) + 0.4 * before(middle, 2) + 0.2 * before(middle, 3)
-        values = np.full((days, 24 * STEPS), np.nan)
-        for hour in range(24):
-            so_far = (hourly[:days, :hour + 1].max(axis=1) + hourly[:days, :hour + 1].min(axis=1)) / 2
-            values[:, STEPS * hour + STEPS - 1] = (so_far + previous) / 2.4
-        return values
+        daily = (middle[:days] + 0.8 * before(middle, 1) + 0.4 * before(middle, 2) + 0.2 * before(middle, 3)) / 2.4
     return np.repeat(daily, 24 * STEPS).reshape(days, -1)
 
 
@@ -612,6 +739,32 @@ def test_the_outdoor_metrics_in_energyplus(tmp_path, monkeypatch, capsys, metric
     difference = np.abs(results[metric].to_numpy() - results[native].to_numpy()).reshape(days, -1)[:, 1]
     assert difference[21:].max() < 0.05
     assert difference[14] > 0.05
+
+
+@needs_energyplus
+def test_te_ref_nl_with_the_weather_file_in_both_backends(tmp_path, monkeypatch):
+    from accim.sim.energyplus_api import run_simulations
+
+    # te_ref_nl in both zones, with T0 of the Schedule:File of the weather file (task H2), 10 days of March in
+    # timesteps
+    model = _output_idf(tmp_path, monkeypatch, (3, 1), (3, 10), 'timestep', custom_outdoor_metric='te_ref_nl',
+                        epw=str(EPW))
+    ems_results = _run_energyplus(model, tmp_path / 'ems')
+    results = run_simulations([(model, EPW, {'output_directory': tmp_path / 'api', 'output_prefix': 'run'})],
+                              processes=1)
+    assert results[0].success, results[0].error
+    api_results = pd.read_csv(tmp_path / 'api' / 'run.csv')
+    assert len(ems_results) == 10 * 24 * STEPS
+    pd.testing.assert_frame_equal(api_results, ems_results, check_exact=True)
+    hourly = pd.read_csv(EPW, skiprows=8, header=None)[6].to_numpy(dtype=float).reshape(-1, 24)
+    middle = (hourly.max(axis=1) + hourly.min(axis=1)) / 2
+    first = 59
+    expected = np.array([(middle[d] + 0.8 * middle[d - 1] + 0.4 * middle[d - 2] + 0.2 * middle[d - 3]) / 2.4
+                         for d in range(first, first + 10)])
+    for zone in ('Block1_Zone1', 'Block1_Zone2'):
+        [column] = [c for c in ems_results.columns if c.startswith(f'EMS:Tout_metric_{zone} [')]
+        found = ems_results[column].to_numpy().reshape(10, -1)
+        np.testing.assert_allclose(found, np.repeat(expected, 24 * STEPS).reshape(10, -1), rtol=0, atol=1e-9)
 
 
 @needs_energyplus

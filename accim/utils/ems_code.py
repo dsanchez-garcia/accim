@@ -76,7 +76,9 @@ _OUTDOOR_METRIC_LEGEND = (
     '! runs in each timestep before the programs of the zones, and InitOutdoorMetric at the beginning of each',
     '! environment; OutT is the outdoor dry-bulb temperature (Site Outdoor Air Drybulb Temperature). Without the',
     '! weather file (argument epw of AddAccis), the daily means begin with PMOT; with it, with those of the weather',
-    '! file.',
+    '! file. te_ref_nl: T0 (OutdoorMidRange) is, with the weather file, OutdoorMidRangeToday, the mean of the maximum',
+    '! and minimum of the day of the weather file (the Schedule Value of the Schedule:File ACCIS Outdoor Mid Range);',
+    '! without it, that of the previous day (Tmid_1).',
 )
 _LIMIT_LEGEND = (
     '! AHSTmin and ACSTmax: the minimum heating setpoint and the maximum cooling setpoint of the',
@@ -298,7 +300,8 @@ def _outdoor_metric_programs(comfort_standard: int, arguments: dict, epw, start_
         om.INIT_PROGRAM: om.init_program_lines([_ZONE], ring),
         om.PROGRAM: om.building_program_lines(ring, initial),
         f'{om.ZONE_PROGRAM_PREFIX}{_ZONE}': om.zone_program_lines(
-            _ZONE, ring, None if initial is None else initial['running_means'][_ZONE], initial is not None),
+            _ZONE, ring, None if initial is None else initial['running_means'][_ZONE], initial is not None,
+            mid_range_sensor=initial is not None and code == om.OUTDOOR_METRICS['te_ref_nl']),
     }
 
 

@@ -321,7 +321,10 @@ def compute_setpoints(epw: PathLike, comfort_standard: int, category: Optional[N
     With the custom model (comfort standard 99) and an outdoor metric other than 'pmot' (``custom_outdoor_metric``),
     the programs of the outdoor metric (:mod:`accim.sim.ems.outdoor_metric`) also run in each timestep, with the outdoor
     temperature of EnergyPlus (interpolated between the hourly values of the weather file, which it has at the end of
-    each hour), and so they do with JPN Aqilah 2025 (23) and ``outdoor_metric_start`` 'epw', whose running mean is then
+    each hour; with 'te_ref_nl' and ``outdoor_metric_start`` 'epw', T0 is the mean of the maximum and minimum of the day
+    of the weather file in all its timesteps, as the sensor of the Schedule:File object of the output IDFs gives it,
+    :func:`accim.sim.ems.outdoor_metric.mid_range_values`), and so they do with JPN Aqilah 2025 (23) and
+    ``outdoor_metric_start`` 'epw', whose running mean is then
     that of EN 16798-1 with α = 0.8 that the EMS calculates (as in the output IDFs of AddAccis with the weather file,
     :data:`accim.sim.ems.standard_lines.WEATHER_FILE_METRICS`). With its regimes (``custom_regimes``), the program of
     the regimes (:mod:`accim.sim.ems.custom_regimes`) runs before SetAppLimits; their conditions 'hvac_off' and
@@ -393,6 +396,10 @@ def compute_setpoints(epw: PathLike, comfort_standard: int, category: Optional[N
     outdoor_metric = om.PROGRAM in programs
     weather_file = outdoor_metric and int(comfort_standard) in WEATHER_FILE_METRICS
     zone_metric = f'{om.ZONE_PROGRAM_PREFIX}{_ZONE}'
+    # T0 of 'te_ref_nl' from the weather file: the Schedule Value of the Schedule:File object of each day (task H2)
+    mid_ranges = None
+    if any(om.MID_RANGE_SENSOR in line for line in programs.get(zone_metric, [])):
+        mid_ranges = om.mid_range_values(epw)[::24]
     # The hour counters of the zone tell whether the running mean is within the applicability limits
     counter = f'CountHours_{_ZONE}'
     programs[counter] = weather_file_lines(counter, pl.format_lines(pl.count_hours_lines(outdoor_metric), zone=_ZONE),
@@ -460,6 +467,8 @@ def compute_setpoints(epw: PathLike, comfort_standard: int, category: Optional[N
                     erl.set('TimeStepNum', step)
                     # The end of the timestep, in minutes of the hour (60 at the end of the hour)
                     erl.set('Minute', step * 60 / n)
+                    if mid_ranges is not None:
+                        erl.set(om.MID_RANGE_SENSOR, mid_ranges[day])
                     for program in every_timestep:
                         erl.run(program)
                     tout_metric = erl.get(pl.OUTDOOR_METRIC_VARIABLE)

@@ -17,6 +17,14 @@ Temperature*), without EnergyManagementSystem:TrendVariable, which the Python AP
   which are the values of the weather file. At the first timestep of each day, it keeps the daily mean of the previous
   day (``Tday_1``, ``Tday_2``... ``Tday_<n>``, those of the n previous days) and the mean of its maximum and minimum
   (``Tmid_1``, ``Tmid_2``, ``Tmid_3``). It does not add the warm-up days.
+- 'te_ref_nl' needs the mean of the maximum and minimum of the day itself (T0, which the outdoor temperature of the day
+  so far does not give; task H2 of the review of accim 1.2.0): with the weather file of the simulation (argument
+  ``epw``), the model gets the Schedule:File object :data:`MID_RANGE_SCHEDULE`, whose CSV file has, for each hour, the
+  mean of the maximum and minimum of its day of the weather file (:func:`mid_range_values`,
+  :mod:`accim.sim.schedule_files`), and the EMS sensor :data:`MID_RANGE_SENSOR` of its *Schedule Value*, which the
+  EMS reads at the beginning of each timestep with the value of the day of the timestep (from its first timestep, as
+  EnergyPlus 25.1 gave it in the tests of accim); without it, T0 is that of the previous day (``Tmid_1``), with a
+  warning.
 - The program ``SetOutdoorMetric_<zone>`` (run by ``RunACCIS_<zone>`` after the inputs of the zone) updates the running
   mean of EN 16798-1 of the zone (``RMOTa_<zone>``, with its ``CustAST_alpha``) at the first timestep of each day, and
   sets ``Tout_metric`` (and ``Tout_metric_<zone>``, its EMS output variable).
@@ -43,7 +51,9 @@ The equations (section 11.4 of ``notes/PROPUESTAS_MEJORAS_post_1.1.0_v03.md``): 
 recommended 0.8, and its approximate formula (B.2), (Θed−1 + 0.8·Θed−2 + 0.6·Θed−3 + 0.5·Θed−4 + 0.4·Θed−5 +
 0.3·Θed−6 + 0.2·Θed−7)/3.8; ASHRAE 55-2020, 5.4.2.1, the arithmetic mean of the daily means of 7 to 30 previous days;
 and van der Linden et al. (2006), Te,ref = (T0 + 0.8·T−1 + 0.4·T−2 + 0.2·T−3)/2.4, with Ti the mean of the maximum and
-minimum of the day i (T0, of the day so far; before its first hourly value, the outdoor temperature of the timestep).
+minimum of the day i ("calculated from the averages of the maximum and minimum outdoor (air) temperature of the day
+under study and the three preceding days", v03 section 11; T0, that of the whole day of the weather file, or of the
+previous day without it).
 """
 
 import copy
@@ -61,6 +71,8 @@ __all__ = [
     'DEFAULT_ALPHA',
     'DEFAULT_DAYS',
     'INIT_PROGRAM',
+    'MID_RANGE_SCHEDULE',
+    'MID_RANGE_SENSOR',
     'OUTDOOR_METRICS',
     'OUTPUT_PREFIX',
     'PROGRAM',
@@ -74,7 +86,9 @@ __all__ = [
     'metric_code',
     'metric_comfort_standards',
     'metric_name',
+    'mid_range_values',
     'outdoor_metric_needed',
+    'reads_mid_range',
     'ring_days',
     'set_outdoor_metric_code',
     'set_weather_file_lines',
@@ -104,6 +118,12 @@ PROGRAM = 'SetOutdoorMetric'
 ZONE_PROGRAM_PREFIX = 'SetOutdoorMetric_'
 INIT_PROGRAM = 'InitOutdoorMetric'
 OUTPUT_PREFIX = 'Tout_metric_'
+#: The Schedule:File object of the mean of the maximum and minimum of the day of each hour of the weather file (T0 of
+#: 'te_ref_nl', task H2 of the review of accim 1.2.0), its CSV file (``<name of the weather file><suffix>``, in the
+#: folder of the model) and the EMS sensor of its Schedule Value
+MID_RANGE_SCHEDULE = 'ACCIS Outdoor Mid Range'
+MID_RANGE_FILE_SUFFIX = '_outdoor_mid_range.csv'
+MID_RANGE_SENSOR = 'OutdoorMidRangeToday'
 #: The inputs of each zone (SetInputData_<zone>)
 INPUTS = ('CustAST_metric', 'CustAST_alpha', 'CustAST_days')
 #: The daily means that SetOutdoorMetric keeps, at least (those of 'ndrm' with the most days of ASHRAE 55)
@@ -235,7 +255,7 @@ def building_program_lines(ring: int, initial: Optional[Mapping[str, Any]] = Non
 
 
 def zone_program_lines(zone: str, ring: int, initial_running_mean: Optional[float] = None,
-                       monthly_means: bool = False) -> List[str]:
+                       monthly_means: bool = False, mid_range_sensor: bool = False) -> List[str]:
     """The lines of the program SetOutdoorMetric_<zone>.
 
     :param zone: The name of the zone in the EMS objects.
@@ -243,6 +263,8 @@ def zone_program_lines(zone: str, ring: int, initial_running_mean: Optional[floa
     :param initial_running_mean: The running mean of EN 16798-1 (B.1) of the weather file on the first day of the run
         period, with the alpha of the zone (:func:`initial_values`); None without a weather file.
     :param monthly_means: True if SetOutdoorMetric has the monthly means of a weather file.
+    :param mid_range_sensor: True if T0 of 'te_ref_nl' is the sensor :data:`MID_RANGE_SENSOR` (the model has the
+        Schedule:File object of the weather file); False for the mean of the maximum and minimum of the previous day.
     """
     running_mean, initialised = f'RMOTa_{zone}', f'OutdoorMetricInit_{zone}'
     lines = [f'if {initialised} == -1']
@@ -269,9 +291,10 @@ def zone_program_lines(zone: str, ring: int, initial_running_mean: Optional[floa
     lines += ['set Tout_metric = OutdoorDaysSum/CustAST_days', 'elseif CustAST_metric == 6']
     # Without the monthly means of a weather file, EnergyPlus stops
     lines.append('set Tout_metric = OutdoorMonthlyMean' if monthly_means else 'set Tout_metric = @FatalHaltEp 6')
-    # The ATG (van der Linden et al., 2006): T0 is the mean of the maximum and minimum of the day so far
-    lines += ['elseif CustAST_metric == 7', 'if OutdoorHours > 0', 'set OutdoorMidRange = (OutdoorMax+OutdoorMin)/2',
-              'else', 'set OutdoorMidRange = OutT', 'endif',
+    # The ATG (van der Linden et al., 2006): T0 is the mean of the maximum and minimum of the whole day, that of the
+    # weather file (the sensor of its Schedule:File), or that of the previous day without it (task H2 of the review)
+    lines += ['elseif CustAST_metric == 7',
+              f"set OutdoorMidRange = {MID_RANGE_SENSOR if mid_range_sensor else 'Tmid_1'}",
               'set Tout_metric = (OutdoorMidRange+'
               + '+'.join(f'{_weight(w)}Tmid_{k}' for k, w in enumerate(_ATG_WEIGHTS[1:], 1)) + f')/{_ATG_DIVISOR}',
               'else', 'set Tout_metric = PMOT', 'endif',
@@ -364,6 +387,57 @@ def _initial_values(epw: Union[str, Any], start_day: int, ring: int,
         'running_means': running_means,
         'monthly_means': [float(monthly.get(month, float('nan'))) for month in range(1, 13)],
     }
+
+
+def mid_range_values(epw: Union[str, Any]) -> List[float]:
+    """The mean of the maximum and minimum of the day of each hour of a weather file, T0 of 'te_ref_nl' (van der Linden
+    et al., 2006): the values of the Schedule:File object :data:`MID_RANGE_SCHEDULE`, from the hour 1 of 1 January
+    (8760 values, or 8784 with 29 February), with the maximum and minimum of the 24 hourly values of each day of
+    :func:`accim.sim.preview.outdoor_metrics`.
+
+    :param epw: The path of the weather file.
+    :raises ValueError: If the weather file does not have the days of a whole year (365 or 366) from 1 January.
+    """
+    from accim.sim.preview import outdoor_metrics
+
+    daily = outdoor_metrics(epw, frequency='daily')
+    first = daily['date'].iloc[0]
+    if len(daily) not in (365, 366) or (first.month, first.day) != (1, 1):
+        raise ValueError(f"The outdoor metric 'te_ref_nl' needs a weather file of a whole year from 1 January (the "
+                         f"hours of the Schedule:File object {MID_RANGE_SCHEDULE!r}), not {epw} ({len(daily)} days "
+                         f"from {first.day:02d}/{first.month:02d}).")
+    middle = (daily['daily_max'] + daily['daily_min']) / 2
+    return [float(value) for value in middle for _ in range(24)]
+
+
+def reads_mid_range(idf) -> bool:
+    """True if the model has the EMS sensor :data:`MID_RANGE_SENSOR` of the Schedule:File object of the mean of the
+    maximum and minimum of each day of a weather file (T0 of 'te_ref_nl')."""
+    return idf.getobject('EnergyManagementSystem:Sensor', MID_RANGE_SENSOR) is not None
+
+
+def _set_mid_range_schedule(idf, epw: Union[str, Any]) -> None:
+    """Give the model the Schedule:File object of the mean of the maximum and minimum of each day of a weather file, its
+    CSV file (in the folder of the model) and the EMS sensor of its Schedule Value."""
+    from accim.sim.schedule_files import write_schedule_file
+
+    write_schedule_file(idf, MID_RANGE_SCHEDULE, mid_range_values(epw),
+                        f'{os.path.splitext(os.path.basename(os.fspath(epw)))[0]}{MID_RANGE_FILE_SUFFIX}')
+    if not reads_mid_range(idf):
+        idf.newidfobject('EnergyManagementSystem:Sensor', Name=MID_RANGE_SENSOR,
+                         OutputVariable_or_OutputMeter_Index_Key_Name=MID_RANGE_SCHEDULE,
+                         OutputVariable_or_OutputMeter_Name='Schedule Value')
+
+
+def _remove_mid_range_schedule(idf) -> None:
+    """Remove the Schedule:File object of the mean of the maximum and minimum of each day and its EMS sensor (the CSV
+    file stays: other models can read it)."""
+    from accim.sim.schedule_files import remove_schedule_file
+
+    sensor = idf.getobject('EnergyManagementSystem:Sensor', MID_RANGE_SENSOR)
+    if sensor is not None:
+        idf.removeidfobject(sensor)
+    remove_schedule_file(idf, MID_RANGE_SCHEDULE)
 
 
 def has_outdoor_metric_code(idf) -> bool:
@@ -587,6 +661,7 @@ def _remove_outdoor_metric_code(idf, zone_programs: Mapping[str, Any]) -> None:
                   if str(g.fieldvalues[1]).strip() == _FIRST_GLOBAL_VARIABLE])
     _remove(idf, [o for o in idf.idfobjects['EnergyManagementSystem:OutputVariable'] if o.Name.upper() in outputs])
     _remove(idf, [o for o in idf.idfobjects['Output:Variable'] if str(o.Variable_Name).upper() in outputs])
+    _remove_mid_range_schedule(idf)
     for zone, program in zone_programs.items():
         lines = _program_lines(program)
         kept = [line for line in lines if line.split('=')[0].replace('set', '', 1).strip() not in INPUTS]
@@ -632,9 +707,15 @@ def set_outdoor_metric_code(idf, enabled: bool, epw: Union[str, Any, None] = Non
     The daily means kept are those of :func:`ring_days` for the ``CustAST_days`` of the zones. With a weather file,
     the programs begin with its values on the first day of the first RunPeriod of the model (:func:`initial_values`);
     without it, with the running mean of ASHRAE 55 of EnergyPlus (PMOT, decision D3), with a warning if a zone has a
-    metric that EnergyPlus does not calculate. Without a weather file and ``rewrite``, a model that already has the
-    programs keeps them (and the values of the weather file with which they begin) if they keep enough daily means
-    (and the monthly means, if a zone needs them).
+    metric that EnergyPlus does not calculate. If a zone has 'te_ref_nl', with a weather file the model also gets the
+    Schedule:File object :data:`MID_RANGE_SCHEDULE` (its CSV file in the folder of the model) and the sensor
+    :data:`MID_RANGE_SENSOR`, with which T0 is the mean of the maximum and minimum of the day itself; without it, T0 is
+    that of the previous day, with a warning (task H2 of the review of accim 1.2.0). The programs read the sensor if
+    and only if they begin with the values of a weather file and a zone had 'te_ref_nl' when they were written: if a
+    zone gets 'te_ref_nl' without the weather file in a model whose programs begin with the values of one and do not
+    read it, they are written again, beginning with PMOT. Without a weather file and ``rewrite``, a model that
+    already has the programs keeps them (and the values of the weather file with which they begin) if they keep enough
+    daily means (and the monthly means, if a zone needs them).
 
     Without ``enabled``, all of them are removed, and the programs of the custom model use PMOT: the model is as
     before accim 1.2.0. :func:`accim.sim.ems.programs.set_comfort_standard_code` calls this function with
@@ -688,11 +769,14 @@ def set_outdoor_metric_code(idf, enabled: bool, epw: Union[str, Any, None] = Non
     metrics = {metric_code(values[zone]['CustAST_metric']) for zone in zones
                if with_weather_file or zone not in weather_zones}
     monthly = OUTDOOR_METRICS['monthly_mean'] in metrics
+    te_ref = OUTDOOR_METRICS['te_ref_nl'] in metrics
 
-    # 2. The programs: those of the model stay if they can (without a weather file)
+    # 2. The programs: those of the model stay if they can (without a weather file); those that begin with the values
+    # of a weather file read T0 of 'te_ref_nl' from its Schedule:File object, or are written again
     existing = idf.getobject('EnergyManagementSystem:Program', PROGRAM)
     keep = (epw is None and not rewrite and existing is not None and _ring_of(existing) >= ring
             and (not monthly or _has_monthly_means(existing))
+            and not (te_ref and begins_with_weather_file(idf) and not reads_mid_range(idf))
             and all(idf.getobject('EnergyManagementSystem:Program', f'{ZONE_PROGRAM_PREFIX}{zone}') is not None
                     for zone in zones)
             and idf.getobject('EnergyManagementSystem:Program', INIT_PROGRAM) is not None)
@@ -706,7 +790,13 @@ def set_outdoor_metric_code(idf, enabled: bool, epw: Union[str, Any, None] = Non
         if epw is not None:
             alphas = {zone: values[zone]['CustAST_alpha'] for zone in zones}
             initial = initial_values(epw, _run_period_start(idf), ring, alphas)
-        elif metrics & _NEEDS_INITIAL_VALUES:
+        # T0 of 'te_ref_nl', from the weather file
+        mid_range = epw is not None and te_ref
+        if mid_range:
+            _set_mid_range_schedule(idf, epw)
+        else:
+            _remove_mid_range_schedule(idf)
+        if epw is None and metrics & _NEEDS_INITIAL_VALUES:
             names = sorted(metric_name(code) for code in metrics & _NEEDS_INITIAL_VALUES)
             warnings.warn(f'custom_outdoor_metric {names} begins with the running mean of ASHRAE 55 that EnergyPlus '
                           f'calculates (PMOT), without a weather file (argument epw): give the weather file of the '
@@ -723,8 +813,12 @@ def set_outdoor_metric_code(idf, enabled: bool, epw: Union[str, Any, None] = Non
         for zone in zones:
             write(f'{ZONE_PROGRAM_PREFIX}{zone}',
                   zone_program_lines(zone, ring, None if initial is None else initial['running_means'][zone],
-                                     initial is not None))
+                                     initial is not None, mid_range_sensor=mid_range))
         write(INIT_PROGRAM, init_program_lines(zones, ring))
+    if te_ref and not reads_mid_range(idf):
+        warnings.warn("The outdoor metric 'te_ref_nl' takes as T0 the mean of the maximum and minimum of the previous "
+                      "day without the weather file of the simulation (argument epw): give it to take that of the day "
+                      "itself, as van der Linden et al. (2006) define it.")
 
     # 3. RunACCIS_<zone> runs SetOutdoorMetric_<zone> after the inputs of the zone
     for zone in zones:

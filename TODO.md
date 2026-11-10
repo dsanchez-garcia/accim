@@ -39,11 +39,6 @@ Active short-term tasks.
   - Definition of done: an option of the EMS code for comfort standard 24 with that loop (a sensor of the Pierce SET of the People object of each zone), documented with its delay; tests of its convergence against the hook with EnergyPlus 25.1 (both backends), and the `ValueError` of `AddAccis` replaced by it.
   - References: `notes/PROPUESTAS_MEJORAS_post_1.1.0_v03.md` (A6, way (a)), `notes/PROPUESTA_ADAPTACION_INTERIOR_v03.md` (§3, §4 F1), `notes/PROMPTS_COPILOT_bloque_F_v02.md` (F1, scope 5).
 
-- [ ] [P2][todo] B1: T0 of `te_ref_nl`, the mean of the maximum and the minimum of the whole day (task H2 of v04 §7)
-  - Context: finding B1-1 and verdict #8 (`notes/decisions.md`, 2026-11-10): T0 is the running (max+min)/2 of the hours of the day that have ended, so Te,ref drifts within the day, while van der Linden et al. (2006) define Ti with the maximum and minimum of the whole day.
-  - Definition of done: with the weather file, the daily (Tmax+Tmin)/2 of the current day as a `Schedule:File` read by a sensor `Schedule Value`; without it, the value of the previous day, with a warning; both backends identical, `compute_setpoints` and the docs.
-  - References: `notes/PROPUESTAS_MEJORAS_post_1.1.0_v04.md` (§3.3 B1-1, §7 H2), `accim/sim/ems/outdoor_metric.py`.
-
 - [ ] [P2][todo] A4: the saturation of the ATHB setpoints, the frequencies of their outputs, the ranges of met and air speed, and a bounded scientific test (task H4 of v04 §7)
   - Context: findings A4-1 to A4-3 and the test finding of §3.4 (v04): the setpoints saturate silently at the limits of `temperature_range`; `output_frequencies=('hourly',)` ignores those of the model; `met = 0` is accepted; the relation between W/person and met, and the relative air speed, are undocumented; the EnergyPlus test only checks −3 ≤ ATHB_PMV ≤ 3.
   - Definition of done: a saturation counter and a warning; `output_frequencies=None` (those of the ACCIS outputs of the model); warnings for met outside 0.8–4 met and an air speed above 1 m/s; the documentation; a bounded test of the ATHB_PMV within the setpoints (or an IdealLoads variant of the sample model).

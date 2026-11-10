@@ -100,7 +100,8 @@ def verify_accim_simulation(
     begin with the values of a weather file (its running mean of EN 16798-1 with α = 0.8,
     :data:`accim.sim.ems.standard_lines.WEATHER_FILE_METRICS`), the outdoor metric that the EMS of each zone calculates
     (``Tout_metric_<zone>``) is that of ``compute_setpoints`` too (``Check4_Tout_metric``), which begins as the programs
-    of the model do (with the values of the weather file given to AddAccis, or with PMOT). The static setpoints of JPN
+    of the model do (with the values of the weather file given to AddAccis, or with PMOT; with them, T0 of
+    'te_ref_nl' is that of the Schedule:File object of that weather file). The static setpoints of JPN
     Aqilah 2025 are those of the inputs StaticAHST and StaticACST of each zone. With the regimes of the
     custom model (:mod:`accim.sim.ems.custom_regimes`), ``compute_setpoints`` gets those of the program
     ``SelectCustomRegime_<zone>`` of each zone, and the number of the regime that the EMS reports
