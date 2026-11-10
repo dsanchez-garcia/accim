@@ -15,6 +15,15 @@ This log is a lightweight, session-scoped complement to the repository's
 existing tracking files — it does not replace them (see
 [[decisions.md#2026-09-13 — `notes/work-log.md` complements, not replaces, existing tracking files|the related decision]]).
 
+## 2026-11-10 — The report of the session (branch `v1.2.0`, on the server)
+
+- **Objective**: the report that the author asked for at the end of the list of proposals.
+- **Affected files**: [[INFORME_SESION_v1.2.0_2026-11-10.md]], [[../DEVLOG.md]].
+- **Finding or decision**: all the proposals of the list are done; the parts that wait for the author or for missing
+  documents and tools are blocked tasks in [[../TODO.md]], and 36 decisions taken provisionally are in [[questions.md]].
+- **Validation**: the figures of the report checked against [[../DEVLOG.md]] and `git log`.
+- **Next step**: the answers of the author.
+
 ## 2026-11-10 — D2, completed: the optional outputs of the ACCIS and of the ATHB in Table (branch `v1.2.0`, on the server)
 
 - **Objective**: the task of D2 left in `TODO.md` (its outputs of A4, B1 and B5, and B2), unblocked once A4 was done.

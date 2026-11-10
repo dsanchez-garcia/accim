@@ -36,6 +36,14 @@ Recommended flow: track active work in `TODO.md`, move completed outcomes to `DE
 ## Entries
 
 ### 2026-11-10
+#### [done] The report of the session of the proposals of 1.2.0 (branch `v1.2.0`)
+- Context: the author asked, once the list of proposals was finished or blocked, for a report with the proposals and their commits, the deviations from the v03 prompts, the entries added to `TODO.md`, the provisional decisions of `notes/questions.md`, the tests and the comparisons of the backends, and the blocked items with the information they miss.
+- Changes: `notes/INFORME_SESION_v1.2.0_2026-11-10.md` (new, in English as the notes of the vault; the name is that of the author), from this log, `notes/questions.md`, `TODO.md` and the commits of the branch (`aff9cfc` to `eec5f8e`).
+- Files: `notes/INFORME_SESION_v1.2.0_2026-11-10.md`, `DEVLOG.md`, `notes/work-log.md`.
+- Verification: the commits, test counts and comparisons of the report checked against the entries of this log and `git log`; no code changes.
+- Next step: the answers of the author to the provisional decisions (`notes/questions.md`) and to the blocked tasks (`TODO.md`).
+
+### 2026-11-10
 #### [done] D2, completed: the optional outputs of the ACCIS and of the ATHB in `Table` (branch `v1.2.0`)
 - Context: D2 (v03: "Reconocer `ePMV_<zone>`, `e_<zone>`, `Activity_corrected_<zone>`, `aPMV_<zone>`, `ATHB_PMV_<zone>`, `Tout_metric`, `HoursBelow_*_<zone>` en las tablas de renombrado (`rename_cols`) y en `time_plot`/`wrangled_table`; unidades: adimensional, W/persona, °C, h") was done on 2026-11-09 for the PMV-based setpoints, before the outputs of A4, B1 and B5 existed, with a task in `TODO.md` for them (and `CustomRegime_<zone>` of B2). With A4 done, the task was no longer blocked, so it was done after A6 and R-06, before the report, so that D2 is complete; the outputs of C2 (`report_long_term_discomfort`), of the same kind, too. An experiment (outside the repository) simulated 3 days of April of the sample model with the custom model, `custom_outdoor_metric='rmot_7day'` and `epw`, two regimes, `report_hours_below=[18, 17.5]`, `report_long_term_discomfort=True` and `apply_athb_setpoints` (EnergyPlus 25.1, API backend with the hook): the columns are `EMS:Tout_metric [C](Hourly)`, `EMS:Tout_metric_Block1_Zone1 [C](Hourly)`, `EMS:CustomRegime_Block1_Zone1 [](Hourly)`, `EMS:HoursBelow_17p5_Block1_Zone1 [H](Hourly)`, `EMS:Degree Hours Above Upper Limit_Block1_Zone1 [KH](Hourly)`, `EMS:Hours Above Upper Limit_Building [H](Hourly)`, `EMS:ATHB_met_Block1_Zone1 [MET](Hourly)`, `EMS:ATHB_clo_Block1_Zone1 [clo](Hourly)`...; `Table` (daily, `frequency_agg_func='sum'`) dropped them all with `standard_outputs=True`, and without it kept their EMS names in capitals, without block and building values, and added up the ATHB_PMV (6.36 instead of 0.265), the clothing and the metabolic rate.
 - Changes:
