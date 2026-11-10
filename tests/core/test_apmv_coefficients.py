@@ -120,6 +120,70 @@ def test_apply_apmv_setpoints_with_keys_of_the_catalogue(tmp_path):
     assert ADAPTIVE_COEFFICIENT_BY == ('season', 'pmv_sign')
 
 
+def test_adaptive_coefficients_sets_both_sides(tmp_path):
+    # The catalogue is made of pairs (verdict #3 of the review of 1.2.0): adaptive_coefficients gives both coefficients
+    # of an entry
+    both = _model(tmp_path / 'both')
+    with warnings.catch_warnings():
+        warnings.simplefilter('error')
+        apmv.apply_apmv_setpoints(both, adaptive_coefficients='gbt50785_cold_general', verbose=False)
+    numbers = _model(tmp_path / 'numbers')
+    apmv.apply_apmv_setpoints(numbers, adaptive_coefficient_cooling=0.24, adaptive_coefficient_heating=-0.5,
+                              verbose=False)
+    assert both.idfstr() == numbers.idfstr()
+    # Not with the coefficients of the sides (other numbers, keys or dictionaries), nor with an entry without a side
+    for side, value in (('adaptive_coefficient_heating', -0.4),
+                        ('adaptive_coefficient_cooling', 'gbt50785_cold_general'),
+                        ('adaptive_coefficient_cooling', {'Block1:Zone1': 0.3})):
+        with pytest.raises(ValueError, match=rf"adaptive_coefficients \('gbt50785_cold_general'\) sets both "
+                                             rf"coefficients: {side} cannot be given too"):
+            apmv.apply_apmv_setpoints(_model(tmp_path / 'given'), adaptive_coefficients='gbt50785_cold_general',
+                                      verbose=False, **{side: value})
+    with pytest.raises(ValueError, match="'zhang2024_Aw' have no heating coefficient"):
+        apmv.apply_apmv_setpoints(_model(tmp_path / 'aw'), adaptive_coefficients='zhang2024_Aw', verbose=False)
+    with pytest.raises(ValueError, match="'unknown' is not a key"):
+        apmv.apply_apmv_setpoints(_model(tmp_path / 'unknown'), adaptive_coefficients='unknown', verbose=False)
+
+
+def test_a_key_on_one_side_with_the_default_on_the_other_warns():
+    for key_side, default_side, default in (('adaptive_coefficient_cooling', 'adaptive_coefficient_heating', -0.293),
+                                            ('adaptive_coefficient_heating', 'adaptive_coefficient_cooling', 0.293)):
+        with pytest.warns(UserWarning, match=rf'{key_side} is a key of the catalogue of the adaptive coefficients, '
+                                             rf'and {default_side} is its default, {default}, which has no source'):
+            resolved = resolve_adaptive_coefficients({key_side: 'yao2009_chongqing_classrooms', default_side: default})
+        assert resolved[default_side] == default
+        # Also with the key in a dictionary of the zones
+        with pytest.warns(UserWarning, match='which has no source'):
+            resolve_adaptive_coefficients({key_side: {'Block1:Zone1': 'yao2009_chongqing_classrooms'},
+                                           default_side: default})
+    # Not with another number, nor with keys on both sides
+    with warnings.catch_warnings():
+        warnings.simplefilter('error')
+        resolve_adaptive_coefficients(dict(adaptive_coefficient_cooling='yao2009_chongqing_classrooms',
+                                           adaptive_coefficient_heating=-0.3))
+        resolve_adaptive_coefficients(dict(adaptive_coefficient_cooling='yao2009_chongqing_classrooms',
+                                           adaptive_coefficient_heating='gbt50785_cold_general'))
+
+
+def test_the_signs_of_the_setpoints_with_the_pmv_sign(tmp_path):
+    # Each setpoint is converted with the coefficient of its side of the scale (verdict #4 of the review of 1.2.0)
+    with pytest.raises(ValueError, match="pmv_cooling_setpoint must be >= 0 with adaptive_coefficient_by='pmv_sign', "
+                                         "not -0.2"):
+        apmv.apply_apmv_setpoints(_model(tmp_path / 'cooling'), pmv_cooling_setpoint=-0.2,
+                                  adaptive_coefficient_by='pmv_sign', verbose=False)
+    with pytest.raises(ValueError, match=r"pmv_heating_setpoint must be <= 0 with adaptive_coefficient_by='pmv_sign' "
+                                         r"\(zone 'Block1:Zone2'\), not 0.1"):
+        apmv.apply_apmv_setpoints(_model(tmp_path / 'heating'), pmv_heating_setpoint={'Block1:Zone2': 0.1},
+                                  adaptive_coefficient_by='pmv_sign', verbose=False)
+    with pytest.raises(ValueError, match="default_pmv_heating_setpoint must be <= 0"):
+        apmv.apply_apmv_setpoints(_model(tmp_path / 'default'), default_pmv_heating_setpoint=0.2,
+                                  adaptive_coefficient_by='pmv_sign', verbose=False)
+    # By the season, the setpoints can have any sign, as before
+    building = _model(tmp_path / 'season')
+    apmv.apply_apmv_setpoints(building, pmv_cooling_setpoint=-0.2, pmv_heating_setpoint=-0.6, verbose=False)
+    assert 'apply_aPMV_Block1_Zone1' in _programs(building)
+
+
 def _erl(building):
     """The EMS programs of a model, compiled by the Erl interpreter, and those run at the beginning of each timestep,
     in their order."""

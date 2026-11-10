@@ -106,6 +106,13 @@ Lo que ya está en otros documentos no se repite aquí:
   primer día), y sin él lee el RMOT de EnergyPlus con un aviso; sus consignas estáticas son los argumentos
   `static_heating_setpoint` y `static_cooling_setpoint` (20 y 28 °C), entradas `StaticAHST` y `StaticACST` de sus zonas
   (sección 26).
+- **G5 (revisión v04).** Saneamiento: `adaptive_coefficients=<clave>` da los dos λ de una entrada del catálogo y una
+  clave con el número por defecto en el otro lado avisa; con `'pmv_sign'` se comprueban los signos de las consignas;
+  el suelo y el techo acotan también las consignas sin tolerancia y son exactos tras el redondeo, con aviso si cruzan
+  los límites de aplicabilidad; un formateador único de los números de los programas; el YAML de Qatar completo (102)
+  carga; las categorías en orden numérico y aviso por los signos de los offsets; `fwg_add_uhi=False` con pyfwg, aviso
+  con `fwg_options_ensemble=0` y limpieza tras un `ValueError`; `run_ep(processes=0)` en el proceso actual; pruebas
+  que se saltan sin besos (sección 27).
 - Las categorías del PMV y la aproximación de la corrección del metabolismo se han comprobado en ISO 7730:2025 y
   EN 16798-1:2019, y el modelo dinámico de vestimenta de A5, en Schiavon y Lee (2013) y ASHRAE 55-2020 (sección 6).
 - Lo que quedaba abierto se ha comprobado: el golden master y las pruebas de EnergyPlus 26.1 y 26.2, también la de A5
@@ -1635,3 +1642,60 @@ abril y del 1 de julio y las horas 2 a 24 (y todas las horas de los días 21 a 3
   él; las consignas estáticas; `AddAccis`, `modify_accis`, `add_accis_to_idf` y el paramétrico; con EnergyPlus 25.1,
   desde el 8 de enero con el archivo, la comprobación 4 sin discrepancias, y los dos backends con resultados idénticos),
   `tests/core/test_comfort_standard_code.py` y `tests/core/test_gui.py`.
+
+## 27. Saneamiento de la revisión v04 (G5)
+
+La tarea G5 de la revisión v04 (§3.2 a §3.5 y §7) reúne los hallazgos menores y las decisiones provisionales que el
+autor cambió (veredictos 3, 13, 26 y 28).
+
+**Coeficientes del aPMV (A3-1, A3-2, veredicto 3).** `apply_apmv_setpoints(adaptive_coefficients=<clave>)` da los dos
+coeficientes de una entrada del catálogo (`pmv_index.both_adaptive_coefficients`), con `ValueError` si los argumentos
+de cada lado no tienen sus valores por defecto, la clave no existe o a la entrada le falta un lado. Una clave en un lado
+con el número por defecto en el otro (0,293 o −0,293, sin fuente; `APMV_DEFAULT_COEFFICIENTS`) avisa. Con
+`adaptive_coefficient_by='pmv_sign'`, las consignas de refrigeración deben ser ≥ 0 y las de calefacción ≤ 0, también las
+de los diccionarios por zona y las de por defecto (`check_pmv_sign_setpoints`, antes de tocar el modelo).
+
+**Suelo y techo (B5-1, B5-2, B5-3, veredicto 13).** `ApplySetpointLimits_<zona>` corre ahora justo después de
+`SetASTnoTol`: acota `AHST` y `ACST` (las consignas con tolerancia de los termostatos), redondea de nuevo, fija las
+consignas redondeadas al suelo o al techo cuando los alcanzan (el redondeo estricto daba 25,9999 °C con un techo de 26 °C
+y 19,11 °C con un suelo de 19,1 °C y precisión 100) y acota también `AHSTnoTol` y `ACSTnoTol`, los límites de la banda
+de confort de los contadores (antes la de calefacción quedaba en el suelo menos la tolerancia). Un modelo con el programa
+tras `SetAST` (versiones previas de la 1.2.0) lo mueve al reescribir los límites. `AddAccis` y `modify_accis` avisan si
+el suelo supera `ACSTaul` o el techo baja de `AHSTall` de la norma de la zona (`warn_crossed_setpoint_limits`, con el
+intérprete de Erl sobre `SetInputData_<zona>` y `SetAppLimits`; la lectura literal del veredicto queda en
+`notes/questions.md`). La comprobación 5 de `verify_accim_simulation` mira también las consignas sin tolerancia
+(`Check5_AHSTfloor_noTol`, `Check5_ACSTceil_noTol`); `compute_setpoints`, `print_setpoint_ems_code` y
+`get_setpoint_ems_programs` siguen el nuevo orden. El docstring y la sección 4.2.3 dicen que la consigna de ventilación
+sólo sigue al suelo y al techo donde sale de las consignas redondeadas (dentro de los límites suele ser la temperatura
+de confort más el offset).
+
+**Métrica exterior (B1-2 y §3.4).** Un EPW sin algún mes da `ValueError` (sus medias mensuales serían `nan`, que Erl
+tomaría por una variable). Un único formateador de los números de los programas, `accim.sim.ems.erl.format_number`
+(posicional, sin exponente), en `custom_regimes`, `standard_lines`, `outdoor_metric` (con `.0`, como `repr`),
+`setpoint_limits` y `ems_code`; los IDF no cambian (golden master). La prueba con EnergyPlus compara además
+`rmot_alpha`, `te_ref_nl`, `rmot_7day` y `ndrm` con sus ecuaciones calculadas con pandas desde el EPW (1e-9 °C).
+
+**Normas definidas por sus datos (B3-1 a B3-3, veredictos 26 y 28).** `qat_indraganti2018_hvac.yaml` (102) tiene los
+datos de v04 §6.3 (elecciones del autor anotadas en su evidencia) y carga, como la carpeta de ejemplos; el cuaderno
+How-to lo lee (ejecutado y exportado de nuevo). El código EMS lista las categorías en orden numérico (las de 101 quedan
+como las de la 23). Un offset de refrigeración < 0 o de calefacción > 0 avisa. La documentación dice que el modo 2 no
+está definido para categorías distintas de 80 y 90. La discrepancia entre 25,5 °C y la Tabla B.2 (26 °C en la categoría
+II de oficinas) queda en `notes/questions.md`.
+
+**Archivos climáticos futuros (E4-1 a E4-3).** Con pyfwg, `morph_epws` da `fwg_add_uhi=False` salvo que
+`pyfwg_arguments` lo dé (pyfwg añade la isla de calor por defecto con las versiones 3 y 4 de la herramienta, y Java no);
+`fwg_options_ensemble=0` avisa con los dos motores (todos los EPW de los modelos se renombran igual); un `ValueError` de
+pyfwg borra las carpetas del proceso como los demás errores.
+
+**Infraestructura y documentación (§3.4, §3.5).** `run_simulations(processes=0)` y `run_ep(processes=0)` ejecutan en el
+proceso actual (con el backend EMS, `_run_idfs_in_this_process` con `prepare_run` de eppy; antes 0 eran todos los
+procesadores); un número negativo es `ValueError` en `run_simulations`. Las cuatro pruebas de `tests/core` que importan
+besos lo piden con `pytest.importorskip` (las demás, en `TODO.md`). Documentación: `activity_level` no es parámetro con
+la corrección metabólica del ePMV, las sumas de bloque y de edificio de `Table` de magnitudes no aditivas no tienen
+sentido físico, el `BANNER` toma la versión de `__version__` (lista de la publicación) y el comentario de
+`_pmv_index_mismatches` sobre la dependencia del texto de `monitor_ePMV_<zona>`.
+
+- Pruebas: `test_setpoint_limits.py` (líneas, redondeo exacto en Erl, consignas sin tolerancia con
+  `compute_setpoints`, el movimiento de la línea, los avisos, EnergyPlus 25.1 y los dos backends), `test_comfort_hooks.py`,
+  `test_apmv_coefficients.py`, `test_energyplus_api.py`, `test_outdoor_metric.py`, `test_comfort_standard_registry.py`,
+  `test_morphing.py`, `test_gui.py`, `test_jpn_aqilah2025.py`.

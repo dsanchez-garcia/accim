@@ -43,6 +43,7 @@ from accim.utils.people import get_people_objects
 
 __all__ = [
     'ADAPTIVE_COEFFICIENT_BY',
+    'APMV_DEFAULT_COEFFICIENTS',
     'IndexParameter',
     'METABOLIC_CORRECTION_OUTPUTS',
     'PMV_INDICES',
@@ -50,6 +51,8 @@ __all__ = [
     'PmvIndex',
     'apply_pmv_index_setpoints',
     'arguments_table',
+    'both_adaptive_coefficients',
+    'check_pmv_sign_setpoints',
     'get_adaptive_coefficients',
     'get_pmv_index',
     'metabolic_correction_names',
@@ -169,6 +172,9 @@ class PmvIndex:
 #: (``'pmv_sign'``, the λ of warm sensations, PMV >= 0, and that of cool sensations, PMV < 0, as Yao et al., 2009, and
 #: GB/T 50785-2012 define them)
 ADAPTIVE_COEFFICIENT_BY = ('season', 'pmv_sign')
+#: The adaptive coefficients λ of the aPMV by default (cooling and heating), which have no source of their own: a key
+#: of the catalogue on one side only leaves the other side with them, with a warning (verdict #3 of the review of 1.2.0)
+APMV_DEFAULT_COEFFICIENTS = {'adaptive_coefficient_cooling': 0.293, 'adaptive_coefficient_heating': -0.293}
 
 
 def _by_pmv_sign(options: Mapping[str, Any]) -> bool:
@@ -245,12 +251,21 @@ def resolve_adaptive_coefficients(values: Mapping[str, Any]) -> Dict[str, Any]:
     """The values of the arguments of the aPMV with the keys of :data:`accim.constants.APMV_ADAPTIVE_COEFFICIENTS`
     replaced by their coefficients: those of ``adaptive_coefficient_cooling`` and
     ``default_adaptive_coefficient_cooling`` by the λ of warm sensations, and those of the heating arguments by that of
-    cool sensations. A key of the grade 'literature' warns.
+    cool sensations. A key of the grade 'literature' warns, and so does a key on one side when the other side has its
+    numeric default (0.293 or −0.293, which has no source: the catalogue is made of pairs, verdict #3 of the review of
+    1.2.0; ``adaptive_coefficients`` of :func:`accim.sim.apmv.apply_apmv_setpoints` sets both sides).
 
     :param values: The arguments (numbers, dictionaries {zone: number or key} or keys); the others are kept.
     :raises ValueError: If a key is not in the catalogue, or its entry has no coefficient of that side.
     """
     resolved = dict(values)
+    for side, other in (('adaptive_coefficient_cooling', 'adaptive_coefficient_heating'),
+                        ('adaptive_coefficient_heating', 'adaptive_coefficient_cooling')):
+        if (side in resolved and other in resolved and _has_key(resolved[side])
+                and _is_default_coefficient(resolved[other], other)):
+            warnings.warn(f'{side} is a key of the catalogue of the adaptive coefficients, and {other} is its default, '
+                          f'{APMV_DEFAULT_COEFFICIENTS[other]}, which has no source: give the key to '
+                          f'adaptive_coefficients to use both coefficients of its entry, or give {other} too.')
     warned: set = set()
     for name, side in (('adaptive_coefficient_cooling', 'cooling'), ('adaptive_coefficient_heating', 'heating'),
                        ('default_adaptive_coefficient_cooling', 'cooling'),
@@ -258,6 +273,63 @@ def resolve_adaptive_coefficients(values: Mapping[str, Any]) -> Dict[str, Any]:
         if name in resolved:
             resolved[name] = _adaptive_coefficient(resolved[name], side, name, warned)
     return resolved
+
+
+def _has_key(value: Any) -> bool:
+    """True if the value of an adaptive coefficient is a key of the catalogue, or a dictionary with one."""
+    if isinstance(value, Mapping):
+        return any(isinstance(item, str) for item in value.values())
+    return isinstance(value, str)
+
+
+def _is_default_coefficient(value: Any, name: str) -> bool:
+    return (isinstance(value, numbers.Real) and not isinstance(value, bool)
+            and float(value) == APMV_DEFAULT_COEFFICIENTS[name])
+
+
+def both_adaptive_coefficients(key: str, cooling: Any = None, heating: Any = None) -> Tuple[str, str]:
+    """The adaptive coefficients of both sides of a key of :data:`accim.constants.APMV_ADAPTIVE_COEFFICIENTS` (the
+    argument ``adaptive_coefficients`` of :func:`accim.sim.apmv.apply_apmv_setpoints`), as the keys of each side.
+
+    :param key: The key, whose entry must have both coefficients.
+    :param cooling: The value of ``adaptive_coefficient_cooling``, which must be its default (0.293), or None.
+    :param heating: The value of ``adaptive_coefficient_heating``, which must be its default (−0.293), or None.
+    :raises ValueError: If the key is not in the catalogue or has no coefficient of a side, or the coefficients of the
+        sides are given too (other numbers, keys or dictionaries).
+    """
+    if not isinstance(key, str):
+        raise ValueError(f'adaptive_coefficients must be a key of accim.constants.APMV_ADAPTIVE_COEFFICIENTS, not '
+                         f'{key!r}.')
+    for name, value in (('adaptive_coefficient_cooling', cooling), ('adaptive_coefficient_heating', heating)):
+        if value is not None and not _is_default_coefficient(value, name):
+            raise ValueError(f'adaptive_coefficients ({key!r}) sets both coefficients: {name} cannot be given too '
+                             f'({value!r}).')
+    entry = get_adaptive_coefficients(key)
+    missing = [side for side in ('cooling', 'heating') if entry[side] is None]
+    if missing:
+        raise ValueError(f'adaptive_coefficients: the adaptive coefficients {key!r} have no {missing[0]} coefficient '
+                         f'({entry["source"]}); give the coefficient of that side as a number.')
+    return key, key
+
+
+def check_pmv_sign_setpoints(setpoints: Mapping[str, Any]) -> None:
+    """Check the signs of the setpoints of the aPMV with ``adaptive_coefficient_by='pmv_sign'`` (finding A3-2 of the
+    review of 1.2.0, verdict #4): the cooling setpoint is on the warm side of the scale (≥ 0), converted with the λ of
+    warm sensations, and the heating setpoint on the cool side (≤ 0), with that of cool sensations.
+
+    :param setpoints: The setpoints by argument (``pmv_cooling_setpoint``, ``default_pmv_cooling_setpoint``,
+        ``pmv_heating_setpoint``, ``default_pmv_heating_setpoint``): numbers or dictionaries {zone: number}.
+    :raises ValueError: If a cooling setpoint is negative or a heating setpoint positive.
+    """
+    for name, value in setpoints.items():
+        cooling = 'cooling' in name
+        for zone, number in (value.items() if isinstance(value, Mapping) else [(None, value)]):
+            if isinstance(number, numbers.Real) and (number < 0 if cooling else number > 0):
+                where = f' (zone {zone!r})' if zone is not None else ''
+                raise ValueError(f"{name} must be {'>= 0' if cooling else '<= 0'} with adaptive_coefficient_by="
+                                 f"'pmv_sign'{where}, not {number}: it is converted into the PMV setpoint of the "
+                                 f"thermostat with the adaptive coefficient of the "
+                                 f"{'warm' if cooling else 'cool'} sensations.")
 
 
 # ------------------------------------------------------------------------------------------------------------------
@@ -453,8 +525,10 @@ PMV_INDICES: Dict[str, PmvIndex] = {
         name='aPMV',
         description='adaptive predicted mean vote (Yao et al., 2009): aPMV = PMV/(1 + lambda*PMV)',
         parameters=(
-            IndexParameter('adaptive_coefficient_cooling', 'adap_coeff_cooling', 0.293, 0.4),
-            IndexParameter('adaptive_coefficient_heating', 'adap_coeff_heating', -0.293, -0.4),
+            IndexParameter('adaptive_coefficient_cooling', 'adap_coeff_cooling',
+                           APMV_DEFAULT_COEFFICIENTS['adaptive_coefficient_cooling'], 0.4),
+            IndexParameter('adaptive_coefficient_heating', 'adap_coeff_heating',
+                           APMV_DEFAULT_COEFFICIENTS['adaptive_coefficient_heating'], -0.4),
         ),
         coefficient='adap_coeff',
         coefficient_output='Adaptive Coefficient',
@@ -631,10 +705,18 @@ def apply_pmv_index_setpoints(
         ``pmv_cooling_setpoint`` (and the other ``default_*`` arguments, for the other arguments).
     :param verbose: If True, prints the objects that are added. The warnings are always issued.
     :return: The modified IDF object.
-    :raises ValueError: If the index or its parameters are not valid, or the model has the setpoints of another index.
+    :raises ValueError: If the index or its parameters are not valid, the model has the setpoints of another index, or,
+        with the aPMV and ``adaptive_coefficient_by='pmv_sign'``, a cooling setpoint is negative or a heating setpoint
+        positive (:func:`check_pmv_sign_setpoints`).
     """
     pmv_index = get_pmv_index(index)
     values, options = _index_values(pmv_index, index_parameters)
+    if pmv_index.key == 'apmv' and _by_pmv_sign(options):
+        # Each setpoint is converted with the coefficient of its side of the scale (verdict #4 of the review of 1.2.0)
+        check_pmv_sign_setpoints({'pmv_cooling_setpoint': pmv_cooling_setpoint,
+                                  'default_pmv_cooling_setpoint': default_pmv_cooling_setpoint,
+                                  'pmv_heating_setpoint': pmv_heating_setpoint,
+                                  'default_pmv_heating_setpoint': default_pmv_heating_setpoint})
 
     # --- 1. RESOLVE TARGETS ---
     # The zones that the EMS controls, from the People objects of the model (and its People:Instance objects, in

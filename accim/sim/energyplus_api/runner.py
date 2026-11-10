@@ -199,11 +199,20 @@ def run_simulations(
     """Run simulations with the Python API of EnergyPlus, each one in its own process.
 
     :param jobs: (IDF, EPW) or (IDF, EPW, arguments of :func:`run_simulation`) of each simulation.
-    :param processes: The number of simulations that run at the same time.
+    :param processes: The number of simulations that run at the same time, each one in a new process; 0 runs them one
+        after the other in the current process, without multiprocessing (for the environments that do not allow its
+        pipes, for instance). In the current process, all the models must be of the same EnergyPlus version (a process
+        loads the library of the API of one version, and eppy the IDD of one version), and the library of the API
+        stays loaded: the hooks with a method ``prepare()`` (:func:`prepare_hooks`, such as the hook of the SET with
+        ``method='bisection'``) must get it called before any library of the API is loaded in the process.
     :param kwargs: Arguments of :func:`run_simulation` for all the simulations (the hooks must be functions
         defined at the top level of a module, so that they can be sent to the processes).
     :return: The results, in the order of the jobs. The simulations that fail have an ``error``.
+    :raises ValueError: If ``processes`` is negative.
     """
+    if isinstance(processes, bool) or not isinstance(processes, int) or processes < 0:
+        raise ValueError(f'processes must be an integer: the number of simulations that run at the same time, or 0 to '
+                         f'run them in the current process, not {processes!r}.')
     prepared = []
     for job in jobs:
         idf, epw = str(job[0]), (None if job[1] is None else str(job[1]))
@@ -213,14 +222,17 @@ def run_simulations(
         prepared.append((idf, epw, arguments))
     if not prepared:
         return []
-    context = multiprocessing.get_context('spawn')
-    try:
-        # A new process for each simulation, since a process can only load the API of one EnergyPlus version
-        executor = ProcessPoolExecutor(max_workers=processes, mp_context=context, max_tasks_per_child=1)
-    except TypeError:  # Python 3.10 and earlier
-        executor = ProcessPoolExecutor(max_workers=processes, mp_context=context)
-    with executor:
-        results = list(executor.map(_run_job, prepared))
+    if processes == 0:
+        results = [_run_job(job) for job in prepared]
+    else:
+        context = multiprocessing.get_context('spawn')
+        try:
+            # A new process for each simulation, since a process can only load the API of one EnergyPlus version
+            executor = ProcessPoolExecutor(max_workers=processes, mp_context=context, max_tasks_per_child=1)
+        except TypeError:  # Python 3.10 and earlier
+            executor = ProcessPoolExecutor(max_workers=processes, mp_context=context)
+        with executor:
+            results = list(executor.map(_run_job, prepared))
     failed = [r for r in results if not r.success]
     if failed:
         warnings.warn(f'{len(failed)} of {len(results)} simulations failed: '

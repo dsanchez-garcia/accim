@@ -39,7 +39,7 @@ of the regime of the timestep, from 1, or 0 when the inputs of SetInputData_<zon
 import re
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
-import numpy as np
+from accim.sim.ems.erl import format_number
 
 from accim.sim.arguments import CustomRegime, check_custom_regimes
 
@@ -96,7 +96,7 @@ _ASSIGNMENT = re.compile(r'^set\s+(\S+)\s*=\s*(\S+)$', re.IGNORECASE)
 
 def _number(value: float) -> str:
     """A number as Erl reads it: without exponent, and without decimals if it is an integer."""
-    return np.format_float_positional(float(value), trim='-')
+    return format_number(value)
 
 
 def _value(text: str) -> float:

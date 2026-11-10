@@ -118,7 +118,10 @@ def verify_accim_simulation(
     The heating setpoint of each zone with a floor (``heating_setpoint_floor``, the input ``AHSTfloor`` of its program
     ``SetInputData_<zone>``, see :mod:`accim.sim.ems.setpoint_limits`) is not below it (``Check5_AHSTfloor``), and the
     cooling setpoint of each zone with a ceiling (``cooling_setpoint_ceiling``, ``ACSTceil``) is not above it
-    (``Check5_ACSTceil``), in the outputs at timestep frequency, or else hourly.
+    (``Check5_ACSTceil``), in the outputs at timestep frequency, or else hourly. The setpoints without the tolerance
+    (the outputs ``..._No Tolerance``, the limits of the comfort band of the hour counters) are checked too
+    (``Check5_AHSTfloor_noTol`` and ``Check5_ACSTceil_noTol``): since finding B5-1 of the review of accim 1.2.0, the
+    floor and the ceiling bound them as well.
 
     **Check 6 – The long-term discomfort (per zone and building, output IDFs of AddAccis with**
     ``report_long_term_discomfort=True`` **, see** :mod:`accim.sim.ems.long_term_discomfort` **):**
@@ -1044,7 +1047,10 @@ def _pmv_index_mismatches(building, frame: Optional[pd.DataFrame], tolerance: fl
                 check(found, pmv / (1 + coefficient * pmv), suffix, 'Check3_aPMV', 'aPMV = PMV/(1 + lambda*PMV)')
             elif pmv_index.key == 'epmv':
                 # Fanger and Toftum (2002): on the warm side of the scale, unless the monitor of the zone applies the
-                # expectancy factor to every PMV (apply_to_heating)
+                # expectancy factor to every PMV (apply_to_heating). The argument is not stored in the model: it is
+                # read from the lines of the program monitor_ePMV_<zone> of accim.sim.pmv_index, which has an 'if'
+                # (e*PMV if PMV > 0) without apply_to_heating and none with it, so this check depends on those lines
+                # (finding E2 of section 3.5 of the review of accim 1.2.0)
                 monitor = programs.get(f'MONITOR_{name}_{suffix}'.upper())
                 both_sides = monitor is not None and not any(
                     line.lower().startswith('if') for line in _program_lines(monitor))
@@ -1305,8 +1311,8 @@ def _setpoint_limit_mismatches(building, data: Mapping[str, pd.DataFrame],
                                tolerance: float) -> Tuple[List[dict], List[str]]:
     """Check 5 of :func:`verify_accim_simulation`: the heating setpoint of each zone with a floor (``AHSTfloor`` in
     its program SetInputData_<zone>, :mod:`accim.sim.ems.setpoint_limits`) is not below it, and the cooling setpoint
-    of each zone with a ceiling (``ACSTceil``) is not above it, in the outputs of the setpoints of the zone at timestep
-    frequency, or else hourly (whose means keep the limits too).
+    of each zone with a ceiling (``ACSTceil``) is not above it, with and without the tolerance, in the outputs of the
+    setpoints of the zone at timestep frequency, or else hourly (whose means keep the limits too).
 
     :return: The mismatches, and the lines of the summary (none if no zone has a floor or a ceiling).
     """
@@ -1316,15 +1322,19 @@ def _setpoint_limit_mismatches(building, data: Mapping[str, pd.DataFrame],
               if any(value is not None for value in values.values())}
     if not limits:
         return [], []
-    outputs_of_limits = {'AHSTfloor': ('Adaptive Heating Setpoint Temperature', np.maximum, 'floor'),
-                         'ACSTceil': ('Adaptive Cooling Setpoint Temperature', np.minimum, 'ceiling')}
+    outputs_of_limits = {
+        'AHSTfloor': ('AHSTfloor', 'Adaptive Heating Setpoint Temperature', np.maximum, 'floor'),
+        'AHSTfloor_noTol': ('AHSTfloor', 'Adaptive Heating Setpoint Temperature_No Tolerance', np.maximum, 'floor'),
+        'ACSTceil': ('ACSTceil', 'Adaptive Cooling Setpoint Temperature', np.minimum, 'ceiling'),
+        'ACSTceil_noTol': ('ACSTceil', 'Adaptive Cooling Setpoint Temperature_No Tolerance', np.minimum, 'ceiling'),
+    }
     chosen = None
     for frequency in ('Timestep', 'Hourly'):
         frame = data.get(frequency)
         if frame is not None and not frame.empty:
             outputs = _Outputs(frame)
             if any(outputs.get('EMS', f'{output}_{zone}') is not None
-                   for zone in limits for output, _, _ in outputs_of_limits.values()):
+                   for zone in limits for _, output, _, _ in outputs_of_limits.values()):
                 chosen = frequency, outputs
                 break
     if chosen is None:
@@ -1334,13 +1344,13 @@ def _setpoint_limit_mismatches(building, data: Mapping[str, pd.DataFrame],
     mismatches: List[dict] = []
     lines = [f'  {frequency} outputs']
     for zone, values in limits.items():
-        for variable, (output, bound, side) in outputs_of_limits.items():
+        for check, (variable, output, bound, side) in outputs_of_limits.items():
             limit = values[variable]
             found = outputs.get('EMS', f'{output}_{zone}')
             if limit is None or found is None:
                 continue
             new_rows, line = _mismatch_rows(outputs.timestamps, found, bound(found, float(limit)), zone,
-                                            f'Check5_{variable}', f'{output}_{zone} within the {side} {limit}',
+                                            f'Check5_{check}', f'{output}_{zone} within the {side} {limit}',
                                             tolerance)
             mismatches.extend(new_rows)
             lines.append(line)

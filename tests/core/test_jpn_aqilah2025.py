@@ -246,6 +246,7 @@ def test_its_static_setpoints_are_arguments(comfort_mode):
 
 
 def test_the_valid_combinations_of_the_parametric_module():
+    pytest.importorskip('besos')
     from accim.parametric_and_optimisation.funcs_for_besos import param_accis
 
     assert param_accis.get_valid_param_combinations()[23] == [[80, 90], [0, 1, 2, 3]]
@@ -512,13 +513,16 @@ def test_the_parameters_of_its_static_setpoints(tmp_path, monkeypatch):
 @needs_idd
 @pytest.mark.skipif(LEGACY_IDF is None, reason='needs the output IDF of accim 0.x of the repository')
 def test_the_models_of_earlier_versions_do_not_have_it(tmp_path):
-    from accim.parametric_and_optimisation.funcs_for_besos import param_accis
     from accim.sim.accis import load_idf, modify_accis
 
     shutil.copy(LEGACY_IDF, tmp_path / 'legacy.idf')
     building = load_idf(tmp_path / 'legacy.idf')
     with pytest.raises(ValueError, match='which does not have the EMS code of the comfort standard 23'):
         modify_accis(building, comfort_standard=23, category=80, comfort_mode=3)
+    # The parametric module (it needs besos)
+    pytest.importorskip('besos')
+    from accim.parametric_and_optimisation.funcs_for_besos import param_accis
+
     with pytest.raises(ValueError, match='which does not have the EMS code of the comfort standard 23'):
         param_accis.modify_ComfStand(building, 23)
 

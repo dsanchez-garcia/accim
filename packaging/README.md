@@ -96,7 +96,9 @@ Los otros `.bat` de la raíz no intervienen: `dist_build_docs.bat` compila la do
 
 1. Cambia `__version__` en `accim/__init__.py` y el número que comprueba `test_version`, en
    `tests/core/test_deprecation.py`, si no lo están ya (la 1.1.0 se puso en `master` antes de
-   publicarla, el 08/11/2026).
+   publicarla, el 08/11/2026). La cabecera que imprime `AddAccis` (`BANNER`, en
+   `accim/sim/accis.py`) toma el número de `__version__`: hasta este paso dice el de la versión
+   anterior (la revisión de la 1.2.0, v04 §3.5, lo vio con `v1.1.0`).
 2. En `CHANGELOG.md`, convierte lo que hay bajo `## [Unreleased]` en `## [X.Y.Z] - AAAA-MM-DD`,
    deja encima un `## [Unreleased]` vacío y actualiza los enlaces del final:
 

@@ -23,7 +23,7 @@ import pytest
 from accim.constants import EN16798_TABLE_B2
 from accim.energyplus import default_energyplus_folder, find_energyplus
 from accim.sim.ems import setpoint_limits as sl
-from accim.sim.ems.erl import ErlProgramSet
+from accim.sim.ems.erl import ErlProgramSet, variables_in_programs
 from accim.sim.ems.setpoint_lines import ROUNDING
 from accim.sim.preview import compute_setpoints
 from accim.utils import get_setpoint_ems_code, get_setpoint_ems_programs
@@ -86,10 +86,47 @@ def test_the_names_of_the_hours_below():
 def test_the_lines_of_the_program_of_the_limits():
     floor = ['if AHST < AHSTfloor', 'set AHST = AHSTfloor', 'endif']
     ceiling = ['if ACST > ACSTceil', 'set ACST = ACSTceil', 'endif']
+    # The floor and the ceiling are the rounded setpoints when they bound them (finding B5-2 of the review of 1.2.0)
+    exact_floor = ['if AHST <= AHSTfloor', 'set roundedAHST = AHSTfloor', 'endif']
+    exact = ['if ACST >= ACSTceil', 'set roundedACST = ACSTceil', 'endif']
+    # The setpoints without the tolerance are bounded too (finding B5-1)
+    floor_no_tolerance = ['if AHSTnoTol < AHSTfloor', 'set AHSTnoTol = AHSTfloor', 'endif']
+    ceiling_no_tolerance = ['if ACSTnoTol > ACSTceil', 'set ACSTnoTol = ACSTceil', 'endif']
     # The bounds, and the rounding of the subprograms of SetAST again
-    assert sl.limit_program_lines(True, False) == floor + list(ROUNDING)
-    assert sl.limit_program_lines(False, True) == ceiling + list(ROUNDING)
-    assert sl.limit_program_lines(True, True) == floor + ceiling + list(ROUNDING)
+    assert sl.limit_program_lines(True, False) == floor + list(ROUNDING) + exact_floor + floor_no_tolerance
+    assert sl.limit_program_lines(False, True) == ceiling + list(ROUNDING) + exact + ceiling_no_tolerance
+    assert sl.limit_program_lines(True, True) == (floor + ceiling + list(ROUNDING) + exact_floor + exact
+                                                  + floor_no_tolerance + ceiling_no_tolerance)
+
+
+def test_the_floor_and_ceiling_are_the_rounded_setpoints_that_they_bound():
+    # Finding B5-2 of the review of 1.2.0: the strict rounding gives one step below the ceiling (25.9999 with 26 and
+    # the default accuracy) and one step above a floor whose product by the accuracy is not exact (19.1 * 100 is
+    # 1910.0000000000002), but the program sets the rounded setpoints to the floor and the ceiling
+    programs = {'Rounding': list(ROUNDING), 'Limits': sl.limit_program_lines(True, True)}
+    erl = ErlProgramSet(programs, global_variables=set().union(*variables_in_programs(programs).values()))
+    for accuracy, floor, ceiling in ((10000, 20, 26), (100, 19.1, 26.1), (10, 18.6, 25.3)):
+        for name, value in dict(AHST=floor - 1, ACST=ceiling + 1, AHSTfloor=floor, ACSTceil=ceiling,
+                                SetpointAcc=accuracy, AHSTnoTol=floor - 1.1, ACSTnoTol=ceiling + 1.1).items():
+            erl.set(name, value)
+        erl.run('Limits')
+        assert (erl.get('roundedAHST'), erl.get('roundedACST')) == (floor, ceiling)
+        assert (erl.get('AHSTnoTol'), erl.get('ACSTnoTol')) == (floor, ceiling)
+        # As the rounding alone would give them
+        erl.set('AHST', floor)
+        erl.set('ACST', ceiling)
+        erl.run('Rounding')
+        if accuracy == 10000:
+            assert erl.get('roundedACST') == pytest.approx(25.9999, rel=0, abs=1e-12)
+        if (accuracy, floor) == (100, 19.1):
+            assert erl.get('roundedAHST') == pytest.approx(19.11, rel=0, abs=1e-12)
+    # The setpoints that the floor and the ceiling do not bound are rounded as before
+    for name, value in dict(AHST=21.234, ACST=24.567, AHSTfloor=20, ACSTceil=26, SetpointAcc=100, AHSTnoTol=21.134,
+                            ACSTnoTol=24.667).items():
+        erl.set(name, value)
+    erl.run('Limits')
+    assert (erl.get('roundedAHST'), erl.get('roundedACST')) == pytest.approx((21.24, 24.56), rel=0, abs=1e-12)
+    assert (erl.get('AHSTnoTol'), erl.get('ACSTnoTol')) == (21.134, 24.667)
 
 
 def test_the_hours_below_in_the_erl_interpreter():
@@ -123,6 +160,7 @@ def _rounded_down(values, accuracy):
     (0, None, None, None, 24.5),  # ESP CTE, static setpoints, the ceiling only
 ])
 def test_the_setpoints_are_bounded_before_their_rounding(comfort_standard, category, comfort_mode, floor, ceiling):
+    # The ceiling is the cooling setpoint that it bounds, not one step of the accuracy below it (finding B5-2)
     # Without tolerance, the setpoints without the tolerance are those that SetAST calculates, before their rounding
     arguments = dict(frequency='timestep', start_date='01/07', setpoint_tolerance=0, setpoint_accuracy=10)
     reference = compute_setpoints(EPW, comfort_standard, category, comfort_mode, **arguments)
@@ -141,13 +179,55 @@ def test_the_setpoints_are_bounded_before_their_rounding(comfort_standard, categ
     # The setpoints of the zone are those of bounding AHST and ACST before their rounding (as at the end of SetAST)
     assert np.array_equal(bounded['AHSTnoTol'], heating) and np.array_equal(bounded['ACSTnoTol'], cooling)
     assert np.array_equal(bounded['AHST'], _rounded_up(heating, 10))
-    assert np.array_equal(bounded['ACST'], _rounded_down(cooling, 10))
+    if ceiling is None:
+        assert np.array_equal(bounded['ACST'], _rounded_down(cooling, 10))
+    else:
+        assert np.array_equal(bounded['ACST'], np.where(cooling >= ceiling, ceiling, _rounded_down(cooling, 10)))
     if floor is not None:
         assert bounded['AHST'].min() == floor
     if ceiling is not None:
-        # The cooling setpoint is rounded down, below the ceiling
-        assert bounded['ACST'].max() == pytest.approx(ceiling - 0.1, rel=0, abs=1e-12)
+        assert bounded['ACST'].max() == ceiling
     # The other values do not change
+    others = [column for column in reference.columns if column not in ('AHST', 'ACST', 'AHSTnoTol', 'ACSTnoTol')]
+    pd.testing.assert_frame_equal(bounded[others], reference[others])
+
+
+def _limit_near(values, quantile):
+    """A multiple of 0.1 near a quantile of some setpoints without the tolerance that none of them, with or without the
+    tolerance of 0.1 K, is equal to (so that whether the limit bounds them does not depend on rounding errors)."""
+    start = float(np.quantile(values, quantile).round(1))
+    for step in range(100):
+        for candidate in (round(start + 0.1 * step, 1), round(start - 0.1 * step, 1)):
+            if all(np.abs(values + shift - candidate).min() > 1e-6 for shift in (-0.1, 0, 0.1)):
+                return candidate
+    raise AssertionError('no limit found')
+
+
+@pytest.mark.parametrize('comfort_standard, category, comfort_mode', [(1, 2, 3), (2, 80, 2)])
+def test_the_floor_and_ceiling_bound_the_setpoints_without_the_tolerance(comfort_standard, category, comfort_mode):
+    # Finding B5-1 of the review of 1.2.0: with a tolerance of 0.1 K, the setpoints without the tolerance (the limits
+    # of the comfort band of the hour counters) are bounded by the floor and the ceiling themselves, not by the floor
+    # minus the tolerance (and the ceiling plus it); the thermostats get the bounded setpoints with the tolerance: the
+    # floor or the ceiling where they bound them
+    arguments = dict(frequency='timestep', start_date='01/07', setpoint_tolerance=0.1, setpoint_accuracy=10)
+    reference = compute_setpoints(EPW, comfort_standard, category, comfort_mode, **arguments)
+    heating, cooling = reference['AHSTnoTol'].to_numpy(), reference['ACSTnoTol'].to_numpy()
+    floor, ceiling = _limit_near(heating, 0.3), _limit_near(cooling, 0.7)
+    bounded = compute_setpoints(EPW, comfort_standard, category, comfort_mode, heating_setpoint_floor=floor,
+                                cooling_setpoint_ceiling=ceiling, **arguments)
+    np.testing.assert_array_equal(bounded['AHSTnoTol'], np.maximum(heating, floor))
+    np.testing.assert_array_equal(bounded['ACSTnoTol'], np.minimum(cooling, ceiling))
+    assert bounded['AHSTnoTol'].min() == floor and bounded['ACSTnoTol'].max() == ceiling
+    # Some setpoints without the tolerance were between the floor minus the tolerance and the floor (and between the
+    # ceiling and the ceiling plus the tolerance), which the floor and the ceiling did not bound before
+    near_floor = (heating > floor - 0.1) & (heating < floor)
+    near_ceiling = (cooling < ceiling + 0.1) & (cooling > ceiling)
+    assert near_floor.any() or near_ceiling.any()
+    # The setpoints of the thermostats, with the tolerance
+    np.testing.assert_array_equal(bounded['AHST'], np.where(heating + 0.1 < floor, floor, reference['AHST']))
+    np.testing.assert_array_equal(bounded['ACST'], np.where(cooling - 0.1 > ceiling, ceiling, reference['ACST']))
+    assert bounded['AHST'].min() == floor and bounded['ACST'].max() == ceiling
+    assert (bounded['AHST'] >= bounded['AHSTnoTol']).all() and (bounded['ACST'] <= bounded['ACSTnoTol']).all()
     others = [column for column in reference.columns if column not in ('AHST', 'ACST', 'AHSTnoTol', 'ACSTnoTol')]
     pd.testing.assert_frame_equal(bounded[others], reference[others])
 
@@ -158,11 +238,11 @@ def test_the_setpoint_ems_code_with_the_floor_and_ceiling():
     code = get_setpoint_ems_code(1, 2, 3, heating_setpoint_floor=20)
     assert 'set AHSTfloor = 20' in code and 'if AHST < AHSTfloor' in code
     assert 'set ACSTceil' not in code and 'if ACST > ACSTceil' not in code
-    assert '! --- ApplySetpointLimits_<zone>: after SetAST, the floor of the heating setpoint' in code
-    assert code.index('! --- ApplySetpointLimits_<zone>') < code.index('! --- SetASTnoTol')
+    assert '! --- ApplySetpointLimits_<zone>: after SetASTnoTol, the floor of the heating setpoint' in code
+    assert code.index('! --- SetASTnoTol') < code.index('! --- ApplySetpointLimits_<zone>')
     programs = get_setpoint_ems_programs(1, 2, 3, heating_setpoint_floor=20, cooling_setpoint_ceiling=26.5)
     names = list(programs)
-    assert names[names.index('ApplySetpointLimits_<zone>') + 1] == 'SetASTnoTol'
+    assert names[-2:] == ['SetASTnoTol', 'ApplySetpointLimits_<zone>']
     assert programs['ApplySetpointLimits_<zone>'] == sl.limit_program_lines(True, True)
     assert {'set AHSTfloor = 20', 'set ACSTceil = 26.5'} <= set(programs['SetInputData_<zone>'])
     with pytest.raises(ValueError, match='must be lower than'):
@@ -225,7 +305,7 @@ def test_add_accis_adds_the_floor_and_ceiling(tmp_path, monkeypatch):
             assert inputs[inputs.index(new[0]):inputs.index(new[0]) + 2] == new
             assert [line for line in inputs if line not in new] == programs_before[f'SetInputData_{zone}']
             run = programs[f'RunACCIS_{zone}']
-            assert run[run.index('run SetAST') + 1] == f'run ApplySetpointLimits_{zone}'
+            assert run[run.index('run SetASTnoTol') + 1] == f'run ApplySetpointLimits_{zone}'
             assert [line for line in run if line != f'run ApplySetpointLimits_{zone}'] == programs_before[
                 f'RunACCIS_{zone}']
         changed = {f'SetInputData_{zone}' for zone in ZONES} | {f'RunACCIS_{zone}' for zone in ZONES} | set(added)
@@ -331,7 +411,8 @@ def test_modify_accis_adds_and_keeps_the_floor_and_ceiling(tmp_path):
     with pytest.raises(ValueError, match=r"heating_setpoint_floor \(27\) must be lower than cooling_setpoint_ceiling "
                                          r"\(26.5\)"):
         modify_accis(idf, heating_setpoint_floor=27)
-    # The parametric module sets them in all the zones, as modify_accis does
+    # The parametric module sets them in all the zones, as modify_accis does (it needs besos)
+    pytest.importorskip('besos')
     from accim.parametric_and_optimisation.funcs_for_besos import param_accis
 
     other = model()
@@ -349,20 +430,96 @@ def test_modify_accis_adds_and_keeps_the_floor_and_ceiling(tmp_path):
         param_accis.modify_AHSTfloor(other, 27)
 
 
+def _accis_model(folder):
+    """The sample model with the ACCIS of this version (INT EN16798, category 3, comfort mode 3, by default)."""
+    from accim.sim.accis import add_accis_to_idf, load_idf
+
+    shutil.copy(SAMPLE_IDF, folder / 'model.idf')
+    idf = load_idf(folder / 'model.idf')
+    with warnings.catch_warnings():
+        warnings.simplefilter('ignore')
+        add_accis_to_idf(idf, script_type='vrf_mm', supply_air_temp_input_method='temperature difference',
+                         output_type='standard', output_frequencies=['hourly'], keep_existing_outputs=False,
+                         setpoint_type='temperature', verbose=False)
+    return idf
+
+
+@needs_idd
+def test_the_program_of_the_limits_runs_after_the_setpoints_without_the_tolerance(tmp_path):
+    from accim.sim.ems.programs import set_program_lines
+
+    idf = _accis_model(tmp_path)
+    sl.set_setpoint_limits_code(idf)
+    assert not sl.has_setpoint_limits(idf)
+    from accim.sim.accis import modify_accis
+
+    modify_accis(idf, heating_setpoint_floor=20, cooling_setpoint_ceiling=26)
+    for zone in ZONES:
+        run = _programs(idf)[f'RunACCIS_{zone}']
+        assert run[run.index('run SetASTnoTol') + 1] == f'run ApplySetpointLimits_{zone}'
+        # The models of accim 1.2.0 before its finding B5-1 ran it right after SetAST: it is moved
+        old = [line for line in run if line != f'run ApplySetpointLimits_{zone}']
+        old.insert(old.index('run SetAST') + 1, f'run ApplySetpointLimits_{zone}')
+        set_program_lines(idf.getobject('EnergyManagementSystem:Program', f'RunACCIS_{zone}'), old)
+    sl.set_setpoint_limits_code(idf)
+    for zone in ZONES:
+        run = _programs(idf)[f'RunACCIS_{zone}']
+        assert run.count(f'run ApplySetpointLimits_{zone}') == 1
+        assert run[run.index('run SetASTnoTol') + 1] == f'run ApplySetpointLimits_{zone}'
+
+
+@needs_idd
+def test_a_warning_if_the_floor_or_ceiling_crosses_the_applicability_limits(tmp_path):
+    # Verdict 13 of the review of 1.2.0: a warning if the floor is above ACSTaul or the ceiling below AHSTall (those of
+    # INT EN16798, comfort standard 1: 30 and 10 degC)
+    from accim.sim.accis import modify_accis
+
+    idf = _accis_model(tmp_path)
+    with warnings.catch_warnings():
+        warnings.simplefilter('error')
+        modify_accis(idf, comfort_standard=1, heating_setpoint_floor=20, cooling_setpoint_ceiling=26)
+        assert sl.warn_crossed_setpoint_limits(idf) == []
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter('always')
+        modify_accis(idf, heating_setpoint_floor=31, cooling_setpoint_ceiling=32)
+    assert [str(warning.message) for warning in caught] == [
+        f'The floor of the heating setpoint of the zone {zone} (31 °C) is above the upper applicability limit of the '
+        f'cooling setpoint of its comfort standard (ACSTaul, 30 °C): its heating setpoint can be above its cooling '
+        f'setpoint.' for zone in sorted(ZONES, reverse=True)]
+    with pytest.warns(UserWarning, match=r'The ceiling of the cooling setpoint of the zone Block1_Zone2 \(9.5 °C\) is '
+                                         r'below the lower applicability limit of the heating setpoint'):
+        modify_accis(idf, heating_setpoint_floor=5, cooling_setpoint_ceiling=None,
+                     zone_arguments={'Block1:Zone2': {'cooling_setpoint_ceiling': 9.5}})
+    with warnings.catch_warnings(record=True):
+        warnings.simplefilter('always')
+        messages = sl.warn_crossed_setpoint_limits(idf)
+    assert len(messages) == 1 and 'Block1_Zone2' in messages[0] and '(AHSTall, 10 °C)' in messages[0]
+    # The custom model takes its limits from its inputs
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter('always')
+        modify_accis(idf, comfort_standard=99, custom_cooling_upper_limit=25, heating_setpoint_floor=26,
+                     cooling_setpoint_ceiling=32, zone_arguments={'Block1:Zone2': {'cooling_setpoint_ceiling': 32}})
+    messages = [str(warning.message) for warning in caught if 'ACSTaul' in str(warning.message)]
+    assert len(messages) == 2 and all('(26 °C)' in message and '(ACSTaul, 25 °C)' in message for message in messages)
+
+
 @needs_idd
 @pytest.mark.skipif(LEGACY_IDF is None, reason='needs the output IDF of accim 0.x of the repository')
 def test_the_models_of_earlier_versions_have_no_floor_nor_ceiling(tmp_path):
-    from accim.parametric_and_optimisation.funcs_for_besos import param_accis
     from accim.sim.accis import load_idf, modify_accis
 
     shutil.copy(LEGACY_IDF, tmp_path / 'legacy.idf')
     building = load_idf(tmp_path / 'legacy.idf')
     with pytest.raises(ValueError, match='whose setpoints have neither floor nor ceiling'):
         modify_accis(building, heating_setpoint_floor=20)
-    with pytest.raises(ValueError, match='whose setpoints have neither floor\\s+nor ceiling'):
-        param_accis.modify_ACSTceil(building, 26)
     modify_accis(building, comfort_standard=99, comfort_mode=3)
     assert not sl.has_setpoint_limits(building)
+    # The parametric module (it needs besos)
+    pytest.importorskip('besos')
+    from accim.parametric_and_optimisation.funcs_for_besos import param_accis
+
+    with pytest.raises(ValueError, match='whose setpoints have neither floor\\s+nor ceiling'):
+        param_accis.modify_ACSTceil(building, 26)
 
 
 # EnergyPlus ---------------------------------------------------------------------------------------------------------
@@ -430,16 +587,22 @@ def test_the_floor_ceiling_and_hours_below_in_energyplus(tmp_path, monkeypatch, 
     output = capsys.readouterr().out
     assert len(mismatches) == 0 or not mismatches['check'].str.match('Check[45]').any()
     for zone in ZONES:
-        for check in ('Check5_AHSTfloor', 'Check5_ACSTceil', 'Check4_AHST', 'Check4_ACST'):
+        for check in ('Check5_AHSTfloor', 'Check5_ACSTceil', 'Check5_AHSTfloor_noTol', 'Check5_ACSTceil_noTol',
+                      'Check4_AHST', 'Check4_ACST'):
             assert re.search(rf"'{zone}' {check} \(.*\): 0 mismatch\(es\) in 1008 timesteps", output), (zone, check)
         heating = results[f'EMS:Adaptive Heating Setpoint Temperature_{zone} [C](TimeStep)']
         cooling = results[f'EMS:Adaptive Cooling Setpoint Temperature_{zone} [C](TimeStep)']
         assert heating.min() >= 20 and cooling.max() <= 26
-        # The floor in winter and the ceiling in summer bound the setpoints (the cooling setpoint rounded down)
+        heating_no_tolerance = results[f'EMS:Adaptive Heating Setpoint Temperature_No Tolerance_{zone} [C](TimeStep)']
+        cooling_no_tolerance = results[f'EMS:Adaptive Cooling Setpoint Temperature_No Tolerance_{zone} [C](TimeStep)']
+        assert heating_no_tolerance.min() >= 20 and cooling_no_tolerance.max() <= 26
+        # The floor in winter and the ceiling in summer bound the setpoints, which are exactly the floor and the
+        # ceiling (finding B5-2 of the review of 1.2.0), with and without the tolerance (finding B5-1)
         if week == 'winter':
-            assert (heating == 20).all()
+            assert (heating == 20).all() and (heating_no_tolerance == 20).all()
         else:
-            assert np.isclose(cooling, 25.9999, rtol=0, atol=1e-9).sum() > 0.9 * len(cooling)
+            assert (cooling == 26).sum() > 0.9 * len(cooling)
+            assert ((cooling == 26) <= (cooling_no_tolerance == 26)).all()
 
         # The occupied hours below each temperature: the length of the timestep when the zone has occupants and its
         # operative temperature of the previous timestep (that which the EMS reads) is below the temperature
@@ -473,5 +636,10 @@ def test_the_ems_and_api_backends_give_the_same_floor_ceiling_and_hours_below(tm
     assert len(ems_results) == 10 * 24
     assert any(column.startswith('EMS:HoursBelow_24p5_Block1_Zone2 [') for column in ems_results.columns)
     assert (ems_results['EMS:Adaptive Heating Setpoint Temperature_Block1_Zone1 [C](Hourly)'] >= 21).all()
-    assert (ems_results['EMS:Adaptive Cooling Setpoint Temperature_Block1_Zone2 [C](Hourly)'] < 24).all()
+    # The ceiling bounds the cooling setpoint, which is the ceiling where it bounds it (finding B5-2 of the review of
+    # 1.2.0), with and without the tolerance (finding B5-1)
+    cooling = ems_results['EMS:Adaptive Cooling Setpoint Temperature_Block1_Zone2 [C](Hourly)']
+    cooling_no_tolerance = ems_results[
+        'EMS:Adaptive Cooling Setpoint Temperature_No Tolerance_Block1_Zone2 [C](Hourly)']
+    assert (cooling <= 24).all() and (cooling == 24).any() and (cooling_no_tolerance <= 24).all()
     pd.testing.assert_frame_equal(api_results, ems_results, check_exact=True)

@@ -1,20 +1,32 @@
 # QAT Indraganti & Boussaa 2018: the adaptive relationship of the offices with HVAC in Qatar, as a comfort standard
 # defined by its data (accim.sim.standards.load_comfort_standards; proposal B3 of accim 1.2.0). Its R2 is almost 0
 # (the comfort temperature hardly depends on the outdoor temperature), which its evidence shows.
-# The data are those of notes/PROPUESTAS_MEJORAS_post_1.1.0_v03.md (B3 and section 11.5), verified there in
-# Indraganti & Boussaa (2018), equation 5 and Table 10.
-# INCOMPLETE: those sources give neither the outdoor metric of the model (Tr, a running mean of the outdoor
-# temperature, without its alpha), nor its comfort band (the offsets of the categories), nor its applicability limits,
-# nor its comfort modes and static setpoints, so load_comfort_standards rejects this file until they are added from
-# the article (TODO.md of accim).
+# The comfort temperature and the evidence are those of notes/PROPUESTAS_MEJORAS_post_1.1.0_v03.md (B3 and section
+# 11.5), verified there in Indraganti & Boussaa (2018), equation 5 and Table 10. The article gives neither the alpha of
+# its running mean outdoor temperature (Tr), nor its applicability limits, nor its own comfort band: the other values
+# are the choices of the author of accim in notes/PROPUESTAS_MEJORAS_post_1.1.0_v04.md (section 6.3), noted in the
+# evidence.
 number: 102
 label: QAT Indraganti2018 HVAC
 title: 102 = QAT Indraganti and Boussaa 2018 (offices, HVAC)
 citation: "Indraganti, M., Boussaa, D. (2018). An adaptive relationship of thermal comfort for the Gulf Cooperation Council (GCC) Countries: The case of offices in Qatar. Energy and Buildings."
-outdoor_metric: null   # Tr, the running mean outdoor temperature: its alpha is not in the sources of accim
+# Tr, a running mean outdoor temperature whose alpha the article does not give: that of EN 16798-1 (choice)
+outdoor_metric: rmot_alpha
+alpha: 0.8
 comfort_temperature: {slope: 0.049, intercept: 22.5}
-applicability: null    # not in the sources of accim
-categories: null       # the comfort band is not in the sources of accim
-comfort_modes: null
-evidence: {N: 3742, R2: 0.015, SE: 0.007, p: "<0.001", building_type: offices, mode: HVAC,
-           outdoor_metric_mean: 30.7, outdoor_metric_sd: 6.4, comfort_temperature_mean: 24.0}
+# Choice: the Tr of the study (mean 30.7 degC, SD 6.4) +-1.5 SD is about 21-40 degC, opened to 10 degC to cover the
+# winter of the offices with HVAC
+applicability: {metric_min: 10.0, metric_max: 40.0}
+# The comfort bands of ASHRAE 55, as the article compares them (not its own)
+categories:
+  90: {cooling_offset: 2.5, heating_offset: -2.5, description: "90 % comfort band of ASHRAE 55 (not own)"}
+  80: {cooling_offset: 3.5, heating_offset: -3.5, description: "80 % comfort band of ASHRAE 55 (not own)"}
+comfort_modes: [0, 1, 2, 3]
+# Choice of section 6.3 of v04, cited there as EN 16798-1, Table B.2, offices, category II (whose values in
+# accim.constants.EN16798_TABLE_B2 are 20 and 26 degC; 25.5 is the cooling one of category I: notes/questions.md)
+static_setpoints: {heating: 20.0, cooling: 25.5}
+evidence: {N: 3742, R2: 0.015, SE: 0.007, p: "<0.001", Tr_mean: 30.7, Tr_sd: 6.4, mode: HVAC,
+           bands: "ASHRAE 55, not own", building_type: offices, comfort_temperature_mean: 24.0,
+           alpha: "0.8 of EN 16798-1, not given by the article",
+           applicability: "10-40 degC, a choice (the Tr of the study: mean 30.7, SD 6.4)",
+           static_setpoints: "20 and 25.5 degC, a choice (EN 16798-1, Table B.2, offices)"}

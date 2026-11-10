@@ -11,6 +11,29 @@ Durable architectural/process decisions for this repository and its Obsidian
 vault. Newest first. Use [[templates/decision-record.md|the decision-record
 template]] to add a new entry.
 
+## 2026-11-10 — The floor and ceiling bound the setpoints with and without the tolerance and are exact; the housekeeping of the review (G5)
+
+- **Status**: accepted (task G5 of `notes/PROPUESTAS_MEJORAS_post_1.1.0_v04.md` §7, findings A3-1, A3-2, B5-1 to B5-3,
+  B1-2, B3-1 to B3-3, E4-1 to E4-3 and §3.4–§3.5, verdicts #3, #13, #26 and #28); three points provisional
+  (`notes/questions.md`: the literal reading of verdict #13, the static setpoints of Qatar, the exact floor)
+- **Context**: the floor bounded only the setpoints with the tolerance (the comfort band of the counters was 0.1 K
+  below it) and the strict rounding put the cooling setpoint one step below the ceiling; a key of the catalogue of the
+  aPMV filled one side only; the YAML file of Qatar was incomplete; the outdoor metric could write `nan`; pyfwg added the
+  urban heat island that Java does not.
+- **Decision**: `ApplySetpointLimits_<zone>` runs right after `SetASTnoTol`, bounds `AHST`/`ACST`, rounds again, sets
+  the rounded setpoints to the floor/ceiling where they bound them, and bounds `AHSTnoTol`/`ACSTnoTol` too; the line
+  moves in the models of earlier builds of 1.2.0; `warn_crossed_setpoint_limits` warns if the floor is above `ACSTaul`
+  or the ceiling below `AHSTall` (literal). `adaptive_coefficients=<key>` gives both sides (`ValueError` with explicit
+  values on a side); a key with the numeric default on the other side warns; with `'pmv_sign'` the setpoints must have
+  their signs. One formatter of the numbers of the programs (`erl.format_number`), and a `ValueError` for a weather
+  file without the 12 months. Qatar with the data of v04 §6.3; the categories in numeric order; a warning for the signs
+  of the offsets. `fwg_add_uhi=False` unless given, a warning with `fwg_options_ensemble=0`, the cleanup after a
+  `ValueError` of pyfwg. `processes=0` runs in the current process.
+- **Consequences**: the hour counters, the long-term discomfort and the hours below some temperatures of the zones with
+  a floor or a ceiling use the bounded band; check 5 of `verify_accim_simulation` checks the setpoints without the
+  tolerance too; the output IDFs without a floor or a ceiling do not change (golden master byte-identical); the YAML
+  101 gives the ApplyCAT lines of 23; the How-to notebook of the registry reads Qatar.
+
 ## 2026-11-10 — JPN Aqilah 2025 reads the running mean of EN 16798-1 of the weather file when the model has its values, and its static setpoints are inputs of its zones (G4)
 
 - **Status**: accepted (task G4 of `notes/PROPUESTAS_MEJORAS_post_1.1.0_v04.md` §7, findings B4-1 and B4-2, verdicts

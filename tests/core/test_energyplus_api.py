@@ -8,6 +8,7 @@ same.
 import math
 import shutil
 import subprocess
+import sys
 import tempfile
 from pathlib import Path
 from types import SimpleNamespace
@@ -412,6 +413,75 @@ def test_run_ep_rejects_unknown_backends(run_folder):
 def _energyplus_with_api(version):
     folder = find_energyplus(version, required=False)
     return folder if folder is not None and (folder / 'pyenergyplus').is_dir() else None
+
+
+def test_run_simulations_rejects_a_negative_number_of_processes():
+    with pytest.raises(ValueError, match='or 0 to run them in the current process'):
+        run_simulations([('model.idf', None)], processes=-1)
+
+
+def test_run_ep_runs_in_the_current_process_with_0_processes(run_folder, monkeypatch):
+    import accim.sim.energyplus_api as energyplus_api
+
+    calls = []
+    monkeypatch.setattr(energyplus_api, 'run_simulations',
+                        lambda jobs, processes=2: calls.append(processes) or ['results'])
+    assert run.run_ep(only_accim_idfs=True, confirm=True, processes=0, backend='api') == ['results']
+    assert calls == [0]
+    # With the EMS backend, eppy runs each simulation in the current process instead of a pool of processes
+    ran = []
+    monkeypatch.setattr(run, 'runIDFs', lambda runs, processes: ran.append(('pool', processes)))
+    monkeypatch.setattr(run, '_run_idfs_in_this_process', lambda runs: ran.append(('current', len(runs))))
+    monkeypatch.setattr(run, 'IDF', lambda idf, epw: SimpleNamespace(
+        idfname=str(run_folder / idf), idfobjects={'version': [SimpleNamespace(Version_Identifier='25.1')]}))
+    monkeypatch.setattr(run, 'get_iddfile_from_idfs', lambda names: None)
+    run.run_ep(only_accim_idfs=True, confirm=True, processes=0, energyplus_version='auto')
+    run.run_ep(only_accim_idfs=True, confirm=True, processes=2, energyplus_version='auto')
+    assert ran == [('current', 1), ('pool', 2)]
+
+
+_IN_THIS_PROCESS = """
+import sys
+from accim.sim.energyplus_api import run_simulations
+results = run_simulations([(sys.argv[1], sys.argv[2], {'output_directory': sys.argv[3], 'output_prefix': 'run'})],
+                          processes=0)
+assert results[0].success, results[0].error
+"""
+
+
+@pytest.mark.skipif(not (_energyplus_with_api('25.1') and SAMPLE_IDF.exists() and SAMPLE_EPW.exists()),
+                    reason='needs EnergyPlus 25.1 (with its Python API) and the sample files of the repository')
+def test_both_backends_run_in_the_current_process(tmp_path, monkeypatch):
+    from accim.sim.accis import AddAccis
+
+    shutil.copy(SAMPLE_IDF, tmp_path / 'TestModel.idf')
+    monkeypatch.chdir(tmp_path)
+    AddAccis(script_type='vrf_ac', supply_air_temp_input_method='temperature difference', output_type='standard',
+             output_frequencies=['hourly'], keep_existing_outputs=False, energyplus_version='auto',
+             setpoint_type='temperature', comfort_standard=[1], category=[3], comfort_mode=[3], hvac_mode=[0],
+             ventilation_control=[0], confirm=True, verbose=False)
+    [output_idf] = tmp_path.glob('TestModel[[]*.idf')
+    idf = load_idf(output_idf)
+    run_period = idf.idfobjects['RunPeriod'][0]
+    run_period.Begin_Month, run_period.Begin_Day_of_Month = 7, 1
+    run_period.End_Month, run_period.End_Day_of_Month = 7, 2
+    folder = tmp_path / 'run'
+    folder.mkdir()
+    model = folder / 'model[CS_INT EN16798[X.idf'
+    idf.saveas(str(model))
+    shutil.copy(SAMPLE_EPW, folder / 'weather.epw')
+    # The API in a new Python process (as a script, without multiprocessing): the library of the API stays loaded in
+    # the process that runs it
+    api = subprocess.run([sys.executable, '-c', _IN_THIS_PROCESS, str(model), str(folder / 'weather.epw'),
+                          str(tmp_path / 'api')], capture_output=True, text=True, cwd=str(REPO))
+    assert api.returncode == 0, api.stderr[-3000:]
+    # The EMS of EnergyPlus through eppy, in this process
+    monkeypatch.chdir(folder)
+    run.run_ep(only_accim_idfs=True, confirm=True, processes=0, energyplus_version='auto')
+    ems_results = pd.read_csv(folder / 'model[CS_INT EN16798[X[weather.csv')
+    assert len(ems_results) == 2 * 24
+    assert not (folder / 'multi_runs').exists()
+    pd.testing.assert_frame_equal(pd.read_csv(tmp_path / 'api' / 'run.csv'), ems_results, check_exact=True)
 
 
 @pytest.mark.skipif(not (_energyplus_with_api('25.1') and SAMPLE_IDF.exists() and SAMPLE_EPW.exists()),

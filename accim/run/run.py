@@ -16,6 +16,7 @@ Two backends run the EMS programs of the output IDFs of accim:
 
 import os
 import re
+import shutil
 from typing import Callable, List, Optional, Sequence
 
 from eppy.modeleditor import IDDAlreadySetError, IDF
@@ -140,7 +141,11 @@ def run_ep(
     :param only_accim_idfs: True to run only the output IDFs of accim (those with '[' in the name), False to
         run all IDFs; None to ask.
     :param confirm: True to run the simulations without asking, False to cancel them; None to ask.
-    :param processes: The number of simulations that run at the same time.
+    :param processes: The number of simulations that run at the same time; 0 (since accim 1.2.0) runs them one after
+        the other in the current process, without multiprocessing (for the environments that do not allow its pipes):
+        with ``backend='api'``, see :func:`accim.sim.energyplus_api.run_simulations`; with ``backend='ems'``, eppy runs
+        EnergyPlus for each one, and the first simulation that fails stops the others (before accim 1.2.0, 0 was all
+        the CPUs, as in eppy's ``runIDFs``). With ``backend='ems'``, a negative number is passed to eppy.
     :param energyplus_version: The EnergyPlus version of the IDFs, from '9.1' to '26.2', or 'auto' to read it
         from the IDFs; None to ask. With ``backend='api'``, the version of each IDF is used.
     :param backend: 'ems' to run the EMS programs with the EMS of EnergyPlus (through eppy), or 'api' to run
@@ -210,8 +215,25 @@ def run_ep(
     for idf, epw in pairs:
         model = IDF(idf, epw)
         runs.append((model, make_eplaunch_options(model, epw)))
-    runIDFs(runs, processes)
+    if processes == 0:
+        _run_idfs_in_this_process(runs)
+    else:
+        runIDFs(runs, processes)
     return None
+
+
+def _run_idfs_in_this_process(runs) -> None:
+    """Run the simulations of eppy's ``runIDFs`` one after the other in the current process (the same folders and
+    files, without multiprocessing): EnergyPlus runs as a subprocess for each one."""
+    from eppy.runner.run_functions import multirunner, prepare_run
+
+    shutil.rmtree('multi_runs', ignore_errors=True)
+    os.mkdir('multi_runs')
+    try:
+        for run_id, run in enumerate(runs):
+            multirunner(prepare_run(run_id, run))
+    finally:
+        shutil.rmtree('multi_runs', ignore_errors=True)
 
 
 def remove_files() -> None:

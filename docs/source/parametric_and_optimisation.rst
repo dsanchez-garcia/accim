@@ -175,7 +175,11 @@ arguments of all the occupied zones (each zone has them in its EMS program ``Set
 with :func:`~accim.sim.apmv.set_pmv_input_parameters`, and warn outside the ranges in which ISO 7730:2025
 (section 4) uses the PMV: 0 to 2 clo (and above 1.5 clo, with which ASHRAE 55-2020 does not use it), 0.8 to 4 met
 (82.8 to 417.6 W/person, with a body surface area of 1.8 m², as in EnergyPlus) and 0 to 1 m/s
-(:data:`accim.constants.PMV_INPUT_RANGES`). The metrics of ``custom_outdoor_metric`` that the EMS calculates begin
+(:data:`accim.constants.PMV_INPUT_RANGES`). With the ePMV setpoints with ``metabolic_correction=True``,
+``activity_level`` is not a parameter: the EMS programs of the correction read the activity level of the People
+objects from their schedules and set it in each timestep, so
+:func:`~accim.sim.apmv.set_pmv_input_parameters` raises a ``ValueError`` (set the activity level before applying
+the setpoints, in the model of the study). The metrics of ``custom_outdoor_metric`` that the EMS calculates begin
 with the running mean of ASHRAE 55 of EnergyPlus, unless the model was given the weather file with
 ``modify_accis(..., custom_outdoor_metric=..., epw=...)`` before the study (``'monthly_mean'`` needs it).
 ``accim.parametric_and_optimisation.parameters`` also has a class for each of them, which applies it to a model

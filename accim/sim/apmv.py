@@ -23,7 +23,7 @@ import pandas as pd
 
 from accim._deprecation import accepts_legacy_kwargs
 from accim.sim.pmv_index import (_resolve_targets, apply_pmv_index_setpoints, arguments_table,
-                                 get_adaptive_coefficients, metabolic_correction_names,
+                                 both_adaptive_coefficients, get_adaptive_coefficients, metabolic_correction_names,
                                  resolve_adaptive_coefficients)
 from accim.sim.targets import sanitize_ems_name
 from accim.utils.editing import transform_ddmm_to_int
@@ -117,6 +117,7 @@ def apply_apmv_setpoints(
         default_heating_setpoint_tolerance_heating_season: float = 0.1,
         verbose: bool = True,
         adaptive_coefficient_by: str = 'season',
+        adaptive_coefficients: Optional[str] = None,
 ) -> IDF:
     """
     Applies setpoints based on the Adaptive Predicted Mean Vote (aPMV) index.
@@ -139,12 +140,14 @@ def apply_apmv_setpoints(
         :func:`get_adaptive_coefficients`), or a dict {TargetName: Value} whose values are numbers or keys.
     :param adaptive_coefficient_heating: Adaptive coefficient (lambda) for heating: that of the heating season (or of
         cool sensations, PMV < 0, with ``adaptive_coefficient_by='pmv_sign'``). Float, key of the catalogue (its
-        ``heating`` coefficient) or Dict {TargetName: Value}. A key sets only its own argument: give it to both to
-        use the two coefficients of an entry. The keys of the grade 'literature' warn.
+        ``heating`` coefficient) or Dict {TargetName: Value}. A key sets only its own argument: give it to
+        ``adaptive_coefficients`` to use the two coefficients of an entry (a key on one side with the numeric default
+        on the other, which has no source, warns). The keys of the grade 'literature' warn.
     :param pmv_cooling_setpoint: Target aPMV setpoint for cooling. Float or Dict. Default is 0.5. The PMV setpoint
-        applied to the thermostat is obtained with the inverse aPMV formula, PMV = aPMV/(1 - lambda*aPMV).
+        applied to the thermostat is obtained with the inverse aPMV formula, PMV = aPMV/(1 - lambda*aPMV). With
+        ``adaptive_coefficient_by='pmv_sign'``, it must be >= 0 (a ``ValueError`` otherwise).
     :param pmv_heating_setpoint: Target aPMV setpoint for heating. Float or Dict. Default is -0.5. Converted to PMV in
-        the same way.
+        the same way. With ``adaptive_coefficient_by='pmv_sign'``, it must be <= 0.
     :param cooling_setpoint_tolerance_cooling_season: Tolerance to widen the cooling setpoint band during cooling
         season.
     :param cooling_setpoint_tolerance_heating_season: Tolerance to widen the cooling setpoint band during heating
@@ -173,12 +176,20 @@ def apply_apmv_setpoints(
         of the zone of the previous timestep, the coefficient for cooling with PMV >= 0 and that for heating with
         PMV < 0, as Yao et al. (2009) and GB/T 50785-2012 define them; the heating setpoint is converted with the
         coefficient for heating, and the cooling setpoint with that for cooling).
+    :param adaptive_coefficients: A key of :data:`accim.constants.APMV_ADAPTIVE_COEFFICIENTS` whose two coefficients
+        are those of cooling and heating (since accim 1.2.0, verdict #3 of its review: the catalogue is made of pairs);
+        None (the default) for those of ``adaptive_coefficient_cooling`` and ``adaptive_coefficient_heating``, which
+        must then keep their defaults (a ``ValueError`` otherwise). An entry without one of the coefficients raises a
+        ``ValueError``.
     :return: The modified BESOS IDF object with EMS controls added.
 
     The arguments had other names before accim 1.0.0 (outputs_freq, other_PMV_related_outputs, adap_coeff_cooling,
     pmv_cooling_sp, tolerance_cooling_sp_cooling_season, dflt_for_adap_coeff_cooling, verbose_mode...), which keep
     working with a DeprecationWarning (see the migration guide). The EMS variables keep the old names.
     """
+    if adaptive_coefficients is not None:
+        adaptive_coefficient_cooling, adaptive_coefficient_heating = both_adaptive_coefficients(
+            adaptive_coefficients, adaptive_coefficient_cooling, adaptive_coefficient_heating)
     return apply_pmv_index_setpoints(
         building,
         index='apmv',

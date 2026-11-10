@@ -21,6 +21,7 @@ The registry is that of the Python session: the comfort standards are registered
 import math
 import numbers
 import os
+import warnings
 from dataclasses import dataclass, field
 from typing import Any, Dict, Iterable, List, Mapping, Optional, Tuple, Union
 
@@ -244,7 +245,12 @@ class ComfortStandardDefinition:
     :ivar regimes: Its comfort temperature, offsets and applicability limits, as a regime of the custom model
         (:class:`accim.sim.arguments.CustomRegime`); one regime 'always' in this version.
     :ivar category_offsets: The offsets of the cooling and heating setpoints of each category, which can be
-        asymmetric: ``{category: (cooling_offset, heating_offset)}``.
+        asymmetric: ``{category: (cooling_offset, heating_offset)}``. The setpoints are the comfort temperature plus
+        the offsets, so the cooling offset is usually positive or zero and the heating offset negative or zero (the
+        comfort band around the comfort temperature): a warning tells otherwise (finding B3-3 of the review of accim
+        1.2.0). Comfort mode 2 (out of the applicability limits, the static setpoints of ISO 7730) is only defined for
+        the categories 80 and 90, those of the static setpoints of ISO 7730 that accim has: with other categories
+        (such as I to IV), a ValueError (verdict 26 of the review of accim 1.2.0).
     :ivar static_setpoints: The static setpoints, ``(heating, cooling)`` (°C), of comfort modes 0 and 1.
     :ivar evidence: The statistics of the comfort model (number of votes, R², standard error, range of the metric,
         type of building, mode of operation...), which ``print_setpoint_ems_code`` prints; it cannot be empty
@@ -302,6 +308,12 @@ class ComfortStandardDefinition:
         if not offsets or set(offsets) != set(standard.categories):
             raise ValueError(f'The {where} must have the offsets of each one of its categories '
                              f'({sorted(standard.categories)}), not those of {sorted(offsets)}.')
+        crossed = {category: pair for category, pair in sorted(offsets.items()) if pair[0] < 0 or pair[1] > 0}
+        if crossed:
+            warnings.warn(f'The offsets (cooling_offset, heating_offset) of the categories {crossed} of the {where} '
+                          f'have the sign that is not usual: the setpoints are the comfort temperature plus the '
+                          f'offsets, so a cooling offset below 0 puts the cooling setpoint below the comfort '
+                          f'temperature, and a heating offset above 0 the heating setpoint above it.', stacklevel=3)
         object.__setattr__(self, 'category_offsets', offsets)
         modes = list(standard.comfort_modes)
         if not modes or any(mode not in DEFINITION_COMFORT_MODES for mode in modes):

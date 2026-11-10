@@ -824,8 +824,9 @@ class AddAccisTab(_Tab):
         long_term.grid(row=4, column=0, columnspan=2, sticky='w')
         self.limit_widgets.append(long_term)
         ttk.Label(frame, text='The heating setpoint is not lower than the floor, and the cooling setpoint not higher '
-                              'than the ceiling, whatever the comfort standard and comfort mode (the cooling '
-                              'setpoint is rounded down, below the ceiling). The PMV-based setpoints have neither. '
+                              'than the ceiling, whatever the comfort standard and comfort mode, with and without the '
+                              'tolerance (the setpoints that they bound are the floor and the ceiling). The PMV-based '
+                              'setpoints have neither. '
                               'The long-term discomfort reports the occupied hours and degree hours of each zone '
                               'and of the building above the cooling setpoint and below the heating setpoint '
                               'without the tolerance.',

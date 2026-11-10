@@ -15,6 +15,24 @@ This log is a lightweight, session-scoped complement to the repository's
 existing tracking files — it does not replace them (see
 [[decisions.md#2026-09-13 — `notes/work-log.md` complements, not replaces, existing tracking files|the related decision]]).
 
+## 2026-11-10 — G5: the housekeeping of the review of 1.2.0 (branch `v1.2.0`, on the server)
+
+- **Objective**: task G5 of the review v04 (A3-1, A3-2, B5-1 to B5-3, B1-2, B3-1 to B3-3, E4-1 to E4-3, §3.4, §3.5).
+- **Affected files**: `accim/sim/ems/setpoint_limits.py`, `erl.py` (`format_number`), `outdoor_metric.py`,
+  `standard_lines.py`, `custom_regimes.py`, `accim/sim/standards.py`, `pmv_index.py`, `apmv.py`, `accis.py`,
+  `preview.py`, `accim/utils/ems_code.py`, `verification.py`, `accim/run/run.py`, `energyplus_api/runner.py`,
+  `accim/data/morphing.py`, the GUI label, the YAML of Qatar and the How-to notebook of the registry,
+  [[../docs/source/4_detailed use.md]], [[../CHANGELOG.md]], [[../CAMBIOS_CODIGO_v1.2.0.md]] (§27), [[../DEVLOG.md]],
+  [[../TODO.md]], [[decisions.md]], [[questions.md]].
+- **Finding or decision**: See
+  [[decisions.md#2026-11-10 — The floor and ceiling bound the setpoints with and without the tolerance and are exact; the housekeeping of the review (G5)|the decision]].
+  Provisional: verdict #13 read literally (ACSTaul/AHSTall are outdoor applicability limits), the static setpoints of
+  Qatar (25.5 vs 26 °C of Table B.2) and the exact floor ([[questions.md]]).
+- **Validation**: `tests/core` 1286 passed, 2 skipped; golden master 35 passed (byte-identical);
+  `tests/parametric_and_optimisation` 507 passed; EnergyPlus 25.1: checks 4 and 5 with 0 mismatches, both backends
+  identical; outdoor metrics of EnergyPlus against pandas within 1e-9 °C; documentation build with the baseline warnings.
+- **Next step**: H1 (rename the floor and ceiling).
+
 ## 2026-11-10 — G4: JPN Aqilah 2025 with the weather file, and its static setpoints (branch `v1.2.0`, on the server)
 
 - **Objective**: task G4 of the review v04 (findings B4-1, B4-2): comfort standard 23 with `rmot_alpha` from the weather

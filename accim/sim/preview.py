@@ -393,10 +393,10 @@ def compute_setpoints(epw: PathLike, comfort_standard: int, category: Optional[N
     names = set().union(*variables_in_programs(programs).values())
     erl = ErlProgramSet(programs, global_variables=names)
     order = ['SetAppLimits', 'ApplyCAT', 'SetComfTemp', 'SetAST', 'SetASTnoTol', counter]
-    # The floor and ceiling of the setpoints of the zone (accim.sim.ems.setpoint_limits), right after SetAST
+    # The floor and ceiling of the setpoints of the zone (accim.sim.ems.setpoint_limits), right after SetASTnoTol
     limits = f'ApplySetpointLimits_{_ZONE}'
     if limits in programs:
-        order.insert(order.index('SetAST') + 1, limits)
+        order.insert(order.index('SetASTnoTol') + 1, limits)
     # The regimes of the custom model (accim.sim.ems.custom_regimes), right before SetAppLimits
     regimes = f'{cr.PROGRAM_PREFIX}{_ZONE}'
     if regimes in programs:

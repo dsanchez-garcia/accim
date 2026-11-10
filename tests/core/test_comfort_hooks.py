@@ -273,11 +273,12 @@ def test_the_hooks_give_their_setpoints_to_the_accis_right_after_setast(tmp_path
         for zone in ZONES:
             assert _program_lines(idf, f'ApplyHookSetpoints_{zone}') == hs.program_lines(zone)
             assert {name.upper() for name in hs.zone_variables(zone)} <= declared
-            # The setpoints of the hook replace those of SetAST, and the floor and ceiling bound them
+            # The setpoints of the hook replace those of SetAST, and the floor and ceiling bound them, with and
+            # without the tolerance (after SetASTnoTol, finding B5-1 of the review of 1.2.0)
             run = _program_lines(idf, f'RunACCIS_{zone}')
             position = run.index('run SetAST')
-            assert run[position + 1:position + 4] == [f'run ApplyHookSetpoints_{zone}',
-                                                      f'run ApplySetpointLimits_{zone}', 'run SetASTnoTol']
+            assert run[position + 1:position + 4] == [f'run ApplyHookSetpoints_{zone}', 'run SetASTnoTol',
+                                                      f'run ApplySetpointLimits_{zone}']
         assert sorted(_program_lines(idf, 'InitHookSetpoints')) == sorted(hs.init_program_lines(ZONES))
         manager = idf.getobject('EnergyManagementSystem:ProgramCallingManager', 'InitHookSetpoints')
         assert (manager.EnergyPlus_Model_Calling_Point, manager.Program_Name_1) == ('BeginNewEnvironment',
@@ -294,8 +295,8 @@ def test_the_hooks_give_their_setpoints_to_the_accis_right_after_setast(tmp_path
 def _hook_erl(**arguments):
     """The programs of the ACCIS of one zone, Zone1 (INT EN16798, category II, comfort mode 3, a tolerance of the
     setpoints of 0.1 and full air-conditioning, with the long-term discomfort of C2), with the program that gives the
-    setpoints of a hook to the zone and, with a floor or a ceiling, the program of the setpoint limits after it, at the
-    beginning of an environment; compiled by the Erl interpreter."""
+    setpoints of a hook to the zone and, with a floor or a ceiling, the program of the setpoint limits after
+    SetASTnoTol, at the beginning of an environment; compiled by the Erl interpreter."""
     from types import SimpleNamespace
 
     from accim.sim.ems import hook_setpoints as hs, long_term_discomfort as ltd, setpoint_limits as sl
@@ -312,14 +313,12 @@ def _hook_erl(**arguments):
     programs['ApplyHookSetpoints_Zone1'] = hs.program_lines('Zone1')
     programs['InitHookSetpoints'] = hs.init_program_lines(['Zone1'])
     programs['CountLongTermDiscomfort_Zone1'] = ltd.zone_lines('Zone1')
-    extra = ['run ApplyHookSetpoints_Zone1']
+    run = list(programs['RunACCIS_Zone1'])
+    run.insert(run.index('run SetAST') + 1, 'run ApplyHookSetpoints_Zone1')
     floor, ceiling = (values.get(name) is not None for name in sl.INPUTS)
     if floor or ceiling:
         programs['ApplySetpointLimits_Zone1'] = sl.limit_program_lines(floor, ceiling)
-        extra.append('run ApplySetpointLimits_Zone1')
-    run = list(programs['RunACCIS_Zone1'])
-    position = run.index('run SetAST') + 1
-    run = run[:position] + extra + run[position:]
+        run.insert(run.index('run SetASTnoTol') + 1, 'run ApplySetpointLimits_Zone1')
     run.insert(run.index('run CountHoursNoApp_Zone1') + 1, 'run CountLongTermDiscomfort_Zone1')
     programs['RunACCIS_Zone1'] = run
     erl = ErlProgramSet(programs, global_variables=set().union(*variables_in_programs(programs).values()))
@@ -371,7 +370,9 @@ def test_the_accis_follows_the_setpoints_of_the_hook():
 def test_the_floor_and_ceiling_bound_the_setpoints_of_the_hook():
     erl = _hook_erl(heating_setpoint_floor=23.0, cooling_setpoint_ceiling=25.0)
     hooked = _hook_timestep(erl, setpoints=(22.0, 26.0))
-    assert (hooked['AHST_Act_Zone1'], hooked['ACST_Act_Zone1']) == pytest.approx((23.0, 25.0))
+    # Exactly the floor and the ceiling (finding B5-2), with and without the tolerance (finding B5-1)
+    assert (hooked['AHST_Act_Zone1'], hooked['ACST_Act_Zone1']) == (23.0, 25.0)
+    assert (hooked['AHSTnoTol_Zone1'], hooked['ACSTnoTol_Zone1']) == (23.0, 25.0)
 
 
 # EnergyPlus ---------------------------------------------------------------------------------------------------------

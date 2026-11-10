@@ -53,6 +53,8 @@ import re
 import warnings
 from typing import Any, Dict, Iterable, List, Mapping, Optional, Sequence, Union
 
+from accim.sim.ems.erl import format_number
+
 __all__ = [
     'ALPHA_RANGE',
     'DAYS_RANGE',
@@ -180,7 +182,9 @@ def ring_days(days: Iterable[Any] = ()) -> int:
 
 
 def _number(value: float) -> str:
-    return repr(float(value))
+    """A number as the programs of the outdoor metric write it: as :func:`repr` (20.0, 12.345), but never with an
+    exponent (finding B1-2 of the review of accim 1.2.0)."""
+    return format_number(value, keep_decimal=True)
 
 
 def building_program_lines(ring: int, initial: Optional[Mapping[str, Any]] = None) -> List[str]:
@@ -315,6 +319,7 @@ def initial_values(epw: Union[str, Any], start_day: int, ring: int,
         ``mid_ranges``, the means of the maximum and minimum of the 3 previous days; ``running_means``, the running
         mean of EN 16798-1 (B.1) of the day with the alpha of each zone, by zone; ``monthly_means``, those of the 12
         months.
+    :raises ValueError: If the weather file does not have the 12 months (finding B1-2 of the review of accim 1.2.0).
     """
     try:
         status = os.stat(epw)
@@ -346,6 +351,12 @@ def _initial_values(epw: Union[str, Any], start_day: int, ring: int,
             by_alpha[alpha] = float(outdoor_metrics(epw, alpha=float(alpha), frequency='daily')['RMOT'].iloc[first])
         running_means[zone] = by_alpha[alpha]
     monthly = daily.groupby(daily['date'].dt.month)['daily_mean'].mean()
+    missing = [month for month in range(1, 13) if month not in monthly.index]
+    if missing:
+        # The programs keep the monthly means of the 12 months: 'nan' would be the name of a variable in Erl (finding
+        # B1-2 of the review of accim 1.2.0)
+        raise ValueError(f'The weather file {epw} has no days of the months {missing}: the EMS programs of the '
+                         f'outdoor metric keep the monthly means of the weather file, which must have the 12 months.')
     return {
         'start_day': first + 1,
         'daily_means': [float(mean[(first - k) % number_of_days]) for k in range(1, ring + 1)],

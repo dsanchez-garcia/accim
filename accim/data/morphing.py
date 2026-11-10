@@ -31,6 +31,7 @@ of EPW files of any folder, such as those, and the future EPW files are written 
 import os
 import shutil
 import subprocess
+import warnings
 from typing import Any, Dict, Iterable, List, Optional
 
 __all__ = ['DEFAULT_GCMS', 'ENGINES', 'SCENARIOS', 'morph_epws']
@@ -82,8 +83,14 @@ def morph_epws(
     future EPWs are renamed as with Java and moved next to the original EPW. The arguments ``fwg_options_*`` are given
     to pyfwg as ``fwg_gcms`` (a list), ``fwg_create_ensemble``, ``fwg_month_transition_hours``,
     ``fwg_use_multithreading``, ``fwg_interpolation_method_id`` and ``fwg_limit_variables``, and the output of the
-    tool is shown, as with Java; the other parameters of the tool take the defaults of pyfwg, unless
-    ``pyfwg_arguments`` gives them.
+    tool is shown, as with Java; the urban heat island is not added (``fwg_add_uhi=False``: pyfwg adds it by default
+    with the versions 3 and 4 of the tool, from the local climate zone 14 to 1, and the command line of Java of
+    accim does not, so both engines give the same future EPWs: finding E4-1 of the review of accim 1.2.0); the other
+    parameters of the tool take the defaults of pyfwg, unless ``pyfwg_arguments`` gives them (also ``fwg_add_uhi``).
+
+    With ``fwg_options_ensemble=0``, the tool writes an EPW for each climate model and scenario, which morph_epws
+    renames to the same name, ``<EPW>_<scenario>.epw``, so only the last one is kept: a warning tells so (finding E4-2
+    of the review of accim 1.2.0).
 
     :param fwg_path: The path to the FutureWeatherGenerator tool.
     :param epw_filepaths: A list of epw filenames to be morphed (those of the working directory with 'all'; with
@@ -93,7 +100,8 @@ def morph_epws(
     :param verbose: True to print on screen the performed actions.
     :param fwg_options_gcms: The GCMs separated by a comma (without white space); None for those of
         :data:`DEFAULT_GCMS`.
-    :param fwg_options_ensemble: Option to create an ensemble from the selected models: 0 is no, 1 is yes.
+    :param fwg_options_ensemble: Option to create an ensemble from the selected models: 0 is no, 1 is yes. With 0,
+        the EPW of each scenario that is kept is that of one of the models (a warning).
     :param fwg_options_month_transition_hours: the number of hours to smooth the transition between months: 0 to 336 hours.
     :param fwg_options_do_multithread_computation: True to do the computations in multithread.
     :param fwg_options_interpolation_method_id: Selects the grid method: 0 – bilinear interpolation, 1 – an average of the four nearest points; 2 – nearest point.
@@ -101,20 +109,32 @@ def morph_epws(
     :param engine: 'java' (the default) to run the tool with Java from the command line, or 'pyfwg' to run it through
         pyfwg (:data:`ENGINES`).
     :param pyfwg_arguments: With ``engine='pyfwg'``, other keyword arguments of ``pyfwg.morph_epw_global`` (such as
-        ``fwg_version`` or ``fwg_add_uhi``), which replace those that this function gives; not those of the files
-        (``epw_paths``, ``fwg_jar_path``, ``output_dir``, ``temp_base_dir`` and ``delete_temp_files``), which it sets.
+        ``fwg_version`` or ``fwg_add_uhi``, False unless given here), which replace those that this function gives;
+        not those of the files (``epw_paths``, ``fwg_jar_path``, ``output_dir``, ``temp_base_dir`` and
+        ``delete_temp_files``), which it sets.
     :raises RuntimeError: If Java cannot be run or the tool fails with an EPW (after moving all the original EPWs
         back to the working folder); with ``engine='pyfwg'``, if the tool writes no future EPW for an EPW (pyfwg
         reports the errors of the tool in its log: ``pyfwg.enable_console_logging()`` shows it).
     :raises ValueError: If ``engine`` is not one of :data:`ENGINES`; with ``engine='pyfwg'``, if the tool is not the
         global Future Weather Generator, ``pyfwg_arguments`` has arguments that ``pyfwg.morph_epw_global`` does not take
-        or that this function sets, or pyfwg finds the parameters not valid.
+        or that this function sets, or pyfwg finds the parameters not valid (the folders that it made for the
+        morphing are then removed with ``delete_morphing_files``, as after the other errors: finding E4-3 of the
+        review of accim 1.2.0).
     :raises ImportError: With ``engine='pyfwg'``, if pyfwg is not installed.
     """
     if engine not in ENGINES:
         raise ValueError(f'engine must be one of {list(ENGINES)}, not {engine!r}.')
     if pyfwg_arguments and engine != 'pyfwg':
         raise ValueError("pyfwg_arguments needs engine='pyfwg'.")
+    try:
+        without_ensemble = int(fwg_options_ensemble) == 0
+    except (TypeError, ValueError):
+        without_ensemble = False
+    if without_ensemble:
+        warnings.warn('With fwg_options_ensemble=0, the Future Weather Generator writes an EPW for each climate model '
+                      'and scenario, which morph_epws renames to the same <EPW>_<scenario>.epw, so only one of them '
+                      'is kept for each scenario: use fwg_options_ensemble=1 (the ensemble of the models), or run '
+                      'pyfwg directly to keep the EPW of each model.', stacklevel=2)
 
     # Get the absolute path of the current working directory
     cwd = os.getcwd()
@@ -270,7 +290,8 @@ def _morph_with_pyfwg(fwg_path: str, epw_files: Iterable[str], delete_morphing_f
     if distribution not in (None, 'global'):
         raise ValueError(f"fwg_path is the {distribution} Future Weather Generator; morph_epws runs the global one "
                          f"(use pyfwg directly for the others).")
-    arguments = dict(options, fwg_show_tool_output=True)
+    # Without the urban heat island, as the command line of Java (finding E4-1 of the review of accim 1.2.0)
+    arguments = dict(options, fwg_show_tool_output=True, fwg_add_uhi=False)
     arguments.update(_pyfwg_arguments(pyfwg.morph_epw_global, pyfwg_arguments))
 
     folders = []
@@ -292,6 +313,13 @@ def _morph_with_pyfwg(fwg_path: str, epw_files: Iterable[str], delete_morphing_f
             # Java is not installed, or not in the PATH
             failed.append(f'{os.path.basename(epw_path)} (Java could not be run: {error})')
             continue
+        except ValueError:
+            # pyfwg finds the parameters not valid: the folders are removed as after the other errors (finding E4-3 of
+            # the review of accim 1.2.0)
+            if delete_morphing_files:
+                for folder in folders:
+                    shutil.rmtree(folder, ignore_errors=True)
+            raise
         if not [path for path in created if str(path).lower().endswith('.epw')]:
             failed.append(f'{os.path.basename(epw_path)} (no future EPW was written)')
         _move_scenario_epws(folder_name, folder_path, parent_folder_path, verbose)

@@ -33,7 +33,7 @@ their code then reads Tout_metric instead of RMOT (:func:`weather_file_lines`, f
 import re
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
-import numpy as np
+from accim.sim.ems.erl import format_number
 
 __all__ = [
     'ISO7730_STATIC_SETPOINTS',
@@ -78,7 +78,7 @@ _CLOSING = ('ENDIF', 'ENDWHILE')
 
 def _number(value: float) -> str:
     """A number as Erl reads it: without exponent, and without decimals if it is an integer."""
-    return np.format_float_positional(float(value), trim='-')
+    return format_number(value)
 
 
 def _plus(value: float) -> str:
@@ -217,7 +217,9 @@ def standard_branches(definition) -> Dict[str, Tuple[str, ...]]:
     condition = f'elseif ComfStand == {number}'
     metric = metric_variable(definition.outdoor_metric)
     cat_lines: List[str] = []
-    for index, (category, (cooling, heating)) in enumerate(definition.category_offsets.items()):
+    # In the numeric order of the categories, whatever the order of the definition (finding B3-2 of the review of
+    # accim 1.2.0), as the branches of the built-in comfort standards
+    for index, (category, (cooling, heating)) in enumerate(sorted(definition.category_offsets.items())):
         cat_lines += [f"{'if' if index == 0 else 'elseif'} (CAT == {_number(category)})",
                       f'set ACSToffset = {_number(cooling + regime.cooling_offset)}+CATcoolOffset',
                       f'set AHSToffset = {_number(heating + regime.heating_offset)}+CATheatOffset']
@@ -269,7 +271,7 @@ def setpoint_lines(definition) -> Dict[int, Tuple[str, ...]]:
                 result += [f'elseif {metric} < {lower}', f'set {setpoint} = {static}+{tolerance}',
                            f'elseif {metric} > {upper}', f'set {setpoint} = {static}+{tolerance}']
             elif mode == 2:
-                for category in definition.category_offsets:
+                for category in sorted(definition.category_offsets):
                     below, above = ISO7730_STATIC_SETPOINTS[category][kind]
                     result += [f'elseif CAT=={_number(category)}', f'if {metric} < {lower}',
                                f'set {setpoint} = {_number(below)}+{tolerance}', f'elseif {metric} > {upper}',

@@ -1319,11 +1319,17 @@ def test_the_window_loads_comfort_standards_defined_by_their_data(app, tmp_path,
         assert arguments['comfort_standard'] == [2, 101] and arguments['epw'] == str(tmp_path / 'weather.epw')
         # Loading it again replaces it
         assert tab.load_comfort_standards() is True and [n for n, _ in tab.standards].count(101) == 1
-        # A file that is not valid is not loaded, and the message names it
-        monkeypatch.setattr(app_module.filedialog, 'askopenfilenames',
-                            lambda **kwargs: (str(samples / 'qat_indraganti2018_hvac.yaml'),))
+        # A file that is not valid is not loaded, and the message names it (Qatar without the keys that it did not have
+        # before the data of section 6.3 of v04 of the proposals)
+        import yaml
+
+        incomplete = tmp_path / 'qat_incomplete.yaml'
+        data = yaml.safe_load((samples / 'qat_indraganti2018_hvac.yaml').read_text(encoding='utf-8'))
+        data.update(outdoor_metric=None, applicability=None, categories=None, comfort_modes=None)
+        incomplete.write_text(yaml.safe_dump(data), encoding='utf-8')
+        monkeypatch.setattr(app_module.filedialog, 'askopenfilenames', lambda **kwargs: (str(incomplete),))
         assert tab.load_comfort_standards() is False
-        assert app.errors[-1].startswith('qat_indraganti2018_hvac.yaml: the keys')
+        assert app.errors[-1].startswith('qat_incomplete.yaml: the keys')
         assert sorted(registered_comfort_standards()) == [101]
         # The session keeps the files loaded
         state = tab.state()

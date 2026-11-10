@@ -212,6 +212,40 @@ def test_the_setpoint_ems_code_checks_the_outdoor_metric(epw):
     assert sum(line.startswith('set OutdoorMonthlyMean = ') for line in programs['SetOutdoorMetric']) == 12
 
 
+def test_the_numbers_of_the_programs():
+    # Finding B1-2 of the review of 1.2.0: one formatter of the numbers of the EMS programs, positional, with the
+    # shortest digits that give the same float
+    from accim.sim.ems.erl import format_number
+
+    assert [format_number(value) for value in (20, 20.0, 0.8, -0.5, 1e-05, 12.345, np.float64(0.33), 1e16)] == [
+        '20', '20', '0.8', '-0.5', '0.00001', '12.345', '0.33', '10000000000000000']
+    # As the programs of the outdoor metric write them: with '.0' (as repr), but without exponent
+    assert [format_number(value, keep_decimal=True) for value in (20, 12.345, 1e-05, -3.0)] == [
+        '20.0', '12.345', '0.00001', '-3.0']
+    assert all(om._number(value) == repr(float(value)) for value in (20, 12.345, 0.1 + 0.2, -7.25, 1234.5))
+    for value in (float('nan'), float('inf'), -np.inf):
+        with pytest.raises(ValueError, match='it is not finite'):
+            format_number(value)
+    # The programs of the outdoor metric with a value that repr writes with an exponent
+    lines = om.building_program_lines(30, {'start_day': 1, 'daily_means': [1e-05] * 30, 'mid_ranges': [0.0] * 3,
+                                           'running_means': {}, 'monthly_means': [-2.5e-06] * 12})
+    assert 'set Tday_1 = 0.00001' in lines and 'set OutdoorMonthlyMean = -0.0000025' in lines
+    assert not any(re.search(r'\de-?\d', line) for line in lines)
+
+
+def test_a_weather_file_without_some_months(tmp_path, epw):
+    # Finding B1-2 of the review of 1.2.0: the programs keep the monthly means of the 12 months of the weather file
+    lines = epw.read_text(encoding='utf-8').splitlines()
+    partial = tmp_path / 'partial.epw'
+    # The header and January to October
+    partial.write_text('\n'.join(lines[:8 + 304 * 24]) + '\n', encoding='utf-8')
+    with pytest.raises(ValueError, match=r'has no days of the months \[11, 12\]: the EMS programs of the outdoor '
+                                         r'metric keep the monthly means'):
+        om.initial_values(partial, 1, 30, {'Zone1': 0.8})
+    with pytest.raises(ValueError, match=r'has no days of the months \[11, 12\]'):
+        get_setpoint_ems_programs(99, comfort_mode=3, custom_outdoor_metric='rmot_alpha', epw=partial)
+
+
 # The programs, run by the Erl interpreter ----------------------------------------------------------------------
 
 def test_the_running_mean_of_en16798_with_alpha(epw, daily):
@@ -495,15 +529,60 @@ def _run_energyplus(model, folder):
     return pd.read_csv(folder / 'run.csv')
 
 
+def _expected_metric(metric, days, custom_days=30, alpha=0.8):
+    """The outdoor metric of each timestep of the first days of the year of the weather file of the simulations,
+    with numpy and pandas from its hourly values, as an array of days x timesteps (NaN where it is not calculated):
+    the days before the run period are the last ones of the file, with which the programs begin (decision D3). The
+    daily metrics have the value of the day in all its timesteps; te_ref_nl, whose T0 is the mean of the maximum and
+    the minimum of the hours of the day that have ended, only at the end of each hour (before the end of the first
+    hour of the day, T0 is the outdoor temperature of the timestep)."""
+    hourly = pd.read_csv(EPW, skiprows=8, header=None)[6].to_numpy(dtype=float).reshape(-1, 24)
+    means = hourly.mean(axis=1)
+    year = len(means)
+
+    def before(values, k):
+        # The values of k days before each day of the run period
+        return np.roll(values, k)[:days]
+
+    if metric == 'rmot_alpha':
+        # EN 16798-1 (B.1): Trm = (1 - alpha)*Ted-1 + alpha*Trm-1, from its infinite sum for the year that repeats
+        daily = np.empty(days)
+        daily[0] = (1 - alpha) * sum(alpha ** (k - 1) * means[-k] for k in range(1, year + 1)) / (1 - alpha ** year)
+        for day in range(1, days):
+            daily[day] = (1 - alpha) * means[day - 1] + alpha * daily[day - 1]
+    elif metric == 'rmot_7day':
+        # EN 16798-1 (B.2)
+        weights = (1, 0.8, 0.6, 0.5, 0.4, 0.3, 0.2)
+        daily = sum(weight * before(means, k) for k, weight in enumerate(weights, start=1)) / 3.8
+    elif metric == 'ndrm':
+        # ASHRAE 55-2020 (5.4.2.1): the arithmetic mean of the daily means of the custom_days previous days
+        daily = pd.Series(np.r_[means[-custom_days:], means[:days]]).rolling(custom_days).mean().shift(1)
+        daily = daily.to_numpy()[custom_days:]
+    else:
+        # van der Linden et al. (2006): (T0 + 0.8*T-1 + 0.4*T-2 + 0.2*T-3)/2.4, with each T the mean of the maximum and
+        # the minimum of the day (T0, of the hours of the day that have ended)
+        middle = (hourly.max(axis=1) + hourly.min(axis=1)) / 2
+        previous = 0.8 * before(middle, 1) + 0.4 * before(middle, 2) + 0.2 * before(middle, 3)
+        values = np.full((days, 24 * STEPS), np.nan)
+        for hour in range(24):
+            so_far = (hourly[:days, :hour + 1].max(axis=1) + hourly[:days, :hour + 1].min(axis=1)) / 2
+            values[:, STEPS * hour + STEPS - 1] = (so_far + previous) / 2.4
+        return values
+    return np.repeat(daily, 24 * STEPS).reshape(days, -1)
+
+
 @needs_energyplus
-def test_the_outdoor_metrics_in_energyplus(tmp_path, monkeypatch, capsys):
+@pytest.mark.parametrize('metrics', [('rmot_alpha', 'te_ref_nl'), ('rmot_7day', 'ndrm')])
+def test_the_outdoor_metrics_in_energyplus(tmp_path, monkeypatch, capsys, metrics):
     from accim.utils.verification import verify_accim_simulation
 
-    # EN 16798-1 (B.1) in zone 1 and the ATG in zone 2, January and February in timesteps, from the weather file
-    model = _output_idf(tmp_path, monkeypatch, (1, 1), (2, 28), 'timestep', custom_outdoor_metric='rmot_alpha',
-                        zone_arguments={'Block1:Zone2': {'custom_outdoor_metric': 'te_ref_nl'}}, epw=str(EPW))
+    # EN 16798-1 (B.1) in zone 1 and the ATG in zone 2, or EN 16798-1 (B.2) in zone 1 and the mean of 30 days of
+    # ASHRAE 55 in zone 2, January and February in timesteps, from the weather file
+    model = _output_idf(tmp_path, monkeypatch, (1, 1), (2, 28), 'timestep', custom_outdoor_metric=metrics[0],
+                        zone_arguments={'Block1:Zone2': {'custom_outdoor_metric': metrics[1]}}, epw=str(EPW))
     results = _run_energyplus(model, tmp_path / 'out')
-    assert len(results) == 59 * 24 * STEPS
+    days = 59
+    assert len(results) == days * 24 * STEPS
 
     # The setpoints and the outdoor metric of each zone are those of compute_setpoints
     mismatches = verify_accim_simulation(str(tmp_path / 'out' / 'run.eso'), str(model), epw=str(EPW))
@@ -512,13 +591,24 @@ def test_the_outdoor_metrics_in_energyplus(tmp_path, monkeypatch, capsys):
     for zone in ('Block1_Zone1', 'Block1_Zone2'):
         assert f"'{zone}' Check4_Tout_metric (Tout_metric_{zone} of compute_setpoints): 0 mismatch(es)" in output
 
+    # And those of their equations with numpy and pandas, directly from the weather file (section 3.4 of the review
+    # of accim 1.2.0)
+    for zone, metric in zip(('Block1_Zone1', 'Block1_Zone2'), metrics):
+        [column] = [c for c in results.columns if c.startswith(f'EMS:Tout_metric_{zone} [')]
+        found = results[column].to_numpy().reshape(days, -1)
+        expected = _expected_metric(metric, days)
+        checked = ~np.isnan(expected)
+        assert checked.sum() >= days * 24
+        np.testing.assert_allclose(found[checked], expected[checked], rtol=0, atol=1e-9, err_msg=metric)
+    if metrics[0] != 'rmot_alpha':
+        return
+
     # rmot_alpha with alpha 0.8 is the running mean of CEN 15251 of EnergyPlus once the beginning of that one, its
     # equation 19.82 (not divided by 1 - alpha^7), has faded: 0.11 K after 14 days in Seville in January, below 0.05 K
     # after 21 (the daily means of EnergyPlus are those of the first timestep of each hour, the others those of the
     # weather file)
     [metric] = [c for c in results.columns if c.startswith('EMS:Tout_metric_Block1_Zone1 [')]
     [native] = [c for c in results.columns if 'CEN 15251 Adaptive Model Running Average' in c and 'ZONE1' in c]
-    days = len(results) // (24 * STEPS)
     difference = np.abs(results[metric].to_numpy() - results[native].to_numpy()).reshape(days, -1)[:, 1]
     assert difference[21:].max() < 0.05
     assert difference[14] > 0.05

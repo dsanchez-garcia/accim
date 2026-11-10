@@ -91,8 +91,10 @@ from accim.sim.ems.setpoint_limits import (
     INPUTS as SETPOINT_LIMIT_INPUTS,
     check_hours_below,
     check_setpoint_limits,
+    has_setpoint_limits,
     set_hours_below_code,
     set_setpoint_limits_code,
+    warn_crossed_setpoint_limits,
 )
 from accim.sim.ems.standard_lines import WEATHER_FILE_METRICS, outdoor_metric_standards, standard_inputs
 from accim.sim.ems.static_setpoints import (
@@ -644,11 +646,15 @@ class AddAccis:
         see :mod:`accim.sim.ems.setpoint_limits`); EN 16798-1:2019 (B.2.2) applies in winter the minimums of its Table
         B.2 (:data:`accim.constants.EN16798_TABLE_B2`). Also for each zone in ``zone_arguments``. Only with
         ``setpoint_type`` 'temperature' (the setpoints based on the PMV have none). The setpoints are bounded before
-        their rounding.
+        their rounding, and the setpoints without the tolerance (the limits of the comfort band of the hour counters)
+        are bounded too (finding B5-1 of the review of accim 1.2.0).
     :param cooling_setpoint_ceiling: The ceiling of the cooling setpoint (°C), or None (the default) for none: the
-        cooling setpoint is not higher (the input ``ACSTceil``), as the maximums of Table B.2 of EN 16798-1. Since the
-        cooling setpoint is rounded down, a cooling setpoint bounded by the ceiling is one step of
-        ``setpoint_accuracy`` below it. It must be higher than the floor.
+        cooling setpoint is not higher (the input ``ACSTceil``), as the maximums of Table B.2 of EN 16798-1. A cooling
+        setpoint bounded by the ceiling is the ceiling, and a heating setpoint bounded by the floor the floor (not one
+        step of ``setpoint_accuracy`` beyond them, as the strict rounding would give: finding B5-2). It must be higher
+        than the floor; a warning tells if the floor is above the upper applicability limit of the cooling setpoint of
+        the comfort standard (ACSTaul) or the ceiling below the lower one of the heating setpoint (AHSTall), since the
+        setpoints can then cross (:func:`accim.sim.ems.setpoint_limits.warn_crossed_setpoint_limits`).
     :param report_hours_below: A list of temperatures (°C), such as ``[18, 17, 16]``, or None (or an empty list) for
         none: the output IDFs report the occupied hours of each zone with the operative temperature below each of
         them, ``HoursBelow_<T>_<zone>`` (``HoursBelow_18_<zone>``, and ``HoursBelow_17p5_<zone>`` for 17.5), with
@@ -1028,6 +1034,8 @@ class AddAccis:
                 set_setpoint_limits_code(idf)
                 set_custom_regimes(idf, regimes)
                 set_comfort_standard_code(idf, zone_comfort_standards(idf), epw)
+                if has_setpoint_limits(idf):
+                    warn_crossed_setpoint_limits(idf)
                 idf.savecopy(path)
                 paths[os.path.basename(path)] = os.path.abspath(path)
         return paths
@@ -1220,8 +1228,11 @@ def modify_accis(
     ``cooling_setpoint_ceiling``, see :class:`AddAccis`) keep their values if they are None (the models without them
     have none): a number, here or in ``zone_arguments``, gives it to the zones, with the program
     ApplySetpointLimits_<zone> (:func:`accim.sim.ems.setpoint_limits.set_setpoint_limits_code`). They bound the
-    setpoint temperatures of the ACCIS: the zones controlled by the thermostats of the PMV (``setpoint_type`` 'pmv',
-    or :mod:`accim.sim.pmv_index`) do not use them.
+    setpoint temperatures of the ACCIS, with and without the tolerance: the zones controlled by the thermostats of the
+    PMV (``setpoint_type`` 'pmv', or :mod:`accim.sim.pmv_index`) do not use them. A model with them warns if a floor
+    is above the upper applicability limit of the cooling setpoint of the comfort standard of its zone, or a ceiling
+    below the lower one of the heating setpoint
+    (:func:`accim.sim.ems.setpoint_limits.warn_crossed_setpoint_limits`).
 
     The static setpoints of JPN Aqilah 2025 (``static_heating_setpoint`` and ``static_cooling_setpoint``, see
     :class:`AddAccis`) keep their values if they are None: a number, here or in ``zone_arguments``, gives it to the
@@ -1362,6 +1373,8 @@ def modify_accis(
     given = {comfort_standard, *(own.get('comfort_standard') for own in resolved.values())}
     if given & set(WEATHER_FILE_METRICS) and weather_zones and not begins_with_weather_file(idf):
         _warn_rmot_start('')
+    if has_setpoint_limits(idf):
+        warn_crossed_setpoint_limits(idf)
     indent_programs(idf)
 
 

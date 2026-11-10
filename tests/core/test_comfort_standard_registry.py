@@ -110,20 +110,51 @@ def test_the_yaml_file_of_jpn_aqilah_2025():
     assert 'doi:10.1016/j.enbuild.2025.115469' in definition.citation
 
 
-def test_the_yaml_file_of_qatar_is_incomplete():
-    # Its sources give neither its outdoor metric, nor its applicability limits, nor its comfort band (TODO.md)
-    message = ("qat_indraganti2018_hvac.yaml: the keys ['outdoor_metric', 'applicability', 'categories', "
-               "'comfort_modes'] are missing or empty.")
-    with pytest.raises(ValueError, match=re.escape(message)):
-        st.load_comfort_standards(QATAR)
-    # A folder is read whole or not at all
-    with pytest.raises(ValueError, match='qat_indraganti2018_hvac.yaml'):
-        st.load_comfort_standards(SAMPLES)
-    assert not st.registered_comfort_standards()
-    with open(QATAR, encoding='utf-8') as stream:
-        data = yaml.safe_load(stream)
-    assert data['comfort_temperature'] == {'slope': 0.049, 'intercept': 22.5}
-    assert (data['evidence']['N'], data['evidence']['R2'], data['evidence']['SE']) == (3742, 0.015, 0.007)
+def test_the_yaml_file_of_qatar():
+    # Indraganti & Boussaa (2018), equation 5 and Table 10 (v03 of the proposals), and the choices of the author of
+    # accim where the article gives no values (section 6.3 of v04 of the proposals, finding B3-1 of the review of 1.2.0)
+    with warnings.catch_warnings():
+        warnings.simplefilter('error')
+        [definition] = st.load_comfort_standards(QATAR, register=False)
+    standard = definition.standard
+    assert (definition.number, standard.label) == (102, 'QAT Indraganti2018 HVAC')
+    assert (definition.outdoor_metric, definition.alpha) == ('rmot_alpha', 0.8)
+    [regime] = definition.regimes
+    assert (regime.slope, regime.intercept) == (0.049, 22.5)
+    assert (regime.cooling_lower_limit, regime.cooling_upper_limit, regime.heating_lower_limit,
+            regime.heating_upper_limit) == (10.0, 40.0, 10.0, 40.0)
+    assert definition.category_offsets == {90: (2.5, -2.5), 80: (3.5, -3.5)}
+    assert list(standard.comfort_modes) == [0, 1, 2, 3] and definition.static_setpoints == (20.0, 25.5)
+    evidence = definition.evidence
+    assert {key: evidence[key] for key in ('N', 'R2', 'SE', 'p', 'Tr_mean', 'Tr_sd', 'mode', 'bands')} == {
+        'N': 3742, 'R2': 0.015, 'SE': 0.007, 'p': '<0.001', 'Tr_mean': 30.7, 'Tr_sd': 6.4, 'mode': 'HVAC',
+        'bands': 'ASHRAE 55, not own'}
+    # The folder of the samples loads whole: JPN Aqilah 2025 and Qatar
+    assert [d.number for d in st.load_comfort_standards(SAMPLES)] == [101, 102]
+    assert sorted(st.registered_comfort_standards()) == [101, 102]
+    # Its setpoints, without EnergyPlus: the comfort temperature, almost flat, with the band of 80 %
+    result = compute_setpoints(EPW, 102, 80, 3, start_date='01/07')
+    inside = (result['Tout_metric'] >= 10) & (result['Tout_metric'] <= 40)
+    np.testing.assert_allclose(result.loc[inside, 'ComfTemp'], 0.049 * result.loc[inside, 'Tout_metric'] + 22.5,
+                               rtol=0, atol=1e-9)
+    np.testing.assert_allclose(result.loc[inside, 'ACSTnoTol'], result.loc[inside, 'ComfTemp'] + 3.5, rtol=0,
+                               atol=1e-9)
+    # Below 10 °C (in December), comfort mode 3 extends the setpoints of the limit horizontally
+    below = result['Tout_metric'] < 10
+    assert inside.mean() > 0.8 and below.any() and (inside | below).all()
+    np.testing.assert_allclose(result.loc[below, 'ACSTnoTol'], 0.049 * 10 + 22.5 + 3.5, rtol=0, atol=1e-9)
+
+
+def test_a_warning_for_the_signs_of_the_offsets():
+    # Finding B3-3 of the review of 1.2.0: the setpoints are the comfort temperature plus the offsets
+    for categories in ({80: {'cooling_offset': -0.5, 'heating_offset': -2.0}},
+                       {80: {'cooling_offset': 2.0, 'heating_offset': 0.5}}):
+        with pytest.warns(UserWarning, match=r'The offsets \(cooling_offset, heating_offset\) of the categories '
+                                             r'\{80: .*\} of the comfort standard 101 have the sign that is not usual'):
+            st.definition_from_mapping(_data(categories=categories))
+    with warnings.catch_warnings():
+        warnings.simplefilter('error')
+        st.definition_from_mapping(_data(categories={80: {'cooling_offset': 0, 'heating_offset': 0}}))
 
 
 def test_the_how_to_notebook_has_the_yaml_files_of_the_samples():
@@ -289,9 +320,15 @@ def test_the_erl_lines_of_a_comfort_standard():
     assert branches['SetComfTemp'] == ('elseif ComfStand == 101', 'set ComfTemp = Tout_metric*0.38+16.9')
     assert branches['SetAppLimits'] == ('elseif ComfStand == 101', 'set ACSTaul = 30', 'set ACSTall = 5',
                                         'set AHSTaul = 30', 'set AHSTall = 5')
-    assert branches['ApplyCAT'] == ('elseif ComfStand == 101', 'if (CAT == 90)', 'set ACSToffset = 1.5+CATcoolOffset',
-                                    'set AHSToffset = -1.5+CATheatOffset', 'elseif (CAT == 80)',
-                                    'set ACSToffset = 2+CATcoolOffset', 'set AHSToffset = -2+CATheatOffset', 'endif')
+    # In the numeric order of the categories (finding B3-2 of the review of 1.2.0), not that of the YAML file (90, 80)
+    assert branches['ApplyCAT'] == ('elseif ComfStand == 101', 'if (CAT == 80)', 'set ACSToffset = 2+CATcoolOffset',
+                                    'set AHSToffset = -2+CATheatOffset', 'elseif (CAT == 90)',
+                                    'set ACSToffset = 1.5+CATcoolOffset', 'set AHSToffset = -1.5+CATheatOffset',
+                                    'endif')
+    # As those of JPN Aqilah 2025 built in (23), whose definition has them in that order
+    assert branches['ApplyCAT'][1:] == pl.BUILT_IN_BRANCHES[23]['ApplyCAT'][1:]
+    assert [line for line in sdl.setpoint_lines(definition)[2] if line.startswith('elseif CAT==')] == [
+        'elseif CAT==80', 'elseif CAT==90'] * 2
     # Its outdoor metric is not PMOT, so CountHours and SetVST compare its metric with its limits
     assert branches['CountHours'] == ('elseif ComfStand == 101', *pl._count_hours_body('Tout_metric').split('\n'))
     assert branches['SetVST'] == ('elseif ComfStand == 101', 'if (Tout_metric >= AHSTall) && (Tout_metric <= ACSTaul)',

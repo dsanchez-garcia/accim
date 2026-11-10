@@ -18,6 +18,7 @@ from accim.sim.ems import outdoor_metric as om
 from accim.sim.ems import program_lines as pl
 from accim.sim.ems import setpoint_limits as sl
 from accim.sim.ems import static_setpoints as ss
+from accim.sim.ems.erl import format_number
 from accim.sim.ems.inputs import INPUT_VARIABLES, input_values
 from accim.sim.ems.programs import indent_lines
 from accim.sim.ems.setast import (
@@ -77,8 +78,8 @@ _OUTDOOR_METRIC_LEGEND = (
 _LIMIT_LEGEND = (
     '! AHSTfloor and ACSTceil: the floor of the heating setpoint and the ceiling of the cooling setpoint of the',
     '! zone (heating_setpoint_floor and cooling_setpoint_ceiling), whatever the comfort standard and comfort mode;',
-    '! ApplySetpointLimits_<zone> bounds AHST and ACST and rounds them again, so the cooling setpoint is rounded',
-    '! down below the ceiling.',
+    '! ApplySetpointLimits_<zone>, after SetASTnoTol, bounds AHST and ACST and rounds them again (the setpoints',
+    '! bounded by the floor or the ceiling are the floor or the ceiling), and bounds AHSTnoTol and ACSTnoTol too.',
 )
 _REGIME_LEGEND = (
     '! SelectCustomRegime_<zone>: the regimes of the custom model (custom_regimes), in their order of priority. The',
@@ -92,7 +93,7 @@ _HVAC_OFF_LINES = {'vrf_mm': pl.HVAC_OFF_FROM_COILS, 'ex_mm': pl.HVAC_OFF_FROM_L
 
 
 def _number(value: Number) -> str:
-    return str(int(value)) if value == int(value) else str(value)
+    return format_number(value)
 
 
 def _section(title: str, lines: Iterable[str]) -> List[str]:
@@ -338,7 +339,7 @@ def get_setpoint_ems_code(
     after the inputs of the zone; see :mod:`accim.sim.ems.outdoor_metric`). With the regimes of the custom model, the
     program ``SelectCustomRegime_<zone>`` comes before ``SetAppLimits`` (see :mod:`accim.sim.ems.custom_regimes`).
     With a floor of the heating setpoint or a ceiling of the cooling setpoint, the program
-    ``ApplySetpointLimits_<zone>`` follows the subprograms (see :mod:`accim.sim.ems.setpoint_limits`). Comments (lines
+    ``ApplySetpointLimits_<zone>`` follows ``SetASTnoTol`` (see :mod:`accim.sim.ems.setpoint_limits`). Comments (lines
     that begin with ``!``) explain the variables.
 
     The arguments are those of :func:`accim.sim.accis.modify_accis`, with one value each, and the same defaults.
@@ -468,10 +469,11 @@ def get_setpoint_ems_code(
         for name, subprogram in subprograms([comfort_standard], outdoor_metric).items():
             lines += _section(f'{name}: the setpoints, and their rounding',
                               weather_file_lines(name, subprogram, weather_file))
-    if limit_lines:
-        lines += _section(f'{sl.PROGRAM_PREFIX}{_ZONE}: after SetAST, the floor of the heating setpoint and the '
-                          f'ceiling of the cooling setpoint of the zone, and the rounding again', limit_lines)
     lines += _section('SetASTnoTol: the setpoints without the tolerance (for the hour counters)', pl.SET_AST_NO_TOL)
+    if limit_lines:
+        lines += _section(f'{sl.PROGRAM_PREFIX}{_ZONE}: after SetASTnoTol, the floor of the heating setpoint and the '
+                          f'ceiling of the cooling setpoint of the zone, the rounding again, and the floor and ceiling '
+                          f'of the setpoints without the tolerance', limit_lines)
     return '\n'.join(lines).rstrip('\n')
 
 
@@ -527,15 +529,15 @@ def get_setpoint_ems_programs(
     come first: ``InitOutdoorMetric``, ``SetOutdoorMetric`` and ``SetOutdoorMetric_<zone>``, whose lines name the
     variables of the zone with '<zone>'. With the regimes of the custom model, ``SelectCustomRegime_<zone>`` runs
     before ``SetAppLimits``. With a floor or a ceiling of the setpoints, ``ApplySetpointLimits_<zone>`` runs after
-    ``SetAST``.
+    ``SetASTnoTol``.
 
     :param comfort_standard: The comfort standard (see :func:`get_setpoint_ems_code`).
     :param category: The category.
     :param comfort_mode: The comfort mode.
     :return: The lines of each program, by name: (``InitOutdoorMetric``, ``SetOutdoorMetric``),
         ``SetInputData_<zone>``, (``SetOutdoorMetric_<zone>``), (``SelectCustomRegime_<zone>``), ``SetAppLimits``,
-        ``ApplyCAT``, ``SetComfTemp``, ``SetAST``, ``SetAST_Master``, the subprograms, (``ApplySetpointLimits_<zone>``)
-        and ``SetASTnoTol``.
+        ``ApplyCAT``, ``SetComfTemp``, ``SetAST``, ``SetAST_Master``, the subprograms, ``SetASTnoTol`` and
+        (``ApplySetpointLimits_<zone>``).
     :raises ValueError: As :func:`get_setpoint_ems_code`, and if the category or the comfort mode is missing.
 
     The other arguments are those of :func:`get_setpoint_ems_code`, with the same defaults.
@@ -589,8 +591,8 @@ def get_setpoint_ems_programs(
     })
     programs.update({name: weather_file_lines(name, lines, weather_file)
                      for name, lines in subprograms([comfort_standard], outdoor_metric).items()})
+    programs['SetASTnoTol'] = list(pl.SET_AST_NO_TOL)
     limit_lines = _limit_program(arguments)
     if limit_lines:
         programs[f'{sl.PROGRAM_PREFIX}{_ZONE}'] = limit_lines
-    programs['SetASTnoTol'] = list(pl.SET_AST_NO_TOL)
     return programs

@@ -37,6 +37,8 @@ import math
 import re
 from typing import Callable, Dict, Iterable, List, Mapping, Optional, Sequence, Set, Tuple
 
+import numpy as np
+
 __all__ = [
     'BUILT_IN_VARIABLES',
     'ErlError',
@@ -48,6 +50,7 @@ __all__ = [
     'UNINITIALISED_NULL',
     'UNINITIALISED_NUMBER',
     'erl_round',
+    'format_number',
     'is_number',
     'parse_expression',
 ]
@@ -94,6 +97,20 @@ _float = float
 def is_number(value) -> bool:
     """True if an Erl value is a number."""
     return value.__class__ is _float
+
+
+def format_number(value: float, keep_decimal: bool = False) -> str:
+    """A number as accim writes it in the lines of the EMS programs: positional, without exponent, with the shortest
+    digits that give the same float (:func:`numpy.format_float_positional`), and without the decimal point if it is
+    an integer (with ``keep_decimal``, with ``.0``, as the programs of the outdoor metric write their numbers). All
+    the modules that write numbers in the programs use it (finding B1-2 of the review of accim 1.2.0).
+
+    :raises ValueError: If the number is not finite: ``nan`` or ``inf`` would be the names of variables in Erl.
+    """
+    number = float(value)
+    if not math.isfinite(number):
+        raise ValueError(f'The EMS programs cannot have the number {value!r}: it is not finite.')
+    return np.format_float_positional(number, trim='0' if keep_decimal else '-')
 
 
 # Built-in variables of EnergyPlus; the constants keep their values at a new environment

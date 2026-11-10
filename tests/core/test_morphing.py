@@ -11,6 +11,7 @@ command is a list of arguments, and morph_epws raises an error after moving the 
 """
 import os
 import subprocess
+import warnings
 
 import pytest
 
@@ -103,10 +104,12 @@ def test_morph_epws_gives_its_options_to_futureweathergenerator(tmp_path, monkey
     monkeypatch.setattr(subprocess, 'run',
                         lambda command, **kwargs: commands.append(command) or subprocess.CompletedProcess(command, 0))
 
-    morph_epws(fwg_path='C:/FWG folder/FutureWeatherGenerator.jar', fwg_options_gcms='CanESM5,MIROC6',
-               fwg_options_ensemble=0, fwg_options_month_transition_hours=24,
-               fwg_options_do_multithread_computation=False, fwg_options_interpolation_method_id=2,
-               fwg_options_do_limit_variables=False)
+    # Without the ensemble, also with Java (finding E4-2 of the review of 1.2.0)
+    with pytest.warns(UserWarning, match='With fwg_options_ensemble=0'):
+        morph_epws(fwg_path='C:/FWG folder/FutureWeatherGenerator.jar', fwg_options_gcms='CanESM5,MIROC6',
+                   fwg_options_ensemble=0, fwg_options_month_transition_hours=24,
+                   fwg_options_do_multithread_computation=False, fwg_options_interpolation_method_id=2,
+                   fwg_options_do_limit_variables=False)
 
     # A list of arguments: the paths with blanks need no quotes, on any operating system
     folder = os.path.join(os.getcwd(), 'Seville')
@@ -205,6 +208,8 @@ def test_morph_epws_with_pyfwg(tmp_path, monkeypatch, delete_morphing_files):
         assert (call['fwg_create_ensemble'], call['fwg_month_transition_hours'], call['fwg_use_multithreading'],
                 call['fwg_interpolation_method_id'], call['fwg_limit_variables']) == (True, 72, True, 0, True)
         assert call['fwg_show_tool_output'] is True and call['delete_temp_files'] is delete_morphing_files
+        # Without the urban heat island, as the command line of Java (finding E4-1 of the review of 1.2.0)
+        assert call['fwg_add_uhi'] is False
     # The future EPWs next to the originals, named as with Java; the originals do not move
     expected = ['Seville.epw', 'tmy'] + [f'Seville_{scenario}.epw' for scenario in SCENARIOS]
     if not delete_morphing_files:
@@ -225,16 +230,53 @@ def test_morph_epws_gives_its_options_and_pyfwg_arguments_to_pyfwg(tmp_path, mon
     (tmp_path / 'Seville.epw').write_text('EPW', encoding='utf-8')
     calls = _fake_pyfwg(monkeypatch)
 
-    morph_epws(fwg_path='FutureWeatherGenerator.jar', fwg_options_gcms='CanESM5,MIROC6', fwg_options_ensemble=0,
-               fwg_options_month_transition_hours=24, fwg_options_do_multithread_computation=False,
-               fwg_options_interpolation_method_id=2, fwg_options_do_limit_variables=False, engine='pyfwg',
-               pyfwg_arguments={'fwg_add_uhi': False, 'fwg_version': 4, 'fwg_show_tool_output': False})
+    # Without the ensemble, the EPW of each scenario that is kept is that of one of the models (finding E4-2)
+    with pytest.warns(UserWarning, match=r'With fwg_options_ensemble=0, the Future Weather Generator writes an EPW for '
+                                         r'each climate model and scenario'):
+        morph_epws(fwg_path='FutureWeatherGenerator.jar', fwg_options_gcms='CanESM5,MIROC6', fwg_options_ensemble=0,
+                   fwg_options_month_transition_hours=24, fwg_options_do_multithread_computation=False,
+                   fwg_options_interpolation_method_id=2, fwg_options_do_limit_variables=False, engine='pyfwg',
+                   pyfwg_arguments={'fwg_add_uhi': True, 'fwg_version': 4, 'fwg_show_tool_output': False})
 
     [call] = calls
     assert call['fwg_gcms'] == ['CanESM5', 'MIROC6']
     assert (call['fwg_create_ensemble'], call['fwg_month_transition_hours'], call['fwg_use_multithreading'],
             call['fwg_interpolation_method_id'], call['fwg_limit_variables']) == (False, 24, False, 2, False)
-    assert (call['fwg_add_uhi'], call['fwg_version'], call['fwg_show_tool_output']) == (False, 4, False)
+    # pyfwg_arguments gives the urban heat island
+    assert (call['fwg_add_uhi'], call['fwg_version'], call['fwg_show_tool_output']) == (True, 4, False)
+    # With the ensemble (also as text), no warning
+    with warnings.catch_warnings():
+        warnings.simplefilter('error')
+        morph_epws(fwg_path='FutureWeatherGenerator.jar', epw_filepaths=['Seville.epw'], fwg_options_ensemble='1',
+                   engine='pyfwg')
+
+
+@pytest.mark.parametrize('delete_morphing_files', [True, False])
+def test_a_value_error_of_pyfwg_removes_the_folders(tmp_path, monkeypatch, delete_morphing_files):
+    # Finding E4-3 of the review of 1.2.0: as after the other errors, the folders that morph_epws made are removed
+    monkeypatch.chdir(tmp_path)
+    for name in ('Granada.epw', 'Seville.epw'):
+        (tmp_path / name).write_text(name, encoding='utf-8')
+    good = _fake_pyfwg(monkeypatch)
+    import sys
+
+    module = sys.modules['pyfwg']
+    morph_good = module.morph_epw_global
+
+    def morph(**kwargs):
+        if os.path.basename(kwargs['epw_paths'][0]) == 'Granada.epw':
+            return morph_good(**kwargs)
+        os.makedirs(kwargs['temp_base_dir'], exist_ok=True)
+        raise ValueError('The parameters of the tool are not valid.')
+
+    module.morph_epw_global = morph
+    with pytest.raises(ValueError, match='The parameters of the tool are not valid'):
+        morph_epws(fwg_path='FutureWeatherGenerator.jar', epw_filepaths=['Granada.epw', 'Seville.epw'],
+                   delete_morphing_files=delete_morphing_files, engine='pyfwg')
+    assert len(good) == 1
+    names = {p.name for p in tmp_path.iterdir()}
+    assert {'Granada.epw', 'Seville.epw'} | {f'Granada_{scenario}.epw' for scenario in SCENARIOS} <= names
+    assert ({'Granada', 'Seville'} & names) == (set() if delete_morphing_files else {'Granada', 'Seville'})
 
 
 def test_the_arguments_of_the_engines_are_checked(tmp_path, monkeypatch):
@@ -324,7 +366,7 @@ def test_the_arguments_and_constants_are_those_of_pyfwg():
         epw_paths=['Seville.epw'], fwg_jar_path='FutureWeatherGenerator.jar', output_dir='Seville',
         temp_base_dir='Seville/pyfwg_temp', delete_temp_files=True, fwg_show_tool_output=True,
         fwg_gcms=list(DEFAULT_GCMS), fwg_create_ensemble=True, fwg_month_transition_hours=72,
-        fwg_use_multithreading=True, fwg_interpolation_method_id=0, fwg_limit_variables=True)
+        fwg_use_multithreading=True, fwg_interpolation_method_id=0, fwg_limit_variables=True, fwg_add_uhi=False)
     assert pyfwg.detect_fwg_tool('FutureWeatherGenerator_Europe_v2.0.2.jar') == 'europe'
 
 

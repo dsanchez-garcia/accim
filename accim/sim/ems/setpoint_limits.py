@@ -12,20 +12,35 @@ cooling systems, whose adaptive limits (Figure B.1) apply in summer and the mid-
 limits change the equation of the setpoints (comfort modes 1, 2 and 3), but they do not bound them.
 
 - ``heating_setpoint_floor`` and ``cooling_setpoint_ceiling`` (the inputs ``AHSTfloor`` and ``ACSTceil`` of the program
-  SetInputData_<zone>): the program ``ApplySetpointLimits_<zone>``, which RunACCIS_<zone> runs right after SetAST (and
-  after the program that gives the setpoints of a hook of the API backend to the zone,
-  :mod:`accim.sim.ems.hook_setpoints`, if it has one), sets
-  the heating setpoint AHST to AHSTfloor if it is lower, and the cooling setpoint ACST to ACSTceil if it is higher, and
-  then rounds them again as the subprograms of SetAST do (:data:`accim.sim.ems.setpoint_lines.ROUNDING`, with
-  SetpointAcc): the setpoints are those of bounding AHST and ACST before their rounding, whatever the comfort standard
-  and the comfort mode are, as the proposal designs it. The rounding of the cooling setpoint is downwards and strict,
-  so a cooling setpoint bounded by the ceiling is one step of SetpointAcc below it (25.9999 °C with a ceiling of 26 °C
-  and the default accuracy, 10000), and a heating setpoint bounded by the floor is the floor. The setpoints without the
-  tolerance (SetASTnoTol, which runs after it) and those of the ventilation (SetVST) come from the bounded setpoints.
-  The floor only bounds the heating setpoint and the ceiling the cooling setpoint: with a floor above the cooling
-  setpoint of the comfort model (or a ceiling below its heating setpoint), the heating setpoint is above the cooling
-  setpoint. Only the zones with a floor or a ceiling have the program and the inputs, so the output IDFs without them
-  do not change.
+  SetInputData_<zone>): the program ``ApplySetpointLimits_<zone>``, which RunACCIS_<zone> runs right after SetASTnoTol
+  (so after SetAST, and after the program that gives the setpoints of a hook of the API backend to the zone,
+  :mod:`accim.sim.ems.hook_setpoints`, if it has one), sets the heating setpoint AHST to AHSTfloor if it is lower, and
+  the cooling setpoint ACST to ACSTceil if it is higher, and then rounds them again as the subprograms of SetAST do
+  (:data:`accim.sim.ems.setpoint_lines.ROUNDING`, with SetpointAcc): the setpoints of the thermostats are those of
+  bounding AHST and ACST before their rounding, whatever the comfort standard and the comfort mode are, as the
+  proposal designs it. The rounding is strict (the cooling setpoint downwards and the heating setpoint upwards), so
+  the program sets the rounded setpoints to the ceiling and the floor when they bound them: otherwise, the cooling
+  setpoint would be one step of SetpointAcc below the ceiling (25.9999 °C with a ceiling of 26 °C and the default
+  accuracy, 10000: finding B5-2 of the review of 1.2.0), and the heating setpoint one step above a floor whose product
+  by SetpointAcc is not exact in binary (19.11 °C with a floor of 19.1 °C and an accuracy of 100). The floor and the
+  ceiling also bound the setpoints without the tolerance
+  (AHSTnoTol and ACSTnoTol, the limits of the comfort band with which the hour counters of the ACCIS, the long-term
+  discomfort and the hours below some temperatures count; finding B5-1): the floor is a limit of the setpoint without
+  the tolerance, so a heating setpoint without the tolerance of AHSTfloor − AHSTtol (0.1 K below the floor with the
+  default tolerance) becomes AHSTfloor: AHSTnoTol = max(AHST − AHSTtol, AHSTfloor) and ACSTnoTol = min(ACST −
+  ACSTtol, ACSTceil), with the setpoints AHST and ACST of SetAST, while the thermostats get max(AHST, AHSTfloor) and
+  min(ACST, ACSTceil), rounded (so, where the floor or the ceiling bounds them, the setpoints with and without the
+  tolerance are the same). The ventilation setpoint (SetVST, in mixed mode) follows the floor and ceiling only where
+  it comes from the rounded setpoints (``(roundedACST+roundedAHST)/2+VSToffset``, ``roundedAHST+VSToffset``, and
+  MinOutTemp, ``roundedAHST - MinOToffset``): within the applicability limits, most comfort standards set it to the
+  comfort temperature plus VSToffset (``ComfTemp+VSToffset``), and ESP CTE from 7 to 15 h to 22.5 °C plus VSToffset,
+  which the floor and the ceiling do not bound (finding B5-3). The floor only bounds the heating
+  setpoint and the ceiling the cooling setpoint: with a floor above the cooling setpoint of the comfort model (or a
+  ceiling below its heating setpoint), the heating setpoint is above the cooling setpoint; a floor not lower than the
+  ceiling raises a ValueError, and :func:`warn_crossed_setpoint_limits` warns when the floor is above the upper
+  applicability limit of the cooling setpoint of the comfort standard of the zone (ACSTaul) or the ceiling below the
+  lower applicability limit of its heating setpoint (AHSTall), as verdict 13 of the review of 1.2.0 asks. Only the
+  zones with a floor or a ceiling have the program and the inputs, so the output IDFs without them do not change.
 - ``report_hours_below``: the occupied hours with the operative temperature below each of some temperatures, the EMS
   outputs ``HoursBelow_<T>_<zone>`` (the program ``CountHoursBelow_<zone>``, which RunACCIS_<zone> runs after
   CountHoursNoApp_<zone>): in each timestep, the length of the timestep if the zone has occupants and its operative
@@ -37,8 +52,10 @@ The setpoints based on the PMV (:mod:`accim.sim.pmv_index`) have neither floor n
 """
 
 import numbers
-from typing import Any, Dict, Iterable, List, Optional, Sequence
+import warnings
+from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
 
+from accim.sim.ems.erl import format_number
 from accim.sim.ems.setpoint_lines import ROUNDING
 
 __all__ = [
@@ -54,6 +71,7 @@ __all__ = [
     'limit_program_lines',
     'set_hours_below_code',
     'set_setpoint_limits_code',
+    'warn_crossed_setpoint_limits',
     'zone_limits',
 ]
 
@@ -116,14 +134,28 @@ def hours_below_variable(threshold: float, zone: str) -> str:
 
 
 def limit_program_lines(floor: bool, ceiling: bool) -> List[str]:
-    """The lines of the program ApplySetpointLimits_<zone>: the floor of the heating setpoint and the ceiling of the
-    cooling setpoint (those of the zone), and the rounding of the setpoints."""
+    """The lines of the program ApplySetpointLimits_<zone> (run after SetASTnoTol): the floor of the heating setpoint
+    and the ceiling of the cooling setpoint (those of the zone) on the setpoints with the tolerance, which the
+    thermostats get, the rounding of the setpoints, the floor and the ceiling as the rounded setpoints when they bound
+    them (the rounding is strict, so the ceiling would otherwise be one step of SetpointAcc below it, and a floor whose
+    product by SetpointAcc is not exact in binary, such as 19.1 °C with an accuracy of 100, one step above it: finding
+    B5-2 of the review of 1.2.0), and the floor and the ceiling on the setpoints without the tolerance too (the comfort
+    band of the hour counters: finding B5-1)."""
     lines: List[str] = []
     if floor:
         lines += ['if AHST < AHSTfloor', 'set AHST = AHSTfloor', 'endif']
     if ceiling:
         lines += ['if ACST > ACSTceil', 'set ACST = ACSTceil', 'endif']
-    return lines + list(ROUNDING)
+    lines += list(ROUNDING)
+    if floor:
+        lines += ['if AHST <= AHSTfloor', 'set roundedAHST = AHSTfloor', 'endif']
+    if ceiling:
+        lines += ['if ACST >= ACSTceil', 'set roundedACST = ACSTceil', 'endif']
+    if floor:
+        lines += ['if AHSTnoTol < AHSTfloor', 'set AHSTnoTol = AHSTfloor', 'endif']
+    if ceiling:
+        lines += ['if ACSTnoTol > ACSTceil', 'set ACSTnoTol = ACSTceil', 'endif']
+    return lines
 
 
 def hours_below_lines(zone: str, thresholds: Sequence[float]) -> List[str]:
@@ -140,15 +172,16 @@ def hours_below_lines(zone: str, thresholds: Sequence[float]) -> List[str]:
 
 
 def _number(value: float) -> str:
-    return str(int(value)) if float(value) == int(value) else repr(float(value))
+    return format_number(value)
 
 
 def _program_lines(program) -> List[str]:
     return [str(value).strip() for value in program.fieldvalues[2:]]
 
 
-def _insert_run_line(idf, zone: str, line: str, after: str) -> None:
-    """Make RunACCIS_<zone> run a program right after another one (that it runs)."""
+def _insert_run_line(idf, zone: str, line: str, after: str, move: bool = False) -> None:
+    """Make RunACCIS_<zone> run a program right after another one (that it runs); with ``move``, a line that it
+    has somewhere else is moved there."""
     from accim.sim.ems.inputs import RUN_PROGRAM_PREFIX
     from accim.sim.ems.programs import set_program_lines
 
@@ -157,7 +190,10 @@ def _insert_run_line(idf, zone: str, line: str, after: str) -> None:
         return
     lines = _program_lines(run_program)
     if line in lines:
-        return
+        position = lines.index(line)
+        if not move or (position and lines[position - 1].lower() == after.lower()):
+            return
+        lines = [existing for existing in lines if existing != line]
     index = next((n + 1 for n, existing in enumerate(lines) if existing.lower() == after.lower()), None)
     if index is None:
         raise ValueError(f'The program {RUN_PROGRAM_PREFIX}{zone} does not run {after.split(" ", 1)[1]}.')
@@ -165,17 +201,11 @@ def _insert_run_line(idf, zone: str, line: str, after: str) -> None:
 
 
 def _after_setpoints(idf, zone: str) -> str:
-    """The line of RunACCIS_<zone> after which ApplySetpointLimits_<zone> runs: that of the program that gives the
-    setpoints of a hook to the zone (:mod:`accim.sim.ems.hook_setpoints`, run right after SetAST), if it has one, so
-    that the floor and ceiling also bound the setpoints of the hook; otherwise, SetAST."""
-    from accim.sim.ems.hook_setpoints import PROGRAM_PREFIX as HOOK_PROGRAM_PREFIX
-    from accim.sim.ems.inputs import RUN_PROGRAM_PREFIX
-
-    hook_line = f'{_RUN_PREFIX}{HOOK_PROGRAM_PREFIX}{zone}'
-    run_program = idf.getobject('EnergyManagementSystem:Program', f'{RUN_PROGRAM_PREFIX}{zone}')
-    if run_program is not None and hook_line.lower() in (line.lower() for line in _program_lines(run_program)):
-        return hook_line
-    return 'run SetAST'
+    """The line of RunACCIS_<zone> after which ApplySetpointLimits_<zone> runs: that of SetASTnoTol, which runs after
+    SetAST and after the program that gives the setpoints of a hook to the zone (:mod:`accim.sim.ems.hook_setpoints`,
+    if it has one), so that the floor and ceiling also bound the setpoints of the hook and those without the
+    tolerance."""
+    return 'run SetASTnoTol'
 
 
 def _remove_run_line(idf, zone: str, line: str) -> None:
@@ -203,9 +233,8 @@ def has_setpoint_limits(idf) -> bool:
 def set_setpoint_limits_code(idf) -> None:
     """Write the programs ApplySetpointLimits_<zone> of the zones of a model (of accim 1.0.0 or later) with the inputs
     ``AHSTfloor`` or ``ACSTceil`` in their programs SetInputData_<zone>, with the lines of the inputs that they have
-    (and the line that runs them in RunACCIS_<zone>, after SetAST, or after the program of the setpoints of a hook if
-    the zone has it), and remove those of the other zones; the EMS global
-    variables AHSTfloor and ACSTceil are declared if a zone has them."""
+    (and the line that runs them in RunACCIS_<zone>, right after SetASTnoTol), and remove those of the other zones; the
+    EMS global variables AHSTfloor and ACSTceil are declared if a zone has them."""
     from accim.sim.ems.inputs import input_programs, read_inputs
     from accim.sim.ems.programs import add_program, set_program_lines
 
@@ -223,7 +252,8 @@ def set_setpoint_limits_code(idf) -> None:
                 add_program(idf, name, lines)
             elif _program_lines(existing) != lines:
                 set_program_lines(existing, lines)
-            _insert_run_line(idf, zone, run_line, _after_setpoints(idf, zone))
+            # The programs of the limits of accim 1.2.0 before its finding B5-1 ran right after SetAST
+            _insert_run_line(idf, zone, run_line, _after_setpoints(idf, zone), move=True)
         else:
             if existing is not None:
                 idf.removeidfobject(existing)
@@ -283,3 +313,55 @@ def zone_limits(idf) -> Dict[str, Dict[str, Optional[float]]]:
 
     return {zone: {name: read_inputs(program).get(name) for name in INPUTS}
             for zone, program in input_programs(idf).items()}
+
+
+def _applicability_limits(idf, program) -> Tuple[Optional[float], Optional[float]]:
+    """The upper applicability limit of the cooling setpoint (ACSTaul) and the lower one of the heating setpoint
+    (AHSTall) of the comfort standard of a zone: its program SetInputData_<zone> and the program SetAppLimits of the
+    model run with the Erl interpreter of accim (:mod:`accim.sim.ems.erl`); None if they do not set them."""
+    from accim.sim.ems.erl import ErlProgramSet, variables_in_programs
+
+    app_limits = idf.getobject('EnergyManagementSystem:Program', 'SetAppLimits')
+    if app_limits is None:
+        return None, None
+    programs = {'SetInputData': _program_lines(program), 'SetAppLimits': _program_lines(app_limits)}
+    try:
+        erl = ErlProgramSet(programs, global_variables=set().union(*variables_in_programs(programs).values()))
+        erl.run('SetInputData')
+        erl.run('SetAppLimits')
+    except Exception:  # The warning is not given if the programs cannot run on their own
+        return None, None
+    return erl.get('ACSTaul'), erl.get('AHSTall')
+
+
+def warn_crossed_setpoint_limits(idf) -> List[str]:
+    """Warn about the zones of a model whose floor of the heating setpoint is above the upper applicability limit of
+    the cooling setpoint of their comfort standard (ACSTaul), or whose ceiling of the cooling setpoint is below the
+    lower applicability limit of their heating setpoint (AHSTall), as verdict 13 of the review of accim 1.2.0 asks
+    (``notes/PROPUESTAS_MEJORAS_post_1.1.0_v04.md``, section 5): the floor only bounds the heating setpoint and the
+    ceiling the cooling setpoint, so the heating setpoint can then be above the cooling setpoint, with which EnergyPlus
+    gives warnings and meaningless results. The limits are those of the program SetAppLimits of the model for the
+    inputs of the zone (its comfort standard and category); a floor not lower than the ceiling is a ValueError
+    (:func:`check_setpoint_limits`).
+
+    :return: The messages, which are also given as warnings.
+    """
+    from accim.sim.ems.inputs import input_programs, read_inputs
+
+    messages = []
+    for zone, program in input_programs(idf).items():
+        floor, ceiling = (read_inputs(program).get(name) for name in INPUTS)
+        if floor is None and ceiling is None:
+            continue
+        upper, lower = _applicability_limits(idf, program)
+        if floor is not None and upper is not None and floor > upper:
+            messages.append(f'The floor of the heating setpoint of the zone {zone} ({_number(floor)} °C) is above the '
+                            f'upper applicability limit of the cooling setpoint of its comfort standard (ACSTaul, '
+                            f'{_number(upper)} °C): its heating setpoint can be above its cooling setpoint.')
+        if ceiling is not None and lower is not None and ceiling < lower:
+            messages.append(f'The ceiling of the cooling setpoint of the zone {zone} ({_number(ceiling)} °C) is below '
+                            f'the lower applicability limit of the heating setpoint of its comfort standard (AHSTall, '
+                            f'{_number(lower)} °C): its cooling setpoint can be below its heating setpoint.')
+    for message in messages:
+        warnings.warn(message, stacklevel=2)
+    return messages
