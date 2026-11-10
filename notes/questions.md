@@ -24,6 +24,21 @@ it here as answered).
 
 ## Open
 
+## 2026-11-10 — D2 (completed): the names in Table of the optional outputs of the ACCIS and of the ATHB
+- Context: v03 (D2) asks Table to recognise `ATHB_PMV_<zone>`, `Tout_metric` and `HoursBelow_*_<zone>` in the renaming
+  and in the figures and `wrangled_table`; it does not give their names in Table, nor those of `Tout_metric_<zone>`,
+  `CustomRegime_<zone>` (B2, added to the task in `TODO.md`) or the outputs of C2, nor their block and building values.
+- Options considered: the outdoor metric of each zone: (a) it keeps its EMS name, as the comfort temperature and the
+  setpoints of each zone of the ACCIS (chosen), or (b) `<zone>_Tout_metric (°C)`, which contains `Tout_metric (°C)`, the
+  name of that of the model, so the figures would take the zones with it; the outputs of C2: (i) the same names as the
+  indicators of `Table(long_term_indicators=True)`, `<zone>_Hours Above Upper Limit (h)`... and `Building_...` for the
+  EMS sums of the building (chosen), or (ii) not renamed (v03 does not list them); block and building values for the
+  hours, the degree hours and the ATHB (as for the index of the PMV-based setpoints), not for the regime and the outdoor
+  metric of the zones (as for the schedules of the thermostats).
+- Owner: the author.
+- Status: open; (a), (i) and the levels above decided provisionally (no name contains another one, and the names follow
+  those that Table already gives), pending author.
+
 ## 2026-11-10 — A6: which setpoints of SET, PPD or cooling effect
 - Context: v03 (A6, no prompt) gives two ways for the setpoints of the SET, (a) a proportional control in Erl of the
   setpoint from the SET of the previous timestep (k ≈ 0.8, with saturation; "sencillo pero con retardo y posible

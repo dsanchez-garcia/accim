@@ -20,6 +20,14 @@ accim.data.postprocessing.main module
    :show-inheritance:
    :undoc-members:
 
+accim.data.postprocessing.optional\_output\_columns module
+----------------------------------------------------------
+
+.. automodule:: accim.data.postprocessing.optional_output_columns
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
 accim.data.postprocessing.pmv\_index\_columns module
 ----------------------------------------------------
 

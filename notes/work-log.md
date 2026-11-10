@@ -15,6 +15,21 @@ This log is a lightweight, session-scoped complement to the repository's
 existing tracking files — it does not replace them (see
 [[decisions.md#2026-09-13 — `notes/work-log.md` complements, not replaces, existing tracking files|the related decision]]).
 
+## 2026-11-10 — D2, completed: the optional outputs of the ACCIS and of the ATHB in Table (branch `v1.2.0`, on the server)
+
+- **Objective**: the task of D2 left in `TODO.md` (its outputs of A4, B1 and B5, and B2), unblocked once A4 was done.
+- **Affected files**: `accim/data/postprocessing/optional_output_columns.py` (new), `accim/data/postprocessing/main.py`,
+  `tests/core/test_table_optional_outputs.py` (new), [[../docs/source/4_detailed use.md]] (§4.7.5),
+  [[../CHANGELOG.md]], [[../CAMBIOS_CODIGO_v1.2.0.md]] (§22), [[../DEVLOG.md]], [[../TODO.md]], [[decisions.md]],
+  [[questions.md]].
+- **Finding or decision**: See
+  [[decisions.md#2026-11-10 — The optional outputs of the ACCIS and of the ATHB in Table (D2, completed)|the decision]].
+  Table dropped these outputs with `standard_outputs=True` and added up the ATHB_PMV over time; the outdoor metric of
+  each zone keeps its EMS name, so that `Tout_metric (°C)` is not part of other names.
+- **Validation**: 18 new tests (one with EnergyPlus 25.1); the tests of Table; the whole suite (1783 passed, 2
+  skipped); the documentation build (59 warning lines, as before).
+- **Next step**: the report of the session.
+
 ## 2026-11-10 — A6: the setpoints of the SET and the PPD (branch `v1.2.0`, on the server)
 
 - **Objective**: A6, the last proposal of the list of the author.

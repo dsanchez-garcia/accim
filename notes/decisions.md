@@ -11,6 +11,20 @@ Durable architectural/process decisions for this repository and its Obsidian
 vault. Newest first. Use [[templates/decision-record.md|the decision-record
 template]] to add a new entry.
 
+## 2026-11-10 — The optional outputs of the ACCIS and of the ATHB in Table (D2, completed)
+
+- **Status**: accepted (proposal D2 of `notes/PROPUESTAS_MEJORAS_post_1.1.0_v03.md`, the outputs of A4, B1 and B5 that it
+  lists, with those of B2 and C2; the names decided provisionally, see questions.md)
+- **Context**: D2 was done on 2026-11-09 for the PMV-based setpoints, before the outputs of the other proposals existed;
+  Table dropped the optional outputs with `standard_outputs=True`, kept their EMS names in capitals without block and
+  building values, and added up the outputs of the ATHB over time.
+- **Decision**: a module `accim.data.postprocessing.optional_output_columns`, as `pmv_index_columns`, with the names of
+  Table (`<zone>_HoursBelow_<T> (h)`, `<zone>_Hours Above Upper Limit (h)`, `Building_...`, `<zone>_ATHB_PMV`,
+  `<zone>_CustomRegime`, `Tout_metric (°C)`), what is averaged and what has block and building values; the outdoor metric
+  of each zone keeps its EMS name, so that no name contains another one.
+- **Consequences**: Table keeps and names every optional output of 1.2.0; a test checks the names against the modules of
+  `accim.sim` that create the outputs, so a new optional output needs its name in Table.
+
 ## 2026-11-10 — The setpoints of the SET are a hook of the API backend with a table by relative humidity (A6)
 
 - **Status**: accepted (proposal A6 of `notes/PROPUESTAS_MEJORAS_post_1.1.0_v03.md`, way (b); decided provisionally,

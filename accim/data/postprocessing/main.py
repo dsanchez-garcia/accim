@@ -17,7 +17,7 @@
 from typing import Tuple, Union
 
 from accim._deprecation import accepts_legacy_kwargs
-from accim.data.postprocessing import pmv_index_columns
+from accim.data.postprocessing import optional_output_columns, pmv_index_columns
 
 
 def _share_y_axis(reference_ax, ax):
@@ -54,10 +54,6 @@ _AVERAGED_OUTPUTS = [
     'EMS:Adaptive Heating Setpoint Temperature_No Tolerance',
     'EMS:Ventilation Setpoint Temperature',
     'EMS:Minimum Outdoor Temperature for ventilation',
-    # The outdoor metric of the custom model (accim.sim.ems.outdoor_metric), of the whole model and of each zone
-    'EMS:Tout_metric',
-    # The number of the regime of the custom model of each zone (accim.sim.ems.custom_regimes)
-    'EMS:CustomRegime',
     # 'Zone Thermostat Operative Temperature',
     # 'Zone Operative Temperature',
     'Zone Operative Temperature',
@@ -69,9 +65,12 @@ _AVERAGED_OUTPUTS = [
 
 
 def _averaged_outputs() -> list:
-    """The outputs that Table averages over time, and over the occupant instances of a zone: those above, and those of
-    the setpoints based on the PMV but their hour counters (see :mod:`accim.data.postprocessing.pmv_index_columns`)."""
-    return _AVERAGED_OUTPUTS + list(pmv_index_columns.averaged_outputs())
+    """The outputs that Table averages over time, and over the occupant instances of a zone: those above, those of the
+    setpoints based on the PMV but their hour counters (see :mod:`accim.data.postprocessing.pmv_index_columns`), and the
+    optional outputs of the ACCIS but the hours and degree hours, such as the outdoor metric of the custom model and the
+    outputs of the ATHB (see :mod:`accim.data.postprocessing.optional_output_columns`)."""
+    return (_AVERAGED_OUTPUTS + list(pmv_index_columns.averaged_outputs())
+            + list(optional_output_columns.averaged_outputs()))
 
 
 def _longest_name_in(text: str, names) -> Union[str, None]:
@@ -288,16 +287,17 @@ def _of_output(column: str, output: str) -> bool:
     return not any(name in column for name in longer)
 
 
-def _add_pmv_index_levels(df, index_columns: dict, level: list, level_agg_func: list, block_list: list, in_block,
-                          excluded):
+def _add_zone_output_levels(df, index_columns: dict, level: list, level_agg_func: list, block_list: list, in_block,
+                            excluded):
     """
-    Add the block and building values of the outputs of the zones of the setpoints based on the PMV, as Table does for
-    its other outputs: their sum (``<block>_Total_<name> (summed)_pymod``, ``Building_Total_<name> (summed)_pymod``)
-    and their mean (``... (mean)_pymod``) over the zones of each block and of the building, with ``level`` and
-    ``level_agg_func``, but the excluded zones.
+    Add the block and building values of the outputs of the zones of the setpoints based on the PMV and of the optional
+    outputs of the ACCIS, as Table does for its other outputs: their sum (``<block>_Total_<name> (summed)_pymod``,
+    ``Building_Total_<name> (summed)_pymod``) and their mean (``... (mean)_pymod``) over the zones of each block and of
+    the building, with ``level`` and ``level_agg_func``, but the excluded zones.
 
     :param df: The table.
-    :param index_columns: The columns of these outputs (see :func:`pmv_index_columns.zone_columns`).
+    :param index_columns: The columns of these outputs (see :func:`pmv_index_columns.zone_columns` and
+        :func:`optional_output_columns.zone_columns`).
     :param in_block: Whether a column is of a block, ``in_block(column, block)``.
     :param excluded: Whether a column is of an excluded zone, ``excluded(column)``.
     :return: The table with the new columns.
@@ -705,8 +705,9 @@ class Table:
                 'Zone Thermal Comfort Fanger Model PMV',
                 'Zone Thermal Comfort Fanger Model PPD'
             ]
-            # And those of the setpoints based on the PMV
+            # And those of the setpoints based on the PMV, and the optional outputs of the ACCIS
             cleaned_columns.extend(pmv_index_columns.standard_outputs())
+            cleaned_columns.extend(optional_output_columns.standard_outputs())
 
             summed_dataframes = []
 
@@ -1332,10 +1333,12 @@ class Table:
                         df['Building_Total_' + outputdict[output] + ' (mean)_pymod'] = df[
                             [i for i in df.columns if _of_output(i, output) and '_pymod' not in i.lower() and not excluded(i)]].mean(axis=1)
 
-        # The block and building values of the outputs of the zones of the setpoints based on the PMV, named as with
-        # rename_cols (see pmv_index_columns.zone_columns)
-        df = _add_pmv_index_levels(df, pmv_index_columns.zone_columns(df.columns, zone_of, occupied_zone_list),
-                                   level, level_agg_func, block_list, in_block, excluded)
+        # The block and building values of the outputs of the zones of the setpoints based on the PMV and of the
+        # optional outputs of the ACCIS, named as with rename_cols (see pmv_index_columns.zone_columns and
+        # optional_output_columns.zone_columns)
+        zone_output_columns = pmv_index_columns.zone_columns(df.columns, zone_of, occupied_zone_list)
+        zone_output_columns.update(optional_output_columns.zone_columns(df.columns, zone_of, occupied_zone_list))
+        df = _add_zone_output_levels(df, zone_output_columns, level, level_agg_func, block_list, in_block, excluded)
 
         # df.to_excel('checkpoint_02.xlsx')
 
@@ -1801,11 +1804,14 @@ class Table:
                             all_cols_renamed.update(temp)
 
             # The outputs of the zones of the setpoints based on the PMV ('EMS:APMV_BLOCK1:ZONE1 [](HOURLY)' is
-            # 'Block1:Zone1_aPMV'; see pmv_index_columns.zone_columns)
-            all_cols_renamed.update({
-                column: f'{zone}_{name}'
-                for column, (zone, name, _) in pmv_index_columns.zone_columns(df.columns, zone_of,
-                                                                              occupied_zone_list).items()})
+            # 'Block1:Zone1_aPMV'; see pmv_index_columns.zone_columns), and the optional outputs of the ACCIS
+            # ('EMS:ATHB_PMV_BLOCK1:ZONE1 [](HOURLY)' is 'Block1:Zone1_ATHB_PMV', and 'EMS:TOUT_METRIC [C](HOURLY)' is
+            # 'Tout_metric (°C)'; see optional_output_columns)
+            for found_columns in (pmv_index_columns.zone_columns(df.columns, zone_of, occupied_zone_list),
+                                  optional_output_columns.zone_columns(df.columns, zone_of, occupied_zone_list)):
+                all_cols_renamed.update({column: f'{zone}_{name}'
+                                         for column, (zone, name, _) in found_columns.items()})
+            all_cols_renamed.update(optional_output_columns.other_columns(df.columns))
 
             df = df.rename(columns=all_cols_renamed)
 
@@ -2037,7 +2043,8 @@ class Table:
         It filters the columns.
 
         :param type_of_table: To get previously set out tables. Can be 'energy demand' or 'comfort hours' (the hour
-            counters of the ACCIS and of the setpoints based on the PMV).
+            counters of the ACCIS, also the optional ones of ``report_hours_below`` and ``report_long_term_discomfort``,
+            and those of the setpoints based on the PMV).
         :param custom_cols: A list of strings.
         The strings will be used as a filter, and the columns that match will be selected.
         """
@@ -2116,16 +2123,19 @@ class Table:
                      'Discomfortable Applicable Hot Hours', 'Discomfortable Applicable Cold Hours',
                      'Discomfortable Non Applicable Hot Hours', 'Discomfortable Non Applicable Cold Hours',
                      'Ventilation Hours']
-            # And the hours within the setpoints based on the PMV, and out of them ('Comfortable Hours (h)'...): their
-            # block and building values have these names also with rename_cols=False
-            index_hours = list(pmv_index_columns.comfort_hours())
+            # And the hours within the setpoints based on the PMV, and out of them ('Comfortable Hours (h)'...), and the
+            # optional hours of the ACCIS ('Hours Above Upper Limit (h)'..., 'HoursBelow_18 (h)'...): their block and
+            # building values have these names also with rename_cols=False
+            index_hours = list(pmv_index_columns.comfort_hours()) + list(optional_output_columns.comfort_hours())
+            hours_below = f'{optional_output_columns.HOURS_BELOW}_'
             if self.rename_cols:
-                self.val_cols = [col for col in self.df.columns if any(name in col for name in hours + index_hours)]
+                self.val_cols = [col for col in self.df.columns
+                                 if any(name in col for name in hours + index_hours + [hours_below])]
             else:
                 # The EMS outputs of the zones ('EMS:COMFORTABLE HOURS_BLOCK1:ZONE1 [H](HOURLY)')
                 index_hours += [f"EMS:{name[:-len(' (h)')]}_" for name in index_hours]
                 self.val_cols = [col for col in self.df.columns
-                                 if any(name.upper() in col.upper() for name in hours + index_hours)]
+                                 if any(name.upper() in col.upper() for name in hours + index_hours + [hours_below])]
         elif type_of_table == 'temperature':
             if not self.rename_cols:
                 raise ValueError("type_of_table='temperature' takes the renamed columns: make the Table with "

@@ -7,13 +7,14 @@ esta versión: las P1, A2, A1 y A5, en este orden; y después D2 (sección 7), q
 2026-11-09 con E2 y E1, y las demás propuestas de la v03 (`notes/PROPUESTAS_MEJORAS_post_1.1.0_v03.md`), en el orden
 del autor (`notes/COPILOT_BRIEF_v1.2.0_v01.md`): E1 (sección 8), E2 (sección 9), A3 (sección 10), B1 (sección 11),
 B5 (sección 12), C1 (sección 13), D1 (sección 14), B2 (sección 15), B3 (sección 16), B4 (sección 17), C2 (sección
-18), E4 (sección 19), A4 (sección 20) y A6 (sección 21).
+18), E4 (sección 19), A4 (sección 20) y A6 (sección 21); y, al final, lo que faltaba de D2: las salidas opcionales
+del ACCIS y del ATHB en `Table` (sección 22).
 
 Lo que ya está en otros documentos no se repite aquí:
 
 - `CHANGELOG.md` (sección Unreleased): los cambios que ve el usuario.
-- `docs/source/4_detailed use.md`, secciones 4.2.2, 4.2.3, 4.2.4, 4.2.5, 4.2.6, 4.3.1, 4.5.1, 4.6.1, 4.7.3, 4.7.4, 4.8,
-  4.8.1, 4.9, 4.9.1 y 4.9.2: el uso.
+- `docs/source/4_detailed use.md`, secciones 4.2.2, 4.2.3, 4.2.4, 4.2.5, 4.2.6, 4.3.1, 4.5.1, 4.6.1, 4.7.3, 4.7.4,
+  4.7.5, 4.8, 4.8.1, 4.9, 4.9.1 y 4.9.2: el uso.
 - `DEVLOG.md`: el registro del trabajo, con cómo se comprobó.
 - `notes/decisions.md`: las decisiones y sus motivos.
 
@@ -85,6 +86,10 @@ Lo que ya está en otros documentos no se repite aquí:
 - **A6.** Las consignas de la temperatura efectiva estándar (SET), con un gancho como el del ATHB que
   interpola una tabla de las consignas por humedad relativa (el SET de pythermalcomfort detiene EnergyPlus si se
   calcula en sus callbacks); las del PPD son las del PMV de `apply_pmv_setpoints` (sección 21).
+- **D2, completada.** `Table` toma también las salidas opcionales del ACCIS y del ATHB (`Tout_metric`,
+  `CustomRegime_<zona>`, `HoursBelow_<T>_<zona>`, las horas y grados-hora de largo plazo de las zonas y del edificio y
+  `ATHB_PMV/clo/met_<zona>`): las promedia o les aplica `frequency_agg_func`, las conserva con
+  `standard_outputs=True`, les da nombres de `Table` y valores de bloque y de edificio (sección 22).
 - Las categorías del PMV y la aproximación de la corrección del metabolismo se han comprobado en ISO 7730:2025 y
   EN 16798-1:2019, y el modelo dinámico de vestimenta de A5, en Schiavon y Lee (2013) y ASHRAE 55-2020 (sección 6).
 - Lo que quedaba abierto se ha comprobado: el golden master y las pruebas de EnergyPlus 26.1 y 26.2, también la de A5
@@ -379,7 +384,7 @@ en las figuras de `time_plot`; también `Tout_metric` y `HoursBelow_*`, que son 
 propuestas (del autor, en git desde `4d5fb90`, escrita sobre el código de la 1.1.0) añade `Activity_corrected_<zone>`
 (aquí, `Corrected Activity Level_<people>`, de cada `People`), `ATHB_PMV_<zone>` (A4) y `HoursBelow_*_<zone>` (D1 o
 B5), `wrangled_table` y las unidades (adimensional, W/persona, °C, h): todo hecho menos las salidas de A4, B1, B5 y D1,
-que accim no tiene.
+que accim no tenía entonces (hechas al final, sección 22).
 
 **Antes** (comprobado el 2026-11-09 con tres días de julio del modelo de ejemplo con las consignas del ePMV y la
 corrección del metabolismo, EnergyPlus 25.1, con un script fuera del repositorio):
@@ -1402,3 +1407,51 @@ categorías, sin decirlo la documentación (ni la categoría IV).
   dentro de la tolerancia, las de la bisección exacta). Suite completa: 1765 pasan y 2 omitidas; la documentación, con
   los mismos avisos que antes (59). El código del EMS no cambia (solo se añaden sensores al aplicar las consignas), así
   que no hay comparación nueva de backends: la de A4 (el modelo sin gancho, idéntico con los dos) sigue pasando.
+
+## 22. Las salidas opcionales del ACCIS y del ATHB en `Table` (D2, completada)
+
+La v03 pide en D2 que `Table` reconozca también `ATHB_PMV_<zone>`, `Tout_metric` y `HoursBelow_*_<zone>` en el
+renombrado y en las figuras y `wrangled_table` (unidades: adimensional, °C, h). Eran salidas de A4, B1 y B5, que no
+existían cuando se hizo D2 (sección 7), así que quedó una tarea en `TODO.md`, con `CustomRegime_<zona>` de B2. Con
+todas hechas, se ha completado, y con las salidas de C2, que son del mismo tipo.
+
+**Antes** (comprobado el 2026-11-10 con tres días de abril del modelo de ejemplo con el modelo personalizado, su
+métrica exterior, dos regímenes, las horas por debajo de 18 y 17,5 °C, el disconfort de largo plazo y las consignas
+del ATHB, EnergyPlus 25.1 y el backend de la API, con un script fuera del repositorio):
+
+- con `standard_outputs=True`, `Table` quitaba todas estas salidas;
+- sin él, quedaban con su nombre EMS en mayúsculas (`EMS:ATHB_PMV_BLOCK1:ZONE1 [](HOURLY)`), sin valores de bloque
+  ni de edificio;
+- con valores diarios y `frequency_agg_func='sum'`, sumaba el ATHB_PMV (6,36 en vez de 0,265), el clo y el met; la
+  métrica exterior y el régimen ya se promediaban (B1 y B2 los habían añadido a `_AVERAGED_OUTPUTS`).
+
+**Ahora.**
+
+- El módulo nuevo `accim/data/postprocessing/optional_output_columns.py`, como `pmv_index_columns` (sección 7), dice
+  qué hace `Table` con ellas: `averaged_outputs()` (la métrica exterior, el régimen y las del ATHB; `Tout_metric` y
+  `CustomRegime` pasan aquí desde `_AVERAGED_OUTPUTS`, sin cambiar lo que se promedia), `standard_outputs()`,
+  `zone_columns()` (las de las zonas, con la salida exacta, como `pmv_index_columns.zone_columns`; las de
+  `HoursBelow_<T>_<zona>` con la temperatura, que no tiene `_`, en minúsculas: `HoursBelow_17p5 (h)`),
+  `other_columns()` (`Tout_metric` y las del edificio de C2) y `comfort_hours()`. Los nombres y unidades se comprueban
+  frente a los módulos de `accim.sim` que crean las salidas (una prueba).
+- Los nombres en `Table`: `Block1:Zone1_CustomRegime`, `Block1:Zone1_HoursBelow_18 (h)`,
+  `Block1:Zone1_Hours Above Upper Limit (h)`, `Block1:Zone1_Degree Hours Above Upper Limit (Kh)` (los de los
+  indicadores de `Table(long_term_indicators=True)`, D1), `Building_Hours Above Upper Limit (h)` (las sumas del EMS),
+  `Block1:Zone1_ATHB_PMV`, `Block1:Zone1_ATHB_clo (clo)`, `Block1:Zone1_ATHB_met (met)` y `Tout_metric (°C)`.
+- La métrica exterior de cada zona (`Tout_metric_<zona>`) conserva su nombre EMS, como la temperatura de confort y
+  las consignas de cada zona del ACCIS: con `<zona>_Tout_metric (°C)`, el nombre `Tout_metric (°C)` estaría dentro de
+  los de las zonas y las figuras lo tomarían con ellos (decisión provisional en `notes/questions.md`).
+- Valores de bloque y de edificio (`_add_pmv_index_levels` pasa a llamarse `_add_zone_output_levels` y recibe las
+  columnas de los dos módulos): las horas, los grados-hora y las del ATHB; el régimen y la métrica de las zonas, no.
+  Las salidas del edificio de C2 son las sumas del EMS de todas las zonas, también de las excluidas.
+- `format_table(type_of_table='comfort hours')` toma también las horas por debajo de las temperaturas y por encima y
+  por debajo de los límites (no los grados-hora).
+- Documentación: la sección 4.7.5 del uso detallado (nueva), y una frase en las secciones de cada salida (4.2.2,
+  4.2.3, 4.2.4, 4.2.6 y 4.9.1); la API del módulo.
+- Pruebas: `tests/core/test_table_optional_outputs.py` (18: los nombres frente a `accim.sim`; con tres modelos, los
+  nombres, que ningún nombre contiene otro, la media o la suma en el tiempo y los valores de bloque y de edificio,
+  también con zonas excluidas; `rename_cols=False`; `standard_outputs=True`; la tabla `'comfort hours'`; `time_plot` y
+  `wrangled_table`; y una simulación de dos días de enero con EnergyPlus 25.1 y todas las salidas, cuyos valores
+  diarios son las medias o sumas del CSV). No cambia ningún IDF ni el código del EMS. Suite completa: 1783 pasan y 2
+  omitidas (la prueba con el jar del Future Weather Generator y la de EnergyPlus 26.1, que no están en esta máquina);
+  la documentación, con los mismos 59 avisos.
