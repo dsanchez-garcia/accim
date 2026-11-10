@@ -258,14 +258,14 @@ def test_the_hooks_give_their_setpoints_to_the_accis_right_after_setast(tmp_path
     from accim.sim.accis import modify_accis
     from accim.sim.ems import hook_setpoints as hs
 
-    # The floor and ceiling of the setpoints given before the hook, and after it
+    # The minimum and maximum of the setpoints given before the hook, and after it
     before = _model(tmp_path)
-    modify_accis(before, heating_setpoint_floor=21.0, cooling_setpoint_ceiling=26.0)
+    modify_accis(before, heating_setpoint_minimum=21.0, cooling_setpoint_maximum=26.0)
     ch.apply_athb_setpoints(before)
     (tmp_path / 'after').mkdir()
     after = _model(tmp_path / 'after')
     ch.apply_set_setpoints(after, set_cooling_setpoint=27, set_heating_setpoint=21, met=1.1, clo=0.5, air_speed=0.1)
-    modify_accis(after, heating_setpoint_floor=21.0, cooling_setpoint_ceiling=26.0)
+    modify_accis(after, heating_setpoint_minimum=21.0, cooling_setpoint_maximum=26.0)
     for idf in (before, after):
         assert sorted(hs.hook_zones(idf)) == ZONES
         declared = {str(name).upper() for g in idf.idfobjects['EnergyManagementSystem:GlobalVariable']
@@ -273,7 +273,7 @@ def test_the_hooks_give_their_setpoints_to_the_accis_right_after_setast(tmp_path
         for zone in ZONES:
             assert _program_lines(idf, f'ApplyHookSetpoints_{zone}') == hs.program_lines(zone)
             assert {name.upper() for name in hs.zone_variables(zone)} <= declared
-            # The setpoints of the hook replace those of SetAST, and the floor and ceiling bound them, with and
+            # The setpoints of the hook replace those of SetAST, and the minimum and maximum bound them, with and
             # without the tolerance (after SetASTnoTol, finding B5-1 of the review of 1.2.0)
             run = _program_lines(idf, f'RunACCIS_{zone}')
             position = run.index('run SetAST')
@@ -295,7 +295,7 @@ def test_the_hooks_give_their_setpoints_to_the_accis_right_after_setast(tmp_path
 def _hook_erl(**arguments):
     """The programs of the ACCIS of one zone, Zone1 (INT EN16798, category II, comfort mode 3, a tolerance of the
     setpoints of 0.1 and full air-conditioning, with the long-term discomfort of C2), with the program that gives the
-    setpoints of a hook to the zone and, with a floor or a ceiling, the program of the setpoint limits after
+    setpoints of a hook to the zone and, with a minimum or a maximum, the program of the setpoint limits after
     SetASTnoTol, at the beginning of an environment; compiled by the Erl interpreter."""
     from types import SimpleNamespace
 
@@ -315,9 +315,9 @@ def _hook_erl(**arguments):
     programs['CountLongTermDiscomfort_Zone1'] = ltd.zone_lines('Zone1')
     run = list(programs['RunACCIS_Zone1'])
     run.insert(run.index('run SetAST') + 1, 'run ApplyHookSetpoints_Zone1')
-    floor, ceiling = (values.get(name) is not None for name in sl.INPUTS)
-    if floor or ceiling:
-        programs['ApplySetpointLimits_Zone1'] = sl.limit_program_lines(floor, ceiling)
+    minimum, maximum = (values.get(name) is not None for name in sl.INPUTS)
+    if minimum or maximum:
+        programs['ApplySetpointLimits_Zone1'] = sl.limit_program_lines(minimum, maximum)
         run.insert(run.index('run SetASTnoTol') + 1, 'run ApplySetpointLimits_Zone1')
     run.insert(run.index('run CountHoursNoApp_Zone1') + 1, 'run CountLongTermDiscomfort_Zone1')
     programs['RunACCIS_Zone1'] = run
@@ -367,10 +367,10 @@ def test_the_accis_follows_the_setpoints_of_the_hook():
     assert _hook_timestep(erl) == adaptive
 
 
-def test_the_floor_and_ceiling_bound_the_setpoints_of_the_hook():
-    erl = _hook_erl(heating_setpoint_floor=23.0, cooling_setpoint_ceiling=25.0)
+def test_the_minimum_and_maximum_bound_the_setpoints_of_the_hook():
+    erl = _hook_erl(heating_setpoint_minimum=23.0, cooling_setpoint_maximum=25.0)
     hooked = _hook_timestep(erl, setpoints=(22.0, 26.0))
-    # Exactly the floor and the ceiling (finding B5-2), with and without the tolerance (finding B5-1)
+    # Exactly the minimum and the maximum (finding B5-2), with and without the tolerance (finding B5-1)
     assert (hooked['AHST_Act_Zone1'], hooked['ACST_Act_Zone1']) == (23.0, 25.0)
     assert (hooked['AHSTnoTol_Zone1'], hooked['ACSTnoTol_Zone1']) == (23.0, 25.0)
 

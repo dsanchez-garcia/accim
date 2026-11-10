@@ -15,6 +15,21 @@ This log is a lightweight, session-scoped complement to the repository's
 existing tracking files — it does not replace them (see
 [[decisions.md#2026-09-13 — `notes/work-log.md` complements, not replaces, existing tracking files|the related decision]]).
 
+## 2026-11-10 — H1: the minimum and maximum of the setpoints (branch `v1.2.0`, on the server)
+
+- **Objective**: task H1 of the review v04 (§4.5): rename `heating_setpoint_floor`/`cooling_setpoint_ceiling` to
+  `heating_setpoint_minimum`/`cooling_setpoint_maximum` (EMS `AHSTmin`/`ACSTmax`, parameters
+  `HeatingSetpointMinimum`/`CoolingSetpointMaximum`) with deprecated aliases.
+- **Affected files**: `accim/_deprecation.py`, `accim/sim/arguments.py`, the modules of the ACCIS, the EMS code, the
+  verification, the GUI and the parametric module, [[../docs/source/4_detailed use.md]], [[../CHANGELOG.md]],
+  [[../CAMBIOS_CODIGO_v1.2.0.md]] (§28), [[../DEVLOG.md]], [[../TODO.md]], [[decisions.md]].
+- **Finding or decision**: See
+  [[decisions.md#2026-11-10 — The minimum and maximum of the setpoints replace the floor and ceiling (H1)|the decision]].
+  The warnings say "since accim 1.2.0" (`accim._deprecation` takes the version).
+- **Validation**: `tests/core` 1323 passed, 2 skipped (golden master byte-identical); `tests/parametric_and_optimisation`
+  509 passed; documentation build with the baseline warnings.
+- **Next step**: E-F1 (EnergyPlus Pierce SET against pythermalcomfort).
+
 ## 2026-11-10 — G5: the housekeeping of the review of 1.2.0 (branch `v1.2.0`, on the server)
 
 - **Objective**: task G5 of the review v04 (A3-1, A3-2, B5-1 to B5-3, B1-2, B3-1 to B3-3, E4-1 to E4-3, §3.4, §3.5).

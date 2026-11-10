@@ -136,8 +136,8 @@ the object does to each model when it is created:
      - Adds accim to each model (:func:`~accim.sim.accis.add_accis_to_idf`)
      - ``comfort_standard``, ``category``, ``comfort_mode``, ``hvac_mode``, ``ventilation_control``,
        ``setpoint_tolerance`` and the other arguments of :func:`~accim.sim.accis.modify_accis`, with
-       their names (see :doc:`4_detailed use`); since accim 1.2.0, also ``heating_setpoint_floor`` and
-       ``cooling_setpoint_ceiling`` (the floor of the heating setpoint and the ceiling of the cooling
+       their names (see :doc:`4_detailed use`); since accim 1.2.0, also ``heating_setpoint_minimum`` and
+       ``cooling_setpoint_maximum`` (the minimum heating setpoint and the maximum of the cooling
        setpoint of all the zones)
    * - ``'accim custom model'``
      - Adds accim to each model, with the custom adaptive model
@@ -146,7 +146,7 @@ the object does to each model when it is created:
        ``custom_lower_limit``/``custom_upper_limit`` (applicability limits of the running mean
        outdoor temperature); the offsets and limits can also be set separately for cooling and
        heating (``custom_cooling_offset``, ``custom_heating_offset``, ``custom_cooling_lower_limit``...);
-       since accim 1.2.0, also ``heating_setpoint_floor`` and ``cooling_setpoint_ceiling``, and the outdoor
+       since accim 1.2.0, also ``heating_setpoint_minimum`` and ``cooling_setpoint_maximum``, and the outdoor
        metric of the custom model: ``custom_outdoor_metric`` (the codes of the metrics, 0 to 7, as options),
        ``custom_alpha`` and ``custom_days`` (rounded to whole days); and the coefficients of the regimes of the
        custom model, ``custom_regime_<regime>_<field>`` (such as ``custom_regime_1_slope``), once the model has
@@ -184,8 +184,8 @@ with the running mean of ASHRAE 55 of EnergyPlus, unless the model was given the
 ``modify_accis(..., custom_outdoor_metric=..., epw=...)`` before the study (``'monthly_mean'`` needs it).
 ``accim.parametric_and_optimisation.parameters`` also has a class for each of them, which applies it to a model
 (``Clo``, ``Met``, ``AirVelocity``, ``ExpectancyFactor``, ``AdaptiveCoefficientCooling``,
-``AdaptiveCoefficientHeating``, ``CustAST_metric``, ``CustAST_alpha``, ``CustAST_days``, ``HeatingSetpointFloor``
-and ``CoolingSetpointCeiling``, besides those of the other parameters).
+``AdaptiveCoefficientHeating``, ``CustAST_metric``, ``CustAST_alpha``, ``CustAST_days``, ``HeatingSetpointMinimum``
+and ``CoolingSetpointMaximum``, besides those of the other parameters).
 The regimes of the custom model (``custom_regimes``, section 4.2.4 of :doc:`4_detailed use`) depend on the model, so
 their coefficients are parameters once the model has them: give them with
 ``modify_accis(sim.building, comfort_standard=99, comfort_mode=3, custom_regimes=[...])`` before
@@ -440,8 +440,8 @@ compared with the same parameter values.
    * - ``sampling_full_set()``
      - lists
      - all the combinations (those that are not valid are left out: with the accim models, the categories
-       and comfort modes that a comfort standard does not have, and since accim 1.2.0 a floor of the heating
-       setpoint that is not lower than the ceiling of the cooling setpoint)
+       and comfort modes that a comfort standard does not have, and since accim 1.2.0 a minimum of the heating
+       setpoint that is not lower than the maximum cooling setpoint)
      - compare discrete alternatives, such as comfort models and categories
    * - ``sampling_full_factorial(level)``
      - ranges

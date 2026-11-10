@@ -11,6 +11,22 @@ Durable architectural/process decisions for this repository and its Obsidian
 vault. Newest first. Use [[templates/decision-record.md|the decision-record
 template]] to add a new entry.
 
+## 2026-11-10 — The minimum and maximum of the setpoints replace the floor and ceiling (H1)
+
+- **Status**: accepted (task H1 of `notes/PROPUESTAS_MEJORAS_post_1.1.0_v04.md` §7, §4.5; decision 8 of block F,
+  `notes/PROPUESTA_ADAPTACION_INTERIOR_v03.md` §6)
+- **Context**: `heating_setpoint_floor` could be read as a physical floor (a radiant floor); the names are public API
+  of 1.2.0, so they change before the release.
+- **Decision**: `heating_setpoint_minimum`/`cooling_setpoint_maximum` (EMS inputs `AHSTmin`/`ACSTmax`, parameter classes
+  `HeatingSetpointMinimum`/`CoolingSetpointMaximum`, modifiers `modify_AHSTmin`/`modify_ACSTmax`, checks
+  `Check5_AHSTmin`/`Check5_ACSTmax`); the old names of the arguments (also in `zone_arguments` and GUI sessions), of the
+  parameters, classes and modifiers are deprecated aliases (`accim.sim.arguments.DEPRECATED_ARGUMENT_NAMES`, version
+  1.2.0 in the warnings); the old EMS inputs are not read (only development builds had them). The prose of the code and
+  the docs says "the minimum heating setpoint" and "the maximum cooling setpoint"; the program keeps its name
+  `ApplySetpointLimits_<zone>`.
+- **Consequences**: block F (F1, F2) uses the new names; models made with development builds of 1.2.0 that have
+  `AHSTfloor`/`ACSTceil` must be made again.
+
 ## 2026-11-10 — The floor and ceiling bound the setpoints with and without the tolerance and are exact; the housekeeping of the review (G5)
 
 - **Status**: accepted (task G5 of `notes/PROPUESTAS_MEJORAS_post_1.1.0_v04.md` §7, findings A3-1, A3-2, B5-1 to B5-3,

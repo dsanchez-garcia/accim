@@ -20,8 +20,10 @@ Exports dictionaries for predefined ACCIM models, custom ACCIM models,
 APMV setpoints, and a merged `all_params` dictionary.
 
 The names of the parameters are those of the arguments of :mod:`accim.sim` (``comfort_standard``, ``category``,
-``comfort_mode``...). The names of accim 0.x (``ComfStand``, ``CAT``, ``ComfMod``...), in
-:data:`LEGACY_PARAMETER_NAMES`, keep working with a DeprecationWarning (see :func:`resolve_parameter_name`). The
+``comfort_mode``...). The names of accim 0.x (``ComfStand``, ``CAT``, ``ComfMod``...), and those of the development
+of accim 1.2.0 (``heating_setpoint_floor`` and ``cooling_setpoint_ceiling``, now ``heating_setpoint_minimum`` and
+``cooling_setpoint_maximum``), in :data:`LEGACY_PARAMETER_NAMES`, keep working with a DeprecationWarning (see
+:func:`resolve_parameter_name`). The
 modifier functions keep the names of the EMS variables that they set (``modify_ComfStand``...).
 
 Usage
@@ -39,6 +41,7 @@ import re
 import warnings
 
 from accim.parametric_and_optimisation.funcs_for_besos import param_accis, param_apmv
+from accim.sim.arguments import DEPRECATED_ARGUMENT_NAMES
 from accim.sim.ems.custom_regimes import REGIME_INPUTS
 
 accim_predef_model_params = {
@@ -60,9 +63,9 @@ accim_predef_model_params = {
     'min_outdoor_temp_offset': param_accis.modify_MinOToffset,
     'max_wind_speed': param_accis.modify_MaxWindSpeed,
     'setpoint_tolerance': param_accis.modify_ASTtol,
-    # The floor of the heating setpoint and the ceiling of the cooling setpoint (accim 1.2.0)
-    'heating_setpoint_floor': param_accis.modify_AHSTfloor,
-    'cooling_setpoint_ceiling': param_accis.modify_ACSTceil,
+    # The minimum heating setpoint and the maximum cooling setpoint (accim 1.2.0)
+    'heating_setpoint_minimum': param_accis.modify_AHSTmin,
+    'cooling_setpoint_maximum': param_accis.modify_ACSTmax,
     # The static setpoints of JPN Aqilah 2025 (accim 1.2.0; the other comfort standards ignore them)
     'static_heating_setpoint': param_accis.modify_StaticAHST,
     'static_cooling_setpoint': param_accis.modify_StaticACST,
@@ -80,9 +83,9 @@ accim_custom_model_params = {
     'custom_cooling_offset': param_accis.modify_CustAST_ACSToffset,
     'custom_heating_offset': param_accis.modify_CustAST_AHSToffset,
     'custom_offset': param_accis.modify_CustAST_ASToffset,
-    # The floor of the heating setpoint and the ceiling of the cooling setpoint (accim 1.2.0)
-    'heating_setpoint_floor': param_accis.modify_AHSTfloor,
-    'cooling_setpoint_ceiling': param_accis.modify_ACSTceil,
+    # The minimum heating setpoint and the maximum cooling setpoint (accim 1.2.0)
+    'heating_setpoint_minimum': param_accis.modify_AHSTmin,
+    'cooling_setpoint_maximum': param_accis.modify_ACSTmax,
     # The outdoor metric of the custom model (accim 1.2.0; custom_outdoor_metric takes the codes of the metrics)
     'custom_outdoor_metric': param_accis.modify_CustAST_metric,
     'custom_alpha': param_accis.modify_CustAST_alpha,
@@ -188,13 +191,18 @@ LEGACY_PARAMETER_NAMES = {
     'PMV setpoint': 'pmv_setpoint',
     'PMV cooling setpoint': 'pmv_cooling_setpoint',
     'PMV heating setpoint': 'pmv_heating_setpoint',
+    # The names of the development of accim 1.2.0, renamed before its release (deprecated since accim 1.2.0)
+    **DEPRECATED_ARGUMENT_NAMES,
 }
 _LEGACY_BY_LOWER = {old.lower(): new for old, new in LEGACY_PARAMETER_NAMES.items()}
+#: The version of accim since which each old name is deprecated (1.0.0 for the names of accim 0.x)
+_LEGACY_VERSIONS = {old.lower(): '1.2.0' for old in DEPRECATED_ARGUMENT_NAMES}
 _NEW_BY_LOWER = {new.lower(): new for new in all_params}
 
 
 def legacy_parameter_name(name):
-    """The name since accim 1.0.0 of a parameter name of accim 0.x (case-insensitive), or None if it is not one."""
+    """The current name of an old parameter name (of accim 0.x, or of the development of accim 1.2.0;
+    case-insensitive), or None if it is not one."""
     if not isinstance(name, str) or name.lower() in _NEW_BY_LOWER:
         return None
     return _LEGACY_BY_LOWER.get(name.lower())
@@ -215,7 +223,8 @@ def resolve_parameter_name(name, stacklevel: int = 3):
     new = legacy_parameter_name(name)
     if new is None:
         return name
-    warnings.warn(f'The parameter name {name!r} is deprecated since accim 1.0.0 and will be removed in a future '
+    version = _LEGACY_VERSIONS.get(name.lower(), '1.0.0')
+    warnings.warn(f'The parameter name {name!r} is deprecated since accim {version} and will be removed in a future '
                   f'version; use {new!r} instead.', DeprecationWarning, stacklevel=stacklevel)
     return new
 
@@ -247,9 +256,14 @@ def rename_legacy_parameter_columns(df, context: str = 'The DataFrame', category
     if not renamed and attrs.get('parameters_names') == names:
         return df
     if renamed:
-        warnings.warn(f'{context}: the columns {list(renamed)} have the names of the parameters in accim 0.x, so they '
-                      f'are renamed to {list(renamed.values())} (their names since accim 1.0.0).', category,
-                      stacklevel=stacklevel)
+        if any(column.lower() in _LEGACY_VERSIONS for column in renamed):
+            message = (f'{context}: the columns {list(renamed)} have old names of the parameters (of accim 0.x, or of '
+                       f'the development of accim 1.2.0), so they are renamed to {list(renamed.values())} (their '
+                       f'current names).')
+        else:
+            message = (f'{context}: the columns {list(renamed)} have the names of the parameters in accim 0.x, so they '
+                       f'are renamed to {list(renamed.values())} (their names since accim 1.0.0).')
+        warnings.warn(message, category, stacklevel=stacklevel)
     out = df.rename(columns=renamed)
     # The attributes of the DataFrame (the names of the parameters and outputs of the results...)
     out.attrs = attrs

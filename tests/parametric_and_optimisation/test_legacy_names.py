@@ -21,10 +21,11 @@ def _simulation(**kwargs):
     return ParametricSimulation(**arguments)
 
 
-#: The parameters added after accim 1.0.0, which have no name of accim 0.x
-PARAMETERS_WITHOUT_LEGACY_NAMES = {'expectancy_factor', 'heating_setpoint_floor', 'cooling_setpoint_ceiling',
-                                   'clothing_insulation', 'activity_level', 'air_velocity', 'custom_outdoor_metric',
-                                   'custom_alpha', 'custom_days', 'static_heating_setpoint', 'static_cooling_setpoint'}
+#: The parameters added after accim 1.0.0, which have no name of accim 0.x (those of the minimum and maximum of the
+#: setpoints have the names of the development of accim 1.2.0)
+PARAMETERS_WITHOUT_LEGACY_NAMES = {'expectancy_factor', 'clothing_insulation', 'activity_level', 'air_velocity',
+                                   'custom_outdoor_metric', 'custom_alpha', 'custom_days', 'static_heating_setpoint',
+                                   'static_cooling_setpoint'}
 
 
 def test_the_legacy_names_are_those_of_all_the_parameters():
@@ -55,6 +56,29 @@ def test_resolve_parameter_name_keeps_the_new_names_without_warnings(name, expec
 def test_resolve_parameter_name_translates_the_names_of_accim_0x(name, expected):
     with pytest.warns(DeprecationWarning, match=f'use {expected!r} instead'):
         assert params_dicts.resolve_parameter_name(name) == expected
+
+
+def test_the_names_of_the_development_of_accim_1_2_0():
+    # Task H1 of the review of 1.2.0: heating_setpoint_floor and cooling_setpoint_ceiling, renamed before the release
+    assert {old: params_dicts.LEGACY_PARAMETER_NAMES[old] for old in ('heating_setpoint_floor',
+                                                                     'cooling_setpoint_ceiling')} == {
+        'heating_setpoint_floor': 'heating_setpoint_minimum', 'cooling_setpoint_ceiling': 'cooling_setpoint_maximum'}
+    with pytest.warns(DeprecationWarning, match=r"The parameter name 'heating_setpoint_floor' is deprecated since "
+                                                r"accim 1\.2\.0 and will be removed in a future version; use "
+                                                r"'heating_setpoint_minimum' instead"):
+        assert params_dicts.resolve_parameter_name('heating_setpoint_floor') == 'heating_setpoint_minimum'
+    with pytest.warns(DeprecationWarning, match=r'since accim 1\.0\.0'):
+        assert params_dicts.resolve_parameter_name('ComfStand') == 'comfort_standard'
+    df = pd.DataFrame({'cooling_setpoint_ceiling': [26.0]})
+    with pytest.warns(DeprecationWarning,
+                      match="the columns \\['cooling_setpoint_ceiling'\\] have old names of the parameters"):
+        assert list(params_dicts.rename_legacy_parameter_columns(df).columns) == ['cooling_setpoint_maximum']
+    with pytest.warns(DeprecationWarning, match='parameters.HeatingSetpointFloor is deprecated since accim 1.2.0'):
+        assert parameters.HeatingSetpointFloor().name == 'heating_setpoint_minimum'
+    with pytest.warns(DeprecationWarning, match='parameters.CoolingSetpointCeiling is deprecated since accim 1.2.0'):
+        assert parameters.CoolingSetpointCeiling().name == 'cooling_setpoint_maximum'
+    with pytest.warns(DeprecationWarning):
+        assert parameters.Parameter('heating_setpoint_floor').name == 'heating_setpoint_minimum'
 
 
 def test_rename_legacy_parameter_columns():

@@ -66,7 +66,7 @@ ASHRAE55_MAX_CLOTHING_INSULATION = 1.5
 #: rooms...), and 'office' the offices and spaces with similar activity (meeting rooms, auditoria, cafeterias,
 #: restaurants, classrooms...). B.2.2 applies them in winter also to the buildings without mechanical cooling systems,
 #: whose adaptive limits (Figure B.1) apply in summer and the mid-seasons. They are the arguments
-#: ``heating_setpoint_floor`` and ``cooling_setpoint_ceiling`` of :class:`accim.sim.accis.AddAccis` (proposal B5 of
+#: ``heating_setpoint_minimum`` and ``cooling_setpoint_maximum`` of :class:`accim.sim.accis.AddAccis` (proposal B5 of
 #: ``notes/PROPUESTAS_MEJORAS_post_1.1.0_v03.md``).
 EN16798_TABLE_B2 = {
     ('residential', 1): (21.0, 25.5),

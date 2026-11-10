@@ -114,14 +114,14 @@ def verify_accim_simulation(
     :func:`accim.sim.preview.energyplus_running_means`); with a .stat file next to the weather file, EnergyPlus takes it
     from the monthly means of the .stat file, which check 4 does not reproduce (its summary says so).
 
-    **Check 5 – The floor and ceiling of the setpoints (per zone, output IDFs of AddAccis):**
-    The heating setpoint of each zone with a floor (``heating_setpoint_floor``, the input ``AHSTfloor`` of its program
-    ``SetInputData_<zone>``, see :mod:`accim.sim.ems.setpoint_limits`) is not below it (``Check5_AHSTfloor``), and the
-    cooling setpoint of each zone with a ceiling (``cooling_setpoint_ceiling``, ``ACSTceil``) is not above it
-    (``Check5_ACSTceil``), in the outputs at timestep frequency, or else hourly. The setpoints without the tolerance
+    **Check 5 – The minimum and maximum of the setpoints (per zone, output IDFs of AddAccis):**
+    The heating setpoint of each zone with a minimum (``heating_setpoint_minimum``, the input ``AHSTmin`` of its program
+    ``SetInputData_<zone>``, see :mod:`accim.sim.ems.setpoint_limits`) is not below it (``Check5_AHSTmin``), and the
+    cooling setpoint of each zone with a maximum (``cooling_setpoint_maximum``, ``ACSTmax``) is not above it
+    (``Check5_ACSTmax``), in the outputs at timestep frequency, or else hourly. The setpoints without the tolerance
     (the outputs ``..._No Tolerance``, the limits of the comfort band of the hour counters) are checked too
-    (``Check5_AHSTfloor_noTol`` and ``Check5_ACSTceil_noTol``): since finding B5-1 of the review of accim 1.2.0, the
-    floor and the ceiling bound them as well.
+    (``Check5_AHSTmin_noTol`` and ``Check5_ACSTmax_noTol``): since finding B5-1 of the review of accim 1.2.0, the
+    minimum and the maximum bound them as well.
 
     **Check 6 – The long-term discomfort (per zone and building, output IDFs of AddAccis with**
     ``report_long_term_discomfort=True`` **, see** :mod:`accim.sim.ems.long_term_discomfort` **):**
@@ -815,11 +815,11 @@ def verify_accim_simulation(
         mismatch_rows.extend(rows)
 
     # ─────────────────────────────────────────────
-    # 5.E CHECK 5 – THE FLOOR AND CEILING OF THE SETPOINTS
+    # 5.E CHECK 5 – THE MINIMUM AND MAXIMUM OF THE SETPOINTS
     # ─────────────────────────────────────────────
     rows, messages = _setpoint_limit_mismatches(building, eso['data'], calculation_tolerance)
     if messages:
-        print("\n--- Check 5: The floor of the heating setpoint and the ceiling of the cooling setpoint ---")
+        print("\n--- Check 5: The minimum heating setpoint and the maximum cooling setpoint ---")
         print('\n'.join(messages))
     mismatch_rows.extend(rows)
 
@@ -1309,12 +1309,12 @@ def _setpoint_mismatches(building, data: Mapping[str, pd.DataFrame], epw: str,
 
 def _setpoint_limit_mismatches(building, data: Mapping[str, pd.DataFrame],
                                tolerance: float) -> Tuple[List[dict], List[str]]:
-    """Check 5 of :func:`verify_accim_simulation`: the heating setpoint of each zone with a floor (``AHSTfloor`` in
+    """Check 5 of :func:`verify_accim_simulation`: the heating setpoint of each zone with a minimum (``AHSTmin`` in
     its program SetInputData_<zone>, :mod:`accim.sim.ems.setpoint_limits`) is not below it, and the cooling setpoint
-    of each zone with a ceiling (``ACSTceil``) is not above it, with and without the tolerance, in the outputs of the
+    of each zone with a maximum (``ACSTmax``) is not above it, with and without the tolerance, in the outputs of the
     setpoints of the zone at timestep frequency, or else hourly (whose means keep the limits too).
 
-    :return: The mismatches, and the lines of the summary (none if no zone has a floor or a ceiling).
+    :return: The mismatches, and the lines of the summary (none if no zone has a minimum or a maximum).
     """
     from accim.sim.ems.setpoint_limits import zone_limits
 
@@ -1323,10 +1323,10 @@ def _setpoint_limit_mismatches(building, data: Mapping[str, pd.DataFrame],
     if not limits:
         return [], []
     outputs_of_limits = {
-        'AHSTfloor': ('AHSTfloor', 'Adaptive Heating Setpoint Temperature', np.maximum, 'floor'),
-        'AHSTfloor_noTol': ('AHSTfloor', 'Adaptive Heating Setpoint Temperature_No Tolerance', np.maximum, 'floor'),
-        'ACSTceil': ('ACSTceil', 'Adaptive Cooling Setpoint Temperature', np.minimum, 'ceiling'),
-        'ACSTceil_noTol': ('ACSTceil', 'Adaptive Cooling Setpoint Temperature_No Tolerance', np.minimum, 'ceiling'),
+        'AHSTmin': ('AHSTmin', 'Adaptive Heating Setpoint Temperature', np.maximum, 'minimum'),
+        'AHSTmin_noTol': ('AHSTmin', 'Adaptive Heating Setpoint Temperature_No Tolerance', np.maximum, 'minimum'),
+        'ACSTmax': ('ACSTmax', 'Adaptive Cooling Setpoint Temperature', np.minimum, 'maximum'),
+        'ACSTmax_noTol': ('ACSTmax', 'Adaptive Cooling Setpoint Temperature_No Tolerance', np.minimum, 'maximum'),
     }
     chosen = None
     for frequency in ('Timestep', 'Hourly'):

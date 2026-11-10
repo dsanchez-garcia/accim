@@ -24,11 +24,6 @@ Active short-term tasks.
 
 ## Backlog
 
-- [ ] [P1][todo] B5: rename the floor and ceiling of the setpoints to `heating_setpoint_minimum`/`cooling_setpoint_maximum` (task H1 of v04 §7)
-  - Context: decision 8 of block F (`notes/PROPUESTA_ADAPTACION_INTERIOR_v03.md` §6; v04 §4.5; `notes/decisions.md`, 2026-11-10): `heating_setpoint_floor` can be read as a physical floor (a radiant floor). The names change before 1.2.0, since they are public API.
-  - Definition of done: `heating_setpoint_minimum`/`cooling_setpoint_maximum` in `AddAccis`, `add_accis_to_idf`, `modify_accis`, `zone_arguments`, `print_setpoint_ems_code`, `get_setpoint_ems_programs`, `compute_setpoints` and the GUI; EMS keys `AHSTmin`/`ACSTmax` (and the outputs and checks of `verify_accim_simulation`); parametric classes `HeatingSetpointMinimum`/`CoolingSetpointMaximum` and their modifiers; the old names as deprecated aliases through `accim._deprecation`; the docs and `CHANGELOG.md`.
-  - References: `notes/PROPUESTAS_MEJORAS_post_1.1.0_v04.md` (§4.5), `accim/sim/ems/setpoint_limits.py`, `accim/sim/accis.py`, `accim/_deprecation.py`.
-
 - [ ] [P2][todo] The tests of `tests/core` that need besos without skipping
   - Context: task G5 (2026-11-10) gave `pytest.importorskip('besos')` to the four tests of the finding of v04 §3.4; other tests of `tests/core` also need besos, and fail without it instead of being skipped: `test_modifyaccis_setast.py` imports `param_accis` at module level (an error of collection), and `test_apmv_calling_managers.py`, `test_apmv_defaults.py`, `test_energyplus_versions.py`, `test_existing_hvac.py`, `test_existing_hvac_mixed_mode.py`, `test_mixed_mode_windows.py`, `test_sizing.py`, `test_utils_accim_args.py`, `test_utils_editing.py`, `test_utils_idf_hierarchy.py`, `test_vrf_ideal_loads.py`, `test_zone_arguments.py` and `golden_master/runner.py` read models with `besos.eppy_funcs.get_building`, and `test_comfort_standard_code.py`, `test_epmv.py`, `test_pmv_index.py` and `test_gui.py` import the parametric module in some tests.
   - Definition of done: the tests that only read models use `accim.sim.accis.load_idf` (eppy), and those of the parametric module call `pytest.importorskip('besos')` first; `py -m pytest tests/core` without besos (a plugin that sets `sys.modules['besos'] = None`) skips them and fails none.
@@ -145,7 +140,7 @@ Active short-term tasks.
   - References: `accim/utils/verification.py:191` (`find_col`) and `:198`, `tests/core/test_verification.py`.
 
 - [ ] [P2][todo] `AccimSimulationVerifier` has checks 1 and 2 only
-  - Context: the object-oriented verifier of `accim.utils.verification` evaluates checks 1 and 2 of `verify_accim_simulation`; checks 3 (the indices derived from the PMV, E2), 4 (the setpoints against `compute_setpoints`, E2 and B1), 5 (the floor and ceiling of the setpoints, B5) and 6 (the long-term discomfort, C2) are only in `verify_accim_simulation` (noted with E2, B5 and C2, 2026-11-09 and 2026-11-10).
+  - Context: the object-oriented verifier of `accim.utils.verification` evaluates checks 1 and 2 of `verify_accim_simulation`; checks 3 (the indices derived from the PMV, E2), 4 (the setpoints against `compute_setpoints`, E2 and B1), 5 (the minimum and maximum of the setpoints, B5) and 6 (the long-term discomfort, C2) are only in `verify_accim_simulation` (noted with E2, B5 and C2, 2026-11-09 and 2026-11-10).
   - Definition of done: the class runs the same checks as the function (or calls it), with tests, or its docstring points to the function for checks 3 to 6.
   - References: `accim/utils/verification.py` (`AccimSimulationVerifier`, `verify_accim_simulation`).
 

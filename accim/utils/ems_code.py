@@ -12,7 +12,8 @@ apply, and what happens out of the applicability limits of the comfort standard.
 
 from typing import Dict, Iterable, List, Optional, Sequence, Union
 
-from accim.sim.arguments import CustomRegime, check_custom_regimes
+from accim._deprecation import accepts_legacy_kwargs
+from accim.sim.arguments import DEPRECATED_ARGUMENT_NAMES, CustomRegime, check_custom_regimes
 from accim.sim.ems import custom_regimes as cr
 from accim.sim.ems import outdoor_metric as om
 from accim.sim.ems import program_lines as pl
@@ -76,10 +77,10 @@ _OUTDOOR_METRIC_LEGEND = (
     '! file.',
 )
 _LIMIT_LEGEND = (
-    '! AHSTfloor and ACSTceil: the floor of the heating setpoint and the ceiling of the cooling setpoint of the',
-    '! zone (heating_setpoint_floor and cooling_setpoint_ceiling), whatever the comfort standard and comfort mode;',
+    '! AHSTmin and ACSTmax: the minimum heating setpoint and the maximum cooling setpoint of the',
+    '! zone (heating_setpoint_minimum and cooling_setpoint_maximum), whatever the comfort standard and comfort mode;',
     '! ApplySetpointLimits_<zone>, after SetASTnoTol, bounds AHST and ACST and rounds them again (the setpoints',
-    '! bounded by the floor or the ceiling are the floor or the ceiling), and bounds AHSTnoTol and ACSTnoTol too.',
+    '! bounded by the minimum or the maximum are the minimum or the maximum), and bounds AHSTnoTol and ACSTnoTol too.',
 )
 _REGIME_LEGEND = (
     '! SelectCustomRegime_<zone>: the regimes of the custom model (custom_regimes), in their order of priority. The',
@@ -185,7 +186,7 @@ def _input_lines(comfort_standard: int, category: Optional[Number], comfort_mode
         weather = weather_file_definition(comfort_standard)
         if weather is not None:
             values.update(standard_inputs(weather))
-    # The floor and ceiling of the setpoints, if they are given, and the static setpoints of JPN Aqilah 2025
+    # The minimum and maximum of the setpoints, if they are given, and the static setpoints of JPN Aqilah 2025
     wanted |= set(sl.INPUTS)
     if ss.has_static_setpoints(comfort_standard):
         wanted |= set(ss.INPUTS)
@@ -203,12 +204,12 @@ def _input_lines(comfort_standard: int, category: Optional[Number], comfort_mode
 
 
 def _limit_program(arguments: dict) -> List[str]:
-    """The lines of the program of the floor and ceiling of the setpoints of a zone (none without them)."""
-    floor, ceiling = arguments.get('heating_setpoint_floor'), arguments.get('cooling_setpoint_ceiling')
-    sl.check_setpoint_limits(floor, ceiling)
-    if floor is None and ceiling is None:
+    """The lines of the program of the minimum and maximum of the setpoints of a zone (none without them)."""
+    minimum, maximum = arguments.get('heating_setpoint_minimum'), arguments.get('cooling_setpoint_maximum')
+    sl.check_setpoint_limits(minimum, maximum)
+    if minimum is None and maximum is None:
         return []
-    return sl.limit_program_lines(floor is not None, ceiling is not None)
+    return sl.limit_program_lines(minimum is not None, maximum is not None)
 
 
 def _check_static_setpoints(comfort_standard: int, arguments: dict) -> None:
@@ -295,6 +296,7 @@ def _checked_arguments(comfort_standard: int, category: Optional[Number], comfor
     return arguments
 
 
+@accepts_legacy_kwargs(DEPRECATED_ARGUMENT_NAMES, version='1.2.0')
 def get_setpoint_ems_code(
     comfort_standard: int,
     category: Optional[Number] = None,
@@ -318,8 +320,8 @@ def get_setpoint_ems_code(
     custom_days: int = 30,
     epw=None,
     start_date: Union[int, str] = 1,
-    heating_setpoint_floor: Optional[Number] = None,
-    cooling_setpoint_ceiling: Optional[Number] = None,
+    heating_setpoint_minimum: Optional[Number] = None,
+    cooling_setpoint_maximum: Optional[Number] = None,
     custom_regimes: Optional[Sequence[CustomRegime]] = None,
     script_type: Optional[str] = None,
     static_heating_setpoint: Number = ss.DEFAULTS[0],
@@ -338,7 +340,7 @@ def get_setpoint_ems_code(
     (``InitOutdoorMetric`` and ``SetOutdoorMetric``, which do not belong to a zone, and ``SetOutdoorMetric_<zone>``,
     after the inputs of the zone; see :mod:`accim.sim.ems.outdoor_metric`). With the regimes of the custom model, the
     program ``SelectCustomRegime_<zone>`` comes before ``SetAppLimits`` (see :mod:`accim.sim.ems.custom_regimes`).
-    With a floor of the heating setpoint or a ceiling of the cooling setpoint, the program
+    With a minimum heating setpoint or a maximum cooling setpoint, the program
     ``ApplySetpointLimits_<zone>`` follows ``SetASTnoTol`` (see :mod:`accim.sim.ems.setpoint_limits`). Comments (lines
     that begin with ``!``) explain the variables.
 
@@ -384,8 +386,8 @@ def get_setpoint_ems_code(
         RMOT of EnergyPlus (:data:`accim.sim.ems.standard_lines.WEATHER_FILE_METRICS`).
     :param start_date: The first day of the RunPeriod of the model (a date 'dd/mm' or a day of the year), with which
         the programs of the outdoor metric begin with the values of ``epw``.
-    :param heating_setpoint_floor: The floor of the heating setpoint (°C), or None for none.
-    :param cooling_setpoint_ceiling: The ceiling of the cooling setpoint (°C), or None for none.
+    :param heating_setpoint_minimum: The minimum heating setpoint (°C), or None for none.
+    :param cooling_setpoint_maximum: The maximum cooling setpoint (°C), or None for none.
     :param custom_regimes: Custom model: its regimes (see :class:`accim.sim.accis.AddAccis`), or None for none.
     :param script_type: The script type of the output IDFs ('vrf_mm' or 'ex_mm'), which the conditions 'hvac_off' and
         'hvac_on' of the regimes of the custom model need (they read the coils of the VRF systems of accim, or the
@@ -396,7 +398,7 @@ def get_setpoint_ems_code(
     :return: The lines of the programs, one after the other, separated by a comment with the name of each one.
     :raises ValueError: If the comfort standard does not exist, the category is not one of the comfort standard, or
         the comfort standard has no setpoints with the comfort mode (as in :class:`accim.sim.accis.AddAccis`), or the
-        arguments of the outdoor metric are not valid ('monthly_mean' needs ``epw``), or the floor and the ceiling,
+        arguments of the outdoor metric are not valid ('monthly_mean' needs ``epw``), or the minimum and the maximum,
         or the static setpoints of JPN Aqilah 2025, or the regimes (they need the custom model, and their conditions
         'hvac_off' and 'hvac_on' the script type).
     """
@@ -413,8 +415,8 @@ def get_setpoint_ems_code(
         custom_heating_offset=custom_heating_offset, custom_cooling_upper_limit=custom_cooling_upper_limit,
         custom_cooling_lower_limit=custom_cooling_lower_limit, custom_heating_upper_limit=custom_heating_upper_limit,
         custom_heating_lower_limit=custom_heating_lower_limit, custom_outdoor_metric=custom_outdoor_metric,
-        custom_alpha=custom_alpha, custom_days=custom_days, heating_setpoint_floor=heating_setpoint_floor,
-        cooling_setpoint_ceiling=cooling_setpoint_ceiling, custom_regimes=custom_regimes, script_type=script_type,
+        custom_alpha=custom_alpha, custom_days=custom_days, heating_setpoint_minimum=heating_setpoint_minimum,
+        cooling_setpoint_maximum=cooling_setpoint_maximum, custom_regimes=custom_regimes, script_type=script_type,
         static_heating_setpoint=static_heating_setpoint, static_cooling_setpoint=static_cooling_setpoint,
     )
     metric_programs = _outdoor_metric_programs(comfort_standard, arguments, epw, start_date)
@@ -471,12 +473,13 @@ def get_setpoint_ems_code(
                               weather_file_lines(name, subprogram, weather_file))
     lines += _section('SetASTnoTol: the setpoints without the tolerance (for the hour counters)', pl.SET_AST_NO_TOL)
     if limit_lines:
-        lines += _section(f'{sl.PROGRAM_PREFIX}{_ZONE}: after SetASTnoTol, the floor of the heating setpoint and the '
-                          f'ceiling of the cooling setpoint of the zone, the rounding again, and the floor and ceiling '
+        lines += _section(f'{sl.PROGRAM_PREFIX}{_ZONE}: after SetASTnoTol, the minimum heating setpoint and the '
+                          f'maximum cooling setpoint of the zone, the rounding again, and the minimum and maximum '
                           f'of the setpoints without the tolerance', limit_lines)
     return '\n'.join(lines).rstrip('\n')
 
 
+@accepts_legacy_kwargs(DEPRECATED_ARGUMENT_NAMES, version='1.2.0')
 def print_setpoint_ems_code(comfort_standard: int, category: Optional[Number] = None,
                             comfort_mode: Optional[Number] = None, **arguments) -> None:
     """Print the EMS code with which the ACCIS calculates the setpoints of a comfort standard, category and comfort
@@ -487,6 +490,7 @@ def print_setpoint_ems_code(comfort_standard: int, category: Optional[Number] = 
     print(get_setpoint_ems_code(comfort_standard, category, comfort_mode, **arguments))
 
 
+@accepts_legacy_kwargs(DEPRECATED_ARGUMENT_NAMES, version='1.2.0')
 def get_setpoint_ems_programs(
     comfort_standard: int,
     category: Optional[Number] = None,
@@ -510,8 +514,8 @@ def get_setpoint_ems_programs(
     custom_days: int = 30,
     epw=None,
     start_date: Union[int, str] = 1,
-    heating_setpoint_floor: Optional[Number] = None,
-    cooling_setpoint_ceiling: Optional[Number] = None,
+    heating_setpoint_minimum: Optional[Number] = None,
+    cooling_setpoint_maximum: Optional[Number] = None,
     custom_regimes: Optional[Sequence[CustomRegime]] = None,
     script_type: Optional[str] = None,
     static_heating_setpoint: Number = ss.DEFAULTS[0],
@@ -528,7 +532,7 @@ def get_setpoint_ems_programs(
     subprograms. With the custom model and an outdoor metric other than 'pmot', the programs of the outdoor metric
     come first: ``InitOutdoorMetric``, ``SetOutdoorMetric`` and ``SetOutdoorMetric_<zone>``, whose lines name the
     variables of the zone with '<zone>'. With the regimes of the custom model, ``SelectCustomRegime_<zone>`` runs
-    before ``SetAppLimits``. With a floor or a ceiling of the setpoints, ``ApplySetpointLimits_<zone>`` runs after
+    before ``SetAppLimits``. With a minimum or a maximum of the setpoints, ``ApplySetpointLimits_<zone>`` runs after
     ``SetASTnoTol``.
 
     :param comfort_standard: The comfort standard (see :func:`get_setpoint_ems_code`).
@@ -551,8 +555,8 @@ def get_setpoint_ems_programs(
         custom_heating_offset=custom_heating_offset, custom_cooling_upper_limit=custom_cooling_upper_limit,
         custom_cooling_lower_limit=custom_cooling_lower_limit, custom_heating_upper_limit=custom_heating_upper_limit,
         custom_heating_lower_limit=custom_heating_lower_limit, custom_outdoor_metric=custom_outdoor_metric,
-        custom_alpha=custom_alpha, custom_days=custom_days, heating_setpoint_floor=heating_setpoint_floor,
-        cooling_setpoint_ceiling=cooling_setpoint_ceiling, custom_regimes=custom_regimes, script_type=script_type,
+        custom_alpha=custom_alpha, custom_days=custom_days, heating_setpoint_minimum=heating_setpoint_minimum,
+        cooling_setpoint_maximum=cooling_setpoint_maximum, custom_regimes=custom_regimes, script_type=script_type,
         static_heating_setpoint=static_heating_setpoint, static_cooling_setpoint=static_cooling_setpoint,
     )
     comfort_standard = int(comfort_standard)

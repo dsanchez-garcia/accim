@@ -113,6 +113,9 @@ Lo que ya está en otros documentos no se repite aquí:
   carga; las categorías en orden numérico y aviso por los signos de los offsets; `fwg_add_uhi=False` con pyfwg, aviso
   con `fwg_options_ensemble=0` y limpieza tras un `ValueError`; `run_ep(processes=0)` en el proceso actual; pruebas
   que se saltan sin besos (sección 27).
+- **H1 (revisión v04).** El suelo y el techo de las consignas se llaman ahora `heating_setpoint_minimum` y
+  `cooling_setpoint_maximum` (entradas EMS `AHSTmin` y `ACSTmax`, parámetros `HeatingSetpointMinimum` y
+  `CoolingSetpointMaximum`); los nombres anteriores funcionan como alias obsoletos (sección 28).
 - Las categorías del PMV y la aproximación de la corrección del metabolismo se han comprobado en ISO 7730:2025 y
   EN 16798-1:2019, y el modelo dinámico de vestimenta de A5, en Schiavon y Lee (2013) y ASHRAE 55-2020 (sección 6).
 - Lo que quedaba abierto se ha comprobado: el golden master y las pruebas de EnergyPlus 26.1 y 26.2, también la de A5
@@ -1699,3 +1702,32 @@ sentido físico, el `BANNER` toma la versión de `__version__` (lista de la publ
   `compute_setpoints`, el movimiento de la línea, los avisos, EnergyPlus 25.1 y los dos backends), `test_comfort_hooks.py`,
   `test_apmv_coefficients.py`, `test_energyplus_api.py`, `test_outdoor_metric.py`, `test_comfort_standard_registry.py`,
   `test_morphing.py`, `test_gui.py`, `test_jpn_aqilah2025.py`.
+
+## 28. El renombrado del suelo y del techo de las consignas (H1, revisión v04)
+
+El autor pidió (decisión 8 del bloque F, v04 §4.5) cambiar `heating_setpoint_floor` y `cooling_setpoint_ceiling`, que
+pueden leerse como un suelo físico (suelo radiante), antes de publicar la 1.2.0, porque son API pública.
+
+**Ahora.**
+
+- Argumentos `heating_setpoint_minimum` y `cooling_setpoint_maximum` en `AddAccis`, `modify_accis`, `zone_arguments`,
+  `print_setpoint_ems_code`, `get_setpoint_ems_code`, `get_setpoint_ems_programs` y `compute_setpoints`; entradas EMS
+  `AHSTmin` y `ACSTmax` (el programa sigue siendo `ApplySetpointLimits_<zona>`); comprobaciones `Check5_AHSTmin`,
+  `Check5_ACSTmax` y sus `_noTol` en `verify_accim_simulation`; parámetros `heating_setpoint_minimum` y
+  `cooling_setpoint_maximum` del paramétrico, con las clases `HeatingSetpointMinimum` y `CoolingSetpointMaximum` y los
+  modificadores `param_accis.modify_AHSTmin` y `modify_ACSTmax`; campos de la interfaz gráfica. Los textos dicen «la
+  consigna mínima de calefacción» y «la consigna máxima de refrigeración».
+- Alias obsoletos con `DeprecationWarning` («deprecated since accim 1.2.0»): los argumentos antiguos
+  (`accim.sim.arguments.DEPRECATED_ARGUMENT_NAMES`, con el decorador `accepts_legacy_kwargs`, al que
+  `accim._deprecation` añade el argumento `version`, como a `warn_deprecated`, `rename_legacy_kwargs` y
+  `deprecated_alias`), también como claves de `zone_arguments` (`check_zone_arguments`; `ValueError` si una zona da los
+  dos nombres); los parámetros (`LEGACY_PARAMETER_NAMES` de `params_dicts`, con la versión en el aviso), las clases
+  `HeatingSetpointFloor` y `CoolingSetpointCeiling` y los modificadores `modify_AHSTfloor` y `modify_ACSTceil`. La
+  interfaz gráfica lee las sesiones guardadas con los nombres antiguos (`forms.current_names`, y las filas del
+  paramétrico). Los modelos hechos con las entradas EMS antiguas (`AHSTfloor`, `ACSTceil`), sólo de versiones de
+  desarrollo, deben generarse de nuevo.
+- El mensaje de los argumentos antiguos de un `__init__` nombra la clase (`AddAccis()`), no `__init__()`.
+- Pruebas: `test_setpoint_limits.py` (los nombres nuevos y los antiguos con sus avisos: código EMS, `compute_setpoints`,
+  `AddAccis` con IDF idénticos, `modify_accis`, `zone_arguments`), `test_gui.py` (sesiones antiguas),
+  `test_legacy_names.py` y `test_setpoint_limit_parameters.py` (paramétrico). El golden master no cambia (ninguna
+  configuración tiene suelo ni techo).

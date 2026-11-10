@@ -14,7 +14,7 @@ sensors of the timestep, and set for each zone the EMS global variables ``HookAH
 SetAST, then sets the setpoints of the ACCIS to them as the subprograms of SetAST set the adaptive ones: ``AHST =
 HookAHST_<zone> + AHSTtol`` and ``ACST = HookACST_<zone> + ACSTtol`` (with the tolerance of the setpoints of the zone),
 rounded with SetpointAcc (:data:`accim.sim.ems.setpoint_lines.ROUNDING`), and sets ``HookSetpoints_<zone>`` back to 0.
-So everything that the ACCIS does after SetAST follows the setpoints of the hook: the floor and ceiling of the
+So everything that the ACCIS does after SetAST follows the setpoints of the hook: the minimum and maximum of the
 setpoints (:mod:`accim.sim.ems.setpoint_limits`, whose program runs after this one), the setpoints without the tolerance
 (SetASTnoTol: those of the hook), the hour counters (CountHours_<zone>, CountHoursNoApp_<zone>, and those of
 :mod:`accim.sim.ems.long_term_discomfort`), the thermostats (ApplyAST_<zone>) and the outputs of the setpoints of the zone
@@ -82,7 +82,7 @@ def hook_zones(idf) -> List[str]:
 def set_hook_setpoints_code(idf, zones: Sequence[str]) -> None:
     """Add to a model with the ACCIS (of accim 1.0.0 or later) the EMS objects with which a hook gives its setpoints to
     some zones (see the module): the global variables of each zone, its program ApplyHookSetpoints_<zone> and the line
-    that runs it in RunACCIS_<zone> right after SetAST (before the program of the floor and ceiling of the setpoints,
+    that runs it in RunACCIS_<zone> right after SetAST (before the program of the minimum and maximum of the setpoints,
     if the zone has it), and the program InitHookSetpoints with its program calling manager at the beginning of each
     environment. The objects that the model has already are kept (written again), so the hooks of the ATHB and of the
     SET share them.

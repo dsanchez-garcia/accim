@@ -2,7 +2,7 @@
 # Copyright (C) 2021-2026 Daniel Sánchez-García
 # Distributed under the GNU General Public License v3 or later.
 
-"""The floor of the heating setpoint and the ceiling of the cooling setpoint of the ACCIS, and the occupied hours below
+"""The minimum heating setpoint and the maximum cooling setpoint of the ACCIS, and the occupied hours below
 some temperatures (proposal B5).
 
 EN 16798-1:2019, Annex B: Table B.2 (B.2.1) gives the default design values of the indoor operative temperature of the
@@ -11,44 +11,48 @@ buildings with mechanical cooling systems (the minimum for heating, in winter, a
 cooling systems, whose adaptive limits (Figure B.1) apply in summer and the mid-seasons. In accim, the applicability
 limits change the equation of the setpoints (comfort modes 1, 2 and 3), but they do not bound them.
 
-- ``heating_setpoint_floor`` and ``cooling_setpoint_ceiling`` (the inputs ``AHSTfloor`` and ``ACSTceil`` of the program
+- ``heating_setpoint_minimum`` and ``cooling_setpoint_maximum`` (the inputs ``AHSTmin`` and ``ACSTmax`` of the program
   SetInputData_<zone>): the program ``ApplySetpointLimits_<zone>``, which RunACCIS_<zone> runs right after SetASTnoTol
   (so after SetAST, and after the program that gives the setpoints of a hook of the API backend to the zone,
-  :mod:`accim.sim.ems.hook_setpoints`, if it has one), sets the heating setpoint AHST to AHSTfloor if it is lower, and
-  the cooling setpoint ACST to ACSTceil if it is higher, and then rounds them again as the subprograms of SetAST do
+  :mod:`accim.sim.ems.hook_setpoints`, if it has one), sets the heating setpoint AHST to AHSTmin if it is lower, and
+  the cooling setpoint ACST to ACSTmax if it is higher, and then rounds them again as the subprograms of SetAST do
   (:data:`accim.sim.ems.setpoint_lines.ROUNDING`, with SetpointAcc): the setpoints of the thermostats are those of
   bounding AHST and ACST before their rounding, whatever the comfort standard and the comfort mode are, as the
   proposal designs it. The rounding is strict (the cooling setpoint downwards and the heating setpoint upwards), so
-  the program sets the rounded setpoints to the ceiling and the floor when they bound them: otherwise, the cooling
-  setpoint would be one step of SetpointAcc below the ceiling (25.9999 °C with a ceiling of 26 °C and the default
-  accuracy, 10000: finding B5-2 of the review of 1.2.0), and the heating setpoint one step above a floor whose product
-  by SetpointAcc is not exact in binary (19.11 °C with a floor of 19.1 °C and an accuracy of 100). The floor and the
-  ceiling also bound the setpoints without the tolerance
+  the program sets the rounded setpoints to the maximum and the minimum when they bound them: otherwise, the cooling
+  setpoint would be one step of SetpointAcc below the maximum (25.9999 °C with a maximum of 26 °C and the default
+  accuracy, 10000: finding B5-2 of the review of 1.2.0), and the heating setpoint one step above a minimum whose product
+  by SetpointAcc is not exact in binary (19.11 °C with a minimum of 19.1 °C and an accuracy of 100). The minimum and the
+  maximum also bound the setpoints without the tolerance
   (AHSTnoTol and ACSTnoTol, the limits of the comfort band with which the hour counters of the ACCIS, the long-term
-  discomfort and the hours below some temperatures count; finding B5-1): the floor is a limit of the setpoint without
-  the tolerance, so a heating setpoint without the tolerance of AHSTfloor − AHSTtol (0.1 K below the floor with the
-  default tolerance) becomes AHSTfloor: AHSTnoTol = max(AHST − AHSTtol, AHSTfloor) and ACSTnoTol = min(ACST −
-  ACSTtol, ACSTceil), with the setpoints AHST and ACST of SetAST, while the thermostats get max(AHST, AHSTfloor) and
-  min(ACST, ACSTceil), rounded (so, where the floor or the ceiling bounds them, the setpoints with and without the
-  tolerance are the same). The ventilation setpoint (SetVST, in mixed mode) follows the floor and ceiling only where
+  discomfort and the hours below some temperatures count; finding B5-1): the minimum is a limit of the setpoint without
+  the tolerance, so a heating setpoint without the tolerance of AHSTmin − AHSTtol (0.1 K below the minimum with the
+  default tolerance) becomes AHSTmin: AHSTnoTol = max(AHST − AHSTtol, AHSTmin) and ACSTnoTol = min(ACST −
+  ACSTtol, ACSTmax), with the setpoints AHST and ACST of SetAST, while the thermostats get max(AHST, AHSTmin) and
+  min(ACST, ACSTmax), rounded (so, where the minimum or the maximum bounds them, the setpoints with and without the
+  tolerance are the same). The ventilation setpoint (SetVST, in mixed mode) follows the minimum and maximum only where
   it comes from the rounded setpoints (``(roundedACST+roundedAHST)/2+VSToffset``, ``roundedAHST+VSToffset``, and
   MinOutTemp, ``roundedAHST - MinOToffset``): within the applicability limits, most comfort standards set it to the
   comfort temperature plus VSToffset (``ComfTemp+VSToffset``), and ESP CTE from 7 to 15 h to 22.5 °C plus VSToffset,
-  which the floor and the ceiling do not bound (finding B5-3). The floor only bounds the heating
-  setpoint and the ceiling the cooling setpoint: with a floor above the cooling setpoint of the comfort model (or a
-  ceiling below its heating setpoint), the heating setpoint is above the cooling setpoint; a floor not lower than the
-  ceiling raises a ValueError, and :func:`warn_crossed_setpoint_limits` warns when the floor is above the upper
-  applicability limit of the cooling setpoint of the comfort standard of the zone (ACSTaul) or the ceiling below the
+  which the minimum and the maximum do not bound (finding B5-3). The minimum only bounds the heating
+  setpoint and the maximum the cooling setpoint: with a minimum above the cooling setpoint of the comfort model (or a
+  maximum below its heating setpoint), the heating setpoint is above the cooling setpoint; a minimum not lower than the
+  maximum raises a ValueError, and :func:`warn_crossed_setpoint_limits` warns when the minimum is above the upper
+  applicability limit of the cooling setpoint of the comfort standard of the zone (ACSTaul) or the maximum below the
   lower applicability limit of its heating setpoint (AHSTall), as verdict 13 of the review of 1.2.0 asks. Only the
-  zones with a floor or a ceiling have the program and the inputs, so the output IDFs without them do not change.
+  zones with a minimum or a maximum have the program and the inputs, so the output IDFs without them do not change.
+  During the development of 1.2.0, the arguments were ``heating_setpoint_floor`` and ``cooling_setpoint_ceiling``
+  (the inputs ``AHSTfloor`` and ``ACSTceil``), names that could be read as a physical floor (decision 8 of block F,
+  task H1 of the review of 1.2.0): the old names of the arguments keep working with a DeprecationWarning
+  (:data:`accim.sim.arguments.DEPRECATED_ARGUMENT_NAMES`), and the models with the old inputs must be made again.
 - ``report_hours_below``: the occupied hours with the operative temperature below each of some temperatures, the EMS
   outputs ``HoursBelow_<T>_<zone>`` (the program ``CountHoursBelow_<zone>``, which RunACCIS_<zone> runs after
   CountHoursNoApp_<zone>): in each timestep, the length of the timestep if the zone has occupants and its operative
   temperature is below T, and 0 otherwise. As in the other hour counters of the ACCIS, the EMS reads at the beginning of
   the timestep the occupants of the timestep and the operative temperature of the previous one.
 
-The setpoints based on the PMV (:mod:`accim.sim.pmv_index`) have neither floor nor ceiling (decision D5 of the brief of
-1.2.0): their thermostats have setpoints of the PMV, not of the temperature.
+The setpoints based on the PMV (:mod:`accim.sim.pmv_index`) have neither minimum nor maximum (decision D5 of the brief
+of 1.2.0): their thermostats have setpoints of the PMV, not of the temperature.
 """
 
 import numbers
@@ -75,8 +79,8 @@ __all__ = [
     'zone_limits',
 ]
 
-#: The inputs of the floor of the heating setpoint and the ceiling of the cooling setpoint (SetInputData_<zone>)
-INPUTS = ('AHSTfloor', 'ACSTceil')
+#: The inputs of the minimum heating setpoint and the maximum cooling setpoint (SetInputData_<zone>)
+INPUTS = ('AHSTmin', 'ACSTmax')
 #: The program of the setpoint limits of each zone is this prefix and the name of the zone
 PROGRAM_PREFIX = 'ApplySetpointLimits_'
 #: The program of the hours below some temperatures of each zone
@@ -86,20 +90,20 @@ HOURS_BELOW_PREFIX = 'HoursBelow_'
 _RUN_PREFIX = 'run '
 
 
-def check_setpoint_limits(floor: Any, ceiling: Any, where: str = '') -> None:
-    """Check a floor of the heating setpoint and a ceiling of the cooling setpoint: numbers (in °C) or None, and the
-    floor lower than the ceiling.
+def check_setpoint_limits(minimum: Any, maximum: Any, where: str = '') -> None:
+    """Check a minimum heating setpoint and a maximum cooling setpoint: numbers (in °C) or None, and the
+    minimum lower than the maximum.
 
     :param where: The zone, for the messages.
     :raises ValueError: If they are not valid.
     """
     suffix = f' (zone {where!r})' if where else ''
-    for name, value in (('heating_setpoint_floor', floor), ('cooling_setpoint_ceiling', ceiling)):
+    for name, value in (('heating_setpoint_minimum', minimum), ('cooling_setpoint_maximum', maximum)):
         if value is not None and (isinstance(value, bool) or not isinstance(value, numbers.Real)):
             raise ValueError(f'{name} must be a number (°C) or None{suffix}, not {value!r}.')
-    if floor is not None and ceiling is not None and not floor < ceiling:
-        raise ValueError(f'heating_setpoint_floor ({floor}) must be lower than cooling_setpoint_ceiling '
-                         f'({ceiling}){suffix}.')
+    if minimum is not None and maximum is not None and not minimum < maximum:
+        raise ValueError(f'heating_setpoint_minimum ({minimum}) must be lower than cooling_setpoint_maximum '
+                         f'({maximum}){suffix}.')
 
 
 def check_hours_below(thresholds: Any) -> List[float]:
@@ -133,28 +137,28 @@ def hours_below_variable(threshold: float, zone: str) -> str:
     return f"{HOURS_BELOW_PREFIX}{text.replace('-', 'm')}_{zone}"
 
 
-def limit_program_lines(floor: bool, ceiling: bool) -> List[str]:
-    """The lines of the program ApplySetpointLimits_<zone> (run after SetASTnoTol): the floor of the heating setpoint
-    and the ceiling of the cooling setpoint (those of the zone) on the setpoints with the tolerance, which the
-    thermostats get, the rounding of the setpoints, the floor and the ceiling as the rounded setpoints when they bound
-    them (the rounding is strict, so the ceiling would otherwise be one step of SetpointAcc below it, and a floor whose
-    product by SetpointAcc is not exact in binary, such as 19.1 °C with an accuracy of 100, one step above it: finding
-    B5-2 of the review of 1.2.0), and the floor and the ceiling on the setpoints without the tolerance too (the comfort
-    band of the hour counters: finding B5-1)."""
+def limit_program_lines(minimum: bool, maximum: bool) -> List[str]:
+    """The lines of the program ApplySetpointLimits_<zone> (run after SetASTnoTol): the minimum heating setpoint
+    and the maximum cooling setpoint (those of the zone) on the setpoints with the tolerance, which the
+    thermostats get, the rounding of the setpoints, the minimum and the maximum as the rounded setpoints when they
+    bound them (the rounding is strict, so the maximum would otherwise be one step of SetpointAcc below it, and a
+    minimum whose product by SetpointAcc is not exact in binary, such as 19.1 °C with an accuracy of 100, one step
+    above it: finding B5-2 of the review of 1.2.0), and the minimum and the maximum on the setpoints without the
+    tolerance too (the comfort band of the hour counters: finding B5-1)."""
     lines: List[str] = []
-    if floor:
-        lines += ['if AHST < AHSTfloor', 'set AHST = AHSTfloor', 'endif']
-    if ceiling:
-        lines += ['if ACST > ACSTceil', 'set ACST = ACSTceil', 'endif']
+    if minimum:
+        lines += ['if AHST < AHSTmin', 'set AHST = AHSTmin', 'endif']
+    if maximum:
+        lines += ['if ACST > ACSTmax', 'set ACST = ACSTmax', 'endif']
     lines += list(ROUNDING)
-    if floor:
-        lines += ['if AHST <= AHSTfloor', 'set roundedAHST = AHSTfloor', 'endif']
-    if ceiling:
-        lines += ['if ACST >= ACSTceil', 'set roundedACST = ACSTceil', 'endif']
-    if floor:
-        lines += ['if AHSTnoTol < AHSTfloor', 'set AHSTnoTol = AHSTfloor', 'endif']
-    if ceiling:
-        lines += ['if ACSTnoTol > ACSTceil', 'set ACSTnoTol = ACSTceil', 'endif']
+    if minimum:
+        lines += ['if AHST <= AHSTmin', 'set roundedAHST = AHSTmin', 'endif']
+    if maximum:
+        lines += ['if ACST >= ACSTmax', 'set roundedACST = ACSTmax', 'endif']
+    if minimum:
+        lines += ['if AHSTnoTol < AHSTmin', 'set AHSTnoTol = AHSTmin', 'endif']
+    if maximum:
+        lines += ['if ACSTnoTol > ACSTmax', 'set ACSTnoTol = ACSTmax', 'endif']
     return lines
 
 
@@ -203,7 +207,7 @@ def _insert_run_line(idf, zone: str, line: str, after: str, move: bool = False) 
 def _after_setpoints(idf, zone: str) -> str:
     """The line of RunACCIS_<zone> after which ApplySetpointLimits_<zone> runs: that of SetASTnoTol, which runs after
     SetAST and after the program that gives the setpoints of a hook to the zone (:mod:`accim.sim.ems.hook_setpoints`,
-    if it has one), so that the floor and ceiling also bound the setpoints of the hook and those without the
+    if it has one), so that the minimum and maximum also bound the setpoints of the hook and those without the
     tolerance."""
     return 'run SetASTnoTol'
 
@@ -225,29 +229,29 @@ def _declared(idf) -> set:
 
 
 def has_setpoint_limits(idf) -> bool:
-    """True if a zone of the model has a floor of the heating setpoint or a ceiling of the cooling setpoint."""
+    """True if a zone of the model has a minimum heating setpoint or a maximum cooling setpoint."""
     return any(p.Name.upper().startswith(PROGRAM_PREFIX.upper())
                for p in idf.idfobjects['EnergyManagementSystem:Program'])
 
 
 def set_setpoint_limits_code(idf) -> None:
     """Write the programs ApplySetpointLimits_<zone> of the zones of a model (of accim 1.0.0 or later) with the inputs
-    ``AHSTfloor`` or ``ACSTceil`` in their programs SetInputData_<zone>, with the lines of the inputs that they have
+    ``AHSTmin`` or ``ACSTmax`` in their programs SetInputData_<zone>, with the lines of the inputs that they have
     (and the line that runs them in RunACCIS_<zone>, right after SetASTnoTol), and remove those of the other zones; the
-    EMS global variables AHSTfloor and ACSTceil are declared if a zone has them."""
+    EMS global variables AHSTmin and ACSTmax are declared if a zone has them."""
     from accim.sim.ems.inputs import input_programs, read_inputs
     from accim.sim.ems.programs import add_program, set_program_lines
 
     any_limits = False
     for zone, program in input_programs(idf).items():
         inputs = read_inputs(program)
-        floor, ceiling = (name in inputs for name in INPUTS)
+        minimum, maximum = (name in inputs for name in INPUTS)
         name = f'{PROGRAM_PREFIX}{zone}'
         run_line = f'{_RUN_PREFIX}{name}'
         existing = idf.getobject('EnergyManagementSystem:Program', name)
-        if floor or ceiling:
+        if minimum or maximum:
             any_limits = True
-            lines = limit_program_lines(floor, ceiling)
+            lines = limit_program_lines(minimum, maximum)
             if existing is None:
                 add_program(idf, name, lines)
             elif _program_lines(existing) != lines:
@@ -307,7 +311,7 @@ def set_hours_below_code(idf, thresholds: Iterable[float], frequencies: Sequence
 
 
 def zone_limits(idf) -> Dict[str, Dict[str, Optional[float]]]:
-    """The floor and ceiling of each zone of a model: ``{zone: {'AHSTfloor': ..., 'ACSTceil': ...}}`` (None if the
+    """The minimum and maximum of each zone of a model: ``{zone: {'AHSTmin': ..., 'ACSTmax': ...}}`` (None if the
     zone has none)."""
     from accim.sim.ems.inputs import input_programs, read_inputs
 
@@ -335,13 +339,13 @@ def _applicability_limits(idf, program) -> Tuple[Optional[float], Optional[float
 
 
 def warn_crossed_setpoint_limits(idf) -> List[str]:
-    """Warn about the zones of a model whose floor of the heating setpoint is above the upper applicability limit of
-    the cooling setpoint of their comfort standard (ACSTaul), or whose ceiling of the cooling setpoint is below the
+    """Warn about the zones of a model whose minimum heating setpoint is above the upper applicability limit of
+    the cooling setpoint of their comfort standard (ACSTaul), or whose maximum cooling setpoint is below the
     lower applicability limit of their heating setpoint (AHSTall), as verdict 13 of the review of accim 1.2.0 asks
-    (``notes/PROPUESTAS_MEJORAS_post_1.1.0_v04.md``, section 5): the floor only bounds the heating setpoint and the
-    ceiling the cooling setpoint, so the heating setpoint can then be above the cooling setpoint, with which EnergyPlus
+    (``notes/PROPUESTAS_MEJORAS_post_1.1.0_v04.md``, section 5): the minimum only bounds the heating setpoint and the
+    maximum the cooling setpoint, so the heating setpoint can then be above the cooling setpoint, with which EnergyPlus
     gives warnings and meaningless results. The limits are those of the program SetAppLimits of the model for the
-    inputs of the zone (its comfort standard and category); a floor not lower than the ceiling is a ValueError
+    inputs of the zone (its comfort standard and category); a minimum not lower than the maximum is a ValueError
     (:func:`check_setpoint_limits`).
 
     :return: The messages, which are also given as warnings.
@@ -350,16 +354,16 @@ def warn_crossed_setpoint_limits(idf) -> List[str]:
 
     messages = []
     for zone, program in input_programs(idf).items():
-        floor, ceiling = (read_inputs(program).get(name) for name in INPUTS)
-        if floor is None and ceiling is None:
+        minimum, maximum = (read_inputs(program).get(name) for name in INPUTS)
+        if minimum is None and maximum is None:
             continue
         upper, lower = _applicability_limits(idf, program)
-        if floor is not None and upper is not None and floor > upper:
-            messages.append(f'The floor of the heating setpoint of the zone {zone} ({_number(floor)} °C) is above the '
+        if minimum is not None and upper is not None and minimum > upper:
+            messages.append(f'The minimum heating setpoint of the zone {zone} ({_number(minimum)} °C) is above the '
                             f'upper applicability limit of the cooling setpoint of its comfort standard (ACSTaul, '
                             f'{_number(upper)} °C): its heating setpoint can be above its cooling setpoint.')
-        if ceiling is not None and lower is not None and ceiling < lower:
-            messages.append(f'The ceiling of the cooling setpoint of the zone {zone} ({_number(ceiling)} °C) is below '
+        if maximum is not None and lower is not None and maximum < lower:
+            messages.append(f'The maximum cooling setpoint of the zone {zone} ({_number(maximum)} °C) is below '
                             f'the lower applicability limit of the heating setpoint of its comfort standard (AHSTall, '
                             f'{_number(lower)} °C): its cooling setpoint can be below its heating setpoint.')
     for message in messages:

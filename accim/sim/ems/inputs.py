@@ -18,7 +18,8 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Set, Union
 
-from accim.sim.arguments import LEGACY_ARGUMENT_NAMES, to_day_of_year
+from accim._deprecation import warn_deprecated
+from accim.sim.arguments import DEPRECATED_ARGUMENT_NAMES, LEGACY_ARGUMENT_NAMES, to_day_of_year
 
 __all__ = [
     'INPUT_PROGRAM_PREFIX',
@@ -57,8 +58,8 @@ class InputVariable:
         have.
     :ivar outdoor_metric_only: True for the inputs of the outdoor metric of the custom model, which only the models
         with the EMS code of the custom model have (:mod:`accim.sim.ems.outdoor_metric`).
-    :ivar optional: True for the inputs that SetInputData_<zone> only has if they are given (the floor of the heating
-        setpoint and the ceiling of the cooling setpoint, :mod:`accim.sim.ems.setpoint_limits`); their default is None.
+    :ivar optional: True for the inputs that SetInputData_<zone> only has if they are given (the minimum of the heating
+        setpoint and the maximum cooling setpoint, :mod:`accim.sim.ems.setpoint_limits`); their default is None.
     :ivar static_only: True for the inputs of the static setpoints of the comfort standards whose standard does not
         give them (JPN Aqilah 2025, :mod:`accim.sim.ems.static_setpoints`), which only the zones of these comfort
         standards have.
@@ -104,8 +105,8 @@ INPUT_VARIABLES = (
     InputVariable('CustAST_days', 'custom_days', 30, outdoor_metric_only=True),
     InputVariable('StaticAHST', 'static_heating_setpoint', 20.0, static_only=True),
     InputVariable('StaticACST', 'static_cooling_setpoint', 28.0, static_only=True),
-    InputVariable('AHSTfloor', 'heating_setpoint_floor', None, optional=True),
-    InputVariable('ACSTceil', 'cooling_setpoint_ceiling', None, optional=True),
+    InputVariable('AHSTmin', 'heating_setpoint_minimum', None, optional=True),
+    InputVariable('ACSTmax', 'cooling_setpoint_maximum', None, optional=True),
     InputVariable('MaxTempDiffVOF', 'opening_factor_max_temp_diff', 6, mixed_mode_only=True),
     InputVariable('MinTempDiffVOF', 'opening_factor_min_temp_diff', 1, mixed_mode_only=True),
     InputVariable('MultiplierVOF', 'min_opening_factor', 0.25, mixed_mode_only=True),
@@ -242,6 +243,20 @@ def check_zone_arguments(zone_arguments: Optional[Mapping]) -> Dict[Any, Dict[st
         if not isinstance(arguments, Mapping):
             raise ValueError(f'The arguments of the zone {zone!r} in zone_arguments must be a dictionary, such as '
                              f'{example}, not {arguments!r}.')
+        # The names of the minimum and maximum of the setpoints during the development of accim 1.2.0
+        legacy = [name for name in arguments if name in DEPRECATED_ARGUMENT_NAMES]
+        if legacy:
+            renamed = {}
+            for name, value in arguments.items():
+                new = DEPRECATED_ARGUMENT_NAMES.get(name, name)
+                if new in renamed or (new != name and new in arguments):
+                    raise ValueError(f'The arguments of the zone {zone!r} in zone_arguments have {name!r} and {new!r}, '
+                                     f'two names of the same argument.')
+                renamed[new] = value
+            for name in legacy:
+                warn_deprecated(f'The argument {name!r} of zone_arguments', repr(DEPRECATED_ARGUMENT_NAMES[name]),
+                                stacklevel=4, version='1.2.0')
+            arguments = renamed
         for name, value in arguments.items():
             if name not in ZONE_ARGUMENTS:
                 new_name = LEGACY_ARGUMENT_NAMES.get(name)

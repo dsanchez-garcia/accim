@@ -34,6 +34,7 @@ result = <module>()
 import besos.IDF_class
 import pandas as pd
 
+from accim._deprecation import deprecated_alias
 from accim.sim.ems.inputs import input_programs, read_inputs, set_inputs
 from accim.sim.ems.programs import add_comfort_standard_code, set_program_lines
 from accim.sim.ems.setpoint_limits import check_setpoint_limits, set_setpoint_limits_code
@@ -260,9 +261,9 @@ def drop_invalid_param_combinations(samples_df):
     of INT ISO7730 (22) not on the comfort mode, so a full set would simulate the same model once for each of their
     values: their rows keep only the first value of these columns in the plan (one row for each combination of the
     other parameters). Before accim 1.0.0, the rows of ESP CTE were dropped when the plan had `category` or
-    `comfort_mode`, and those of INT ISO7730 kept only `comfort_mode` 0. Since accim 1.2.0, the rows whose floor of
-    the heating setpoint is not lower than the ceiling of the cooling setpoint (`heating_setpoint_floor` and
-    `cooling_setpoint_ceiling`, which the modifiers reject) are dropped too, and so are those whose static heating
+    `comfort_mode`, and those of INT ISO7730 kept only `comfort_mode` 0. Since accim 1.2.0, the rows whose minimum
+    heating setpoint is not lower than the maximum cooling setpoint (`heating_setpoint_minimum` and
+    `cooling_setpoint_maximum`, which the modifiers reject) are dropped too, and so are those whose static heating
     setpoint of JPN Aqilah 2025 is not lower than its static cooling setpoint (`static_heating_setpoint` and
     `static_cooling_setpoint`).
 
@@ -324,7 +325,7 @@ def drop_invalid_param_combinations(samples_df):
         'opening_factor_max_temp_diff': 'MaxTempDiffVOF', 'opening_factor_min_temp_diff': 'MinTempDiffVOF',
         'min_opening_factor': 'MultiplierVOF',
         # The parameters of accim 1.2.0 have no names of accim 0.x
-        'heating_setpoint_floor': 'heating_setpoint_floor', 'cooling_setpoint_ceiling': 'cooling_setpoint_ceiling',
+        'heating_setpoint_minimum': 'heating_setpoint_minimum', 'cooling_setpoint_maximum': 'cooling_setpoint_maximum',
         'static_heating_setpoint': 'static_heating_setpoint', 'static_cooling_setpoint': 'static_cooling_setpoint',
     }
     columns = {new: (old if old in samples_df.columns and new not in samples_df.columns else new)
@@ -356,7 +357,7 @@ def drop_invalid_param_combinations(samples_df):
         lambda v: v('opening_factor_min_temp_diff') <= 0,
         lambda v: v('opening_factor_min_temp_diff') >= v('opening_factor_max_temp_diff'),
         lambda v: v('min_opening_factor') < 0 or v('min_opening_factor') > 1,
-        lambda v: v('heating_setpoint_floor') >= v('cooling_setpoint_ceiling'),
+        lambda v: v('heating_setpoint_minimum') >= v('cooling_setpoint_maximum'),
         lambda v: v('static_heating_setpoint') >= v('static_cooling_setpoint'),
     )
     samples_df['valid'] = True
@@ -502,21 +503,21 @@ def modify_StaticACST(idf: besos.IDF_class, value: float):
 
 
 def _set_setpoint_limit(idf, variable: str, value: float) -> None:
-    """Set the floor of the heating setpoint (AHSTfloor) or the ceiling of the cooling setpoint (ACSTceil) of all the
+    """Set the minimum heating setpoint (AHSTmin) or the maximum cooling setpoint (ACSTmax) of all the
     zones of a model of accim 1.0.0 or later, adding the lines that their programs SetInputData_<zone> do not have,
     and the programs ApplySetpointLimits_<zone> (:mod:`accim.sim.ems.setpoint_limits`).
 
-    :raises ValueError: If the model has the ACCIS of an earlier version, the value is not a number, or the floor of a
-        zone would not be lower than its ceiling.
+    :raises ValueError: If the model has the ACCIS of an earlier version, the value is not a number, or the minimum of a
+        zone would not be lower than its maximum.
     """
     zone_programs = input_programs(idf)
     if not zone_programs:
-        raise ValueError('The model has the ACCIS of an earlier version of accim, whose setpoints have neither floor '
-                         'nor ceiling. Add the ACCIS with this version of accim to the model without it.')
+        raise ValueError('The model has the ACCIS of an earlier version of accim, whose setpoints have neither minimum '
+                         'nor maximum. Add the ACCIS with this version of accim to the model without it.')
     for zone, program in zone_programs.items():
-        limits = {name: read_inputs(program).get(name) for name in ('AHSTfloor', 'ACSTceil')}
+        limits = {name: read_inputs(program).get(name) for name in ('AHSTmin', 'ACSTmax')}
         limits[variable] = value
-        check_setpoint_limits(limits['AHSTfloor'], limits['ACSTceil'], where=zone)
+        check_setpoint_limits(limits['AHSTmin'], limits['ACSTmax'], where=zone)
     for program in zone_programs.values():
         if set_inputs(program, {variable: value}):
             set_program_lines(program, [str(line).strip() for line in program.fieldvalues[2:]]
@@ -524,42 +525,49 @@ def _set_setpoint_limit(idf, variable: str, value: float) -> None:
     set_setpoint_limits_code(idf)
 
 
-def modify_AHSTfloor(idf: besos.IDF_class, value: float):
-    """Modifies the floor of the heating setpoint (``heating_setpoint_floor``, the input AHSTfloor) of all the zones:
+def modify_AHSTmin(idf: besos.IDF_class, value: float):
+    """Modifies the minimum heating setpoint (``heating_setpoint_minimum``, the input AHSTmin) of all the zones:
     their heating setpoint is not lower than the value (°C), whatever the comfort standard and the comfort mode are
     (EN 16798-1:2019 applies in winter the minimums of its Table B.2, ``accim.constants.EN16798_TABLE_B2``).
 
     :param idf: The eppy or besos IDF class instance, with the ACCIS of accim 1.0.0 or later.
-    :param value: The floor (°C).
+    :param value: The minimum (°C).
 
     Usage
     -----
-    Use `modify_AHSTfloor` within ACCIM parametric and optimisation workflows.
+    Use `modify_AHSTmin` within ACCIM parametric and optimisation workflows.
 
     Examples
     --------
-    result = modify_AHSTfloor(idf=..., value=20)
+    result = modify_AHSTmin(idf=..., value=20)
     """
-    _set_setpoint_limit(idf, 'AHSTfloor', value)
+    _set_setpoint_limit(idf, 'AHSTmin', value)
 
 
-def modify_ACSTceil(idf: besos.IDF_class, value: float):
-    """Modifies the ceiling of the cooling setpoint (``cooling_setpoint_ceiling``, the input ACSTceil) of all the zones:
+def modify_ACSTmax(idf: besos.IDF_class, value: float):
+    """Modifies the maximum cooling setpoint (``cooling_setpoint_maximum``, the input ACSTmax) of all the zones:
     their cooling setpoint is not higher than the value (°C), whatever the comfort standard and the comfort mode are
     (the maximums of Table B.2 of EN 16798-1:2019).
 
     :param idf: The eppy or besos IDF class instance, with the ACCIS of accim 1.0.0 or later.
-    :param value: The ceiling (°C).
+    :param value: The maximum (°C).
 
     Usage
     -----
-    Use `modify_ACSTceil` within ACCIM parametric and optimisation workflows.
+    Use `modify_ACSTmax` within ACCIM parametric and optimisation workflows.
 
     Examples
     --------
-    result = modify_ACSTceil(idf=..., value=26)
+    result = modify_ACSTmax(idf=..., value=26)
     """
-    _set_setpoint_limit(idf, 'ACSTceil', value)
+    _set_setpoint_limit(idf, 'ACSTmax', value)
+
+
+# The names of the development of accim 1.2.0, renamed before its release (decision 8 of block F)
+modify_AHSTfloor = deprecated_alias(modify_AHSTmin, 'param_accis.modify_AHSTfloor', 'param_accis.modify_AHSTmin',
+                                    version='1.2.0')
+modify_ACSTceil = deprecated_alias(modify_ACSTmax, 'param_accis.modify_ACSTceil', 'param_accis.modify_ACSTmax',
+                                   version='1.2.0')
 
 
 def _set_outdoor_metric_input(idf, variable: str, value) -> None:

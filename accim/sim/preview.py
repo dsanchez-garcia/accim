@@ -29,6 +29,9 @@ from typing import Dict, List, Optional, Sequence, Tuple, Union
 import numpy as np
 import pandas as pd
 
+from accim._deprecation import accepts_legacy_kwargs
+from accim.sim.arguments import DEPRECATED_ARGUMENT_NAMES
+
 __all__ = [
     'ENERGYPLUS_ASHRAE55_DAYS',
     'ENERGYPLUS_CEN15251_ALPHA',
@@ -296,6 +299,7 @@ def _metric(comfort_standard: int, comfort_mode: Optional[Number]) -> Optional[s
     return None
 
 
+@accepts_legacy_kwargs(DEPRECATED_ARGUMENT_NAMES, version='1.2.0')
 def compute_setpoints(epw: PathLike, comfort_standard: int, category: Optional[Number] = None,
                       comfort_mode: Optional[Number] = None, *, timesteps_per_hour: int = 6,
                       start_date: Union[int, str] = 1, frequency: str = 'hourly', outdoor_metric_start: str = 'epw',
@@ -393,7 +397,7 @@ def compute_setpoints(epw: PathLike, comfort_standard: int, category: Optional[N
     names = set().union(*variables_in_programs(programs).values())
     erl = ErlProgramSet(programs, global_variables=names)
     order = ['SetAppLimits', 'ApplyCAT', 'SetComfTemp', 'SetAST', 'SetASTnoTol', counter]
-    # The floor and ceiling of the setpoints of the zone (accim.sim.ems.setpoint_limits), right after SetASTnoTol
+    # The minimum and maximum of the setpoints of the zone (accim.sim.ems.setpoint_limits), right after SetASTnoTol
     limits = f'ApplySetpointLimits_{_ZONE}'
     if limits in programs:
         order.insert(order.index('SetASTnoTol') + 1, limits)

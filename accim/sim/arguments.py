@@ -14,6 +14,7 @@ from accim.constants import SUPPORTED_ENERGYPLUS_VERSIONS
 
 __all__ = [
     'CustomRegime',
+    'DEPRECATED_ARGUMENT_NAMES',
     'LEGACY_ARGUMENT_NAMES',
     'METRIC_CONDITIONS',
     'MIXED_MODE_SCRIPT_TYPES',
@@ -97,6 +98,13 @@ LEGACY_ARGUMENT_NAMES = {
     'debugging': 'debug_ems',
     'eer': 'vrf_eer',
     'cop': 'vrf_cop',
+}
+#: New name of each argument renamed during the development of accim 1.2.0, before its release: the minimum heating
+#: setpoint and the maximum cooling setpoint (proposal B5; decision 8 of block F, ``heating_setpoint_floor`` could be
+#: read as a physical floor). The old names keep working with a DeprecationWarning (since accim 1.2.0).
+DEPRECATED_ARGUMENT_NAMES = {
+    'heating_setpoint_floor': 'heating_setpoint_minimum',
+    'cooling_setpoint_ceiling': 'cooling_setpoint_maximum',
 }
 
 

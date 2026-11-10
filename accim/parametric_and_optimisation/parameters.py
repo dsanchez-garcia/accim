@@ -34,6 +34,7 @@ p.name
 ComfStand().modify(idf, 1)
 """
 
+from accim._deprecation import deprecated_alias
 from accim.parametric_and_optimisation.funcs_for_besos import param_accis, param_apmv
 import accim.parametric_and_optimisation.params_dicts as params_dicts
 from accim.parametric_and_optimisation.utils import descriptor_has_options
@@ -1749,8 +1750,8 @@ class MultiplierVOF:
         param_accis.modify_MultiplierVOF(idf, value)
 
 
-class HeatingSetpointFloor:
-    """OO wrapper for the ACCIS parameter ``heating_setpoint_floor`` (the input ``AHSTfloor``, accim 1.2.0): the
+class HeatingSetpointMinimum:
+    """OO wrapper for the ACCIS parameter ``heating_setpoint_minimum`` (the input ``AHSTmin``, accim 1.2.0): the
     heating setpoint of all the zones is not lower than the value (°C), whatever the comfort standard and the comfort
     mode are (EN 16798-1:2019 applies in winter the minimums of its Table B.2, ``accim.constants.EN16798_TABLE_B2``).
 
@@ -1760,7 +1761,7 @@ class HeatingSetpointFloor:
 
     Examples
     --------
-    p = HeatingSetpointFloor()
+    p = HeatingSetpointMinimum()
     p.modify(idf, 20)
     """
 
@@ -1773,20 +1774,20 @@ class HeatingSetpointFloor:
 
         Examples
         --------
-        HeatingSetpointFloor().name
-        'heating_setpoint_floor'
+        HeatingSetpointMinimum().name
+        'heating_setpoint_minimum'
         """
-        self.name = 'heating_setpoint_floor'
+        self.name = 'heating_setpoint_minimum'
 
     def modify(self, idf, value):
-        """Apply parameter ``heating_setpoint_floor`` to an IDF in place.
+        """Apply parameter ``heating_setpoint_minimum`` to an IDF in place.
 
         Parameters
         ----------
         idf : besos.IDF_class
             Target building model to edit, with the ACCIS of accim 1.0.0 or later.
         value : float
-            The floor of the heating setpoint (°C), written by ``param_accis.modify_AHSTfloor``.
+            The minimum heating setpoint (°C), written by ``param_accis.modify_AHSTmin``.
 
         Returns
         -------
@@ -1799,13 +1800,13 @@ class HeatingSetpointFloor:
 
         Examples
         --------
-        HeatingSetpointFloor().modify(idf, 20)
+        HeatingSetpointMinimum().modify(idf, 20)
         """
-        param_accis.modify_AHSTfloor(idf, value)
+        param_accis.modify_AHSTmin(idf, value)
 
 
-class CoolingSetpointCeiling:
-    """OO wrapper for the ACCIS parameter ``cooling_setpoint_ceiling`` (the input ``ACSTceil``, accim 1.2.0): the
+class CoolingSetpointMaximum:
+    """OO wrapper for the ACCIS parameter ``cooling_setpoint_maximum`` (the input ``ACSTmax``, accim 1.2.0): the
     cooling setpoint of all the zones is not higher than the value (°C), whatever the comfort standard and the comfort
     mode are (the maximums of Table B.2 of EN 16798-1:2019, ``accim.constants.EN16798_TABLE_B2``).
 
@@ -1815,7 +1816,7 @@ class CoolingSetpointCeiling:
 
     Examples
     --------
-    p = CoolingSetpointCeiling()
+    p = CoolingSetpointMaximum()
     p.modify(idf, 26)
     """
 
@@ -1828,20 +1829,20 @@ class CoolingSetpointCeiling:
 
         Examples
         --------
-        CoolingSetpointCeiling().name
-        'cooling_setpoint_ceiling'
+        CoolingSetpointMaximum().name
+        'cooling_setpoint_maximum'
         """
-        self.name = 'cooling_setpoint_ceiling'
+        self.name = 'cooling_setpoint_maximum'
 
     def modify(self, idf, value):
-        """Apply parameter ``cooling_setpoint_ceiling`` to an IDF in place.
+        """Apply parameter ``cooling_setpoint_maximum`` to an IDF in place.
 
         Parameters
         ----------
         idf : besos.IDF_class
             Target building model to edit, with the ACCIS of accim 1.0.0 or later.
         value : float
-            The ceiling of the cooling setpoint (°C), written by ``param_accis.modify_ACSTceil``.
+            The maximum cooling setpoint (°C), written by ``param_accis.modify_ACSTmax``.
 
         Returns
         -------
@@ -1854,9 +1855,16 @@ class CoolingSetpointCeiling:
 
         Examples
         --------
-        CoolingSetpointCeiling().modify(idf, 26)
+        CoolingSetpointMaximum().modify(idf, 26)
         """
-        param_accis.modify_ACSTceil(idf, value)
+        param_accis.modify_ACSTmax(idf, value)
+
+
+# The names of the development of accim 1.2.0, renamed before its release (decision 8 of block F)
+HeatingSetpointFloor = deprecated_alias(HeatingSetpointMinimum, 'parameters.HeatingSetpointFloor',
+                                        'parameters.HeatingSetpointMinimum', version='1.2.0')
+CoolingSetpointCeiling = deprecated_alias(CoolingSetpointMaximum, 'parameters.CoolingSetpointCeiling',
+                                          'parameters.CoolingSetpointMaximum', version='1.2.0')
 
 
 class StaticHeatingSetpoint:

@@ -210,7 +210,9 @@ def _variables_state(variables: Mapping[str, tk.Variable]) -> Dict[str, Any]:
 
 
 def _restore_variables(variables: Mapping[str, tk.Variable], values: Mapping[str, Any]) -> None:
-    """Set the variables of a form that ``values`` has (the others keep their values)."""
+    """Set the variables of a form that ``values`` has (the others keep their values), also those of the old names
+    of the arguments renamed during the development of accim 1.2.0 (:func:`accim.gui.forms.current_names`)."""
+    values = forms.current_names(values)
     for name, variable in variables.items():
         if name in values:
             variable.set(bool(values[name]) if isinstance(variable, tk.BooleanVar) else values[name])
@@ -804,12 +806,12 @@ class AddAccisTab(_Tab):
         return frame
 
     def _setpoint_limits_frame(self, parent) -> ttk.LabelFrame:
-        frame = ttk.LabelFrame(parent, text='Floor and ceiling of the setpoints (setpoint type temperature), '
+        frame = ttk.LabelFrame(parent, text='Minimum and maximum of the setpoints (setpoint type temperature), '
                                             'occupied hours below some temperatures, and long-term discomfort',
                                padding=6)
         # The values of Table B.2 of EN 16798-1 fill both fields (accim.constants.EN16798_TABLE_B2)
         self.table_b2 = tk.StringVar(value='')
-        self.table_b2_combo = _grid_combo(frame, 0, 'EN 16798-1, Table B.2 (fills the floor and ceiling):',
+        self.table_b2_combo = _grid_combo(frame, 0, 'EN 16798-1, Table B.2 (fills the minimum and maximum):',
                                           self.table_b2, ('', *forms.EN16798_TABLE_B2_CHOICES), width=34)
         self.table_b2.trace_add('write', lambda *args: self._table_b2_chosen())
         self.limit_widgets: List[Any] = [self.table_b2_combo]
@@ -823,10 +825,10 @@ class AddAccisTab(_Tab):
                                     variable=self.vars['report_long_term_discomfort'])
         long_term.grid(row=4, column=0, columnspan=2, sticky='w')
         self.limit_widgets.append(long_term)
-        ttk.Label(frame, text='The heating setpoint is not lower than the floor, and the cooling setpoint not higher '
-                              'than the ceiling, whatever the comfort standard and comfort mode, with and without the '
-                              'tolerance (the setpoints that they bound are the floor and the ceiling). The PMV-based '
-                              'setpoints have neither. '
+        ttk.Label(frame, text='The heating setpoint is not lower than the minimum, and the cooling setpoint not '
+                              'higher than the maximum, whatever the comfort standard and comfort mode, with and '
+                              'without the tolerance (the setpoints that they bound are the minimum and the maximum). '
+                              'The PMV-based setpoints have neither. '
                               'The long-term discomfort reports the occupied hours and degree hours of each zone '
                               'and of the building above the cooling setpoint and below the heating setpoint '
                               'without the tolerance.',
@@ -834,7 +836,7 @@ class AddAccisTab(_Tab):
         return frame
 
     def _table_b2_chosen(self) -> None:
-        """Fill the floor and ceiling of the setpoints with the values of Table B.2 of EN 16798-1 chosen."""
+        """Fill the minimum and maximum of the setpoints with the values of Table B.2 of EN 16798-1 chosen."""
         values = forms.EN16798_TABLE_B2_CHOICES.get(self.table_b2.get())
         if values is not None:
             for name, value in zip(forms.SETPOINT_LIMIT_FIELDS, values):
@@ -953,7 +955,7 @@ class AddAccisTab(_Tab):
                                  self.availability_combo, script_type.startswith('ex'), temperature)
         _set_state(self.comfort_widgets, temperature)
         _set_state([self.ems_code_button], temperature)
-        # The PMV-based setpoints have neither floor nor ceiling (decision D5 of accim 1.2.0)
+        # The PMV-based setpoints have neither minimum nor maximum (decision D5 of accim 1.2.0)
         _set_state(self.limit_widgets, temperature)
         self.zone_table.set_state(temperature, () if mixed_mode else ('hvac_mode', 'ventilation_control'))
         standards = self.selected_standards() if temperature else []
@@ -1007,7 +1009,7 @@ class AddAccisTab(_Tab):
             # The comfort models are not used with PMV control, but AddAccis needs them
             values['comfort_standard'] = forms.ADD_ACCIS_DEFAULTS['comfort_standard']
         if values['setpoint_type'] != 'temperature':
-            # The fields of the floor and ceiling of the setpoints, of the regimes of the custom model and of the
+            # The fields of the minimum and maximum of the setpoints, of the regimes of the custom model and of the
             # long-term discomfort are disabled
             values.update(dict.fromkeys(forms.SETPOINT_LIMIT_FIELDS, ''), custom_regimes='',
                           report_long_term_discomfort=False)
@@ -2122,7 +2124,9 @@ class ParametricTab(_Tab):
         if 'epws' in state:
             messages += _select(self.epw_list, state['epws'], 'EPWs of "7. Parametric study"')
         if 'parameters' in state:
-            _set_rows(self.parameter_tree, state['parameters'])
+            # The parameters renamed during the development of accim 1.2.0 get their names
+            _set_rows(self.parameter_tree, [(forms.DEPRECATED_ARGUMENT_NAMES.get(name, name), *rest)
+                                            for name, *rest in state['parameters']])
         self.update_state()
         if results is None:
             self.clear_results()

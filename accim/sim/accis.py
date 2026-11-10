@@ -22,7 +22,7 @@ from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple, Union
 import pandas as pd
 
 from accim import __version__
-from accim._deprecation import rename_legacy_kwargs, warn_deprecated
+from accim._deprecation import accepts_legacy_kwargs, rename_legacy_kwargs, warn_deprecated
 from accim.constants import SUPPORTED_ENERGYPLUS_VERSIONS
 from accim.energyplus import (
     expand_objects,
@@ -33,6 +33,7 @@ from accim.energyplus import (
 )
 from accim.sim import prompts
 from accim.sim.arguments import (
+    DEPRECATED_ARGUMENT_NAMES,
     LEGACY_ARGUMENT_NAMES,
     OUTPUT_FREQUENCIES,
     OUTPUT_TYPES,
@@ -375,11 +376,11 @@ def _warn_hvac_zone_map(hvac_zone_map: Optional[Dict[str, str]]) -> None:
 
 #: The arguments of the outdoor metric of the custom model (accim.sim.ems.outdoor_metric)
 _OUTDOOR_METRIC_ARGUMENTS = ('custom_outdoor_metric', 'custom_alpha', 'custom_days')
-#: The arguments of the floor and ceiling of the setpoints (accim.sim.ems.setpoint_limits)
-_SETPOINT_LIMIT_ARGUMENTS = ('heating_setpoint_floor', 'cooling_setpoint_ceiling')
+#: The arguments of the minimum and maximum of the setpoints (accim.sim.ems.setpoint_limits)
+_SETPOINT_LIMIT_ARGUMENTS = ('heating_setpoint_minimum', 'cooling_setpoint_maximum')
 #: The arguments of the output IDFs that the prompts do not ask, and their defaults
 _NOT_ASKED_ARGUMENTS = (('custom_outdoor_metric', 'pmot'), ('custom_alpha', 0.8), ('custom_days', 30),
-                        ('heating_setpoint_floor', None), ('cooling_setpoint_ceiling', None),
+                        ('heating_setpoint_minimum', None), ('cooling_setpoint_maximum', None),
                         *zip(STATIC_SETPOINT_ARGUMENTS, STATIC_SETPOINT_DEFAULTS))
 
 
@@ -407,18 +408,18 @@ def _check_static_setpoint_arguments(heating: Any, cooling: Any, zone_arguments:
                                    arguments.get(STATIC_SETPOINT_ARGUMENTS[1], cooling), where=str(zone))
 
 
-def _check_setpoint_limits(floor: Any, ceiling: Any, zone_arguments: Dict[Any, Dict[str, Any]]) -> bool:
-    """Check the floor of the heating setpoint and the ceiling of the cooling setpoint, of all the zones and of those
+def _check_setpoint_limits(minimum: Any, maximum: Any, zone_arguments: Dict[Any, Dict[str, Any]]) -> bool:
+    """Check the minimum heating setpoint and the maximum cooling setpoint, of all the zones and of those
     of ``zone_arguments``; return True if a zone has one of them.
 
     :raises ValueError: If they are not valid.
     """
-    check_setpoint_limits(floor, ceiling)
-    found = floor is not None or ceiling is not None
+    check_setpoint_limits(minimum, maximum)
+    found = minimum is not None or maximum is not None
     for zone, arguments in zone_arguments.items():
         if any(name in arguments for name in _SETPOINT_LIMIT_ARGUMENTS):
-            check_setpoint_limits(arguments.get('heating_setpoint_floor', floor),
-                                  arguments.get('cooling_setpoint_ceiling', ceiling), where=str(zone))
+            check_setpoint_limits(arguments.get('heating_setpoint_minimum', minimum),
+                                  arguments.get('cooling_setpoint_maximum', maximum), where=str(zone))
             found = True
     return found
 
@@ -641,20 +642,21 @@ class AddAccis:
         first value in a run period is lower (equation 19.82 of the Engineering Reference is not divided by 1 − α⁷,
         about 21 % below the running mean, a difference that decays by α each day); without it, JPN Aqilah 2025 reads
         the RMOT of EnergyPlus, with a warning (finding B4-1 of the review of accim 1.2.0).
-    :param heating_setpoint_floor: The floor of the heating setpoint (°C), or None (the default) for none: in every
-        comfort standard and comfort mode, the heating setpoint is not lower (the input ``AHSTfloor`` of each zone,
+    :param heating_setpoint_minimum: The minimum heating setpoint (°C), or None (the default) for none: in every
+        comfort standard and comfort mode, the heating setpoint is not lower (the input ``AHSTmin`` of each zone,
         see :mod:`accim.sim.ems.setpoint_limits`); EN 16798-1:2019 (B.2.2) applies in winter the minimums of its Table
         B.2 (:data:`accim.constants.EN16798_TABLE_B2`). Also for each zone in ``zone_arguments``. Only with
         ``setpoint_type`` 'temperature' (the setpoints based on the PMV have none). The setpoints are bounded before
         their rounding, and the setpoints without the tolerance (the limits of the comfort band of the hour counters)
         are bounded too (finding B5-1 of the review of accim 1.2.0).
-    :param cooling_setpoint_ceiling: The ceiling of the cooling setpoint (°C), or None (the default) for none: the
-        cooling setpoint is not higher (the input ``ACSTceil``), as the maximums of Table B.2 of EN 16798-1. A cooling
-        setpoint bounded by the ceiling is the ceiling, and a heating setpoint bounded by the floor the floor (not one
-        step of ``setpoint_accuracy`` beyond them, as the strict rounding would give: finding B5-2). It must be higher
-        than the floor; a warning tells if the floor is above the upper applicability limit of the cooling setpoint of
-        the comfort standard (ACSTaul) or the ceiling below the lower one of the heating setpoint (AHSTall), since the
-        setpoints can then cross (:func:`accim.sim.ems.setpoint_limits.warn_crossed_setpoint_limits`).
+    :param cooling_setpoint_maximum: The maximum cooling setpoint (°C), or None (the default) for none: the
+        cooling setpoint is not higher (the input ``ACSTmax``), as the maximums of Table B.2 of EN 16798-1. A cooling
+        setpoint bounded by the maximum is the maximum, and a heating setpoint bounded by the minimum the minimum (not
+        one step of ``setpoint_accuracy`` beyond them, as the strict rounding would give: finding B5-2). It must be
+        higher than the minimum; a warning tells if the minimum is above the upper applicability limit of the cooling
+        setpoint of the comfort standard (ACSTaul) or the maximum below the lower one of the heating setpoint
+        (AHSTall), since the setpoints can then cross
+        (:func:`accim.sim.ems.setpoint_limits.warn_crossed_setpoint_limits`).
     :param report_hours_below: A list of temperatures (°C), such as ``[18, 17, 16]``, or None (or an empty list) for
         none: the output IDFs report the occupied hours of each zone with the operative temperature below each of
         them, ``HoursBelow_<T>_<zone>`` (``HoursBelow_18_<zone>``, and ``HoursBelow_17p5_<zone>`` for 17.5), with
@@ -708,6 +710,8 @@ class AddAccis:
         output IDFs and EPWs of a folder.
     """
 
+    # heating_setpoint_floor and cooling_setpoint_ceiling, the names of the development of 1.2.0
+    @accepts_legacy_kwargs(DEPRECATED_ARGUMENT_NAMES, version='1.2.0')
     def __init__(
         self,
         idfs: Optional[Sequence[Union[str, os.PathLike]]] = None,
@@ -766,8 +770,8 @@ class AddAccis:
         custom_alpha: Number = 0.8,
         custom_days: int = 30,
         epw: Optional[Union[str, os.PathLike]] = None,
-        heating_setpoint_floor: Optional[Number] = None,
-        cooling_setpoint_ceiling: Optional[Number] = None,
+        heating_setpoint_minimum: Optional[Number] = None,
+        cooling_setpoint_maximum: Optional[Number] = None,
         report_hours_below: Optional[Sequence[Number]] = None,
         custom_regimes: Optional[Sequence[CustomRegime]] = None,
         report_long_term_discomfort: bool = False,
@@ -780,7 +784,7 @@ class AddAccis:
         self.verbose = verbose
         checked_zone_arguments = check_zone_arguments(zone_arguments)
         epw = _check_outdoor_metric(custom_outdoor_metric, custom_alpha, custom_days, checked_zone_arguments, epw)
-        has_limits = _check_setpoint_limits(heating_setpoint_floor, cooling_setpoint_ceiling, checked_zone_arguments)
+        has_limits = _check_setpoint_limits(heating_setpoint_minimum, cooling_setpoint_maximum, checked_zone_arguments)
         _check_static_setpoint_arguments(static_heating_setpoint, static_cooling_setpoint, checked_zone_arguments)
         hours_below = check_hours_below(report_hours_below)
         regimes = check_custom_regimes(custom_regimes)
@@ -809,7 +813,7 @@ class AddAccis:
             raise ValueError("zone_arguments needs setpoint_type 'temperature': with 'pmv', the Fanger thermostats "
                              "control the zones and the arguments of the ACCIS are not used.")
         if has_limits and setpoint_type == 'pmv':
-            raise ValueError("heating_setpoint_floor and cooling_setpoint_ceiling need setpoint_type 'temperature': "
+            raise ValueError("heating_setpoint_minimum and cooling_setpoint_maximum need setpoint_type 'temperature': "
                              "the Fanger thermostats of 'pmv' have setpoints of the PMV, not of the temperature.")
         if regimes and setpoint_type == 'pmv':
             raise ValueError("custom_regimes needs setpoint_type 'temperature': with 'pmv', the Fanger thermostats "
@@ -940,8 +944,8 @@ class AddAccis:
             max_wind_speed=max_wind_speed, setpoint_tolerance_start=setpoint_tolerance_start,
             setpoint_tolerance_end=setpoint_tolerance_end, setpoint_tolerance_step=setpoint_tolerance_step,
             name_suffix=name_suffix, custom_outdoor_metric=custom_outdoor_metric, custom_alpha=custom_alpha,
-            custom_days=custom_days, heating_setpoint_floor=heating_setpoint_floor,
-            cooling_setpoint_ceiling=cooling_setpoint_ceiling, static_heating_setpoint=static_heating_setpoint,
+            custom_days=custom_days, heating_setpoint_minimum=heating_setpoint_minimum,
+            cooling_setpoint_maximum=cooling_setpoint_maximum, static_heating_setpoint=static_heating_setpoint,
             static_cooling_setpoint=static_cooling_setpoint)
         self.arguments.update({k: v for k, v in vars(generation).items()})
         self.arguments.update(verbose=verbose, confirm=confirm, zone_arguments=zone_arguments, epw=epw,
@@ -1160,6 +1164,7 @@ def _programs(idf) -> Dict[str, Any]:
     return {p.Name: p for p in idf.idfobjects['EnergyManagementSystem:Program']}
 
 
+@accepts_legacy_kwargs(DEPRECATED_ARGUMENT_NAMES, version='1.2.0')
 def modify_accis(
     idf,
     comfort_standard: Optional[int] = None,
@@ -1192,8 +1197,8 @@ def modify_accis(
     custom_alpha: Optional[Number] = None,
     custom_days: Optional[int] = None,
     epw: Optional[Union[str, os.PathLike]] = None,
-    heating_setpoint_floor: Optional[Number] = None,
-    cooling_setpoint_ceiling: Optional[Number] = None,
+    heating_setpoint_minimum: Optional[Number] = None,
+    cooling_setpoint_maximum: Optional[Number] = None,
     custom_regimes: Optional[Sequence[CustomRegime]] = None,
     static_heating_setpoint: Optional[Number] = None,
     static_cooling_setpoint: Optional[Number] = None,
@@ -1222,15 +1227,15 @@ def modify_accis(
     The models of earlier versions of accim, which have one program SetInputData for all the zones, can only have
     the same arguments in all the zones, and they get the subprograms of this version where they behave
     differently (those of ESP CTE and INT ISO7730 set the setpoints whatever the comfort mode is). Their custom model
-    only has the outdoor metric 'pmot', and their setpoints have neither floor nor ceiling.
+    only has the outdoor metric 'pmot', and their setpoints have neither minimum nor maximum.
 
-    The floor of the heating setpoint and the ceiling of the cooling setpoint (``heating_setpoint_floor`` and
-    ``cooling_setpoint_ceiling``, see :class:`AddAccis`) keep their values if they are None (the models without them
+    The minimum heating setpoint and the maximum cooling setpoint (``heating_setpoint_minimum`` and
+    ``cooling_setpoint_maximum``, see :class:`AddAccis`) keep their values if they are None (the models without them
     have none): a number, here or in ``zone_arguments``, gives it to the zones, with the program
     ApplySetpointLimits_<zone> (:func:`accim.sim.ems.setpoint_limits.set_setpoint_limits_code`). They bound the
     setpoint temperatures of the ACCIS, with and without the tolerance: the zones controlled by the thermostats of the
-    PMV (``setpoint_type`` 'pmv', or :mod:`accim.sim.pmv_index`) do not use them. A model with them warns if a floor
-    is above the upper applicability limit of the cooling setpoint of the comfort standard of its zone, or a ceiling
+    PMV (``setpoint_type`` 'pmv', or :mod:`accim.sim.pmv_index`) do not use them. A model with them warns if a minimum
+    is above the upper applicability limit of the cooling setpoint of the comfort standard of its zone, or a maximum
     below the lower one of the heating setpoint
     (:func:`accim.sim.ems.setpoint_limits.warn_crossed_setpoint_limits`).
 
@@ -1256,16 +1261,16 @@ def modify_accis(
     :param custom_days: The days of 'ndrm', or None to keep them.
     :param epw: The weather file with which the outdoor metric of the custom model, and that of JPN Aqilah 2025, begin
         (see :class:`AddAccis`).
-    :param heating_setpoint_floor: The floor of the heating setpoint (°C), or None to keep it.
-    :param cooling_setpoint_ceiling: The ceiling of the cooling setpoint (°C), or None to keep it.
+    :param heating_setpoint_minimum: The minimum heating setpoint (°C), or None to keep it.
+    :param cooling_setpoint_maximum: The maximum cooling setpoint (°C), or None to keep it.
     :param custom_regimes: The regimes of the custom model (see :class:`AddAccis`), or None to keep them; an empty
         list removes them.
     :param static_heating_setpoint: The static heating setpoint of JPN Aqilah 2025 (°C), or None to keep it.
     :param static_cooling_setpoint: The static cooling setpoint of JPN Aqilah 2025 (°C), or None to keep it.
     :raises ValueError: If the model has no ACCIS, setpoint_accuracy is negative, zone_arguments is not valid (or
         is given for a model of an earlier version of accim), an argument of the outdoor metric is not valid (or is
-        not 'pmot' in a model of an earlier version of accim), 'monthly_mean' has no weather file, a floor or a
-        ceiling is not valid (or is given for a model of an earlier version of accim), the static setpoints of a zone
+        not 'pmot' in a model of an earlier version of accim), 'monthly_mean' has no weather file, a minimum or a
+        maximum is not valid (or is given for a model of an earlier version of accim), the static setpoints of a zone
         of JPN Aqilah 2025 are not valid, or the regimes are not valid (or no zone has the custom model, or a condition
         'hvac_off' or 'hvac_on' is given without mixed mode, or for a model of an earlier version of accim).
     """
@@ -1289,7 +1294,7 @@ def modify_accis(
                                                          (custom_outdoor_metric, custom_alpha, custom_days))
                       if value is not None}
     limits = {name: value for name, value in zip(_SETPOINT_LIMIT_ARGUMENTS,
-                                                 (heating_setpoint_floor, cooling_setpoint_ceiling))
+                                                 (heating_setpoint_minimum, cooling_setpoint_maximum))
               if value is not None}
     statics = {name: value for name, value in zip(STATIC_SETPOINT_ARGUMENTS,
                                                   (static_heating_setpoint, static_cooling_setpoint))
@@ -1306,7 +1311,7 @@ def modify_accis(
                              'the model without it.')
         if limits:
             raise ValueError('The model has the ACCIS of an earlier version of accim, whose setpoints have neither '
-                             'floor nor ceiling. To give them, add the ACCIS with this version of accim to the model '
+                             'minimum nor maximum. To give them, add the ACCIS with this version of accim to the model '
                              'without it.')
         if regimes:
             raise ValueError('The model has the ACCIS of an earlier version of accim, whose custom model has one '
@@ -1347,7 +1352,7 @@ def modify_accis(
         if definition is not None:
             values.update(standard_inputs(definition))
         not_set = set_inputs(program, values)
-        # The inputs of the outdoor metric of the models without its EMS code, and the floor and ceiling of the
+        # The inputs of the outdoor metric of the models without its EMS code, and the minimum and maximum of the
         # setpoints of the zones without them
         new_lines = [f'set {name} = {values[name]}' for name in not_set
                      if name in OUTDOOR_METRIC_INPUTS or name in SETPOINT_LIMIT_INPUTS]
@@ -1419,7 +1424,7 @@ def _check_zone_custom_regimes(idf, zone_programs: Dict[str, Any], regimes: Sequ
 
 def _check_zone_setpoint_limits(zone_programs: Dict[str, Any], limits: Dict[str, Any],
                                 zone_arguments: Dict[str, Dict[str, Any]]) -> None:
-    """Check the floor and ceiling of the setpoints that each zone gets in :func:`modify_accis` (those of the call,
+    """Check the minimum and maximum of the setpoints that each zone gets in :func:`modify_accis` (those of the call,
     those of ``zone_arguments`` or those it has)."""
     for zone, program in zone_programs.items():
         current = read_inputs(program)

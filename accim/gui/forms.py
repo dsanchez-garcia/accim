@@ -16,8 +16,8 @@ import warnings
 from typing import Any, Dict, Iterable, List, Mapping, Tuple, Union
 
 from accim.constants import APMV_ADAPTIVE_COEFFICIENTS, EN16798_TABLE_B2, SUPPORTED_ENERGYPLUS_VERSIONS
-from accim.sim.arguments import (MIXED_MODE_SCRIPT_TYPES, OUTPUT_FREQUENCIES, REGIME_CONDITIONS,
-                                 SUPPLY_AIR_TEMP_INPUT_METHODS)
+from accim.sim.arguments import (DEPRECATED_ARGUMENT_NAMES, MIXED_MODE_SCRIPT_TYPES, OUTPUT_FREQUENCIES,
+                                 REGIME_CONDITIONS, SUPPLY_AIR_TEMP_INPUT_METHODS)
 from accim.sim.ems.inputs import ZONE_ARGUMENTS, check_zone_arguments
 from accim.sim.standards import COMFORT_STANDARDS
 
@@ -72,6 +72,7 @@ __all__ = [
     'ZONE_FIELDS',
     'adaptive_coefficient_choices',
     'adaptive_coefficient_entry',
+    'current_names',
     'add_accis_arguments',
     'apmv_arguments',
     'apmv_zone_row_text',
@@ -177,11 +178,11 @@ CUSTOM_REGIMES_HINT = (
     'metric_below x, metric_above x, metric_between x1 x2. If none holds, the coefficients above apply. For instance: '
     'metric_below 10: 0.31 17.8 3.5 -3.5 10 33.5 10 33.5; always: 0.33 18.8 2 -3 10 30 10 30'
 )
-#: The floor of the heating setpoint and the ceiling of the cooling setpoint (accim.sim.ems.setpoint_limits), which
+#: The minimum heating setpoint and the maximum cooling setpoint (accim.sim.ems.setpoint_limits), which
 #: are None if their fields are empty: argument -> (label, default).
 SETPOINT_LIMIT_FIELDS = {
-    'heating_setpoint_floor': ('Floor of the heating setpoint (°C; empty: none)', ''),
-    'cooling_setpoint_ceiling': ('Ceiling of the cooling setpoint (°C; empty: none)', ''),
+    'heating_setpoint_minimum': ('Minimum heating setpoint (°C; empty: none)', ''),
+    'cooling_setpoint_maximum': ('Maximum cooling setpoint (°C; empty: none)', ''),
 }
 #: The static setpoints of JPN Aqilah 2025 (accim.sim.ems.static_setpoints), whose paper gives none: argument ->
 #: (label, default).
@@ -193,10 +194,11 @@ STATIC_SETPOINT_FIELDS = {
 STATIC_SETPOINT_STANDARDS = (23,)
 _ROMAN = {1: 'I', 2: 'II', 3: 'III', 4: 'IV'}
 #: The minimum operative temperature for heating and the maximum for cooling of Table B.2 of EN 16798-1:2019
-#: (accim.constants.EN16798_TABLE_B2), which fill the fields of the floor and ceiling: description -> (floor, ceiling).
+#: (accim.constants.EN16798_TABLE_B2), which fill the fields of the minimum and maximum: description -> (minimum,
+#: maximum).
 EN16798_TABLE_B2_CHOICES = {
-    f'{building.capitalize()}, category {_ROMAN.get(category, category)}: {floor} / {ceiling} °C': (floor, ceiling)
-    for (building, category), (floor, ceiling) in EN16798_TABLE_B2.items()
+    f'{building.capitalize()}, category {_ROMAN.get(category, category)}: {minimum} / {maximum} °C': (minimum, maximum)
+    for (building, category), (minimum, maximum) in EN16798_TABLE_B2.items()
 }
 #: The options of the existing HVAC systems (script types 'ex_ac' and 'ex_mm') that are booleans: argument -> label.
 EXISTING_HVAC_OPTIONS = {
@@ -380,13 +382,13 @@ PREDEFINED_MODEL_PARAMETERS = (
     'setpoint_accuracy', 'cooling_season_start', 'cooling_season_end', 'hvac_mode', 'ventilation_control',
     'opening_factor_max_temp_diff', 'opening_factor_min_temp_diff', 'min_opening_factor',
     'ventilation_setpoint_offset', 'min_outdoor_temp_offset', 'max_wind_speed', 'setpoint_tolerance',
-    'heating_setpoint_floor', 'cooling_setpoint_ceiling', 'static_heating_setpoint', 'static_cooling_setpoint',
+    'heating_setpoint_minimum', 'cooling_setpoint_maximum', 'static_heating_setpoint', 'static_cooling_setpoint',
 )
 CUSTOM_MODEL_PARAMETERS = (
     'custom_cooling_upper_limit', 'custom_cooling_lower_limit', 'custom_heating_upper_limit',
     'custom_heating_lower_limit', 'custom_upper_limit', 'custom_lower_limit', 'custom_slope', 'custom_intercept',
-    'custom_cooling_offset', 'custom_heating_offset', 'custom_offset', 'heating_setpoint_floor',
-    'cooling_setpoint_ceiling', 'custom_outdoor_metric', 'custom_alpha', 'custom_days',
+    'custom_cooling_offset', 'custom_heating_offset', 'custom_offset', 'heating_setpoint_minimum',
+    'cooling_setpoint_maximum', 'custom_outdoor_metric', 'custom_alpha', 'custom_days',
 )
 PARAMETERS_TYPES = {'accim predefined model': PREDEFINED_MODEL_PARAMETERS,
                     'accim custom model': CUSTOM_MODEL_PARAMETERS}
@@ -559,6 +561,9 @@ def _pairs(text: Any, label: str, allowed: Iterable[str], what: str) -> Dict[str
         if '=' not in item:
             raise FormError(f'{label}: write each argument as name=value, not {item!r}.')
         name, value = (part.strip() for part in item.split('=', 1))
+        if name not in allowed and DEPRECATED_ARGUMENT_NAMES.get(name) in allowed:
+            # The names of the development of accim 1.2.0, in the session files saved with them
+            name = DEPRECATED_ARGUMENT_NAMES[name]
         if name not in allowed:
             raise FormError(f'{label}: {name!r} is not {what} (they are {", ".join(allowed)}).')
         if name in arguments:
@@ -584,6 +589,19 @@ def _metric_value(text: Any, label: str) -> str:
     if text.isdigit() and int(text) < len(names):
         return names[int(text)]
     raise FormError(f'{label}: {text!r} is not an outdoor metric of the custom model ({", ".join(names)}).')
+
+
+def current_names(values: Mapping[str, Any]) -> Dict[str, Any]:
+    """The values of a form (or of a session file) with the names of the arguments that accim 1.2.0 renamed during
+    its development (``heating_setpoint_floor`` and ``cooling_setpoint_ceiling``,
+    :data:`accim.sim.arguments.DEPRECATED_ARGUMENT_NAMES`) replaced by their names, unless the values have them
+    too."""
+    current = dict(values)
+    for old, new in DEPRECATED_ARGUMENT_NAMES.items():
+        if old in current:
+            value = current.pop(old)
+            current.setdefault(new, value)
+    return current
 
 
 def _pairs_text(arguments: Mapping[str, Any]) -> str:
@@ -741,7 +759,7 @@ def add_accis_arguments(form: Mapping[str, Any]) -> Dict[str, Any]:
     :return: The keyword arguments of AddAccis, with all the arguments that it would otherwise ask in the prompt,
         ``confirm=True`` and ``idfs`` (the names of the selected input IDFs, to run in the folder); with the VRF
         systems ('vrf_ac' and 'vrf_mm'), also their availability schedule, EER and COP; with the existing HVAC
-        systems ('ex_ac' and 'ex_mm'), their arguments (:func:`existing_hvac_arguments`); the floor and ceiling of
+        systems ('ex_ac' and 'ex_mm'), their arguments (:func:`existing_hvac_arguments`); the minimum and maximum of
         the setpoints and ``report_hours_below``, if their fields are not empty (:func:`setpoint_limit_arguments`);
         and ``report_long_term_discomfort=True`` if its box (the boolean ``report_long_term_discomfort`` of the form)
         is checked.
@@ -1006,13 +1024,13 @@ def custom_regime_arguments(form: Mapping[str, Any], script_type: str) -> Dict[s
 
 
 def setpoint_limit_arguments(form: Mapping[str, Any], hours_below: bool = True) -> Dict[str, Any]:
-    """The floor of the heating setpoint and the ceiling of the cooling setpoint of :class:`accim.sim.accis.AddAccis`
-    (``heating_setpoint_floor`` and ``cooling_setpoint_ceiling``, :mod:`accim.sim.ems.setpoint_limits`) and the
+    """The minimum heating setpoint and the maximum cooling setpoint of :class:`accim.sim.accis.AddAccis`
+    (``heating_setpoint_minimum`` and ``cooling_setpoint_maximum``, :mod:`accim.sim.ems.setpoint_limits`) and the
     temperatures of ``report_hours_below`` from the values of its form: only those of the fields that are not empty.
 
     :param hours_below: False to leave out ``report_hours_below`` (the EMS code of the setpoints does not have it).
-    :raises FormError: If a value is not valid, the floor is not lower than the ceiling, or the floor or the ceiling is
-        given with the PMV-based setpoints (setpoint_type 'pmv'), which have neither of them.
+    :raises FormError: If a value is not valid, the minimum is not lower than the maximum, or the minimum or the
+        maximum is given with the PMV-based setpoints (setpoint_type 'pmv'), which have neither of them.
     """
     from accim.sim.ems.setpoint_limits import check_hours_below, check_setpoint_limits
 
@@ -1022,10 +1040,10 @@ def setpoint_limit_arguments(form: Mapping[str, Any], hours_below: bool = True) 
         if text:
             arguments[name] = parse_number(text, name)
     if arguments and form.get('setpoint_type', ADD_ACCIS_DEFAULTS['setpoint_type']) != 'temperature':
-        raise FormError('heating_setpoint_floor, cooling_setpoint_ceiling: the PMV-based setpoints have neither floor '
-                        'nor ceiling (leave these fields empty).')
+        raise FormError('heating_setpoint_minimum, cooling_setpoint_maximum: the PMV-based setpoints have neither '
+                        'minimum nor maximum (leave these fields empty).')
     try:
-        check_setpoint_limits(arguments.get('heating_setpoint_floor'), arguments.get('cooling_setpoint_ceiling'))
+        check_setpoint_limits(arguments.get('heating_setpoint_minimum'), arguments.get('cooling_setpoint_maximum'))
     except ValueError as error:
         raise FormError(str(error)) from None
     text = str(form.get('report_hours_below', '') or '').strip()
@@ -1143,7 +1161,7 @@ def setpoint_ems_code_calls(form: Mapping[str, Any]) -> List[Tuple[str, Dict[str
         **{name: parse_number(form.get(name, ADD_ACCIS_DEFAULTS[name]), name)
            for name in ('category_cooling_offset', 'category_heating_offset')},
     )
-    # The floor and ceiling of the setpoints, if they are given
+    # The minimum and maximum of the setpoints, if they are given
     common.update(setpoint_limit_arguments(form, hours_below=False))
     if 99 in standards or any(values.get('comfort_standard') == 99 for values in zones.values()):
         common.update({name: parse_number(form.get(name, ''), name) for name in CUSTOM_MODEL_FIELDS})

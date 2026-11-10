@@ -29,8 +29,8 @@ it finds by bisection the operative temperatures whose ATHB_PMV (with the air te
 temperature equal to them, and the relative humidity of the zone) is the heating and the cooling setpoints of the
 ATHB, and gives them to the ACCIS instead of the adaptive setpoints (:mod:`accim.sim.ems.hook_setpoints`: the program
 ``ApplyHookSetpoints_<zone>``, which ``RunACCIS_<zone>`` runs right after SetAST, takes them as the limits of the
-comfort band, so that the thermostats get them with the tolerance of the setpoints of the zone, and the floor and
-ceiling of the setpoints, the hour counters and the outputs of the setpoints of the zone follow them); it also reports
+comfort band, so that the thermostats get them with the tolerance of the setpoints of the zone, and the minimum and
+maximum of the setpoints, the hour counters and the outputs of the setpoints of the zone follow them); it also reports
 the ATHB_PMV of each zone (``ATHB_PMV_<zone>``, from its mean air and mean radiant temperatures and relative humidity)
 and the adapted clothing and metabolic rate (``ATHB_clo_<zone>`` and ``ATHB_met_<zone>``). As the other sensors of the
 EMS at the beginning of the timestep, those of the zone are those of the previous timestep, and trm is the running mean
@@ -240,9 +240,9 @@ class AthbSetpointHook:
     temperature), within ``temperature_range`` and to ``tolerance_k``, gives them to the ACCIS as the limits of the
     comfort band (the variables of :mod:`accim.sim.ems.hook_setpoints`: the program ``ApplyHookSetpoints_<zone>``, run
     right after SetAST, gives the thermostats these setpoints with the tolerance of the setpoints of the zone, and the
-    floor and ceiling of the setpoints, the hour counters and the outputs of the setpoints of the zone follow them) and
-    sets the global variables ``ATHB_PMV_<zone>``, ``ATHB_clo_<zone>`` and ``ATHB_met_<zone>``, which EnergyPlus
-    reports.
+    minimum and maximum of the setpoints, the hour counters and the outputs of the setpoints of the zone follow
+    them) and sets the global variables ``ATHB_PMV_<zone>``, ``ATHB_clo_<zone>`` and ``ATHB_met_<zone>``, which
+    EnergyPlus reports.
 
     :param zones: The zones, by their names in the EMS objects (``Block1_Zone1``...).
     :param athb_cooling_setpoint: The cooling setpoint of the ATHB_PMV.
@@ -411,7 +411,7 @@ def apply_athb_setpoints(building, athb_cooling_setpoint: float = 0.5, athb_heat
     frequencies given), and the program ``ApplyHookSetpoints_<zone>`` with which the hook gives its setpoints to the
     ACCIS (:mod:`accim.sim.ems.hook_setpoints`, run by ``RunACCIS_<zone>`` right after SetAST): the thermostats of the
     ACCIS (dual setpoints of the operative temperature) get them with the tolerance of the setpoints of the zone, as
-    the adaptive setpoints, and the floor and ceiling of the setpoints, the hour counters (also those of the long-term
+    the adaptive setpoints, and the minimum and maximum of the setpoints, the hour counters (also those of the long-term
     discomfort) and the outputs of the setpoints of the zone (``Adaptive Cooling Setpoint Temperature_<zone>``, with and
     without the tolerance...) are those of the ATHB; the comfort temperature and the applicability limits stay those of
     the comfort standard of the zone. The model must be simulated with the backend of the Python API and the hook
@@ -491,7 +491,8 @@ class SetSetpointHook:
     programs (as :class:`AthbSetpointHook`, :attr:`runs_before_programs`), the hook gives them, for the relative humidity
     of each zone of the previous timestep (the sensor ``SET_RH_<zone>``), to the ACCIS as the limits of the comfort band
     (:mod:`accim.sim.ems.hook_setpoints`: the thermostats get them with the tolerance of the setpoints of the zone, and
-    the floor and ceiling of the setpoints, the hour counters and the outputs of the setpoints of the zone follow them).
+    the minimum and maximum of the setpoints, the hour counters and the outputs of the setpoints of the zone follow
+    them).
     With ``method``:
 
     - ``'table'`` (the default): the setpoints of each relative humidity from 0 to 100 % (every 1 %) are calculated when

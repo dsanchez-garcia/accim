@@ -2,10 +2,12 @@
 # Copyright (C) 2021-2026 Daniel Sánchez-García
 # Distributed under the GNU General Public License v3 or later.
 
-"""Support for the names that accim 1.0.0 renamed to follow PEP 8.
+"""Support for the names that accim 1.0.0 renamed to follow PEP 8, and for those renamed later.
 
 The old names of functions, classes and arguments keep working, with a ``DeprecationWarning``
-that gives the new name.
+that gives the new name and the version of accim since which the old name is deprecated
+(``version``, 1.0.0 by default; 1.2.0 for the names of the minimum and maximum of the setpoints,
+``heating_setpoint_floor`` and ``cooling_setpoint_ceiling`` during the development of 1.2.0).
 """
 
 import functools
@@ -16,10 +18,13 @@ from typing import Callable, Dict, Mapping, Optional
 __all__ = ['accepts_legacy_kwargs', 'deprecated_alias', 'rename_legacy_kwargs', 'warn_deprecated']
 
 
-def warn_deprecated(old: str, new: str, stacklevel: int = 3) -> None:
-    """Warn that ``old`` is deprecated in favour of ``new``."""
+def warn_deprecated(old: str, new: str, stacklevel: int = 3, version: str = '1.0.0') -> None:
+    """Warn that ``old`` is deprecated in favour of ``new``.
+
+    :param version: The version of accim since which it is deprecated.
+    """
     warnings.warn(
-        f'{old} is deprecated since accim 1.0.0 and will be removed in a future version; use {new} instead.',
+        f'{old} is deprecated since accim {version} and will be removed in a future version; use {new} instead.',
         DeprecationWarning,
         stacklevel=stacklevel,
     )
@@ -30,6 +35,7 @@ def rename_legacy_kwargs(
     mapping: Mapping[str, str],
     function_name: str,
     stacklevel: int = 3,
+    version: str = '1.0.0',
 ) -> Dict:
     """Return the keyword arguments with the legacy names replaced by the new ones.
 
@@ -37,6 +43,7 @@ def rename_legacy_kwargs(
     :param mapping: The new name of each legacy argument.
     :param function_name: The name of the function, for the messages.
     :param stacklevel: The stack level of the warning (the caller of the public function).
+    :param version: The version of accim since which the legacy names are deprecated.
     :raises TypeError: If an argument is given with both its legacy and its new name.
     """
     renamed = {}
@@ -53,7 +60,7 @@ def rename_legacy_kwargs(
     if legacy:
         warnings.warn(
             f'The argument names {", ".join(k.split(" ")[0] for k in legacy)} of {function_name}() are deprecated '
-            f'since accim 1.0.0; use the new names ({"; ".join(legacy)}).',
+            f'since accim {version}; use the new names ({"; ".join(legacy)}).',
             DeprecationWarning,
             stacklevel=stacklevel,
         )
@@ -65,6 +72,7 @@ def deprecated_alias(
     old_name: str,
     new_name: str,
     legacy_kwargs: Optional[Mapping[str, str]] = None,
+    version: str = '1.0.0',
 ) -> Callable:
     """Make a deprecated alias of a function or class.
 
@@ -72,25 +80,27 @@ def deprecated_alias(
     :param old_name: The old name (shown in the warning).
     :param new_name: The new name (shown in the warning).
     :param legacy_kwargs: The new name of each legacy keyword argument of the old function.
+    :param version: The version of accim since which the old name is deprecated.
     """
     @functools.wraps(new_callable)
     def alias(*args, **kwargs):
-        warn_deprecated(old_name, new_name)
+        warn_deprecated(old_name, new_name, version=version)
         if legacy_kwargs:
-            kwargs = rename_legacy_kwargs(kwargs, legacy_kwargs, old_name.split('.')[-1])
+            kwargs = rename_legacy_kwargs(kwargs, legacy_kwargs, old_name.split('.')[-1], version=version)
         return new_callable(*args, **kwargs)
 
     alias.__name__ = old_name.split('.')[-1].rstrip('()')
     alias.__qualname__ = alias.__name__
-    alias.__doc__ = f'Deprecated alias of :func:`{new_name}` (accim 1.0.0).'
+    alias.__doc__ = f'Deprecated alias of :func:`{new_name}` (accim {version}).'
     return alias
 
 
-def accepts_legacy_kwargs(mapping: Mapping[str, str]) -> Callable:
+def accepts_legacy_kwargs(mapping: Mapping[str, str], version: str = '1.0.0') -> Callable:
     """Decorator: the function also accepts the old names of its keyword arguments, with a DeprecationWarning.
 
     :param mapping: The new name of each old keyword argument. Only the names whose new names are parameters of the
         function are used (unless it takes ``**kwargs``), so the same mapping can serve several functions.
+    :param version: The version of accim since which the old names are deprecated.
     """
     def decorator(function: Callable) -> Callable:
         parameters = inspect.signature(function).parameters
@@ -98,11 +108,14 @@ def accepts_legacy_kwargs(mapping: Mapping[str, str]) -> Callable:
             used = dict(mapping)
         else:
             used = {old: new for old, new in mapping.items() if new in parameters}
+        # The name of the class for its __init__ (the messages say 'AddAccis()', not '__init__()')
+        qualname = getattr(function, '__qualname__', function.__name__)
+        name = qualname[:-len('.__init__')] if qualname.endswith('.__init__') else function.__name__
 
         @functools.wraps(function)
         def wrapper(*args, **kwargs):
             if any(key in used for key in kwargs):
-                kwargs = rename_legacy_kwargs(kwargs, used, function.__name__)
+                kwargs = rename_legacy_kwargs(kwargs, used, name, version=version)
             return function(*args, **kwargs)
         return wrapper
     return decorator

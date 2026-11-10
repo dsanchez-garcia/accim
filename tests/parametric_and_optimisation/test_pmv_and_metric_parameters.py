@@ -3,7 +3,7 @@ of accim 1.2.0): ``clothing_insulation``, ``activity_level`` and ``air_velocity`
 setpoints based on the PMV), ``custom_outdoor_metric``, ``custom_alpha`` and ``custom_days`` (the outdoor metric of the
 custom model, B1), their wrapper classes (``Clo``, ``Met``, ``AirVelocity``, ``ExpectancyFactor``,
 ``AdaptiveCoefficientCooling``, ``AdaptiveCoefficientHeating``, ``CustAST_metric``, ``CustAST_alpha``,
-``CustAST_days``), and the plans that drop a floor of the heating setpoint that is not lower than the ceiling of the
+``CustAST_days``), and the plans that drop a minimum heating setpoint that is not lower than the maximum of the
 cooling setpoint (B5). The ranges of the warnings are those of ISO 7730:2025 (section 4) and ASHRAE 55-2020.
 """
 import shutil
@@ -38,7 +38,7 @@ WRAPPERS = {'Clo': 'clothing_insulation', 'Met': 'activity_level', 'AirVelocity'
             'ExpectancyFactor': 'expectancy_factor', 'AdaptiveCoefficientCooling': 'adaptive_coefficient_cooling',
             'AdaptiveCoefficientHeating': 'adaptive_coefficient_heating', 'CustAST_metric': 'custom_outdoor_metric',
             'CustAST_alpha': 'custom_alpha', 'CustAST_days': 'custom_days',
-            'HeatingSetpointFloor': 'heating_setpoint_floor', 'CoolingSetpointCeiling': 'cooling_setpoint_ceiling'}
+            'HeatingSetpointMinimum': 'heating_setpoint_minimum', 'CoolingSetpointMaximum': 'cooling_setpoint_maximum'}
 
 
 def _simulation(parameters_type):
@@ -96,18 +96,18 @@ def test_the_ranges_of_the_inputs_of_the_pmv():
 
 
 def test_the_plans_drop_a_floor_that_is_not_below_the_ceiling():
-    plan = pd.DataFrame({'heating_setpoint_floor': [18, 21, 22, 26], 'cooling_setpoint_ceiling': [26, 25, 22, 25]})
+    plan = pd.DataFrame({'heating_setpoint_minimum': [18, 21, 22, 26], 'cooling_setpoint_maximum': [26, 25, 22, 25]})
     kept = param_accis.drop_invalid_param_combinations(plan)
     assert kept.values.tolist() == [[18, 26], [21, 25]]
     # The full sets of the accim custom models too (those of the predefined models already were)
     simulation = _simulation('accim custom model')
     simulation.epws = []
-    simulation.parameters_list = [parameters.accis_parameter('heating_setpoint_floor', [20, 26]),
-                                  parameters.accis_parameter('cooling_setpoint_ceiling', [25.5, 26])]
+    simulation.parameters_list = [parameters.accis_parameter('heating_setpoint_minimum', [20, 26]),
+                                  parameters.accis_parameter('cooling_setpoint_maximum', [25.5, 26])]
     simulation.descriptors_has_options = True
     simulation.sampling_full_set()
-    assert simulation.parameters_values_df[['heating_setpoint_floor', 'cooling_setpoint_ceiling']].values.tolist() == [
-        [20, 25.5], [20, 26]]
+    limits = simulation.parameters_values_df[['heating_setpoint_minimum', 'cooling_setpoint_maximum']]
+    assert limits.values.tolist() == [[20, 25.5], [20, 26]]
 
 
 def _apmv_model(tmp_path):
