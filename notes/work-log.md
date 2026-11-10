@@ -15,6 +15,29 @@ This log is a lightweight, session-scoped complement to the repository's
 existing tracking files — it does not replace them (see
 [[decisions.md#2026-09-13 — `notes/work-log.md` complements, not replaces, existing tracking files|the related decision]]).
 
+## 2026-11-09 — B2: several regimes of the custom model (branch `v1.2.0`, on the server)
+
+- **Objective**: B2, after D1, in the order of the author (with decision D6).
+- **Affected files**: `accim/sim/arguments.py`, `accim/sim/ems/custom_regimes.py` (new),
+  `accim/sim/ems/program_lines.py`, `accim/sim/ems/outdoor_metric.py`, `accim/sim/accis.py`, `accim/sim/__init__.py`,
+  `accim/sim/preview.py`, `accim/utils/ems_code.py`, `accim/utils/verification.py`,
+  `accim/data/postprocessing/main.py`, `accim/parametric_and_optimisation/` (`params_dicts.py`, `parameters.py`,
+  `main.py`, `funcs_for_besos/param_accis.py`), `accim/gui/forms.py`, `accim/gui/app.py`,
+  `tests/core/test_custom_regimes.py` (new), `tests/parametric_and_optimisation/test_custom_regime_parameters.py`
+  (new), `tests/core/test_gui.py`, [[../docs/source/4_detailed use.md]] (4.2.4 and its references),
+  `docs/source/parametric_and_optimisation.rst`, `docs/source/api/accim.sim.ems.rst`, [[../CHANGELOG.md]],
+  [[../CAMBIOS_CODIGO_v1.2.0.md]] (§15), [[../DEVLOG.md]], [[../TODO.md]], [[decisions.md]], [[questions.md]].
+- **Finding or decision**: See
+  [[decisions.md#2026-11-09 — The custom model has several regimes, selected in each timestep by a program of each zone (B2)|the decision]].
+  The program writes the inputs of the custom model, not ACSTall/ACSToffset (SetAppLimits and ApplyCAT would overwrite
+  them); eppy drops the comment lines of the EMS programs when it reads an IDF, so the regimes are read back from the
+  Erl lines. The outdoor metric of each regime waits for the author ([[questions.md]], [[../TODO.md]]).
+- **Validation**: 20 + 4 new tests and 2 of the GUI; EnergyPlus 25.1: a week of April with three regimes (check 4 of
+  `verify_accim_simulation`, 0 mismatches), a week of June with 'hvac_off' in mixed mode (the regime follows the coils
+  of the previous timestep, and the setpoints those of the regime), and the EMS and API backends identical; the whole
+  suite; the documentation build.
+- **Next step**: B3.
+
 ## 2026-11-09 — D1: the indicators of the long-term thermal discomfort (branch `v1.2.0`, on the server)
 
 - **Objective**: D1, after C1, in the order of the author (with decision D8).

@@ -36,6 +36,8 @@ __all__ = [
     'SET_WINDOW_OPERATION_EXISTING_HVAC',
     'APPLY_AST_AIR_CONDITIONED',
     'COUNT_HOURS_OUTDOOR_METRIC',
+    'HVAC_OFF_FROM_COILS',
+    'HVAC_OFF_FROM_LOAD',
     'OUTDOOR_METRIC_VARIABLE',
     'SET_COMF_TEMP_OUTDOOR_METRIC',
     'SET_VST_OUTDOOR_METRIC',
@@ -702,6 +704,12 @@ else
 set NoH_NoC_reqs = 0
 endif
 """
+#: The lines that set NoH_NoC_reqs (1 if the HVAC system of the zone neither heated nor cooled in the previous
+#: timestep) in the programs of mixed mode of a zone: with the VRF systems of accim ('vrf_mm') and with the existing
+#: HVAC systems ('ex_mm'). The regimes of the custom model with the conditions 'hvac_off' and 'hvac_on' use them too
+#: (:mod:`accim.sim.ems.custom_regimes`).
+HVAC_OFF_FROM_COILS = _lines(_HVAC_OFF_FROM_COILS.replace('{name}', '{zone}'))
+HVAC_OFF_FROM_LOAD = _lines(_HVAC_OFF_FROM_LOAD.replace('{name}', '{zone}'))
 
 #: Setpoints and ventilation of a zone in mixed mode (after the lines that set NoH_NoC_reqs).
 _APPLY_AST_MIXED_MODE_BODY = """

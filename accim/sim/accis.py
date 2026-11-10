@@ -38,8 +38,10 @@ from accim.sim.arguments import (
     OUTPUT_TYPES,
     SCRIPT_TYPES,
     SUPPLY_AIR_TEMP_INPUT_METHODS,
+    CustomRegime,
     as_list,
     check_choice,
+    check_custom_regimes,
     is_mixed_mode,
     normalise_energyplus_version,
     normalise_setpoint_type,
@@ -47,6 +49,7 @@ from accim.sim.arguments import (
     to_day_of_year,
 )
 from accim.sim.build import add_accis_objects, add_outputs
+from accim.sim.ems.custom_regimes import set_custom_regimes, uses_hvac_conditions
 from accim.sim.ems.inputs import (
     check_zone_arguments,
     input_programs,
@@ -586,6 +589,17 @@ class AddAccis:
         none: the output IDFs report the occupied hours of each zone with the operative temperature below each of
         them, ``HoursBelow_<T>_<zone>`` (``HoursBelow_18_<zone>``, and ``HoursBelow_17p5_<zone>`` for 17.5), with
         every ``output_type`` but 'custom', which keeps the outputs chosen.
+    :param custom_regimes: Custom model: a list of regimes (:class:`accim.sim.arguments.CustomRegime`), each one with
+        the coefficients of the custom model (slope, intercept, offsets and applicability limits) and the condition
+        under which they apply: 'always' (only the last regime), 'cooling_season', 'heating_season', 'hvac_off' and
+        'hvac_on' (these two, in mixed mode only), ``('metric_below', x)``, ``('metric_above', x)`` or
+        ``('metric_between', (x1, x2))`` (the outdoor metric of the custom model). In each timestep, the first regime
+        whose condition holds applies (the order of the list is the priority); if none holds, the scalar arguments
+        (``custom_slope``...) apply. None (the default) for none: the custom model has the scalar arguments only, as
+        before accim 1.2.0. The zones of the custom model get the program SelectCustomRegime_<zone> and the output
+        ``CustomRegime_<zone>``, the number of the regime of each timestep (0 for the scalar arguments); see
+        :mod:`accim.sim.ems.custom_regimes`. It needs ``comfort_standard`` 99 (in the output IDFs or in
+        ``zone_arguments``) and ``setpoint_type`` 'temperature'.
     :ivar arguments: The arguments, after asking the missing ones.
     :ivar input_idfs: The input IDFs, {'input IDF name': IDF object}.
     :ivar occupied_zones: The occupied zones of each input IDF, as in the EMS objects.
@@ -669,6 +683,7 @@ class AddAccis:
         heating_setpoint_floor: Optional[Number] = None,
         cooling_setpoint_ceiling: Optional[Number] = None,
         report_hours_below: Optional[Sequence[Number]] = None,
+        custom_regimes: Optional[Sequence[CustomRegime]] = None,
     ):
         files = _input_files(idfs)
         print(BANNER)
@@ -678,6 +693,7 @@ class AddAccis:
         epw = _check_outdoor_metric(custom_outdoor_metric, custom_alpha, custom_days, checked_zone_arguments, epw)
         has_limits = _check_setpoint_limits(heating_setpoint_floor, cooling_setpoint_ceiling, checked_zone_arguments)
         hours_below = check_hours_below(report_hours_below)
+        regimes = check_custom_regimes(custom_regimes)
         (existing_hvac_operative_temperature_control, existing_hvac_widen_outdoor_temperature_limits,
          existing_hvac_ideal_loads_backup, existing_hvac_radiant_setpoints) = _check_existing_hvac_arguments(
             existing_hvac_operative_temperature_control, existing_hvac_availability_schedule,
@@ -705,6 +721,12 @@ class AddAccis:
         if has_limits and setpoint_type == 'pmv':
             raise ValueError("heating_setpoint_floor and cooling_setpoint_ceiling need setpoint_type 'temperature': "
                              "the Fanger thermostats of 'pmv' have setpoints of the PMV, not of the temperature.")
+        if regimes and setpoint_type == 'pmv':
+            raise ValueError("custom_regimes needs setpoint_type 'temperature': with 'pmv', the Fanger thermostats "
+                             "control the zones and the custom model is not used.")
+        if regimes and uses_hvac_conditions(regimes) and not is_mixed_mode(script_type):
+            raise ValueError("The conditions 'hvac_off' and 'hvac_on' of custom_regimes need mixed mode (script_type "
+                             f"'vrf_mm' or 'ex_mm'), not {script_type!r}.")
         if verbose:
             _print_model_arguments(script_type, supply_air_temp_input_method, output_type, output_frequencies,
                                    energyplus_version, setpoint_type)
@@ -827,10 +849,15 @@ class AddAccis:
             cooling_setpoint_ceiling=cooling_setpoint_ceiling)
         self.arguments.update({k: v for k, v in vars(generation).items()})
         self.arguments.update(verbose=verbose, confirm=confirm, zone_arguments=zone_arguments, epw=epw,
-                              report_hours_below=hours_below or None)
+                              report_hours_below=hours_below or None, custom_regimes=list(regimes) or None)
+        if regimes and CUSTOM_COMFORT_STANDARD not in generation.comfort_standard and not any(
+                arguments.get('comfort_standard') == CUSTOM_COMFORT_STANDARD
+                for arguments in checked_zone_arguments.values()):
+            raise ValueError(f'custom_regimes needs the custom model: comfort_standard {CUSTOM_COMFORT_STANDARD} in '
+                             f'the output IDFs or in zone_arguments.')
 
         paths = self._write_output_idfs(models, generation, setpoint_type, confirm, is_mixed_mode(script_type), sizes,
-                                        epw)
+                                        epw, regimes)
         from eppy.modeleditor import IDF
         self.output_idfs = OutputIdfs(paths, IDF)
         self._log(_END_OUTPUTS)
@@ -872,10 +899,11 @@ class AddAccis:
 
     def _write_output_idfs(self, models, generation: GenerationArguments, setpoint_type: str, confirm,
                            mixed_mode: bool, sizes: Dict[str, Optional[SimulationSize]],
-                           epw: Optional[str] = None) -> Dict[str, str]:
+                           epw: Optional[str] = None, regimes: Sequence[CustomRegime] = ()) -> Dict[str, str]:
         """Write the output IDFs: for each combination, eppy saves the model with the arguments of the combination
         and the EMS code of the comfort standards of its zones only (and that of the outdoor metric of the custom
-        model, which begins with the values of ``epw``, if a zone needs it)."""
+        model, which begins with the values of ``epw``, if a zone needs it, and that of the regimes of the custom
+        model in its zones)."""
         from eppy.modeleditor import IDF
 
         combos = list(combinations(generation, setpoint_type))
@@ -901,6 +929,7 @@ class AddAccis:
                 self._log(path)
                 set_combination(idf, generation, combination, self.zone_arguments.get(stem))
                 set_setpoint_limits_code(idf)
+                set_custom_regimes(idf, regimes)
                 set_comfort_standard_code(idf, zone_comfort_standards(idf), epw)
                 idf.savecopy(path)
                 paths[os.path.basename(path)] = os.path.abspath(path)
@@ -1053,6 +1082,7 @@ def modify_accis(
     epw: Optional[Union[str, os.PathLike]] = None,
     heating_setpoint_floor: Optional[Number] = None,
     cooling_setpoint_ceiling: Optional[Number] = None,
+    custom_regimes: Optional[Sequence[CustomRegime]] = None,
 ) -> None:
     """Set the arguments of the ACCIS of an IDF object (one value of each argument of :class:`AddAccis`), in all
     its occupied zones or, with ``zone_arguments``, in some of them.
@@ -1084,6 +1114,12 @@ def modify_accis(
     setpoint temperatures of the ACCIS: the zones controlled by the thermostats of the PMV (``setpoint_type`` 'pmv',
     or :mod:`accim.sim.pmv_index`) do not use them.
 
+    The regimes of the custom model (``custom_regimes``, see :class:`AddAccis`) are kept if it is None: a list gives
+    them to the zones whose comfort standard is the custom model (99) once the arguments are set, and removes them
+    from the other zones (:func:`accim.sim.ems.custom_regimes.set_custom_regimes`); an empty list removes them from
+    all the zones. The zones whose comfort standard changes keep their regimes otherwise, which only the custom model
+    uses.
+
     :param setpoint_tolerance: The tolerance of the setpoints.
     :param zone_arguments: The arguments of some zones, which replace those of the call in these zones:
         ``{zone: {argument: value}}``, for instance
@@ -1095,10 +1131,14 @@ def modify_accis(
     :param epw: The weather file with which the outdoor metric of the custom model begins (see :class:`AddAccis`).
     :param heating_setpoint_floor: The floor of the heating setpoint (°C), or None to keep it.
     :param cooling_setpoint_ceiling: The ceiling of the cooling setpoint (°C), or None to keep it.
+    :param custom_regimes: The regimes of the custom model (see :class:`AddAccis`), or None to keep them; an empty
+        list removes them.
     :raises ValueError: If the model has no ACCIS, setpoint_accuracy is negative, zone_arguments is not valid (or
         is given for a model of an earlier version of accim), an argument of the outdoor metric is not valid (or is
-        not 'pmot' in a model of an earlier version of accim), 'monthly_mean' has no weather file, or a floor or a
-        ceiling is not valid (or is given for a model of an earlier version of accim).
+        not 'pmot' in a model of an earlier version of accim), 'monthly_mean' has no weather file, a floor or a
+        ceiling is not valid (or is given for a model of an earlier version of accim), or the regimes are not valid
+        (or no zone has the custom model, or a condition 'hvac_off' or 'hvac_on' is given without mixed mode, or for a
+        model of an earlier version of accim).
     """
     arguments = dict(
         comfort_standard=comfort_standard, category=category, category_cooling_offset=category_cooling_offset,
@@ -1122,6 +1162,7 @@ def modify_accis(
     limits = {name: value for name, value in zip(_SETPOINT_LIMIT_ARGUMENTS,
                                                  (heating_setpoint_floor, cooling_setpoint_ceiling))
               if value is not None}
+    regimes = None if custom_regimes is None else check_custom_regimes(custom_regimes)
     if not zone_programs:
         if zone_arguments and 'SetInputData' in programs:
             raise ValueError('The model has the ACCIS of an earlier version of accim, whose arguments are the same in '
@@ -1135,6 +1176,10 @@ def modify_accis(
             raise ValueError('The model has the ACCIS of an earlier version of accim, whose setpoints have neither '
                              'floor nor ceiling. To give them, add the ACCIS with this version of accim to the model '
                              'without it.')
+        if regimes:
+            raise ValueError('The model has the ACCIS of an earlier version of accim, whose custom model has one '
+                             'regime. To give several, add the ACCIS with this version of accim to the model without '
+                             'it.')
         _modify_accis_of_earlier_versions(idf, programs, **arguments)
         indent_programs(idf)
         return
@@ -1154,6 +1199,8 @@ def modify_accis(
     limits_given = bool(limits) or any(name in own for own in resolved.values() for name in _SETPOINT_LIMIT_ARGUMENTS)
     if limits_given:
         _check_zone_setpoint_limits(zone_programs, limits, resolved)
+    if regimes:
+        _check_zone_custom_regimes(idf, zone_programs, regimes, comfort_standard, resolved)
     for zone, program in zone_programs.items():
         values = input_values({**arguments, **outdoor_metric, **limits, **resolved.get(zone, {})})
         not_set = set_inputs(program, values)
@@ -1165,12 +1212,33 @@ def modify_accis(
             set_program_lines(program, [str(line).strip() for line in program.fieldvalues[2:]] + new_lines)
     if limits_given:
         set_setpoint_limits_code(idf)
+    if regimes is not None:
+        set_custom_regimes(idf, regimes)
     add_comfort_standard_code(idf, zone_comfort_standards(idf))
     if metric_given:
         standards = code_comfort_standards(idf)
         enabled = (standards is None or CUSTOM_COMFORT_STANDARD in standards) and uses_outdoor_metric(idf)
         set_outdoor_metric_code(idf, enabled, epw, rewrite=True)
     indent_programs(idf)
+
+
+def _check_zone_custom_regimes(idf, zone_programs: Dict[str, Any], regimes: Sequence[CustomRegime],
+                               comfort_standard: Optional[int], zone_arguments: Dict[str, Dict[str, Any]]) -> None:
+    """Check that some zone has the custom model once :func:`modify_accis` has set the comfort standards (that of the
+    call, those of ``zone_arguments`` or those that the zones have), and that the zones of the custom model are in
+    mixed mode if a regime has the condition 'hvac_off' or 'hvac_on', before changing the model."""
+    from accim.sim.ems.custom_regimes import hvac_off_lines
+
+    custom = [zone for zone, program in zone_programs.items()
+              if zone_arguments.get(zone, {}).get(
+                  'comfort_standard', read_inputs(program).get('ComfStand') if comfort_standard is None
+                  else comfort_standard) == CUSTOM_COMFORT_STANDARD]
+    if not custom:
+        raise ValueError(f'custom_regimes needs the custom model: no zone has comfort_standard '
+                         f'{CUSTOM_COMFORT_STANDARD} (give it in the same call).')
+    if uses_hvac_conditions(regimes) and any(hvac_off_lines(idf, zone) is None for zone in custom):
+        raise ValueError("The conditions 'hvac_off' and 'hvac_on' of custom_regimes need mixed mode (script_type "
+                         "'vrf_mm' or 'ex_mm').")
 
 
 def _check_zone_setpoint_limits(zone_programs: Dict[str, Any], limits: Dict[str, Any],

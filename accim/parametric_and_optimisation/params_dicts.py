@@ -34,9 +34,12 @@ Examples
 modifier = all_params['comfort_standard']
 """
 
+import functools
+import re
 import warnings
 
 from accim.parametric_and_optimisation.funcs_for_besos import param_accis, param_apmv
+from accim.sim.ems.custom_regimes import REGIME_INPUTS
 
 accim_predef_model_params = {
     # accim predefined models parameters
@@ -112,6 +115,39 @@ all_params.update(accim_predef_model_params)
 all_params.update(accim_custom_model_params)
 all_params.update(apmv_setpoints_params)
 all_params.update(epmv_setpoints_params)
+
+#: The coefficients of each regime of the custom model (``custom_regimes``, accim 1.2.0) that are parameters of the
+#: accim custom models: ``custom_regime_<regime>_<field>``, such as ``custom_regime_1_slope``, with these fields of
+#: :class:`accim.sim.arguments.CustomRegime` (see :func:`custom_regime_parameter`)
+CUSTOM_REGIME_FIELDS = tuple(REGIME_INPUTS)
+_CUSTOM_REGIME_PARAMETER = re.compile(rf"^custom_regime_([1-9]\d*)_({'|'.join(CUSTOM_REGIME_FIELDS)})$",
+                                      re.IGNORECASE)
+
+
+def custom_regime_parameter(name):
+    """The regime (from 1) and the field of a parameter of the coefficients of the regimes of the custom model
+    (``custom_regime_<regime>_<field>``, such as ``custom_regime_1_slope``), or None if the name is not one of them.
+
+    The number of regimes depends on the model, so these parameters are not in :data:`all_params`: their modifier is
+    :func:`custom_regime_modifier`.
+    """
+    match = _CUSTOM_REGIME_PARAMETER.match(name) if isinstance(name, str) else None
+    return (int(match.group(1)), match.group(2).lower()) if match else None
+
+
+def custom_regime_modifier(name):
+    """The modifier of a parameter of the coefficients of the regimes of the custom model
+    (:func:`custom_regime_parameter`): ``modify_custom_regime`` of
+    :mod:`accim.parametric_and_optimisation.funcs_for_besos.param_accis` with its regime and field (a
+    ``functools.partial``, which can be sent to other processes).
+
+    :raises KeyError: If the name is not one of these parameters.
+    """
+    found = custom_regime_parameter(name)
+    if found is None:
+        raise KeyError(f'{name!r} is not a parameter of the regimes of the custom model '
+                       f'(custom_regime_<regime>_<field>, with the fields {list(CUSTOM_REGIME_FIELDS)}).')
+    return functools.partial(param_accis.modify_custom_regime, regime=found[0], field=found[1])
 
 #: The names of the parameters in accim 0.x -> their names since accim 1.0.0
 LEGACY_PARAMETER_NAMES = {

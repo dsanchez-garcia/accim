@@ -6331,8 +6331,9 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         :param accis_params_dict: a dictionary containing the parameters names in the keys (those of
             ``get_available_parameters()``, which are the names of the arguments of accim.sim: comfort_standard,
             category, custom_slope...; the names of accim 0.x, such as ComfStand or CustAST_m, keep working with a
-            DeprecationWarning), and in the values, the options or range of values using respectively
-            a list or tuple with min and max values.
+            DeprecationWarning; with the accim custom models, also the coefficients of the regimes of the custom model
+            that the model has, ``custom_regime_<regime>_<field>`` such as custom_regime_1_slope), and in the values,
+            the options or range of values using respectively a list or tuple with min and max values.
         :param additional_params: any other additional parameter, as it would be added in besos
         :param use_default_values: only used in accim custom models: True to give the coefficients of the custom
             model that are not parameters and are not set yet (their value is 0) the default values (those of
@@ -6391,7 +6392,9 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         available_parameters = self.get_available_parameters()
         not_allowed_parameters = []
         for p in parameters:
-            if p not in available_parameters:
+            # The coefficients of the regimes of the custom model (custom_regime_<regime>_<field>) depend on the model
+            if p not in available_parameters and not (self.is_accim_custom_model
+                                                      and params_dicts.custom_regime_parameter(p) is not None):
                 not_allowed_parameters.append(p)
         if len(not_allowed_parameters) > 0 and self.parameters_type is not None:
             raise ValueError(f'The following parameters are not allowed in parameters_type {self.parameters_type}: {not_allowed_parameters}')

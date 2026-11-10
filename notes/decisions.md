@@ -11,6 +11,29 @@ Durable architectural/process decisions for this repository and its Obsidian
 vault. Newest first. Use [[templates/decision-record.md|the decision-record
 template]] to add a new entry.
 
+## 2026-11-09 — The custom model has several regimes, selected in each timestep by a program of each zone (B2)
+
+- **Status**: accepted (proposal B2 of `notes/PROPUESTAS_MEJORAS_post_1.1.0_v03.md` with decision D6 of the brief;
+  four details decided provisionally and one left open, see questions.md)
+- **Context**: many comfort models have several equations or limits, each one under some conditions; the custom model
+  (comfort standard 99) had one set of coefficients, the inputs `m`, `n`, `CustAST_*` of `SetInputData_<zone>`. The
+  prompt asks for `CustomRegime`, `custom_regimes` in `AddAccis`, an Erl chain `if/elseif` in priority order that
+  leaves `SetComfTemp`, `SetAppLimits`, `ApplyCAT` and the setpoint lines unchanged, the scalar arguments as a regime
+  'always' (identical output IDFs without regimes), a `ValueError` for 'hvac_off'/'hvac_on' without mixed mode, and the
+  factory `custom_regime_parameters(n)`.
+- **Decision**: `accim.sim.arguments.CustomRegime` (frozen, checked) and `check_custom_regimes`; the module
+  `accim.sim.ems.custom_regimes` writes `SelectCustomRegime_<zone>` in the zones of the custom model, run right before
+  `SetAppLimits`, which sets the inputs of the custom model of the zone (so the category offsets still apply) and
+  `CustomRegime_<zone>` (an EMS output, 0 when the scalar inputs apply, which are the appended regime of D6); the
+  conditions reuse the lines of the cooling season of `SetAST_Master` and those of `NoH_NoC_reqs` of `ApplyAST_<zone>`;
+  the outdoor metric of B1 rewrites them as the other programs of the custom model; `custom_regimes_of` reads the
+  regimes back from the Erl (the comments of the programs are lost when eppy reads an IDF), for
+  `verify_accim_simulation` and the parametric module (`custom_regime_<regime>_<field>`, `modify_custom_regime`,
+  `custom_regime_parameters(n)`).
+- **Consequences**: the output IDFs without regimes do not change (golden master), the regimes need comfort standard 99
+  and `setpoint_type` 'temperature', and `compute_setpoints` cannot calculate the conditions of the HVAC system; the
+  regimes use the outdoor metric of the zone (an outdoor metric for each regime is pending the author).
+
 ## 2026-11-09 — The indicators of the long-term discomfort are functions of a module of their own, and Table gives those of the temperature on request (D1)
 
 - **Status**: accepted (proposal D1 of `notes/PROPUESTAS_MEJORAS_post_1.1.0_v03.md` with decision D8 of the brief;

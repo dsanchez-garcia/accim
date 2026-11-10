@@ -400,9 +400,11 @@ def _set_custom_model_lines(idf, enabled: bool) -> None:
     """Write the programs of the custom model of a model (those of accim 1.0.0 or later) with its outdoor metric,
     Tout_metric (``enabled``), or with the running mean of ASHRAE 55 of EnergyPlus, PMOT, as before accim 1.2.0:
     the comfort temperature (SetComfTemp), the subprograms of its setpoints (SetAST_CS99_<chunk>), the hour counters
-    (CountHours_<zone>, where it gets a branch of its own) and the ventilation setpoint (SetVST, in mixed mode). The
-    programs whose lines are not those of accim (of the comfort standards of the model) do not change."""
+    (CountHours_<zone>, where it gets a branch of its own), the ventilation setpoint (SetVST, in mixed mode) and the
+    conditions of its regimes (SelectCustomRegime_<zone>, :mod:`accim.sim.ems.custom_regimes`). The programs whose
+    lines are not those of accim (of the comfort standards of the model) do not change."""
     from accim.sim.ems import program_lines as pl
+    from accim.sim.ems.custom_regimes import PROGRAM_PREFIX as REGIME_PROGRAM_PREFIX
     from accim.sim.ems.programs import set_program_lines
     from accim.sim.ems.setast import CUSTOM_COMFORT_STANDARD
 
@@ -420,7 +422,7 @@ def _set_custom_model_lines(idf, enabled: bool) -> None:
         if name.upper() == 'SETCOMFTEMP':
             replace(program, [comfort_temperature[enabled] if line == comfort_temperature[not enabled] else line
                               for line in _program_lines(program)])
-        elif subprogram.match(name):
+        elif subprogram.match(name) or name.upper().startswith(REGIME_PROGRAM_PREFIX.upper()):
             replace(program, [word.sub(new, line) for line in _program_lines(program)])
         elif name.upper().startswith(_COUNT_HOURS_PREFIX.upper()):
             zone = name[len(_COUNT_HOURS_PREFIX):]
@@ -500,7 +502,8 @@ def set_outdoor_metric_code(idf, enabled: bool, epw: Union[str, Any, None] = Non
     - the EMS output variables ``Tout_metric`` (of the zone that runs last, as the comfort temperature) and
       ``Tout_metric_<zone>``, with Output:Variable objects at the frequencies of those of the comfort temperature;
     - the programs of the custom model with its outdoor metric, Tout_metric, instead of PMOT: SetComfTemp, the
-      subprograms SetAST_CS99_<chunk>, CountHours_<zone> and, in mixed mode, SetVST.
+      subprograms SetAST_CS99_<chunk>, CountHours_<zone>, in mixed mode SetVST, and the programs of its regimes
+      (SelectCustomRegime_<zone>, :mod:`accim.sim.ems.custom_regimes`).
 
     The daily means kept are those of :func:`ring_days` for the ``CustAST_days`` of the zones. With a weather file,
     the programs begin with its values on the first day of the first RunPeriod of the model (:func:`initial_values`);

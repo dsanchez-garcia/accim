@@ -98,7 +98,11 @@ def verify_accim_simulation(
     and ``Check4_AHSTnoTol``). With the custom model and an outdoor metric other than 'pmot'
     (:mod:`accim.sim.ems.outdoor_metric`), the outdoor metric that the EMS of each zone calculates
     (``Tout_metric_<zone>``) is that of ``compute_setpoints`` too (``Check4_Tout_metric``), which begins as the programs
-    of the model do (with the values of the weather file given to AddAccis, or with PMOT). They are checked with the
+    of the model do (with the values of the weather file given to AddAccis, or with PMOT). With the regimes of the
+    custom model (:mod:`accim.sim.ems.custom_regimes`), ``compute_setpoints`` gets those of the program
+    ``SelectCustomRegime_<zone>`` of each zone, and the number of the regime that the EMS reports
+    (``CustomRegime_<zone>``) is that of ``compute_setpoints`` (``Check4_custom_regime``); the zones whose regimes have
+    the conditions 'hvac_off' or 'hvac_on', which depend on the HVAC system, are not checked. They are checked with the
     outputs at timestep frequency, or else hourly, of the last environment of the outputs (the run period).
 
     **Check 5 – The floor and ceiling of the setpoints (per zone, output IDFs of AddAccis):**
@@ -1140,6 +1144,7 @@ def _setpoint_mismatches(building, data: Mapping[str, pd.DataFrame], epw: str,
     :param tolerance: The largest difference allowed.
     :return: The mismatches, and the lines of the summary.
     """
+    from accim.sim.ems.custom_regimes import OUTPUT_PREFIX as REGIME_OUTPUT_PREFIX, PROGRAM_PREFIX, parse_regime_program
     from accim.sim.ems.inputs import input_programs, read_inputs
     from accim.sim.ems.objects import ZONE_SETPOINT_OUTPUT_VARIABLES
     from accim.sim.ems.outdoor_metric import OUTPUT_PREFIX, begins_with_weather_file, metric_code
@@ -1203,6 +1208,10 @@ def _setpoint_mismatches(building, data: Mapping[str, pd.DataFrame], epw: str,
     for zone, program in zone_programs.items():
         try:
             arguments = _compute_setpoints_arguments(read_inputs(program))
+            # The regimes of the custom model of the zone (accim.sim.ems.custom_regimes)
+            regime_program = building.getobject('EnergyManagementSystem:Program', f'{PROGRAM_PREFIX}{zone}')
+            if regime_program is not None:
+                arguments['custom_regimes'] = parse_regime_program(regime_program.fieldvalues[2:], zone)
             key = tuple(sorted(arguments.items()))
             if key not in previews:
                 previews[key] = compute_setpoints(epw, timesteps_per_hour=timesteps_per_hour, start_date=start_date,
@@ -1230,6 +1239,14 @@ def _setpoint_mismatches(building, data: Mapping[str, pd.DataFrame], epw: str,
             expected = np.where(inside, preview['Tout_metric'].to_numpy(dtype=float), np.nan)
             new_rows, line = _mismatch_rows(timestamps, found[rows], expected, zone, 'Check4_Tout_metric',
                                             f'{OUTPUT_PREFIX}{zone} of compute_setpoints', tolerance)
+            mismatches.extend(new_rows)
+            lines.append(line)
+        # The regime of the custom model of each timestep
+        found = outputs.get('EMS', f'{REGIME_OUTPUT_PREFIX}{zone}')
+        if found is not None and 'custom_regime' in preview:
+            expected = np.where(inside, preview['custom_regime'].to_numpy(dtype=float), np.nan)
+            new_rows, line = _mismatch_rows(timestamps, found[rows], expected, zone, 'Check4_custom_regime',
+                                            f'{REGIME_OUTPUT_PREFIX}{zone} of compute_setpoints', tolerance)
             mismatches.extend(new_rows)
             lines.append(line)
     return mismatches, lines

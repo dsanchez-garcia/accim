@@ -24,6 +24,68 @@ it here as answered).
 
 ## Open
 
+## 2026-11-09 — B2: an outdoor metric for each regime of the custom model
+- Context: the design of B2 in v03 gives `CustomRegime` the field `outdoor_metric: Optional[str] = None  # overrides
+  custom_outdoor_metric for this regime (B1)`, and its prompt only says "optional outdoor_metric". Neither says which
+  metric the conditions `metric_below/above/between` compare when the regimes have different metrics (that of the zone,
+  or that of each regime), nor how the running means of the metrics that the zone does not use begin and are kept
+  (B1 keeps one running mean `RMOTa_<zone>` with the alpha of the zone, and its daily means only if a zone has a
+  metric other than 'pmot').
+- Why it matters: with a metric for each regime, the comfort temperature, the setpoints and the applicability of the
+  custom model would change of variable from one timestep to the next, and the EMS would have to keep the running
+  means of several metrics in each zone.
+- Options considered: (a) not available yet: `outdoor_metric` must be None, and all the regimes use the metric of the
+  zone (`custom_outdoor_metric`); (b) the conditions compare the metric of the zone, and the regime selected sets
+  `Tout_metric` to its own metric (EMS code of B1 for every metric used by a regime, with the alpha and days of the
+  zone); (c) as (b), with the alpha and days of each regime.
+- Owner: the author.
+- Status: open; option (a) decided provisionally (a `ValueError` explains it), pending author. `TODO.md` has the task.
+
+## 2026-11-09 — B2: how the program of the regimes sets the custom model
+- Context: the prompt of B2 says that `SelectCustomRegime` "assigns m, n, ACSToffset, AHSToffset, ACSTall, ACSTaul,
+  AHSTall and AHSTaul ... so that SetComfTemp, SetAppLimits, ApplyCAT and the ComfStand 99 setpoint lines do not
+  change"; but SetAppLimits sets ACSTall... from the inputs `CustAST_ACSTall`... of the zone, and ApplyCAT sets
+  ACSToffset to `CustAST_ACSToffset + CATcoolOffset`, so values written in ACSTall or ACSToffset before them are
+  overwritten. Decision D6 says that, if the last regime is not 'always', "accim appends one built from the scalar
+  CustAST_* arguments".
+- Options considered: (a) one program `SelectCustomRegime_<zone>` for each zone of the custom model (the conditions
+  of the HVAC system read the sensors of the zone), run by `RunACCIS_<zone>` right before `SetAppLimits`, that writes
+  the inputs `m`, `n`, `CustAST_ACSToffset`, `CustAST_AHSToffset`, `CustAST_ACSTall`, `CustAST_ACSTaul`,
+  `CustAST_AHSTall` and `CustAST_AHSTaul`, so the programs of the custom model do not change and the offsets of the
+  category still apply; without a last regime 'always', the program has no `else`, so the inputs of
+  `SetInputData_<zone>` (the scalar arguments, which `modify_accis` and the parametric module can still change) are the
+  appended regime; a regime 'always' before the last one raises a `ValueError` (the regimes after it would never
+  apply); the new EMS global and output variable `CustomRegime_<zone>` is the number of the regime (0 for the scalar
+  arguments), which `verify_accim_simulation` checks; (b) one program for all the zones that writes ACSTall... after
+  SetAppLimits and ApplyCAT (they would need changes, and the HVAC conditions are of each zone).
+- Owner: the author.
+- Status: open; option (a) decided provisionally, pending author.
+
+## 2026-11-09 — B2: the meaning of the conditions of the regimes
+- Context: the prompt lists the conditions without saying what each one compares, nor whether the limits of the
+  conditions of the outdoor metric are included.
+- Options considered: 'cooling_season' and 'heating_season' are CoolingSeason 1 or 0, calculated with the lines of
+  SetAST_Master and the cooling season of the zone; 'hvac_off' and 'hvac_on' are NoH_NoC_reqs 1 or 0, calculated with
+  the lines with which ApplyAST_<zone> of mixed mode calculates it (the coils of the VRF systems of accim, or the load
+  to the setpoints of the existing HVAC systems, of the previous timestep), so they need 'vrf_mm' or 'ex_mm'
+  (`ValueError` otherwise, as v03 says) and `compute_setpoints` cannot calculate them (`ValueError`);
+  ('metric_below', x) is metric < x, ('metric_above', x) is metric > x, and ('metric_between', (x1, x2)) is
+  x1 <= metric <= x2, as the applicability limits of the ACCIS (`>=` and `<=` within, `<` and `>` outside).
+- Owner: the author.
+- Status: open; decided provisionally, pending author.
+
+## 2026-11-09 — B2: the regimes in the zones and in the parametric module
+- Context: v03 does not say whether the regimes can differ between zones, nor which coefficients the factory
+  `custom_regime_parameters(n)` makes parameters ("CustAST_m_1, CustAST_n_1, ...").
+- Options considered: the same regimes in all the zones whose comfort standard is 99 (`zone_arguments` cannot give
+  them); in the parametric module, the eight coefficients of each regime (not the values of its condition), as the
+  parameters `custom_regime_<regime>_<field>` of the accim custom models (accepted by `set_parameters` and
+  `accis_parameter`, applied by BESOS through `param_accis.modify_custom_regime`) and the classes `CustAST_m_1`,
+  `CustAST_n_1`, `CustAST_ACSToffset_1`, `CustAST_AHSToffset_1`, `CustAST_ACSTall_1`, `CustAST_ACSTaul_1`,
+  `CustAST_AHSTall_1` and `CustAST_AHSTaul_1` of the factory.
+- Owner: the author.
+- Status: open; decided provisionally, pending author.
+
 ## 2026-11-09 — D1: what are the warm and cold periods of the indicators of Table
 - Context: the prompt of D1 asks Table for the indicators "per zone and building for the warm and cold periods, using
   the ACSTnoTol/AHSTnoTol columns as limits by default"; CEN/TR 16798-2 (Annex D, Methods B and C) calls "warm period"

@@ -547,6 +547,50 @@ def modify_CustAST_days(idf: besos.IDF_class, value: float):
     _set_outdoor_metric_input(idf, 'CustAST_days', int(round(value)))
 
 
+def modify_custom_regime(idf: besos.IDF_class, value: float, regime: int, field: str):
+    """Modifies a coefficient of a regime of the custom model (``custom_regimes``, proposal B2 of accim 1.2.0) in all
+    the zones that have the regimes (their programs SelectCustomRegime_<zone>, see
+    :mod:`accim.sim.ems.custom_regimes`), as the parameters ``custom_regime_<regime>_<field>`` and the classes of
+    ``custom_regime_parameters`` (:mod:`accim.parametric_and_optimisation.parameters`) do: the model must have the
+    regimes already (``custom_regimes`` of :func:`accim.sim.accis.modify_accis`), and each regime keeps its condition.
+
+    :param idf: The eppy or besos IDF class instance, with the regimes of the custom model.
+    :param value: The value of the coefficient.
+    :param regime: The number of the regime, from 1 (in the order of priority of the regimes).
+    :param field: The coefficient: a field of :class:`accim.sim.arguments.CustomRegime` ('slope', 'intercept',
+        'cooling_offset', 'heating_offset', 'cooling_lower_limit', 'cooling_upper_limit', 'heating_lower_limit' or
+        'heating_upper_limit').
+    :raises ValueError: If the field is not a coefficient, the model has no regimes, or a zone has fewer regimes.
+
+    Usage
+    -----
+    Use `modify_custom_regime` within ACCIM parametric and optimisation workflows (parameters type 'accim custom
+    model'), through the parameters ``custom_regime_<regime>_<field>``.
+
+    Examples
+    --------
+    result = modify_custom_regime(idf=..., value=0.33, regime=1, field='slope')
+    """
+    import dataclasses
+
+    from accim.sim.ems.custom_regimes import REGIME_INPUTS, custom_regimes_of, set_zone_custom_regimes
+
+    if field not in REGIME_INPUTS:
+        raise ValueError(f'{field!r} is not a coefficient of a regime of the custom model: {list(REGIME_INPUTS)}.')
+    regimes_by_zone = custom_regimes_of(idf)
+    if not regimes_by_zone:
+        raise ValueError('The model has no regimes of the custom model: give them first with custom_regimes '
+                         '(accim.sim.accis.modify_accis).')
+    for zone, regimes in regimes_by_zone.items():
+        if isinstance(regime, bool) or not isinstance(regime, int) or not 1 <= regime <= len(regimes):
+            raise ValueError(f'The zone {zone!r} has {len(regimes)} regimes of the custom model, so it has no regime '
+                             f'{regime!r}.')
+    for zone, regimes in regimes_by_zone.items():
+        changed = list(regimes)
+        changed[regime - 1] = dataclasses.replace(changed[regime - 1], **{field: value})
+        set_zone_custom_regimes(idf, zone, changed)
+
+
 def modify_CustAST_ACSTaul(idf: besos.IDF_class, value: float):
     """Modifies the CustAST_ACSTaul argument to match the entered value.
     

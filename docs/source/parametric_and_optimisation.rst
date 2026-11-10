@@ -148,7 +148,9 @@ the object does to each model when it is created:
        heating (``custom_cooling_offset``, ``custom_heating_offset``, ``custom_cooling_lower_limit``...);
        since accim 1.2.0, also ``heating_setpoint_floor`` and ``cooling_setpoint_ceiling``, and the outdoor
        metric of the custom model: ``custom_outdoor_metric`` (the codes of the metrics, 0 to 7, as options),
-       ``custom_alpha`` and ``custom_days`` (rounded to whole days)
+       ``custom_alpha`` and ``custom_days`` (rounded to whole days); and the coefficients of the regimes of the
+       custom model, ``custom_regime_<regime>_<field>`` (such as ``custom_regime_1_slope``), once the model has
+       them
    * - ``'apmv setpoints'``
      - Applies the aPMV setpoints with the default values of ``apply_apmv_setpoints``, unless
        ``bypass_add_accis=True``
@@ -180,6 +182,16 @@ with the running mean of ASHRAE 55 of EnergyPlus, unless the model was given the
 (``Clo``, ``Met``, ``AirVelocity``, ``ExpectancyFactor``, ``AdaptiveCoefficientCooling``,
 ``AdaptiveCoefficientHeating``, ``CustAST_metric``, ``CustAST_alpha``, ``CustAST_days``, ``HeatingSetpointFloor``
 and ``CoolingSetpointCeiling``, besides those of the other parameters).
+The regimes of the custom model (``custom_regimes``, section 4.2.4 of :doc:`4_detailed use`) depend on the model, so
+their coefficients are parameters once the model has them: give them with
+``modify_accis(sim.building, comfort_standard=99, comfort_mode=3, custom_regimes=[...])`` before
+``set_parameters``, whose dictionary can then have ``custom_regime_<regime>_<field>``, where the field is
+``slope``, ``intercept``, ``cooling_offset``, ``heating_offset``, ``cooling_lower_limit``, ``cooling_upper_limit``,
+``heating_lower_limit`` or ``heating_upper_limit`` of :class:`~accim.sim.arguments.CustomRegime`; each one sets that
+coefficient of the regime in all the zones, which keeps its condition. ``custom_regime_parameters(n)`` gives the
+classes of the coefficients of the first ``n`` regimes (``CustAST_m_1``, ``CustAST_n_1``, ``CustAST_ACSToffset_1``,
+``CustAST_AHSToffset_1``, ``CustAST_ACSTall_1``, ``CustAST_ACSTaul_1``, ``CustAST_AHSTall_1``, ``CustAST_AHSTaul_1``,
+``CustAST_m_2``...).
 For the aPMV and ePMV setpoints, apply them yourself
 with explicit values, as in step 1 (for the ePMV, with ``apply_epmv_setpoints()``, section 4.8 of
 :doc:`4_detailed use`), and pass ``bypass_add_accis=True``: the parameters of the study

@@ -17,9 +17,10 @@ The modules are imported when they are first used, so that ``import accim.sim`` 
 
 import importlib
 
-__all__ = ['AddAccis', 'add_accis_to_idf', 'gen_outputs_df', 'modify_accis']
+__all__ = ['AddAccis', 'CustomRegime', 'add_accis_to_idf', 'gen_outputs_df', 'modify_accis']
 
 _LAZY = {name: 'accim.sim.accis' for name in __all__}
+_LAZY['CustomRegime'] = 'accim.sim.arguments'
 
 
 def __getattr__(name):

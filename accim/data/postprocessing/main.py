@@ -56,6 +56,8 @@ _AVERAGED_OUTPUTS = [
     'EMS:Minimum Outdoor Temperature for ventilation',
     # The outdoor metric of the custom model (accim.sim.ems.outdoor_metric), of the whole model and of each zone
     'EMS:Tout_metric',
+    # The number of the regime of the custom model of each zone (accim.sim.ems.custom_regimes)
+    'EMS:CustomRegime',
     # 'Zone Thermostat Operative Temperature',
     # 'Zone Operative Temperature',
     'Zone Operative Temperature',

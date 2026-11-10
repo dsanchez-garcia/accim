@@ -6,7 +6,7 @@ documentación de uso. Recoge las propuestas del bloque A de `notes/PROPUESTAS_M
 esta versión: las P1, A2, A1 y A5, en este orden; y después D2 (sección 7), que el autor incluyó en la 1.2.0 el
 2026-11-09 con E2 y E1, y las demás propuestas de la v03 (`notes/PROPUESTAS_MEJORAS_post_1.1.0_v03.md`), en el orden
 del autor (`notes/COPILOT_BRIEF_v1.2.0_v01.md`): E1 (sección 8), E2 (sección 9), A3 (sección 10), B1 (sección 11),
-B5 (sección 12), C1 (sección 13), D1 (sección 14)...
+B5 (sección 12), C1 (sección 13), D1 (sección 14), B2 (sección 15)...
 
 Lo que ya está en otros documentos no se repite aquí:
 
@@ -55,6 +55,10 @@ Lo que ya está en otros documentos no se repite aquí:
 - **D1.** Los indicadores de disconfort de largo plazo de CEN/TR 16798-2 (anexo D, métodos A, B y C; anexo E,
   tabla E.1) en `accim.data.postprocessing.long_term_discomfort`, y los de los métodos A y B de cada simulación, zona
   y edificio con `Table(long_term_indicators=True)` (sección 14).
+- **B2.** El modelo personalizado admite varios regímenes (`custom_regimes`, una lista de `CustomRegime`), cada uno
+  con sus coeficientes y la condición en que se aplica (siempre, estación, HVAC apagado o encendido en modo mixto, o la
+  métrica exterior por debajo, por encima o entre dos valores); el programa `SelectCustomRegime_<zona>` pone las
+  entradas del modelo del primero que se cumple, y la salida `CustomRegime_<zona>` dice cuál (sección 15).
 - Las categorías del PMV y la aproximación de la corrección del metabolismo se han comprobado en ISO 7730:2025 y
   EN 16798-1:2019, y el modelo dinámico de vestimenta de A5, en Schiavon y Lee (2013) y ASHRAE 55-2020 (sección 6).
 - Lo que quedaba abierto se ha comprobado: el golden master y las pruebas de EnergyPlus 26.1 y 26.2, también la de A5
@@ -919,3 +923,97 @@ indicadores de largo plazo de la norma.
   cálculo directo desde el CSV (zona 1: 60 h ocupadas, 25,1667 h por encima y 16,7978 K·h).
 - Hallazgo: `Table` con `source_frequency='timestep'` y `standard_outputs=True` deja fuera todas las salidas
   (EnergyPlus escribe `(TimeStep)` y el filtro busca `Timestep`); en `TODO.md`.
+
+## 15. Varios regímenes del modelo personalizado (B2)
+
+La propuesta B2 pide la dataclass congelada `CustomRegime` en `accim/sim/arguments.py` (pendiente, ordenada en el
+origen, compensaciones de refrigeración y calefacción, los cuatro límites de aplicabilidad, la condición y una
+`outdoor_metric` opcional), el argumento `custom_regimes` de `AddAccis`, un programa Erl `SelectCustomRegime` con una
+cadena `if/elseif` (el último régimen, 'always') que asigne los coeficientes del primer régimen cuya condición se
+cumple sin cambiar `SetComfTemp`, `SetAppLimits`, `ApplyCAT` ni las líneas de las consignas de la norma 99, los
+argumentos escalares `CustAST_*` como un régimen 'always' (prueba de regresión: el mismo IDF de salida), `ValueError`
+para 'hvac_on'/'hvac_off' sin modo mixto, la fábrica `custom_regime_parameters(n)` del paramétrico y pruebas con dos
+regímenes (`metric_below 10` y 'always') del texto Erl y de una semana simulada. La decisión D6 del brief fija la
+prioridad: el orden de la lista; el primero que se cumple gana; el último es 'always' o accim añade uno con los
+argumentos escalares.
+
+**Antes.** El modelo personalizado tenía un solo juego de coeficientes: las entradas `m`, `n`, `CustAST_ACSToffset`,
+`CustAST_AHSToffset`, `CustAST_ACSTall`, `CustAST_ACSTaul`, `CustAST_AHSTall` y `CustAST_AHSTaul` de
+`SetInputData_<zona>`, que `SetAppLimits` y `ApplyCAT` copian en `ACSTall`... y `ACSToffset`... (con la compensación
+de la categoría) y que `SetComfTemp` y `SetAST_CS99_*` usan.
+
+**Ahora.**
+
+- `accim/sim/arguments.py`: `CustomRegime` (congelada; `__post_init__` comprueba los ocho números, normaliza la
+  condición a minúsculas y tuplas, para poder compararlas y usarlas como claves, y exige `outdoor_metric=None`),
+  `REGIME_CONDITIONS`, `METRIC_CONDITIONS` y `check_custom_regimes` (lista de `CustomRegime`, o None; un régimen
+  'always' que no es el último da `ValueError`, porque los siguientes no se aplicarían nunca). `accim.sim.CustomRegime`
+  la importa sin cargar el resto.
+- `accim/sim/ems/custom_regimes.py` (nuevo): `regime_program_lines` escribe el programa `SelectCustomRegime_<zona>`:
+  `set CustomRegime_<zona> = 0` si el último no es 'always'; las líneas de la estación de refrigeración de
+  `SetAST_Master` (`COOLING_SEASON_LINES`, que ponen `CoolingSeason` con el mismo valor que `SetAST_Master` le dará
+  después) si alguna condición es de estación; las líneas con que `ApplyAST_<zona>` del modo mixto pone
+  `NoH_NoC_reqs` (`program_lines.HVAC_OFF_FROM_COILS`, de las baterías del VRF de accim, o `HVAC_OFF_FROM_LOAD`, de la
+  carga a las consignas del termostato con los sistemas existentes, públicas ahora) si alguna es del HVAC; y la cadena
+  `if/elseif/else/endif`, que pone las ocho entradas del régimen y `CustomRegime_<zona>` (su número). Las condiciones:
+  `CoolingSeason == 1` y `== 0`; `NoH_NoC_reqs == 1` y `== 0`; `PMOT < x`, `PMOT > x` y
+  `(PMOT >= x1) && (PMOT <= x2)` (o `Tout_metric` con el código de B1). Los números se escriben sin exponente
+  (`numpy.format_float_positional`). `set_custom_regimes` lo escribe en las zonas cuya norma es 99 y lo quita de las
+  demás (con la línea `run SelectCustomRegime_<zona>` de `RunACCIS_<zona>`, justo antes de `run SetAppLimits`, la
+  variable global y la salida EMS `CustomRegime_<zona>`, promediada y sin unidades, y sus `Output:Variable` a las
+  frecuencias de las de la temperatura de confort de la zona); sin regímenes, el IDF queda como sin ellos.
+  `custom_regimes_of` y `parse_regime_program` leen los regímenes de las líneas Erl, porque eppy pierde los
+  comentarios de los programas al leer un IDF (comprobado). `hvac_off_lines` toma las líneas de `ApplyAST_<zona>`
+  (None si no es modo mixto).
+- `accim/sim/ems/outdoor_metric.py`: `_set_custom_model_lines` cambia también `PMOT` por `Tout_metric` (y al revés) en
+  los programas `SelectCustomRegime_<zona>`, como en los demás del modelo personalizado.
+- `accim/sim/accis.py`: `AddAccis(..., custom_regimes=None)` (al final): `ValueError` con `setpoint_type='pmv'`, con
+  'hvac_off'/'hvac_on' sin `vrf_mm` ni `ex_mm`, y sin la norma 99 en los IDF de salida ni en `zone_arguments`;
+  `_write_output_idfs` llama a `set_custom_regimes` en cada combinación, después de `set_setpoint_limits_code` y antes
+  de `set_comfort_standard_code`. `modify_accis(..., custom_regimes=None)`: None conserva los regímenes, una lista los
+  pone en las zonas con la norma 99 (también la de la misma llamada; si no hay ninguna, `ValueError` antes de cambiar
+  nada) y una lista vacía los quita; los modelos de versiones anteriores solo tienen un régimen.
+- `accim/utils/ems_code.py`: `get_setpoint_ems_code` y `get_setpoint_ems_programs` toman `custom_regimes` y
+  `script_type` ('vrf_mm' o 'ex_mm', para las condiciones del HVAC); la sección `SelectCustomRegime_<zone>` va antes de
+  `SetAppLimits`, con la lista de las condiciones en su título y una leyenda.
+- `accim/sim/preview.py`: `compute_setpoints` ejecuta el programa de los regímenes antes de `SetAppLimits` y da la
+  columna `custom_regime` (la media de la hora, como la salida); con 'hvac_off'/'hvac_on', `ValueError` (dependen del
+  HVAC de la simulación).
+- `accim/utils/verification.py`: la comprobación 4 pasa a `compute_setpoints` los regímenes de cada zona y compara
+  `CustomRegime_<zona>` (`Check4_custom_regime`); las zonas con condiciones del HVAC quedan sin comprobar (en
+  `TODO.md`).
+- `accim/data/postprocessing/main.py`: `Table` promedia en el tiempo `EMS:CustomRegime` (`_AVERAGED_OUTPUTS`).
+- Paramétrico: `param_accis.modify_custom_regime(idf, value, regime, field)` cambia un coeficiente de un régimen en
+  todas las zonas que los tienen (conserva la condición); `params_dicts.custom_regime_parameter` y
+  `custom_regime_modifier` (un `functools.partial`, que se puede enviar a otros procesos) para los parámetros
+  `custom_regime_<régimen>_<campo>`, que `accis_parameter` construye y `set_parameters` acepta con los modelos
+  personalizados; `parameters.CustomRegimeParameter` y `custom_regime_parameters(n)`, que devuelve las clases
+  `CustAST_m_1`, `CustAST_n_1`, `CustAST_ACSToffset_1`, `CustAST_AHSToffset_1`, `CustAST_ACSTall_1`,
+  `CustAST_ACSTaul_1`, `CustAST_AHSTall_1`, `CustAST_AHSTaul_1`, `CustAST_m_2`... Cierra la tarea de C1.
+- GUI: el campo *Regimes (custom_regimes)* en el marco del modelo personalizado (`forms.parse_custom_regimes`,
+  `custom_regime_arguments`, `CUSTOM_REGIMES_HINT`): un régimen por línea o separados por punto y coma,
+  `condición: pendiente ordenada ...`; el código EMS de la ventana los incluye, con el tipo de script del formulario.
+- Desviaciones de la v03 (en `notes/questions.md`, decididas provisionalmente): un programa por zona
+  (`SelectCustomRegime_<zona>`, porque las condiciones del HVAC leen los sensores de la zona) en vez de uno solo; el
+  programa escribe las entradas `m`, `n`, `CustAST_*` y no `ACSToffset`, `ACSTall`... (que `ApplyCAT` y `SetAppLimits`
+  sobrescribirían); el régimen añadido de D6 son las entradas escalares de `SetInputData_<zona>` (sin `else`), no una
+  copia congelada; la salida `CustomRegime_<zona>`, que la v03 no pide; `outdoor_metric` de cada régimen sin
+  implementar (`ValueError` si no es None, tarea bloqueada en `TODO.md`); los mismos regímenes en todas las zonas del
+  modelo personalizado; y la fábrica, con los ocho coeficientes de cada régimen, no los valores de las condiciones.
+- Pruebas: `tests/core/test_custom_regimes.py` (20: la comprobación de los regímenes y de la lista; el texto Erl de
+  dos regímenes (`metric_below 10` y 'always') y de las demás condiciones, y su lectura; el intérprete de Erl con los
+  límites de las condiciones; `compute_setpoints` con dos regímenes, con las estaciones y sin 'always', con la métrica
+  de B1 y con un solo régimen igual a los argumentos escalares (el mismo resultado); el código EMS; `AddAccis` (los IDF
+  sin regímenes, y los de la otra norma, idénticos byte a byte), `zone_arguments`, la métrica de B1, los errores,
+  `modify_accis` y `Table`; y tres con EnergyPlus 25.1), `tests/parametric_and_optimisation/test_custom_regime_parameters.py` (4,
+  con un diseño de dos puntos de `custom_regime_1_slope` generado con `EvaluatorEP.generate_building`) y 2 de la GUI.
+- EnergyPlus 25.1 (Sevilla): del 1 al 7 de abril, tres regímenes (`metric_below 16`, 'cooling_season' desde el 5 de
+  abril y 'always'), por paso de tiempo: `verify_accim_simulation` sin discrepancias en la comprobación 4
+  (`Check4_custom_regime`, `Check4_ACST`, `Check4_AHST`, `Check4_ComfTemp` de cada zona, 1008 pasos) y los tres
+  regímenes en la semana; del 1 al 7 de junio en modo mixto (`vrf_mm`), 'hvac_off' y 'always': el régimen de cada paso
+  es el 1 exactamente cuando las baterías de la zona estuvieron paradas el paso anterior, y las consignas son las de
+  `compute_setpoints` del régimen de cada paso; y los backends `ems` y `api` (del 1 al 10 de abril, `vrf_mm`, horario,
+  `metric_below 16`, 'hvac_off' y 'cooling_season') dan CSV idénticos (`check_exact=True`). Con `run_ep`
+  (`backend='ems'` y `'api'`, por paso de tiempo), los modelos de abril (`vrf_ac`, 1008 filas × 102 columnas) y de junio
+  (`vrf_mm`, 1008 × 113) tienen una diferencia máxima de 0,0 (ems 4,7 y 4,3 s; api 6,3 y 6,9 s). Suite completa: 1644
+  pasan, 1 omitida; el golden master no cambia.

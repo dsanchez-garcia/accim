@@ -585,7 +585,7 @@ class AddAccisTab(_Tab):
                      'opening_factor_max_temp_diff', 'opening_factor_min_temp_diff', 'min_opening_factor',
                      'setpoint_tolerance_start', 'setpoint_tolerance_end', 'setpoint_tolerance_step', 'name_suffix',
                      *forms.CUSTOM_MODEL_FIELDS, 'custom_outdoor_metric', *forms.CUSTOM_OUTDOOR_METRIC_FIELDS, 'epw',
-                     *forms.SETPOINT_LIMIT_FIELDS, 'report_hours_below'):
+                     'custom_regimes', *forms.SETPOINT_LIMIT_FIELDS, 'report_hours_below'):
             self.vars[name] = tk.StringVar(value=defaults[name])
         for name in ('keep_existing_outputs', 'add_building_averages', 'debug_ems', *forms.EXISTING_HVAC_OPTIONS):
             self.vars[name] = tk.BooleanVar(value=defaults[name])
@@ -761,6 +761,11 @@ class AddAccisTab(_Tab):
         self.epw_button = ttk.Button(epw_frame, text='Browse...', command=self.choose_epw)
         self.epw_button.grid(row=0, column=1, padx=(4, 0))
         self.custom_widgets += [self.epw_entry, self.epw_button]
+        # The regimes of the custom model (accim.sim.ems.custom_regimes)
+        row += 1
+        self.custom_widgets.append(_grid_entry(frame, row, 'Regimes (custom_regimes):', self.vars['custom_regimes']))
+        ttk.Label(frame, text=forms.CUSTOM_REGIMES_HINT, wraplength=340, foreground='gray25').grid(
+            row=row + 1, column=0, columnspan=2, sticky='w', pady=(0, 2))
         self._metric_changed()
         return frame
 
@@ -925,8 +930,9 @@ class AddAccisTab(_Tab):
             # The comfort models are not used with PMV control, but AddAccis needs them
             values['comfort_standard'] = forms.ADD_ACCIS_DEFAULTS['comfort_standard']
         if values['setpoint_type'] != 'temperature':
-            # The fields of the floor and ceiling of the setpoints are disabled
-            values.update(dict.fromkeys(forms.SETPOINT_LIMIT_FIELDS, ''))
+            # The fields of the floor and ceiling of the setpoints, and of the regimes of the custom model, are
+            # disabled
+            values.update(dict.fromkeys(forms.SETPOINT_LIMIT_FIELDS, ''), custom_regimes='')
         return values
 
     def state(self) -> Dict[str, Any]:

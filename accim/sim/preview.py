@@ -302,7 +302,9 @@ def compute_setpoints(epw: PathLike, comfort_standard: int, category: Optional[N
     With the custom model (comfort standard 99) and an outdoor metric other than 'pmot' (``custom_outdoor_metric``),
     the programs of the outdoor metric (:mod:`accim.sim.ems.outdoor_metric`) also run in each timestep, with the outdoor
     temperature of EnergyPlus (interpolated between the hourly values of the weather file, which it has at the end of
-    each hour).
+    each hour). With its regimes (``custom_regimes``), the program of the regimes (:mod:`accim.sim.ems.custom_regimes`)
+    runs before SetAppLimits; their conditions 'hvac_off' and 'hvac_on' depend on the HVAC system of the simulation, so
+    they cannot be calculated without EnergyPlus.
 
     :param epw: The path of the weather file (EPW), of a whole year of 365 days.
     :param comfort_standard: The comfort standard (see :func:`accim.utils.get_setpoint_ems_code`).
@@ -316,8 +318,8 @@ def compute_setpoints(epw: PathLike, comfort_standard: int, category: Optional[N
         default), those of the weather file, as in the output IDFs of AddAccis with its argument ``epw``; 'pmot', the
         running mean of ASHRAE 55 of EnergyPlus, as in those without it.
     :param custom_arguments: The other arguments of :func:`accim.utils.get_setpoint_ems_code` (``setpoint_tolerance``,
-        ``setpoint_accuracy``, ``cooling_season_start``, ``custom_slope``, ``custom_outdoor_metric``...), with the same
-        defaults.
+        ``setpoint_accuracy``, ``cooling_season_start``, ``custom_slope``, ``custom_outdoor_metric``,
+        ``custom_regimes``...), with the same defaults.
     :return: A DataFrame with a row for each hour (or timestep): ``datetime`` (the end of the hour or timestep, as
         EnergyPlus reports it), ``Tout`` (the outdoor dry-bulb temperature: that of the weather file, or that of
         EnergyPlus, interpolated, for each timestep), ``RMOT`` and ``PMOT`` (those of EnergyPlus for the day),
@@ -328,11 +330,15 @@ def compute_setpoints(epw: PathLike, comfort_standard: int, category: Optional[N
         *Adaptive Cooling Setpoint Temperature* and *Adaptive Heating Setpoint Temperature*), ``ACSTnoTol`` and
         ``AHSTnoTol`` (without the tolerance), ``applicable`` (1 if the running mean is within the applicability
         limits, as the hour counters of the ACCIS count it, at the end of the hour) and ``cooling_season`` (1 in the
-        cooling season). Values that the programs do not set (such as the comfort temperature of static setpoints) are
-        NaN.
+        cooling season); with ``custom_regimes``, also ``custom_regime`` (the number of the regime, from 1, or 0 for the
+        scalar arguments; the mean of the hour, as the output ``CustomRegime_<zone>``). Values that the programs do not
+        set (such as the comfort temperature of static setpoints) are NaN.
     :raises ValueError: If the arguments are not valid (as in :func:`accim.utils.get_setpoint_ems_programs` and
-        :func:`energyplus_running_means`).
+        :func:`energyplus_running_means`), or a regime of ``custom_regimes`` has the condition 'hvac_off' or
+        'hvac_on'.
     """
+    from accim.sim.arguments import check_custom_regimes
+    from accim.sim.ems import custom_regimes as cr
     from accim.sim.ems import outdoor_metric as om
     from accim.sim.ems import program_lines as pl
     from accim.sim.ems.erl import ErlProgramSet, variables_in_programs
@@ -342,6 +348,9 @@ def compute_setpoints(epw: PathLike, comfort_standard: int, category: Optional[N
         raise ValueError(f"frequency must be 'hourly' or 'timestep', not {frequency!r}.")
     if outdoor_metric_start not in ('epw', 'pmot'):
         raise ValueError(f"outdoor_metric_start must be 'epw' or 'pmot', not {outdoor_metric_start!r}.")
+    if cr.uses_hvac_conditions(check_custom_regimes(custom_arguments.get('custom_regimes'))):
+        raise ValueError("compute_setpoints cannot evaluate the conditions 'hvac_off' and 'hvac_on' of custom_regimes: "
+                         "they depend on the HVAC system of the simulation in the previous timestep.")
     programs = get_setpoint_ems_programs(comfort_standard, category, comfort_mode,
                                          epw=epw if outdoor_metric_start == 'epw' else None, start_date=start_date,
                                          **custom_arguments)
@@ -366,12 +375,18 @@ def compute_setpoints(epw: PathLike, comfort_standard: int, category: Optional[N
     limits = f'ApplySetpointLimits_{_ZONE}'
     if limits in programs:
         order.insert(order.index('SetAST') + 1, limits)
+    # The regimes of the custom model (accim.sim.ems.custom_regimes), right before SetAppLimits
+    regimes = f'{cr.PROGRAM_PREFIX}{_ZONE}'
+    if regimes in programs:
+        order.insert(0, regimes)
     # The programs that run in each timestep (those of the outdoor metric keep the daily values)
     every_timestep = [om.PROGRAM, inputs, zone_metric] if outdoor_metric else []
     if not outdoor_metric:
         order.insert(0, inputs)
     uses_time = 'CURRENTTIME' in names
     reported = _REPORTED + ((('Tout_metric', pl.OUTDOOR_METRIC_VARIABLE),) if outdoor_metric else ())
+    if regimes in programs:
+        reported += (('custom_regime', f'{cr.OUTPUT_PREFIX}{_ZONE}'),)
 
     n = timesteps_per_hour
     # InitASTvariables, at the beginning of the run period
@@ -474,6 +489,8 @@ def compute_setpoints(epw: PathLike, comfort_standard: int, category: Optional[N
         result.insert(4, 'Tout_metric', result.pop('Tout_metric'))
     else:
         result.insert(4, 'Tout_metric', result[metric] if metric else np.nan)
+    if 'custom_regime' in result:
+        result['custom_regime'] = result.pop('custom_regime')
     result.attrs.update(comfort_standard=int(comfort_standard), category=category, comfort_mode=comfort_mode,
                         timesteps_per_hour=n, start_date=start_date, metric=metric)
     return result

@@ -414,6 +414,51 @@ def test_the_floor_and_ceiling_of_the_setpoints_in_the_form(tmp_path):
     assert 'set ACST = ACSTceil' not in text
 
 
+def test_the_regimes_of_the_custom_model_in_the_form(tmp_path):
+    from accim.gui import tasks
+    from accim.sim.arguments import CustomRegime
+
+    text = 'metric_below 10: 0.31 17.8 3.5 -3.5 10 33.5 10 33.5;\n Always: 0.33, 18.8, 2, -3, 10, 30, 10, 30'
+    regimes = [CustomRegime(0.31, 17.8, 3.5, -3.5, 10, 33.5, 10, 33.5, ('metric_below', 10)),
+               CustomRegime(0.33, 18.8, 2, -3, 10, 30, 10, 30)]
+    assert forms.parse_custom_regimes(text) == regimes
+    assert forms.parse_custom_regimes(' ') == [] and forms.parse_custom_regimes(None) == []
+    assert forms.parse_custom_regimes('metric_between -2 7.5: 0.3 17 2 -2 10 30 10 30\nhvac_off: 1 2 3 -3 4 5 6 7') == [
+        CustomRegime(0.3, 17, 2, -2, 10, 30, 10, 30, ('metric_between', (-2, 7.5))),
+        CustomRegime(1, 2, 3, -3, 4, 5, 6, 7, 'hvac_off')]
+    for wrong, message in (('0.31 17.8 3.5 -3.5 10 33.5 10 33.5', 'as its condition, a colon and its 8 coefficients'),
+                           ('winter: 0.31 17.8 3.5 -3.5 10 33.5 10 33.5', "'winter' \\(regime 1\\) is not a condition"),
+                           ('metric_below: 0.31 17.8 3.5 -3.5 10 33.5 10 33.5', 'is not a condition'),
+                           ('always 3: 0.31 17.8 3.5 -3.5 10 33.5 10 33.5', 'is not a condition'),
+                           ('always: 0.31 17.8', 'the regime 1 needs 8 coefficients'),
+                           ('metric_between 20 10: 1 2 3 -3 4 5 6 7', 'regime 1: The condition .metric_between.'),
+                           ('always: 1 2 3 -3 4 5 6 7; cooling_season: 1 2 3 -3 4 5 6 7', 'only the last regime'),
+                           ('metric_above x: 1 2 3 -3 4 5 6 7', "custom_regimes: 'x' is not a number")):
+        with pytest.raises(FormError, match=message):
+            forms.parse_custom_regimes(wrong)
+    # Only with the custom model, and none by default (an empty field), as in AddAccis
+    assert 'custom_regimes' not in forms.add_accis_arguments(_form(tmp_path, comfort_standard=[99]))
+    assert 'custom_regimes' not in forms.add_accis_arguments(_form(tmp_path, custom_regimes=text))
+    arguments = forms.add_accis_arguments(_form(tmp_path, comfort_standard=[1, 99], custom_regimes=text))
+    assert arguments['custom_regimes'] == regimes
+    for values, message in ((dict(script_type='vrf_ac', custom_regimes='hvac_on: 1 2 3 -3 4 5 6 7'),
+                             'the conditions hvac_off and hvac_on need mixed mode'),
+                            (dict(setpoint_type='pmv', custom_regimes=text), 'do not use the custom model')):
+        with pytest.raises(FormError, match=message):
+            forms.add_accis_arguments(_form(tmp_path, comfort_standard=[99], **values))
+    # The EMS code of the form: the regimes of the custom model only, with the script type
+    calls = dict(forms.setpoint_ems_code_calls(_form(tmp_path, comfort_standard=[1, 99], category='2',
+                                                     custom_regimes=f'hvac_off: 1 2 3 -3 4 5 6 7; {text}')))
+    custom = next(kwargs for title, kwargs in calls.items() if title.startswith('99'))
+    en16798 = next(kwargs for title, kwargs in calls.items() if title.startswith('1 '))
+    assert custom['custom_regimes'][1:] == regimes and custom['script_type'] == 'vrf_mm'
+    assert 'custom_regimes' not in en16798 and 'script_type' not in en16798
+    text = tasks.setpoint_ems_code([('99', custom)])
+    assert ('! --- SelectCustomRegime_<zone>: the regime of the custom model of the timestep (1 = hvac_off, '
+            '2 = metric_below 10, 3 = always), which sets its inputs ---') in text
+    assert 'if <zone>_CoolCoil==0' in text.split('\n')
+
+
 def _apmv_form(folder, **values):
     return dict(dict(forms.APMV_DEFAULTS, folder=str(folder), idf='model.idf'), **values)
 
@@ -1139,6 +1184,27 @@ def test_the_window_gives_the_floor_and_ceiling_of_the_setpoints(app, tmp_path):
     assert 'heating_setpoint_floor' not in arguments and arguments['report_hours_below'] == [18, 17]
     tab.vars['setpoint_type'].set('temperature')
     assert not tab.limit_widgets[1].instate(['disabled'])
+
+
+def test_the_window_gives_the_regimes_of_the_custom_model(app, tmp_path):
+    from accim.sim.arguments import CustomRegime
+
+    (tmp_path / 'model.idf').write_text('')
+    app.folder.set(str(tmp_path))
+    tab = app.add_accis
+    regimes = tab.custom_widgets[-1]
+    # Disabled without the custom model
+    assert regimes.instate(['disabled'])
+    tab.standard_list.selection_set(len(tab.standards) - 1)
+    tab.update_state()
+    assert not regimes.instate(['disabled'])
+    tab.vars['custom_regimes'].set('cooling_season: 0.33 18.8 2 -3 10 30 10 30')
+    arguments = forms.add_accis_arguments(tab.form())
+    assert arguments['custom_regimes'] == [CustomRegime(0.33, 18.8, 2, -3, 10, 30, 10, 30, 'cooling_season')]
+    # The PMV-based setpoints do not use the custom model: the field is disabled and left out
+    tab.vars['setpoint_type'].set('pmv')
+    assert regimes.instate(['disabled']) and tab.form()['custom_regimes'] == ''
+    tab.vars['setpoint_type'].set('temperature')
 
 
 def test_wrong_values_are_shown_and_nothing_runs(app, tmp_path):

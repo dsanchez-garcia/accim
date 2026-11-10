@@ -16,7 +16,8 @@ import warnings
 from typing import Any, Dict, Iterable, List, Mapping, Tuple, Union
 
 from accim.constants import APMV_ADAPTIVE_COEFFICIENTS, EN16798_TABLE_B2, SUPPORTED_ENERGYPLUS_VERSIONS
-from accim.sim.arguments import MIXED_MODE_SCRIPT_TYPES, OUTPUT_FREQUENCIES, SUPPLY_AIR_TEMP_INPUT_METHODS
+from accim.sim.arguments import (MIXED_MODE_SCRIPT_TYPES, OUTPUT_FREQUENCIES, REGIME_CONDITIONS,
+                                 SUPPLY_AIR_TEMP_INPUT_METHODS)
 from accim.sim.ems.inputs import ZONE_ARGUMENTS, check_zone_arguments
 from accim.sim.standards import COMFORT_STANDARDS
 
@@ -32,6 +33,7 @@ __all__ = [
     'CUSTOM_OUTDOOR_METRICS',
     'CUSTOM_OUTDOOR_METRIC_FIELDS',
     'CUSTOM_MODEL_PARAMETERS',
+    'CUSTOM_REGIMES_HINT',
     'ENERGYPLUS_VERSIONS',
     'EN16798_TABLE_B2_CHOICES',
     'EPMV_OPTIONS',
@@ -75,6 +77,7 @@ __all__ = [
     'categories_hint',
     'comfort_modes_hint',
     'comfort_standard_choices',
+    'custom_regime_arguments',
     'epw_files',
     'existing_hvac_arguments',
     'figure_arguments',
@@ -86,6 +89,7 @@ __all__ = [
     'parametric_arguments',
     'parametric_simulation_count',
     'parse_apmv_zone_setpoints',
+    'parse_custom_regimes',
     'parse_mapping',
     'parse_number',
     'parse_numbers',
@@ -159,6 +163,14 @@ CUSTOM_OUTDOOR_METRIC_FIELDS = {
     'custom_alpha': ('Alpha of rmot_alpha (0.6 to 0.9; EN 16798-1: 0.8)', '0.8'),
     'custom_days': ('Days of ndrm (7 to 30)', '30'),
 }
+#: How the field of the regimes of the custom model (custom_regimes, accim.sim.ems.custom_regimes) is written.
+CUSTOM_REGIMES_HINT = (
+    'Regimes (empty: none), in their order of priority, separated by semicolons: condition: slope intercept '
+    'cooling-offset heating-offset cooling-lower-limit cooling-upper-limit heating-lower-limit heating-upper-limit. '
+    'Conditions: always (the last one), cooling_season, heating_season, hvac_off, hvac_on (mixed mode), '
+    'metric_below x, metric_above x, metric_between x1 x2. If none holds, the coefficients above apply. For instance: '
+    'metric_below 10: 0.31 17.8 3.5 -3.5 10 33.5 10 33.5; always: 0.33 18.8 2 -3 10 30 10 30'
+)
 #: The floor of the heating setpoint and the ceiling of the cooling setpoint (accim.sim.ems.setpoint_limits), which
 #: are None if their fields are empty: argument -> (label, default).
 SETPOINT_LIMIT_FIELDS = {
@@ -233,6 +245,7 @@ ADD_ACCIS_DEFAULTS = {
     'custom_outdoor_metric': 'pmot',
     **{name: default for name, (_, default) in CUSTOM_OUTDOOR_METRIC_FIELDS.items()},
     'epw': '',
+    'custom_regimes': '',
     **{name: default for name, (_, default) in SETPOINT_LIMIT_FIELDS.items()},
     'report_hours_below': '',
     **EXISTING_HVAC_DEFAULTS,
@@ -765,6 +778,7 @@ def add_accis_arguments(form: Mapping[str, Any]) -> Dict[str, Any]:
     if 99 in comfort_standard:
         arguments.update({name: parse_number(form.get(name, ''), name) for name in CUSTOM_MODEL_FIELDS})
         arguments.update(custom_outdoor_metric_arguments(form))
+        arguments.update(custom_regime_arguments(form, script_type))
     if script_type in MIXED_MODE_SCRIPT_TYPES:
         hvac_mode = sorted(int(mode) for mode in form.get('hvac_mode') or [])
         ventilation_control = sorted(int(control) for control in form.get('ventilation_control') or [])
@@ -841,6 +855,71 @@ def custom_outdoor_metric_arguments(form: Mapping[str, Any]) -> Dict[str, Any]:
         raise FormError("epw: the outdoor metric 'monthly_mean' needs the weather file of the simulations, whose "
                         "monthly means the EMS programs keep.")
     return arguments
+
+
+def parse_custom_regimes(text: Any) -> List[Any]:
+    """The regimes of the custom model (:class:`accim.sim.arguments.CustomRegime`) of the text of its field
+    (:data:`CUSTOM_REGIMES_HINT`): one regime for each line, or separated by semicolons, written as
+    ``condition: slope intercept cooling_offset heating_offset cooling_lower_limit cooling_upper_limit
+    heating_lower_limit heating_upper_limit``, where the condition is one of
+    :data:`accim.sim.arguments.REGIME_CONDITIONS`, ``metric_below x``, ``metric_above x`` or ``metric_between x1 x2``.
+
+    :return: The regimes, in their order of priority (an empty list if the text is empty).
+    :raises FormError: If a regime is not valid, or a regime 'always' is not the last one.
+    """
+    from accim.sim.arguments import CustomRegime, check_custom_regimes
+
+    regimes = []
+    parts = [part.strip() for part in re.split(r'[;\n]', str(text or '')) if part.strip()]
+    for number, part in enumerate(parts, start=1):
+        condition_text, colon, coefficients_text = part.partition(':')
+        tokens = condition_text.split()
+        if not colon or not tokens:
+            raise FormError(f'custom_regimes: write the regime {number} ({part!r}) as its condition, a colon and its '
+                            f'8 coefficients, such as "metric_below 10: 0.31 17.8 3.5 -3.5 10 33.5 10 33.5".')
+        name = tokens[0].lower()
+        values = [_number(token, 'custom_regimes') for token in tokens[1:]]
+        expected = {'metric_below': 1, 'metric_above': 1, 'metric_between': 2}.get(name, 0)
+        if (name not in REGIME_CONDITIONS and not expected) or len(values) != expected:
+            raise FormError(f'custom_regimes: {condition_text.strip()!r} (regime {number}) is not a condition: '
+                            f'{", ".join(REGIME_CONDITIONS)}, metric_below x, metric_above x or metric_between x1 '
+                            f'x2.')
+        condition = name if not expected else (name, values[0] if expected == 1 else tuple(values))
+        coefficients = parse_numbers(coefficients_text, 'custom_regimes')
+        if len(coefficients) != 8:
+            raise FormError(f'custom_regimes: the regime {number} needs 8 coefficients (slope, intercept, cooling '
+                            f'and heating offsets, lower and upper limits of cooling and of heating), not '
+                            f'{len(coefficients)}.')
+        try:
+            regimes.append(CustomRegime(*coefficients, condition=condition))
+        except ValueError as error:
+            raise FormError(f'custom_regimes: regime {number}: {error}') from None
+    try:
+        check_custom_regimes(regimes)
+    except ValueError as error:
+        raise FormError(f'custom_regimes: {error}') from None
+    return regimes
+
+
+def custom_regime_arguments(form: Mapping[str, Any], script_type: str) -> Dict[str, Any]:
+    """The argument ``custom_regimes`` of :class:`accim.sim.accis.AddAccis` from the values of its form, if its field
+    is not empty (:func:`parse_custom_regimes`).
+
+    :param script_type: The script type of the form: the conditions 'hvac_off' and 'hvac_on' need mixed mode.
+    :raises FormError: If the regimes are not valid, or are given with the PMV-based setpoints, or a condition
+        'hvac_off' or 'hvac_on' is given without mixed mode.
+    """
+    from accim.sim.ems.custom_regimes import uses_hvac_conditions
+
+    regimes = parse_custom_regimes(form.get('custom_regimes', ''))
+    if not regimes:
+        return {}
+    if form.get('setpoint_type', ADD_ACCIS_DEFAULTS['setpoint_type']) != 'temperature':
+        raise FormError('custom_regimes: the PMV-based setpoints do not use the custom model (leave this field empty).')
+    if uses_hvac_conditions(regimes) and script_type not in MIXED_MODE_SCRIPT_TYPES:
+        raise FormError('custom_regimes: the conditions hvac_off and hvac_on need mixed mode (script type vrf_mm or '
+                        'ex_mm).')
+    return {'custom_regimes': regimes}
 
 
 def setpoint_limit_arguments(form: Mapping[str, Any], hours_below: bool = True) -> Dict[str, Any]:
@@ -948,7 +1027,8 @@ _EMS_CODE_ARGUMENTS = ('setpoint_tolerance', 'setpoint_accuracy', 'cooling_seaso
                        'category_cooling_offset', 'category_heating_offset', *CUSTOM_MODEL_FIELDS,
                        'custom_outdoor_metric', *CUSTOM_OUTDOOR_METRIC_FIELDS, *SETPOINT_LIMIT_FIELDS)
 #: Those of the custom model only
-_CUSTOM_EMS_CODE_ARGUMENTS = (*CUSTOM_MODEL_FIELDS, 'custom_outdoor_metric', *CUSTOM_OUTDOOR_METRIC_FIELDS, 'epw')
+_CUSTOM_EMS_CODE_ARGUMENTS = (*CUSTOM_MODEL_FIELDS, 'custom_outdoor_metric', *CUSTOM_OUTDOOR_METRIC_FIELDS, 'epw',
+                              'custom_regimes', 'script_type')
 
 
 def setpoint_ems_code_calls(form: Mapping[str, Any]) -> List[Tuple[str, Dict[str, Any]]]:
@@ -985,6 +1065,11 @@ def setpoint_ems_code_calls(form: Mapping[str, Any]) -> List[Tuple[str, Dict[str
         common.update({name: parse_number(form.get(name, ''), name) for name in CUSTOM_MODEL_FIELDS})
         # With the weather file, the code of the outdoor metric begins with its values on 1 January
         common.update(custom_outdoor_metric_arguments(form))
+        # The regimes of the custom model, with the script type (the conditions of its HVAC systems)
+        script_type = _choice(form, 'script_type', SCRIPT_TYPES)
+        regimes = custom_regime_arguments(form, script_type)
+        if regimes:
+            common.update(regimes, script_type=script_type)
 
     def call(title: str, number: int, category, comfort_mode, extra: Mapping[str, Any]) -> Tuple[str, Dict[str, Any]]:
         if number == 0:

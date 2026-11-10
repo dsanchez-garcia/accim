@@ -4,21 +4,28 @@
 
 """Arguments of the functions that add the ACCIS: valid values, checks and old names."""
 
+import math
+import numbers
+from dataclasses import dataclass
 from datetime import date
-from typing import Any, Iterable, List, Optional, Sequence
+from typing import Any, Iterable, List, Optional, Sequence, Tuple, Union
 
 from accim.constants import SUPPORTED_ENERGYPLUS_VERSIONS
 
 __all__ = [
+    'CustomRegime',
     'LEGACY_ARGUMENT_NAMES',
+    'METRIC_CONDITIONS',
     'MIXED_MODE_SCRIPT_TYPES',
     'OUTPUT_FREQUENCIES',
     'OUTPUT_TYPES',
+    'REGIME_CONDITIONS',
     'SCRIPT_TYPES',
     'SUPPLY_AIR_TEMP_INPUT_METHODS',
     'SETPOINT_TYPES',
     'check_choice',
     'check_choices',
+    'check_custom_regimes',
     'is_mixed_mode',
     'normalise_energyplus_version',
     'normalise_setpoint_type',
@@ -168,3 +175,119 @@ def as_list(value: Any) -> List:
     if isinstance(value, (list, tuple)):
         return list(value)
     return [value]
+
+
+#: The conditions of the regimes of the custom comfort model (:class:`CustomRegime`) without a value: 'always' (only
+#: the last regime); 'cooling_season' and 'heating_season', the days of the cooling season of the zone (from
+#: ``cooling_season_start`` to the day before ``cooling_season_end``, as CoolingSeason of the setpoints) and the other
+#: days; 'hvac_off' and 'hvac_on', in mixed mode only, whether the HVAC system of the zone neither heated nor cooled in
+#: the previous timestep (the condition with which the program ApplyAST_<zone> of mixed mode opens the windows) or it
+#: did.
+REGIME_CONDITIONS = ('always', 'cooling_season', 'heating_season', 'hvac_off', 'hvac_on')
+#: The conditions with a value, which compare the outdoor metric of the custom model of the zone (PMOT, or that of
+#: ``custom_outdoor_metric``): ``('metric_below', x)``, lower than x; ``('metric_above', x)``, higher than x;
+#: ``('metric_between', (x1, x2))``, from x1 to x2, both included (as the applicability limits of the ACCIS).
+METRIC_CONDITIONS = ('metric_below', 'metric_above', 'metric_between')
+_REGIME_NUMBERS = ('slope', 'intercept', 'cooling_offset', 'heating_offset', 'cooling_lower_limit',
+                   'cooling_upper_limit', 'heating_lower_limit', 'heating_upper_limit')
+
+
+def _is_number(value: Any) -> bool:
+    return isinstance(value, numbers.Real) and not isinstance(value, bool) and math.isfinite(value)
+
+
+def _regime_condition(condition: Any) -> Union[str, Tuple[str, Any]]:
+    """The condition of a regime, checked: a name of :data:`REGIME_CONDITIONS` (in lower case), or a tuple
+    ``(name, value)`` of :data:`METRIC_CONDITIONS` (``(x1, x2)``, with x1 lower than x2, for 'metric_between')."""
+    valid = (f"one of {list(REGIME_CONDITIONS)}, or ('metric_below', x), ('metric_above', x) or "
+             f"('metric_between', (x1, x2))")
+    if isinstance(condition, str):
+        name = condition.strip().lower()
+        if name in REGIME_CONDITIONS:
+            return name
+        if name in METRIC_CONDITIONS:
+            raise ValueError(f'The condition {condition!r} of a regime of the custom model needs a value: {valid}.')
+    elif isinstance(condition, (list, tuple)) and len(condition) == 2 and isinstance(condition[0], str):
+        name, value = condition[0].strip().lower(), condition[1]
+        if name in ('metric_below', 'metric_above') and _is_number(value):
+            return name, value
+        if name == 'metric_between':
+            if (isinstance(value, (list, tuple)) and len(value) == 2 and all(_is_number(v) for v in value)
+                    and value[0] < value[1]):
+                return name, (value[0], value[1])
+            raise ValueError(f"The condition 'metric_between' of a regime of the custom model needs two numbers, the "
+                             f"lower first, such as ('metric_between', (10, 20)), not {value!r}.")
+    raise ValueError(f'{condition!r} is not a condition of a regime of the custom model: {valid}.')
+
+
+@dataclass(frozen=True)
+class CustomRegime:
+    """A regime of the custom comfort model (comfort standard 99), the argument ``custom_regimes`` of
+    :class:`accim.sim.accis.AddAccis` and :func:`accim.sim.accis.modify_accis` (proposal B2 of accim 1.2.0): the
+    coefficients of the custom model while its condition holds. In each timestep, the first regime of the list whose
+    condition holds sets the inputs of the custom model of the zone (decision D6 of the brief of 1.2.0, see
+    :mod:`accim.sim.ems.custom_regimes`); if none holds, those of the scalar arguments (``custom_slope``...) apply, so
+    the last regime is 'always' or the scalar arguments are the last regime.
+
+    :ivar slope: The slope m of the comfort temperature (m · outdoor metric + n), as ``custom_slope``.
+    :ivar intercept: The intercept n, as ``custom_intercept``.
+    :ivar cooling_offset: The offset of the cooling setpoint from the comfort temperature, as
+        ``custom_cooling_offset``.
+    :ivar heating_offset: The offset of the heating setpoint, as ``custom_heating_offset``.
+    :ivar cooling_lower_limit: The lower applicability limit of the cooling setpoint (of the outdoor metric), as
+        ``custom_cooling_lower_limit``.
+    :ivar cooling_upper_limit: The upper applicability limit of the cooling setpoint, as
+        ``custom_cooling_upper_limit``.
+    :ivar heating_lower_limit: The lower applicability limit of the heating setpoint, as
+        ``custom_heating_lower_limit``.
+    :ivar heating_upper_limit: The upper applicability limit of the heating setpoint, as
+        ``custom_heating_upper_limit``.
+    :ivar condition: When the regime applies: a name of :data:`REGIME_CONDITIONS` ('always' by default) or a tuple of
+        :data:`METRIC_CONDITIONS`, such as ``('metric_below', 10)``.
+    :ivar outdoor_metric: The outdoor metric of the regime; only None (the outdoor metric of the zone,
+        ``custom_outdoor_metric``) in this version.
+    :raises ValueError: If a coefficient is not a number, or the condition or the outdoor metric is not valid.
+    """
+
+    slope: float
+    intercept: float
+    cooling_offset: float
+    heating_offset: float
+    cooling_lower_limit: float
+    cooling_upper_limit: float
+    heating_lower_limit: float
+    heating_upper_limit: float
+    condition: Union[str, Tuple[str, Any]] = 'always'
+    outdoor_metric: Optional[str] = None
+
+    def __post_init__(self):
+        for name in _REGIME_NUMBERS:
+            if not _is_number(getattr(self, name)):
+                raise ValueError(f'{name} of a regime of the custom model must be a number, not '
+                                 f'{getattr(self, name)!r}.')
+        object.__setattr__(self, 'condition', _regime_condition(self.condition))
+        if self.outdoor_metric is not None:
+            raise ValueError(f'outdoor_metric of a regime of the custom model must be None (its outdoor metric is that '
+                             f'of the zone, custom_outdoor_metric): an outdoor metric for each regime is not '
+                             f'available yet, not {self.outdoor_metric!r}.')
+
+
+def check_custom_regimes(regimes: Any) -> Tuple[CustomRegime, ...]:
+    """Check the argument ``custom_regimes``: a list of :class:`CustomRegime`, whose only regime with the condition
+    'always' is the last one (the regimes after it would never apply); None (or an empty list) for none.
+
+    :return: The regimes, as a tuple (empty for none).
+    :raises ValueError: If it is not a list of regimes, or a regime 'always' is not the last one.
+    """
+    if regimes is None:
+        return ()
+    if isinstance(regimes, CustomRegime):
+        regimes = [regimes]
+    if not isinstance(regimes, (list, tuple)) or not all(isinstance(r, CustomRegime) for r in regimes):
+        raise ValueError(f'custom_regimes must be a list of CustomRegime (accim.sim.arguments.CustomRegime), or '
+                         f'None, not {regimes!r}.')
+    always = [number for number, regime in enumerate(regimes, start=1) if regime.condition == 'always']
+    if always and always[0] != len(regimes):
+        raise ValueError(f"The regime {always[0]} of custom_regimes has the condition 'always', so the regimes after "
+                         f"it would never apply: only the last regime can have it.")
+    return tuple(regimes)

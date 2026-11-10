@@ -46,7 +46,9 @@ def accis_parameter(parameter_name, values):
     ----------
     parameter_name : str
         Name of the parameter to map. Matching is case-insensitive and must
-        exist in ``params_dicts.all_params``.
+        exist in ``params_dicts.all_params``, or be a coefficient of a regime
+        of the custom model, ``custom_regime_<regime>_<field>`` (see
+        :func:`custom_regime_parameters`).
     values : sequence
         Parameter domain definition. If it has categorical options,
         ``CategoryParameter`` is used; otherwise, ``RangeParameter`` is used
@@ -75,9 +77,16 @@ def accis_parameter(parameter_name, values):
     desc_has_options = descriptor_has_options(values)
 
     name = params_dicts.resolve_parameter_name(parameter_name)
-    if name not in params_dicts.all_params:
+    regime = params_dicts.custom_regime_parameter(name)
+    if regime is not None:
+        # A coefficient of a regime of the custom model (custom_regime_<regime>_<field>)
+        name = f'custom_regime_{regime[0]}_{regime[1]}'
+        modifier = params_dicts.custom_regime_modifier(name)
+    elif name not in params_dicts.all_params:
         raise KeyError(f'The parameter {parameter_name!r} does not exist. '
                        f'You need to choose one of the following list: {list(params_dicts.all_params)}')
+    else:
+        modifier = params_dicts.all_params[name]
 
     from besos.parameters import Parameter, GenericSelector, CategoryParameter, RangeParameter
     import accim.parametric_and_optimisation.funcs_for_besos.param_accis as bf
@@ -90,7 +99,7 @@ def accis_parameter(parameter_name, values):
             # spurious "This parameter's descriptor is already named ..." UserWarning
             # from besos (harmless, since both names are identical, but noisy).
             # selector=GenericSelector(set=change_adaptive_coeff),
-            selector=GenericSelector(set=params_dicts.all_params[name]),
+            selector=GenericSelector(set=modifier),
             # value_descriptors=RangeParameter(name='custom_slope', min_val=0, max_val=0.7),
             value_descriptors=CategoryParameter(
                 name=name,
@@ -101,7 +110,7 @@ def accis_parameter(parameter_name, values):
         parameter = Parameter(
             # NOTE: see comment above; 'name' is set via value_descriptors only.
             # selector=GenericSelector(set=change_adaptive_coeff),
-            selector=GenericSelector(set=params_dicts.all_params[name]),
+            selector=GenericSelector(set=modifier),
             # value_descriptors=RangeParameter(name='custom_slope', min_val=0, max_val=0.7),
             value_descriptors=RangeParameter(
                 name=name,
@@ -2347,3 +2356,141 @@ class CustAST_days:
         CustAST_days().modify(idf, 7)
         """
         param_accis.modify_CustAST_days(idf, value)
+
+
+#: The class names of the coefficients of each regime of the custom model (``CustAST_<name>_<regime>``, as the
+#: parameters of the scalar custom model in accim 0.x) -> the field of :class:`accim.sim.arguments.CustomRegime`
+CUSTOM_REGIME_CLASS_NAMES = {
+    'm': 'slope',
+    'n': 'intercept',
+    'ACSToffset': 'cooling_offset',
+    'AHSToffset': 'heating_offset',
+    'ACSTall': 'cooling_lower_limit',
+    'ACSTaul': 'cooling_upper_limit',
+    'AHSTall': 'heating_lower_limit',
+    'AHSTaul': 'heating_upper_limit',
+}
+
+
+class CustomRegimeParameter:
+    """OO wrapper for a coefficient of a regime of the custom model (``custom_regimes``, proposal B2 of accim 1.2.0):
+    the parameter ``custom_regime_<regime>_<field>`` of the parameters type ``'accim custom model'``, which sets the
+    field of the regime in all the zones that have the regimes (``param_accis.modify_custom_regime``). The model must
+    have the regimes already (``custom_regimes`` of :func:`accim.sim.accis.modify_accis`).
+
+    Usage
+    -----
+    Instantiate the class with the regime and the field (or use the classes of :func:`custom_regime_parameters`) and
+    call :meth:`modify` with ``idf`` and ``value``; :func:`accis_parameter` builds the BESOS parameter of its
+    ``name``.
+
+    Examples
+    --------
+    p = CustomRegimeParameter(1, 'slope')
+    p.name
+    'custom_regime_1_slope'
+    p.modify(idf, 0.33)
+    """
+
+    def __init__(self, regime, field):
+        """Initialize the wrapper and expose the canonical parameter name.
+
+        Parameters
+        ----------
+        regime : int
+            The number of the regime, from 1 (in the order of priority of the regimes).
+        field : str
+            The coefficient: 'slope', 'intercept', 'cooling_offset', 'heating_offset', 'cooling_lower_limit',
+            'cooling_upper_limit', 'heating_lower_limit' or 'heating_upper_limit'.
+
+        Usage
+        -----
+        Use the instance ``name`` attribute for logging or mapping checks.
+
+        Examples
+        --------
+        CustomRegimeParameter(2, 'intercept').name
+        'custom_regime_2_intercept'
+        """
+        name = f'custom_regime_{regime}_{field}'
+        if (isinstance(regime, bool) or not isinstance(regime, int)
+                or params_dicts.custom_regime_parameter(name) is None):
+            raise ValueError(f'The regime must be a number from 1, and the field one of '
+                             f'{list(params_dicts.CUSTOM_REGIME_FIELDS)}, not {regime!r} and {field!r}.')
+        self.regime = regime
+        self.field = field
+        self.name = name
+
+    def modify(self, idf, value):
+        """Apply parameter ``custom_regime_<regime>_<field>`` to an IDF in place.
+
+        Parameters
+        ----------
+        idf : besos.IDF_class
+            Target building model to edit, with the regimes of the custom model.
+        value : float
+            The value of the coefficient. Written by ``param_accis.modify_custom_regime``.
+
+        Returns
+        -------
+        None
+            The function edits ``idf`` in place.
+
+        Usage
+        -----
+        Call this method before executing parametric or optimisation runs.
+
+        Examples
+        --------
+        CustomRegimeParameter(1, 'slope').modify(idf, 0.33)
+        """
+        param_accis.modify_custom_regime(idf, value, self.regime, self.field)
+
+
+def custom_regime_parameters(n_regimes):
+    """The wrapper classes of the coefficients of the first ``n_regimes`` regimes of the custom model (the factory of
+    the proposal B2 of accim 1.2.0): ``CustAST_m_1``, ``CustAST_n_1``, ``CustAST_ACSToffset_1``,
+    ``CustAST_AHSToffset_1``, ``CustAST_ACSTall_1``, ``CustAST_ACSTaul_1``, ``CustAST_AHSTall_1``,
+    ``CustAST_AHSTaul_1``, ``CustAST_m_2``... (:data:`CUSTOM_REGIME_CLASS_NAMES`), subclasses of
+    :class:`CustomRegimeParameter` that take no arguments, as the other wrapper classes. Their ``name`` is the
+    parameter that :func:`accis_parameter` and ``set_parameters`` of the parametric module take for the parameters
+    type ``'accim custom model'``, such as ``custom_regime_1_slope``.
+
+    Parameters
+    ----------
+    n_regimes : int
+        The number of regimes (at least 1).
+
+    Returns
+    -------
+    dict
+        The classes, by name, in the order of the regimes and of their coefficients.
+
+    Usage
+    -----
+    Build the classes for the regimes of a model, and use them as the other wrapper classes.
+
+    Examples
+    --------
+    classes = custom_regime_parameters(2)
+    classes['CustAST_m_2']().name
+    'custom_regime_2_slope'
+    classes['CustAST_n_1']().modify(idf, 17.8)
+    """
+    if isinstance(n_regimes, bool) or not isinstance(n_regimes, int) or n_regimes < 1:
+        raise ValueError(f'n_regimes must be a number of regimes of at least 1, not {n_regimes!r}.')
+    classes = {}
+    for regime in range(1, n_regimes + 1):
+        for short, field in CUSTOM_REGIME_CLASS_NAMES.items():
+            class_name = f'CustAST_{short}_{regime}'
+
+            def __init__(self, _regime=regime, _field=field):
+                CustomRegimeParameter.__init__(self, _regime, _field)
+
+            classes[class_name] = type(class_name, (CustomRegimeParameter,), {
+                '__init__': __init__,
+                '__module__': __name__,
+                '__doc__': f'OO wrapper for the parameter ``custom_regime_{regime}_{field}``: the {field} of the '
+                           f'regime {regime} of the custom model (see :class:`CustomRegimeParameter`).',
+            })
+    return classes

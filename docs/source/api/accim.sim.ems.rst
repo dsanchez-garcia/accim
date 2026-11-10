@@ -4,6 +4,14 @@ accim.sim.ems package
 Submodules
 ----------
 
+accim.sim.ems.custom\_regimes module
+------------------------------------
+
+.. automodule:: accim.sim.ems.custom_regimes
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
 accim.sim.ems.erl module
 ------------------------
 

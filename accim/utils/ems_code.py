@@ -10,8 +10,10 @@ output IDFs of :class:`accim.sim.accis.AddAccis`, and :func:`print_setpoint_ems_
 apply, and what happens out of the applicability limits of the comfort standard.
 """
 
-from typing import Dict, Iterable, List, Optional, Union
+from typing import Dict, Iterable, List, Optional, Sequence, Union
 
+from accim.sim.arguments import CustomRegime, check_custom_regimes
+from accim.sim.ems import custom_regimes as cr
 from accim.sim.ems import outdoor_metric as om
 from accim.sim.ems import program_lines as pl
 from accim.sim.ems import setpoint_limits as sl
@@ -68,6 +70,15 @@ _LIMIT_LEGEND = (
     '! ApplySetpointLimits_<zone> bounds AHST and ACST and rounds them again, so the cooling setpoint is rounded',
     '! down below the ceiling.',
 )
+_REGIME_LEGEND = (
+    '! SelectCustomRegime_<zone>: the regimes of the custom model (custom_regimes), in their order of priority. The',
+    '! first one whose condition holds sets the inputs of the custom model (m, n, CustAST_ACSToffset...), which',
+    '! SetAppLimits, ApplyCAT, SetComfTemp and SetAST use, and CustomRegime_<zone>, its number; if none holds',
+    '! (CustomRegime_<zone> = 0), the inputs of SetInputData_<zone> apply. NoH_NoC_reqs is 1 if the HVAC system',
+    '! of the zone neither heated nor cooled in the previous timestep (mixed mode).',
+)
+#: The lines that set NoH_NoC_reqs in each script type of mixed mode (accim.sim.ems.program_lines)
+_HVAC_OFF_LINES = {'vrf_mm': pl.HVAC_OFF_FROM_COILS, 'ex_mm': pl.HVAC_OFF_FROM_LOAD}
 
 
 def _number(value: Number) -> str:
@@ -129,6 +140,26 @@ def _limit_program(arguments: dict) -> List[str]:
     if floor is None and ceiling is None:
         return []
     return sl.limit_program_lines(floor is not None, ceiling is not None)
+
+
+def _regime_program(comfort_standard: int, arguments: dict, outdoor_metric: bool) -> List[str]:
+    """The lines of the program of the regimes of the custom model of a zone (none without them), as in the output
+    IDFs of AddAccis with the script type ``script_type`` (which the conditions 'hvac_off' and 'hvac_on' need)."""
+    regimes = check_custom_regimes(arguments.get('custom_regimes'))
+    if not regimes:
+        return []
+    if comfort_standard != _CUSTOM:
+        raise ValueError(f'custom_regimes needs the custom model (comfort_standard {_CUSTOM}), not comfort_standard '
+                         f'{comfort_standard}.')
+    hvac_lines = None
+    if cr.uses_hvac_conditions(regimes):
+        script_type = arguments.get('script_type')
+        if script_type not in _HVAC_OFF_LINES:
+            raise ValueError(f"The conditions 'hvac_off' and 'hvac_on' of custom_regimes need script_type 'vrf_mm' or "
+                             f"'ex_mm' (mixed mode), whose HVAC systems they read, not {script_type!r}.")
+        hvac_lines = pl.format_lines(_HVAC_OFF_LINES[script_type], zone=_ZONE)
+    return cr.regime_program_lines(_ZONE, regimes, pl.OUTDOOR_METRIC_VARIABLE if outdoor_metric else 'PMOT',
+                                   hvac_lines)
 
 
 def _outdoor_metric_programs(comfort_standard: int, arguments: dict, epw, start_date) -> Dict[str, List[str]]:
@@ -203,6 +234,8 @@ def get_setpoint_ems_code(
     start_date: Union[int, str] = 1,
     heating_setpoint_floor: Optional[Number] = None,
     cooling_setpoint_ceiling: Optional[Number] = None,
+    custom_regimes: Optional[Sequence[CustomRegime]] = None,
+    script_type: Optional[str] = None,
 ) -> str:
     """The EMS code with which the ACCIS calculates the setpoints of a comfort standard, category and comfort mode, to
     read it before adding the ACCIS to a model (:func:`print_setpoint_ems_code` prints it).
@@ -215,9 +248,11 @@ def get_setpoint_ems_code(
     them, only the lines of the comfort mode), and the setpoints without tolerance (``SetASTnoTol``). With the custom
     model and an outdoor metric other than 'pmot', the programs of the outdoor metric come first
     (``InitOutdoorMetric`` and ``SetOutdoorMetric``, which do not belong to a zone, and ``SetOutdoorMetric_<zone>``,
-    after the inputs of the zone; see :mod:`accim.sim.ems.outdoor_metric`). With a floor of the heating setpoint or a
-    ceiling of the cooling setpoint, the program ``ApplySetpointLimits_<zone>`` follows the subprograms (see
-    :mod:`accim.sim.ems.setpoint_limits`). Comments (lines that begin with ``!``) explain the variables.
+    after the inputs of the zone; see :mod:`accim.sim.ems.outdoor_metric`). With the regimes of the custom model, the
+    program ``SelectCustomRegime_<zone>`` comes before ``SetAppLimits`` (see :mod:`accim.sim.ems.custom_regimes`).
+    With a floor of the heating setpoint or a ceiling of the cooling setpoint, the program
+    ``ApplySetpointLimits_<zone>`` follows the subprograms (see :mod:`accim.sim.ems.setpoint_limits`). Comments (lines
+    that begin with ``!``) explain the variables.
 
     The arguments are those of :func:`accim.sim.accis.modify_accis`, with one value each, and the same defaults.
 
@@ -260,10 +295,15 @@ def get_setpoint_ems_code(
         the programs of the outdoor metric begin with the values of ``epw``.
     :param heating_setpoint_floor: The floor of the heating setpoint (°C), or None for none.
     :param cooling_setpoint_ceiling: The ceiling of the cooling setpoint (°C), or None for none.
+    :param custom_regimes: Custom model: its regimes (see :class:`accim.sim.accis.AddAccis`), or None for none.
+    :param script_type: The script type of the output IDFs ('vrf_mm' or 'ex_mm'), which the conditions 'hvac_off' and
+        'hvac_on' of the regimes of the custom model need (they read the coils of the VRF systems of accim, or the
+        load of the thermostats of the existing HVAC systems); None otherwise.
     :return: The lines of the programs, one after the other, separated by a comment with the name of each one.
     :raises ValueError: If the comfort standard does not exist, the category is not one of the comfort standard, or
         the comfort standard has no setpoints with the comfort mode (as in :class:`accim.sim.accis.AddAccis`), or the
-        arguments of the outdoor metric are not valid ('monthly_mean' needs ``epw``), or the floor and the ceiling.
+        arguments of the outdoor metric are not valid ('monthly_mean' needs ``epw``), or the floor and the ceiling,
+        or the regimes (they need the custom model, and their conditions 'hvac_off' and 'hvac_on' the script type).
     """
     if comfort_standard not in COMFORT_STANDARDS:
         raise ValueError(f'comfort_standard {comfort_standard!r} is not a comfort standard '
@@ -279,11 +319,12 @@ def get_setpoint_ems_code(
         custom_cooling_lower_limit=custom_cooling_lower_limit, custom_heating_upper_limit=custom_heating_upper_limit,
         custom_heating_lower_limit=custom_heating_lower_limit, custom_outdoor_metric=custom_outdoor_metric,
         custom_alpha=custom_alpha, custom_days=custom_days, heating_setpoint_floor=heating_setpoint_floor,
-        cooling_setpoint_ceiling=cooling_setpoint_ceiling,
+        cooling_setpoint_ceiling=cooling_setpoint_ceiling, custom_regimes=custom_regimes, script_type=script_type,
     )
     metric_programs = _outdoor_metric_programs(comfort_standard, arguments, epw, start_date)
     outdoor_metric = bool(metric_programs)
     limit_lines = _limit_program(arguments)
+    regime_lines = _regime_program(comfort_standard, arguments, outdoor_metric)
 
     def branches(lines):
         # As in the output IDFs: the branch of the comfort standard, or 'return' if it has none
@@ -292,6 +333,8 @@ def get_setpoint_ems_code(
     lines = [*_header(comfort_standard, category, comfort_mode), '', *_LEGEND]
     if outdoor_metric:
         lines += _OUTDOOR_METRIC_LEGEND
+    if regime_lines:
+        lines += _REGIME_LEGEND
     if limit_lines:
         lines += _LIMIT_LEGEND
     lines.append('')
@@ -305,6 +348,11 @@ def get_setpoint_ems_code(
     if outdoor_metric:
         lines += _section('SetOutdoorMetric_<zone>: the outdoor metric of the zone, Tout_metric',
                           metric_programs[f'{om.ZONE_PROGRAM_PREFIX}{_ZONE}'])
+    if regime_lines:
+        conditions = ', '.join(f'{number} = {cr.condition_text(regime.condition)}' for number, regime
+                               in enumerate(check_custom_regimes(arguments['custom_regimes']), start=1))
+        lines += _section(f'{cr.PROGRAM_PREFIX}{_ZONE}: the regime of the custom model of the timestep ({conditions}), '
+                          f'which sets its inputs', regime_lines)
     lines += _section('SetAppLimits: the applicability limits', branches(pl.SET_APP_LIMITS))
     lines += _section('ApplyCAT: the offsets of the category', branches(pl.APPLY_CAT))
     lines += _section('SetComfTemp: the comfort temperature',
@@ -361,6 +409,8 @@ def get_setpoint_ems_programs(
     start_date: Union[int, str] = 1,
     heating_setpoint_floor: Optional[Number] = None,
     cooling_setpoint_ceiling: Optional[Number] = None,
+    custom_regimes: Optional[Sequence[CustomRegime]] = None,
+    script_type: Optional[str] = None,
 ) -> Dict[str, List[str]]:
     """The EMS programs with which the ACCIS calculates the setpoints of a comfort standard, category and comfort mode,
     as they are in the output IDFs of :class:`accim.sim.accis.AddAccis`, to run them with the Erl interpreter of
@@ -372,15 +422,17 @@ def get_setpoint_ems_programs(
     categories or setpoints that depend on the comfort mode. ``SetAST`` runs ``SetAST_Master``, which runs the
     subprograms. With the custom model and an outdoor metric other than 'pmot', the programs of the outdoor metric
     come first: ``InitOutdoorMetric``, ``SetOutdoorMetric`` and ``SetOutdoorMetric_<zone>``, whose lines name the
-    variables of the zone with '<zone>'. With a floor or a ceiling of the setpoints, ``ApplySetpointLimits_<zone>``
-    runs after ``SetAST``.
+    variables of the zone with '<zone>'. With the regimes of the custom model, ``SelectCustomRegime_<zone>`` runs
+    before ``SetAppLimits``. With a floor or a ceiling of the setpoints, ``ApplySetpointLimits_<zone>`` runs after
+    ``SetAST``.
 
     :param comfort_standard: The comfort standard (see :func:`get_setpoint_ems_code`).
     :param category: The category.
     :param comfort_mode: The comfort mode.
     :return: The lines of each program, by name: (``InitOutdoorMetric``, ``SetOutdoorMetric``),
-        ``SetInputData_<zone>``, (``SetOutdoorMetric_<zone>``), ``SetAppLimits``, ``ApplyCAT``, ``SetComfTemp``,
-        ``SetAST``, ``SetAST_Master``, the subprograms, (``ApplySetpointLimits_<zone>``) and ``SetASTnoTol``.
+        ``SetInputData_<zone>``, (``SetOutdoorMetric_<zone>``), (``SelectCustomRegime_<zone>``), ``SetAppLimits``,
+        ``ApplyCAT``, ``SetComfTemp``, ``SetAST``, ``SetAST_Master``, the subprograms, (``ApplySetpointLimits_<zone>``)
+        and ``SetASTnoTol``.
     :raises ValueError: As :func:`get_setpoint_ems_code`, and if the category or the comfort mode is missing.
 
     The other arguments are those of :func:`get_setpoint_ems_code`, with the same defaults.
@@ -395,7 +447,7 @@ def get_setpoint_ems_programs(
         custom_cooling_lower_limit=custom_cooling_lower_limit, custom_heating_upper_limit=custom_heating_upper_limit,
         custom_heating_lower_limit=custom_heating_lower_limit, custom_outdoor_metric=custom_outdoor_metric,
         custom_alpha=custom_alpha, custom_days=custom_days, heating_setpoint_floor=heating_setpoint_floor,
-        cooling_setpoint_ceiling=cooling_setpoint_ceiling,
+        cooling_setpoint_ceiling=cooling_setpoint_ceiling, custom_regimes=custom_regimes, script_type=script_type,
     )
     comfort_standard = int(comfort_standard)
     if category is None and COMFORT_STANDARDS[comfort_standard].categories:
@@ -417,6 +469,9 @@ def get_setpoint_ems_programs(
     programs['SetInputData_<zone>'] = inputs
     if outdoor_metric:
         programs[zone_program] = list(metric_programs[zone_program])
+    regime_lines = _regime_program(comfort_standard, arguments, outdoor_metric)
+    if regime_lines:
+        programs[f'{cr.PROGRAM_PREFIX}{_ZONE}'] = regime_lines
     programs.update({
         'SetAppLimits': branches(pl.SET_APP_LIMITS),
         'ApplyCAT': branches(pl.APPLY_CAT),
