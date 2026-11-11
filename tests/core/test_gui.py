@@ -526,9 +526,19 @@ def test_the_regimes_of_the_custom_model_in_the_form(tmp_path):
                            ('always: 0.31 17.8', 'the regime 1 needs 8 coefficients'),
                            ('metric_between 20 10: 1 2 3 -3 4 5 6 7', 'regime 1: The condition .metric_between.'),
                            ('always: 1 2 3 -3 4 5 6 7; cooling_season: 1 2 3 -3 4 5 6 7', 'only the last regime'),
-                           ('metric_above x: 1 2 3 -3 4 5 6 7', "custom_regimes: 'x' is not a number")):
+                           ('metric_above x: 1 2 3 -3 4 5 6 7', "custom_regimes: 'x' is not a number"),
+                           ('always: 1 2 3 -3 4 5 6 7 metric=ndrm', "'metric=ndrm' \\(regime 1\\) is not an option"),
+                           ('always: 1 2 3 -3 4 5 6 7 days=7', 'alpha and days of a regime of the custom model'),
+                           ('always: 1 2 3 -3 4 5 6 7 outdoor_metric=weekly', 'custom_outdoor_metric must be one of')):
         with pytest.raises(FormError, match=message):
             forms.parse_custom_regimes(wrong)
+    # The outdoor metric of a regime (task H5 of the review of accim 1.2.0)
+    assert forms.parse_custom_regimes('metric_below 10: 0.31 17.8 3.5 -3.5 10 33.5 10 33.5 outdoor_metric=rmot_alpha '
+                                      'alpha=0.7; always: 0.33, 18.8, 2, -3, 10, 30, 10, 30, outdoor_metric=5 '
+                                      'days=7') == [
+        CustomRegime(0.31, 17.8, 3.5, -3.5, 10, 33.5, 10, 33.5, ('metric_below', 10), 'rmot_alpha', alpha=0.7),
+        CustomRegime(0.33, 18.8, 2, -3, 10, 30, 10, 30, outdoor_metric='ndrm', days=7)]
+    assert 'outdoor_metric=name' in forms.CUSTOM_REGIMES_HINT
     # Only with the custom model, and none by default (an empty field), as in AddAccis
     assert 'custom_regimes' not in forms.add_accis_arguments(_form(tmp_path, comfort_standard=[99]))
     assert 'custom_regimes' not in forms.add_accis_arguments(_form(tmp_path, custom_regimes=text))

@@ -382,7 +382,9 @@ def modify_ComfStand(idf: besos.IDF_class, value: int):
 
     The model gets the EMS code of this comfort standard if it does not have it (the output IDFs of ``AddAccis`` only
     have that of the comfort standards of their zones). With a comfort standard of the registry
-    (:mod:`accim.sim.standards`), the zones also get its outdoor metric (and its EMS code, if the EMS calculates it).
+    (:mod:`accim.sim.standards`), the zones also get its outdoor metric (and its EMS code, if the EMS calculates it),
+    and its regimes if it has several (:func:`accim.sim.ems.custom_regimes.set_standard_regimes`, which removes them
+    from the zones when they get another comfort standard).
     With JPN Aqilah 2025 (23), the zones get its static setpoints (20 and 28 °C, unless a parameter
     ``static_heating_setpoint`` or ``static_cooling_setpoint`` gave them before), and the running mean of EN 16798-1
     with α = 0.8 if the programs of the outdoor metric of the model begin with the values of a weather file (AddAccis
@@ -408,13 +410,20 @@ def modify_ComfStand(idf: besos.IDF_class, value: int):
         raise ValueError(f'The model has the ACCIS of an earlier version of accim, which does not have the EMS code of '
                          f'the comfort standard {value}. Add the ACCIS with this version of accim to the model without '
                          f'it.')
+    from accim.sim.ems.custom_regimes import set_standard_regimes
+
+    previous = {zone: read_inputs(program).get('ComfStand') for zone, program in input_programs(idf).items()}
     _set_inputs(idf, {'ComfStand': value})
     if input_programs(idf):
+        # The regimes of the comfort standards of the registry with regimes, before their outdoor metric
+        regimes_changed = set_standard_regimes(idf, previous)
         add_comfort_standard_code(idf, [value])
         definition = comfort_standard_definition(value)
         if definition is not None:
             from accim.sim.ems.standard_lines import standard_inputs
             _set_outdoor_metric_inputs(idf, standard_inputs(definition))
+        elif regimes_changed:
+            _refresh_outdoor_metric_code(idf)
         if has_static_setpoints(value):
             # The static setpoints of JPN Aqilah 2025 that the zones do not have yet (a parameter of the static
             # setpoints applied before keeps its value), and the outdoor metric of the weather file of the model
@@ -711,11 +720,15 @@ def modify_custom_regime(idf: besos.IDF_class, value: float, regime: int, field:
     """
     import dataclasses
 
-    from accim.sim.ems.custom_regimes import REGIME_INPUTS, custom_regimes_of, set_zone_custom_regimes
+    from accim.sim.ems.custom_regimes import (REGIME_INPUTS, custom_regimes_of, set_zone_custom_regimes,
+                                              standard_regimes)
 
     if field not in REGIME_INPUTS:
         raise ValueError(f'{field!r} is not a coefficient of a regime of the custom model: {list(REGIME_INPUTS)}.')
-    regimes_by_zone = custom_regimes_of(idf)
+    # The regimes of the comfort standards of the registry with regimes are those of their definitions
+    standards = {zone: read_inputs(program).get('ComfStand') for zone, program in input_programs(idf).items()}
+    regimes_by_zone = {zone: regimes for zone, regimes in custom_regimes_of(idf).items()
+                       if standard_regimes(standards.get(zone)) is None}
     if not regimes_by_zone:
         raise ValueError('The model has no regimes of the custom model: give them first with custom_regimes '
                          '(accim.sim.accis.modify_accis).')

@@ -87,9 +87,20 @@ def test_a_regime_is_checked():
     for value in ((20, 10), (10, 10), 10, (10, 'x')):
         with pytest.raises(ValueError, match="'metric_between' of a regime of the custom model needs two numbers"):
             CustomRegime(0.3, 17, 2, -2, 10, 30, 10, 30, ('metric_between', value))
-    # An outdoor metric for each regime is not available (pending, see notes/questions.md)
-    with pytest.raises(ValueError, match='outdoor_metric of a regime of the custom model must be None'):
-        CustomRegime(0.3, 17, 2, -2, 10, 30, 10, 30, outdoor_metric='rmot_alpha')
+    # The outdoor metric of each regime (task H5 of the review of accim 1.2.0, decision 1 of its section 6): a name or
+    # code of the metrics, kept as its name, with its alpha and days (None for those of the zone)
+    own = CustomRegime(0.3, 17, 2, -2, 10, 30, 10, 30, outdoor_metric=2, alpha=0.7)
+    assert (own.outdoor_metric, own.alpha, own.days, own.metric_spec) == ('rmot_alpha', 0.7, None, (2, 0.7, None))
+    assert CustomRegime(0.3, 17, 2, -2, 10, 30, 10, 30, outdoor_metric='NDRM', days=7.0).metric_spec == (5, None, 7)
+    assert SCALAR_REGIME.metric_spec is None
+    with pytest.raises(ValueError, match='alpha and days of a regime of the custom model are those of its '
+                                         'outdoor_metric'):
+        CustomRegime(0.3, 17, 2, -2, 10, 30, 10, 30, alpha=0.7)
+    for metric, alpha, days, message in (('weekly', None, None, 'custom_outdoor_metric must be one of'),
+                                         ('rmot_alpha', 1.2, None, 'custom_alpha must be a number between 0 and 1'),
+                                         ('ndrm', None, 0, 'custom_days must be an integer of at least 1')):
+        with pytest.raises(ValueError, match=f'The outdoor metric of a regime of the custom model: {message}'):
+            CustomRegime(0.3, 17, 2, -2, 10, 30, 10, 30, outdoor_metric=metric, alpha=alpha, days=days)
 
 
 def test_the_list_of_regimes_is_checked():

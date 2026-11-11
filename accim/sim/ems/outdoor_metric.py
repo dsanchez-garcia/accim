@@ -35,10 +35,16 @@ Temperature*), without EnergyManagementSystem:TrendVariable, which the Python AP
   running mean of ASHRAE 55 (PMOT), as soon as EnergyPlus has calculated it (decision D3 of the brief of 1.2.0). The
   monthly means are those of the weather file, so ``'monthly_mean'`` needs it.
 
-A model has these EMS objects only if a zone has a metric other than ``'pmot'``
-(:func:`set_outdoor_metric_code`, which :func:`accim.sim.ems.programs.set_comfort_standard_code` calls); then the
-programs of the custom model use ``Tout_metric`` instead of PMOT. Otherwise, the custom model uses PMOT and the model
-is as with accim 1.1.0 (the output IDFs of the comfort standards and of ``'pmot'`` do not change).
+The regimes of the custom model can have their own outdoor metric (:mod:`accim.sim.ems.custom_regimes`, task H5 of
+the review of accim 1.2.0): the program of each zone also calculates, in each timestep, that of each of its regimes
+with one, ``ToutRegime_<regime>_<zone>`` (with its own running mean of EN 16798-1, ``RMOTr_<regime>_<zone>``, if it
+has its own alpha), from the same daily values; the program of the regimes gives it to ``Tout_metric`` when the regime
+applies.
+
+A model has these EMS objects only if a zone has a metric other than ``'pmot'``, or a regime of its custom model has
+its own (:func:`set_outdoor_metric_code`, which :func:`accim.sim.ems.programs.set_comfort_standard_code` calls); then
+the programs of the custom model use ``Tout_metric`` instead of PMOT. Otherwise, the custom model uses PMOT and the
+model is as with accim 1.1.0 (the output IDFs of the comfort standards and of ``'pmot'`` do not change).
 
 JPN Aqilah 2025 (comfort standard 23) reads the RMOT of EnergyPlus, whose first value in a run period is lower than the
 running mean of EN 16798-1 (equation 19.82 of the Engineering Reference is not divided by 1 − α⁷); with the weather file
@@ -61,7 +67,7 @@ import numbers
 import os
 import re
 import warnings
-from typing import Any, Dict, Iterable, List, Mapping, Optional, Sequence, Union
+from typing import Any, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple, Union
 
 from accim.sim.ems.erl import format_number
 
@@ -76,6 +82,7 @@ __all__ = [
     'OUTDOOR_METRICS',
     'OUTPUT_PREFIX',
     'PROGRAM',
+    'REGIME_METRIC_PREFIX',
     'ZONE_PROGRAM_PREFIX',
     'begins_with_weather_file',
     'building_program_lines',
@@ -89,12 +96,14 @@ __all__ = [
     'mid_range_values',
     'outdoor_metric_needed',
     'reads_mid_range',
+    'regime_metric_variable',
     'ring_days',
     'set_outdoor_metric_code',
     'set_weather_file_lines',
     'uses_outdoor_metric',
     'weather_file_zones',
     'zone_program_lines',
+    'zone_regime_metrics',
 ]
 
 #: The metrics of the custom comfort model and their codes (the values of ``CustAST_metric``): 'pmot', the running
@@ -118,6 +127,11 @@ PROGRAM = 'SetOutdoorMetric'
 ZONE_PROGRAM_PREFIX = 'SetOutdoorMetric_'
 INIT_PROGRAM = 'InitOutdoorMetric'
 OUTPUT_PREFIX = 'Tout_metric_'
+#: The outdoor metric of a regime of the custom model with its own (task H5 of the review of accim 1.2.0):
+#: ``ToutRegime_<regime>_<zone>``; and the running mean of EN 16798-1 of a regime with its own alpha,
+#: ``RMOTr_<regime>_<zone>``
+REGIME_METRIC_PREFIX = 'ToutRegime_'
+_REGIME_RUNNING_MEAN_PREFIX = 'RMOTr_'
 #: The Schedule:File object of the mean of the maximum and minimum of the day of each hour of the weather file (T0 of
 #: 'te_ref_nl', task H2 of the review of accim 1.2.0), its CSV file (``<name of the weather file><suffix>``, in the
 #: folder of the model) and the EMS sensor of its Schedule Value
@@ -255,7 +269,9 @@ def building_program_lines(ring: int, initial: Optional[Mapping[str, Any]] = Non
 
 
 def zone_program_lines(zone: str, ring: int, initial_running_mean: Optional[float] = None,
-                       monthly_means: bool = False, mid_range_sensor: bool = False) -> List[str]:
+                       monthly_means: bool = False, mid_range_sensor: bool = False,
+                       regime_metrics: Optional[Mapping[int, tuple]] = None,
+                       initial_regime_running_means: Optional[Mapping[int, float]] = None) -> List[str]:
     """The lines of the program SetOutdoorMetric_<zone>.
 
     :param zone: The name of the zone in the EMS objects.
@@ -265,18 +281,32 @@ def zone_program_lines(zone: str, ring: int, initial_running_mean: Optional[floa
     :param monthly_means: True if SetOutdoorMetric has the monthly means of a weather file.
     :param mid_range_sensor: True if T0 of 'te_ref_nl' is the sensor :data:`MID_RANGE_SENSOR` (the model has the
         Schedule:File object of the weather file); False for the mean of the maximum and minimum of the previous day.
+    :param regime_metrics: The outdoor metric of each regime of the custom model of the zone with its own,
+        ``{regime: (code, alpha, days)}`` (:func:`accim.sim.ems.custom_regimes.regime_metrics`), whose values the
+        program also calculates (``ToutRegime_<regime>_<zone>``); None for none.
+    :param initial_regime_running_means: The running mean of EN 16798-1 of the weather file on the first day of the
+        run period with the alpha of each regime with 'rmot_alpha' and its own alpha, ``{regime: value}``; None without
+        a weather file.
     """
     running_mean, initialised = f'RMOTa_{zone}', f'OutdoorMetricInit_{zone}'
+    own = _own_running_means(regime_metrics)
     lines = [f'if {initialised} == -1']
     if initial_running_mean is not None:
-        lines += ['if OutdoorInit == 1', f'set {running_mean} = {_number(initial_running_mean)}',
-                  f'set {initialised} = 1', 'elseif OutdoorInit == 2']
+        lines += ['if OutdoorInit == 1', f'set {running_mean} = {_number(initial_running_mean)}']
+        lines += [f'set {_regime_running_mean(number, zone)} = {_number(initial_regime_running_means[number])}'
+                  for number, _ in own]
+        lines += [f'set {initialised} = 1', 'elseif OutdoorInit == 2']
     else:
         lines.append('if OutdoorInit == 2')
-    lines += [f'set {running_mean} = PMOT', f'set {initialised} = 1', 'endif', 'endif',
+    lines += [f'set {running_mean} = PMOT']
+    lines += [f'set {_regime_running_mean(number, zone)} = PMOT' for number, _ in own]
+    lines += [f'set {initialised} = 1', 'endif', 'endif',
               # EN 16798-1 (B.1), recursive, with the daily mean of the previous day
               'if OutdoorDayClosed == 1',
-              f'set {running_mean} = (1-CustAST_alpha)*Tday_1+CustAST_alpha*{running_mean}', 'endif',
+              f'set {running_mean} = (1-CustAST_alpha)*Tday_1+CustAST_alpha*{running_mean}']
+    lines += [f'set {_regime_running_mean(number, zone)} = (1-{_number(alpha)})*Tday_1+{_number(alpha)}*'
+              f'{_regime_running_mean(number, zone)}' for number, alpha in own]
+    lines += ['endif',
               'if CustAST_metric == 1', 'set Tout_metric = RMOT',
               'elseif CustAST_metric == 2', f'set Tout_metric = {running_mean}',
               # EN 16798-1 (B.2)
@@ -299,6 +329,9 @@ def zone_program_lines(zone: str, ring: int, initial_running_mean: Optional[floa
               + '+'.join(f'{_weight(w)}Tmid_{k}' for k, w in enumerate(_ATG_WEIGHTS[1:], 1)) + f')/{_ATG_DIVISOR}',
               'else', 'set Tout_metric = PMOT', 'endif',
               f'set {OUTPUT_PREFIX}{zone} = Tout_metric']
+    # The outdoor metric of the regimes with their own (accim.sim.ems.custom_regimes)
+    for number, spec in sorted((regime_metrics or {}).items()):
+        lines += _regime_metric_lines(number, zone, spec, ring, monthly_means, mid_range_sensor)
     return lines
 
 
@@ -306,26 +339,120 @@ def _weight(weight: float) -> str:
     return '' if weight == 1 else f'{weight}*'
 
 
-def init_program_lines(zones: Sequence[str], ring: int = _MIN_RING_DAYS) -> List[str]:
+def _regime_lines_match(idf, zones: Sequence[str], regime_metrics: Mapping[str, Mapping[int, tuple]]) -> bool:
+    """True if the programs SetOutdoorMetric_<zone> (and InitOutdoorMetric) of a model calculate the outdoor metrics
+    of the regimes of each zone, ``{zone: {regime: (code, alpha, days)}}``, and no others, so that they can be kept
+    with the values of the weather file with which they begin."""
+    building = idf.getobject('EnergyManagementSystem:Program', PROGRAM)
+    init = idf.getobject('EnergyManagementSystem:Program', INIT_PROGRAM)
+    if building is None or init is None:
+        return False
+    ring, monthly, mid_range = _ring_of(building), _has_monthly_means(building), reads_mid_range(idf)
+    init_lines = set(_program_lines(init))
+    for zone in zones:
+        program = idf.getobject('EnergyManagementSystem:Program', f'{ZONE_PROGRAM_PREFIX}{zone}')
+        if program is None:
+            return False
+        lines = _program_lines(program)
+        specs = (regime_metrics or {}).get(zone) or {}
+        found = {line.split('=')[0][len('set '):].strip() for line in lines
+                 if line.startswith(f'set {REGIME_METRIC_PREFIX}')}
+        if found != {regime_metric_variable(number, zone) for number in specs}:
+            return False
+        expected = [line for number, spec in specs.items()
+                    for line in _regime_metric_lines(number, zone, spec, ring, monthly, mid_range)]
+        for number, alpha in _own_running_means(specs):
+            running_mean = _regime_running_mean(number, zone)
+            expected += [f'set {running_mean} = PMOT',
+                         f'set {running_mean} = (1-{_number(alpha)})*Tday_1+{_number(alpha)}*{running_mean}']
+            if f'set {running_mean} = 0' not in init_lines:
+                return False
+        if not set(expected) <= set(lines):
+            return False
+    return True
+
+
+def regime_metric_variable(number: int, zone: str) -> str:
+    """The EMS variable of the outdoor metric of a regime of the custom model of a zone, ``ToutRegime_<regime>_<zone>``
+    (the number of the regime, from 1)."""
+    return f'{REGIME_METRIC_PREFIX}{int(number)}_{zone}'
+
+
+def _regime_running_mean(number: int, zone: str) -> str:
+    return f'{_REGIME_RUNNING_MEAN_PREFIX}{int(number)}_{zone}'
+
+
+def _own_running_means(regimes: Optional[Mapping[int, tuple]]) -> List[Tuple[int, float]]:
+    """The regimes with the metric 'rmot_alpha' and their own alpha (their running means of EN 16798-1), and their
+    alphas."""
+    return [(number, alpha) for number, (code, alpha, _) in sorted((regimes or {}).items())
+            if code == OUTDOOR_METRICS['rmot_alpha'] and alpha is not None]
+
+
+def _regime_metric_lines(number: int, zone: str, spec: tuple, ring: int, monthly_means: bool,
+                         mid_range_sensor: bool) -> List[str]:
+    """The lines that set the outdoor metric of a regime, ``ToutRegime_<regime>_<zone>``, with the equations of the
+    metrics of the zone (:func:`zone_program_lines`), the alpha and days of the regime (those of the zone, the inputs
+    ``CustAST_alpha`` and ``CustAST_days``, if they are None)."""
+    code, alpha, days = spec
+    target = regime_metric_variable(number, zone)
+    if code == OUTDOOR_METRICS['pmot']:
+        return [f'set {target} = PMOT']
+    if code == OUTDOOR_METRICS['rmot']:
+        return [f'set {target} = RMOT']
+    if code == OUTDOOR_METRICS['rmot_alpha']:
+        return [f"set {target} = {_regime_running_mean(number, zone) if alpha is not None else f'RMOTa_{zone}'}"]
+    if code == OUTDOOR_METRICS['rmot_7day']:
+        return [f'set {target} = (' + '+'.join(f'{_weight(w)}Tday_{k}' for k, w in enumerate(_B2_WEIGHTS, 1))
+                + f')/{_B2_DIVISOR}']
+    if code == OUTDOOR_METRICS['daily_mean']:
+        return [f'set {target} = Tday_1']
+    if code == OUTDOOR_METRICS['ndrm']:
+        if days is not None:
+            return [f'set {target} = (' + '+'.join(f'Tday_{k}' for k in range(1, int(days) + 1)) + f')/{int(days)}']
+        lines = ['set OutdoorDaysSum = Tday_1']
+        for k in range(2, ring + 1):
+            lines += [f'if CustAST_days >= {k}', f'set OutdoorDaysSum = OutdoorDaysSum+Tday_{k}', 'endif']
+        return lines + [f'set {target} = OutdoorDaysSum/CustAST_days']
+    if code == OUTDOOR_METRICS['monthly_mean']:
+        return [f'set {target} = OutdoorMonthlyMean' if monthly_means else f'set {target} = @FatalHaltEp 6']
+    return [f"set OutdoorMidRange = {MID_RANGE_SENSOR if mid_range_sensor else 'Tmid_1'}",
+            f'set {target} = (OutdoorMidRange+'
+            + '+'.join(f'{_weight(w)}Tmid_{k}' for k, w in enumerate(_ATG_WEIGHTS[1:], 1)) + f')/{_ATG_DIVISOR}']
+
+
+def init_program_lines(zones: Sequence[str], ring: int = _MIN_RING_DAYS,
+                       regime_metrics: Optional[Mapping[str, Mapping[int, tuple]]] = None) -> List[str]:
     """The lines of the program InitOutdoorMetric, at the beginning of each environment: the daily values and the
     running means are 0 (the value of PMOT before EnergyPlus calculates it) until SetOutdoorMetric begins them.
 
     :param zones: The names of the zones in the EMS objects.
     :param ring: The number of daily means kept (:func:`ring_days`).
+    :param regime_metrics: The outdoor metrics of the regimes of each zone with their own (see
+        :func:`zone_program_lines`), ``{zone: {regime: (code, alpha, days)}}``; None for none.
     """
-    return (['set OutdoorInit = -1', 'set OutdoorDayClosed = 0', 'set OutdoorSum = 0', 'set OutdoorHours = 0']
-            + [f'set Tday_{k} = 0' for k in range(1, ring + 1)]
-            + [f'set Tmid_{k} = 0' for k in range(1, len(_ATG_WEIGHTS))]
-            + [line for zone in zones for line in (f'set OutdoorMetricInit_{zone} = -1', f'set RMOTa_{zone} = 0')])
+    lines = (['set OutdoorInit = -1', 'set OutdoorDayClosed = 0', 'set OutdoorSum = 0', 'set OutdoorHours = 0']
+             + [f'set Tday_{k} = 0' for k in range(1, ring + 1)]
+             + [f'set Tmid_{k} = 0' for k in range(1, len(_ATG_WEIGHTS))])
+    for zone in zones:
+        lines += [f'set OutdoorMetricInit_{zone} = -1', f'set RMOTa_{zone} = 0']
+        lines += [f'set {_regime_running_mean(number, zone)} = 0'
+                  for number, _ in _own_running_means((regime_metrics or {}).get(zone))]
+    return lines
 
 
-def global_variables(ring: int, zones: Sequence[str]) -> List[str]:
-    """The EMS global variables of the programs (the inputs of the zones included)."""
+def global_variables(ring: int, zones: Sequence[str],
+                     regime_metrics: Optional[Mapping[str, Mapping[int, tuple]]] = None) -> List[str]:
+    """The EMS global variables of the programs (the inputs of the zones included, and the outdoor metrics of the
+    regimes with their own, ``{zone: {regime: (code, alpha, days)}}``)."""
     names = [_FIRST_GLOBAL_VARIABLE, *INPUTS, 'OutdoorInit', 'OutdoorDayClosed', 'OutdoorSum', 'OutdoorHours',
              'OutdoorMax', 'OutdoorMin', 'OutdoorMonthlyMean']
     names += [f'Tday_{k}' for k in range(1, ring + 1)] + [f'Tmid_{k}' for k in range(1, len(_ATG_WEIGHTS))]
     for zone in zones:
         names += [f'RMOTa_{zone}', f'OutdoorMetricInit_{zone}', f'{OUTPUT_PREFIX}{zone}']
+        regimes = (regime_metrics or {}).get(zone) or {}
+        names += [regime_metric_variable(number, zone) for number in sorted(regimes)]
+        names += [_regime_running_mean(number, zone) for number, _ in _own_running_means(regimes)]
     return names
 
 
@@ -456,15 +583,32 @@ def uses_outdoor_metric(idf) -> bool:
     """True if a zone of the model has an outdoor metric other than 'pmot' (``CustAST_metric`` is not 0 in its program
     SetInputData_<zone>), so that its custom model needs the EMS code of :func:`set_outdoor_metric_code`. The zones of
     the comfort standards of :data:`accim.sim.ems.standard_lines.WEATHER_FILE_METRICS` (JPN Aqilah 2025) do not count:
-    their inputs are those of their outdoor metric with the weather file (:func:`outdoor_metric_needed`)."""
+    their inputs are those of their outdoor metric with the weather file (:func:`outdoor_metric_needed`). The zones of
+    the comfort standards of the registry with regimes count, whatever their outdoor metric: their code reads
+    Tout_metric (:func:`accim.sim.ems.standard_lines.uses_regimes`)."""
     from accim.sim.ems.inputs import input_programs, read_inputs
-    from accim.sim.ems.standard_lines import WEATHER_FILE_METRICS
+    from accim.sim.ems.standard_lines import WEATHER_FILE_METRICS, regime_standards
 
+    with_regimes = regime_standards()
     for program in input_programs(idf).values():
         inputs = read_inputs(program)
-        if inputs.get(INPUTS[0], 0) != 0 and _number_or_none(inputs.get('ComfStand')) not in WEATHER_FILE_METRICS:
+        comfort_standard = _number_or_none(inputs.get('ComfStand'))
+        if comfort_standard in with_regimes:
             return True
-    return False
+        if inputs.get(INPUTS[0], 0) != 0 and comfort_standard not in WEATHER_FILE_METRICS:
+            return True
+    # The regimes of the custom model with their own outdoor metric (task H5 of the review of accim 1.2.0)
+    return bool(zone_regime_metrics(idf))
+
+
+def zone_regime_metrics(idf) -> Dict[str, Dict[int, tuple]]:
+    """The outdoor metrics of the regimes of the custom model of the zones of a model with their own: ``{zone:
+    {regime: (code, alpha, days)}}``, read from the programs SelectCustomRegime_<zone>
+    (:func:`accim.sim.ems.custom_regimes.custom_regimes_of`); only the zones with such regimes."""
+    from accim.sim.ems.custom_regimes import custom_regimes_of, regime_metrics
+
+    found = {zone: regime_metrics(regimes) for zone, regimes in custom_regimes_of(idf).items()}
+    return {zone: metrics for zone, metrics in found.items() if metrics}
 
 
 def _number_or_none(value: Any) -> Optional[int]:
@@ -765,16 +909,22 @@ def set_outdoor_metric_code(idf, enabled: bool, epw: Union[str, Any, None] = Non
     if with_weather_file and weather_zones:
         _set_weather_file_inputs(idf, zone_programs, rewritten=epw is not None or rewrite)
     values: Dict[str, Dict[str, Any]] = {zone: read_inputs(program) for zone, program in zone_programs.items()}
-    ring = ring_days(values[zone]['CustAST_days'] for zone in zones)
+    # The outdoor metrics of the regimes of the custom model with their own (task H5 of the review of accim 1.2.0)
+    regime_metrics = {zone: specs for zone, specs in zone_regime_metrics(idf).items() if zone in zone_programs}
+    regime_days = [days for specs in regime_metrics.values() for _, _, days in specs.values() if days is not None]
+    ring = ring_days([values[zone]['CustAST_days'] for zone in zones] + regime_days)
     metrics = {metric_code(values[zone]['CustAST_metric']) for zone in zones
                if with_weather_file or zone not in weather_zones}
+    metrics |= {code for specs in regime_metrics.values() for code, _, _ in specs.values()}
     monthly = OUTDOOR_METRICS['monthly_mean'] in metrics
     te_ref = OUTDOOR_METRICS['te_ref_nl'] in metrics
 
     # 2. The programs: those of the model stay if they can (without a weather file); those that begin with the values
     # of a weather file read T0 of 'te_ref_nl' from its Schedule:File object, or are written again
     existing = idf.getobject('EnergyManagementSystem:Program', PROGRAM)
-    keep = (epw is None and not rewrite and existing is not None and _ring_of(existing) >= ring
+    # The lines of the programs depend on the outdoor metrics of the regimes, so they stay if they calculate them
+    keep = (epw is None and not rewrite and _regime_lines_match(idf, zones, regime_metrics)
+            and existing is not None and _ring_of(existing) >= ring
             and (not monthly or _has_monthly_means(existing))
             and not (te_ref and begins_with_weather_file(idf) and not reads_mid_range(idf))
             and all(idf.getobject('EnergyManagementSystem:Program', f'{ZONE_PROGRAM_PREFIX}{zone}') is not None
@@ -783,12 +933,21 @@ def set_outdoor_metric_code(idf, enabled: bool, epw: Union[str, Any, None] = Non
     if keep:
         ring = _ring_of(existing)
     else:
+        if regime_metrics and epw is None and begins_with_weather_file(idf):
+            warnings.warn('The programs of the outdoor metric of the custom model are written again with the outdoor '
+                          'metrics of its regimes, beginning with the running mean of ASHRAE 55 of EnergyPlus (PMOT), '
+                          'without the weather file of the simulation (argument epw): give it to begin with its '
+                          'values.')
         if monthly and epw is None:
             raise ValueError("custom_outdoor_metric 'monthly_mean' needs the weather file of the simulation (argument "
-                             "epw), whose monthly means the EMS programs keep.")
+                             "epw), whose monthly means the EMS programs keep (also the outdoor metric of a regime of "
+                             "the custom model).")
         initial = None
         if epw is not None:
             alphas = {zone: values[zone]['CustAST_alpha'] for zone in zones}
+            # The running means of the regimes with their own alpha
+            alphas.update({f'{zone}#{number}': alpha for zone, specs in regime_metrics.items()
+                           for number, alpha in _own_running_means(specs)})
             initial = initial_values(epw, _run_period_start(idf), ring, alphas)
         # T0 of 'te_ref_nl', from the weather file
         mid_range = epw is not None and te_ref
@@ -811,10 +970,16 @@ def set_outdoor_metric_code(idf, enabled: bool, epw: Union[str, Any, None] = Non
 
         write(PROGRAM, building_program_lines(ring, initial))
         for zone in zones:
+            specs = regime_metrics.get(zone)
+            regime_means = None
+            if initial is not None and specs:
+                regime_means = {number: initial['running_means'][f'{zone}#{number}']
+                                for number, _ in _own_running_means(specs)}
             write(f'{ZONE_PROGRAM_PREFIX}{zone}',
                   zone_program_lines(zone, ring, None if initial is None else initial['running_means'][zone],
-                                     initial is not None, mid_range_sensor=mid_range))
-        write(INIT_PROGRAM, init_program_lines(zones, ring))
+                                     initial is not None, mid_range_sensor=mid_range, regime_metrics=specs,
+                                     initial_regime_running_means=regime_means))
+        write(INIT_PROGRAM, init_program_lines(zones, ring, regime_metrics))
     if te_ref and not reads_mid_range(idf):
         warnings.warn("The outdoor metric 'te_ref_nl' takes as T0 the mean of the maximum and minimum of the previous "
                       "day without the weather file of the simulation (argument epw): give it to take that of the day "
@@ -852,7 +1017,7 @@ def set_outdoor_metric_code(idf, enabled: bool, epw: Union[str, Any, None] = Non
                   if str(g.fieldvalues[1]).strip() == _FIRST_GLOBAL_VARIABLE])
     declared = {str(name).strip().upper() for g in idf.idfobjects['EnergyManagementSystem:GlobalVariable']
                 for name in g.fieldvalues[1:] if str(name).strip()}
-    names = [name for name in global_variables(ring, zones) if name.upper() not in declared]
+    names = [name for name in global_variables(ring, zones, regime_metrics) if name.upper() not in declared]
     if names and names[0] != _FIRST_GLOBAL_VARIABLE:
         raise ValueError(f'The model already declares the EMS global variable {_FIRST_GLOBAL_VARIABLE}.')
     idf.newidfobject('EnergyManagementSystem:GlobalVariable',

@@ -15,6 +15,24 @@ This log is a lightweight, session-scoped complement to the repository's
 existing tracking files — it does not replace them (see
 [[decisions.md#2026-09-13 — `notes/work-log.md` complements, not replaces, existing tracking files|the related decision]]).
 
+## 2026-11-10 — H5: the outdoor metric of each regime, and several regimes in the YAML files (branch `v1.2.0`, on the server)
+
+- **Objective**: task H5 of v04 §7 (decisions 1 and 4 of §6, findings B2-1 and B2-2): an outdoor metric for each
+  regime of the custom model; several regimes of a comfort standard defined by its data (key `regimes`); the
+  documentation of the averaged `CustomRegime_<zone>` and of the alternation of `'hvac_off'`/`'hvac_on'`.
+- **Affected files**: `accim/sim/arguments.py`, `accim/sim/standards.py`, `accim/sim/ems/custom_regimes.py`,
+  `outdoor_metric.py` and `standard_lines.py`, `accim/sim/accis.py`, `accim/utils/ems_code.py` and `verification.py`,
+  `accim/parametric_and_optimisation/funcs_for_besos/param_accis.py`, `accim/gui/forms.py`,
+  [[../docs/source/4_detailed use.md]] (4.2.4, 4.2.5), [[../CHANGELOG.md]], [[../CAMBIOS_CODIGO_v1.2.0.md]] (§36),
+  [[../DEVLOG.md]], [[../TODO.md]], [[questions.md]].
+- **Finding or decision**: a comfort standard with regimes reuses the program of the regimes of the custom model (its
+  branches read the inputs of the custom model and its metric is always `Tout_metric`), so it gives exactly the
+  setpoints of the custom model with the same regimes; the programs of the outdoor metric are kept while they calculate
+  the metrics of the regimes (a plain `modify_accis` no longer loses the weather-file start). Provisional choices in
+  [[questions.md]] (the schema of `regimes`, the EMS code, the names and the programs kept).
+- **Validation**: see the entry of H5 in [[../DEVLOG.md]].
+- **Next step**: H6 (`clothing_insulation=callable` as a Schedule:File).
+
 ## 2026-11-10 — H4: the saturation, frequencies and ranges of the hook of the ATHB (branch `v1.2.0`, on the server)
 
 - **Objective**: task H4 of v04 §7 (findings A4-1 to A4-3, the test finding of §3.4): report the setpoints of the

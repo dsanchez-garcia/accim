@@ -177,9 +177,14 @@ CUSTOM_REGIMES_HINT = (
     'Regimes (empty: none), in their order of priority, separated by semicolons: condition: slope intercept '
     'cooling-offset heating-offset cooling-lower-limit cooling-upper-limit heating-lower-limit heating-upper-limit. '
     'Conditions: always (the last one), cooling_season, heating_season, hvac_off, hvac_on (mixed mode), '
-    'metric_below x, metric_above x, metric_between x1 x2. If none holds, the coefficients above apply. For instance: '
-    'metric_below 10: 0.31 17.8 3.5 -3.5 10 33.5 10 33.5; always: 0.33 18.8 2 -3 10 30 10 30'
+    'metric_below x, metric_above x, metric_between x1 x2 (of the outdoor metric of the zone). If none holds, the '
+    'coefficients above apply. A regime can have its own outdoor metric after the coefficients: '
+    'outdoor_metric=name, and alpha=x (rmot_alpha) or days=n (ndrm). For instance: '
+    'metric_below 10: 0.31 17.8 3.5 -3.5 10 33.5 10 33.5 outdoor_metric=rmot_alpha alpha=0.7; '
+    'always: 0.33 18.8 2 -3 10 30 10 30'
 )
+#: The options of a regime of the custom model in its field, after the coefficients (``name=value``)
+_REGIME_OPTIONS = ('outdoor_metric', 'alpha', 'days')
 #: The minimum heating setpoint and the maximum cooling setpoint (accim.sim.ems.setpoint_limits), which
 #: are None if their fields are empty: argument -> (label, default).
 SETPOINT_LIMIT_FIELDS = {
@@ -1001,7 +1006,10 @@ def parse_custom_regimes(text: Any) -> List[Any]:
     (:data:`CUSTOM_REGIMES_HINT`): one regime for each line, or separated by semicolons, written as
     ``condition: slope intercept cooling_offset heating_offset cooling_lower_limit cooling_upper_limit
     heating_lower_limit heating_upper_limit``, where the condition is one of
-    :data:`accim.sim.arguments.REGIME_CONDITIONS`, ``metric_below x``, ``metric_above x`` or ``metric_between x1 x2``.
+    :data:`accim.sim.arguments.REGIME_CONDITIONS`, ``metric_below x``, ``metric_above x`` or ``metric_between x1 x2``;
+    the coefficients can be followed by the outdoor metric of the regime, ``outdoor_metric=name`` (a name or code of
+    :data:`accim.sim.ems.outdoor_metric.OUTDOOR_METRICS`), with ``alpha=x`` and ``days=n`` (task H5 of the review of
+    accim 1.2.0).
 
     :return: The regimes, in their order of priority (an empty list if the text is empty).
     :raises FormError: If a regime is not valid, or a regime 'always' is not the last one.
@@ -1024,13 +1032,30 @@ def parse_custom_regimes(text: Any) -> List[Any]:
                             f'{", ".join(REGIME_CONDITIONS)}, metric_below x, metric_above x or metric_between x1 '
                             f'x2.')
         condition = name if not expected else (name, values[0] if expected == 1 else tuple(values))
-        coefficients = parse_numbers(coefficients_text, 'custom_regimes')
+        # The options of the regime (its outdoor metric) after the coefficients
+        options: Dict[str, Any] = {}
+        numbers_text = []
+        for token in re.split(r'[\s,]+', coefficients_text.strip()):
+            if '=' not in token:
+                numbers_text.append(token)
+                continue
+            option, _, value = token.partition('=')
+            option = option.strip().lower()
+            if option not in _REGIME_OPTIONS or not value.strip() or option in options:
+                raise FormError(f'custom_regimes: {token!r} (regime {number}) is not an option of a regime: '
+                                f'{", ".join(f"{name}=..." for name in _REGIME_OPTIONS)}, once each.')
+            if option == 'outdoor_metric':
+                # A name or a code of the metrics, as in the arguments of the zones
+                options[option] = int(value.strip()) if value.strip().isdigit() else value.strip()
+            else:
+                options[option] = _number(value, 'custom_regimes')
+        coefficients = parse_numbers(' '.join(numbers_text), 'custom_regimes')
         if len(coefficients) != 8:
             raise FormError(f'custom_regimes: the regime {number} needs 8 coefficients (slope, intercept, cooling '
                             f'and heating offsets, lower and upper limits of cooling and of heating), not '
                             f'{len(coefficients)}.')
         try:
-            regimes.append(CustomRegime(*coefficients, condition=condition))
+            regimes.append(CustomRegime(*coefficients, condition=condition, **options))
         except ValueError as error:
             raise FormError(f'custom_regimes: regime {number}: {error}') from None
     try:

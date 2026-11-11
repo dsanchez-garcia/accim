@@ -15,7 +15,8 @@ the backend of the Python API of EnergyPlus (:func:`accim.sim.comfort_hooks.appl
 it (:data:`HOOK_COMFORT_STANDARDS`). Other comfort standards can be defined by
 their data, a :class:`ComfortStandardDefinition` (a comfort temperature that is a straight line of an outdoor metric
 of :mod:`accim.sim.ems.outdoor_metric`, its applicability limits, the offsets of its categories and its static
-setpoints), and registered with :func:`register_comfort_standard`, or read from YAML files with
+setpoints; or several comfort temperatures and applicability limits, each one under a condition, as the regimes of the
+custom model), and registered with :func:`register_comfort_standard`, or read from YAML files with
 :func:`load_comfort_standards`, with the numbers 100 or more (decision D1 of the brief of 1.2.0): accim then writes
 their EMS code (:mod:`accim.sim.ems.standard_lines`), and :class:`accim.sim.accis.AddAccis`, ``modify_accis``,
 ``print_setpoint_ems_code``, ``compute_setpoints`` and the graphical user interface take them as the built-in ones.
@@ -249,7 +250,19 @@ _ISO7730_CATEGORIES = (80, 90)
 #: The keys of the YAML files of the comfort standards: those that must have a value, and the others
 _REQUIRED_KEYS = ('number', 'label', 'title', 'citation', 'outdoor_metric', 'comfort_temperature', 'applicability',
                   'categories', 'comfort_modes', 'evidence')
-_OPTIONAL_KEYS = ('alpha', 'days', 'static_setpoints')
+_OPTIONAL_KEYS = ('alpha', 'days', 'static_setpoints', 'regimes')
+#: The keys of the single regime of a comfort standard, which the key ``regimes`` replaces (task H5 of the review of
+#: accim 1.2.0)
+_SINGLE_REGIME_KEYS = ('comfort_temperature', 'applicability')
+#: The keys of each regime of ``regimes``: the fields of :class:`accim.sim.arguments.CustomRegime` (decision 4 of
+#: section 6 of the review of accim 1.2.0), whose coefficients (the first eight) are required, as in CustomRegime
+_REGIME_FIELDS = ('slope', 'intercept', 'cooling_offset', 'heating_offset', 'cooling_lower_limit',
+                  'cooling_upper_limit', 'heating_lower_limit', 'heating_upper_limit', 'condition', 'outdoor_metric',
+                  'alpha', 'days')
+_REGIME_COEFFICIENTS = _REGIME_FIELDS[:8]
+#: The conditions of the regimes of the custom model that those of a comfort standard cannot have: they read the HVAC
+#: system of the model (mixed mode), which is not part of a comfort model
+_HVAC_CONDITIONS = ('hvac_off', 'hvac_on')
 #: The characters that the labels cannot have: they name the output IDFs ('[' separates their arguments)
 _LABEL_CHARACTERS = '[]\\/:*?"<>|'
 _REGISTRY: Dict[int, 'ComfortStandardDefinition'] = {}
@@ -267,16 +280,24 @@ class ComfortStandardDefinition:
 
     Its comfort temperature is a straight line of an outdoor metric (slope · metric + intercept), within the
     applicability limits of the metric; the setpoints are the comfort temperature plus the offsets of the category (and
-    those of the regime, 0 in the YAML files), and, out of the applicability limits, as its comfort modes say
-    (:data:`DEFINITION_COMFORT_MODES`).
+    those of the regime, 0 in the YAML files with one regime), and, out of the applicability limits, as its comfort
+    modes say (:data:`DEFINITION_COMFORT_MODES`). With several regimes, the comfort temperature, the offsets of the
+    regime and the applicability limits are those of the first regime whose condition holds in each timestep.
 
     :ivar standard: Its number (100 or more to register it), label (in the names of the output IDFs), title,
         categories (with their descriptions) and comfort modes (with their descriptions).
     :ivar outdoor_metric: The outdoor metric of its comfort temperature and applicability, a name of
         :data:`accim.sim.ems.outdoor_metric.OUTDOOR_METRICS`: 'pmot' and 'rmot' are the running means of EnergyPlus,
         and the EMS calculates the others (:mod:`accim.sim.ems.outdoor_metric`).
-    :ivar regimes: Its comfort temperature, offsets and applicability limits, as a regime of the custom model
-        (:class:`accim.sim.arguments.CustomRegime`); one regime 'always' in this version.
+    :ivar regimes: Its comfort temperature, offsets and applicability limits, as regimes of the custom model
+        (:class:`accim.sim.arguments.CustomRegime`): one regime 'always' (``comfort_temperature`` and
+        ``applicability`` of the YAML files), or several (``regimes``), in their order of priority, the last one with
+        the condition 'always' (a comfort standard has no other coefficients for the timesteps in which no condition
+        holds), and without the conditions 'hvac_off' and 'hvac_on', which read the HVAC system of the model. With
+        several regimes, or a regime with its own outdoor metric, its EMS code selects the regime of each timestep as
+        that of the regimes of the custom model (task H5 of the review of accim 1.2.0, decision 4 of its section 6:
+        :func:`accim.sim.ems.standard_lines.uses_regimes`); the conditions of the outdoor metric compare that of the
+        comfort standard (``outdoor_metric``).
     :ivar category_offsets: The offsets of the cooling and heating setpoints of each category, which can be
         asymmetric: ``{category: (cooling_offset, heating_offset)}``. The setpoints are the comfort temperature plus
         the offsets, so the cooling offset is usually positive or zero and the heating offset negative or zero (the
@@ -324,12 +345,17 @@ class ComfortStandardDefinition:
         object.__setattr__(self, 'outdoor_metric', metric_name(code))
         try:
             regimes = check_custom_regimes(self.regimes)
-        except ValueError:
-            regimes = ()
-        if len(regimes) != 1 or regimes[0].condition != 'always':
-            raise ValueError(f'The {where} must have one regime (a CustomRegime), with the condition \'always\': '
-                             f'several regimes of a comfort standard are not available yet (custom_regimes gives them '
-                             f'to the custom model), not {self.regimes!r}.')
+        except ValueError as error:
+            raise ValueError(f'The regimes of the {where}: {error}') from None
+        if not regimes or regimes[-1].condition != 'always':
+            raise ValueError(f"The {where} must have at least one regime (a CustomRegime), the last one with the "
+                             f"condition 'always' (a comfort standard has no other coefficients for the timesteps in "
+                             f"which no condition holds), not {self.regimes!r}.")
+        hvac = [number for number, regime in enumerate(regimes, start=1) if regime.condition in _HVAC_CONDITIONS]
+        if hvac:
+            raise ValueError(f"The regimes {hvac} of the {where} have the condition 'hvac_off' or 'hvac_on', which "
+                             f"reads the HVAC system of the model (mixed mode), not the comfort model: only the "
+                             f"regimes of the custom model can have it (custom_regimes).")
         object.__setattr__(self, 'regimes', regimes)
         offsets = {}
         for category, pair in dict(self.category_offsets).items():
@@ -409,7 +435,14 @@ def definition_from_mapping(data: Any, source: str = '') -> ComfortStandardDefin
     unknown = [key for key in data if key not in _REQUIRED_KEYS + _OPTIONAL_KEYS]
     if unknown:
         raise fail(f'unknown keys {unknown}; the keys are {list(_REQUIRED_KEYS + _OPTIONAL_KEYS)}.')
-    missing = [key for key in _REQUIRED_KEYS if data.get(key) is None]
+    # Several regimes (the key regimes) replace the comfort temperature and the applicability of the single regime
+    several = data.get('regimes') is not None
+    if several:
+        given = [key for key in _SINGLE_REGIME_KEYS if data.get(key) is not None]
+        if given:
+            raise fail(f'regimes replaces {list(_SINGLE_REGIME_KEYS)}: give the regimes, or the comfort temperature '
+                       f'and the applicability of one regime, not both ({given} given).')
+    missing = [key for key in _REQUIRED_KEYS if data.get(key) is None and not (several and key in _SINGLE_REGIME_KEYS)]
     if missing:
         raise fail(f'the keys {missing} are missing or empty.')
 
@@ -425,10 +458,14 @@ def definition_from_mapping(data: Any, source: str = '') -> ComfortStandardDefin
     for key in ('label', 'title', 'citation'):
         if not isinstance(data[key], str) or not data[key].strip():
             raise fail(f'{key} must be a text, not {data[key]!r}.')
-    slope, intercept = numbers_of('comfort_temperature', ('slope', 'intercept'))
-    lower, upper = numbers_of('applicability', ('metric_min', 'metric_max'))
-    if not lower < upper:
-        raise fail(f'applicability: metric_min ({lower}) must be lower than metric_max ({upper}).')
+    if several:
+        regimes = _regimes_from_mapping(data['regimes'], fail)
+    else:
+        slope, intercept = numbers_of('comfort_temperature', ('slope', 'intercept'))
+        lower, upper = numbers_of('applicability', ('metric_min', 'metric_max'))
+        if not lower < upper:
+            raise fail(f'applicability: metric_min ({lower}) must be lower than metric_max ({upper}).')
+        regimes = [CustomRegime(slope, intercept, 0, 0, lower, upper, lower, upper)]
     categories, offsets = {}, {}
     if not isinstance(data['categories'], Mapping) or not data['categories']:
         raise fail(f"categories must be a mapping {{category: {{cooling_offset: ..., heating_offset: ..., "
@@ -456,11 +493,42 @@ def definition_from_mapping(data: Any, source: str = '') -> ComfortStandardDefin
                                _comfort_mode_descriptions(label, [int(mode) for mode in modes], static))
     arguments = {name: data[name] for name in ('alpha', 'days') if data.get(name) is not None}
     try:
-        regime = CustomRegime(slope, intercept, 0, 0, lower, upper, lower, upper)
-        return ComfortStandardDefinition(standard, data['outdoor_metric'], (regime,), offsets, static,
+        return ComfortStandardDefinition(standard, data['outdoor_metric'], tuple(regimes), offsets, static,
                                          dict(data['evidence']), data['citation'].strip(), **arguments)
     except ValueError as error:
         raise fail(str(error)) from None
+
+
+def _regimes_from_mapping(values: Any, fail) -> List[Any]:
+    """The regimes of the key ``regimes`` of a YAML file (:func:`definition_from_mapping`): a list of mappings with
+    the fields of :class:`accim.sim.arguments.CustomRegime` (:data:`_REGIME_FIELDS`), whose conditions with a value
+    are lists (``[metric_below, 10]``, ``[metric_between, [10, 20]]``).
+
+    :param values: The value of the key.
+    :param fail: The function that makes the ValueError of a message (with the name of the file).
+    """
+    from accim.sim.arguments import CustomRegime
+
+    if not isinstance(values, list) or not values:
+        raise fail(f'regimes must be a list of regimes (mappings with the keys {list(_REGIME_FIELDS)}), not '
+                   f'{values!r}.')
+    regimes = []
+    for number, regime in enumerate(values, start=1):
+        if not isinstance(regime, Mapping) or not set(regime) <= set(_REGIME_FIELDS):
+            raise fail(f'the regime {number} must be a mapping with the keys {list(_REGIME_COEFFICIENTS)} (and '
+                       f'optionally {list(_REGIME_FIELDS[8:])}), not {regime!r}.')
+        missing = [key for key in _REGIME_COEFFICIENTS if regime.get(key) is None]
+        if missing:
+            raise fail(f'the regime {number} needs {missing}.')
+        fields = {key: value for key, value in regime.items() if value is not None}
+        condition = fields.get('condition')
+        if isinstance(condition, list):
+            fields['condition'] = tuple(tuple(value) if isinstance(value, list) else value for value in condition)
+        try:
+            regimes.append(CustomRegime(**fields))
+        except ValueError as error:
+            raise fail(f'the regime {number}: {error}') from None
+    return regimes
 
 
 def registered_comfort_standards() -> Dict[int, ComfortStandardDefinition]:
@@ -576,7 +644,13 @@ def load_comfort_standards(path: Union[str, os.PathLike], register: bool = True,
     names of the output IDFs), ``title``, ``citation``, ``outdoor_metric`` (a name of
     :data:`accim.sim.ems.outdoor_metric.OUTDOOR_METRICS`, with ``alpha`` for 'rmot_alpha' and ``days`` for 'ndrm',
     optional), ``comfort_temperature`` (``slope`` and ``intercept``), ``applicability`` (``metric_min`` and
-    ``metric_max``, the limits of the outdoor metric), ``categories`` (``{category: {cooling_offset: ...,
+    ``metric_max``, the limits of the outdoor metric) or, instead of both, ``regimes`` (several comfort temperatures and
+    applicability limits, in their order of priority: a list of mappings with the fields of
+    :class:`accim.sim.arguments.CustomRegime`, ``slope``, ``intercept``, ``cooling_offset``, ``heating_offset``,
+    ``cooling_lower_limit``, ``cooling_upper_limit``, ``heating_lower_limit`` and ``heating_upper_limit``, and
+    optionally ``condition``, 'always' by default, a list such as ``[metric_below, 10]`` for the conditions with a
+    value, ``outdoor_metric``, ``alpha`` and ``days``; the last one 'always'; task H5 of the review of accim 1.2.0),
+    ``categories`` (``{category: {cooling_offset: ...,
     heating_offset: ..., description: ...}}``), ``comfort_modes`` (a list of 0, 1, 2 and 3, see
     :data:`DEFINITION_COMFORT_MODES`), ``static_setpoints`` (``heating`` and ``cooling``, which comfort modes 0 and 1
     need) and ``evidence`` (the statistics of the comfort model, which cannot be empty: decision D11).

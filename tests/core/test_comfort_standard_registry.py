@@ -205,11 +205,13 @@ def test_the_definitions_are_checked():
     definition = st.definition_from_mapping(_data())
     with pytest.raises(ValueError, match='a comfort standard must be a mapping with the keys'):
         st.definition_from_mapping([_data()])
-    # Several regimes, or a regime with a condition, are not available yet (notes/questions.md)
+    # Several regimes, the last one 'always' (task H5 of the review of accim 1.2.0, tests/core/test_standard_regimes.py)
     regime = definition.regimes[0]
-    for regimes in ((regime, regime), (dataclasses.replace(regime, condition='cooling_season'),)):
-        with pytest.raises(ValueError, match=r"must have one regime \(a CustomRegime\), with the condition 'always'"):
+    for regimes in ((regime, regime), (dataclasses.replace(regime, condition='cooling_season'),), ()):
+        with pytest.raises(ValueError, match=r"The (regimes of the )?comfort standard 101"):
             dataclasses.replace(definition, regimes=regimes)
+    several = dataclasses.replace(definition, regimes=(dataclasses.replace(regime, condition='cooling_season'), regime))
+    assert len(several.regimes) == 2 and sdl.uses_regimes(several) and not sdl.uses_regimes(definition)
     with pytest.raises(ValueError, match=r'must have the offsets of each one of its categories \(\[80, 90\]\), not '
                                          r'those of \[80\]'):
         dataclasses.replace(definition, category_offsets={80: (2.0, -2.0)})

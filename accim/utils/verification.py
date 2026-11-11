@@ -1343,9 +1343,10 @@ def _setpoint_mismatches(building, data: Mapping[str, pd.DataFrame], epw: str,
             if drift:
                 arguments.pop('heating_setpoint_minimum', None)
                 arguments.pop('cooling_setpoint_maximum', None)
-            # The regimes of the custom model of the zone (accim.sim.ems.custom_regimes)
+            # The regimes of the custom model of the zone (accim.sim.ems.custom_regimes); those of a comfort standard
+            # with regimes are those of its definition, and the other comfort standards do not use them
             regime_program = building.getobject('EnergyManagementSystem:Program', f'{PROGRAM_PREFIX}{zone}')
-            if regime_program is not None:
+            if regime_program is not None and arguments.get('comfort_standard') == 99:
                 arguments['custom_regimes'] = parse_regime_program(regime_program.fieldvalues[2:], zone)
             key = tuple(sorted(arguments.items()))
             if key not in previews:

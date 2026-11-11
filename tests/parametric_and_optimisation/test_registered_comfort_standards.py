@@ -130,6 +130,51 @@ def test_modify_comf_stand_with_a_comfort_standard_of_the_registry(tmp_path, aqi
 
 
 @needs_idd
+def test_modify_comf_stand_with_a_comfort_standard_with_regimes(tmp_path):
+    import yaml
+
+    from accim.sim.ems.custom_regimes import custom_regimes_of
+    from accim.sim.ems.outdoor_metric import has_outdoor_metric_code, zone_regime_metrics
+
+    # A comfort standard with two regimes (task H5 of the review of accim 1.2.0): its zones get them
+    with open(AQILAH, encoding='utf-8') as stream:
+        data = yaml.safe_load(stream)
+    for key in ('comfort_temperature', 'applicability', 'alpha'):
+        data.pop(key)
+    data.update(number=150, label='Two regimes', title='150 = Two regimes', outdoor_metric='rmot_7day', regimes=[
+        {'slope': 0.5, 'intercept': 12, 'cooling_offset': 0, 'heating_offset': 0, 'cooling_lower_limit': 5,
+         'cooling_upper_limit': 40, 'heating_lower_limit': 5, 'heating_upper_limit': 40,
+         'condition': ['metric_below', 16], 'outdoor_metric': 'daily_mean'},
+        {'slope': 0.33, 'intercept': 18.8, 'cooling_offset': 0, 'heating_offset': 0, 'cooling_lower_limit': 10,
+         'cooling_upper_limit': 30, 'heating_lower_limit': 10, 'heating_upper_limit': 30}])
+    definition = st.definition_from_mapping(data)
+    st.register_comfort_standard(definition)
+    try:
+        building = _model(tmp_path)
+        zones = ['Block1_Zone1', 'Block1_Zone2']
+        with warnings.catch_warnings():
+            warnings.simplefilter('ignore')
+            param_accis.modify_ComfStand(building, 150)
+        assert custom_regimes_of(building) == {zone: definition.regimes for zone in zones}
+        assert has_outdoor_metric_code(building)
+        assert zone_regime_metrics(building) == {zone: {1: (4, None, None)} for zone in zones}
+        assert all(inputs['CustAST_metric'] == 3 for inputs in _inputs(building))
+        # Those of a comfort standard are not those of the custom model, which modify_custom_regime changes
+        with pytest.raises(ValueError, match='The model has no regimes of the custom model'):
+            param_accis.modify_custom_regime(building, 0.3, 1, 'slope')
+        # Back to a built-in comfort standard: the zones lose them
+        with warnings.catch_warnings():
+            warnings.simplefilter('ignore')
+            param_accis.modify_ComfStand(building, 1)
+        assert not custom_regimes_of(building) and not zone_regime_metrics(building)
+        assert not any(str(line).strip().startswith('set ToutRegime_')
+                       for program in building.idfobjects['EnergyManagementSystem:Program']
+                       for line in program.fieldvalues[2:])
+    finally:
+        st.unregister_comfort_standard(150)
+
+
+@needs_idd
 def test_a_plan_with_a_comfort_standard_of_the_registry(tmp_path, monkeypatch, aqilah):
     from besos.evaluator import EvaluatorEP
 

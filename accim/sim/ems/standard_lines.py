@@ -25,6 +25,15 @@ running means of EnergyPlus, or Tout_metric, which the EMS code of the outdoor m
 with the inputs ``CustAST_metric``, ``CustAST_alpha`` and ``CustAST_days`` of the zone (:func:`standard_inputs`, which
 the zones of the comfort standard get, :mod:`accim.sim.ems.outdoor_metric`).
 
+A comfort standard with several regimes, or with a regime with its own outdoor metric (:func:`uses_regimes`, task H5
+of the review of accim 1.2.0, decision 4 of its section 6), has the code of the custom model: its branches read the
+inputs of the custom model (``Tout_metric*m+n``; the limits ``CustAST_ACSTaul``, ``CustAST_ACSTall``,
+``CustAST_AHSTaul`` and ``CustAST_AHSTall``; and the offsets of its categories plus ``CustAST_ACSToffset`` and
+``CustAST_AHSToffset``), which the program of the regimes of each of its zones (``SelectCustomRegime_<zone>``,
+:mod:`accim.sim.ems.custom_regimes`) sets to those of the regime of the timestep, and its outdoor metric is always
+Tout_metric (also with 'pmot' or 'rmot', whose values the EMS code of the outdoor metric gives it), so that a regime can
+have its own (:func:`standard_metric_variable`).
+
 The built-in comfort standards of :data:`WEATHER_FILE_METRICS` (JPN Aqilah 2025, 23) have another outdoor metric in
 the models with the values of the weather file of the simulation (the argument ``epw`` of AddAccis or modify_accis):
 their code then reads Tout_metric instead of RMOT (:func:`weather_file_lines`, finding B4-1 of the review of 1.2.0).
@@ -42,10 +51,13 @@ __all__ = [
     'metric_variable',
     'needs_outdoor_metric_code',
     'outdoor_metric_standards',
+    'regime_standards',
     'remove_standard_lines',
     'setpoint_lines',
     'standard_branches',
     'standard_inputs',
+    'standard_metric_variable',
+    'uses_regimes',
     'weather_file_definition',
     'weather_file_lines',
 ]
@@ -94,10 +106,31 @@ def metric_variable(outdoor_metric: str) -> str:
     return _NATIVE_METRICS.get(outdoor_metric, OUTDOOR_METRIC_VARIABLE)
 
 
+def uses_regimes(definition) -> bool:
+    """True if a comfort standard has several regimes, or a regime with its own outdoor metric: its EMS code selects
+    the regime of each timestep as the regimes of the custom model (see the module)."""
+    return len(definition.regimes) > 1 or any(regime.outdoor_metric is not None for regime in definition.regimes)
+
+
+def regime_standards() -> set:
+    """The comfort standards of the registry with regimes (:func:`uses_regimes`)."""
+    from accim.sim.standards import registered_comfort_standards
+
+    return {number for number, definition in registered_comfort_standards().items() if uses_regimes(definition)}
+
+
 def needs_outdoor_metric_code(definition) -> bool:
-    """True if the outdoor metric of a comfort standard needs the EMS code of the outdoor metric of the custom model
-    (it is not 'pmot' nor 'rmot')."""
-    return definition.outdoor_metric not in _NATIVE_METRICS
+    """True if the outdoor metric of a comfort standard needs the EMS code of the outdoor metric of the custom model:
+    it is not 'pmot' nor 'rmot', or the comfort standard has regimes (:func:`uses_regimes`)."""
+    return definition.outdoor_metric not in _NATIVE_METRICS or uses_regimes(definition)
+
+
+def standard_metric_variable(definition) -> str:
+    """The variable of the outdoor metric in the EMS code of a comfort standard: Tout_metric with regimes
+    (:func:`uses_regimes`), and that of its outdoor metric otherwise (:func:`metric_variable`)."""
+    from accim.sim.ems.program_lines import OUTDOOR_METRIC_VARIABLE
+
+    return OUTDOOR_METRIC_VARIABLE if uses_regimes(definition) else metric_variable(definition.outdoor_metric)
 
 
 def outdoor_metric_standards() -> set:
@@ -200,9 +233,12 @@ def _comfort_temperature(definition, limit: str = '') -> str:
     ``<metric>*<slope>+<intercept>``, as that of the built-in comfort standards, or ``<intercept>-<metric>*<-slope>``
     with a negative slope, since Erl does not take a minus sign after a multiplication sign, not even in parentheses
     (EnergyPlus stops with "Minus sign used on the right side of multiplication sign", as
-    :mod:`accim.sim.ems.erl`)."""
+    :mod:`accim.sim.ems.erl`). With regimes, ``<metric>*m+n``, the inputs of the custom model that the program of the
+    regimes of the zone sets, as the comfort temperature of the custom model."""
+    variable = limit or standard_metric_variable(definition)
+    if uses_regimes(definition):
+        return f'{variable}*m+n'
     regime = definition.regimes[0]
-    variable = limit or metric_variable(definition.outdoor_metric)
     if regime.slope < 0:
         return f'{_number(regime.intercept)}-{variable}*{_number(-regime.slope)}'
     return f'{variable}*{_number(regime.slope)}{_plus(regime.intercept)}'
@@ -210,25 +246,37 @@ def _comfort_temperature(definition, limit: str = '') -> str:
 
 def standard_branches(definition) -> Dict[str, Tuple[str, ...]]:
     """The branches ``elseif ComfStand == <n>`` of a comfort standard in SetComfTemp, SetAppLimits, ApplyCAT and, if its
-    outdoor metric is not PMOT, CountHours (with ``{zone}``) and SetVST."""
+    outdoor metric is not PMOT, CountHours (with ``{zone}``) and SetVST. With regimes (:func:`uses_regimes`), they read
+    the inputs of the custom model that the program of the regimes of the zone sets (see the module)."""
     from accim.sim.ems import program_lines as pl
 
     number, regime = definition.number, definition.regimes[0]
     condition = f'elseif ComfStand == {number}'
-    metric = metric_variable(definition.outdoor_metric)
+    metric = standard_metric_variable(definition)
+    regimes = uses_regimes(definition)
     cat_lines: List[str] = []
     # In the numeric order of the categories, whatever the order of the definition (finding B3-2 of the review of
     # accim 1.2.0), as the branches of the built-in comfort standards
     for index, (category, (cooling, heating)) in enumerate(sorted(definition.category_offsets.items())):
-        cat_lines += [f"{'if' if index == 0 else 'elseif'} (CAT == {_number(category)})",
-                      f'set ACSToffset = {_number(cooling + regime.cooling_offset)}+CATcoolOffset',
-                      f'set AHSToffset = {_number(heating + regime.heating_offset)}+CATheatOffset']
+        cat_lines.append(f"{'if' if index == 0 else 'elseif'} (CAT == {_number(category)})")
+        if regimes:
+            # The offsets of the regime of the timestep, inputs of the custom model
+            cat_lines += [f'set ACSToffset = {_number(cooling)}+CustAST_ACSToffset+CATcoolOffset',
+                          f'set AHSToffset = {_number(heating)}+CustAST_AHSToffset+CATheatOffset']
+        else:
+            cat_lines += [f'set ACSToffset = {_number(cooling + regime.cooling_offset)}+CATcoolOffset',
+                          f'set AHSToffset = {_number(heating + regime.heating_offset)}+CATheatOffset']
+    if regimes:
+        limits = ('set ACSTaul = CustAST_ACSTaul', 'set ACSTall = CustAST_ACSTall', 'set AHSTaul = CustAST_AHSTaul',
+                  'set AHSTall = CustAST_AHSTall')
+    else:
+        limits = (f'set ACSTaul = {_number(regime.cooling_upper_limit)}',
+                  f'set ACSTall = {_number(regime.cooling_lower_limit)}',
+                  f'set AHSTaul = {_number(regime.heating_upper_limit)}',
+                  f'set AHSTall = {_number(regime.heating_lower_limit)}')
     branches = {
         'SetComfTemp': (condition, f'set ComfTemp = {_comfort_temperature(definition)}'),
-        'SetAppLimits': (condition, f'set ACSTaul = {_number(regime.cooling_upper_limit)}',
-                         f'set ACSTall = {_number(regime.cooling_lower_limit)}',
-                         f'set AHSTaul = {_number(regime.heating_upper_limit)}',
-                         f'set AHSTall = {_number(regime.heating_lower_limit)}'),
+        'SetAppLimits': (condition, *limits),
         'ApplyCAT': (condition, *cat_lines, 'endif'),
     }
     if metric != 'PMOT':
@@ -246,7 +294,7 @@ def setpoint_lines(definition) -> Dict[int, Tuple[str, ...]]:
     definition."""
     from accim.sim.ems.static_setpoints import INPUTS as STATIC_INPUTS, has_static_setpoints
 
-    metric = metric_variable(definition.outdoor_metric)
+    metric = standard_metric_variable(definition)
     if has_static_setpoints(definition.standard.number):
         static_setpoints = STATIC_INPUTS
     elif definition.static_setpoints is not None:

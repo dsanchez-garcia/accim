@@ -33,7 +33,31 @@ The conditions (:data:`accim.sim.arguments.REGIME_CONDITIONS` and :data:`accim.s
   applicability limits of the ACCIS).
 
 The EMS global variable ``CustomRegime_<zone>`` (and the EMS output variable of the same name, averaged) is the number
-of the regime of the timestep, from 1, or 0 when the inputs of SetInputData_<zone> apply.
+of the regime of the timestep, from 1, or 0 when the inputs of SetInputData_<zone> apply. Averaged over an hour (or a
+longer period), it is not a whole number when the regime changes within the hour (2.8333...): only the outputs at
+timestep frequency give the regime of each timestep (finding B2-2 of the review of accim 1.2.0).
+
+The conditions 'hvac_off' and 'hvac_on' read the HVAC system of the previous timestep, and the regime that they choose
+changes the setpoints that decide whether the HVAC system runs in the timestep, so the regimes can alternate from one
+timestep to the next (finding B2-1 of the review of accim 1.2.0): check ``CustomRegime_<zone>`` at timestep
+frequency; a minimum time in a regime is not available.
+
+Each regime can have its own outdoor metric (``outdoor_metric``, ``alpha`` and ``days`` of
+:class:`accim.sim.arguments.CustomRegime`; task H5 of the review of accim 1.2.0, decision 1 of its section 6): the
+conditions compare the outdoor metric of the zone (``custom_outdoor_metric``), and the comfort temperature, the
+setpoints, the applicability and the hour counters of the regime use its own. The program of the outdoor metric of the
+zone (:mod:`accim.sim.ems.outdoor_metric`) calculates it in each timestep, ``ToutRegime_<regime>_<zone>``, and the
+branch of the regime sets the inputs of its metric (``CustAST_metric``, and ``CustAST_alpha`` and ``CustAST_days`` if
+they are given, which SetInputData_<zone> sets again in the next timestep) and ``Tout_metric`` to it; after the chain,
+``Tout_metric_<zone>`` (its output) is the outdoor metric of the regime of the timestep. The model then needs the EMS
+code of the outdoor metric of the custom model.
+
+The comfort standards of the registry with several regimes, or with a regime with its own outdoor metric
+(:mod:`accim.sim.standards`, the key ``regimes`` of their YAML files; task H5 of the review of accim 1.2.0, decision 4
+of its section 6), select the regime of each timestep with the same program: their zones get the program
+SelectCustomRegime_<zone> with the regimes of their comfort standard (:func:`standard_regimes`), whose EMS code reads
+the inputs of the custom model (:mod:`accim.sim.ems.standard_lines`), and whose conditions compare the outdoor metric of
+the comfort standard (Tout_metric).
 """
 
 import re
@@ -55,8 +79,11 @@ __all__ = [
     'parse_regime_program',
     'regime_program_lines',
     'set_custom_regimes',
+    'set_standard_regimes',
     'set_zone_custom_regimes',
+    'standard_regimes',
     'uses_hvac_conditions',
+    'uses_regime_metrics',
     'uses_season_conditions',
 ]
 
@@ -76,6 +103,9 @@ REGIME_INPUTS = {
     'heating_lower_limit': 'CustAST_AHSTall',
     'heating_upper_limit': 'CustAST_AHSTaul',
 }
+#: The inputs of the outdoor metric that a regime with its own outdoor metric sets: the field of
+#: :class:`accim.sim.arguments.CustomRegime` -> the EMS variable (of SetInputData_<zone>)
+REGIME_METRIC_INPUTS = {'outdoor_metric': 'CustAST_metric', 'alpha': 'CustAST_alpha', 'days': 'CustAST_days'}
 _CUSTOM_COMFORT_STANDARD = 99
 #: RunACCIS_<zone> runs the program of the regimes right before this line
 _RUN_BEFORE = 'run SetAppLimits'
@@ -116,6 +146,18 @@ def uses_season_conditions(regimes: Sequence[CustomRegime]) -> bool:
 def uses_hvac_conditions(regimes: Sequence[CustomRegime]) -> bool:
     """True if a regime has the condition 'hvac_off' or 'hvac_on' (mixed mode only)."""
     return any(regime.condition in _HVAC_CONDITIONS for regime in regimes)
+
+
+def uses_regime_metrics(regimes: Sequence[CustomRegime]) -> bool:
+    """True if a regime has its own outdoor metric (which needs the EMS code of the outdoor metric)."""
+    return any(regime.outdoor_metric is not None for regime in regimes)
+
+
+def regime_metrics(regimes: Sequence[CustomRegime]) -> Dict[int, Tuple[int, Optional[float], Optional[int]]]:
+    """The outdoor metric of each regime that has its own: ``{number of the regime (from 1): (code, alpha, days)}``,
+    whose alpha and days are None for those of the zone (:attr:`accim.sim.arguments.CustomRegime.metric_spec`)."""
+    return {number: regime.metric_spec for number, regime in enumerate(regimes, start=1)
+            if regime.metric_spec is not None}
 
 
 def condition_text(condition: Any) -> str:
@@ -176,11 +218,32 @@ def regime_program_lines(zone: str, regimes: Sequence[CustomRegime], metric: str
         lines += list(hvac_lines)
 
     def body(number: int, regime: CustomRegime) -> List[str]:
-        return ([f'set {variable} = {_number(getattr(regime, field))}' for field, variable in REGIME_INPUTS.items()]
-                + [f'set {output} = {number}'])
+        result = [f'set {variable} = {_number(getattr(regime, field))}' for field, variable in REGIME_INPUTS.items()]
+        spec = regime.metric_spec
+        if spec is not None:
+            # The outdoor metric of the regime (accim.sim.ems.outdoor_metric calculates it), and its inputs
+            from accim.sim.ems import program_lines as pl
+            from accim.sim.ems.outdoor_metric import regime_metric_variable
 
+            code, alpha, days = spec
+            result.append(f"set {REGIME_METRIC_INPUTS['outdoor_metric']} = {code}")
+            if alpha is not None:
+                result.append(f"set {REGIME_METRIC_INPUTS['alpha']} = {_number(alpha)}")
+            if days is not None:
+                result.append(f"set {REGIME_METRIC_INPUTS['days']} = {int(days)}")
+            result.append(f'set {pl.OUTDOOR_METRIC_VARIABLE} = {regime_metric_variable(number, zone)}')
+        return result + [f'set {output} = {number}']
+
+    # The output of the outdoor metric of the zone is that of the regime of the timestep
+    if uses_regime_metrics(regimes):
+        from accim.sim.ems import program_lines as pl
+        from accim.sim.ems.outdoor_metric import OUTPUT_PREFIX as METRIC_OUTPUT_PREFIX
+
+        closing = [f'set {METRIC_OUTPUT_PREFIX}{zone} = {pl.OUTDOOR_METRIC_VARIABLE}']
+    else:
+        closing = []
     if len(regimes) == 1 and regimes[0].condition == 'always':
-        return lines + body(1, regimes[0])
+        return lines + body(1, regimes[0]) + closing
     for number, regime in enumerate(regimes, start=1):
         expression = condition_expression(regime.condition, metric)
         if expression is None:
@@ -189,7 +252,7 @@ def regime_program_lines(zone: str, regimes: Sequence[CustomRegime], metric: str
             lines.append(f"{'if' if number == 1 else 'elseif'} {expression}")
         lines += body(number, regime)
     lines.append('endif')
-    return lines
+    return lines + closing
 
 
 def hvac_off_lines(idf, zone: str) -> Optional[List[str]]:
@@ -251,11 +314,24 @@ def parse_regime_program(lines: Sequence[str], zone: str) -> Tuple[CustomRegime,
                   pl.format_lines(pl.HVAC_OFF_FROM_LOAD, zone=zone)):
         if lowered[index:index + len(block)] == [line.lower() for line in block]:
             index += len(block)
-    size = len(REGIME_INPUTS) + 1
+    from accim.sim.ems import program_lines as pl
+    from accim.sim.ems.outdoor_metric import OUTPUT_PREFIX as METRIC_OUTPUT_PREFIX, metric_name, regime_metric_variable
 
-    def regime_at(start: int, condition: Any, number: int) -> CustomRegime:
+    closing = f'set {METRIC_OUTPUT_PREFIX}{zone} = {pl.OUTDOOR_METRIC_VARIABLE}'.lower()
+    keywords = ('if', 'elseif', 'else', 'endif')
+
+    def block_end(start: int) -> int:
+        """The end of the assignments of a regime from a line: the next keyword, or the line of the output of the
+        outdoor metric of the zone after the chain, or the end of the lines."""
+        end = start
+        while (end < len(lines) and lowered[end].split(' ', 1)[0] not in keywords
+               and ' '.join(lowered[end].split()) != closing):
+            end += 1
+        return end
+
+    def regime_at(start: int, end: int, condition: Any, number: int) -> CustomRegime:
         values = {}
-        for line in lines[start:start + size]:
+        for line in lines[start:end]:
             found = assignment(line)
             if found is None:
                 raise error(f'{line!r} is not a line of a regime')
@@ -265,14 +341,35 @@ def parse_regime_program(lines: Sequence[str], zone: str) -> Tuple[CustomRegime,
             raise error(f'the regime {number} does not set {missing}')
         if _value(values[output]) != number:
             raise error(f'the regime {number} sets {output} = {values[output]}')
+        metric = {}
+        metric_variable = pl.OUTDOOR_METRIC_VARIABLE.lower()
+        if REGIME_METRIC_INPUTS['outdoor_metric'].lower() in values:
+            if values.get(metric_variable, '').lower() != regime_metric_variable(number, zone).lower():
+                raise error(f'the regime {number} sets its outdoor metric without '
+                            f'{pl.OUTDOOR_METRIC_VARIABLE} = {regime_metric_variable(number, zone)}')
+            metric['outdoor_metric'] = metric_name(_value(values[REGIME_METRIC_INPUTS['outdoor_metric'].lower()]))
+            for field in ('alpha', 'days'):
+                if REGIME_METRIC_INPUTS[field].lower() in values:
+                    metric[field] = _value(values[REGIME_METRIC_INPUTS[field].lower()])
+        elif metric_variable in values:
+            raise error(f'the regime {number} sets {pl.OUTDOOR_METRIC_VARIABLE} without its outdoor metric')
+        expected = {variable.lower() for variable in [*REGIME_INPUTS.values(), output]}
+        if metric:
+            expected.add(REGIME_METRIC_INPUTS['outdoor_metric'].lower())
+            expected |= {REGIME_METRIC_INPUTS[field].lower() for field in ('alpha', 'days') if field in metric}
+            expected.add(metric_variable)
+        unknown = sorted(set(values) - expected)
+        if unknown:
+            raise error(f'the regime {number} sets {unknown}')
         return CustomRegime(**{field: _value(values[variable.lower()]) for field, variable in REGIME_INPUTS.items()},
-                            condition=condition)
+                            condition=condition, **metric)
 
     regimes = []
     closed = True
     if index < len(lines) and not lowered[index].startswith('if '):
-        regimes.append(regime_at(index, 'always', 1))
-        index += size
+        end = block_end(index)
+        regimes.append(regime_at(index, end, 'always', 1))
+        index = end
     else:
         closed = False
         while index < len(lines):
@@ -292,8 +389,15 @@ def parse_regime_program(lines: Sequence[str], zone: str) -> Tuple[CustomRegime,
                 condition = 'always'
             else:
                 raise error(f'{lines[index]!r} is not a condition of a regime')
-            regimes.append(regime_at(index + 1, condition, number))
-            index += 1 + size
+            end = block_end(index + 1)
+            regimes.append(regime_at(index + 1, end, condition, number))
+            index = end
+    # The output of the outdoor metric of the zone, after the chain, with the outdoor metrics of the regimes
+    if regimes and closed and uses_regime_metrics(regimes):
+        if index < len(lines) and ' '.join(lowered[index].split()) == closing:
+            index += 1
+        else:
+            raise error(f'it does not set the output of the outdoor metric of the zone after the regimes ({closing})')
     if not regimes or not closed or index != len(lines):
         raise error('it has no regimes, no endif, or lines after them')
     try:
@@ -408,11 +512,26 @@ def set_zone_custom_regimes(idf, zone: str, regimes: Any) -> None:
                              Schedule_Name='')
 
 
+def standard_regimes(comfort_standard: Any) -> Optional[Tuple[CustomRegime, ...]]:
+    """The regimes of a comfort standard of the registry with regimes
+    (:func:`accim.sim.ems.standard_lines.uses_regimes`), which its zones get; None for the other comfort standards."""
+    from accim.sim.ems.standard_lines import uses_regimes
+    from accim.sim.standards import comfort_standard_definition
+
+    definition = comfort_standard_definition(comfort_standard)
+    return definition.regimes if definition is not None and uses_regimes(definition) else None
+
+
+def _is_custom(comfort_standard: Any) -> bool:
+    return isinstance(comfort_standard, (int, float)) and comfort_standard == _CUSTOM_COMFORT_STANDARD
+
+
 def set_custom_regimes(idf, regimes: Any) -> None:
     """Write the regimes of the custom model in the zones of a model with the ACCIS of accim 1.0.0 or later whose
     comfort standard is the custom model (99), and remove them from the other zones (see
     :func:`set_zone_custom_regimes`); with no regimes, remove them from all the zones, so that the model is as without
-    them.
+    them. The zones of the comfort standards of the registry with regimes get those of their comfort standard
+    (:func:`standard_regimes`), whatever ``regimes``.
 
     :param idf: The model (eppy).
     :param regimes: The regimes (:class:`accim.sim.arguments.CustomRegime`), in their order of priority, or None (or an
@@ -422,9 +541,51 @@ def set_custom_regimes(idf, regimes: Any) -> None:
     from accim.sim.ems.inputs import input_programs, read_inputs
 
     regimes = check_custom_regimes(regimes)
-    if not regimes and not has_custom_regimes(idf):
+    standards = {zone: read_inputs(program).get('ComfStand') for zone, program in input_programs(idf).items()}
+    own = {zone: standard_regimes(comfort_standard) for zone, comfort_standard in standards.items()}
+    if not regimes and not has_custom_regimes(idf) and all(value is None for value in own.values()):
         return
+    for zone, comfort_standard in standards.items():
+        if own[zone] is not None:
+            set_zone_custom_regimes(idf, zone, own[zone])
+        else:
+            set_zone_custom_regimes(idf, zone, regimes if _is_custom(comfort_standard) else ())
+
+
+def set_standard_regimes(idf, previous: Optional[Dict[str, Any]] = None) -> bool:
+    """Write the regimes of the comfort standards of the registry with regimes in their zones of a model with the
+    ACCIS of accim 1.0.0 or later (:func:`standard_regimes`), when the regimes of the custom model are kept (as
+    :func:`accim.sim.accis.modify_accis` without ``custom_regimes``): the other zones keep theirs, but for those that
+    had one of these comfort standards (``previous``) and now have another one, and those that no longer have the
+    custom model and whose regimes have their own outdoor metric, which would replace the outdoor metric of the zone
+    that the other comfort standards read (Tout_metric): their regimes are removed.
+
+    :param idf: The model (eppy).
+    :param previous: The comfort standard of each zone before the changes (by the name of the zone in the EMS
+        objects), or None.
+    :return: True if the regimes of a zone have been written or removed.
+    """
+    from accim.sim.ems.inputs import input_programs, read_inputs
+
+    previous = previous or {}
+    current = custom_regimes_of(idf)
+    changed = False
     for zone, program in input_programs(idf).items():
         comfort_standard = read_inputs(program).get('ComfStand')
-        custom = isinstance(comfort_standard, (int, float)) and comfort_standard == _CUSTOM_COMFORT_STANDARD
-        set_zone_custom_regimes(idf, zone, regimes if custom else ())
+        own = standard_regimes(comfort_standard)
+        if own is not None:
+            if current.get(zone) != own:
+                set_zone_custom_regimes(idf, zone, own)
+                changed = True
+            continue
+        regimes = current.get(zone)
+        if not regimes or _is_custom(comfort_standard):
+            if regimes and standard_regimes(previous.get(zone)) is not None:
+                # From a comfort standard with regimes to the custom model, which keeps its scalar arguments
+                set_zone_custom_regimes(idf, zone, ())
+                changed = True
+            continue
+        if standard_regimes(previous.get(zone)) is not None or uses_regime_metrics(regimes):
+            set_zone_custom_regimes(idf, zone, ())
+            changed = True
+    return changed

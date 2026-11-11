@@ -50,7 +50,7 @@ from accim.sim.arguments import (
     to_day_of_year,
 )
 from accim.sim.build import add_accis_objects, add_outputs
-from accim.sim.ems.custom_regimes import set_custom_regimes, uses_hvac_conditions
+from accim.sim.ems.custom_regimes import set_custom_regimes, set_standard_regimes, uses_hvac_conditions
 from accim.sim.ems.drift_limiter import ARGUMENTS as DRIFT_ARGUMENTS
 from accim.sim.ems.drift_limiter import DEFAULTS as DRIFT_DEFAULTS
 from accim.sim.ems.drift_limiter import INPUTS as DRIFT_INPUTS
@@ -722,7 +722,9 @@ class AddAccis:
         before accim 1.2.0. The zones of the custom model get the program SelectCustomRegime_<zone> and the output
         ``CustomRegime_<zone>``, the number of the regime of each timestep (0 for the scalar arguments); see
         :mod:`accim.sim.ems.custom_regimes`. It needs ``comfort_standard`` 99 (in the output IDFs or in
-        ``zone_arguments``) and ``setpoint_type`` 'temperature'.
+        ``zone_arguments``) and ``setpoint_type`` 'temperature'. The zones of the comfort standards of the registry
+        with regimes (the key ``regimes`` of their YAML files, :mod:`accim.sim.standards`) get those of their comfort
+        standard, with the same program, whatever this argument.
     :param report_long_term_discomfort: True to report the long-term thermal discomfort of the occupied hours of each
         zone and of the building, Methods A and B of CEN/TR 16798-2:2019, Annex D, with the range between the setpoints
         without the tolerance of the ACCIS (:mod:`accim.sim.ems.long_term_discomfort`): the outputs ``Hours Above Upper
@@ -912,6 +914,9 @@ class AddAccis:
         if regimes and uses_hvac_conditions(regimes) and not is_mixed_mode(script_type):
             raise ValueError("The conditions 'hvac_off' and 'hvac_on' of custom_regimes need mixed mode (script_type "
                              f"'vrf_mm' or 'ex_mm'), not {script_type!r}.")
+        if epw is None and any(regime.outdoor_metric == 'monthly_mean' for regime in regimes):
+            raise ValueError("The outdoor metric 'monthly_mean' of a regime of custom_regimes needs the weather file "
+                             "of the simulations (argument epw), whose monthly means the EMS programs keep.")
         report_long_term_discomfort = _check_long_term_discomfort(report_long_term_discomfort, setpoint_type)
         long_term_range = _check_long_term_range(long_term_range, report_long_term_discomfort)
         if verbose:
@@ -1361,7 +1366,10 @@ def modify_accis(
     them to the zones whose comfort standard is the custom model (99) once the arguments are set, and removes them
     from the other zones (:func:`accim.sim.ems.custom_regimes.set_custom_regimes`); an empty list removes them from
     all the zones. The zones whose comfort standard changes keep their regimes otherwise, which only the custom model
-    uses.
+    uses, unless a regime has its own outdoor metric, which would replace the outdoor metric of the zone (Tout_metric)
+    that other comfort standards read: then they are removed. The zones of the comfort standards of the registry with
+    regimes (:mod:`accim.sim.standards`) get those of their comfort standard, and lose them when they get another one
+    (:func:`accim.sim.ems.custom_regimes.set_standard_regimes`).
 
     :param setpoint_tolerance: The tolerance of the setpoints.
     :param zone_arguments: The arguments of some zones, which replace those of the call in these zones:
@@ -1479,6 +1487,9 @@ def modify_accis(
                    for zone, program in zone_programs.items()):
             raise ValueError('The arguments of the limiter of the drift of the setpoints need drift_mode: no zone has '
                              'the limiter, nor gets it in this call.')
+    # The comfort standard of each zone before the changes: the zones that leave a comfort standard with regimes lose
+    # them (accim.sim.ems.custom_regimes.set_standard_regimes)
+    previous = {zone: read_inputs(program).get('ComfStand') for zone, program in zone_programs.items()}
     for zone, program in zone_programs.items():
         current = read_inputs(program)
         values = input_values({**arguments, **outdoor_metric, **limits, **statics, **resolved.get(zone, {})})
@@ -1506,14 +1517,20 @@ def modify_accis(
         set_setpoint_limits_code(idf)
     if drift_given:
         set_drift_limiter_code(idf, _ems_output_frequencies(idf))
+    regimes_changed = False
     if regimes is not None:
         set_custom_regimes(idf, regimes)
+    else:
+        # The regimes of the comfort standards of the registry with regimes (task H5 of the review of accim 1.2.0)
+        regimes_changed = set_standard_regimes(idf, previous)
     add_comfort_standard_code(idf, zone_comfort_standards(idf), epw)
-    # The comfort standards defined by their data whose outdoor metric the EMS calculates need its EMS code, and the
-    # zones of JPN Aqilah 2025 that of the outdoor metric of the weather file (finding B4-1 of accim 1.2.0)
+    # The comfort standards defined by their data whose outdoor metric the EMS calculates (or with regimes) need its
+    # EMS code, and the zones of JPN Aqilah 2025 that of the outdoor metric of the weather file (finding B4-1 of accim
+    # 1.2.0)
     registered_metric = bool({int(n) for n in zone_comfort_standards(idf)} & outdoor_metric_standards())
     weather_zones = weather_file_zones(idf)
-    if metric_given or registered_metric or weather_zones:
+    # The regimes can have their own outdoor metric (task H5 of the review of accim 1.2.0)
+    if metric_given or registered_metric or weather_zones or regimes is not None or regimes_changed:
         enabled = outdoor_metric_needed(idf, code_comfort_standards(idf), epw)
         set_outdoor_metric_code(idf, enabled, epw, rewrite=metric_given)
     given = {comfort_standard, *(own.get('comfort_standard') for own in resolved.values())}

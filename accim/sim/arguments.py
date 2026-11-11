@@ -251,10 +251,18 @@ class CustomRegime:
     :ivar heating_upper_limit: The upper applicability limit of the heating setpoint, as
         ``custom_heating_upper_limit``.
     :ivar condition: When the regime applies: a name of :data:`REGIME_CONDITIONS` ('always' by default) or a tuple of
-        :data:`METRIC_CONDITIONS`, such as ``('metric_below', 10)``.
-    :ivar outdoor_metric: The outdoor metric of the regime; only None (the outdoor metric of the zone,
-        ``custom_outdoor_metric``) in this version.
-    :raises ValueError: If a coefficient is not a number, or the condition or the outdoor metric is not valid.
+        :data:`METRIC_CONDITIONS`, such as ``('metric_below', 10)``. The conditions of the outdoor metric compare that
+        of the zone (``custom_outdoor_metric``), whatever the outdoor metric of the regimes.
+    :ivar outdoor_metric: The outdoor metric of the comfort temperature, the setpoints and the applicability of the
+        regime, a name (or code) of :data:`accim.sim.ems.outdoor_metric.OUTDOOR_METRICS`, kept as its name; None (the
+        default) for that of the zone, ``custom_outdoor_metric`` (task H5 of the review of accim 1.2.0, decision 1 of
+        its section 6: the EMS calculates the outdoor metric of each regime, :mod:`accim.sim.ems.custom_regimes`).
+    :ivar alpha: The alpha of the outdoor metric 'rmot_alpha' of the regime; None (the default) for that of the zone,
+        ``custom_alpha``.
+    :ivar days: The days of the outdoor metric 'ndrm' of the regime; None (the default) for those of the zone,
+        ``custom_days``.
+    :raises ValueError: If a coefficient is not a number, the condition or the outdoor metric is not valid, or
+        ``alpha`` or ``days`` is given without ``outdoor_metric`` (or is not valid).
     """
 
     slope: float
@@ -267,6 +275,8 @@ class CustomRegime:
     heating_upper_limit: float
     condition: Union[str, Tuple[str, Any]] = 'always'
     outdoor_metric: Optional[str] = None
+    alpha: Optional[float] = None
+    days: Optional[int] = None
 
     def __post_init__(self):
         for name in _REGIME_NUMBERS:
@@ -274,10 +284,34 @@ class CustomRegime:
                 raise ValueError(f'{name} of a regime of the custom model must be a number, not '
                                  f'{getattr(self, name)!r}.')
         object.__setattr__(self, 'condition', _regime_condition(self.condition))
-        if self.outdoor_metric is not None:
-            raise ValueError(f'outdoor_metric of a regime of the custom model must be None (its outdoor metric is that '
-                             f'of the zone, custom_outdoor_metric): an outdoor metric for each regime is not '
-                             f'available yet, not {self.outdoor_metric!r}.')
+        if self.outdoor_metric is None:
+            if self.alpha is not None or self.days is not None:
+                raise ValueError('alpha and days of a regime of the custom model are those of its outdoor_metric: give '
+                                 'it too (None, the default, for the outdoor metric of the zone, with its alpha and '
+                                 'days).')
+            return
+        from accim.sim.ems.outdoor_metric import (DEFAULT_ALPHA, DEFAULT_DAYS, check_outdoor_metric_arguments,
+                                                  metric_name)
+
+        try:
+            code = check_outdoor_metric_arguments(self.outdoor_metric,
+                                                  DEFAULT_ALPHA if self.alpha is None else self.alpha,
+                                                  DEFAULT_DAYS if self.days is None else self.days)
+        except ValueError as error:
+            raise ValueError(f'The outdoor metric of a regime of the custom model: {error}') from None
+        object.__setattr__(self, 'outdoor_metric', metric_name(code))
+        if self.days is not None:
+            object.__setattr__(self, 'days', int(self.days))
+
+    @property
+    def metric_spec(self) -> Optional[Tuple[int, Optional[float], Optional[int]]]:
+        """The outdoor metric of the regime, ``(code, alpha, days)`` (None for the alpha and days of the zone), or None
+        for that of the zone."""
+        if self.outdoor_metric is None:
+            return None
+        from accim.sim.ems.outdoor_metric import metric_code
+
+        return metric_code(self.outdoor_metric), self.alpha, self.days
 
 
 def check_custom_regimes(regimes: Any) -> Tuple[CustomRegime, ...]:

@@ -24,6 +24,55 @@ it here as answered).
 
 ## Open
 
+## 2026-11-10 — H5: the schema of the key regimes of the YAML files of the comfort standards
+- Context: decision 4 of v04 §6 gives the key `regimes:` "with the same schema as CustomRegime of B2 (slope, intercept,
+  offsets, limits, condition, outdoor_metric optional)", and says that a scalar `comfort_temperature` is a single regime
+  'always'. It does not say whether the offsets are required, which conditions a comfort standard can have, or what
+  applies when no condition holds.
+- Why it matters: the custom model falls back on its scalar arguments when no regime holds; a comfort standard has no
+  such arguments (its zones have those of the custom model, which are not its coefficients).
+- Options considered: (i) the eight coefficients required, as in `CustomRegime` (no defaults); `condition`,
+  `outdoor_metric`, `alpha` and `days` optional; the last regime must be 'always'; the conditions 'hvac_off' and
+  'hvac_on' rejected (they read the HVAC system of the model in mixed mode, not the comfort model, and would make a
+  comfort standard depend on the script type) (implemented); (ii) offsets 0 by default; (iii) allow every condition and
+  check the mixed mode when the output IDFs are written.
+- Owner: the author.
+- Status: open; option (i) implemented provisionally (`accim.sim.standards.definition_from_mapping` and
+  `ComfortStandardDefinition`).
+
+## 2026-11-10 — H5: the EMS code of a comfort standard with regimes
+- Context: decision 4 of v04 §6 does not say how the EMS selects the regime of a comfort standard.
+- Why it matters: the branches of a registered comfort standard had its numbers written in them; with regimes, they
+  change in each timestep.
+- Options considered: (i) the code of the custom model: the branches read its inputs (`Tout_metric*m+n`,
+  `CustAST_ACSTaul`..., the offsets of each category plus `CustAST_ACSToffset` and `CustAST_AHSToffset`), the zones get
+  the program `SelectCustomRegime_<zone>` with the regimes of the comfort standard, and the outdoor metric is always
+  `Tout_metric`, so the model has the EMS code of the outdoor metric also with 'pmot' and 'rmot' (implemented; a
+  comfort standard with one regime 'always' without its own metric keeps the code of before, numbers in the branches);
+  (ii) a chain of branches per regime in each program of the ACCIS; (iii) native PMOT/RMOT in the conditions when no
+  regime has its own metric. Also: the zones get the regimes of their comfort standard whatever `custom_regimes` (that
+  of the custom model), and lose them when `modify_accis` or the parameter `comfort_standard` gives them another comfort
+  standard (`accim.sim.ems.custom_regimes.set_standard_regimes`); `modify_custom_regime` of the parametric module
+  changes those of the custom model only.
+- Owner: the author.
+- Status: open; option (i) implemented provisionally (`accim.sim.ems.standard_lines.uses_regimes`).
+
+## 2026-11-10 — H5: the outdoor metric of a regime in the outputs, and the programs kept
+- Context: decision 1 of v04 §6 (an outdoor metric per regime) proposes "a variable Tout_metric_<k> per metric" copied to
+  `Tout_metric` by `SelectCustomRegime_<zone>`. `Tout_metric_<zone>` was already the EMS output of the outdoor metric of
+  each zone (B1).
+- Why it matters: the names, what `Tout_metric_<zone>` reports, and whether the programs of the outdoor metric, which
+  begin with the values of the weather file, are written again when `modify_accis` changes other arguments.
+- Options considered: (i) one variable per regime with its own metric, `ToutRegime_<regime>_<zone>` (and
+  `RMOTr_<regime>_<zone>` for its own alpha), so that `Tout_metric_<zone>` keeps its name; after the chain of the
+  regimes, `Tout_metric_<zone>` is the outdoor metric of the regime of the timestep; the programs are kept when they
+  already calculate the outdoor metrics of the regimes of each zone, and written again otherwise (beginning with PMOT
+  without `epw`, with a warning); a zone that leaves the custom model loses its regimes when one has its own outdoor
+  metric (it would replace the `Tout_metric` that other comfort standards read), and keeps them otherwise, as before
+  (implemented); (ii) one variable per distinct metric (`Tout_metric_<k>`), which would clash with the outputs of B1.
+- Owner: the author.
+- Status: open; option (i) implemented provisionally (`accim.sim.ems.outdoor_metric.zone_program_lines`).
+
 ## 2026-11-10 — H3: the building type of long_term_range in categories III and IV
 - Context: the decision of C2-1 (v04 §3.3, task H3) is `long_term_range=('en16798', category)`, with the constant
   limits of EN 16798-1:2019, Table B.2 (`accim.constants.EN16798_TABLE_B2`), whose minimum for heating differs between

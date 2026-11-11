@@ -138,6 +138,10 @@ Lo que ya está en otros documentos no se repite aquí:
 - **H4.** El gancho del ATHB informa de las consignas en los límites de `temperature_range` (salida
   `ATHB_saturated_<zona>` y aviso al final de la simulación), sus salidas tienen por defecto las frecuencias del modelo,
   `met` debe ser mayor que 0 y avisa fuera de 0,8–4 met y por encima de 1 m/s (sección 35).
+- **H5.** Cada régimen del modelo personalizado puede tener su propia métrica exterior (`outdoor_metric`, `alpha` y
+  `days` de `CustomRegime`), y una norma de confort definida por sus datos puede tener varios regímenes (clave
+  `regimes` de los YAML), con el programa de los regímenes del modelo personalizado; la documentación explica el
+  `CustomRegime_<zona>` promediado y la alternancia con `'hvac_off'`/`'hvac_on'` (sección 36).
 - Las categorías del PMV y la aproximación de la corrección del metabolismo se han comprobado en ISO 7730:2025 y
   EN 16798-1:2019, y el modelo dinámico de vestimenta de A5, en Schiavon y Lee (2013) y ASHRAE 55-2020 (sección 6).
 - Lo que quedaba abierto se ha comprobado: el golden master y las pruebas de EnergyPlus 26.1 y 26.2, también la de A5
@@ -1979,3 +1983,66 @@ estaban documentadas; la prueba con EnergyPlus solo comprobaba −3 ≤ ATHB_PMV
   menos de la consigna de refrigeración en al menos el 95 % de los pasos ocupados con la batería de frío encendida, el
   ATHB_PMV frente al de las salidas del paso anterior, y las horas saturadas con un rango hasta 27,5 °C) y
   `tests/core/test_table_optional_outputs.py`.
+
+## 36. La métrica exterior de cada régimen y los regímenes de las normas de confort definidas por sus datos (H5)
+
+Tarea H5 de la revisión v04 (decisiones 1 y 4 de su §6; hallazgos B2-1 y B2-2).
+
+**Antes.** `CustomRegime(outdoor_metric=...)` daba un `ValueError` salvo con `None`: todos los regímenes usaban la
+métrica exterior de la zona. Una norma de confort definida por sus datos tenía un solo régimen `'always'` (un
+`ValueError` con varios). La documentación no decía que `CustomRegime_<zona>` horario es un promedio ni que las
+condiciones `'hvac_off'`/`'hvac_on'` pueden alternar de un paso al siguiente.
+
+**Ahora (métrica de cada régimen, B2).**
+
+- `CustomRegime` tiene `outdoor_metric`, `alpha` y `days` (`None`: los de la zona; `alpha` y `days` necesitan
+  `outdoor_metric`) y la propiedad `metric_spec`. Las condiciones comparan la métrica de la zona; la temperatura de
+  confort, las consignas, la aplicabilidad y los contadores del régimen usan la suya.
+- `SetOutdoorMetric_<zona>` calcula en cada paso la métrica de cada régimen con una propia,
+  `ToutRegime_<régimen>_<zona>` (con su media móvil de EN 16798-1, `RMOTr_<régimen>_<zona>`, si tiene su propio alfa,
+  que empieza con el EPW como la de la zona). La rama del régimen en `SelectCustomRegime_<zona>` fija las entradas de
+  su métrica (`CustAST_metric`, y `CustAST_alpha`/`CustAST_days` si se dan) y `Tout_metric`; tras la cadena,
+  `Tout_metric_<zona>` es la métrica del régimen del paso. `parse_regime_program` lee estas líneas con validación
+  estricta.
+- Los modelos con estos regímenes tienen el código EMS de la métrica exterior aunque las zonas tengan `'pmot'`; sus
+  programas se conservan mientras calculan las métricas de los regímenes de cada zona y se reescriben si cambian (sin
+  `epw`, empezando con PMOT y con aviso si empezaban con un EPW). `'monthly_mean'` necesita `epw` (`ValueError`
+  temprano en `AddAccis`). Una zona que `modify_accis` pasa a otra norma pierde sus regímenes si alguno tiene métrica
+  propia (cambiaría el `Tout_metric` que leen otras normas); si no, los conserva, como antes.
+- `print_setpoint_ems_code`, `get_setpoint_ems_programs`, `compute_setpoints`, `verify_accim_simulation` (comprobación
+  4), el paramétrico (los regímenes conservan su métrica) y la GUI (`outdoor_metric=rmot_alpha alpha=0.7` tras los
+  coeficientes de un régimen) los admiten. Los IDF sin estos regímenes no cambian (golden master).
+- Documentación (4.2.4 y el módulo `accim.sim.ems.custom_regimes`): B2-2, `CustomRegime_<zona>` promediado en una hora
+  no es entero cuando el régimen cambia dentro de ella (solo la frecuencia de paso da el régimen de cada paso); B2-1,
+  `'hvac_off'`/`'hvac_on'` leen el HVAC del paso anterior y el régimen que eligen cambia las consignas que deciden si
+  el HVAC funciona, así que los regímenes pueden alternar (no hay tiempo mínimo en un régimen).
+
+**Ahora (varios regímenes de una norma de confort, B3).**
+
+- Clave `regimes` de los YAML, en lugar de `comfort_temperature` y `applicability` (`ValueError` con ambas): una lista
+  de regímenes con los campos de `CustomRegime` (los ocho coeficientes, obligatorios; `condition`, `outdoor_metric`,
+  `alpha` y `days`, opcionales; las condiciones con valor son listas, `[metric_below, 10]`), en su orden de prioridad.
+  El último debe ser `'always'` (la norma no tiene otros coeficientes cuando ninguna condición se cumple) y
+  `'hvac_off'`/`'hvac_on'` son solo del modelo personalizado (`ValueError`). Una temperatura de confort y una
+  aplicabilidad son un único régimen `'always'`, cuyo código EMS no cambia.
+- Con varios regímenes, o un régimen con métrica propia (`accim.sim.ems.standard_lines.uses_regimes`), el código EMS
+  de la norma es el del modelo personalizado: sus ramas leen las entradas de este (`Tout_metric*m+n`,
+  `CustAST_ACSTaul`..., y los desplazamientos de cada categoría más `CustAST_ACSToffset`/`CustAST_AHSToffset`), sus
+  zonas reciben `SelectCustomRegime_<zona>` con sus regímenes y la salida `CustomRegime_<zona>`, y su métrica es
+  `Tout_metric` (el modelo tiene el código EMS de la métrica también con `'pmot'` y `'rmot'`).
+- Sus zonas reciben sus regímenes sea cual sea `custom_regimes` (`custom_regimes.standard_regimes`;
+  `set_custom_regimes` los escribe) y los pierden cuando `modify_accis` o `param_accis.modify_ComfStand` les da otra
+  norma (`set_standard_regimes`, nueva); `param_accis.modify_custom_regime` solo cambia los del modelo personalizado.
+- `print_setpoint_ems_code` imprime los regímenes y su programa; `compute_setpoints` lo ejecuta (las consignas son las
+  del modelo personalizado con los mismos regímenes); la comprobación 4 de `verify_accim_simulation` pasa
+  `custom_regimes` solo en las zonas del modelo personalizado.
+- Documentación: 4.2.5 (la clave `regimes`, con un ejemplo) y 4.2.4.
+
+**Pruebas.** `tests/core/test_regime_metrics.py` (nuevo: las líneas y su lectura, las métricas de los regímenes, un
+régimen `'always'` con métrica propia igual a la zona con esa métrica para las 7 métricas, las condiciones con la
+métrica de la zona, `AddAccis`/`modify_accis`, los programas conservados con el EPW, y con EnergyPlus 25.1 la
+comprobación 4 sin discrepancias y ambos backends idénticos); `tests/core/test_standard_regimes.py` (nuevo: el YAML con
+regímenes y sus errores, las líneas EMS, `compute_setpoints` igual al del modelo personalizado con los mismos
+regímenes, `AddAccis`/`modify_accis`, y con EnergyPlus 25.1 la comprobación 4 sin discrepancias y ambos backends
+idénticos); `tests/core/test_custom_regimes.py`, `tests/core/test_comfort_standard_registry.py`,
+`tests/core/test_gui.py` y `tests/parametric_and_optimisation/test_registered_comfort_standards.py`.

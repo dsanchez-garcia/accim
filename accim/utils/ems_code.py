@@ -37,6 +37,8 @@ from accim.sim.ems.standard_lines import (
     metric_variable,
     needs_outdoor_metric_code,
     standard_inputs,
+    standard_metric_variable,
+    uses_regimes,
     weather_file_definition,
     weather_file_lines,
 )
@@ -98,11 +100,14 @@ _DRIFT_LEGEND = (
     '! rounded again. InitDriftLimiter resets its variables at the beginning of each environment.',
 )
 _REGIME_LEGEND = (
-    '! SelectCustomRegime_<zone>: the regimes of the custom model (custom_regimes), in their order of priority. The',
-    '! first one whose condition holds sets the inputs of the custom model (m, n, CustAST_ACSToffset...), which',
-    '! SetAppLimits, ApplyCAT, SetComfTemp and SetAST use, and CustomRegime_<zone>, its number; if none holds',
-    '! (CustomRegime_<zone> = 0), the inputs of SetInputData_<zone> apply. NoH_NoC_reqs is 1 if the HVAC system',
-    '! of the zone neither heated nor cooled in the previous timestep (mixed mode).',
+    '! SelectCustomRegime_<zone>: the regimes of the custom model (custom_regimes), or those of a comfort standard',
+    '! defined by its data with regimes, in their order of priority. The first one whose condition holds sets the',
+    '! inputs of the custom model (m, n, CustAST_ACSToffset...), which SetAppLimits, ApplyCAT, SetComfTemp and SetAST',
+    '! use, and CustomRegime_<zone>, its number; if none holds (CustomRegime_<zone> = 0), the inputs of',
+    '! SetInputData_<zone> apply. NoH_NoC_reqs is 1 if the HVAC system of the zone neither heated nor cooled in the',
+    '! previous timestep (mixed mode). The conditions compare the outdoor metric of the zone; a regime with its own',
+    '! outdoor metric sets its inputs (CustAST_metric...) and Tout_metric to ToutRegime_<regime>_<zone>, which',
+    '! SetOutdoorMetric_<zone> calculates.',
 )
 #: The lines that set NoH_NoC_reqs in each script type of mixed mode (accim.sim.ems.program_lines)
 _HVAC_OFF_LINES = {'vrf_mm': pl.HVAC_OFF_FROM_COILS, 'ex_mm': pl.HVAC_OFF_FROM_LOAD}
@@ -176,8 +181,11 @@ def _definition_lines(comfort_standard: int, arguments: dict, weather_file: bool
                      f'(without it, {_metric_text(definition)}, in the EMS '
                      f'{metric_variable(definition.outdoor_metric)})')
     else:
-        lines.append(f'! Outdoor metric: {_metric_text(definition)}, in the EMS '
-                     f'{metric_variable(definition.outdoor_metric)}')
+        lines.append(f'! Outdoor metric: {_metric_text(definition)}, in the EMS {standard_metric_variable(definition)}')
+    if uses_regimes(definition):
+        # Its regimes (task H5 of the review of accim 1.2.0), which SelectCustomRegime_<zone> selects
+        lines.append('! Regimes (the first one whose condition holds, in each timestep):')
+        lines += [f'!     {number} = {_regime_text(regime)}' for number, regime in enumerate(definition.regimes, 1)]
     if ss.has_static_setpoints(comfort_standard):
         heating, cooling = (arguments.get(name, default) for name, default in zip(ss.ARGUMENTS, ss.DEFAULTS))
         lines.append(f'! Static setpoints: {heating} for heating and {cooling} for cooling (the inputs StaticAHST and '
@@ -188,6 +196,23 @@ def _definition_lines(comfort_standard: int, arguments: dict, weather_file: bool
     lines.append('! Evidence:')
     lines += [f'!     {key}: {_evidence_text(value)}' for key, value in definition.evidence.items()]
     return lines
+
+
+def _regime_text(regime: CustomRegime) -> str:
+    """A regime of a comfort standard defined by its data, in one line."""
+    text = (f'{cr.condition_text(regime.condition)}: slope {_number(regime.slope)}, intercept '
+            f'{_number(regime.intercept)}, offsets {_number(regime.cooling_offset)} (cooling) and '
+            f'{_number(regime.heating_offset)} (heating), applicability {_number(regime.cooling_lower_limit)} to '
+            f'{_number(regime.cooling_upper_limit)} (cooling) and {_number(regime.heating_lower_limit)} to '
+            f'{_number(regime.heating_upper_limit)} (heating)')
+    if regime.outdoor_metric is not None:
+        metric = regime.outdoor_metric
+        if regime.alpha is not None:
+            metric += f' (alpha {regime.alpha})'
+        if regime.days is not None:
+            metric += f' ({regime.days} days)'
+        text += f', outdoor metric {metric}'
+    return text
 
 
 def _input_lines(comfort_standard: int, category: Optional[Number], comfort_mode: Optional[Number],
@@ -246,15 +271,25 @@ def _check_static_setpoints(comfort_standard: int, arguments: dict) -> None:
         ss.check_static_setpoints(*(arguments.get(name, default) for name, default in zip(ss.ARGUMENTS, ss.DEFAULTS)))
 
 
-def _regime_program(comfort_standard: int, arguments: dict, outdoor_metric: bool) -> List[str]:
-    """The lines of the program of the regimes of the custom model of a zone (none without them), as in the output
-    IDFs of AddAccis with the script type ``script_type`` (which the conditions 'hvac_off' and 'hvac_on' need)."""
+def _regimes(comfort_standard: int, arguments: dict) -> tuple:
+    """The regimes of a zone: those of the custom model (``custom_regimes``), or those of a comfort standard defined by
+    its data with regimes (:func:`accim.sim.ems.custom_regimes.standard_regimes`); none otherwise.
+
+    :raises ValueError: If ``custom_regimes`` is given for another comfort standard.
+    """
     regimes = check_custom_regimes(arguments.get('custom_regimes'))
-    if not regimes:
-        return []
-    if comfort_standard != _CUSTOM:
+    if regimes and comfort_standard != _CUSTOM:
         raise ValueError(f'custom_regimes needs the custom model (comfort_standard {_CUSTOM}), not comfort_standard '
                          f'{comfort_standard}.')
+    return regimes or cr.standard_regimes(comfort_standard) or ()
+
+
+def _regime_program(comfort_standard: int, arguments: dict, outdoor_metric: bool) -> List[str]:
+    """The lines of the program of the regimes of a zone (none without them, :func:`_regimes`), as in the output IDFs
+    of AddAccis with the script type ``script_type`` (which the conditions 'hvac_off' and 'hvac_on' need)."""
+    regimes = _regimes(comfort_standard, arguments)
+    if not regimes:
+        return []
     hvac_lines = None
     if cr.uses_hvac_conditions(regimes):
         script_type = arguments.get('script_type')
@@ -284,24 +319,35 @@ def _outdoor_metric_programs(comfort_standard: int, arguments: dict, epw, start_
     else:
         metric, alpha, days = (arguments[name] for name in ('custom_outdoor_metric', 'custom_alpha', 'custom_days'))
     code = om.check_outdoor_metric_arguments(metric, alpha, days)
-    if code == 0:
+    # The outdoor metrics of the regimes with their own (task H5 of the review of accim 1.2.0)
+    regimes = cr.regime_metrics(_regimes(comfort_standard, arguments))
+    # The code of a comfort standard with regimes reads Tout_metric, also with 'pmot' (accim.sim.ems.standard_lines)
+    if code == 0 and not regimes and not (definition is not None and uses_regimes(definition)):
         return {}
+    codes = {code} | {regime_code for regime_code, _, _ in regimes.values()}
+    ring = om.ring_days([days] + [regime_days for _, _, regime_days in regimes.values() if regime_days is not None])
+    # The regimes with the metric 'rmot_alpha' and their own alpha have their own running mean
+    own = {number: regime_alpha for number, (regime_code, regime_alpha, _) in regimes.items()
+           if regime_code == om.OUTDOOR_METRICS['rmot_alpha'] and regime_alpha is not None}
     initial = None
     if epw is not None:
         from accim.sim.arguments import to_day_of_year
 
-        ring = om.ring_days([days])
-        initial = om.initial_values(epw, to_day_of_year(start_date, 'start_date'), ring, {_ZONE: alpha})
-    elif code == om.OUTDOOR_METRICS['monthly_mean']:
+        alphas = {_ZONE: alpha, **{f'{_ZONE}#{number}': value for number, value in own.items()}}
+        initial = om.initial_values(epw, to_day_of_year(start_date, 'start_date'), ring, alphas)
+    elif om.OUTDOOR_METRICS['monthly_mean'] in codes:
         raise ValueError("custom_outdoor_metric 'monthly_mean' needs the weather file of the simulations (argument "
-                         "epw), whose monthly means the EMS programs keep.")
-    ring = om.ring_days([days])
+                         "epw), whose monthly means the EMS programs keep (also the outdoor metric of a regime).")
+    regime_means = None
+    if initial is not None and own:
+        regime_means = {number: initial['running_means'][f'{_ZONE}#{number}'] for number in own}
     return {
-        om.INIT_PROGRAM: om.init_program_lines([_ZONE], ring),
+        om.INIT_PROGRAM: om.init_program_lines([_ZONE], ring, {_ZONE: regimes} if regimes else None),
         om.PROGRAM: om.building_program_lines(ring, initial),
         f'{om.ZONE_PROGRAM_PREFIX}{_ZONE}': om.zone_program_lines(
             _ZONE, ring, None if initial is None else initial['running_means'][_ZONE], initial is not None,
-            mid_range_sensor=initial is not None and code == om.OUTDOOR_METRICS['te_ref_nl']),
+            mid_range_sensor=initial is not None and om.OUTDOOR_METRICS['te_ref_nl'] in codes,
+            regime_metrics=regimes or None, initial_regime_running_means=regime_means),
     }
 
 
@@ -502,9 +548,10 @@ def get_setpoint_ems_code(
                           metric_programs[f'{om.ZONE_PROGRAM_PREFIX}{_ZONE}'])
     if regime_lines:
         conditions = ', '.join(f'{number} = {cr.condition_text(regime.condition)}' for number, regime
-                               in enumerate(check_custom_regimes(arguments['custom_regimes']), start=1))
-        lines += _section(f'{cr.PROGRAM_PREFIX}{_ZONE}: the regime of the custom model of the timestep ({conditions}), '
-                          f'which sets its inputs', regime_lines)
+                               in enumerate(_regimes(comfort_standard, arguments), start=1))
+        owner = ('the custom model of the timestep ({}), which sets its inputs' if comfort_standard == _CUSTOM
+                 else 'the comfort standard of the timestep ({}), which sets the inputs of the custom model')
+        lines += _section(f'{cr.PROGRAM_PREFIX}{_ZONE}: the regime of {owner.format(conditions)}', regime_lines)
     lines += _section('SetAppLimits: the applicability limits', branches(pl.set_app_limits_lines()))
     lines += _section('ApplyCAT: the offsets of the category', branches(pl.apply_cat_lines()))
     lines += _section('SetComfTemp: the comfort temperature',

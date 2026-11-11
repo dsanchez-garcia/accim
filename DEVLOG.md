@@ -36,6 +36,61 @@ Recommended flow: track active work in `TODO.md`, move completed outcomes to `DE
 ## Entries
 
 ### 2026-11-10
+#### [done] H5: the outdoor metric of each regime, and several regimes of a comfort standard (branch `v1.2.0`)
+- Context: task H5 of v04 §7: decision 1 of §6 (an outdoor metric for each regime of the custom model; the conditions
+  compare the metric of the zone), decision 4 of §6 (the key `regimes:` of the YAML files of the comfort standards,
+  with the schema of `CustomRegime`; a scalar `comfort_temperature` is one regime 'always'), and findings B2-1 (the
+  regimes can alternate with 'hvac_off'/'hvac_on') and B2-2 (the hourly `CustomRegime_<zone>` is a mean).
+- Changes (B2): `CustomRegime` gets `outdoor_metric`, `alpha` and `days` (checked with
+  `check_outdoor_metric_arguments`; `alpha`/`days` need `outdoor_metric`) and the property `metric_spec`.
+  `accim.sim.ems.custom_regimes`: `REGIME_METRIC_INPUTS`, `uses_regime_metrics`, `regime_metrics`; the branch of a
+  regime with its own metric sets `CustAST_metric` (and `CustAST_alpha`/`CustAST_days` if given) and `Tout_metric =
+  ToutRegime_<regime>_<zone>`, and the chain closes with `set Tout_metric_<zone> = Tout_metric`;
+  `parse_regime_program` reads these lines with strict checks. `accim.sim.ems.outdoor_metric`: `REGIME_METRIC_PREFIX`,
+  `regime_metric_variable`, `zone_regime_metrics`, the lines of each regime metric in `SetOutdoorMetric_<zone>` (with
+  the equations of the metrics of the zone; `RMOTr_<regime>_<zone>` for an own alpha, which begins with the weather
+  file), `init_program_lines`/`global_variables` with them, `uses_outdoor_metric` true with them, and
+  `set_outdoor_metric_code` keeps the programs while they calculate the regime metrics of each zone
+  (`_regime_lines_match`) and writes them again otherwise (with a warning without `epw` if they began with a weather
+  file). `modify_accis` writes the code of the outdoor metric whenever `custom_regimes` is given, and a zone that
+  leaves the custom model loses its regimes if one has its own metric (`set_standard_regimes`); `AddAccis` stops
+  early with 'monthly_mean' in a regime without `epw`. `print_setpoint_ems_code`/`get_setpoint_ems_programs`
+  (`_outdoor_metric_programs` with the regime metrics), the GUI (`outdoor_metric=... alpha=... days=...` after the
+  coefficients of a regime, `forms.parse_custom_regimes`). Docs 4.2.4 (B2-1, B2-2, the metric of each regime) and 4.10.
+- Changes (B3): `accim.sim.standards`: the key `regimes` (`_regimes_from_mapping`; the eight coefficients required, as
+  in `CustomRegime`; mutually exclusive with `comfort_temperature`/`applicability`), and `ComfortStandardDefinition`
+  takes several regimes, the last one 'always', without 'hvac_off'/'hvac_on'. `accim.sim.ems.standard_lines`:
+  `uses_regimes`, `regime_standards`, `standard_metric_variable`; with regimes, the branches read the inputs of the
+  custom model (`Tout_metric*m+n`, `CustAST_ACSTaul`..., the category offsets plus `CustAST_ACSToffset`/
+  `CustAST_AHSToffset`) and `needs_outdoor_metric_code` is true. `accim.sim.ems.custom_regimes`: `standard_regimes`,
+  `set_custom_regimes` writes the regimes of the comfort standard in its zones, and `set_standard_regimes` (new;
+  `modify_accis` without `custom_regimes` and `param_accis.modify_ComfStand` call it) removes them from the zones that
+  leave it. `uses_outdoor_metric` counts the zones of these comfort standards. `ems_code`: `_regimes`, the regimes in
+  the header (`_regime_text`) and their program; `verify_accim_simulation` (check 4) passes `custom_regimes` for the
+  zones of the custom model only; `param_accis.modify_custom_regime` skips the zones of these comfort standards. Docs
+  4.2.5 (the key, an example).
+- Measured: a comfort standard with two regimes (one with its own metric 'daily_mean' below 16 °C of 'rmot_7day') gives
+  exactly the setpoints, outdoor metric and regime of `compute_setpoints` of the custom model with the same regimes
+  (all columns equal, also with category offsets). With EnergyPlus 25.1 (the sample model, 1-7 April in Seville):
+  the custom model with two regimes with their own metrics ('rmot_alpha' α 0.7 below 16.5 °C of 'rmot_7day', 'ndrm' 7
+  days) and the comfort standard with two regimes both give 0 mismatches of check 4 (`custom_regime`, `Tout_metric`,
+  ACST, AHST, ComfTemp) in the 1008 timesteps of each zone, both regimes appear, and the EMS and API backends give
+  identical CSV files.
+- Files: `accim/sim/arguments.py`, `accim/sim/standards.py`, `accim/sim/ems/custom_regimes.py`,
+  `accim/sim/ems/outdoor_metric.py`, `accim/sim/ems/standard_lines.py`, `accim/sim/accis.py`,
+  `accim/utils/ems_code.py`, `accim/utils/verification.py`,
+  `accim/parametric_and_optimisation/funcs_for_besos/param_accis.py`, `accim/gui/forms.py`,
+  `tests/core/test_regime_metrics.py` (new), `tests/core/test_standard_regimes.py` (new),
+  `tests/core/test_custom_regimes.py`, `tests/core/test_comfort_standard_registry.py`, `tests/core/test_gui.py`,
+  `tests/parametric_and_optimisation/test_registered_comfort_standards.py`, `docs/source/4_detailed use.md`,
+  `CHANGELOG.md`, `TODO.md` (the two H5 entries removed), `CAMBIOS_CODIGO_v1.2.0.md` (§36), `notes/questions.md`
+  (three provisional decisions), `notes/work-log.md`.
+- Verification: `tests/core` 1508 passed, 2 skipped (golden master byte-identical: the output IDFs without regimes,
+  and those of the comfort standards without them, do not change); `tests/parametric_and_optimisation` 518 passed;
+  the Sphinx build with the same 35 warnings.
+- Next step: H6.
+
+### 2026-11-10
 #### [done] H4: the saturation, frequencies and ranges of the hook of the ATHB (branch `v1.2.0`)
 - Context: task H4 of v04 §7: findings A4-1 (the setpoints of the ATHB saturate silently at the limits of
   `temperature_range`), A4-2 (`met` and `air_speed` of the hook are not those of the People objects; `air_speed` is the
