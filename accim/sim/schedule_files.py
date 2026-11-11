@@ -17,7 +17,13 @@ characters in the tests of accim), so the model can be saved in another folder w
 The schedules have no interpolation (Interpolate to Timestep No, 60 minutes per item), the schedule type limits
 :data:`SCHEDULE_TYPE_LIMITS` (without it, EnergyPlus warns that the schedule is not validated) and, in the IDDs that
 have the field (not those of EnergyPlus 9.4 and 9.6), Adjust Schedule for Daylight Savings No, so that their values
-are those of the hours of the weather file (in standard time).
+are those of the hours of the weather file (in standard time). With the IDDs of EnergyPlus 9.4 and 9.6, which have
+not that field, EnergyPlus shifts the values of a Schedule:File object by one hour while the daylight saving time is
+active (RunPeriodControl:DaylightSavingTime, or that of the weather file: ScheduleManager.cc of EnergyPlus 9.6.0 adds
+the indicator of the daylight saving time to the hour), so in the models of those versions with daylight saving time
+each hour of that period takes the value of the next hour of the weather file (T0 of 'te_ref_nl' in the last hour of
+each day is that of the next day, and the clothing insulation of a function that of the next hour; findings A22 and
+A26 of the self-audit of 2026-11-11).
 """
 
 import os

@@ -2351,3 +2351,33 @@ el hallazgo A8 (diseño, en `notes/questions.md`).
   sin el arreglo y pasan con él.
 - Documentación: la sección 4.2.7, la entrada del limitador del CHANGELOG y el docstring de
   `drop_invalid_param_combinations`.
+
+### Grupo de documentación: A14, A16, A17, A18, A20, A22, A24 y A26
+
+Correcciones pequeñas de la documentación, sin cambios del código (un commit):
+
+- **A14.** El docstring de `indoor_running_mean` decía que, por pasos, T_occ_mean es la media del EMS del limitador; es
+  la del EMS salvo un paso (el EMS lee la temperatura operativa del paso anterior): con la temperatura desplazada una
+  fila, la función da la T_rm_in del EMS (la auditoría lo midió: diferencia ≤ 1,1e-14 K).
+- **A16.** El CHANGELOG y la sección 4.9.1 decían que el ATHB_PMV estaba «dentro de 0,25» de la consigna de
+  refrigeración; la prueba comprueba una cota superior (como mucho 0,25 por encima, en el 95 % de los pasos ocupados con
+  la batería de frío encendida): ahora lo dicen así.
+- **A17.** La firma de `apply_athb_setpoints` del CHANGELOG decía `output_frequencies=('hourly',)`; es `None` desde H4.
+- **A18.** El YAML de Qatar (las dos copias) decía que el artículo no da la α de su media móvil y tomaba 0,8 de
+  EN 16798-1 como elección; el artículo la da (ecuación 4: «we used the value of 0.8 in this analysis», comprobado en
+  su texto): el comentario, la evidencia (`alpha: "0.8, that of the article (its equation 4)"`), la cita completa
+  (Energy and Buildings 159, 201-212, doi:10.1016/j.enbuild.2017.10.087), la sección 4.2.5, el texto del cuaderno
+  How-to del registro (ejecutado y exportado de nuevo con `docs/prepare_howto_notebooks.py`, 63 s, 0 problemas) y el
+  CHANGELOG. El valor no cambia.
+- **A20.** El docstring de `format_number` decía que todos los módulos lo usan; las entradas de `SetInputData_<zona>` se
+  escriben con `str(valor)` (con exponente en algunos números, `5e-05`), que EnergyPlus lee igual: comprobado con
+  EnergyPlus 25.1 (un programa con `set TestExpA = 5e-05*100000` dio 5 y `-1E-05*100000+2.5e+1`, 24).
+- **A22 y A26.** Con los IDD de EnergyPlus 9.4 y 9.6, los `Schedule:File` no tienen el campo *Adjust Schedule for
+  Daylight Savings*, y EnergyPlus los desplaza una hora durante el horario de verano: el T0 de `'te_ref_nl'` de la
+  última hora de cada día es el del día siguiente, y la vestimenta de una función, la de la hora siguiente. Documentado
+  en el docstring de `accim.sim.schedule_files`, las secciones 4.2.2 y 4.8 y el CHANGELOG (las opciones de un aviso o de
+  desplazar el CSV quedan en `TODO.md`).
+- **A24.** La sección 4.2.1 decía que los modelos de `add_accis_to_idf` tienen el código de todos los estándares (para
+  editar el estándar de una zona); una zona que pasa al 23 editando su programa necesita también `StaticAHST` y
+  `StaticACST` (si no, EnergyPlus se detiene): documentado; el arreglo del código choca con la decisión de G4 (solo las
+  zonas del 23 tienen esas entradas, y las salidas de las demás no cambian) y queda en `notes/questions.md`.

@@ -190,8 +190,10 @@ def indoor_running_mean(top: Values, day: Sequence[Any], occupied: Any = None, t
     end of the first day with occupied hours, and then starts with the mean of that day, unless ``initial_T_rm_in``
     gives the value of the first day; the days without occupied hours do not change it. T_occ_mean(d) is the mean of
     the operative temperature of the occupied rows of the day, weighted by their occupied hours: with the rows of each
-    timestep, the mean of the EMS of the limiter, which takes the operative temperature of the previous timestep (that
-    of the EMS sensors at the beginning of each timestep), and with hourly rows, that of the hourly means.
+    timestep, that of the EMS of the limiter but for one timestep (the EMS takes the operative temperature of the
+    previous timestep, that of its sensors at the beginning of each timestep: with the operative temperature shifted
+    by one row, the function gives the T_rm_in of the EMS; finding A14 of the self-audit of 2026-11-11), and with hourly
+    rows, that of the hourly means.
 
     :param top: The operative temperature of each row (°C).
     :param day: The day of each row, in the order of the simulation: a value that changes from one day to the next, such

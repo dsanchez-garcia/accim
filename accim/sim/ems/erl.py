@@ -102,8 +102,12 @@ def is_number(value) -> bool:
 def format_number(value: float, keep_decimal: bool = False) -> str:
     """A number as accim writes it in the lines of the EMS programs: positional, without exponent, with the shortest
     digits that give the same float (:func:`numpy.format_float_positional`), and without the decimal point if it is
-    an integer (with ``keep_decimal``, with ``.0``, as the programs of the outdoor metric write their numbers). All
-    the modules that write numbers in the programs use it (finding B1-2 of the review of accim 1.2.0).
+    an integer (with ``keep_decimal``, with ``.0``, as the programs of the outdoor metric write their numbers). The
+    modules that write the numbers of the programs use it (finding B1-2 of the review of accim 1.2.0), except those of
+    the inputs of the programs SetInputData_<zone> (:func:`accim.sim.ems.inputs.input_lines`, ``modify_accis`` and the
+    modifiers of the parametric module), which write ``str(value)``, with an exponent for some numbers (``5e-05``):
+    EnergyPlus reads those too (the parser of numbers of its RuntimeLanguageProcessor takes E or D and a sign, as the
+    Erl interpreter of accim), so the difference is only in the text (finding A20 of the self-audit of 2026-11-11).
 
     :raises ValueError: If the number is not finite: ``nan`` or ``inf`` would be the names of variables in Erl.
     """
