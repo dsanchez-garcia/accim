@@ -350,6 +350,20 @@ def test_the_arguments_of_the_indicators(tmp_path, monkeypatch):
     assert row['Block1:Zone1_Mean Tn_exp (°C)'] == pytest.approx(2.23 + 0.897 * t_rm_in)
     gap = data['top'][DAY2] - (2.23 + 0.897 * t_rm_in)
     assert row['Block1:Zone1_Hours Outside Tn_exp Band (h)'] == pytest.approx(OCCUPIED[DAY2][np.abs(gap) > 1].sum())
+    # A cooling season that goes on in the next year, as in the ACCIS (from 27 October to 1 May: both days, or to 30
+    # April: the first one), and none with the same start and end (finding A12 of the self-audit of 2026-11-11: before,
+    # a season in two years had no day)
+    below = data['top'] < 23.0
+    wrapped = ia.table_indicators(df, occupied, overcooling_temperature=23.0, cooling_season_start='27/10',
+                                  cooling_season_end=122).iloc[0]
+    assert wrapped['Block1:Zone1_Overcooling Hours (h)'] == pytest.approx(OCCUPIED[below].sum())
+    assert wrapped['Block1:Zone1_Overcooling Hours (%)'] == pytest.approx(100 * OCCUPIED[below].sum() / OCCUPIED.sum())
+    april = ia.table_indicators(df, occupied, overcooling_temperature=23.0, cooling_season_start='27/10',
+                                cooling_season_end=121).iloc[0]
+    assert OCCUPIED[~DAY2 & below].sum() > 0
+    assert april['Block1:Zone1_Overcooling Hours (h)'] == pytest.approx(OCCUPIED[~DAY2 & below].sum())
+    empty = ia.table_indicators(df, occupied, cooling_season_start=121, cooling_season_end=121).iloc[0]
+    assert empty['Block1:Zone1_Overcooling Hours (h)'] == 0 and np.isnan(empty['Block1:Zone1_Overcooling Hours (%)'])
     for arguments, message in ((dict(overcooling_temperature='22'), 'overcooling_temperature must be a number'),
                                (dict(cooling_season_start='31/02'), 'cooling_season_start must be a date'),
                                (dict(building_type='AC1'), 'building_type must be one of'),

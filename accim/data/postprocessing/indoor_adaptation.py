@@ -324,6 +324,18 @@ def _day_of_year(month: Any, day: Any) -> np.ndarray:
     return np.where(np.isnan(months) | np.isnan(days), np.nan, _MONTH_STARTS[index] + days)
 
 
+def _cooling_season(day: np.ndarray, start: int, end: int) -> np.ndarray:
+    """Whether each day of the year is in the cooling season of the ACCIS (``COOLING_SEASON_LINES`` of
+    :mod:`accim.sim.ems.setast`): from ``start`` to the day before ``end``, also when it goes on in the next year
+    (``start`` after ``end``, as in the southern hemisphere); no day if they are equal (finding A12 of the self-audit of
+    2026-11-11: before, a season in two years had no day)."""
+    if start < end:
+        return (day >= start) & (day < end)
+    if start > end:
+        return (day >= start) | (day < end)
+    return np.zeros(len(day), dtype=bool)
+
+
 def _longest_zone(column: str, zones: Sequence[str]) -> Optional[str]:
     """The longest of the zones whose name the column contains, ignoring the case, or None."""
     found = [zone for zone in zones if zone.upper() in str(column).upper()]
@@ -450,7 +462,9 @@ def table_indicators(df: pd.DataFrame, zones: Sequence[str], tsv_limit: Optional
       it (:func:`causal_band_hours`);
     - ``Overcooling Hours (h)`` and ``(%)`` (:func:`overcooling_hours`), in the cooling season from
       ``cooling_season_start`` to the day before ``cooling_season_end`` (by the month and day of each row, in a year of
-      365 days);
+      365 days; a season that goes on in the next year, with ``cooling_season_start`` after ``cooling_season_end``, as
+      in the ACCIS; ``Table(indoor_adaptation_indicators=True)`` takes the defaults, 1 May to 30 September, whatever
+      the cooling season of the simulations, so give theirs here if it is another one);
     - ``Mean T_rm_in (°C)``, ``Mean Tn_exp (°C)``, ``Mean To - Tn_exp (K)`` and ``Hours Outside Tn_exp Band (h)``
       (:func:`indoor_running_mean` of the rows of each simulation, whose days are their dates, in the order of the
       table, and :func:`exposure_hours`); T_rm_in is calculated in the same way for every simulation, with or without
@@ -492,7 +506,8 @@ def table_indicators(df: pd.DataFrame, zones: Sequence[str], tsv_limit: Optional
         overcooled (°C, 22 by default), or the reference heating setpoint.
     :param cooling_season_start: The first day of the cooling season ('dd/mm' or the day of the year; 121, 1 May, by
         default, as in AddAccis).
-    :param cooling_season_end: The day after the cooling season (274, 1 October, by default).
+    :param cooling_season_end: The day after the cooling season (274, 1 October, by default); before
+        ``cooling_season_start`` for a season that goes on in the next year, and no season if they are equal.
     :param building_type: 'AC' (the default), 'MM' or 'NV': the coefficients of Tn_exp.
     :param alpha_indoor: The weight of the previous day in T_rm_in (0.8 by default, as in the limiter).
     :param exposure_difference: The half-width of the band around Tn_exp (K, 2.5 by default).
@@ -570,7 +585,7 @@ def table_indicators(df: pd.DataFrame, zones: Sequence[str], tsv_limit: Optional
         row: Dict[str, Any] = {'Source': source}
         row.update({column: group[column].iloc[0] for column in descriptive})
         day = _day_of_year(group['Month'], group['Day'])
-        season = (day >= start) & (day < end)
+        season = _cooling_season(day, start, end)
         dates = list(zip(group['Month'].astype(str), group['Day'].astype(str)))
         python_set = {} if hook is None else _pythermalcomfort_set_of_rows(group, source, hook, list(found))
         totals: Dict[str, List[float]] = {}

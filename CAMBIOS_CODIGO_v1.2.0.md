@@ -2305,3 +2305,15 @@ modelos que ya funcionaban no cambian.
   preparado corre en EnergyPlus 25.1 sin el gancho (backend EMS, un día de julio). Las dos fallan sin el arreglo
   (EnergyPlus terminaba con un error fatal) y pasan con él.
 - Documentación: el docstring de `apply_set_setpoints`, la sección 4.9.2 y la entrada del SET del CHANGELOG.
+
+### A12. La temporada de refrigeración de los indicadores de la adaptación interior que cruza el fin de año
+
+**Antes.** `table_indicators` tomaba la temporada de refrigeración como `(día >= inicio) & (día < fin)`, así que una
+temporada que sigue en el año siguiente (inicio después del fin, como el ACCIS admite para el hemisferio sur) no tenía
+ningún día, y las horas de sobreenfriamiento eran 0 (y su porcentaje NaN). Además, `Table` usa siempre 1 de mayo a 30
+de septiembre, sin que la documentación lo dijera.
+
+**Ahora.** `_cooling_season` sigue las líneas del ACCIS (`COOLING_SEASON_LINES`): la unión si el inicio es posterior
+al fin, ningún día si son iguales. La sección 4.7.6 y el docstring dicen que `Table` usa los valores por defecto y que
+`table_indicators` toma los de las simulaciones. Prueba en `test_the_arguments_of_the_indicators` (del 27 de octubre al
+1 de mayo, o al 30 de abril, y una temporada vacía), que falla sin el arreglo (0 h) y pasa con él.
