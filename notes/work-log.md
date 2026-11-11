@@ -15,6 +15,19 @@ This log is a lightweight, session-scoped complement to the repository's
 existing tracking files — it does not replace them (see
 [[decisions.md#2026-09-13 — `notes/work-log.md` complements, not replaces, existing tracking files|the related decision]]).
 
+## 2026-11-11 — S4: the indicators of the causal band with the SET of pythermalcomfort (branch `v1.2.0`, on the server)
+
+- **Objective**: decision 9 (provisional, pending Ruiji Sun): keep the Pierce SET in the indicators of F3 and add,
+  off by default, the same indicators with the SET of pythermalcomfort (`set_of_results`).
+- **Affected files**: `accim/data/postprocessing/indoor_adaptation.py`, `tests/core/test_indoor_adaptation.py`,
+  [[../docs/source/4_detailed use.md]] (4.7.6), [[../CHANGELOG.md]], [[../CAMBIOS_CODIGO_v1.2.0.md]] (§41),
+  [[questions.md]], [[../DEVLOG.md]].
+- **Finding or decision**: `table_indicators(..., pythermalcomfort_set={'met': ..., 'clo': ..., 'air_speed': ...})`
+  reads the conditions of the zones from the CSV file of each simulation; the inputs of the occupants are constant
+  (E-F1 used the schedules of the People objects): the design choices are provisional in [[questions.md]].
+- **Validation**: see the entry of S4 in [[../DEVLOG.md]].
+- **Next step**: S5 (the notes of the accepted decisions #1, #7, #16 and #22).
+
 ## 2026-11-11 — S3: the reference of the rate of the limiter of the drift (branch `v1.2.0`, on the server)
 
 - **Objective**: decision 13: the reference of the daily limit of `drift_mode='rate'` is the mean of the setpoints

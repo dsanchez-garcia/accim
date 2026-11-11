@@ -24,6 +24,35 @@ it here as answered).
 
 ## Open
 
+## 2026-11-11 — S4: how the indicators of the causal band are given with the SET of pythermalcomfort
+- Context: decision 9 (provisional, the entry "F3: the SET of the indicators of the causal band" below; task S4 of
+  `notes/COPILOT_SIGUIENTE_SESION.md`): keep the Pierce SET of EnergyPlus and add, behind an optional argument off by
+  default, the same indicators with the SET of pythermalcomfort, through `set_of_results` (G3) and the inputs that
+  E-F1 compared. It does not say where the argument goes, how the inputs of the occupants are given, where the
+  conditions of the zones come from, nor how the rows of the CSV files are matched with those of the table.
+- Why it matters: `set_of_results` takes constant inputs of the occupants (those of a hook), while E-F1 took the
+  values of the schedules of the People objects in each timestep, as EnergyPlus does; and `Table` drops the mean
+  radiant temperature and the relative humidity with `standard_outputs=True` (and adds them up over the timesteps of
+  each hour with `frequency_agg_func='sum'`).
+- Options considered: (i) the argument `pythermalcomfort_set` of
+  `accim.data.postprocessing.indoor_adaptation.table_indicators` only (not of `Table` nor of the GUI): a dict with
+  `met`, `clo`, `air_speed` and, optionally, `position` (the posture of the hooks by default), or a hook of the SET
+  with them; the SET of `set_of_results` of the outputs *Zone Mean Air Temperature*, *Zone Mean Radiant Temperature*
+  and *Zone Air Relative Humidity* of each zone, keyed by its name in the table, in each row of the CSV file of each
+  simulation (the column `Source` with `.csv`, in the current folder), averaged over the rows of the CSV file of each
+  row of the table (as `Table` averages the Pierce SET; the hour of each row as `Table` gives it); the columns
+  `<zone>_Mean SET_pythermalcomfort (°C)`, `<zone>_Mean TSV_causal_pythermalcomfort` and `<zone>_Hours In / Above /
+  Below Causal Band_pythermalcomfort (h)` and `(%)` after those of each zone and of the building; NaN, with a
+  warning, for the zones without those outputs (such as those that `Table` names after their spaces); a `ValueError`
+  if a CSV file is not found (implemented); (ii) the inputs of the occupants of each row from the schedules of the
+  People objects (their outputs *Schedule Value*, as E-F1), which cases (iii) and (iv) of the validation study need
+  (a seasonal clothing insulation, the dynamic clothing model): it needs those outputs requested and the People
+  objects of each zone; (iii) an argument of `Table` too (and its box in the GUI); (iv) the conditions of the zones
+  from the columns of the table.
+- Owner: the author (with the answer of Ruiji Sun on decision 9).
+- Status: open; option (i) implemented provisionally: off by default, the other indicators and the outputs do not
+  change.
+
 ## 2026-11-11 — S1: the details of the comparison of the minimum and maximum with the setpoints of the comfort model
 - Context: decision 19 (the verdicts of 2026-11-11 in [[decisions.md]]; task S1 of `notes/COPILOT_SIGUIENTE_SESION.md`)
   replaces the comparison with `ACSTaul`/`AHSTall` by option (ii): with the weather file, the setpoints of the comfort

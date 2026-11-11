@@ -362,6 +362,196 @@ def test_the_arguments_of_the_indicators(tmp_path, monkeypatch):
         ia.table_indicators(df.drop(columns=['Month']), occupied)
 
 
+# The indicators of the SET of pythermalcomfort (task S4) ------------------------------------------------------------
+
+#: The inputs of the occupants of the SET of pythermalcomfort of the tests (sitting, with 1.2 met)
+SET_INPUTS = {'met': 1.2, 'clo': 0.6, 'air_speed': 0.2}
+PYTHERMALCOMFORT_TITLES = list(ia.PYTHERMALCOMFORT_SET_INDICATORS)
+
+
+def _fake_set(air_temperature, mean_radiant_temperature, air_speed, relative_humidity, met, clo, position='standing'):
+    """A SET for the tests without pythermalcomfort (numba), which depends on all its inputs (numbers or arrays)."""
+    value = (0.4 * np.asarray(air_temperature, dtype=float) + 0.6 * np.asarray(mean_radiant_temperature, dtype=float)
+             + 0.02 * (np.asarray(relative_humidity, dtype=float) - 50) - 2 * air_speed + 3 * (met - 1.2)
+             + 4 * (clo - 0.6) + (0.1 if position == 'sitting' else 0.0))
+    return float(value) if np.ndim(value) == 0 else value
+
+
+def _add_set_conditions(columns, model, top_of_zone, frequency='Hourly'):
+    """Add the mean air temperature, mean radiant temperature and relative humidity of each zone to the columns of a
+    CSV file, from its operative temperature; {zone: (air, radiant, humidity)}."""
+    conditions = {}
+    for zone, target in zip(model['zone_names'], resolve_targets(model['building'])):
+        top = np.asarray(top_of_zone[zone], dtype=float)
+        steps = np.arange(len(top))
+        air, radiant, humidity = top - 0.5, top + 0.5 + 0.1 * (steps % 3), 40.0 + (steps % 24)
+        key = target.zone_name.upper()
+        columns[f'{key}:Zone Mean Air Temperature [C]({frequency})'] = list(air)
+        columns[f'{key}:Zone Mean Radiant Temperature [C]({frequency})'] = list(radiant)
+        columns[f'{key}:Zone Air Relative Humidity [%]({frequency})'] = list(humidity)
+        conditions[zone] = (air, radiant, humidity)
+    return conditions
+
+
+def _band(set_values, weights):
+    """The indicators of the causal band of a zone, from the formulas of the source (Fig. 7a)."""
+    within = (set_values >= BAND[0]) & (set_values <= BAND[1])
+    mean_set = (set_values * weights).sum() / weights.sum()
+    return {'Mean SET_pythermalcomfort (°C)': mean_set, 'Mean TSV_causal_pythermalcomfort': 0.11 * mean_set - 2.6,
+            'Hours In Causal Band_pythermalcomfort (h)': weights[within].sum(),
+            'Hours Above Causal Band_pythermalcomfort (h)': weights[set_values > BAND[1]].sum(),
+            'Hours Below Causal Band_pythermalcomfort (h)': weights[set_values < BAND[0]].sum(),
+            'Hours In Causal Band_pythermalcomfort (%)': 100 * weights[within].sum() / weights.sum()}
+
+
+@pytest.mark.parametrize('rename_cols', [True, False])
+def test_the_indicators_of_the_set_of_pythermalcomfort(tmp_path, monkeypatch, rename_cols):
+    from accim.sim import comfort_hooks as ch
+
+    model = DESIGNBUILDER
+    columns, zones = _indicator_columns(model)
+    conditions = _add_set_conditions(columns, model, {zone: data['top'] for zone, data in zones.items()})
+    table = _indicator_table(tmp_path, monkeypatch, model, columns, rename_cols=rename_cols,
+                             indoor_adaptation_indicators=False)
+    monkeypatch.setattr(ch, 'standard_effective_temperature', _fake_set)
+    df, occupied = table.df, table.occupied_zone_list
+    default = ia.table_indicators(df, occupied)
+    found = ia.table_indicators(df, occupied, pythermalcomfort_set=SET_INPUTS)
+    # The other indicators do not change; those of pythermalcomfort follow those of each zone and of the building
+    pd.testing.assert_frame_equal(found[list(default.columns)], default)
+    added = [c for c in found.columns if c not in default.columns]
+    assert added == [f'{zone}_{title}' for zone in [*occupied, 'Building'] for title in PYTHERMALCOMFORT_TITLES]
+    names = list(found.columns)
+    for zone in occupied:
+        assert names.index(f'{zone}_{PYTHERMALCOMFORT_TITLES[0]}') == names.index(f'{zone}_Drift Limited Hours (h)') + 1
+    row = found.iloc[0]
+    expected = {}
+    for zone, (air, radiant, humidity) in conditions.items():
+        # Sitting with 1.2 met, as the hooks of the SET
+        expected[zone] = _band(_fake_set(air, radiant, 0.2, humidity, 1.2, 0.6, 'sitting'), OCCUPIED)
+        for title, value in expected[zone].items():
+            assert row[f'{zone}_{title}'] == pytest.approx(value), (zone, title)
+    # Some hours of zone 2 are above the band
+    assert 0 < row['Block1:Zone2_Hours Above Causal Band_pythermalcomfort (h)'] < OCCUPIED.sum()
+    first, second = expected.values()
+    for title in ('Hours In Causal Band_pythermalcomfort (h)', 'Hours Above Causal Band_pythermalcomfort (h)',
+                  'Hours Below Causal Band_pythermalcomfort (h)'):
+        assert row[f'Building_{title}'] == pytest.approx(first[title] + second[title]), title
+    for title in ('Mean SET_pythermalcomfort (°C)', 'Mean TSV_causal_pythermalcomfort'):
+        assert row[f'Building_{title}'] == pytest.approx((first[title] + second[title]) / 2), title
+    assert row['Building_Hours In Causal Band_pythermalcomfort (%)'] == pytest.approx(
+        100 * (first['Hours In Causal Band_pythermalcomfort (h)'] + second['Hours In Causal Band_pythermalcomfort (h)'])
+        / (2 * OCCUPIED.sum()))
+    # The inputs of a hook of the SET, and another posture and tsv_limit
+    hook = ch.SetSetpointHook(['Block1_Zone1'], 27.0, 21.0, method='bisection', **SET_INPUTS)
+    pd.testing.assert_frame_equal(ia.table_indicators(df, occupied, pythermalcomfort_set=hook), found)
+    with pytest.warns(UserWarning, match='extrapolation'):
+        other = ia.table_indicators(df, occupied, tsv_limit=1.0,
+                                    pythermalcomfort_set={**SET_INPUTS, 'position': 'standing'}).iloc[0]
+    air, radiant, humidity = conditions['Block1:Zone1']
+    standing = _fake_set(air, radiant, 0.2, humidity, 1.2, 0.6, 'standing')
+    assert other['Block1:Zone1_Mean SET_pythermalcomfort (°C)'] == pytest.approx(
+        (standing * OCCUPIED).sum() / OCCUPIED.sum())
+    wide = ((-1.0 + 2.6) / 0.11, (1.0 + 2.6) / 0.11)
+    assert other['Block1:Zone1_Hours In Causal Band_pythermalcomfort (h)'] == pytest.approx(
+        OCCUPIED[(standing >= wide[0]) & (standing <= wide[1])].sum())
+
+
+@pytest.mark.parametrize('frequency', ['hourly', 'timestep'])
+def test_the_set_of_pythermalcomfort_of_the_timesteps_of_each_row(tmp_path, monkeypatch, frequency):
+    from accim.sim import comfort_hooks as ch
+
+    model = DESIGNBUILDER
+    # Two timesteps per hour: EnergyPlus labels each with its end, so the second is the hour of the hourly outputs
+    labels = [f' {date}  {hour + minute // 60:02d}:{minute % 60:02d}:00' for date, hour in zip(DATES, HOUR)
+              for minute in (30, 60)]
+    occupied = np.repeat(OCCUPIED / 2, 2)
+    step = np.tile([0.0, 0.2], 48)
+    columns, tops = {}, {}
+    for number, (zone, target) in enumerate(zip(model['zone_names'], resolve_targets(model['building']))):
+        tops[zone] = np.repeat(ZONE_DATA[zone]['top'], 2) + step + number
+        columns[f'{target.zone_name.upper()}:Zone Operative Temperature [C](TimeStep)'] = list(tops[zone])
+        columns[f'EMS:Occupied Hours_{target.ems_suffix} [H](TimeStep)'] = list(occupied)
+        for key in target.instance_keys:
+            columns[f'{key.upper()}:{ia._SET_OUTPUT} [C](TimeStep)'] = list(tops[zone])
+    conditions = _add_set_conditions(columns, model, tops, frequency='TimeStep')
+    lines = [','.join(['Date/Time', *columns])]
+    lines.extend(','.join([label, *(str(v[row]) for v in columns.values())]) for row, label in enumerate(labels))
+    (tmp_path / CSV_NAME).write_text('\n'.join(lines) + '\n', encoding='utf-8')
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(accim.sim.accis, 'load_idf', lambda idf_path: model['building'])
+    table = Table(datasets=[CSV_NAME], source_frequency='timestep', frequency=frequency, frequency_agg_func='sum',
+                  standard_outputs=True, level=['building'], level_agg_func=['sum', 'mean'], level_excluded_zones=[],
+                  idf_path='model.idf')
+    assert len(table.df) == (48 if frequency == 'hourly' else 96)
+    monkeypatch.setattr(ch, 'standard_effective_temperature', _fake_set)
+    row = ia.table_indicators(table.df, table.occupied_zone_list, pythermalcomfort_set=SET_INPUTS).iloc[0]
+    for zone, (air, radiant, humidity) in conditions.items():
+        set_values = _fake_set(air, radiant, 0.2, humidity, 1.2, 0.6, 'sitting')
+        if frequency == 'hourly':
+            # The mean of the SET of the timesteps of each hour, with the occupied hours of the hour
+            set_values, weights = set_values.reshape(-1, 2).mean(axis=1), OCCUPIED
+        else:
+            weights = occupied
+        for title, value in _band(set_values, weights).items():
+            assert row[f'{zone}_{title}'] == pytest.approx(value), (zone, title)
+        # With the SET of the Pierce model equal to the operative temperature, both means differ
+        assert row[f'{zone}_Mean SET_Pierce (°C)'] != pytest.approx(row[f'{zone}_Mean SET_pythermalcomfort (°C)'])
+
+
+def test_the_errors_of_the_set_of_pythermalcomfort(tmp_path, monkeypatch):
+    from accim.sim import comfort_hooks as ch
+
+    model = DESIGNBUILDER
+    columns, zones = _indicator_columns(model)
+    _add_set_conditions(columns, model, {zone: data['top'] for zone, data in zones.items()})
+    # Without the mean radiant temperature of zone 2
+    del columns['BLOCK1:ZONE2:Zone Mean Radiant Temperature [C](Hourly)']
+    table = _indicator_table(tmp_path, monkeypatch, model, columns, indoor_adaptation_indicators=False)
+    monkeypatch.setattr(ch, 'standard_effective_temperature', _fake_set)
+    df, occupied = table.df, table.occupied_zone_list
+    with pytest.warns(UserWarning, match=r"The zones \['Block1:Zone2'\] have not the outputs Zone Mean Air"):
+        row = ia.table_indicators(df, occupied, pythermalcomfort_set=SET_INPUTS).iloc[0]
+    assert np.isfinite(row['Block1:Zone1_Mean SET_pythermalcomfort (°C)'])
+    assert all(np.isnan(row[f'Block1:Zone2_{title}']) for title in PYTHERMALCOMFORT_TITLES)
+    for title in PYTHERMALCOMFORT_TITLES:
+        assert row[f'Building_{title}'] == pytest.approx(row[f'Block1:Zone1_{title}']), title
+    for value, message in (({'met': 1.2, 'clo': 0.6}, r"needs the metabolic rate.*\['air_speed'\]"),
+                           ({**SET_INPUTS, 'fans': 1}, r"pythermalcomfort_set takes .* not \['fans'\]"),
+                           (1.2, 'pythermalcomfort_set must be None, a dict'),
+                           ({**SET_INPUTS, 'met': '1.2'}, 'met must be a number'),
+                           ({**SET_INPUTS, 'position': 'lying'}, 'position must be'),
+                           # A hook that reads the inputs from the People objects
+                           (ch.SetSetpointHook(['Block1_Zone1'], 27.0, 21.0, method='bisection'),
+                            r"needs the metabolic rate.*\['met', 'clo', 'air_speed'\]")):
+        with pytest.raises(ValueError, match=message):
+            ia.table_indicators(df, occupied, pythermalcomfort_set=value)
+    with pytest.raises(ValueError, match='need the hour of each row'):
+        ia.table_indicators(df.drop(columns=['Hour']), occupied, pythermalcomfort_set=SET_INPUTS)
+    # The CSV files of the simulations are those of the folder of the table
+    elsewhere = tmp_path / 'elsewhere'
+    elsewhere.mkdir()
+    monkeypatch.chdir(elsewhere)
+    with pytest.raises(ValueError, match='which is not in the current folder'):
+        ia.table_indicators(df, occupied, pythermalcomfort_set=SET_INPUTS)
+
+
+def test_the_set_of_pythermalcomfort_with_pythermalcomfort(tmp_path, monkeypatch):
+    pytest.importorskip('pythermalcomfort.models')
+    from accim.sim import comfort_hooks as ch
+
+    model = DESIGNBUILDER
+    columns, zones = _indicator_columns(model)
+    conditions = _add_set_conditions(columns, model, {zone: data['top'] for zone, data in zones.items()})
+    table = _indicator_table(tmp_path, monkeypatch, model, columns, indoor_adaptation_indicators=False)
+    row = ia.table_indicators(table.df, table.occupied_zone_list, pythermalcomfort_set=SET_INPUTS).iloc[0]
+    for zone, (air, radiant, humidity) in conditions.items():
+        set_values = np.array([ch.standard_effective_temperature(*inputs, 0.2, rh, 1.2, 0.6, 'sitting')
+                               for *inputs, rh in zip(air, radiant, humidity)])
+        for title, value in _band(set_values, OCCUPIED).items():
+            assert row[f'{zone}_{title}'] == pytest.approx(value), (zone, title)
+
+
 # add_thermal_comfort_outputs ----------------------------------------------------------------------------------------
 
 def _thermal_comfort_fields(people):
@@ -484,6 +674,9 @@ def test_the_indicators_of_a_simulation(tmp_path, monkeypatch):
     [path] = folder.glob('TestModel[[]*.idf')
     idf = load_idf(path)
     add_thermal_comfort_outputs(idf, ['Fanger', 'Pierce', 'CoolingEffectASH55'])
+    # The inputs of the SET of pythermalcomfort of the zones (task S4)
+    for name in ('Zone Mean Air Temperature', 'Zone Mean Radiant Temperature', 'Zone Air Relative Humidity'):
+        idf.newidfobject('Output:Variable', Key_Value='*', Variable_Name=name, Reporting_Frequency='Hourly')
     idf.saveas(str(tmp_path / 'model.idf'))
     result = subprocess.run([str(_energyplus() / 'energyplus.exe'), '-d', str(tmp_path / 'out'), '-p', 'run', '-s',
                              'C', '-r', '-x', '-w', str(EPW), str(tmp_path / 'model.idf')],
@@ -533,6 +726,23 @@ def test_the_indicators_of_a_simulation(tmp_path, monkeypatch):
     for zone in table.occupied_zone_list:
         for name in ia.ENERGYPLUS_OUTPUTS.values():
             assert f'{zone}_{name}' in table.df.columns, (zone, name)
+    # The SET of pythermalcomfort of each hour, from the CSV file of the simulation (a SET of the test: numba may not
+    # run here), in the hours of the table
+    from accim.sim import comfort_hooks as ch
+
+    monkeypatch.setattr(ch, 'standard_effective_temperature', _fake_set)
+    row = ia.table_indicators(table.df, table.occupied_zone_list, pythermalcomfort_set=SET_INPUTS).iloc[0]
+    for target, zone in zip(targets, table.occupied_zone_list):
+        def column(name):
+            [found] = [c for c in results.columns if c.upper().startswith(name.upper())]
+            return results[found].to_numpy(dtype=float)
+
+        hours = column(f'EMS:Occupied Hours_{target.ems_suffix} [')
+        set_values = _fake_set(*(column(f'{target.zone_name}:{name} [') for name in (
+            'Zone Mean Air Temperature', 'Zone Mean Radiant Temperature')), 0.2,
+            column(f'{target.zone_name}:Zone Air Relative Humidity ['), 1.2, 0.6, 'sitting')
+        for title, value in _band(set_values, hours).items():
+            assert row[f'{zone}_{title}'] == pytest.approx(value), (zone, title)
 
 
 @pytest.mark.parametrize('rename_cols', [True, False])

@@ -158,6 +158,9 @@ Lo que ya está en otros documentos no se repite aquí:
 - **S3 (tercera sesión, decisión 13).** El estado del modo `'rate'` del limitador de la deriva es la media de las
   consignas aplicadas en los pasos ocupados del último día con ocupantes, no la consigna del último paso del día
   anterior (sección 40).
+- **S4 (tercera sesión, decisión 9, provisional).** `table_indicators` del módulo de los indicadores de la adaptación
+  interior da también, con `pythermalcomfort_set` (desactivado por defecto), los indicadores de la banda causal con el
+  SET de pythermalcomfort, en columnas con el sufijo `_pythermalcomfort` (sección 41).
 - Las categorías del PMV y la aproximación de la corrección del metabolismo se han comprobado en ISO 7730:2025 y
   EN 16798-1:2019, y el modelo dinámico de vestimenta de A5, en Schiavon y Lee (2013) y ASHRAE 55-2020 (sección 6).
 - Lo que quedaba abierto se ha comprobado: el golden master y las pruebas de EnergyPlus 26.1 y 26.2, también la de A5
@@ -2185,3 +2188,38 @@ T_rm_in (decisión 14).
   las líneas equivalentes al principio de `RunACCIS_<zona>` (backend EMS): resultados idénticos (`check_exact`), la
   regla de la media comprobada día a día con pandas (también el fin de semana sin ocupantes) y el límite activo; y la
   prueba de los dos backends del limitador comprueba la nueva referencia.
+
+## 41. Los indicadores de la banda causal con el SET de pythermalcomfort (S4, decisión 9, provisional)
+
+El texto de Sun, Brager y Schiavon (2026) no dice qué implementación del SET usaron (pregunta para Ruiji Sun). La
+decisión 9, provisional, mantiene el SET del modelo Pierce de EnergyPlus en los indicadores de F3 y pide añadir,
+detrás de un argumento desactivado por defecto, los mismos indicadores con el SET de pythermalcomfort (`set_tmp`, con
+`set_of_results` de G3 y las entradas que comparó E-F1), porque E-F1 midió diferencias del orden de lo que mueve las
+horas cerca de los bordes de la banda de 19,1 a 28,2 °C.
+
+**Antes.** `table_indicators` daba los indicadores de la banda causal solo con el SET del modelo Pierce.
+
+**Ahora.**
+
+- `accim.data.postprocessing.indoor_adaptation.table_indicators(..., pythermalcomfort_set=None)`: con un diccionario
+  de las entradas de los ocupantes (`met`, `clo`, `air_speed` y, opcional, `position`, por defecto la postura de los
+  ganchos: sentado con 1,2 met o menos) o un gancho del SET con ellas, añade `<zona>_Mean SET_pythermalcomfort (°C)`,
+  `<zona>_Mean TSV_causal_pythermalcomfort`, `<zona>_Hours In Causal Band_pythermalcomfort (h)`, `... Above ...`,
+  `... Below ...` y `(%)` tras los indicadores de cada zona, y los del edificio tras los suyos
+  (`PYTHERMALCOMFORT_SET_INDICATORS`). Las demás columnas no cambian; sin el argumento, la salida es la misma.
+- El SET es el de `set_of_results` de las salidas *Zone Mean Air Temperature*, *Zone Mean Radiant Temperature* y *Zone
+  Air Relative Humidity* de cada zona (con su nombre en la tabla como clave) en cada fila del CSV de cada simulación
+  (la columna `Source` con `.csv`, en la carpeta actual), promediado en las filas del CSV de cada fila de la tabla (los
+  pasos de cada hora, como `Table` promedia el SET de Pierce; la hora de cada fila como la da `Table`: la de la
+  etiqueta de EnergyPlus, menos 1 en las que acaban una hora). Las zonas sin esas salidas dan NaN, con un aviso; un
+  CSV que no está, un `ValueError`.
+- Las entradas de los ocupantes son constantes (como en `set_of_results`); E-F1 usó las de los horarios de los objetos
+  People en cada paso, así que con una vestimenta estacional o dinámica los dos SET no tienen las mismas entradas
+  (documentado; la opción de leerlas de los horarios queda en `notes/questions.md`, con el resto de las elecciones de
+  diseño).
+- Documentación: el docstring del módulo y de `table_indicators`, la sección 4.7.6 del uso detallado y el CHANGELOG.
+- Pruebas (`tests/core/test_indoor_adaptation.py`, con un SET de prueba que depende de todas sus entradas, porque numba
+  no carga en el servidor): las columnas nuevas y su orden, las demás iguales, los valores de cada zona y del edificio
+  desde las fórmulas, el gancho como entrada, la postura y `tsv_limit`; una tabla horaria y otra de pasos de un CSV de
+  dos pasos por hora; los errores y el aviso; con la simulación de EnergyPlus 25.1 del test de los indicadores, los
+  valores de cada hora del CSV real; y una prueba con pythermalcomfort, que se salta sin él.

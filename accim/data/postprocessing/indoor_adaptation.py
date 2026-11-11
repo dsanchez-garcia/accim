@@ -12,7 +12,9 @@ simulations, for the comparison of the setpoints of several comfort models in th
   of the Pierce two-node model of EnergyPlus (Engineering Reference 25.2, 19.1.4), which any model reports with
   :func:`accim.sim.people.add_thermal_comfort_outputs`, so the setpoints of every comfort model are measured with the
   same SET (that of the hook of comfort standard 24, ``SET_<zone>``, is that of pythermalcomfort; their differences
-  are in ``notes/decisions.md``, task E-F1).
+  are in ``notes/decisions.md``, task E-F1). With ``pythermalcomfort_set``, :func:`table_indicators` also gives them
+  with the SET of pythermalcomfort (task S4 of the review of accim 1.2.0, provisional until the authors of the causal
+  model say which SET they used).
 - The overcooling (:func:`overcooling_hours`): the occupied hours of the cooling season with the operative temperature
   below a temperature, 22 °C by default, following Parkinson, Schiavon, de Dear & Brager (2021), *Overcooling of
   offices...*, Scientific Reports 11, as the proposal of block F does (a design decision of the proposal), or below
@@ -42,8 +44,12 @@ out. :func:`table_indicators` gives them for the zones and the building of each 
 outputs of EnergyPlus of these models (:data:`ENERGYPLUS_OUTPUTS`).
 """
 
+import copy
+import os
+import re
 import warnings
-from typing import Any, Callable, Dict, List, Optional, Sequence, Union
+from collections.abc import Mapping
+from typing import Any, Callable, Dict, Iterable, List, Optional, Sequence, Union
 
 import numpy as np
 import pandas as pd
@@ -55,6 +61,7 @@ __all__ = [
     'EXPOSURE_DIFFERENCE',
     'EXPOSURE_NEUTRAL_TEMPERATURE',
     'OVERCOOLING_TEMPERATURE',
+    'PYTHERMALCOMFORT_SET_INDICATORS',
     'TABLE_INDICATORS',
     'causal_band_hours',
     'exposure_hours',
@@ -103,6 +110,23 @@ TABLE_INDICATORS = {
     'Mean CoolingEffect (°C)': 'mean_cooling_effect',
     'Drift Limited Hours (h)': 'drift_h',
 }
+#: The columns of the indicators of the causal band with the SET of pythermalcomfort that :func:`table_indicators` adds
+#: with ``pythermalcomfort_set`` (task S4 of the review of accim 1.2.0, provisional), with their keys
+PYTHERMALCOMFORT_SET_INDICATORS = {
+    'Mean SET_pythermalcomfort (°C)': 'mean_set',
+    'Mean TSV_causal_pythermalcomfort': 'mean_tsv',
+    'Hours In Causal Band_pythermalcomfort (h)': 'in_h',
+    'Hours Above Causal Band_pythermalcomfort (h)': 'above_h',
+    'Hours Below Causal Band_pythermalcomfort (h)': 'below_h',
+    'Hours In Causal Band_pythermalcomfort (%)': 'in_pct',
+}
+#: The inputs of the SET of pythermalcomfort that ``pythermalcomfort_set`` gives, those of
+#: :class:`accim.sim.comfort_hooks.SetSetpointHook`
+_SET_INPUTS = ('met', 'clo', 'air_speed', 'position')
+#: The beginning of the keys of the results of the indicators of the SET of pythermalcomfort
+_PYTHERMALCOMFORT = 'pythermalcomfort_'
+#: The month, day, hour and minute of the dates of the CSV files of EnergyPlus (' 07/15  10:20:00')
+_DATE_TIME = re.compile(r'\s*(\d+)/(\d+)\s+(\d+):(\d+)')
 _BUILDING_TYPES = tuple(EXPOSURE_NEUTRAL_TEMPERATURE)
 _SET_OUTPUT = 'Zone Thermal Comfort Pierce Model Standard Effective Temperature'
 _COOLING_EFFECT_OUTPUT = 'Zone Thermal Comfort ASHRAE 55 Elevated Air Speed Cooling Effect'
@@ -325,11 +349,95 @@ def _mean_of(group: pd.DataFrame, columns: list) -> Optional[pd.Series]:
     return group[columns].apply(pd.to_numeric, errors='coerce').mean(axis=1)
 
 
+def _pythermalcomfort_hook(pythermalcomfort_set: Any, zones: Sequence[str]):
+    """The hook of the SET with which :func:`table_indicators` calculates the SET of pythermalcomfort of the zones, with
+    the inputs of ``pythermalcomfort_set`` (``method='bisection'``, so that nothing is calculated when it is made)."""
+    from accim.sim.comfort_hooks import SetSetpointHook, sun2026_set_setpoints
+
+    if isinstance(pythermalcomfort_set, Mapping):
+        inputs = dict(pythermalcomfort_set)
+        unknown = [name for name in inputs if name not in _SET_INPUTS]
+        if unknown:
+            raise ValueError(f'pythermalcomfort_set takes {list(_SET_INPUTS)}, not {unknown}.')
+    elif all(hasattr(pythermalcomfort_set, name) for name in _SET_INPUTS):
+        inputs = {name: getattr(pythermalcomfort_set, name) for name in _SET_INPUTS}
+    else:
+        raise ValueError(f'pythermalcomfort_set must be None, a dict with the inputs of the occupants '
+                         f'{list(_SET_INPUTS)} or a hook of the SET, not {pythermalcomfort_set!r}.')
+    missing = [name for name in _SET_INPUTS[:3] if inputs.get(name) is None]
+    if missing:
+        raise ValueError(f'pythermalcomfort_set needs the metabolic rate, clothing insulation and air speed of the '
+                         f'occupants (met, clo and air_speed) as numbers, not None for {missing}: the SET of '
+                         f'pythermalcomfort of the indicators takes them in all the rows (a hook that reads them from '
+                         f'the People objects in each timestep reports its own SET, the output SET_<zone>).')
+    heating, cooling = sun2026_set_setpoints(1)
+    return SetSetpointHook(list(zones) or ['Building'], cooling, heating, method='bisection', **inputs)
+
+
+def _date_parts(values: Iterable[Any]) -> np.ndarray:
+    """The month, day, hour and minute of the dates of the rows of a CSV file of EnergyPlus (4 columns; NaN in the rows
+    without a date)."""
+    parts = []
+    for value in values:
+        match = _DATE_TIME.match(str(value))
+        parts.append([float(part) for part in match.groups()] if match else [np.nan] * 4)
+    return np.array(parts, dtype=float).reshape(-1, 4)
+
+
+def _pythermalcomfort_set_of_rows(group: pd.DataFrame, source: Any, hook,
+                                  zones: Sequence[str]) -> Dict[str, Optional[np.ndarray]]:
+    """The SET of pythermalcomfort of each zone in each row of the table of a simulation (see :func:`table_indicators`):
+    that of each row of its CSV file (:func:`accim.sim.comfort_hooks.set_of_results`, keyed by the name of the zone),
+    averaged over the rows of the CSV file of each row of the table, by its month, day and hour, and its minute in the
+    tables of timesteps (EnergyPlus labels each timestep and hour with its end, and Table gives each row the hour that
+    it is part of: that of the label, minus 1 for the labels that end an hour, such as 01:00 and 24:00); None for the
+    zones whose outputs the CSV file has not."""
+    from accim.sim.comfort_hooks import _SET_ZONE_VARIABLES, set_of_results
+
+    path = str(source) if str(source).lower().endswith('.csv') else f'{source}.csv'
+    if not os.path.isfile(path):
+        raise ValueError(f'The SET of pythermalcomfort of the indicators is calculated from the CSV file of each '
+                         f'simulation (the column Source, with .csv), {path!r}, which is not in the current folder '
+                         f'{os.getcwd()!r}: use the folder of the table.')
+    wanted = [f':{variable} ['.upper() for variable in _SET_ZONE_VARIABLES]
+    results = pd.read_csv(path, skip_blank_lines=False, usecols=lambda column: column.strip() == 'Date/Time' or any(
+        name in column.upper() for name in wanted))
+    results.columns = [str(column).strip() for column in results.columns]
+    if 'Date/Time' not in results.columns:
+        raise ValueError(f'The CSV file {path!r} has not the column Date/Time.')
+    parts = _date_parts(results['Date/Time'])
+    month, day, hour, minute = (pd.to_numeric(group[name], errors='coerce').to_numpy(dtype=float)
+                                if name in group.columns else np.zeros(len(group))
+                                for name in ('Month', 'Day', 'Hour', 'Minute'))
+    timestep_rows = bool((np.nan_to_num(minute) > 0).any())
+    hour_of_row = parts[:, 2] - (parts[:, 3] == 0)
+    if timestep_rows:
+        keys = {'month': parts[:, 0], 'day': parts[:, 1], 'hour': hour_of_row, 'minute': parts[:, 3]}
+    else:
+        minute = np.zeros(len(group))
+        keys = {'month': parts[:, 0], 'day': parts[:, 1], 'hour': hour_of_row, 'minute': np.zeros(len(parts))}
+    rows = pd.MultiIndex.from_arrays([month, day, hour, minute])
+    found: Dict[str, Optional[np.ndarray]] = {}
+    for zone in zones:
+        single = copy.copy(hook)
+        single.zones = [zone]
+        try:
+            values = set_of_results(results, single, keys={zone: zone})[f'SET_{zone}'].to_numpy(dtype=float)
+        except ValueError:
+            found[zone] = None
+            continue
+        frame = pd.DataFrame({**keys, 'set': values}).dropna(subset=list(keys))
+        means = frame.groupby(list(keys))['set'].mean()
+        found[zone] = means.reindex(rows).to_numpy(dtype=float)
+    return found
+
+
 def table_indicators(df: pd.DataFrame, zones: Sequence[str], tsv_limit: Optional[float] = None,
                      overcooling_temperature: float = OVERCOOLING_TEMPERATURE, cooling_season_start: Any = 121,
                      cooling_season_end: Any = 274, building_type: str = 'AC', alpha_indoor: float = 0.8,
                      exposure_difference: float = EXPOSURE_DIFFERENCE,
-                     zone_of: Optional[Callable[[str], Optional[str]]] = None) -> pd.DataFrame:
+                     zone_of: Optional[Callable[[str], Optional[str]]] = None,
+                     pythermalcomfort_set: Any = None) -> pd.DataFrame:
     """The indicators of the adaptation to the indoor climate of each simulation of a table of
     :class:`accim.data.postprocessing.main.Table` with timestep or hourly rows, for each occupied zone and for the
     building (:data:`TABLE_INDICATORS`), with the occupied hours of each row of the ACCIS (the output ``Occupied
@@ -349,7 +457,27 @@ def table_indicators(df: pd.DataFrame, zones: Sequence[str], tsv_limit: Optional
       the limiter of the drift of the setpoints (whose own T_rm_in, of the operative temperature of the previous
       timestep, is the output ``T_rm_in (°C)``);
     - with the cooling effect of EnergyPlus (``CoolingEffect (°C)``): ``Mean CoolingEffect (°C)``;
-    - with the limiter of the drift of the setpoints: ``Drift Limited Hours (h)``, the sum of its output.
+    - with the limiter of the drift of the setpoints: ``Drift Limited Hours (h)``, the sum of its output;
+    - with ``pythermalcomfort_set`` (None by default; task S4 of the review of accim 1.2.0, a provisional option until
+      the authors of the causal model say which implementation of the SET they used, ``notes/questions.md``): the
+      indicators of the causal band with the SET of pythermalcomfort, ``Mean SET_pythermalcomfort (°C)``, ``Mean
+      TSV_causal_pythermalcomfort``, ``Hours In Causal Band_pythermalcomfort (h)``, ``Hours Above Causal
+      Band_pythermalcomfort (h)``, ``Hours Below Causal Band_pythermalcomfort (h)`` and ``Hours In Causal
+      Band_pythermalcomfort (%)`` (:data:`PYTHERMALCOMFORT_SET_INDICATORS`), after those of each zone and of the
+      building. The SET is :func:`accim.sim.comfort_hooks.set_of_results` (``set_tmp`` of pythermalcomfort) of each
+      row of the CSV file of each simulation (the column ``Source`` with ``.csv``, in the current folder, as Table
+      reads them), with the outputs *Zone Mean Air Temperature*, *Zone Mean Radiant Temperature* and *Zone Air
+      Relative Humidity* of each zone, keyed by its name in the table (those that
+      :func:`accim.sim.comfort_hooks.apply_set_setpoints` requests; the zones without them, such as those that Table
+      names after their spaces, have NaN, with a warning), and the metabolic rate, clothing insulation, air speed and
+      posture of ``pythermalcomfort_set``, averaged over the rows of the CSV file of each row of the table (the
+      timesteps of each hour, as Table averages the SET of the Pierce model). These are the inputs that task E-F1
+      compared, with constant inputs of the occupants: E-F1 took those of the schedules of the People objects in each
+      timestep, as EnergyPlus does, so the two SET have the same inputs only where those schedules give the values of
+      ``pythermalcomfort_set`` (not with a seasonal clothing insulation or the dynamic clothing model). With the same
+      inputs, in a year in Seville, E-F1 measured the SET of pythermalcomfort below that of EnergyPlus by 0.045 K on
+      average (at most 0.20 K in the hourly means) standing and by 0.116 K (at most 0.34 K) sitting
+      (``notes/decisions.md``), which moves the hours near the limits of the band.
 
     The building adds up the hours of its zones and weights their means by their hours, of the zones that have each
     output. With hourly rows (and timestep outputs aggregated by Table with ``frequency_agg_func='sum'``), the
@@ -370,11 +498,20 @@ def table_indicators(df: pd.DataFrame, zones: Sequence[str], tsv_limit: Optional
     :param exposure_difference: The half-width of the band around Tn_exp (K, 2.5 by default).
     :param zone_of: The zone of a column (the function of Table), for the outputs of the occupants with
         ``rename_cols=False``; None: the longest of the zones whose name the column contains.
+    :param pythermalcomfort_set: None (the default), or the inputs of the occupants of the SET of pythermalcomfort,
+        to add its indicators of the causal band (see above): a dict with ``'met'`` (met), ``'clo'`` (clo),
+        ``'air_speed'`` (m/s) and, optionally, ``'position'`` ('sitting' or 'standing'; by default, sitting with 1.2
+        met or less and standing above it, as the hooks of the SET), such as ``{'met': 1.1, 'clo': 0.5, 'air_speed':
+        0.1}``, or a hook of the SET with them (:class:`accim.sim.comfort_hooks.SetSetpointHook`, as that of
+        :func:`accim.sim.comfort_hooks.apply_sun2026_setpoints` with its own inputs). It needs pythermalcomfort and the
+        hour of each row.
     :return: A DataFrame with a row for each simulation: ``Source``, the columns that describe the simulations
         (``Model``, ``ComfStand``... ``EPW``, those that the table has), and ``<zone>_<indicator>`` and
         ``Building_<indicator>`` for each indicator.
-    :raises ValueError: If the table has no months and days, a zone has not the operative temperature or the occupied
-        hours, or an argument is not valid.
+    :raises ValueError: If the table has no months and days (or hours, with ``pythermalcomfort_set``), a zone has not
+        the operative temperature or the occupied hours, an argument is not valid, or the CSV file of a simulation is
+        not found with ``pythermalcomfort_set``.
+    :raises ImportError: With ``pythermalcomfort_set``, if pythermalcomfort cannot be imported.
     """
     from accim.sim.arguments import to_day_of_year
 
@@ -395,6 +532,10 @@ def table_indicators(df: pd.DataFrame, zones: Sequence[str], tsv_limit: Optional
 
         sun2026_set_setpoints(1, tsv_limit)
     zones = list(zones)
+    hook = None if pythermalcomfort_set is None else _pythermalcomfort_hook(pythermalcomfort_set, zones)
+    if hook is not None and 'Hour' not in df.columns:
+        raise ValueError('The indicators of the SET of pythermalcomfort need the hour of each row (a table of '
+                         'timesteps or hours).')
     if zone_of is None:
         def zone_of(column):
             return _longest_zone(column, zones)
@@ -424,12 +565,14 @@ def table_indicators(df: pd.DataFrame, zones: Sequence[str], tsv_limit: Optional
     descriptive = [column for column in _DESCRIPTIVE_COLUMNS if column in df.columns]
     nan = float('nan')
     rows = []
+    without_inputs: List[str] = []
     for source, group in df.groupby('Source', sort=False):
         row: Dict[str, Any] = {'Source': source}
         row.update({column: group[column].iloc[0] for column in descriptive})
         day = _day_of_year(group['Month'], group['Day'])
         season = (day >= start) & (day < end)
         dates = list(zip(group['Month'].astype(str), group['Day'].astype(str)))
+        python_set = {} if hook is None else _pythermalcomfort_set_of_rows(group, source, hook, list(found))
         totals: Dict[str, List[float]] = {}
         for zone, zone_columns in found.items():
             hours = pd.to_numeric(group[zone_columns['hours']], errors='coerce').fillna(0.0).to_numpy()
@@ -462,37 +605,76 @@ def table_indicators(df: pd.DataFrame, zones: Sequence[str], tsv_limit: Optional
             drift = zone_columns['drift']
             results['drift_h'] = (float(pd.to_numeric(group[drift], errors='coerce').sum()) if drift is not None
                                   else nan)
+            if hook is not None:
+                values = python_set.get(zone)
+                if values is None:
+                    if zone not in without_inputs:
+                        without_inputs.append(zone)
+                    band = dict.fromkeys(('in_h', 'above_h', 'below_h', 'in_pct', 'occupied_h', 'mean_set',
+                                          'mean_tsv'), nan)
+                else:
+                    band = causal_band_hours(values, occupied=hours, timestep_h=hours, tsv_limit=tsv_limit)
+                band['set_h'] = band.pop('occupied_h')
+                results.update({_PYTHERMALCOMFORT + key: value for key, value in band.items()})
             for title, key in TABLE_INDICATORS.items():
                 row[f'{zone}_{title}'] = results[key]
+            if hook is not None:
+                for title, key in PYTHERMALCOMFORT_SET_INDICATORS.items():
+                    row[f'{zone}_{title}'] = results[_PYTHERMALCOMFORT + key]
             for key, value in results.items():
                 totals.setdefault(key, []).append(value)
         row.update(_building(totals))
+        if hook is not None:
+            row.update(_building(totals, pythermalcomfort=True))
         rows.append(row)
+    if without_inputs:
+        warnings.warn(f'The zones {without_inputs} have not the outputs Zone Mean Air Temperature, Zone Mean Radiant '
+                      f'Temperature and Zone Air Relative Humidity, keyed by their names, in the CSV files of some '
+                      f'simulations: their indicators of the SET of pythermalcomfort are NaN.', UserWarning,
+                      stacklevel=2)
     return pd.DataFrame(rows)
 
 
-def _building(totals: Dict[str, List[float]]) -> Dict[str, float]:
+def _total(totals: Dict[str, List[float]], key: str) -> float:
+    """The sum of the values of the zones that have them, or NaN if none has them."""
+    values = [value for value in totals[key] if not np.isnan(value)]
+    return float(sum(values)) if values else float('nan')
+
+
+def _weighted(totals: Dict[str, List[float]], key: str, weight: str) -> float:
+    """The mean of the values of the zones that have them, weighted by their hours; NaN without them."""
+    pairs = [(value, hours) for value, hours in zip(totals[key], totals[weight])
+             if not np.isnan(value) and not np.isnan(hours) and hours > 0]
+    hours = sum(hours for _, hours in pairs)
+    return float(sum(value * hours for value, hours in pairs) / hours) if hours > 0 else float('nan')
+
+
+def _percentage(totals: Dict[str, List[float]], part: str, whole: str) -> float:
+    """The percentage of the sum of some hours of the zones in the sum of others; NaN without them."""
+    part_h, whole_h = _total(totals, part), _total(totals, whole)
+    return 100.0 * part_h / whole_h if whole_h > 0 else float('nan')
+
+
+def _building(totals: Dict[str, List[float]], pythermalcomfort: bool = False) -> Dict[str, float]:
     """The indicators of the building: the sums of the hours of its zones (of those that have them), and the means of
-    the zones weighted by the hours of each mean; NaN if no zone has them."""
-    def total(key):
-        values = [value for value in totals[key] if not np.isnan(value)]
-        return float(sum(values)) if values else float('nan')
+    the zones weighted by the hours of each mean; NaN if no zone has them. With ``pythermalcomfort``, those of the SET
+    of pythermalcomfort (:data:`PYTHERMALCOMFORT_SET_INDICATORS`)."""
+    if pythermalcomfort:
+        def key(name):
+            return _PYTHERMALCOMFORT + name
 
-    def weighted(key, weight):
-        pairs = [(value, hours) for value, hours in zip(totals[key], totals[weight])
-                 if not np.isnan(value) and not np.isnan(hours) and hours > 0]
-        hours = sum(hours for _, hours in pairs)
-        return float(sum(value * hours for value, hours in pairs) / hours) if hours > 0 else float('nan')
-
-    def percentage(part, whole):
-        part, whole = total(part), total(whole)
-        return 100.0 * part / whole if whole > 0 else float('nan')
-
-    values = {key: total(key) for key in ('occupied_h', 'in_h', 'above_h', 'below_h', 'overcooling_h', 'outside_h',
-                                          'drift_h')}
-    values.update(in_pct=percentage('in_h', 'set_h'), overcooling_pct=percentage('overcooling_h', 'cooling_season_h'),
-                  mean_set=weighted('mean_set', 'set_h'), mean_tsv=weighted('mean_tsv', 'set_h'),
-                  mean_t_rm_in=weighted('mean_t_rm_in', 'exposure_h'), mean_tn=weighted('mean_tn', 'exposure_h'),
-                  mean_difference=weighted('mean_difference', 'exposure_h'),
-                  mean_cooling_effect=weighted('mean_cooling_effect', 'cooling_effect_h'))
+        values = {name: _total(totals, key(name)) for name in ('in_h', 'above_h', 'below_h')}
+        values.update(in_pct=_percentage(totals, key('in_h'), key('set_h')),
+                      mean_set=_weighted(totals, key('mean_set'), key('set_h')),
+                      mean_tsv=_weighted(totals, key('mean_tsv'), key('set_h')))
+        return {f'Building_{title}': values[name] for title, name in PYTHERMALCOMFORT_SET_INDICATORS.items()}
+    values = {key: _total(totals, key) for key in ('occupied_h', 'in_h', 'above_h', 'below_h', 'overcooling_h',
+                                                   'outside_h', 'drift_h')}
+    values.update(in_pct=_percentage(totals, 'in_h', 'set_h'),
+                  overcooling_pct=_percentage(totals, 'overcooling_h', 'cooling_season_h'),
+                  mean_set=_weighted(totals, 'mean_set', 'set_h'), mean_tsv=_weighted(totals, 'mean_tsv', 'set_h'),
+                  mean_t_rm_in=_weighted(totals, 'mean_t_rm_in', 'exposure_h'),
+                  mean_tn=_weighted(totals, 'mean_tn', 'exposure_h'),
+                  mean_difference=_weighted(totals, 'mean_difference', 'exposure_h'),
+                  mean_cooling_effect=_weighted(totals, 'mean_cooling_effect', 'cooling_effect_h'))
     return {f'Building_{title}': values[key] for title, key in TABLE_INDICATORS.items()}
