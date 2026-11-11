@@ -525,7 +525,7 @@ def test_add_accis_writes_the_schedule_of_te_ref_nl(tmp_path, monkeypatch):
     [path] = outputs.values()
     idf = load_idf(path)
     schedule, sensor = _mid_range_objects(idf)
-    csv = tmp_path / 'with' / f'{EPW.stem}{om.MID_RANGE_FILE_SUFFIX}'
+    csv = tmp_path / 'with' / om.mid_range_file_name(EPW)
     assert csv.is_file() and str(schedule.File_Name) == str(csv)
     assert (schedule.Schedule_Type_Limits_Name, schedule.Column_Number, schedule.Rows_to_Skip_at_Top,
             schedule.Number_of_Hours_of_Data, schedule.Column_Separator, schedule.Interpolate_to_Timestep,
@@ -576,7 +576,7 @@ def test_modify_accis_and_the_schedule_of_te_ref_nl(tmp_path):
     # The CSV file in the folder of the model
     modify_accis(idf, comfort_standard=99, comfort_mode=3, custom_outdoor_metric='te_ref_nl', epw=str(EPW))
     schedule, sensor = _mid_range_objects(idf)
-    assert sensor is not None and str(schedule.File_Name) == str(tmp_path / f'{EPW.stem}{om.MID_RANGE_FILE_SUFFIX}')
+    assert sensor is not None and str(schedule.File_Name) == str(tmp_path / om.mid_range_file_name(EPW))
     # The programs are kept with their sensor when the outdoor metric is written again without the weather file
     om.set_outdoor_metric_code(idf, True)
     assert om.reads_mid_range(idf) and om.begins_with_weather_file(idf)
@@ -585,7 +585,7 @@ def test_modify_accis_and_the_schedule_of_te_ref_nl(tmp_path):
     with pytest.warns(UserWarning, match='begins with the running mean of ASHRAE 55'):
         modify_accis(idf, custom_outdoor_metric='rmot_alpha')
     assert _mid_range_objects(idf) == (None, None) and not om.begins_with_weather_file(idf)
-    assert (tmp_path / f'{EPW.stem}{om.MID_RANGE_FILE_SUFFIX}').is_file()
+    assert (tmp_path / om.mid_range_file_name(EPW)).is_file()
     # Programs that begin with the values of a weather file and do not read the sensor are written again when a zone
     # gets te_ref_nl without it (as the parametric module does), beginning with PMOT
     modify_accis(idf, custom_outdoor_metric='rmot_alpha', epw=str(EPW))
@@ -603,6 +603,45 @@ def test_modify_accis_and_the_schedule_of_te_ref_nl(tmp_path):
     assert om.reads_mid_range(idf)
     modify_accis(idf, custom_outdoor_metric='pmot', zone_arguments={'Block1:Zone2': {'custom_outdoor_metric': 'pmot'}})
     assert _mid_range_objects(idf) == (None, None) and not om.has_outdoor_metric_code(idf)
+
+
+@needs_idd
+def test_two_weather_files_with_the_same_name_have_their_own_files_of_t0(tmp_path):
+    # Finding A21 of the self-audit of 2026-11-11: the CSV file of T0 has the hash of its values in its name, as the
+    # files of the clothing insulation of a function (H6), so the weather files of the same name in other folders (such
+    # as those of the present and of 2050) do not replace the file that the models of the other one read
+    from accim.sim.accis import add_accis_to_idf, load_idf, modify_accis
+    from accim.sim.schedule_files import schedule_file_path
+
+    sample_epw = REPO / 'accim' / 'sample_files' / 'jupyter_notebooks' / 'parametric_and_optimisation_examples' / (
+        'Seville.epw')
+    epws = []
+    for folder, source in (('present', EPW), ('future', sample_epw)):
+        (tmp_path / folder).mkdir()
+        epws.append(tmp_path / folder / 'Seville.epw')
+        shutil.copy(source, epws[-1])
+    names = [om.mid_range_file_name(epw) for epw in epws]
+    assert names[0] != names[1] and all(name.startswith('Seville_outdoor_mid_range_') for name in names)
+    # The same values, the same hash
+    assert names[0].rsplit('_', 1)[1] == om.mid_range_file_name(EPW).rsplit('_', 1)[1]
+    (tmp_path / 'models').mkdir()
+    models = []
+    for number, epw in enumerate(epws):
+        shutil.copy(SAMPLE_IDF, tmp_path / 'models' / f'model{number}.idf')
+        idf = load_idf(tmp_path / 'models' / f'model{number}.idf')
+        with warnings.catch_warnings():
+            warnings.simplefilter('ignore')
+            add_accis_to_idf(idf, script_type='vrf_mm', supply_air_temp_input_method='temperature difference',
+                             output_type='standard', output_frequencies=['hourly'], keep_existing_outputs=False,
+                             setpoint_type='temperature', verbose=False)
+            modify_accis(idf, comfort_standard=99, comfort_mode=3, custom_outdoor_metric='te_ref_nl', epw=str(epw))
+        models.append(idf)
+    # Each model reads the values of its own weather file
+    for idf, epw, name in zip(models, epws, names):
+        path = Path(schedule_file_path(idf, om.MID_RANGE_SCHEDULE))
+        assert path == tmp_path / 'models' / name
+        values = [float(value) for value in path.read_text(encoding='utf-8').splitlines()[1:]]
+        assert values == om.mid_range_values(epw)
 
 
 @needs_idd

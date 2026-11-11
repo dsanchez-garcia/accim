@@ -93,6 +93,7 @@ __all__ = [
     'metric_code',
     'metric_comfort_standards',
     'metric_name',
+    'mid_range_file_name',
     'mid_range_values',
     'outdoor_metric_needed',
     'reads_mid_range',
@@ -133,10 +134,10 @@ OUTPUT_PREFIX = 'Tout_metric_'
 REGIME_METRIC_PREFIX = 'ToutRegime_'
 _REGIME_RUNNING_MEAN_PREFIX = 'RMOTr_'
 #: The Schedule:File object of the mean of the maximum and minimum of the day of each hour of the weather file (T0 of
-#: 'te_ref_nl', task H2 of the review of accim 1.2.0), its CSV file (``<name of the weather file><suffix>``, in the
-#: folder of the model) and the EMS sensor of its Schedule Value
+#: 'te_ref_nl', task H2 of the review of accim 1.2.0), the end of the name of its CSV file
+#: (:func:`mid_range_file_name`, in the folder of the model) and the EMS sensor of its Schedule Value
 MID_RANGE_SCHEDULE = 'ACCIS Outdoor Mid Range'
-MID_RANGE_FILE_SUFFIX = '_outdoor_mid_range.csv'
+MID_RANGE_FILE_SUFFIX = '_outdoor_mid_range'
 MID_RANGE_SENSOR = 'OutdoorMidRangeToday'
 #: The inputs of each zone (SetInputData_<zone>)
 INPUTS = ('CustAST_metric', 'CustAST_alpha', 'CustAST_days')
@@ -543,13 +544,27 @@ def reads_mid_range(idf) -> bool:
     return idf.getobject('EnergyManagementSystem:Sensor', MID_RANGE_SENSOR) is not None
 
 
+def mid_range_file_name(epw: Union[str, Any], values: Optional[Sequence[float]] = None) -> str:
+    """The name of the CSV file of the Schedule:File object of T0 of 'te_ref_nl' of a weather file:
+    ``<name of the weather file>_outdoor_mid_range_<hash>.csv``, with the first 8 characters of the SHA-1 of its values
+    (:func:`mid_range_values`, or ``values``), as the CSV files of the clothing insulation of a function (task H6), so
+    that two weather files with the same name in other folders (such as those of the present and of 2050) do not replace
+    the file that the models of the other one read (finding A21 of the self-audit of 2026-11-11: before, the name was
+    ``<name of the weather file>_outdoor_mid_range.csv``)."""
+    import hashlib
+
+    values = mid_range_values(epw) if values is None else values
+    digest = hashlib.sha1(','.join(repr(float(value)) for value in values).encode('utf-8')).hexdigest()[:8]
+    return f'{os.path.splitext(os.path.basename(os.fspath(epw)))[0]}{MID_RANGE_FILE_SUFFIX}_{digest}.csv'
+
+
 def _set_mid_range_schedule(idf, epw: Union[str, Any]) -> None:
     """Give the model the Schedule:File object of the mean of the maximum and minimum of each day of a weather file, its
-    CSV file (in the folder of the model) and the EMS sensor of its Schedule Value."""
+    CSV file (in the folder of the model, :func:`mid_range_file_name`) and the EMS sensor of its Schedule Value."""
     from accim.sim.schedule_files import write_schedule_file
 
-    write_schedule_file(idf, MID_RANGE_SCHEDULE, mid_range_values(epw),
-                        f'{os.path.splitext(os.path.basename(os.fspath(epw)))[0]}{MID_RANGE_FILE_SUFFIX}')
+    values = mid_range_values(epw)
+    write_schedule_file(idf, MID_RANGE_SCHEDULE, values, mid_range_file_name(epw, values))
     if not reads_mid_range(idf):
         idf.newidfobject('EnergyManagementSystem:Sensor', Name=MID_RANGE_SENSOR,
                          OutputVariable_or_OutputMeter_Index_Key_Name=MID_RANGE_SCHEDULE,

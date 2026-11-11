@@ -36,6 +36,13 @@ Recommended flow: track active work in `TODO.md`, move completed outcomes to `DE
 ## Entries
 
 ### 2026-11-11
+#### [done] A21: the name of the CSV file of T0 of 'te_ref_nl' with a hash of its values (self-audit of session 2) (branch `v1.2.0`)
+- Context: finding A21 (design) of the self-audit of session 2: the CSV file of the `Schedule:File` object of T0 (task H2) was named after the weather file only, `<epw>_outdoor_mid_range.csv`, in the folder of the model, and `write_schedule_file` rewrites it when its values change, so two weather files with the same name in other folders (present and 2050) used by models of the same folder replaced each other, and the models written first read the T0 of the other one through their absolute path. H6 had avoided it with 8 characters of the SHA-1 of the values in the name (decision 1, accepted on 2026-11-11).
+- Changes: `accim.sim.ems.outdoor_metric.mid_range_file_name(epw, values=None)` gives `<epw>_outdoor_mid_range_<hash>.csv`; `_set_mid_range_schedule` uses it; `MID_RANGE_FILE_SUFFIX` is `'_outdoor_mid_range'`. Section 4.2.2 and the H2 entry of `CHANGELOG.md`. The golden master has no model with `te_ref_nl`.
+- Files: `accim/sim/ems/outdoor_metric.py`, `tests/core/test_outdoor_metric.py`, `docs/source/4_detailed use.md`, `CHANGELOG.md`, `CAMBIOS_CODIGO_v1.2.0.md` (§43), `DEVLOG.md`.
+- Verification: `test_two_weather_files_with_the_same_name_have_their_own_files_of_t0` (two `Seville.epw` of different folders give two names, the same values the same hash, and two models of one folder read the values of their own weather file); the tests of H2 with the new name; `tests/core/test_outdoor_metric.py` 43 passed. Compiles with Python 3.9.
+
+### 2026-11-11
 #### [done] A5 and A6: the hours in the causal band of a timestep without the SET, and the order of prepare() and the API (self-audit of session 2) (branch `v1.2.0`)
 - Context: findings A5 (minor) and A6 (test) of the self-audit of session 2: when the hook of the SET calculated no SET of a zone in a timestep, it did not update `HoursInCausalBand_<zone>`, a summed output, which repeated the hours of the last timestep with the SET (also in unoccupied timesteps); and no test checked that `run_simulation` calls `prepare()` of the hooks before it loads the library of the API of EnergyPlus.
 - Changes: `SetSetpointHook._skipped(controller, zone)`, called when the hook calculates no SET of a zone (no value of a sensor, `zone_inputs` None, or no mean air temperature with `method='bisection'`); `Sun2026SetpointHook._skipped` sets `HoursInCausalBand_<zone>` to 0 (`SET_<zone>` and `TSV_causal_<zone>`, averaged, keep their last values). Section 4.9.3 of the detailed use.

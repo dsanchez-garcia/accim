@@ -2407,3 +2407,16 @@ Correcciones pequeñas de la documentación, sin cambios del código (un commit)
   la API de EnergyPlus (el orden que necesita el gancho del SET por bisección): prueba nueva que sustituye
   `load_energyplus_api` y comprueba el orden (`prepare` de los ganchos de antes y de después de los programas, y luego
   la carga). El código ya lo hacía.
+
+### A21. El nombre del CSV de T0 de `'te_ref_nl'`, con un hash de sus valores
+
+**Antes.** El CSV del `Schedule:File` de T0 se llamaba `<nombre del EPW>_outdoor_mid_range.csv`, en la carpeta del
+modelo, y `write_schedule_file` lo reescribe si su contenido cambia: dos archivos climáticos con el mismo nombre en
+carpetas distintas (el presente y 2050, por ejemplo) usados por modelos de la misma carpeta se sobrescribían, y los
+modelos escritos antes leían sin aviso el T0 del otro archivo.
+
+**Ahora.** `accim.sim.ems.outdoor_metric.mid_range_file_name(epw, values=None)`:
+`<nombre del EPW>_outdoor_mid_range_<hash>.csv`, con 8 caracteres del SHA-1 de los valores, como los CSV de la
+vestimenta de una función (H6, decisión 1). `MID_RANGE_FILE_SUFFIX` es ahora `'_outdoor_mid_range'`. Prueba nueva:
+dos EPW llamados `Seville.epw` en dos carpetas dan dos nombres, y dos modelos de la misma carpeta leen cada uno los
+valores de su archivo; las pruebas de H2 usan el nombre nuevo. Documentado en la sección 4.2.2 y el CHANGELOG.
