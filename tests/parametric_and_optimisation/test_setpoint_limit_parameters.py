@@ -70,11 +70,12 @@ def test_the_names_of_the_development_of_accim_1_2_0():
 
 def test_the_plans_with_the_names_of_the_development_of_accim_1_2_0():
     # Finding A23 of the self-audit of 2026-11-11: a plan with the columns heating_setpoint_floor and
-    # cooling_setpoint_ceiling drops the rows whose minimum is not lower than the maximum, as with the new names (before,
-    # their rule was skipped), and keeps its columns
+    # cooling_setpoint_ceiling drops the rows whose minimum is not lower than the maximum, as with the new names
+    # (before, their rule was skipped), and keeps its columns
     import pandas as pd
 
-    plan = pd.DataFrame({'heating_setpoint_floor': [18.0, 26.0, 21.0], 'cooling_setpoint_ceiling': [27.0, 26.0, 20.0]})
+    plan = pd.DataFrame({'heating_setpoint_floor': [18.0, 26.0, 21.0],
+                         'cooling_setpoint_ceiling': [27.0, 26.0, 20.0]})
     kept = param_accis.drop_invalid_param_combinations(plan)
     assert kept.index.tolist() == [0] and list(kept.columns) == list(plan.columns)
     renamed = plan.rename(columns={'heating_setpoint_floor': 'heating_setpoint_minimum',

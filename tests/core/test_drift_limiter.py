@@ -420,8 +420,9 @@ def test_addaccis_warns_of_the_arguments_of_the_limiter_without_drift_mode(tmp_p
                      output_type='standard', output_frequencies=['hourly'], keep_existing_outputs=False,
                      energyplus_version='auto', setpoint_type='temperature', comfort_standard=[1], category=[2],
                      comfort_mode=[3], confirm=True, verbose=False)
-    with pytest.warns(UserWarning, match=r"The arguments of the limiter of the drift of the setpoints \['max_drift_rate', "
-                                         r"'delta_cool \(Block1:Zone2\)'\] are not used: no zone has drift_mode"):
+    message = (r"The arguments of the limiter of the drift of the setpoints \['max_drift_rate', 'delta_cool "
+               r"\(Block1:Zone2\)'\] are not used: no zone has drift_mode")
+    with pytest.warns(UserWarning, match=message):
         result = AddAccis(**arguments, max_drift_rate=0.3, zone_arguments={'Block1:Zone2': {'delta_cool': 1.5}})
     [path] = result.output_idfs.paths.values()
     assert 'DriftMode' not in Path(path).read_text()

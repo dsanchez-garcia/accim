@@ -2381,3 +2381,16 @@ Correcciones pequeñas de la documentación, sin cambios del código (un commit)
   editar el estándar de una zona); una zona que pasa al 23 editando su programa necesita también `StaticAHST` y
   `StaticACST` (si no, EnergyPlus se detiene): documentado; el arreglo del código choca con la decisión de G4 (solo las
   zonas del 23 tienen esas entradas, y las salidas de las demás no cambian) y queda en `notes/questions.md`.
+
+### Grupo de argumentos: A11 y A23
+
+- **A11.** `AddAccis` ignoraba en silencio `max_drift_rate`, `alpha_indoor`, `delta_cool`, `delta_heat` e
+  `initial_T_rm_in` (distintos de sus valores por defecto, o en `zone_arguments`) cuando ninguna zona tiene
+  `drift_mode`, mientras `modify_accis` da un `ValueError`. Ahora avisa (`_warn_unused_drift_arguments`; un aviso y no
+  un error, para que los IDF de salida no cambien). Prueba: el aviso con un argumento general y otro de una zona, el IDF
+  sin limitador, y ningún aviso con `drift_mode` ni con los valores por defecto.
+- **A23.** `drop_invalid_param_combinations` no traducía los nombres del desarrollo de 1.2.0
+  (`heating_setpoint_floor`, `cooling_setpoint_ceiling`), así que con ellos se saltaba la regla del mínimo y el máximo
+  (H1 dice que los nombres antiguos siguen funcionando). Ahora los toma, y las columnas del plan no cambian. Prueba en
+  `tests/parametric_and_optimisation/test_setpoint_limit_parameters.py`.
+- Las dos pruebas fallan sin los arreglos y pasan con ellos.
