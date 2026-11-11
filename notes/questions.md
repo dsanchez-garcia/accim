@@ -24,6 +24,29 @@ it here as answered).
 
 ## Open
 
+## 2026-11-11 — S1: the details of the comparison of the minimum and maximum with the setpoints of the comfort model
+- Context: decision 19 (the verdicts of 2026-11-11 in [[decisions.md]]; task S1 of `notes/COPILOT_SIGUIENTE_SESION.md`)
+  replaces the comparison with `ACSTaul`/`AHSTall` by option (ii): with the weather file, the setpoints of the comfort
+  model of each zone with `accim.sim.preview.compute_setpoints`, and a warning for each zone whose minimum is at or
+  above the lowest cooling setpoint, or whose maximum is at or below the highest heating setpoint, with the value, the
+  first date and the number of days; the zones that `compute_setpoints` does not cover are left out with a debug
+  message. It does not say which setpoints, which days, nor when `modify_accis` compares them.
+- Why it matters: what the warning reports, and when it is given.
+- Options considered: (i) the setpoints of the thermostats (`ACST`/`AHST`, with the tolerance, rounded: where they
+  cross, the heating setpoint of the thermostats is at or above the cooling one), by timestep, with the timesteps per
+  hour of the model, from the first day of its first `RunPeriod` to its last day (to the end of the year if the run
+  period goes on in the next one), including the first timestep of the run period, whose running means are 0 in the
+  EMS as in EnergyPlus; `modify_accis` compares whenever the model has a minimum or a maximum (given in the call or
+  before) and `epw` is given; the zones left out: those whose setpoints a hook gives and those with the limiter of the
+  drift of the setpoints (their setpoints are not those of `compute_setpoints`), and those whose arguments it rejects
+  (with the debug message of the logger `accim.sim.ems.setpoint_limits`, the first use of `logging` in accim)
+  (implemented); (ii) the setpoints without the tolerance (`ACSTnoTol`/`AHSTnoTol`, the comfort band), which cross
+  later; (iii) the whole year of the weather file, whatever the run period; (iv) leave out the first timestep of the
+  run period.
+- Owner: the author.
+- Status: open; option (i) implemented provisionally (`accim.sim.ems.setpoint_limits.warn_crossed_setpoint_limits`):
+  it only adds warnings.
+
 ## 2026-11-11 — Comfort standards 9 and 10 (IND IMAC R 7DRM and 30DRM): their running means, and the heating setpoint of 9 in comfort mode 1
 - Context: the review of Claude Science of 2026-11-11 (`notes/TRASPASO_ClaudeScience_2026-11-11_v01.md` §2.1)
   checked the source of comfort standards 9 and 10, Rawal et al. (2022), Building and Environment 219, 109187

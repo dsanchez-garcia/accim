@@ -704,10 +704,11 @@ class AddAccis:
         cooling setpoint is not higher (the input ``ACSTmax``), as the maximums of Table B.2 of EN 16798-1. A cooling
         setpoint bounded by the maximum is the maximum, and a heating setpoint bounded by the minimum the minimum (not
         one step of ``setpoint_accuracy`` beyond them, as the strict rounding would give: finding B5-2). It must be
-        higher than the minimum; a warning tells if the minimum is above the upper applicability limit of the cooling
-        setpoint of the comfort standard (ACSTaul) or the maximum below the lower one of the heating setpoint
-        (AHSTall), since the setpoints can then cross
-        (:func:`accim.sim.ems.setpoint_limits.warn_crossed_setpoint_limits`).
+        higher than the minimum. With the weather file of the simulations (``epw``), a warning tells of the zones whose
+        minimum is at or above the cooling setpoint of their comfort model, or whose maximum is at or below its heating
+        setpoint, in some timestep of the run period of the model, since the heating setpoint is then at or above the
+        cooling setpoint (:func:`accim.sim.ems.setpoint_limits.warn_crossed_setpoint_limits`, with the setpoints of
+        :func:`accim.sim.preview.compute_setpoints`); without it, no warning.
     :param report_hours_below: A list of temperatures (°C), such as ``[18, 17, 16]``, or None (or an empty list) for
         none: the output IDFs report the occupied hours of each zone with the operative temperature below each of
         them, ``HoursBelow_<T>_<zone>`` (``HoursBelow_18_<zone>``, and ``HoursBelow_17p5_<zone>`` for 17.5), with
@@ -1137,7 +1138,7 @@ class AddAccis:
                 set_custom_regimes(idf, regimes)
                 set_comfort_standard_code(idf, zone_comfort_standards(idf), epw)
                 if has_setpoint_limits(idf):
-                    warn_crossed_setpoint_limits(idf)
+                    warn_crossed_setpoint_limits(idf, epw)
                 idf.savecopy(path)
                 paths[os.path.basename(path)] = os.path.abspath(path)
         return paths
@@ -1344,10 +1345,10 @@ def modify_accis(
     have none): a number, here or in ``zone_arguments``, gives it to the zones, with the program
     ApplySetpointLimits_<zone> (:func:`accim.sim.ems.setpoint_limits.set_setpoint_limits_code`). They bound the
     setpoint temperatures of the ACCIS, with and without the tolerance: the zones controlled by the thermostats of the
-    PMV (``setpoint_type`` 'pmv', or :mod:`accim.sim.pmv_index`) do not use them. A model with them warns if a minimum
-    is above the upper applicability limit of the cooling setpoint of the comfort standard of its zone, or a maximum
-    below the lower one of the heating setpoint
-    (:func:`accim.sim.ems.setpoint_limits.warn_crossed_setpoint_limits`).
+    PMV (``setpoint_type`` 'pmv', or :mod:`accim.sim.pmv_index`) do not use them. A model with them, given ``epw``,
+    warns of the zones whose minimum is at or above the cooling setpoint of their comfort model, or whose maximum is at
+    or below its heating setpoint, in some timestep of its run period
+    (:func:`accim.sim.ems.setpoint_limits.warn_crossed_setpoint_limits`); without ``epw``, it does not warn.
 
     The static setpoints of JPN Aqilah 2025 (``static_heating_setpoint`` and ``static_cooling_setpoint``, see
     :class:`AddAccis`) keep their values if they are None: a number, here or in ``zone_arguments``, gives it to the
@@ -1537,7 +1538,7 @@ def modify_accis(
     if given & set(WEATHER_FILE_METRICS) and weather_zones and not begins_with_weather_file(idf):
         _warn_rmot_start('')
     if has_setpoint_limits(idf):
-        warn_crossed_setpoint_limits(idf)
+        warn_crossed_setpoint_limits(idf, epw)
     indent_programs(idf)
 
 

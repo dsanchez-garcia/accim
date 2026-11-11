@@ -9,7 +9,9 @@ del autor (`notes/COPILOT_BRIEF_v1.2.0_v01.md`): E1 (sección 8), E2 (sección 9
 B5 (sección 12), C1 (sección 13), D1 (sección 14), B2 (sección 15), B3 (sección 16), B4 (sección 17), C2 (sección
 18), E4 (sección 19), A4 (sección 20) y A6 (sección 21); y, al final, lo que faltaba de D2: las salidas opcionales
 del ACCIS y del ATHB en `Table` (sección 22). Después, las tareas de la revisión independiente de la 1.2.0
-(`notes/PROPUESTAS_MEJORAS_post_1.1.0_v04.md`, §7), en el orden del autor: G1 (sección 23) y las siguientes.
+(`notes/PROPUESTAS_MEJORAS_post_1.1.0_v04.md`, §7), en el orden del autor: G1 (sección 23) y las siguientes; y, en
+la tercera sesión, las tareas S1 a S5 de `notes/COPILOT_SIGUIENTE_SESION.md` y las correcciones de su auditoría de la
+segunda sesión (sección 38 y las siguientes).
 
 Lo que ya está en otros documentos no se repite aquí:
 
@@ -109,7 +111,8 @@ Lo que ya está en otros documentos no se repite aquí:
 - **G5 (revisión v04).** Saneamiento: `adaptive_coefficients=<clave>` da los dos λ de una entrada del catálogo y una
   clave con el número por defecto en el otro lado avisa; con `'pmv_sign'` se comprueban los signos de las consignas;
   el suelo y el techo acotan también las consignas sin tolerancia y son exactos tras el redondeo, con aviso si cruzan
-  los límites de aplicabilidad; un formateador único de los números de los programas; el YAML de Qatar completo (102)
+  los límites de aplicabilidad (aviso sustituido en S1, sección 38); un formateador único de los números de los
+  programas; el YAML de Qatar completo (102)
   carga; las categorías en orden numérico y aviso por los signos de los offsets; `fwg_add_uhi=False` con pyfwg, aviso
   con `fwg_options_ensemble=0` y limpieza tras un `ValueError`; `run_ep(processes=0)` en el proceso actual; pruebas
   que se saltan sin besos (sección 27).
@@ -145,6 +148,10 @@ Lo que ya está en otros documentos no se repite aquí:
 - **H6.** La vestimenta puede ser una función de una temperatura exterior del EPW
   (`set_pmv_input_parameters(clothing_insulation=función, epw=..., clothing_outdoor_metric='RMOT')`), escrita como un
   `Schedule:File`; `read_epw_dry_bulb` lee los EPW como Latin-1 (sección 37).
+- **S1 (tercera sesión, decisión 19).** El aviso del mínimo y el máximo de las consignas ya no los compara con
+  `ACSTaul`/`AHSTall` (límites de aplicabilidad de la métrica exterior, no consignas): con el EPW, compara cada zona
+  con las consignas de su modelo de confort de `compute_setpoints`, paso a paso en el periodo de simulación, y da un
+  aviso por zona con el límite, la consigna extrema, el número de días y el primero (sección 38).
 - Las categorías del PMV y la aproximación de la corrección del metabolismo se han comprobado en ISO 7730:2025 y
   EN 16798-1:2019, y el modelo dinámico de vestimenta de A5, en Schiavon y Lee (2013) y ASHRAE 55-2020 (sección 6).
 - Lo que quedaba abierto se ha comprobado: el golden master y las pruebas de EnergyPlus 26.1 y 26.2, también la de A5
@@ -2080,3 +2087,44 @@ caracteres en otra codificación, paraba `outdoor_metrics` y `compute_setpoints`
   con EnergyPlus 25.1, la *Schedule Value* y la vestimenta del método `CalculationMethodSchedule` iguales a la función
   hora a hora en una semana de enero y otra de julio, con el horario de verano del modelo) y
   `tests/core/test_preview.py` (un EPW con la cabecera en Latin-1).
+
+## 38. El aviso del mínimo y el máximo de las consignas, con las consignas del modelo de confort (S1, decisión 19)
+
+La revisión de Claude Science del 11/11/2026 (`notes/TRASPASO_ClaudeScience_2026-11-11_v01.md` §2.2) encontró que el
+veredicto 13 de la v04, que G5 aplicó al pie de la letra, comparaba el mínimo de calefacción y el máximo de refrigeración
+con `ACSTaul` y `AHSTall`, que son límites de aplicabilidad de la métrica exterior (10 y 30 °C en INT EN16798), no
+consignas: el aviso solo saltaba con valores extremos, mientras que las consignas pueden cruzarse con valores corrientes
+(un mínimo de 24 °C por encima de una consigna de refrigeración de 23,5 °C en invierno). La decisión 19 elige la opción
+(ii) de la pregunta: comparar con las consignas del modelo de confort de cada zona con el archivo climático.
+
+**Antes.** `warn_crossed_setpoint_limits(idf)` ejecutaba `SetInputData_<zona>` y `SetAppLimits` con el intérprete de
+Erl y avisaba si el mínimo superaba `ACSTaul` o el máximo bajaba de `AHSTall`.
+
+**Ahora.**
+
+- `accim.sim.ems.setpoint_limits.warn_crossed_setpoint_limits(idf, epw=None)`: sin `epw`, no avisa (las consignas de la
+  mayoría de los modelos de confort dependen de la temperatura exterior). Con él, calcula para cada zona con mínimo o
+  máximo las consignas de su modelo de confort con `accim.sim.preview.compute_setpoints` y los argumentos de la zona
+  (los de su `SetInputData_<zona>` sin el mínimo ni el máximo, con la función de la comprobación 4 de
+  `verify_accim_simulation`, y los regímenes de su `SelectCustomRegime_<zona>` en el modelo personalizado), por pasos de
+  tiempo, con los pasos por hora del modelo, desde el primer día de su primer `RunPeriod` hasta el último (o hasta el
+  final del año si el periodo sigue en el siguiente), y con la métrica exterior del modelo personalizado empezando como
+  empiezan sus programas. Compara las consignas de los termostatos (`ACST`/`AHST`, con tolerancia y redondeadas): un
+  aviso por zona si el mínimo es mayor o igual que la consigna de refrigeración en algún paso, o el máximo menor o igual
+  que la de calefacción, con el límite, la consigna extrema, el número de días con cruce y el primero. El primer paso del
+  periodo lee medias móviles 0, como en EnergyPlus, así que cuenta (en el modo 3 de INT EN16798, la consigna de
+  refrigeración de una media por debajo de los límites).
+- Se dejan fuera, con un mensaje de depuración del logger del módulo (el primer uso de `logging` en accim), las zonas
+  cuyas consignas da un gancho de la API, las que tienen el limitador de la deriva, las que `compute_setpoints` rechaza
+  (las condiciones `'hvac_off'`/`'hvac_on'`, un EPW que no es de 365 días...) y los modelos sin `RunPeriod` o sin
+  `Timestep`.
+- `AddAccis` (cada IDF de salida) y `modify_accis` le pasan su `epw`; el `ValueError` de un mínimo no menor que el máximo
+  se mantiene. Los IDF no cambian.
+- Documentación: docstrings del módulo, de `AddAccis` y de `modify_accis`, y la sección 4.2.3 del uso detallado. Las
+  elecciones de detalle (qué consignas, qué días, cuándo compara `modify_accis`) están en `notes/questions.md`.
+- Pruebas (`tests/core/test_setpoint_limits.py`, 4 nuevas en lugar de la del aviso literal): sin cruce y sin EPW, sin
+  aviso (y el modelo no cambia); con un mínimo de 24,5 °C y un máximo de 25,5 °C en Sevilla (INT EN16798, categoría I,
+  modo 3), un aviso por zona con los números que da un cálculo por días con pandas; solo el mínimo de una zona; el
+  periodo de junio a agosto del modelo (el mínimo de 24 °C solo cruza en su primer paso); las zonas con gancho y con
+  limitador, y el modelo sin `RunPeriod`, con sus mensajes de depuración; y `AddAccis` con y sin EPW, con los mismos IDF
+  de salida.

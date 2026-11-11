@@ -37,9 +37,11 @@ limits change the equation of the setpoints (comfort modes 1, 2 and 3), but they
   which the minimum and the maximum do not bound (finding B5-3). The minimum only bounds the heating
   setpoint and the maximum the cooling setpoint: with a minimum above the cooling setpoint of the comfort model (or a
   maximum below its heating setpoint), the heating setpoint is above the cooling setpoint; a minimum not lower than the
-  maximum raises a ValueError, and :func:`warn_crossed_setpoint_limits` warns when the minimum is above the upper
-  applicability limit of the cooling setpoint of the comfort standard of the zone (ACSTaul) or the maximum below the
-  lower applicability limit of its heating setpoint (AHSTall), as verdict 13 of the review of 1.2.0 asks. Only the
+  maximum raises a ValueError, and, given the weather file of the simulations, :func:`warn_crossed_setpoint_limits`
+  warns of the zones whose minimum is at or above the cooling setpoint of their comfort model, or whose maximum is at
+  or below its heating setpoint, in some timestep of the run period (with the setpoints of
+  :func:`accim.sim.preview.compute_setpoints`; decision 19 of the review of 1.2.0, which replaced a comparison with
+  the applicability limits of the outdoor metric, ACSTaul and AHSTall, which are not setpoints). Only the
   zones with a minimum or a maximum have the program and the inputs, so the output IDFs without them do not change.
   During the development of 1.2.0, the arguments were ``heating_setpoint_floor`` and ``cooling_setpoint_ceiling``
   (the inputs ``AHSTfloor`` and ``ACSTceil``), names that could be read as a physical floor (decision 8 of block F,
@@ -319,53 +321,157 @@ def zone_limits(idf) -> Dict[str, Dict[str, Optional[float]]]:
             for zone, program in input_programs(idf).items()}
 
 
-def _applicability_limits(idf, program) -> Tuple[Optional[float], Optional[float]]:
-    """The upper applicability limit of the cooling setpoint (ACSTaul) and the lower one of the heating setpoint
-    (AHSTall) of the comfort standard of a zone: its program SetInputData_<zone> and the program SetAppLimits of the
-    model run with the Erl interpreter of accim (:mod:`accim.sim.ems.erl`); None if they do not set them."""
-    from accim.sim.ems.erl import ErlProgramSet, variables_in_programs
-
-    app_limits = idf.getobject('EnergyManagementSystem:Program', 'SetAppLimits')
-    if app_limits is None:
-        return None, None
-    programs = {'SetInputData': _program_lines(program), 'SetAppLimits': _program_lines(app_limits)}
-    try:
-        erl = ErlProgramSet(programs, global_variables=set().union(*variables_in_programs(programs).values()))
-        erl.run('SetInputData')
-        erl.run('SetAppLimits')
-    except Exception:  # The warning is not given if the programs cannot run on their own
-        return None, None
-    return erl.get('ACSTaul'), erl.get('AHSTall')
+def _run_period(idf) -> Optional[Tuple[str, Optional[Tuple[int, int]]]]:
+    """The first day of the first RunPeriod of a model ('dd/mm') and its last day ((month, day), or None if the run
+    period goes on in the next year), or None if the model has no RunPeriod."""
+    run_periods = idf.idfobjects['RunPeriod']
+    if not run_periods:
+        return None
+    run_period = run_periods[0]
+    begin = int(run_period.Begin_Month), int(run_period.Begin_Day_of_Month)
+    end = int(run_period.End_Month), int(run_period.End_Day_of_Month)
+    return f'{begin[1]:02d}/{begin[0]:02d}', (end if end >= begin else None)
 
 
-def warn_crossed_setpoint_limits(idf) -> List[str]:
-    """Warn about the zones of a model whose minimum heating setpoint is above the upper applicability limit of
-    the cooling setpoint of their comfort standard (ACSTaul), or whose maximum cooling setpoint is below the
-    lower applicability limit of their heating setpoint (AHSTall), as verdict 13 of the review of accim 1.2.0 asks
-    (``notes/PROPUESTAS_MEJORAS_post_1.1.0_v04.md``, section 5): the minimum only bounds the heating setpoint and the
-    maximum the cooling setpoint, so the heating setpoint can then be above the cooling setpoint, with which EnergyPlus
-    gives warnings and meaningless results. The limits are those of the program SetAppLimits of the model for the
-    inputs of the zone (its comfort standard and category); a minimum not lower than the maximum is a ValueError
-    (:func:`check_setpoint_limits`).
+def _days(count: int) -> str:
+    return f'{count} day' if count == 1 else f'{count} days'
 
-    :return: The messages, which are also given as warnings.
-    """
-    from accim.sim.ems.inputs import input_programs, read_inputs
 
-    messages = []
-    for zone, program in input_programs(idf).items():
-        minimum, maximum = (read_inputs(program).get(name) for name in INPUTS)
-        if minimum is None and maximum is None:
+def _crossing_message(zone: str, minimum: Optional[float], maximum: Optional[float], setpoints,
+                      last_day: Optional[Tuple[int, int]], timesteps_per_hour: int, epw) -> Optional[str]:
+    """The warning of a zone whose minimum heating setpoint is at or above the cooling setpoint of its comfort model,
+    or whose maximum cooling setpoint is at or below its heating setpoint, in some timestep of ``setpoints`` (those of
+    :func:`accim.sim.preview.compute_setpoints` by timestep), or None if they do not cross."""
+    import os
+
+    import pandas as pd
+
+    # The day of each timestep (the datetime is the end of the timestep, 24:00 for the last one of the day)
+    days = (setpoints['datetime'] - pd.Timedelta(minutes=60 / timesteps_per_hour)).dt.normalize()
+    if last_day is not None:
+        try:
+            inside = (days <= pd.Timestamp(year=days.iloc[0].year, month=last_day[0], day=last_day[1])).to_numpy()
+        except ValueError:  # A last day that the year of the values has not (29 February)
+            inside = None
+        if inside is not None:
+            setpoints, days = setpoints[inside], days[inside]
+    parts = []
+    for limit, column, crossed_of, text in (
+            (minimum, 'ACST', lambda values: values <= minimum, 'its minimum heating setpoint ({limit} °C) is at or '
+             'above the cooling setpoint of its comfort model (as low as {extreme} °C)'),
+            (maximum, 'AHST', lambda values: values >= maximum, 'its maximum cooling setpoint ({limit} °C) is at or '
+             'below the heating setpoint of its comfort model (as high as {extreme} °C)')):
+        if limit is None:
             continue
-        upper, lower = _applicability_limits(idf, program)
-        if minimum is not None and upper is not None and minimum > upper:
-            messages.append(f'The minimum heating setpoint of the zone {zone} ({_number(minimum)} °C) is above the '
-                            f'upper applicability limit of the cooling setpoint of its comfort standard (ACSTaul, '
-                            f'{_number(upper)} °C): its heating setpoint can be above its cooling setpoint.')
-        if maximum is not None and lower is not None and maximum < lower:
-            messages.append(f'The maximum cooling setpoint of the zone {zone} ({_number(maximum)} °C) is below '
-                            f'the lower applicability limit of the heating setpoint of its comfort standard (AHSTall, '
-                            f'{_number(lower)} °C): its cooling setpoint can be below its heating setpoint.')
+        values = setpoints[column].to_numpy(dtype=float)
+        crossed = crossed_of(values)
+        if not crossed.any():
+            continue
+        crossed_days = days[crossed]
+        extreme = values[crossed].min() if column == 'ACST' else values[crossed].max()
+        parts.append(f'{text.format(limit=_number(limit), extreme=_number(extreme))} on '
+                     f'{_days(crossed_days.nunique())}, the first {crossed_days.iloc[0]:%d/%m}')
+    if not parts:
+        return None
+    return (f'In the zone {zone}, with the weather file {os.path.basename(str(epw))}, {"; and ".join(parts)}: its '
+            f'heating setpoint is then at or above its cooling setpoint, with which EnergyPlus gives warnings and '
+            f'meaningless results.')
+
+
+def warn_crossed_setpoint_limits(idf, epw=None) -> List[str]:
+    """Warn about the zones of a model whose minimum heating setpoint is at or above the cooling setpoint of their
+    comfort model, or whose maximum cooling setpoint is at or below its heating setpoint, with the weather file of the
+    simulations (decision 19 of the review of accim 1.2.0, option (ii): ``notes/decisions.md``, 2026-11-11).
+
+    The minimum only bounds the heating setpoint and the maximum the cooling setpoint, so, where the minimum is at or
+    above the cooling setpoint of the comfort model of the zone (or the maximum at or below its heating setpoint), the
+    heating setpoint of its thermostats is at or above their cooling setpoint, with which EnergyPlus gives warnings and
+    meaningless results. The setpoints of the comfort model of each zone with a minimum or a maximum are those of
+    :func:`accim.sim.preview.compute_setpoints` with the arguments of the zone (its program SetInputData_<zone>, without
+    the minimum and maximum; and the regimes of its program SelectCustomRegime_<zone> in the custom model) in each
+    timestep of the weather file, with the timesteps per hour of the model, from the first day of its first RunPeriod
+    to its last day (to the end of the year, if the run period goes on in the next one), and the outdoor metric of the
+    custom model beginning as its programs begin: the setpoints that the thermostats get from the comfort model
+    (``ACST`` and ``AHST``, with the tolerance, rounded), also in the first timestep of the run period, in which the EMS
+    reads running means of 0, as in EnergyPlus (the setpoints of a running mean below the applicability limits). The
+    warning of a zone gives the limit, the extreme setpoint of
+    the comfort model with which it crosses, the number of days with a crossing and the first of them. A minimum not
+    lower than the maximum is a ValueError (:func:`check_setpoint_limits`).
+
+    Without the weather file (``epw`` None), it warns of nothing: the setpoints of most comfort models depend on the
+    outdoor temperature. The zones that :func:`accim.sim.preview.compute_setpoints` does not cover are left out with a
+    debug message of the logger of this module: the zones whose setpoints a hook of the API backend gives
+    (:mod:`accim.sim.ems.hook_setpoints`), the zones with the limiter of the drift of the setpoints
+    (:mod:`accim.sim.ems.drift_limiter`, whose setpoints depend on the indoor temperature of the simulation), and those
+    whose arguments compute_setpoints rejects (the conditions 'hvac_off' and 'hvac_on' of the regimes of the custom
+    model, a weather file that is not of 365 days...); and so are all the zones of a model without a RunPeriod or a
+    Timestep object.
+
+    :param idf: The model (eppy), with the ACCIS.
+    :param epw: The path of the weather file of the simulations, or None.
+    :return: The messages, which are also given as warnings (one for each zone at most).
+    """
+    import logging
+
+    from accim.sim.ems.custom_regimes import PROGRAM_PREFIX as REGIME_PROGRAM_PREFIX, parse_regime_program
+    from accim.sim.ems.drift_limiter import INPUTS as DRIFT_INPUTS
+    from accim.sim.ems.hook_setpoints import hook_zones
+    from accim.sim.ems.inputs import input_programs, read_inputs
+    from accim.sim.ems.outdoor_metric import begins_with_weather_file
+
+    if epw is None:
+        return []
+    zones = {}
+    for zone, program in input_programs(idf).items():
+        inputs = read_inputs(program)
+        if any(inputs.get(name) is not None for name in INPUTS):
+            zones[zone] = inputs
+    if not zones:
+        return []
+    from accim.sim.preview import compute_setpoints
+    from accim.utils.verification import _compute_setpoints_arguments, _timesteps_per_hour
+
+    logger = logging.getLogger(__name__)
+    period = _run_period(idf)
+    timesteps_per_hour = _timesteps_per_hour(idf, None)
+    if period is None or timesteps_per_hour is None:
+        logger.debug('The minimum and maximum of the setpoints are not compared with the setpoints of the comfort '
+                     'models: the model has no RunPeriod or no Timestep object.')
+        return []
+    start_date, last_day = period
+    hooked = {zone.upper() for zone in hook_zones(idf)}
+    metric_start = 'epw' if begins_with_weather_file(idf) else 'pmot'
+    previews = {}
+    messages = []
+    for zone, inputs in zones.items():
+        if zone.upper() in hooked:
+            logger.debug('The minimum and maximum of the setpoints of the zone %s are not compared with the setpoints '
+                         'of its comfort model: a hook of the API backend gives its setpoints.', zone)
+            continue
+        if any(name in inputs for name in DRIFT_INPUTS):
+            logger.debug('The minimum and maximum of the setpoints of the zone %s are not compared with the setpoints '
+                         'of its comfort model: the limiter of the drift of the setpoints changes them with the indoor '
+                         'temperature of the simulation.', zone)
+            continue
+        try:
+            arguments = _compute_setpoints_arguments(inputs)
+            for name in ('heating_setpoint_minimum', 'cooling_setpoint_maximum'):
+                arguments.pop(name, None)
+            regime_program = idf.getobject('EnergyManagementSystem:Program', f'{REGIME_PROGRAM_PREFIX}{zone}')
+            if regime_program is not None and arguments.get('comfort_standard') == 99:
+                arguments['custom_regimes'] = parse_regime_program(regime_program.fieldvalues[2:], zone)
+            key = repr(sorted(arguments.items()))
+            if key not in previews:
+                previews[key] = compute_setpoints(epw, timesteps_per_hour=timesteps_per_hour, start_date=start_date,
+                                                  frequency='timestep', outdoor_metric_start=metric_start, **arguments)
+        except (ValueError, TypeError) as error:
+            logger.debug('The minimum and maximum of the setpoints of the zone %s are not compared with the setpoints '
+                         'of its comfort model: %s', zone, error)
+            continue
+        message = _crossing_message(zone, *(inputs.get(name) for name in INPUTS), previews[key], last_day,
+                                    timesteps_per_hour, epw)
+        if message is not None:
+            messages.append(message)
     for message in messages:
         warnings.warn(message, stacklevel=2)
     return messages

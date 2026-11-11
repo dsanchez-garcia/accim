@@ -562,7 +562,9 @@ template]] to add a new entry.
 - **Decision**: `ApplySetpointLimits_<zone>` runs right after `SetASTnoTol`, bounds `AHST`/`ACST`, rounds again, sets
   the rounded setpoints to the floor/ceiling where they bound them, and bounds `AHSTnoTol`/`ACSTnoTol` too; the line
   moves in the models of earlier builds of 1.2.0; `warn_crossed_setpoint_limits` warns if the floor is above `ACSTaul`
-  or the ceiling below `AHSTall` (literal). `adaptive_coefficients=<key>` gives both sides (`ValueError` with explicit
+  or the ceiling below `AHSTall` (literal; replaced on 2026-11-11 by the comparison with the setpoints of the comfort
+  model of each zone with the weather file, decision 19 of the verdicts of 2026-11-11 above, task S1).
+  `adaptive_coefficients=<key>` gives both sides (`ValueError` with explicit
   values on a side); a key with the numeric default on the other side warns; with `'pmv_sign'` the setpoints must have
   their signs. One formatter of the numbers of the programs (`erl.format_number`), and a `ValueError` for a weather
   file without the 12 months. Qatar with the data of v04 §6.3; the categories in numeric order; a warning for the signs

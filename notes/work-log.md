@@ -15,6 +15,19 @@ This log is a lightweight, session-scoped complement to the repository's
 existing tracking files — it does not replace them (see
 [[decisions.md#2026-09-13 — `notes/work-log.md` complements, not replaces, existing tracking files|the related decision]]).
 
+## 2026-11-11 — S1: the warning of the minimum and maximum with the setpoints of the comfort model (branch `v1.2.0`, on the server)
+
+- **Objective**: decision 19: replace the comparison of the minimum and maximum of the setpoints with `ACSTaul`/
+  `AHSTall` by the setpoints of the comfort model of each zone with the weather file (`compute_setpoints`).
+- **Affected files**: `accim/sim/ems/setpoint_limits.py`, `accim/sim/accis.py`, `tests/core/test_setpoint_limits.py`,
+  [[../docs/source/4_detailed use.md]] (4.2.3), [[../CHANGELOG.md]], [[../CAMBIOS_CODIGO_v1.2.0.md]] (§38),
+  [[decisions.md]], [[questions.md]], [[../DEVLOG.md]].
+- **Finding or decision**: one warning per zone with the limit, the extreme setpoint, the days and the first day; no
+  warning without `epw`; the first timestep of a run period (running means of 0 in the EMS) can cross by itself. The
+  details are provisional in [[questions.md]].
+- **Validation**: see the entry of S1 in [[../DEVLOG.md]].
+- **Next step**: S2 (the static setpoints of Qatar).
+
 ## 2026-11-11 — The self-audit of session 2 (branch `v1.2.0`, on the server)
 
 - **Objective**: audit the 15 code tasks of session 2 with the checklist of the handoff of Claude Science (Appendix A),

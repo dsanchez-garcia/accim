@@ -530,39 +530,173 @@ def test_the_program_of_the_limits_runs_after_the_setpoints_without_the_toleranc
         assert run[run.index('run SetASTnoTol') + 1] == f'run ApplySetpointLimits_{zone}'
 
 
+def _expected_crossings(setpoints, minimum=None, maximum=None, last_day=None):
+    """The crossings of a minimum and a maximum with the setpoints of compute_setpoints by timestep, calculated here by
+    day: (number of days, first day 'dd/mm', extreme setpoint) of the minimum and of the maximum (None without them)."""
+    days = (setpoints['datetime'] - pd.Timedelta(minutes=60 // STEPS)).dt.normalize()
+    if last_day is not None:
+        inside = days <= days.iloc[0].replace(month=last_day[0], day=last_day[1])
+        setpoints, days = setpoints[inside], days[inside]
+    daily = setpoints.groupby(days.to_numpy())
+    result = []
+    for limit, column, sign in ((minimum, 'ACST', -1), (maximum, 'AHST', 1)):
+        if limit is None:
+            result.append(None)
+            continue
+        # The lowest cooling setpoint of each day at or below the minimum, the highest heating setpoint at or above
+        # the maximum
+        extremes = daily[column].min() if sign < 0 else daily[column].max()
+        crossed = extremes <= limit if sign < 0 else extremes >= limit
+        if not crossed.any():
+            result.append(None)
+            continue
+        crossed_days = crossed.index[crossed.to_numpy()]
+        extreme = extremes.min() if sign < 0 else extremes.max()
+        result.append((len(crossed_days), f'{crossed_days[0]:%d/%m}', extreme))
+    return result
+
+
+def _crossing_warning(zone, minimum, maximum, crossings):
+    parts = []
+    for limit, crossing, text in (
+            (minimum, crossings[0], 'its minimum heating setpoint ({} °C) is at or above the cooling setpoint of its '
+                                    'comfort model (as low as {} °C)'),
+            (maximum, crossings[1], 'its maximum cooling setpoint ({} °C) is at or below the heating setpoint of its '
+                                    'comfort model (as high as {} °C)')):
+        if crossing is not None:
+            days, first, extreme = crossing
+            plural = '' if days == 1 else 's'
+            parts.append(f'{text.format(sl._number(limit), sl._number(extreme))} on {days} day{plural}, '
+                         f'the first {first}')
+    return (f'In the zone {zone}, with the weather file {EPW.name}, {"; and ".join(parts)}: its heating setpoint is '
+            f'then at or above its cooling setpoint, with which EnergyPlus gives warnings and meaningless results.')
+
+
+def _caught_crossings(caught):
+    return [str(warning.message) for warning in caught if str(warning.message).startswith('In the zone ')]
+
+
 @needs_idd
-def test_a_warning_if_the_minimum_or_maximum_crosses_the_applicability_limits(tmp_path):
-    # Verdict 13 of the review of 1.2.0: a warning if the minimum is above ACSTaul or the maximum below AHSTall (those
-    # of INT EN16798, comfort standard 1: 30 and 10 degC)
+def test_no_warning_without_crossed_setpoints_or_without_the_weather_file(tmp_path):
+    # Decision 19 of the review of 1.2.0 (task S1): the minimum and the maximum are compared with the setpoints of the
+    # comfort model of each zone with the weather file, not with ACSTaul/AHSTall (applicability limits of the outdoor
+    # metric). INT EN16798, category I, comfort mode 3 in Seville: cooling setpoints of 24 to 30.6 degC, heating
+    # setpoints of 19.2 to 25.8 degC
     from accim.sim.accis import modify_accis
 
     idf = _accis_model(tmp_path)
-    with warnings.catch_warnings():
-        warnings.simplefilter('error')
-        modify_accis(idf, comfort_standard=1, heating_setpoint_minimum=20, cooling_setpoint_maximum=26)
-        assert sl.warn_crossed_setpoint_limits(idf) == []
     with warnings.catch_warnings(record=True) as caught:
         warnings.simplefilter('always')
-        modify_accis(idf, heating_setpoint_minimum=31, cooling_setpoint_maximum=32)
-    assert [str(warning.message) for warning in caught] == [
-        f'The minimum heating setpoint of the zone {zone} (31 °C) is above the upper applicability limit of the '
-        f'cooling setpoint of its comfort standard (ACSTaul, 30 °C): its heating setpoint can be above its cooling '
-        f'setpoint.' for zone in sorted(ZONES, reverse=True)]
-    with pytest.warns(UserWarning, match=r'The maximum cooling setpoint of the zone Block1_Zone2 \(9.5 °C\) is '
-                                         r'below the lower applicability limit of the heating setpoint'):
-        modify_accis(idf, heating_setpoint_minimum=5, cooling_setpoint_maximum=None,
-                     zone_arguments={'Block1:Zone2': {'cooling_setpoint_maximum': 9.5}})
+        modify_accis(idf, comfort_standard=1, category=1, comfort_mode=3, heating_setpoint_minimum=20,
+                     cooling_setpoint_maximum=26, epw=str(EPW))
+    assert _caught_crossings(caught) == []
+    assert sl.warn_crossed_setpoint_limits(idf, EPW) == []
+    # The limits that cross, without the weather file: no warning
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter('always')
+        modify_accis(idf, heating_setpoint_minimum=24.5, cooling_setpoint_maximum=25.5)
+        assert sl.warn_crossed_setpoint_limits(idf) == []
+    assert _caught_crossings(caught) == []
+    # The comparison does not change the model
+    before = idf.idfstr()
     with warnings.catch_warnings(record=True):
         warnings.simplefilter('always')
-        messages = sl.warn_crossed_setpoint_limits(idf)
-    assert len(messages) == 1 and 'Block1_Zone2' in messages[0] and '(AHSTall, 10 °C)' in messages[0]
-    # The custom model takes its limits from its inputs
+        assert len(sl.warn_crossed_setpoint_limits(idf, EPW)) == 2
+    assert idf.idfstr() == before
+
+
+@needs_idd
+def test_a_warning_if_the_minimum_or_maximum_crosses_the_setpoints_of_the_comfort_model(tmp_path):
+    from accim.sim.accis import modify_accis
+
+    setpoints = compute_setpoints(EPW, 1, 1, 3, frequency='timestep')
+    crossings = _expected_crossings(setpoints, 24.5, 25.5)
+    # In winter the cooling setpoints are below 24.5 degC, and in summer the heating setpoints above 25.5 degC
+    assert crossings[0][1] == '01/01' and crossings[0][0] > 30 and crossings[1][0] > 0
+    idf = _accis_model(tmp_path)
     with warnings.catch_warnings(record=True) as caught:
         warnings.simplefilter('always')
-        modify_accis(idf, comfort_standard=99, custom_cooling_upper_limit=25, heating_setpoint_minimum=26,
-                     cooling_setpoint_maximum=32, zone_arguments={'Block1:Zone2': {'cooling_setpoint_maximum': 32}})
-    messages = [str(warning.message) for warning in caught if 'ACSTaul' in str(warning.message)]
-    assert len(messages) == 2 and all('(26 °C)' in message and '(ACSTaul, 25 °C)' in message for message in messages)
+        modify_accis(idf, comfort_standard=1, category=1, comfort_mode=3, heating_setpoint_minimum=24.5,
+                     cooling_setpoint_maximum=25.5, epw=str(EPW))
+    # One warning for each zone, with both crossings
+    assert sorted(_caught_crossings(caught)) == [_crossing_warning(zone, 24.5, 25.5, crossings) for zone in ZONES]
+    # The minimum only, of one zone (the minimum of 24 degC is at the lowest cooling setpoint, 23.9999 degC)
+    (tmp_path / 'other').mkdir()
+    other = _accis_model(tmp_path / 'other')
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter('always')
+        modify_accis(other, comfort_standard=1, category=1, comfort_mode=3, epw=str(EPW),
+                     zone_arguments={'Block1:Zone2': {'heating_setpoint_minimum': 24}})
+    assert _caught_crossings(caught) == [
+        _crossing_warning('Block1_Zone2', 24, None, _expected_crossings(setpoints, minimum=24))]
+    # The days of the run period of the model, from 1 June to 31 August: the minimum of 24 degC crosses only in its
+    # first timestep, in which the EMS reads running means of 0, as in EnergyPlus (the setpoints out of the limits)
+    run_period = other.idfobjects['RunPeriod'][0]
+    run_period.Begin_Month, run_period.Begin_Day_of_Month = 6, 1
+    run_period.End_Month, run_period.End_Day_of_Month = 8, 31
+    modify_accis(other, cooling_setpoint_maximum=25.5)
+    summer = compute_setpoints(EPW, 1, 1, 3, frequency='timestep', start_date='01/06')
+    assert _expected_crossings(summer, minimum=24, last_day=(8, 31))[0][:2] == (1, '01/06')
+    with warnings.catch_warnings(record=True):
+        warnings.simplefilter('always')
+        messages = sl.warn_crossed_setpoint_limits(other, EPW)
+    assert messages == [
+        _crossing_warning('Block1_Zone2', 24, 25.5, _expected_crossings(summer, 24, 25.5, last_day=(8, 31))),
+        _crossing_warning('Block1_Zone1', None, 25.5, _expected_crossings(summer, maximum=25.5, last_day=(8, 31)))]
+
+
+@needs_idd
+def test_the_zones_that_compute_setpoints_does_not_cover_are_left_out(tmp_path, caplog):
+    import logging
+
+    from accim.sim.accis import modify_accis
+    from accim.sim.ems.hook_setpoints import set_hook_setpoints_code
+
+    idf = _accis_model(tmp_path)
+    with warnings.catch_warnings():
+        warnings.simplefilter('ignore')
+        modify_accis(idf, comfort_standard=1, category=1, comfort_mode=3, heating_setpoint_minimum=24.5,
+                     zone_arguments={'Block1:Zone2': {'drift_mode': 'rate'}})
+    set_hook_setpoints_code(idf, ['Block1_Zone1'])
+    caplog.set_level(logging.DEBUG, logger=sl.__name__)
+    assert sl.warn_crossed_setpoint_limits(idf, EPW) == []
+    messages = sorted(record.getMessage() for record in caplog.records if record.name == sl.__name__)
+    assert len(messages) == 2
+    assert 'zone Block1_Zone1' in messages[0] and 'a hook of the API backend gives its setpoints' in messages[0]
+    assert 'zone Block1_Zone2' in messages[1] and 'the limiter of the drift' in messages[1]
+    # A model without a RunPeriod
+    caplog.clear()
+    for run_period in list(idf.idfobjects['RunPeriod']):
+        idf.removeidfobject(run_period)
+    assert sl.warn_crossed_setpoint_limits(idf, EPW) == []
+    assert [record.getMessage() for record in caplog.records if record.name == sl.__name__] == [
+        'The minimum and maximum of the setpoints are not compared with the setpoints of the comfort models: the model '
+        'has no RunPeriod or no Timestep object.']
+
+
+@needs_idd
+def test_add_accis_warns_of_the_crossed_setpoints_with_the_weather_file(tmp_path, monkeypatch):
+    from accim.sim.accis import AddAccis
+
+    def add_accis(folder, **arguments):
+        folder.mkdir()
+        shutil.copy(SAMPLE_IDF, folder / 'TestModel.idf')
+        monkeypatch.chdir(folder)
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter('always')
+            AddAccis(script_type='vrf_mm', supply_air_temp_input_method='temperature difference',
+                     output_type='standard', output_frequencies=['hourly'], keep_existing_outputs=False,
+                     energyplus_version='auto', setpoint_type='temperature', comfort_standard=[1], category=[1],
+                     comfort_mode=[3], hvac_mode=[2], ventilation_control=[0], confirm=True, verbose=False,
+                     heating_setpoint_minimum=24.5, cooling_setpoint_maximum=25.5, **arguments)
+        return _caught_crossings(caught), {path.name: path.read_bytes() for path in folder.glob('TestModel[[]*.idf')}
+
+    warned, outputs = add_accis(tmp_path / 'epw', epw=str(EPW))
+    crossings = _expected_crossings(compute_setpoints(EPW, 1, 1, 3, frequency='timestep'), 24.5, 25.5)
+    assert sorted(warned) == [_crossing_warning(zone, 24.5, 25.5, crossings) for zone in ZONES]
+    # Without the weather file, no warning, and the same output IDFs
+    not_warned, same = add_accis(tmp_path / 'no_epw')
+    assert not_warned == [] and len(outputs) == 1 and same == outputs
 
 
 @needs_idd
