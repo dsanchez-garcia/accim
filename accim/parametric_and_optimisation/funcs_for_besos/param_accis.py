@@ -267,7 +267,9 @@ def drop_invalid_param_combinations(samples_df):
     setpoint of JPN Aqilah 2025 is not lower than its static cooling setpoint (`static_heating_setpoint` and
     `static_cooling_setpoint`), and, since the self-audit of 2026-11-11 (finding A9), those whose window of the limiter
     of the drift of the setpoints (`drift_mode` 'window' or 2) is narrower than twice the tolerance of the setpoints
-    (`delta_heat` + `delta_cool` < 2·`setpoint_tolerance`, which crosses the setpoints of the thermostats).
+    (`delta_heat` + `delta_cool` < 2·`setpoint_tolerance`, which crosses the setpoints of the thermostats). The
+    columns can have the names of accim 0.x and those of the development of accim 1.2.0 (`heating_setpoint_floor` and
+    `cooling_setpoint_ceiling`, finding A23 of the same self-audit), which are kept.
 
     Parameters
     ----------
@@ -326,8 +328,9 @@ def drop_invalid_param_combinations(samples_df):
         'min_outdoor_temp_offset': 'MinOToffset', 'max_wind_speed': 'MaxWindSpeed', 'setpoint_accuracy': 'SetpointAcc',
         'opening_factor_max_temp_diff': 'MaxTempDiffVOF', 'opening_factor_min_temp_diff': 'MinTempDiffVOF',
         'min_opening_factor': 'MultiplierVOF',
-        # The parameters of accim 1.2.0 have no names of accim 0.x
-        'heating_setpoint_minimum': 'heating_setpoint_minimum', 'cooling_setpoint_maximum': 'cooling_setpoint_maximum',
+        # The parameters of accim 1.2.0 have no names of accim 0.x, but those of its development renamed before its
+        # release (finding A23 of the self-audit of 2026-11-11: before, their rule was skipped)
+        'heating_setpoint_minimum': 'heating_setpoint_floor', 'cooling_setpoint_maximum': 'cooling_setpoint_ceiling',
         'static_heating_setpoint': 'static_heating_setpoint', 'static_cooling_setpoint': 'static_cooling_setpoint',
         'drift_mode': 'drift_mode', 'delta_heat': 'delta_heat', 'delta_cool': 'delta_cool',
         'setpoint_tolerance': 'ASTtol',

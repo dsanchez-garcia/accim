@@ -443,6 +443,19 @@ def _check_drift_arguments(arguments: Dict[str, Any], zone_arguments: Dict[Any, 
     return found
 
 
+def _warn_unused_drift_arguments(arguments: Dict[str, Any], zone_arguments: Dict[Any, Dict[str, Any]]) -> None:
+    """Warn if :class:`AddAccis` gets arguments of the limiter of the drift of the setpoints (other than their defaults,
+    or in ``zone_arguments``) without ``drift_mode`` in any zone: they are not used, and the output IDFs have no
+    limiter (finding A11 of the self-audit of 2026-11-11; ``modify_accis`` raises a ValueError instead, since it keeps
+    the arguments of the zones)."""
+    given = [name for name in DRIFT_ARGUMENTS[1:] if arguments.get(name) != DRIFT_DEFAULTS[name]]
+    given += [f'{name} ({zone})' for zone, own in zone_arguments.items() for name in DRIFT_ARGUMENTS[1:]
+              if name in own]
+    if given:
+        warnings.warn(f'The arguments of the limiter of the drift of the setpoints {given} are not used: no zone has '
+                      f'drift_mode, so the output IDFs have no limiter.', UserWarning, stacklevel=3)
+
+
 def _check_window_widths(arguments: Dict[str, Any], zone_arguments: Dict[Any, Dict[str, Any]],
                          tolerance: Any) -> None:
     """Check the width of the window of the limiter of the drift of the setpoints
@@ -899,6 +912,8 @@ class AddAccis:
         drift = dict(drift_mode=drift_mode, max_drift_rate=max_drift_rate, alpha_indoor=alpha_indoor,
                      delta_cool=delta_cool, delta_heat=delta_heat, initial_T_rm_in=initial_T_rm_in)
         has_drift = _check_drift_arguments(drift, checked_zone_arguments)
+        if not has_drift:
+            _warn_unused_drift_arguments(drift, checked_zone_arguments)
         hours_below = check_hours_below(report_hours_below)
         regimes = check_custom_regimes(custom_regimes)
         (existing_hvac_operative_temperature_control, existing_hvac_widen_outdoor_temperature_limits,

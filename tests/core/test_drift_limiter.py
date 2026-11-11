@@ -407,6 +407,34 @@ def test_the_window_cannot_be_narrower_than_twice_the_tolerance(tmp_path, monkey
     assert not list(tmp_path.glob('TestModel[[]*.idf'))
 
 
+def test_addaccis_warns_of_the_arguments_of_the_limiter_without_drift_mode(tmp_path, monkeypatch):
+    # Finding A11 of the self-audit of 2026-11-11: without drift_mode in any zone, the other arguments of the limiter
+    # are not used (the output IDFs have no limiter, as before), so AddAccis warns of them (modify_accis raises)
+    from pathlib import Path
+
+    from accim.sim.accis import AddAccis
+
+    shutil.copy(SAMPLE_IDF, tmp_path / 'TestModel.idf')
+    monkeypatch.chdir(tmp_path)
+    arguments = dict(script_type='vrf_ac', supply_air_temp_input_method='temperature difference',
+                     output_type='standard', output_frequencies=['hourly'], keep_existing_outputs=False,
+                     energyplus_version='auto', setpoint_type='temperature', comfort_standard=[1], category=[2],
+                     comfort_mode=[3], confirm=True, verbose=False)
+    with pytest.warns(UserWarning, match=r"The arguments of the limiter of the drift of the setpoints \['max_drift_rate', "
+                                         r"'delta_cool \(Block1:Zone2\)'\] are not used: no zone has drift_mode"):
+        result = AddAccis(**arguments, max_drift_rate=0.3, zone_arguments={'Block1:Zone2': {'delta_cool': 1.5}})
+    [path] = result.output_idfs.paths.values()
+    assert 'DriftMode' not in Path(path).read_text()
+    # Not with drift_mode, nor with the defaults
+    for extra in (dict(drift_mode='rate', max_drift_rate=0.3), {}):
+        for output in tmp_path.glob('TestModel[[]*.idf'):
+            output.unlink()
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter('always')
+            AddAccis(**arguments, **extra)
+        assert not [w for w in caught if 'are not used: no zone has drift_mode' in str(w.message)], extra
+
+
 def test_the_ems_code_of_the_limiter():
     from accim.sim.preview import compute_setpoints
     from accim.utils.ems_code import get_setpoint_ems_code, get_setpoint_ems_programs
