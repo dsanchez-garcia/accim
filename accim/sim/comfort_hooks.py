@@ -1291,6 +1291,28 @@ def _output_frequencies(building, output_frequencies: Optional[Sequence[str]]) -
     return [str(frequency).capitalize() for frequency in output_frequencies]
 
 
+#: The thermal comfort models of the People objects with which EnergyPlus reports the output Zone Thermal Comfort
+#: Clothing Value (ThermalComfort.cc of EnergyPlus 25.1, the outputs of the Fanger, Pierce and KSU models)
+_CLOTHING_VALUE_MODELS = ('FANGER', 'PIERCE', 'KSU')
+
+
+def _needs_comfort_model(building, people: Dict[str, dict]) -> bool:
+    """Whether the People objects of the zones of a hook of the SET that read the clothing insulation of the dynamic
+    clothing model (the sensors ``SET_CloValue_<zone>``) need a thermal comfort model that reports it: True if one of
+    the objects with the thermal comfort models of the model (the People objects, or the People:Definition objects of
+    EnergyPlus 26.2) has none of :data:`_CLOTHING_VALUE_MODELS`."""
+    from accim.sim.people import _comfort_model_targets
+
+    if not any(values['clothing_source'] in ('dynamic', 'method') for values in people.values()):
+        return False
+    for target in _comfort_model_targets(building):
+        models = {str(getattr(target, field) or '').strip().upper() for field in target.fieldnames
+                  if field.startswith('Thermal_Comfort_Model_')}
+        if not models & set(_CLOTHING_VALUE_MODELS):
+            return True
+    return False
+
+
 def apply_set_setpoints(building, set_cooling_setpoint: float, set_heating_setpoint: float,
                         met: Optional[float] = None, clo: Optional[float] = None, air_speed: Optional[float] = None,
                         position: Optional[str] = None, tolerance_k: float = 0.1, max_iterations: int = 20,
@@ -1311,7 +1333,12 @@ def apply_set_setpoints(building, set_cooling_setpoint: float, set_heating_setpo
     and the air speed, unless the hook reads them from the People object of each zone in each timestep (None, with
     ``method='bisection'``: the zones then get the EMS sensors of their schedules, ``SET_Act_<zone>``,
     ``SET_Clo_<zone>`` or ``SET_CloValue_<zone>`` and ``SET_CloMethod_<zone>``, and ``SET_Vel_<zone>``, see
-    :class:`SetSetpointHook`). The model must be simulated with the backend of the Python API and the hook
+    :class:`SetSetpointHook`). With ``clo`` None and the clothing insulation of the dynamic clothing model in a zone
+    (the Clothing Insulation Calculation Method DynamicClothingModelASHRAE55, or CalculationMethodSchedule), the People
+    objects get the Pierce model (:func:`accim.sim.people.add_thermal_comfort_model`) unless they all have the Fanger,
+    Pierce or KSU model, since EnergyPlus reports the clothing insulation that the sensors ``SET_CloValue_<zone>``
+    read (*Zone Thermal Comfort Clothing Value*) only with them, and stops before the simulation otherwise (finding A3
+    of the self-audit of 2026-11-11). The model must be simulated with the backend of the Python API and the hook
     (``run_ep(backend='api', hooks=[hook])``): without it, its setpoints are those of the ACCIS (and ``SET_<zone>`` is
     0).
 
@@ -1329,17 +1356,28 @@ def apply_set_setpoints(building, set_cooling_setpoint: float, set_heating_setpo
     :return: The hook, with the other arguments, and the keys of the zones in the outputs (``hook.keys``).
     :raises ValueError: If the model has no ACCIS of accim 1.0.0 or later, is in mixed mode, has already the objects of
         the SET or of the ATHB (both would set the same thermostats), has not the People objects whose inputs the hook
-        reads, or an argument is not valid.
+        reads (or, when they get the Pierce model, the schedules that it needs, or an empty field for it), or an
+        argument is not valid.
     """
     keys = _model_zones(building, 'the SET', _HOOK_SENSOR_PREFIXES, running_mean=False)
     needed = [name for name, value in (('met', met), ('clo', clo), ('air_speed', air_speed)) if value is None]
     people = _people_inputs(building, list(keys), needed) if needed else {}
+    # The clothing insulation of the dynamic clothing model is an output of the thermal comfort models of EnergyPlus
+    # (finding A3 of the self-audit of 2026-11-11), which the People objects need for the sensors SET_CloValue_<zone>
+    pierce = 'clo' in needed and _needs_comfort_model(building, people)
+    if pierce:
+        people = _people_inputs(building, list(keys), needed, pierce=True)
     hook = SetSetpointHook(list(keys), set_cooling_setpoint=set_cooling_setpoint,
                            set_heating_setpoint=set_heating_setpoint, met=met, clo=clo, air_speed=air_speed,
                            position=position, tolerance_k=tolerance_k, max_iterations=max_iterations,
                            temperature_range=temperature_range, method=method, tr_mode=tr_mode,
                            clothing_sources={zone: values['clothing_source'] for zone, values in people.items()})
     hook.keys = dict(keys)
+    if pierce:
+        from accim.sim.people import add_thermal_comfort_model
+
+        # It raises its errors before changing anything
+        add_thermal_comfort_model(building, 'Pierce')
     frequencies = _output_frequencies(building, output_frequencies)
     _add_hook_objects(building, keys, _SET_SENSORS, _SET_OUTPUTS if method == 'bisection' else {}, frequencies)
     _add_people_sensors(building, people, needed)

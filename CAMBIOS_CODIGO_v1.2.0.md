@@ -2284,3 +2284,24 @@ dimensionado (los días de diseño).
   ejemplo): cuentan exactamente los 288 pasos del periodo de simulación, y quedan fuera los días de diseño y los de
   calentamiento.
 - Documentación: el docstring de la clase, la sección 4.9.1 y la entrada del ATHB del CHANGELOG.
+
+### A3. El gancho del SET con la vestimenta dinámica añade el modelo Pierce
+
+**Antes.** `apply_set_setpoints(..., clo=None, method='bisection')` en un modelo cuyos objetos People usan la
+vestimenta dinámica (`DynamicClothingModelASHRAE55`, o `CalculationMethodSchedule`) añadía los sensores
+`SET_CloValue_<zona>` de la salida *Zone Thermal Comfort Clothing Value*, que EnergyPlus solo da para los objetos
+People con el modelo Fanger, Pierce o KSU; los modelos del ACCIS con consignas de temperatura solo tienen
+AdaptiveASH55 y AdaptiveCEN15251, así que EnergyPlus se detenía antes de simular (en los dos backends).
+`apply_sun2026_setpoints` ya añadía el modelo Pierce.
+
+**Ahora.** Con `clo=None` y la vestimenta dinámica en alguna zona, `apply_set_setpoints` añade el modelo Pierce a los
+objetos People (`add_thermal_comfort_model`, que comprueba antes de cambiar nada) salvo si todos tienen ya Fanger,
+Pierce o KSU (`_needs_comfort_model`, con los objetos People:Definition de EnergyPlus 26.2); comprueba antes los
+horarios que el modelo Pierce necesita (`_people_inputs(..., pierce=True)`: eficiencia y velocidad del aire). Los
+modelos que ya funcionaban no cambian.
+
+- Pruebas (`tests/core/test_sun2026_set.py`): los objetos People reciben Pierce con la vestimenta dinámica, no si ya
+  tienen Fanger ni con la vestimenta dada, y el error sin el horario de eficiencia (sin cambiar el modelo); y el modelo
+  preparado corre en EnergyPlus 25.1 sin el gancho (backend EMS, un día de julio). Las dos fallan sin el arreglo
+  (EnergyPlus terminaba con un error fatal) y pasan con él.
+- Documentación: el docstring de `apply_set_setpoints`, la sección 4.9.2 y la entrada del SET del CHANGELOG.

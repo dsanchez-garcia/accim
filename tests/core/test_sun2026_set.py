@@ -333,6 +333,80 @@ def test_the_set_of_the_results_needs_the_inputs_of_the_hook():
         ch.set_of_results(pd.DataFrame(), hook)
 
 
+def _comfort_models(people):
+    return [str(getattr(people, f'Thermal_Comfort_Model_{n}_Type')).strip() for n in range(1, 8)]
+
+
+def _dynamic_clothing_model(folder):
+    """The model of the hooks with the dynamic clothing model of ASHRAE 55 in its People objects."""
+    from accim.sim.people import set_clothing_method
+
+    folder.mkdir(parents=True, exist_ok=True)
+    idf = _model(folder)
+    with warnings.catch_warnings():
+        warnings.simplefilter('ignore')
+        set_clothing_method(idf, 'DynamicClothingModelASHRAE55', verbose=False)
+    return idf
+
+
+@needs_idd
+def test_the_hook_of_the_set_with_the_dynamic_clothing_model_adds_the_pierce_model(tmp_path):
+    # Finding A3 of the self-audit of 2026-11-11: EnergyPlus reports the clothing insulation of the dynamic clothing
+    # model (Zone Thermal Comfort Clothing Value, which the sensors SET_CloValue_<zone> read) only for the People
+    # objects with the Fanger, Pierce or KSU model, so apply_set_setpoints adds the Pierce model, as
+    # apply_sun2026_setpoints does
+    idf = _dynamic_clothing_model(tmp_path / 'dynamic')
+    assert all(_comfort_models(people)[:3] == ['AdaptiveASH55', 'AdaptiveCEN15251', '']
+               for people in idf.idfobjects['People'])
+    hook = ch.apply_set_setpoints(idf, 27, 21, met=1.1, clo=None, air_speed=0.1, method='bisection')
+    assert hook.clothing_sources == {zone: 'dynamic' for zone in ZONES}
+    assert {s.Name for s in idf.idfobjects['EnergyManagementSystem:Sensor']} >= {f'SET_CloValue_{zone}'
+                                                                                 for zone in ZONES}
+    for people in idf.idfobjects['People']:
+        assert _comfort_models(people)[:4] == ['AdaptiveASH55', 'AdaptiveCEN15251', 'Pierce', '']
+    # With a model that reports it already (Fanger), or with the clothing insulation given, the People objects keep
+    # their models
+    idf = _dynamic_clothing_model(tmp_path / 'fanger')
+    for people in idf.idfobjects['People']:
+        people.Thermal_Comfort_Model_3_Type = 'Fanger'
+    ch.apply_set_setpoints(idf, 27, 21, met=1.1, clo=None, air_speed=0.1, method='bisection')
+    assert all(_comfort_models(people)[:4] == ['AdaptiveASH55', 'AdaptiveCEN15251', 'Fanger', '']
+               for people in idf.idfobjects['People'])
+    idf = _dynamic_clothing_model(tmp_path / 'given')
+    ch.apply_set_setpoints(idf, 27, 21, met=None, clo=0.5, air_speed=0.1, method='bisection')
+    assert all('Pierce' not in _comfort_models(people) for people in idf.idfobjects['People'])
+    # The Pierce model needs the work efficiency schedule, before the model changes
+    idf = _dynamic_clothing_model(tmp_path / 'work')
+    idf.idfobjects['People'][0].Work_Efficiency_Schedule_Name = ''
+    counts = len(idf.idfobjects['EnergyManagementSystem:Sensor'])
+    with pytest.raises(ValueError, match='have no Work Efficiency Schedule Name, which the Pierce model'):
+        ch.apply_set_setpoints(idf, 27, 21, met=1.1, clo=None, air_speed=0.1, method='bisection')
+    assert len(idf.idfobjects['EnergyManagementSystem:Sensor']) == counts
+    assert all('Pierce' not in _comfort_models(people) for people in idf.idfobjects['People'])
+
+
+@needs_energyplus
+def test_the_model_of_the_hook_of_the_set_with_the_dynamic_clothing_model_runs(tmp_path):
+    # Finding A3: without the Pierce model, EnergyPlus stopped before the simulation (the sensors SET_CloValue_<zone>
+    # of an output variable that it does not report); the model runs now, also without the hook (EMS backend)
+    import subprocess
+
+    idf = _dynamic_clothing_model(tmp_path / 'model')
+    run_period = idf.idfobjects['RunPeriod'][0]
+    run_period.Begin_Month, run_period.Begin_Day_of_Month, run_period.End_Month, run_period.End_Day_of_Month = (
+        7, 15, 7, 15)
+    ch.apply_set_setpoints(idf, 27, 21, met=1.1, clo=None, air_speed=0.1, method='bisection')
+    idf.saveas(str(tmp_path / 'set.idf'))
+    from .test_comfort_hooks import _energyplus_with_api
+
+    energyplus = _energyplus_with_api() / 'energyplus.exe'
+    result = subprocess.run([str(energyplus), '-d', str(tmp_path / 'out'), '-p', 'run', '-s', 'C', '-r', '-x', '-w',
+                             str(EPW), str(tmp_path / 'set.idf')], capture_output=True, text=True)
+    assert result.returncode == 0, result.stdout[-3000:]
+    [err] = (tmp_path / 'out').glob('*.err')
+    assert 'ZONE THERMAL COMFORT CLOTHING VALUE' not in err.read_text(errors='replace').upper()
+
+
 # EnergyPlus ---------------------------------------------------------------------------------------------------------
 
 #: The hourly differences measured on 2026-11-10 between the SET of each zone that the hook reports (``SET_<zone>``,
