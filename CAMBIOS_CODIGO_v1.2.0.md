@@ -2317,3 +2317,15 @@ de septiembre, sin que la documentación lo dijera.
 al fin, ningún día si son iguales. La sección 4.7.6 y el docstring dicen que `Table` usa los valores por defecto y que
 `table_indicators` toma los de las simulaciones. Prueba en `test_the_arguments_of_the_indicators` (del 27 de octubre al
 1 de mayo, o al 30 de abril, y una temporada vacía), que falla sin el arreglo (0 h) y pasa con él.
+
+### A13. La fuente de los 22 °C del sobreenfriamiento
+
+**Antes.** El docstring del módulo de los indicadores de la adaptación interior, `OVERCOOLING_TEMPERATURE`,
+`overcooling_hours` y la sección 4.7.6 atribuían el umbral de 22 °C a Parkinson, Schiavon, de Dear y Brager (2021),
+*Overcooling of offices...*, Scientific Reports 11, como la propuesta del bloque F; ese artículo estudia el
+sobreenfriamiento pero no da ningún umbral de temperatura.
+
+**Ahora.** Citan Parkinson, de Dear y Brager (2020), Energy and Buildings 206, 109559, sección 4.3.2: la consigna
+habitual de verano de las oficinas climatizadas, «current summertime practices (~22 °C)» (comprobado en el texto de
+ambos artículos de la biblioteca). El valor sigue siendo una decisión de diseño de la propuesta; nota en la decisión
+de F3 de `notes/decisions.md`. Solo cambia la documentación (sin prueba: es una cita).

@@ -16,9 +16,12 @@ simulations, for the comparison of the setpoints of several comfort models in th
   with the SET of pythermalcomfort (task S4 of the review of accim 1.2.0, provisional until the authors of the causal
   model say which SET they used).
 - The overcooling (:func:`overcooling_hours`): the occupied hours of the cooling season with the operative temperature
-  below a temperature, 22 °C by default, following Parkinson, Schiavon, de Dear & Brager (2021), *Overcooling of
-  offices...*, Scientific Reports 11, as the proposal of block F does (a design decision of the proposal), or below
-  the reference heating setpoint that is given instead. The cooling season is that of the ACCIS (from
+  below a temperature, 22 °C by default, the typical setpoint of the air-conditioned offices in summer that Parkinson,
+  de Dear & Brager (2020), Energy and Buildings 206, 109559, section 4.3.2, describe as overcooled ("current
+  summertime practices (~22 °C)"; a design decision of the proposal of block F, which attributed the value to
+  Parkinson, Schiavon, de Dear & Brager (2021), *Overcooling of offices...*, Scientific Reports 11, a study of the
+  overcooling that gives no temperature threshold: finding A13 of the self-audit of 2026-11-11), or below the
+  reference heating setpoint that is given instead. The cooling season is that of the ACCIS (from
   ``cooling_season_start`` to the day before ``cooling_season_end``, 121 and 274 by default, as in
   :class:`accim.sim.accis.AddAccis`).
 - The neutrality by exposure (:func:`exposure_neutral_temperature`, :func:`indoor_running_mean`,
@@ -86,8 +89,9 @@ ENERGYPLUS_OUTPUTS = {
 #: mean indoor temperature of the building, Tn = intercept + slope·Tin, of the air-conditioned (AC), mixed-mode (MM)
 #: and naturally ventilated (NV) buildings: (intercept in °C, slope)
 EXPOSURE_NEUTRAL_TEMPERATURE = {'AC': (1.06, 0.951), 'MM': (2.91, 0.879), 'NV': (2.23, 0.897)}
-#: The operative temperature below which an occupied hour of the cooling season is overcooled, by default (°C;
-#: Parkinson, Schiavon, de Dear & Brager, 2021, as the proposal of block F cites them)
+#: The operative temperature below which an occupied hour of the cooling season is overcooled, by default (°C; the
+#: typical summer setpoint of the air-conditioned offices, "current summertime practices (~22 °C)", of Parkinson, de
+#: Dear & Brager, 2020, section 4.3.2: a design decision of the proposal of block F)
 OVERCOOLING_TEMPERATURE = 22.0
 #: The difference between the operative temperature and Tn_exp beyond which the proposal of block F counts the
 #: "expected" discomfort (K; a value that the proposal infers, not of Parkinson et al., 2020)
@@ -257,9 +261,9 @@ def causal_band_hours(set_values: Values, occupied: Any = None, timestep_h: Any 
 def overcooling_hours(top: Values, cooling_season: Any, occupied: Any = None, timestep_h: Any = 1.0,
                       threshold: Values = OVERCOOLING_TEMPERATURE) -> Dict[str, float]:
     """The overcooled hours: the occupied hours of the cooling season with the operative temperature below a
-    temperature, 22 °C by default (:data:`OVERCOOLING_TEMPERATURE`; Parkinson, Schiavon, de Dear & Brager, 2021, as the
-    proposal of block F cites them), or below the reference heating setpoint, given as ``threshold`` (a number or one
-    for each row).
+    temperature, 22 °C by default (:data:`OVERCOOLING_TEMPERATURE`, the typical summer setpoint of the air-conditioned
+    offices of Parkinson, de Dear & Brager, 2020, section 4.3.2), or below the reference heating setpoint, given as
+    ``threshold`` (a number or one for each row).
 
     :param top: The operative temperature of each row (°C).
     :param cooling_season: Whether each row is in the cooling season (booleans, or numbers: in it if greater than 0).

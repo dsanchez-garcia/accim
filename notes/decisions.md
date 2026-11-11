@@ -187,6 +187,11 @@ template]] to add a new entry.
 - Provisional decision (pending author until 2026-11-11): option (i) implemented provisionally.
 - Status: answered on 2026-11-11 (accepted; handoff §3, #10).
 - Verdict (handoff §3, #10): Accepted as implemented.
+- Note (finding A13 of the self-audit of 2026-11-11): the source of the 22 °C is Parkinson, de Dear & Brager (2020),
+  Energy and Buildings 206, 109559, section 4.3.2 (the typical summer setpoint of the air-conditioned offices,
+  "current summertime practices (~22 °C)"); Parkinson, Schiavon, de Dear & Brager (2021), Scientific Reports 11, the
+  "Parkinson 2021" of the proposal, studies the overcooling but gives no temperature threshold. The value stays a
+  design decision; the docstrings and section 4.7.6 cite the 2020 paper since then.
 
 ### 2026-11-10 — F3: T_rm_in and the band of Tn_exp
 - Context: Tn_exp = 1.06 + 0.951·T_rm_in (Parkinson et al., 2020, Fig. 6, with T_rm_in instead of the mean indoor
