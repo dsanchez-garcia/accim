@@ -567,7 +567,8 @@ template]] to add a new entry.
   `adaptive_coefficients=<key>` gives both sides (`ValueError` with explicit
   values on a side); a key with the numeric default on the other side warns; with `'pmv_sign'` the setpoints must have
   their signs. One formatter of the numbers of the programs (`erl.format_number`), and a `ValueError` for a weather
-  file without the 12 months. Qatar with the data of v04 §6.3; the categories in numeric order; a warning for the signs
+  file without the 12 months. Qatar with the data of v04 §6.3 (its static setpoints 20 and 26 °C since decision 20 of
+  2026-11-11, task S2); the categories in numeric order; a warning for the signs
   of the offsets. `fwg_add_uhi=False` unless given, a warning with `fwg_options_ensemble=0`, the cleanup after a
   `ValueError` of pyfwg. `processes=0` runs in the current process.
 - **Consequences**: the hour counters, the long-term discomfort and the hours below some temperatures of the zones with
@@ -679,7 +680,8 @@ template]] to add a new entry.
     `applicability: {metric_min: 10.0, metric_max: 40.0}` (the range of Tr of the study, mean 30.7 °C, SD 6.4 → about
     21–40 °C, opened to 10 °C to cover the winter of offices with HVAC, noted as a choice); `categories: {90: ±2.5, 80:
     ±3.5}` (the bands of ASHRAE 55, as the article compares, noted as "not own"); `comfort_modes: [0, 1, 2, 3]`;
-    `static_setpoints: {heating: 20.0, cooling: 25.5}` (EN 16798-1, Table B.2, offices, category II); `evidence: {N:
+    `static_setpoints: {heating: 20.0, cooling: 25.5}` (EN 16798-1, Table B.2, offices, category II; changed to 20.0
+    and 26.0 °C, the values of that category, by decision 20 of 2026-11-11 above, task S2); `evidence: {N:
     3742, R2: 0.015, SE: 0.007, p: '<0.001', Tr_mean: 30.7, Tr_sd: 6.4, mode: HVAC, bands: 'ASHRAE 55, not own'}`.
     The file must load and be the second example.
   - B3, several regimes in a YAML file (§6.4): a key `regimes:` (a list) with the schema of `CustomRegime` of B2

@@ -15,6 +15,17 @@ This log is a lightweight, session-scoped complement to the repository's
 existing tracking files — it does not replace them (see
 [[decisions.md#2026-09-13 — `notes/work-log.md` complements, not replaces, existing tracking files|the related decision]]).
 
+## 2026-11-11 — S2: the static setpoints of Qatar, 20 and 26 °C (branch `v1.2.0`, on the server)
+
+- **Objective**: decision 20: the static setpoints of the YAML file of Qatar are those of the offices of category II
+  of EN 16798-1, Table B.2 (20 and 26 °C), not 25.5 °C (category I).
+- **Affected files**: the two copies of `qat_indraganti2018_hvac.yaml`, the How-to notebook of the registry (source and
+  exported), `tests/core/test_comfort_standard_registry.py`, [[../docs/source/4_detailed use.md]] (4.2.5),
+  [[../CHANGELOG.md]], [[../CAMBIOS_CODIGO_v1.2.0.md]] (§39), [[decisions.md]], [[../DEVLOG.md]].
+- **Finding or decision**: as decided; only comfort modes 0 and 1 of comfort standard 102 change.
+- **Validation**: see the entry of S2 in [[../DEVLOG.md]].
+- **Next step**: S3 (the reference of the rate of the limiter of the drift).
+
 ## 2026-11-11 — S1: the warning of the minimum and maximum with the setpoints of the comfort model (branch `v1.2.0`, on the server)
 
 - **Objective**: decision 19: replace the comparison of the minimum and maximum of the setpoints with `ACSTaul`/

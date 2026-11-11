@@ -23,6 +23,7 @@ import pandas as pd
 import pytest
 import yaml
 
+from accim.constants import EN16798_TABLE_B2
 from accim.energyplus import default_energyplus_folder, find_energyplus
 from accim.sim import standards as st
 from accim.sim.ems import program_lines as pl
@@ -124,7 +125,10 @@ def test_the_yaml_file_of_qatar():
     assert (regime.cooling_lower_limit, regime.cooling_upper_limit, regime.heating_lower_limit,
             regime.heating_upper_limit) == (10.0, 40.0, 10.0, 40.0)
     assert definition.category_offsets == {90: (2.5, -2.5), 80: (3.5, -3.5)}
-    assert list(standard.comfort_modes) == [0, 1, 2, 3] and definition.static_setpoints == (20.0, 25.5)
+    assert list(standard.comfort_modes) == [0, 1, 2, 3] and definition.static_setpoints == (20.0, 26.0)
+    # The static setpoints of the offices of category II of EN 16798-1:2019, Table B.2 (decision 20 of the review of
+    # 1.2.0, task S2: 25.5 degC, the cooling one of category I, before)
+    assert definition.static_setpoints == EN16798_TABLE_B2[('office', 2)]
     evidence = definition.evidence
     assert {key: evidence[key] for key in ('N', 'R2', 'SE', 'p', 'Tr_mean', 'Tr_sd', 'mode', 'bands')} == {
         'N': 3742, 'R2': 0.015, 'SE': 0.007, 'p': '<0.001', 'Tr_mean': 30.7, 'Tr_sd': 6.4, 'mode': 'HVAC',

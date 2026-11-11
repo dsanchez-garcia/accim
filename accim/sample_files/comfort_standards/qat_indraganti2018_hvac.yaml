@@ -22,11 +22,12 @@ categories:
   90: {cooling_offset: 2.5, heating_offset: -2.5, description: "90 % comfort band of ASHRAE 55 (not own)"}
   80: {cooling_offset: 3.5, heating_offset: -3.5, description: "80 % comfort band of ASHRAE 55 (not own)"}
 comfort_modes: [0, 1, 2, 3]
-# Choice of section 6.3 of v04, cited there as EN 16798-1, Table B.2, offices, category II (whose values in
-# accim.constants.EN16798_TABLE_B2 are 20 and 26 degC; 25.5 is the cooling one of category I: notes/questions.md)
-static_setpoints: {heating: 20.0, cooling: 25.5}
+# EN 16798-1:2019, Table B.2, offices, category II (accim.constants.EN16798_TABLE_B2): 20 and 26 degC (decision
+# 20 of the review of accim 1.2.0, task S2 of its third session, in notes/decisions.md: section 6.3 of v04 gave
+# 25.5 degC, the cooling one of category I)
+static_setpoints: {heating: 20.0, cooling: 26.0}
 evidence: {N: 3742, R2: 0.015, SE: 0.007, p: "<0.001", Tr_mean: 30.7, Tr_sd: 6.4, mode: HVAC,
            bands: "ASHRAE 55, not own", building_type: offices, comfort_temperature_mean: 24.0,
            alpha: "0.8 of EN 16798-1, not given by the article",
            applicability: "10-40 degC, a choice (the Tr of the study: mean 30.7, SD 6.4)",
-           static_setpoints: "20 and 25.5 degC, a choice (EN 16798-1, Table B.2, offices)"}
+           static_setpoints: "20 and 26 degC, a choice (EN 16798-1, Table B.2, offices, category II)"}

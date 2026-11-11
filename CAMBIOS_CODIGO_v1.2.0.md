@@ -152,6 +152,9 @@ Lo que ya está en otros documentos no se repite aquí:
   `ACSTaul`/`AHSTall` (límites de aplicabilidad de la métrica exterior, no consignas): con el EPW, compara cada zona
   con las consignas de su modelo de confort de `compute_setpoints`, paso a paso en el periodo de simulación, y da un
   aviso por zona con el límite, la consigna extrema, el número de días y el primero (sección 38).
+- **S2 (tercera sesión, decisión 20).** Las consignas estáticas del YAML de Qatar (102) son 20 y 26 °C, las de las
+  oficinas de la categoría II de la tabla B.2 de EN 16798-1 (25,5 °C era la de refrigeración de la categoría I)
+  (sección 39).
 - Las categorías del PMV y la aproximación de la corrección del metabolismo se han comprobado en ISO 7730:2025 y
   EN 16798-1:2019, y el modelo dinámico de vestimenta de A5, en Schiavon y Lee (2013) y ASHRAE 55-2020 (sección 6).
 - Lo que quedaba abierto se ha comprobado: el golden master y las pruebas de EnergyPlus 26.1 y 26.2, también la de A5
@@ -2128,3 +2131,20 @@ Erl y avisaba si el mínimo superaba `ACSTaul` o el máximo bajaba de `AHSTall`.
   periodo de junio a agosto del modelo (el mínimo de 24 °C solo cruza en su primer paso); las zonas con gancho y con
   limitador, y el modelo sin `RunPeriod`, con sus mensajes de depuración; y `AddAccis` con y sin EPW, con los mismos IDF
   de salida.
+
+## 39. Las consignas estáticas del YAML de Qatar (S2, decisión 20)
+
+La revisión de Claude Science del 11/11/2026 (`notes/TRASPASO_ClaudeScience_2026-11-11_v01.md` §2.2) encontró que la v04
+(§6.3) daba al YAML de Qatar las consignas estáticas 20 y 25,5 °C citando la tabla B.2 de EN 16798-1 (oficinas,
+categoría II), cuyos valores son 20 y 26 °C (`accim.constants.EN16798_TABLE_B2`); 25,5 °C es la consigna de
+refrigeración de la categoría I. G5 aplicó los números de la v04 y dejó la discrepancia en `notes/questions.md`.
+
+**Ahora.**
+
+- `qat_indraganti2018_hvac.yaml` (las dos copias: la de `comfort_standards` y la del cuaderno How-to del registro):
+  `static_setpoints: {heating: 20.0, cooling: 26.0}`, con el comentario y la evidencia corregidos. Afecta a los modos de
+  confort 0 y 1 de la norma 102 (los que usan las consignas estáticas).
+- `tests/core/test_comfort_standard_registry.py`: las consignas estáticas son (20,0, 26,0) y las de la tabla B.2 de las
+  oficinas de la categoría II.
+- Documentación: la sección 4.2.5 del uso detallado y la entrada del CHANGELOG del registro; el cuaderno How-to
+  `using_comfort_standard_registry` (su texto, y ejecutado y exportado de nuevo, con la evidencia de Qatar actualizada).
