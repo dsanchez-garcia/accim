@@ -19,9 +19,19 @@ from accim.sim.energyplus_api.controller import ErlController, Hook
 from accim.sim.energyplus_api.idf import prepare_for_api
 from accim.sim.energyplus_api.runtime import load_energyplus_api
 
-__all__ = ['SimulationResult', 'prepare_hooks', 'run_simulation', 'run_simulations']
+__all__ = ['SimulationResult', 'finish_hooks', 'prepare_hooks', 'run_simulation', 'run_simulations']
 
 PathLike = Union[str, os.PathLike]
+
+
+def finish_hooks(hooks: Sequence[Hook]) -> None:
+    """Call the method ``finish()`` of the hooks that have one, as :func:`run_simulation` does after each simulation
+    (the hook of the ATHB of :mod:`accim.sim.comfort_hooks` warns there of its setpoints at the limits of their
+    range)."""
+    for hook in hooks:
+        finish = getattr(hook, 'finish', None)
+        if callable(finish):
+            finish()
 
 
 def prepare_hooks(hooks: Sequence[Hook]) -> None:
@@ -111,7 +121,8 @@ def run_simulation(
     :param after_programs: Functions called at each calling point after the EMS programs, before the
         actuators are set. The hooks (before or after the programs) with a method ``prepare()`` get it called once, in
         the process of the simulation, before the library of the API of EnergyPlus is loaded (:func:`prepare_hooks`:
-        the hook of the SET of :mod:`accim.sim.comfort_hooks` with ``method='bisection'`` calls pythermalcomfort there).
+        the hook of the SET of :mod:`accim.sim.comfort_hooks` with ``method='bisection'`` calls pythermalcomfort there),
+        and those with a method ``finish()`` get it called after the simulation (:func:`finish_hooks`).
     :param verbose: True to print the messages of EnergyPlus.
     :param raise_errors: True to raise an error if the EMS programs fail or EnergyPlus ends with a fatal
         error; False to return it in the result.
@@ -166,6 +177,7 @@ def run_simulation(
         for file in run_folder.iterdir():
             if file.is_file():
                 shutil.move(str(file), str(output_directory / file.name))
+    finish_hooks([*before_programs, *after_programs])
 
     result = SimulationResult(str(idf), None if epw is None else str(Path(epw).resolve()), str(output_directory),
                               output_prefix, exit_code, controller.environments, output_suffix=output_suffix)

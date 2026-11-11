@@ -13,6 +13,7 @@ __all__ = [
     'EPMV_MET_REDUCTION_PER_PMV',
     'PMV_BODY_SURFACE_AREA',
     'PMV_INPUT_RANGES',
+    'PMV_MET_RANGE',
     'SUPPORTED_ENERGYPLUS_VERSIONS',
 ]
 
@@ -53,6 +54,11 @@ PMV_INPUT_RANGES = {
     'clothing_insulation': (0.0, 2.0),
     'air_velocity': (0.0, 1.0),
 }
+
+#: The range of the metabolic rate (met) within which ISO 7730:2025 (section 4) uses the PMV, as it gives it in met
+#: (46 to 232 W/m², 1 met being 58.2 W/m²): the hook of the ATHB (:class:`accim.sim.comfort_hooks.AthbSetpointHook`)
+#: warns outside it (task H4 of the review of accim 1.2.0, finding A4-3).
+PMV_MET_RANGE = (0.8, 4.0)
 
 #: The largest clothing insulation (clo) with which ASHRAE 55-2020 uses the PMV (section 11.3 of
 #: ``notes/PROPUESTAS_MEJORAS_post_1.1.0_v03.md``): the parameter ``clothing_insulation`` of the parametric module

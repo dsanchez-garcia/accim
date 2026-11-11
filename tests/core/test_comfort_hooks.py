@@ -130,10 +130,64 @@ def test_the_hook_sets_the_setpoints_and_the_outputs():
         hook(late, CALLING_POINT)
 
 
+def test_the_hook_reports_the_setpoints_at_the_limits_of_their_range():
+    pytest.importorskip('pythermalcomfort')
+    # Up to 25 °C, the cooling setpoint of the ATHB (0.5) is out of the range in July in Seville
+    hook = ch.AthbSetpointHook(ZONES, temperature_range=(10.0, 25.0))
+    heating, cooling = hook.operative_temperatures(50.0, 24.0)
+    assert cooling == 25.0 and hook.saturated(heating, cooling)
+    assert not ch.AthbSetpointHook(ZONES).saturated(*ch.AthbSetpointHook(ZONES).operative_temperatures(50.0, 24.0))
+    values = {'RMOT': 24.0, 'ZoneTimeStep': 1 / STEPS, 'WarmupFlag': 0.0}
+    for zone in ZONES:
+        values.update({f'ATHB_MAT_{zone}': 26.0, f'ATHB_MRT_{zone}': 26.5, f'ATHB_RH_{zone}': 50.0})
+    controller = _Controller(dict(values))
+    for _ in range(3):
+        hook(controller, CALLING_POINT)
+    # The output of each timestep, and the hours out of the warm-up days
+    assert all(controller.get(f'ATHB_saturated_{zone}') == pytest.approx(1 / STEPS) for zone in ZONES)
+    assert hook.saturated_hours == {zone: pytest.approx(3 / STEPS) for zone in ZONES}
+    warmup = _Controller(dict(values, WarmupFlag=1.0))
+    hook(warmup, CALLING_POINT)
+    assert warmup.get('ATHB_saturated_Block1_Zone1') == pytest.approx(1 / STEPS)
+    assert hook.saturated_hours['Block1_Zone1'] == pytest.approx(3 / STEPS)
+    # A warning at the end of the simulation, and none without saturated setpoints
+    with pytest.warns(UserWarning, match=r'The setpoints of the ATHB were at a limit of temperature_range '
+                                         r'\(10.0, 25.0\) °C .* in Block1_Zone1: 0.50 h, Block1_Zone2: 0.50 h'):
+        hook.finish()
+    hook.prepare()
+    assert hook.saturated_hours == {}
+    with warnings.catch_warnings():
+        warnings.simplefilter('error')
+        hook.finish()
+        within = ch.AthbSetpointHook(ZONES)
+        within(_Controller(dict(values)), CALLING_POINT)
+        assert within.saturated_hours == {}
+        within.finish()
+
+
+def test_the_hook_warns_out_of_the_ranges_of_the_pmv():
+    # ISO 7730:2025, section 4: 0.8 to 4 met and a relative air speed up to 1 m/s
+    from accim.constants import PMV_MET_RANGE
+
+    assert PMV_MET_RANGE == (0.8, 4.0)
+    for met in (0.5, 4.5):
+        with pytest.warns(UserWarning, match=f'met is {met} met, out of the range of 0.8 to 4.0 met'):
+            ch.AthbSetpointHook(ZONES, met=met)
+    with pytest.warns(UserWarning, match='air_speed is 1.2 m/s, above the relative air speed of 1.0 m/s'):
+        ch.AthbSetpointHook(ZONES, air_speed=1.2)
+    with warnings.catch_warnings():
+        warnings.simplefilter('error')
+        for met, air_speed in ((0.8, 0.0), (4.0, 1.0), (1.1, 0.1)):
+            ch.AthbSetpointHook(ZONES, met=met, air_speed=air_speed)
+    # 1 met is 58.2 W/m2 times the body surface area of 1.8 m2 of EnergyPlus, about 104.8 W/person
+    assert ch.MET_ACTIVITY_LEVEL == pytest.approx(104.76)
+
+
 def test_the_arguments_of_the_hook_are_checked():
     for arguments, message in ((dict(zones=[]), 'zones must name at least one zone'),
                                (dict(athb_heating_setpoint=0.5), 'must be lower than athb_cooling_setpoint'),
                                (dict(met='1.1'), 'met must be a number'),
+                               (dict(met=0), 'met must be greater than 0'),
                                (dict(air_speed=-0.1), 'air_speed must be between 0.0'),
                                (dict(clo='dynamic'), 'clo must be a number'),
                                (dict(tolerance_k=0), 'tolerance_k must be greater than 0'),
@@ -179,6 +233,13 @@ def _model(tmp_path, script_type='vrf_ac'):
 def test_apply_athb_setpoints_prepares_the_model(tmp_path):
     idf = _model(tmp_path)
     hook = ch.apply_athb_setpoints(idf, athb_cooling_setpoint=0.4, met=1.2, output_frequencies=['timestep', 'hourly'])
+    # The frequencies of the outputs of the model by default (task H4 of the review of 1.2.0): hourly, those of _model
+    (tmp_path / 'default').mkdir()
+    default = _model(tmp_path / 'default')
+    ch.apply_athb_setpoints(default)
+    for name in ch.zone_outputs('Block1_Zone1'):
+        assert sorted(o.Reporting_Frequency for o in default.idfobjects['Output:Variable']
+                      if o.Variable_Name == name) == ['Hourly']
     assert isinstance(hook, ch.AthbSetpointHook)
     assert sorted(hook.zones) == ZONES and (hook.athb_cooling_setpoint, hook.met) == (0.4, 1.2)
     sensors = {s.Name: s for s in idf.idfobjects['EnergyManagementSystem:Sensor']}
@@ -194,12 +255,14 @@ def test_apply_athb_setpoints_prepares_the_model(tmp_path):
             sensor = sensors[f'{prefix}_{zone}']
             assert (sensor.OutputVariable_or_OutputMeter_Index_Key_Name,
                     sensor.OutputVariable_or_OutputMeter_Name) == (key, variable)
-        assert ch.zone_outputs(zone) == [f'ATHB_PMV_{zone}', f'ATHB_clo_{zone}', f'ATHB_met_{zone}']
-        for name, units in zip(ch.zone_outputs(zone), ('', 'clo', 'met')):
+        assert ch.zone_outputs(zone) == [f'ATHB_PMV_{zone}', f'ATHB_clo_{zone}', f'ATHB_met_{zone}',
+                                         f'ATHB_saturated_{zone}']
+        for name, units, kind in zip(ch.zone_outputs(zone), ('', 'clo', 'met', 'H'),
+                                     ('Averaged', 'Averaged', 'Averaged', 'Summed')):
             assert name in declared
             output = ems_outputs[name]
             assert (output.EMS_Variable_Name, output.Type_of_Data_in_Variable, output.Update_Frequency,
-                    output.Units) == (name, 'Averaged', 'ZoneTimestep', units)
+                    output.Units) == (name, kind, 'ZoneTimestep', units)
             assert {(name, 'Timestep'), (name, 'Hourly')} <= requested
     with pytest.raises(ValueError, match='already has the setpoints of the ATHB'):
         ch.apply_athb_setpoints(idf)
@@ -412,8 +475,8 @@ def _athb_model(folder, monkeypatch, end_day=21, **arguments):
     [path] = folder.glob('TestModel[[]*.idf')
     idf = load_idf(path)
     hook = ch.apply_athb_setpoints(idf, output_frequencies=['timestep'], **arguments)
-    for variable in ('Zone Air Relative Humidity', 'Zone Thermal Comfort CEN 15251 Adaptive Model Running Average '
-                                                   'Outdoor Air Temperature'):
+    for variable in ('Zone Air Relative Humidity', 'Zone Mean Air Temperature', 'Zone Mean Radiant Temperature',
+                     'Zone Thermal Comfort CEN 15251 Adaptive Model Running Average Outdoor Air Temperature'):
         idf.newidfobject('Output:Variable', Key_Value='*', Variable_Name=variable, Reporting_Frequency='Timestep')
     idf.saveas(str(folder / 'athb.idf'))
     path.unlink()
@@ -477,6 +540,49 @@ def test_the_athb_setpoints_in_energyplus(tmp_path, monkeypatch):
         within = (operative <= no_tolerance[:, 1]) & (operative >= no_tolerance[:, 0])
         clear = np.minimum(np.abs(operative - no_tolerance[:, 0]), np.abs(operative - no_tolerance[:, 1])) > 1e-3
         assert occupied.any() and (comfortable[clear] == (within & occupied)[clear]).all()
+
+        # The ATHB_PMV of the zone is that of its mean air and radiant temperatures and relative humidity of the
+        # previous timestep: the sensors read their last values, and the outputs are the means of the system timesteps
+        # of each timestep, so they differ by up to 0.02 in this week (task H4 of the review of 1.2.0, section 3.4)
+        air = column(f'{key}:Zone Mean Air Temperature').to_numpy()
+        radiant = column(f'{key}:Zone Mean Radiant Temperature').to_numpy()
+        humid = column(f'{key}:Zone Air Relative Humidity').to_numpy()
+        previous = np.asarray(ch.athb_pmv(air[:-1], radiant[:-1], hook.air_speed, humid[:-1], hook.met,
+                                          running_mean.to_numpy()[1:]), dtype=float)
+        difference = np.abs(pmv.to_numpy()[1:] - previous)[1:]
+        assert np.median(difference) <= 0.01 and difference.max() <= 0.03
+        # The scientific claim, bounded: in the occupied timesteps with the cooling coil on in the previous timestep,
+        # the ATHB_PMV is at most 0.25 above the cooling setpoint of the ATHB in at least 95 % of them (all, in this
+        # week: at most 0.68 with the setpoint 0.5)
+        cooling_on = column(f'{key} VRF INDOOR UNIT DX COOLING COIL:Cooling Coil Total Cooling Rate').to_numpy() > 0
+        occupied_hours = column(f'EMS:Occupied Hours_{zone} [').to_numpy() > 0
+        selected = np.zeros(len(results), dtype=bool)
+        selected[2:] = occupied_hours[1:-1] & cooling_on[1:-1]
+        assert selected.sum() > 100
+        assert np.mean(pmv.to_numpy()[selected] <= hook.athb_cooling_setpoint + 0.25) >= 0.95
+        # No setpoint at the limits of temperature_range (10 to 30 °C): the cooling setpoints were 27.4 to 28.4 °C
+        assert (column(f'EMS:ATHB_saturated_{zone}') == 0).all()
+
+
+@needs_energyplus
+def test_the_saturated_setpoints_of_the_athb_in_energyplus(tmp_path, monkeypatch):
+    from accim.sim.energyplus_api import run_simulations
+
+    pytest.importorskip('pythermalcomfort')
+    # Up to 27.5 °C, the cooling setpoints of the ATHB of these days (27.4 to 28.4 °C) are often out of the range
+    model, hook = _athb_model(tmp_path / 'model', monkeypatch, end_day=16, temperature_range=(10.0, 27.5))
+    [result] = run_simulations([(model, EPW, {'output_directory': tmp_path / 'api', 'output_prefix': 'run'})],
+                               processes=1, before_programs=[hook])
+    assert result.success, result.error
+    results = pd.read_csv(tmp_path / 'api' / 'run.csv')
+    for zone in ZONES:
+        saturated = results[f'EMS:ATHB_saturated_{zone} [H](TimeStep)']
+        cooling = results[f'EMS:Adaptive Cooling Setpoint Temperature_No Tolerance_{zone} [C](TimeStep)']
+        heating = results[f'EMS:Adaptive Heating Setpoint Temperature_No Tolerance_{zone} [C](TimeStep)']
+        at_limit = (cooling == 27.5) | (heating == 10.0)
+        # The hours of the timesteps whose setpoints are at a limit (the first timestep, with trm = 0, too)
+        assert 0 < at_limit.sum() < len(results)
+        np.testing.assert_allclose(saturated.to_numpy(), np.where(at_limit, 1 / STEPS, 0.0), atol=1e-9)
 
 
 @needs_energyplus

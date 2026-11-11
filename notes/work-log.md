@@ -15,6 +15,20 @@ This log is a lightweight, session-scoped complement to the repository's
 existing tracking files — it does not replace them (see
 [[decisions.md#2026-09-13 — `notes/work-log.md` complements, not replaces, existing tracking files|the related decision]]).
 
+## 2026-11-10 — H4: the saturation, frequencies and ranges of the hook of the ATHB (branch `v1.2.0`, on the server)
+
+- **Objective**: task H4 of v04 §7 (findings A4-1 to A4-3, the test finding of §3.4): report the setpoints of the
+  ATHB at the limits of their range, the frequencies of its outputs, the ranges of met and air speed, the documentation
+  of W/person and the relative air speed, and a bounded scientific test.
+- **Affected files**: `accim/sim/comfort_hooks.py`, `accim/sim/energyplus_api/runner.py`, `accim/constants.py`,
+  `accim/data/postprocessing/optional_output_columns.py`, [[../docs/source/4_detailed use.md]] (4.7.5, 4.9.1),
+  [[../CHANGELOG.md]], [[../CAMBIOS_CODIGO_v1.2.0.md]] (§35), [[../DEVLOG.md]], [[../TODO.md]].
+- **Finding or decision**: in a July week of the sample model the ATHB_PMV stays within 0.25 of the cooling setpoint
+  in every occupied timestep with cooling (at most 0.68); the reported ATHB_PMV differs from that of the averaged
+  outputs of the previous timestep by up to 0.02 (the sensors read the last system timestep).
+- **Validation**: see the entry of H4 in [[../DEVLOG.md]].
+- **Next step**: H5 (the outdoor metric of each regime, and several regimes in the YAML files).
+
 ## 2026-11-10 — H3: the constant long-term range, Method C and Table by timestep (branch `v1.2.0`, on the server)
 
 - **Objective**: task H3 of v04 §7 (findings C2-1 and D1-1, decision 5 of §6, verdict #20): `long_term_range` with the

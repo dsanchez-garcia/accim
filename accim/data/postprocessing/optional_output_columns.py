@@ -19,7 +19,8 @@ of the ATHB add EMS outputs to the zones (``<output>_<zone>``, with the EMS suff
   Limit_<zone>``, in h, ``Degree Hours Above Upper Limit_<zone>`` and ``Degree Hours Below Lower Limit_<zone>``, in Kh)
   and of the building (``..._Building``, the sums of the zones), summed;
 - :func:`accim.sim.comfort_hooks.apply_athb_setpoints`: the ATHB_PMV and the adapted clothing insulation and metabolic
-  rate of each zone, ``ATHB_PMV_<zone>``, ``ATHB_clo_<zone>`` (clo) and ``ATHB_met_<zone>`` (met), averaged;
+  rate of each zone, ``ATHB_PMV_<zone>``, ``ATHB_clo_<zone>`` (clo) and ``ATHB_met_<zone>`` (met), averaged, and the
+  hours in which a setpoint was at a limit of its range, ``ATHB_saturated_<zone>`` (h), summed (task H4);
 - :func:`accim.sim.comfort_hooks.apply_set_setpoints` with ``method='bisection'``: the standard effective temperature of
   each zone, ``SET_<zone>`` (°C), averaged;
 - :func:`accim.sim.comfort_hooks.apply_sun2026_setpoints` (comfort standard 24, task F1): also the causal TSV of each
@@ -59,6 +60,7 @@ ZONE_OUTPUTS = {
     'ATHB_PMV': ('ATHB_PMV', True, True),
     'ATHB_clo': ('ATHB_clo (clo)', True, True),
     'ATHB_met': ('ATHB_met (met)', True, True),
+    'ATHB_saturated': ('ATHB_saturated (h)', False, True),
     'SET': ('SET (°C)', True, True),
     'TSV_causal': ('TSV_causal', True, True),
     'HoursInCausalBand': ('HoursInCausalBand (h)', False, True),

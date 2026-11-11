@@ -135,6 +135,9 @@ Lo que ya está en otros documentos no se repite aquí:
   horas ponderadas por el PPD (`report_ppd_weighted_hours`, salida `PPD Weighted Hours_<zona>`), y el reductor
   `ppd_weighted_hours` las lee; el método C de D1 sigue el texto literal (veredicto #20); `Table` con
   `source_frequency='timestep'` conserva las salidas y agrupa los pasos en su hora (sección 34).
+- **H4.** El gancho del ATHB informa de las consignas en los límites de `temperature_range` (salida
+  `ATHB_saturated_<zona>` y aviso al final de la simulación), sus salidas tienen por defecto las frecuencias del modelo,
+  `met` debe ser mayor que 0 y avisa fuera de 0,8–4 met y por encima de 1 m/s (sección 35).
 - Las categorías del PMV y la aproximación de la corrección del metabolismo se han comprobado en ISO 7730:2025 y
   EN 16798-1:2019, y el modelo dinámico de vestimenta de A5, en Schiavon y Lee (2013) y ASHRAE 55-2020 (sección 6).
 - Lo que quedaba abierto se ha comprobado: el golden master y las pruebas de EnergyPlus 26.1 y 26.2, también la de A5
@@ -1944,3 +1947,35 @@ por la hora anterior.
   `tests/core/test_long_term_discomfort.py` (el método C semiabierto y `Table` por pasos),
   `tests/core/test_table_pmv_index.py`, `tests/core/test_gui.py` y
   `tests/parametric_and_optimisation/test_objectives.py`.
+
+## 35. La saturación, las frecuencias y los rangos del gancho del ATHB (H4)
+
+Tarea H4 de la revisión v04 (hallazgos A4-1 a A4-3 y el de las pruebas de §3.4).
+
+**Antes.** Las consignas del ATHB fuera de `temperature_range` (10–30 °C) eran sus límites sin que nada lo dijera;
+`apply_athb_setpoints(output_frequencies=('hourly',))` no seguía las frecuencias del modelo; `met = 0` se aceptaba; la
+relación entre el nivel de actividad de los People (W/persona) y `met`, y que `air_speed` es la velocidad relativa, no
+estaban documentadas; la prueba con EnergyPlus solo comprobaba −3 ≤ ATHB_PMV ≤ 3.
+
+**Ahora.**
+
+- `AthbSetpointHook`: la salida sumada `ATHB_saturated_<zona>` (la duración del paso si una consigna está en un límite
+  del rango; el método `saturated`), las horas fuera de los días de calentamiento (`saturated_hours`) y los métodos
+  `prepare()` (las pone a cero) y `finish()` (avisa de ellas), que `run_simulation` llama antes y después de cada
+  simulación (`accim.sim.energyplus_api.finish_hooks`, nueva). En los procesos de `run_ep`, el aviso va a su consola y
+  las salidas guardan las horas.
+- `apply_athb_setpoints(output_frequencies=None)`: por defecto, las frecuencias de las salidas EMS del modelo, como los
+  ganchos de la SET (cambia los IDF que se preparaban con el valor por defecto anterior, `('hourly',)`, si el modelo
+  tiene otras).
+- `met` > 0 (`ValueError`); avisos fuera de 0,8–4 met (`accim.constants.PMV_MET_RANGE`, nueva) y por encima de 1 m/s
+  (ISO 7730:2025, §4).
+- `Table`: `<zona>_ATHB_saturated (h)`, sumada, con valores de bloque y de edificio, fuera de la tabla de horas de
+  confort.
+- Documentación (4.9.1, 4.7.5 y docstrings): 1 met = 58,2 W/m² × 1,8 m² ≈ 104,8 W/persona (la superficie corporal de
+  EnergyPlus, Input Output Reference, campo *Activity Level Schedule Name* de `People`) y la velocidad relativa,
+  v + 0,3·(met − 1) por encima de 1 met (`pythermalcomfort.utilities.v_relative`).
+- Pruebas: `tests/core/test_comfort_hooks.py` (la saturación con un controlador falso, el aviso, `prepare`, los avisos
+  de met y velocidad, las frecuencias por defecto; con EnergyPlus 25.1, la afirmación acotada: el ATHB_PMV a 0,25 o
+  menos de la consigna de refrigeración en al menos el 95 % de los pasos ocupados con la batería de frío encendida, el
+  ATHB_PMV frente al de las salidas del paso anterior, y las horas saturadas con un rango hasta 27,5 °C) y
+  `tests/core/test_table_optional_outputs.py`.

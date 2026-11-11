@@ -39,10 +39,15 @@ Active short-term tasks.
   - Definition of done: an option of the EMS code for comfort standard 24 with that loop (a sensor of the Pierce SET of the People object of each zone), documented with its delay; tests of its convergence against the hook with EnergyPlus 25.1 (both backends), and the `ValueError` of `AddAccis` replaced by it.
   - References: `notes/PROPUESTAS_MEJORAS_post_1.1.0_v03.md` (A6, way (a)), `notes/PROPUESTA_ADAPTACION_INTERIOR_v03.md` (§3, §4 F1), `notes/PROMPTS_COPILOT_bloque_F_v02.md` (F1, scope 5).
 
-- [ ] [P2][todo] A4: the saturation of the ATHB setpoints, the frequencies of their outputs, the ranges of met and air speed, and a bounded scientific test (task H4 of v04 §7)
-  - Context: findings A4-1 to A4-3 and the test finding of §3.4 (v04): the setpoints saturate silently at the limits of `temperature_range`; `output_frequencies=('hourly',)` ignores those of the model; `met = 0` is accepted; the relation between W/person and met, and the relative air speed, are undocumented; the EnergyPlus test only checks −3 ≤ ATHB_PMV ≤ 3.
-  - Definition of done: a saturation counter and a warning; `output_frequencies=None` (those of the ACCIS outputs of the model); warnings for met outside 0.8–4 met and an air speed above 1 m/s; the documentation; a bounded test of the ATHB_PMV within the setpoints (or an IdealLoads variant of the sample model).
-  - References: `notes/PROPUESTAS_MEJORAS_post_1.1.0_v04.md` (§3.3 A4-1 to A4-3, §3.4, §7 H4), `accim/sim/comfort_hooks.py`.
+- [ ] [P2][todo] A4: the metabolic rate of the People objects in the hook of the ATHB (`met='people'`)
+  - Context: finding A4-2 of v04 (task H4, 2026-11-10): `met` and `air_speed` of `AthbSetpointHook` are independent of the activity level (W/person) and the air velocity of the People objects, which EnergyPlus uses for the internal gains and its own comfort outputs; H4 documented the relation (1 met ≈ 104.8 W/person) and the relative air speed, and v04 leaves `met='people'` as a future option. The hook of the SET with `method='bisection'` already reads the inputs of the People objects (`met=None`...).
+  - Definition of done: `AthbSetpointHook(met=None)` (or `'people'`) reads the activity level of the People object of each zone in each timestep (W/person divided by `MET_ACTIVITY_LEVEL`), and, if wanted, the air velocity converted to the relative air speed, with tests with EnergyPlus.
+  - References: `notes/PROPUESTAS_MEJORAS_post_1.1.0_v04.md` (§3.3 A4-2), `accim/sim/comfort_hooks.py` (`SetSetpointHook.zone_inputs`).
+
+- [ ] [P2][todo] A6: the setpoints of the SET at the limits of their range
+  - Context: finding A4-1 of v04 mentions that the SET saturates silently too (at 10 and 40 °C); task H4 (2026-11-10) reports the saturation of the hook of the ATHB only (`ATHB_saturated_<zone>`, and a warning at the end of the simulation).
+  - Definition of done: the hooks of the SET (`SetSetpointHook`, `Sun2026SetpointHook`) report the hours of their setpoints at the limits of `temperature_range` (an output of each zone and a warning in `finish()`), with a name in `Table` and tests.
+  - References: `notes/PROPUESTAS_MEJORAS_post_1.1.0_v04.md` (§3.3 A4-1), `accim/sim/comfort_hooks.py`.
 
 - [ ] [P2][todo] A4: the setpoints of the ATHB in mixed mode
   - Context: verdict #34 (`notes/decisions.md`, 2026-11-10): the ATHB setpoints are for full air-conditioning only (a `ValueError` in mixed mode, whose windows follow the setpoints of the ACCIS); mixed mode stays a P2 task.

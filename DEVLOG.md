@@ -36,6 +36,45 @@ Recommended flow: track active work in `TODO.md`, move completed outcomes to `DE
 ## Entries
 
 ### 2026-11-10
+#### [done] H4: the saturation, frequencies and ranges of the hook of the ATHB (branch `v1.2.0`)
+- Context: task H4 of v04 §7: findings A4-1 (the setpoints of the ATHB saturate silently at the limits of
+  `temperature_range`), A4-2 (`met` and `air_speed` of the hook are not those of the People objects; `air_speed` is the
+  relative air speed), A4-3 (`output_frequencies=('hourly',)` ignores those of the model; `met = 0` accepted) and the
+  test finding of §3.4 (the test with EnergyPlus only checked −3 ≤ ATHB_PMV ≤ 3).
+- Changes: `accim.sim.comfort_hooks`: `ATHB_SATURATED` ('ATHB_saturated') and `_SUMMED_OUTPUTS`, the summed output
+  `ATHB_saturated_<zone>` (H), which the hook sets to `ZoneTimeStep` when a setpoint is at a limit of the range
+  (`AthbSetpointHook.saturated`); `saturated_hours` out of the warm-up days (`WarmupFlag`), `prepare()` (resets them)
+  and `finish()` (warns of them); `met` must be greater than 0 and `_warn_pmv_ranges` warns out of 0.8–4 met
+  (`accim.constants.PMV_MET_RANGE`, new) and above 1 m/s (`PMV_INPUT_RANGES`); `apply_athb_setpoints(output_frequencies=
+  None)` (the frequencies of the EMS outputs of the model, `_output_frequencies`, as the hooks of the SET);
+  `zone_outputs` also gives `ATHB_saturated_<zone>`. `accim.sim.energyplus_api.finish_hooks` (new), which
+  `run_simulation` calls after each simulation. `Table`: `ATHB_saturated (h)` (`optional_output_columns.ZONE_OUTPUTS`),
+  summed, with block and building values, not in the comfort hours. Docs: 4.9.1 (the saturation, the frequencies, the
+  ranges, 1 met ≈ 104.8 W/person with the body surface area of 1.8 m² of EnergyPlus, Input Output Reference, Activity
+  Level Schedule Name of People, and the relative air speed, v + 0.3·(met − 1) above 1 met,
+  `pythermalcomfort.utilities.v_relative`) and 4.7.5.
+- Measured with EnergyPlus 25.1 (the sample model in Seville, 15-21 July, INT EN16798 II comfort mode 3, the ATHB
+  setpoints −0.5 and 0.5, met 1.1, 0.1 m/s): the cooling setpoints of the ATHB were 27.4 to 28.4 °C, without
+  saturation; in the 310 occupied timesteps of each zone with the cooling coil on in the previous timestep, the ATHB_PMV
+  was at most 0.62 and 0.68 (all within 0.25 of the setpoint; 93 % and 74 % within 0.1); the ATHB_PMV reported by the
+  hook differs from that of the outputs of the mean air and radiant temperatures and relative humidity of the previous
+  timestep by up to 0.020 (median 0.003 and 0.006), since the sensors read the last system timestep and the outputs
+  average them. With `temperature_range=(10, 27.5)`, `ATHB_saturated_<zone>` is 1/6 h in exactly the timesteps whose
+  cooling setpoint is 27.5 °C.
+- Files: `accim/sim/comfort_hooks.py`, `accim/sim/energyplus_api/runner.py`, `accim/sim/energyplus_api/__init__.py`,
+  `accim/constants.py`, `accim/data/postprocessing/optional_output_columns.py`, `tests/core/test_comfort_hooks.py`,
+  `tests/core/test_table_optional_outputs.py`, `docs/source/4_detailed use.md`, `CHANGELOG.md`, `TODO.md`,
+  `CAMBIOS_CODIGO_v1.2.0.md` (§35), `notes/work-log.md`.
+- Verification: `tests/core/test_comfort_hooks.py` and `tests/core/test_table_optional_outputs.py` 49 passed (the
+  saturation with a fake controller, the warning of `finish()` and `prepare()`, the warnings of met and air speed, the
+  default frequencies; with EnergyPlus 25.1, the bounded claim (at least 95 % of the occupied timesteps with cooling
+  within 0.25 of the cooling setpoint of the ATHB; all of them in this week), the ATHB_PMV against the outputs of the
+  previous timestep (median ≤ 0.01, maximum ≤ 0.03), the hours at a limit of a narrower range, and both backends
+  identical without the hook and with constant setpoints given by a hook and by the programs); `tests/core` 1472
+  passed, 2 skipped (golden master byte-identical); the Sphinx build with the same 35 warnings.
+- Next step: H5.
+
+### 2026-11-10
 #### [done] H3: the constant long-term range, Method C and `Table` by timestep (branch `v1.2.0`)
 - Context: task H3 of v04 §7: finding C2-1 (the range of the long-term counters of the ACCIS is its own setpoints
   without the tolerance, so models with different comfort standards are not compared with the same range), decision 5

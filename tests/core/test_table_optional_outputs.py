@@ -47,6 +47,7 @@ ZONE_OUTPUTS = {
     'ATHB_PMV': ('', [0.1, 0.3], 'ATHB_PMV'),
     'ATHB_clo': ('clo', [0.6, 0.7], 'ATHB_clo (clo)'),
     'ATHB_met': ('MET', [1.05, 1.07], 'ATHB_met (met)'),
+    'ATHB_saturated': ('H', [0.0, 0.5], 'ATHB_saturated (h)'),
     'Tout_metric': ('C', [15.0, 16.0], ''),
 }
 SUMMED = [output for output, (units, _, _) in ZONE_OUTPUTS.items() if units in ('H', 'KH')]
@@ -89,6 +90,10 @@ def test_the_optional_outputs_are_those_of_accim_sim():
                                                           comfort_hooks._OUTPUTS.values())}
     assert {output: ooc.ZONE_OUTPUTS[output][0] for output in athb} == \
         {output: f'{output} ({unit})' if unit else output for output, unit in athb.items()}
+    # The hours of the setpoints of the ATHB at the limits of their range (task H4 of the review of 1.2.0), summed
+    assert comfort_hooks.zone_outputs('Z')[-1] == f'{comfort_hooks.ATHB_SATURATED}_Z'
+    assert comfort_hooks._SUMMED_OUTPUTS == {comfort_hooks.ATHB_SATURATED: 'H'}
+    assert ooc.ZONE_OUTPUTS[comfort_hooks.ATHB_SATURATED] == ('ATHB_saturated (h)', False, True)
     # The SET of the zones of the hook of the SET by bisection (task G3 of the review of 1.2.0), in °C
     assert comfort_hooks.set_zone_outputs('Z') == ['SET_Z'] and comfort_hooks._SET_OUTPUTS == {'SET': 'C'}
     assert ooc.ZONE_OUTPUTS['SET'] == ('SET (°C)', True, True)
@@ -104,7 +109,7 @@ def test_the_optional_outputs_are_those_of_accim_sim():
         ['HoursBelow_18_Z', 'HoursBelow_17p5_Z', 'HoursBelow_m2_Z']
     # The outputs that are added up, and those that are averaged (see the docstring of the module)
     assert [output for output, (_, averaged, _) in ooc.ZONE_OUTPUTS.items() if not averaged] == LONG_TERM + [
-        'HoursInCausalBand', 'DriftLimitedHours']
+        'ATHB_saturated', 'HoursInCausalBand', 'DriftLimitedHours']
     # The outputs of the limiter of the drift of the setpoints (task F2 of block F), with their units
     from accim.sim.ems import drift_limiter
 
@@ -216,7 +221,8 @@ def test_standard_outputs_keep_the_optional_outputs(tmp_path, monkeypatch):
 
 def test_comfort_hours_table_takes_the_optional_hours(tmp_path, monkeypatch):
     columns, _ = _outputs(DESIGNBUILDER)
-    hours = [output for output, (units, _, _) in ZONE_OUTPUTS.items() if units == 'H']
+    # The hours at the limits of the range of the setpoints of the ATHB (task H4) are not comfort hours
+    hours = [output for output, (units, _, _) in ZONE_OUTPUTS.items() if units == 'H' and not output.startswith('ATHB')]
     for rename_cols in (True, False):
         table = _table(tmp_path, monkeypatch, DESIGNBUILDER, columns, rename_cols=rename_cols)
         table.format_table(type_of_table='comfort hours')

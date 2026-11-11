@@ -34,7 +34,17 @@ maximum of the setpoints, the hour counters and the outputs of the setpoints of 
 the ATHB_PMV of each zone (``ATHB_PMV_<zone>``, from its mean air and mean radiant temperatures and relative humidity)
 and the adapted clothing and metabolic rate (``ATHB_clo_<zone>`` and ``ATHB_met_<zone>``). As the other sensors of the
 EMS at the beginning of the timestep, those of the zone are those of the previous timestep, and trm is the running mean
-outdoor temperature of CEN 15251 of EnergyPlus (the sensor ``RMOT`` of the ACCIS, α = 0.8, as EN 16798-1).
+outdoor temperature of CEN 15251 of EnergyPlus (the sensor ``RMOT`` of the ACCIS, α = 0.8, as EN 16798-1). The
+setpoints out of ``temperature_range`` are its limits: the hook reports the hours in which a setpoint of a zone is at
+one of them (``ATHB_saturated_<zone>``, summed) and warns at the end of the simulation (task H4 of the review of accim
+1.2.0, finding A4-1). The metabolic rate and the air speed of the hook are not those of the People objects, which
+EnergyPlus uses for the internal gains and its own thermal comfort outputs: their activity level is in W/person, and
+1 met is 58.2 W/m² (ISO 7730:2025) times the body surface area of 1.8 m² of EnergyPlus (Input Output Reference, the
+field Activity Level Schedule Name of People), about 104.8 W/person (:data:`MET_ACTIVITY_LEVEL`); and ``air_speed`` is
+the relative air speed of pythermalcomfort, which for met > 1 is the air speed of the zone plus 0.3·(met − 1)
+(``pythermalcomfort.utilities.v_relative``, as ASHRAE 55 and ISO 7730). The hook warns with a metabolic rate out of
+0.8 to 4 met or an air speed above 1 m/s, the ranges within which ISO 7730:2025 (section 4) uses the PMV
+(:data:`accim.constants.PMV_MET_RANGE`, :data:`accim.constants.PMV_INPUT_RANGES`; finding A4-3).
 pythermalcomfort is optional (``pip install accim[comfort]``, Python 3.11 or later); the EMS backend cannot run the hook
 (``run_ep(backend='ems', hooks=...)`` raises ``NotImplementedError``), and without it the setpoints are those of the
 ACCIS.
@@ -72,9 +82,10 @@ import numbers
 import warnings
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
-from accim.constants import PMV_BODY_SURFACE_AREA
+from accim.constants import PMV_BODY_SURFACE_AREA, PMV_INPUT_RANGES, PMV_MET_RANGE
 
 __all__ = [
+    'ATHB_SATURATED',
     'ATHB_TEMPERATURE_RANGE',
     'AthbSetpointHook',
     'MET_ACTIVITY_LEVEL',
@@ -119,6 +130,10 @@ _SENSORS = {
 }
 #: The EMS output variables of each zone: prefix (of the global variable and the output) -> units
 _OUTPUTS = {'ATHB_PMV': '', 'ATHB_clo': 'clo', 'ATHB_met': 'met'}
+#: The summed EMS output variable of each zone of the hours in which a setpoint of the ATHB is at a limit of
+#: ``temperature_range`` (task H4 of the review of accim 1.2.0, finding A4-1)
+ATHB_SATURATED = 'ATHB_saturated'
+_SUMMED_OUTPUTS = {ATHB_SATURATED: 'H'}
 #: The range of the operative temperature (°C) within which the hook of the SET looks for its setpoints: the air and
 #: mean radiant temperatures of 10 to 40 °C, the limits of the inputs of the SET of pythermalcomfort
 #: (``pythermalcomfort.models.set_tmp``, 4.8.1); the setpoints out of it are its limits.
@@ -265,6 +280,20 @@ def _check_number(name: str, value: Any, low: Optional[float] = None, high: Opti
     return float(value)
 
 
+def _warn_pmv_ranges(met: float, air_speed: float) -> None:
+    """Warn if the metabolic rate (met) or the air speed (m/s) of a hook are out of the ranges within which ISO
+    7730:2025 (section 4) uses the PMV: 0.8 to 4 met (:data:`accim.constants.PMV_MET_RANGE`) and 0 to 1 m/s of
+    relative air speed (:data:`accim.constants.PMV_INPUT_RANGES`)."""
+    low, high = PMV_MET_RANGE
+    if not low <= met <= high:
+        warnings.warn(f'met is {met} met, out of the range of {low} to {high} met within which ISO 7730:2025 '
+                      f'(section 4) uses the PMV.', UserWarning, stacklevel=3)
+    highest = PMV_INPUT_RANGES['air_velocity'][1]
+    if air_speed > highest:
+        warnings.warn(f'air_speed is {air_speed} m/s, above the relative air speed of {highest} m/s up to which ISO '
+                      f'7730:2025 (section 4) uses the PMV.', UserWarning, stacklevel=3)
+
+
 def _check_before_programs(hook, controller) -> None:
     """Stop if a hook of the setpoints runs after the EMS programs: the program ApplyHookSetpoints_<zone> reads its
     setpoints in the programs of the timestep (:mod:`accim.sim.ems.hook_setpoints`)."""
@@ -327,13 +356,20 @@ class AthbSetpointHook:
     right after SetAST, gives the thermostats these setpoints with the tolerance of the setpoints of the zone, and the
     minimum and maximum of the setpoints, the hour counters and the outputs of the setpoints of the zone follow
     them) and sets the global variables ``ATHB_PMV_<zone>``, ``ATHB_clo_<zone>`` and ``ATHB_met_<zone>``, which
-    EnergyPlus reports.
+    EnergyPlus reports, and ``ATHB_saturated_<zone>``: the length of the timestep (``ZoneTimeStep``, h) if a setpoint
+    is at a limit of ``temperature_range`` (where the bisection stops, the setpoint of the ATHB being out of it), and 0
+    otherwise. It adds up those hours out of the warm-up days of EnergyPlus (:attr:`saturated_hours`), and warns of them
+    at the end of the simulation (:meth:`finish`, which :func:`accim.sim.energyplus_api.run_simulation` calls; in the
+    processes of :func:`accim.run.run_ep`, the warning goes to their console, and the outputs keep the hours).
 
     :param zones: The zones, by their names in the EMS objects (``Block1_Zone1``...).
     :param athb_cooling_setpoint: The cooling setpoint of the ATHB_PMV.
     :param athb_heating_setpoint: The heating setpoint of the ATHB_PMV, lower than the cooling one.
-    :param met: The metabolic rate of the occupants (met), without the adaptation.
-    :param air_speed: The relative air speed (m/s).
+    :param met: The metabolic rate of the occupants (met), without the adaptation, greater than 0; it warns out of
+        0.8 to 4 met (ISO 7730:2025, section 4). It is not the activity level of the People objects (W/person, about
+        104.8 W/person per met, :data:`MET_ACTIVITY_LEVEL`).
+    :param air_speed: The relative air speed (m/s): for met > 1, the air speed of the zone plus 0.3·(met − 1)
+        (``pythermalcomfort.utilities.v_relative``); it warns above 1 m/s (ISO 7730:2025, section 4).
     :param clo: 'adaptive' (the default) for the clothing insulation of the behavioural adaptation, or the clothing
         insulation (clo), without it.
     :param tolerance_k: The largest width of the interval of the bisection (K): the setpoint is its middle.
@@ -341,6 +377,9 @@ class AthbSetpointHook:
     :param temperature_range: The range of the operative temperature of the setpoints (°C,
         :data:`ATHB_TEMPERATURE_RANGE`).
     :ivar setpoints: The last setpoints of each zone, ``{zone: (heating, cooling)}``, without the tolerance.
+    :ivar saturated_hours: The hours of each zone in which a setpoint was at a limit of ``temperature_range``, out of
+        the warm-up days, since the hook was made or prepared (:meth:`prepare`).
+    :raises ValueError: If an argument is not valid (``met`` must be greater than 0).
     """
 
     #: The hook runs before the EMS programs (:func:`accim.run.run_ep` passes it as ``before_programs``)
@@ -358,7 +397,10 @@ class AthbSetpointHook:
             raise ValueError(f'athb_heating_setpoint ({athb_heating_setpoint}) must be lower than '
                              f'athb_cooling_setpoint ({athb_cooling_setpoint}).')
         self.met = _check_number('met', met, 0.0)
+        if self.met <= 0:
+            raise ValueError(f'met must be greater than 0, not {met!r}.')
         self.air_speed = _check_number('air_speed', air_speed, 0.0)
+        _warn_pmv_ranges(self.met, self.air_speed)
         if clo != 'adaptive':
             clo = _check_number('clo', clo, 0.0)
         self.clo = clo
@@ -373,6 +415,7 @@ class AthbSetpointHook:
             raise ValueError(f'temperature_range must be (lower, higher), not {temperature_range!r}.')
         self.temperature_range = (low, high)
         self.setpoints: Dict[str, Tuple[float, float]] = {}
+        self.saturated_hours: Dict[str, float] = {}
 
     def __repr__(self) -> str:
         return (f'AthbSetpointHook(zones={self.zones!r}, athb_cooling_setpoint={self.athb_cooling_setpoint}, '
@@ -397,6 +440,27 @@ class AthbSetpointHook:
         return _bisect(athb, (self.athb_heating_setpoint, self.athb_cooling_setpoint), self.temperature_range,
                        self.tolerance_k, self.max_iterations)
 
+    def saturated(self, heating: float, cooling: float) -> bool:
+        """True if a setpoint is at a limit of ``temperature_range`` (the bisection gives them exactly when the setpoint
+        of the ATHB is out of the range)."""
+        return heating in self.temperature_range or cooling in self.temperature_range
+
+    def prepare(self) -> None:
+        """Reset :attr:`saturated_hours` before a simulation (:func:`accim.sim.energyplus_api.run_simulation` calls it
+        in the process of the simulation)."""
+        self.saturated_hours = {}
+
+    def finish(self) -> None:
+        """Warn of the hours in which the setpoints were at a limit of ``temperature_range``, if any, after a simulation
+        (:func:`accim.sim.energyplus_api.run_simulation` calls it)."""
+        hours = {zone: value for zone, value in self.saturated_hours.items() if value > 0}
+        if hours:
+            warnings.warn(f'The setpoints of the ATHB were at a limit of temperature_range {self.temperature_range} °C '
+                          f'(their ATHB_PMV setpoints are out of it) in '
+                          + ', '.join(f'{zone}: {value:.2f} h' for zone, value in hours.items())
+                          + ' (the outputs ATHB_saturated_<zone>): widen temperature_range, or check the setpoints and '
+                            'the running mean outdoor temperature.', UserWarning, stacklevel=2)
+
     def __call__(self, controller, calling_point: str) -> None:
         if calling_point != _CALLING_POINT:
             return
@@ -413,6 +477,11 @@ class AthbSetpointHook:
             heating, cooling = self.operative_temperatures(humidity, t_running_mean)
             self.setpoints[zone] = (heating, cooling)
             _give_setpoints(controller, zone, heating, cooling)
+            step = controller.get('ZoneTimeStep') or 0.0
+            saturated = self.saturated(heating, cooling)
+            controller.set(f'{ATHB_SATURATED}_{zone}', step if saturated else 0.0)
+            if saturated and not controller.get('WarmupFlag'):
+                self.saturated_hours[zone] = self.saturated_hours.get(zone, 0.0) + step
             controller.set(f'ATHB_PMV_{zone}', athb_pmv(air, radiant, self.air_speed, humidity, self.met,
                                                         t_running_mean, self.clo))
             controller.set(f'ATHB_clo_{zone}', clo_adapted)
@@ -486,7 +555,7 @@ def _add_hook_objects(building, keys: Dict[str, str], sensors: Dict[str, str], o
 
 def apply_athb_setpoints(building, athb_cooling_setpoint: float = 0.5, athb_heating_setpoint: float = -0.5,
                          met: float = 1.1, air_speed: float = 0.1, clo: Any = 'adaptive',
-                         output_frequencies: Sequence[str] = ('hourly',), tolerance_k: float = 0.1,
+                         output_frequencies: Optional[Sequence[str]] = None, tolerance_k: float = 0.1,
                          max_iterations: int = 20,
                          temperature_range: Tuple[float, float] = ATHB_TEMPERATURE_RANGE) -> AthbSetpointHook:
     """Prepare a model with the ACCIS (an output IDF of :class:`accim.sim.accis.AddAccis` or a model of
@@ -495,8 +564,9 @@ def apply_athb_setpoints(building, athb_cooling_setpoint: float = 0.5, athb_heat
 
     Its zones get the EMS sensors of their mean air temperature, mean radiant temperature and relative humidity
     (``ATHB_MAT_<zone>``, ``ATHB_MRT_<zone>`` and ``ATHB_RH_<zone>``), and the global variables and outputs
-    ``ATHB_PMV_<zone>``, ``ATHB_clo_<zone>`` and ``ATHB_met_<zone>`` (averaged, with Output:Variable objects at the
-    frequencies given), and the program ``ApplyHookSetpoints_<zone>`` with which the hook gives its setpoints to the
+    ``ATHB_PMV_<zone>``, ``ATHB_clo_<zone>`` and ``ATHB_met_<zone>`` (averaged) and ``ATHB_saturated_<zone>`` (the
+    hours in which a setpoint is at a limit of ``temperature_range``, summed), with Output:Variable objects at the
+    frequencies given, and the program ``ApplyHookSetpoints_<zone>`` with which the hook gives its setpoints to the
     ACCIS (:mod:`accim.sim.ems.hook_setpoints`, run by ``RunACCIS_<zone>`` right after SetAST): the thermostats of the
     ACCIS (dual setpoints of the operative temperature) get them with the tolerance of the setpoints of the zone, as
     the adaptive setpoints, and the minimum and maximum of the setpoints, the hour counters (also those of the long-term
@@ -507,8 +577,11 @@ def apply_athb_setpoints(building, athb_cooling_setpoint: float = 0.5, athb_heat
     those of the ACCIS and the outputs of the ATHB are 0.
 
     :param building: The model (eppy), changed in place.
-    :param output_frequencies: The reporting frequencies of the outputs of the ATHB ('timestep', 'hourly'...).
-    :return: The hook (:class:`AthbSetpointHook`), with the other arguments.
+    :param output_frequencies: The reporting frequencies of the outputs of the ATHB ('timestep', 'hourly'...); None
+        (the default since task H4 of the review of accim 1.2.0, finding A4-3; ``('hourly',)`` before) for those of the
+        EMS outputs of the model (those of the ACCIS), so that ``Table`` reads them with the other outputs.
+    :return: The hook (:class:`AthbSetpointHook`), with the other arguments (see it: ``met`` greater than 0, warnings
+        out of the ranges of ISO 7730:2025 of the metabolic rate and the air speed).
     :raises ValueError: If the model has no ACCIS of accim 1.0.0 or later, is in mixed mode (whose windows follow the
         setpoints of the ACCIS), has already the objects of the ATHB or of the SET (:func:`apply_set_setpoints`), or
         an argument is not valid.
@@ -518,13 +591,14 @@ def apply_athb_setpoints(building, athb_cooling_setpoint: float = 0.5, athb_heat
                             athb_heating_setpoint=athb_heating_setpoint, met=met, air_speed=air_speed, clo=clo,
                             tolerance_k=tolerance_k, max_iterations=max_iterations,
                             temperature_range=temperature_range)
-    _add_hook_objects(building, keys, _SENSORS, _OUTPUTS, output_frequencies)
+    _add_hook_objects(building, keys, _SENSORS, _OUTPUTS, _output_frequencies(building, output_frequencies),
+                      summed=_SUMMED_OUTPUTS)
     return hook
 
 
 def zone_outputs(zone: str) -> List[str]:
-    """The names of the outputs of the ATHB of a zone."""
-    return [f'{prefix}_{zone}' for prefix in _OUTPUTS]
+    """The names of the outputs of the ATHB of a zone (the averaged ones, and ``ATHB_saturated_<zone>``)."""
+    return [f'{prefix}_{zone}' for prefix in (*_OUTPUTS, *_SUMMED_OUTPUTS)]
 
 
 def set_zone_outputs(zone: str) -> List[str]:
