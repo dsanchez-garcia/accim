@@ -142,6 +142,9 @@ Lo que ya está en otros documentos no se repite aquí:
   `days` de `CustomRegime`), y una norma de confort definida por sus datos puede tener varios regímenes (clave
   `regimes` de los YAML), con el programa de los regímenes del modelo personalizado; la documentación explica el
   `CustomRegime_<zona>` promediado y la alternancia con `'hvac_off'`/`'hvac_on'` (sección 36).
+- **H6.** La vestimenta puede ser una función de una temperatura exterior del EPW
+  (`set_pmv_input_parameters(clothing_insulation=función, epw=..., clothing_outdoor_metric='RMOT')`), escrita como un
+  `Schedule:File`; `read_epw_dry_bulb` lee los EPW como Latin-1 (sección 37).
 - Las categorías del PMV y la aproximación de la corrección del metabolismo se han comprobado en ISO 7730:2025 y
   EN 16798-1:2019, y el modelo dinámico de vestimenta de A5, en Schiavon y Lee (2013) y ASHRAE 55-2020 (sección 6).
 - Lo que quedaba abierto se ha comprobado: el golden master y las pruebas de EnergyPlus 26.1 y 26.2, también la de A5
@@ -2046,3 +2049,34 @@ regímenes y sus errores, las líneas EMS, `compute_setpoints` igual al del mode
 regímenes, `AddAccis`/`modify_accis`, y con EnergyPlus 25.1 la comprobación 4 sin discrepancias y ambos backends
 idénticos); `tests/core/test_custom_regimes.py`, `tests/core/test_comfort_standard_registry.py`,
 `tests/core/test_gui.py` y `tests/parametric_and_optimisation/test_registered_comfort_standards.py`.
+
+## 37. La vestimenta en función de la temperatura exterior (H6)
+
+Tarea H6 de la revisión v04 (A5, decisión de su §6).
+
+**Antes.** `set_pmv_input_parameters` aceptaba para `clothing_insulation` un número, un diccionario por estación o
+`'dynamic_ashrae55'`; la vestimenta en función de la temperatura exterior (`callable(rmot) -> clo`) estaba bloqueada.
+`read_epw_dry_bulb` (E1) leía los EPW como UTF-8, y el `Seville.epw` de los archivos de ejemplo, cuya cabecera tiene
+caracteres en otra codificación, paraba `outdoor_metrics` y `compute_setpoints` con un `UnicodeDecodeError`.
+
+**Ahora.**
+
+- `clothing_insulation` puede ser una función: recibe una `pandas.Series` con los valores horarios de una columna de
+  `accim.sim.preview.outdoor_metrics(epw)` (`clothing_outdoor_metric`, `'RMOT'` por defecto, la media móvil de
+  EN 16798-1 con α = 0,8; las demás en `CLOTHING_OUTDOOR_METRICS`) y devuelve la vestimenta de cada hora. accim la
+  escribe en un CSV en la carpeta del modelo (con el nombre de la schedule, del EPW y 8 caracteres del SHA-1 de los
+  valores) que lee un `Schedule:File` `Sch_Clo_<people>` (`accim.sim.schedule_files`), en lugar del
+  `Schedule:Compact`; un número o un diccionario vuelven a escribir el `Schedule:Compact` y quitan el `Schedule:File`.
+- `clothing_insulation_values(función, epw, outdoor_metric)` da los valores sin modelo; `ValueError` (antes de cambiar
+  el modelo) sin `epw`, con una función para otro parámetro, con valores negativos o no numéricos o sin un valor por
+  hora; avisos fuera de 0–2 clo (ISO 7730:2025) y por encima de 1,5 clo (ASHRAE 55-2020).
+- `read_epw_dry_bulb` lee los EPW como Latin-1 (cuyos bytes son todos caracteres; los registros son ASCII).
+- Documentación (4.8): la función, su temperatura exterior y su archivo, y que EnergyPlus 25.1 informa de *Zone Thermal
+  Comfort Clothing Value* solo con los métodos `DynamicClothingModelASHRAE55` y `CalculationMethodSchedule` (0 con
+  `ClothingInsulationSchedule`, cuyo PMV usa la schedule igualmente: la salida *Schedule Value* de `Sch_Clo_<people>`
+  da la vestimenta).
+- Pruebas: `tests/core/test_pmv_input_parameters.py` (la función de RMOT y de `Tout`, el archivo y sus campos, la
+  sustitución entre función, número y diccionario, los valores por zona, los errores sin cambiar el modelo, los avisos;
+  con EnergyPlus 25.1, la *Schedule Value* y la vestimenta del método `CalculationMethodSchedule` iguales a la función
+  hora a hora en una semana de enero y otra de julio, con el horario de verano del modelo) y
+  `tests/core/test_preview.py` (un EPW con la cabecera en Latin-1).

@@ -79,13 +79,15 @@ def read_epw_dry_bulb(epw: PathLike) -> pd.DataFrame:
     """The hourly dry-bulb temperatures of a weather file (EPW), one row per hour.
 
     The first 8 lines of the file are its header, as EnergyPlus reads it; the records are the hours 1 to 24 of each
-    day (the hour 1 is the first hour of the day).
+    day (the hour 1 is the first hour of the day). The file is read as Latin-1, whose bytes are all characters: the
+    header of many weather files has the names of their location in another encoding than UTF-8 (such as the Seville.epw
+    of the sample files of accim), and the records are ASCII.
 
     :param epw: The path of the weather file.
     :return: A DataFrame with the columns ``month``, ``day``, ``hour`` and ``dry_bulb`` (°C).
     :raises ValueError: If the file does not have whole days of hourly records.
     """
-    data = pd.read_csv(epw, skiprows=8, header=None, usecols=[1, 2, 3, 6])
+    data = pd.read_csv(epw, skiprows=8, header=None, usecols=[1, 2, 3, 6], encoding='latin-1')
     data.columns = ['month', 'day', 'hour', 'dry_bulb']
     hours = data['hour'].to_numpy()
     if len(data) == 0 or len(data) % 24 or not (hours.reshape(-1, 24) == np.arange(1, 25)).all():

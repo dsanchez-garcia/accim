@@ -73,6 +73,17 @@ def test_read_epw_dry_bulb(epw, tmp_path):
         read_epw_dry_bulb(tmp_path / 'short.epw')
 
 
+def test_read_epw_dry_bulb_with_a_header_that_is_not_utf8(epw, tmp_path):
+    # The headers of many weather files have the names of their location in another encoding (Latin-1, as the
+    # Seville.epw of the sample files of accim): the records are read all the same
+    lines = epw.read_text(encoding='utf-8').splitlines()
+    lines[0] = 'LOCATION,Sevilla,Andalucía,ESP'
+    latin = tmp_path / 'latin.epw'
+    latin.write_bytes(('\n'.join(lines) + '\n').encode('latin-1'))
+    pd.testing.assert_frame_equal(read_epw_dry_bulb(latin), read_epw_dry_bulb(epw))
+    pd.testing.assert_frame_equal(outdoor_metrics(latin), outdoor_metrics(epw))
+
+
 def test_outdoor_metrics_of_a_constant_temperature(tmp_path):
     metrics = outdoor_metrics(_write_epw(tmp_path / 'constant.epw', [15.0] * 8760), alpha=0.7, days=10)
 

@@ -24,6 +24,24 @@ it here as answered).
 
 ## Open
 
+## 2026-11-10 — H6: the outdoor temperature of the functions of the clothing insulation, and their CSV files
+- Context: the decision of A5 in v04 §6 is `clothing_insulation=callable`, written as a `Schedule:File` generated from
+  the weather file with `accim.sim.preview.outdoor_metrics` (the TODO says `callable(rmot) -> clo`; v03 says "a
+  callable that maps an outdoor-temperature pandas Series to clo values"). Neither says which temperature, with which
+  alpha, how the function is called, nor where the file goes.
+- Why it matters: the clothing insulation of the occupants of each hour, and the files that the models read.
+- Options considered: (i) the function receives a pandas Series with the hourly values of a column of
+  `outdoor_metrics(epw)` with its defaults (α = 0.8, 30 days), `clothing_outdoor_metric='RMOT'` by default (the
+  running mean of EN 16798-1, B.1), and must return one value per hour (no element-wise fallback, so that a function
+  of one value fails with a message instead of being called 8760 times); `epw` required; the values must be at least
+  0 clo, with the warnings of the parametric parameter `clothing_insulation` (0–2 clo, ISO 7730; 1.5 clo, ASHRAE 55);
+  the CSV file in the folder of the model, named `Sch_Clo_<people>_<weather file>_<8 characters of the SHA-1 of the
+  values>.csv`, so that other values (or other models in the folder) do not replace the file that a model reads; the
+  GUI takes numbers only (implemented); (ii) the whole DataFrame of `outdoor_metrics` as the argument; (iii) alpha and
+  days of the metric as arguments.
+- Owner: the author.
+- Status: open; option (i) implemented provisionally (`accim.sim.apmv.clothing_insulation_values`).
+
 ## 2026-11-10 — H5: the schema of the key regimes of the YAML files of the comfort standards
 - Context: decision 4 of v04 §6 gives the key `regimes:` "with the same schema as CustomRegime of B2 (slope, intercept,
   offsets, limits, condition, outdoor_metric optional)", and says that a scalar `comfort_temperature` is a single regime

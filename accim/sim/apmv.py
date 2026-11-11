@@ -14,11 +14,15 @@ that control thermal comfort dynamically. This module also has the functions tha
 setpoints (:func:`add_vrf_system`, :func:`set_pmv_input_parameters`...).
 """
 
+import hashlib
 import numbers
+import os
 import warnings
 from datetime import date, timedelta
-from typing import Any, Dict, List, Optional, Sequence, Union
+from pathlib import Path
+from typing import Any, Callable, Dict, List, Optional, Sequence, Union
 
+import numpy as np
 import pandas as pd
 
 from accim._deprecation import accepts_legacy_kwargs
@@ -30,12 +34,14 @@ from accim.utils.editing import transform_ddmm_to_int
 from accim.utils.people import get_people_definition, get_people_objects, is_people_instance
 
 __all__ = [
+    'CLOTHING_OUTDOOR_METRICS',
     'add_ems_debug_output',
     'add_vrf_system',
     'apply_apmv_setpoints',
     'apply_epmv_setpoints',
     'apply_pmv_setpoints',
     'change_adaptive_coeff',
+    'clothing_insulation_values',
     'generate_df_from_args',
     'get_adaptive_coefficients',
     'get_available_target_names',
@@ -86,6 +92,15 @@ _accepts_legacy_arguments = accepts_legacy_kwargs(_LEGACY_ARGUMENTS)
 _DYNAMIC_CLOTHING = 'dynamic_ashrae55'
 #: The keys of the dictionaries of set_pmv_input_parameters with a value for each season
 _SEASONS = ('heating_season', 'cooling_season')
+#: The outdoor temperatures of which the clothing insulation of :func:`set_pmv_input_parameters` can be a function
+#: (task H6 of the review of accim 1.2.0, A5): the hourly columns of :func:`accim.sim.preview.outdoor_metrics` of the
+#: weather file, with its defaults (α = 0.8 and 30 days): the dry-bulb temperature of each hour ('Tout'), the mean,
+#: maximum and minimum of the day ('daily_mean', 'daily_max' and 'daily_min'), the running mean of EN 16798-1:2019,
+#: formula (B.1) ('RMOT', the default), its approximate formula (B.2) ('RMOT_7day'), the mean of the 30 previous days of
+#: ASHRAE 55-2020, 5.4.2.1 ('PMOT_n'), the reference temperature of the Dutch ATG ('Te_ref_nl') and the monthly mean
+#: ('monthly_mean')
+CLOTHING_OUTDOOR_METRICS = ('Tout', 'daily_mean', 'daily_max', 'daily_min', 'RMOT', 'RMOT_7day', 'PMOT_n', 'Te_ref_nl',
+                            'monthly_mean')
 
 
 # ==============================================================================
@@ -679,7 +694,13 @@ def _seasonal_schedule_fields(heating: Any, cooling: Any, start: int, end: int) 
 
 
 def _write_compact_schedule(building: IDF, name: str, fields: List[str]) -> None:
-    """Adds a Schedule:Compact object with these fields (after its type limits), replacing the one with this name."""
+    """Adds a Schedule:Compact object with these fields (after its type limits), replacing the one with this name (or
+    the Schedule:File object of a function of the clothing insulation, :func:`_write_clothing_schedule`)."""
+    from accim.sim.schedule_files import remove_schedule_file
+
+    # Only the models with Schedule:File objects can have one with this name (eppy gives an empty sequence otherwise)
+    if building.idfobjects.get('SCHEDULE:FILE'):
+        remove_schedule_file(building, name)
     existing = building.getobject('Schedule:Compact', name)
     if existing is not None:
         building.removeidfobject(existing)
@@ -687,17 +708,91 @@ def _write_compact_schedule(building: IDF, name: str, fields: List[str]) -> None
                           **{f'Field_{n}': field for n, field in enumerate(fields, start=1)})
 
 
+def clothing_insulation_values(function: Callable, epw: Union[str, os.PathLike],
+                               outdoor_metric: str = 'RMOT') -> pd.Series:
+    """The clothing insulation (clo) of each hour of a weather file, as a function of one of its outdoor temperatures:
+    the values that :func:`set_pmv_input_parameters` writes in the Schedule:File object of the clothing insulation of
+    the People objects with ``clothing_insulation=function`` (task H6 of the review of accim 1.2.0, A5).
+
+    The function receives a pandas Series with the hourly values of the column ``outdoor_metric`` of
+    :func:`accim.sim.preview.outdoor_metrics` of the weather file (with its defaults, α = 0.8 and 30 days), indexed by
+    the end of each hour, and returns the clothing insulation of each hour (one value per hour, in the same order), so
+    it works on whole series (with numpy, such as ``np.where`` or ``np.clip``, or ``np.vectorize`` for a function of
+    one value).
+
+    :param function: The function of the outdoor temperature.
+    :param epw: The weather file (EPW) of the simulation.
+    :param outdoor_metric: A column of :data:`CLOTHING_OUTDOOR_METRICS`: 'RMOT' (the default, the running mean of
+        EN 16798-1:2019, formula B.1, with α = 0.8), 'Tout', 'daily_mean'...
+    :return: The clothing insulation of each hour, indexed by the end of the hour.
+    :raises ValueError: If the function is not callable, the outdoor metric or the weather file is not valid, or the
+        function does not return one number of at least 0 for each hour (warning outside 0 to 2 clo, the range of
+        ISO 7730:2025, section 4, :data:`accim.constants.PMV_INPUT_RANGES`, and above 1.5 clo, the limit of
+        ASHRAE 55-2020, :data:`accim.constants.ASHRAE55_MAX_CLOTHING_INSULATION`).
+    """
+    from accim.constants import ASHRAE55_MAX_CLOTHING_INSULATION, PMV_INPUT_RANGES
+    from accim.sim.preview import outdoor_metrics
+
+    if not callable(function):
+        raise ValueError(f'clothing_insulation must be a function of an outdoor temperature, not {function!r}.')
+    if outdoor_metric not in CLOTHING_OUTDOOR_METRICS:
+        raise ValueError(f'clothing_outdoor_metric must be one of {list(CLOTHING_OUTDOOR_METRICS)} (the hourly columns '
+                         f'of accim.sim.preview.outdoor_metrics), not {outdoor_metric!r}.')
+    if epw is None or not os.path.isfile(epw):
+        raise ValueError(f'A function of clothing_insulation needs the weather file of the simulation (epw), whose '
+                         f'outdoor temperatures it takes, not {epw!r}.')
+    temperatures = outdoor_metrics(epw).set_index('datetime')[outdoor_metric]
+    name = getattr(function, '__name__', repr(function))
+    try:
+        values = np.asarray(function(temperatures.copy()), dtype=float)
+    except (TypeError, ValueError) as error:
+        raise ValueError(f'The function {name} of clothing_insulation could not give the clothing insulation of the '
+                         f'hourly values of {outdoor_metric} (a pandas Series): {error}. Write it with numpy '
+                         f'(np.where, np.clip...), or vectorise it (np.vectorize).') from error
+    if values.shape != (len(temperatures),):
+        raise ValueError(f'The function {name} of clothing_insulation must return one value for each of the '
+                         f'{len(temperatures)} hours of the weather file, not an array of shape {values.shape}.')
+    if not np.isfinite(values).all() or (values < 0).any():
+        raise ValueError(f'The clothing insulation of the function {name} must be numbers of at least 0 clo (it has '
+                         f'{int((~np.isfinite(values) | (values < 0)).sum())} values that are not).')
+    low, high = PMV_INPUT_RANGES['clothing_insulation']
+    if values.min() < low or values.max() > high:
+        warnings.warn(f'The clothing insulation of the function {name} goes from {values.min():.2f} to '
+                      f'{values.max():.2f} clo, outside {low} to {high} clo, the range in which ISO 7730:2025 '
+                      f'(section 4) uses the PMV.')
+    elif values.max() > ASHRAE55_MAX_CLOTHING_INSULATION:
+        warnings.warn(f'The clothing insulation of the function {name} reaches {values.max():.2f} clo, above '
+                      f'{ASHRAE55_MAX_CLOTHING_INSULATION} clo, with which ASHRAE 55-2020 does not use the PMV.')
+    return pd.Series(values, index=temperatures.index, name='clothing_insulation')
+
+
+def _write_clothing_schedule(building: IDF, name: str, values: pd.Series, epw: Union[str, os.PathLike]) -> Path:
+    """Write the hourly clothing insulation of a function as a Schedule:File object of the model
+    (:func:`accim.sim.schedule_files.write_schedule_file`), replacing the Schedule:Compact object with its name: a CSV
+    file in the folder of the model, named after the schedule, the weather file and its values (so that the files of
+    other values, or of other models in the folder, are not replaced)."""
+    from accim.sim.schedule_files import write_schedule_file
+
+    existing = building.getobject('Schedule:Compact', name)
+    if existing is not None:
+        building.removeidfobject(existing)
+    digest = hashlib.sha1(','.join(repr(float(value)) for value in values).encode('utf-8')).hexdigest()[:8]
+    return write_schedule_file(building, name, values.to_numpy(), f'{name}_{Path(os.fspath(epw)).stem}_{digest}.csv')
+
+
 @_accepts_legacy_arguments
 def set_pmv_input_parameters(
         building: IDF,
         activity_level: Optional[Union[float, Dict[str, Any]]] = None,
-        clothing_insulation: Optional[Union[float, str, Dict[str, Any]]] = None,
+        clothing_insulation: Optional[Union[float, str, Dict[str, Any], Callable]] = None,
         air_velocity: Optional[Union[float, Dict[str, float]]] = None,
         work_efficiency: Optional[Union[float, Dict[str, float]]] = None,
         verbose: bool = True,
         *,
         cooling_season_start: Union[float, str] = 121,
         cooling_season_end: Union[float, str] = 274,
+        epw: Optional[Union[str, os.PathLike]] = None,
+        clothing_outdoor_metric: str = 'RMOT',
 ):
     """
     Modifies 'People' objects in the IDF to set the parameters that influence the PMV calculation.
@@ -723,10 +818,19 @@ def set_pmv_input_parameters(
     insulation schedule. A number or a dictionary by season sets the method ClothingInsulationSchedule, the default of
     EnergyPlus, if the People object had another one.
 
+    Since accim 1.2.0 (task H6 of its review, A5), the clothing insulation can also be a function of an outdoor
+    temperature of the weather file of the simulation (``epw``): ``clothing_insulation=function`` gives the clothing
+    insulation of each hour of the file from the hourly values of ``clothing_outdoor_metric``
+    (:func:`clothing_insulation_values`, 'RMOT' by default, the running mean of EN 16798-1 with α = 0.8, from
+    :func:`accim.sim.preview.outdoor_metrics`), written as a Schedule:File object ``Sch_Clo_<people>`` instead of the
+    Schedule:Compact object, with a CSV file in the folder of the model (:mod:`accim.sim.schedule_files`: the values of
+    the hours of the weather file, in standard time).
+
     :param building: The BESOS/eppy IDF object.
     :param activity_level: Metabolic rate in W/person, or a dictionary by season. If None, ignores this parameter.
-    :param clothing_insulation: Clothing insulation in clo units, a dictionary by season, or 'dynamic_ashrae55'. If
-        None, ignores this parameter.
+    :param clothing_insulation: Clothing insulation in clo units, a dictionary by season, 'dynamic_ashrae55' or a
+        function of an outdoor temperature of ``epw`` (see :func:`clothing_insulation_values`). If None, ignores this
+        parameter.
     :param air_velocity: Air velocity in m/s. If None, ignores this parameter.
     :param work_efficiency: Work efficiency (0.0 - 1.0). If None, ignores this parameter.
     :param verbose: If True, prints created schedules to console.
@@ -734,11 +838,16 @@ def set_pmv_input_parameters(
         or 'dd/mm' (121, 1 May, by default, as in the setpoints).
     :param cooling_season_end: The day after the last day of the cooling season of the dictionaries by season: the day
         of the year or 'dd/mm' (274, 1 October, by default, as in the setpoints).
+    :param epw: The weather file of the simulation, which a function of the clothing insulation needs.
+    :param clothing_outdoor_metric: The outdoor temperature of the functions of the clothing insulation, a column of
+        :data:`CLOTHING_OUTDOOR_METRICS` ('RMOT' by default).
     :raises ValueError: If an activity level is given for a People object whose activity level has the metabolic
         correction of :func:`apply_epmv_setpoints`, which reads it from its schedule: set it before applying them.
         Also, if a dictionary by season does not have the keys 'heating_season' and 'cooling_season' only, or has a
-        value that is not a number, if 'dynamic_ashrae55' is given for another parameter, or if the days of the
-        cooling season are not days of the year or are the same day.
+        value that is not a number, if 'dynamic_ashrae55' or a function is given for another parameter, if the days of
+        the cooling season are not days of the year or are the same day, or if a function of the clothing insulation
+        has no weather file or does not give valid values (:func:`clothing_insulation_values`); the model does not
+        change.
     """
     # 0. The cooling season of the values by season
     season_start = _day_of_year('cooling_season_start', cooling_season_start)
@@ -774,9 +883,17 @@ def set_pmv_input_parameters(
             return _DYNAMIC_CLOTHING
         return value
 
+    def check_function(value, name):
+        # Only the clothing insulation can be a function of an outdoor temperature (task H6 of the review of 1.2.0)
+        if callable(value) and name != 'clothing_insulation':
+            raise ValueError(f'A function (of an outdoor temperature of the weather file) is a value of '
+                             f'clothing_insulation, not of {name}.')
+        return value
+
     # Helper to map input args (Float, Dict, or None) to a lookup dictionary
-    def map_arg_to_lookup(arg_val, label, arg_name=None):
+    def map_arg_to_lookup(arg_val, label, arg_name=None, name=None):
         # arg_name: the name of the argument if it takes values by season ('dynamic_ashrae55' for the clothing)
+        name = name or arg_name
         data = {}
         if arg_val is None:
             return data  # Empty dict will return None on .get()
@@ -788,19 +905,28 @@ def set_pmv_input_parameters(
                 warnings.warn(f"Keys dropped from {label}: {dropped}")
 
             for k in df_keys:
-                value = arg_val.get(k, None)  # None if key missing in user dict
+                value = check_function(arg_val.get(k, None), name)  # None if key missing in user dict
                 data[k] = normalize(value, arg_name) if arg_name and value is not None else value
         else:
             # Apply single value to all targets
-            value = normalize(arg_val, arg_name) if arg_name else arg_val
+            value = check_function(arg_val, name)
+            value = normalize(value, arg_name) if arg_name else value
             for k in df_keys:
                 data[k] = value
         return data
 
     val_map_activity = map_arg_to_lookup(activity_level, 'activity', 'activity_level')
     val_map_clo = map_arg_to_lookup(clothing_insulation, 'clo', 'clothing_insulation')
-    val_map_vel = map_arg_to_lookup(air_velocity, 'vel')
-    val_map_eff = map_arg_to_lookup(work_efficiency, 'eff')
+    val_map_vel = map_arg_to_lookup(air_velocity, 'vel', name='air_velocity')
+    val_map_eff = map_arg_to_lookup(work_efficiency, 'eff', name='work_efficiency')
+    if clothing_outdoor_metric not in CLOTHING_OUTDOOR_METRICS:
+        raise ValueError(f'clothing_outdoor_metric must be one of {list(CLOTHING_OUTDOOR_METRICS)} (the hourly columns '
+                         f'of accim.sim.preview.outdoor_metrics), not {clothing_outdoor_metric!r}.')
+    # The hourly values of the functions of the clothing insulation, before changing the model
+    clothing_values: Dict[int, pd.Series] = {}
+    for function in val_map_clo.values():
+        if callable(function) and id(function) not in clothing_values:
+            clothing_values[id(function)] = clothing_insulation_values(function, epw, clothing_outdoor_metric)
 
     # 2. Map each People object to the keys of the targets of its instances
     people_to_keys: Dict[str, List[str]] = {}
@@ -867,16 +993,22 @@ def set_pmv_input_parameters(
                     print(f"Set Clothing for '{p_name}': the dynamic clothing model of ASHRAE 55 "
                           f"(DynamicClothingModelASHRAE55)")
                 continue
-            if isinstance(value, tuple):
-                _, heating, cooling = value
-                fields = _seasonal_schedule_fields(heating, cooling, season_start, season_end)
-                message = (f"Set {label} for '{p_name}': {heating}{unit} in the heating season and "
-                           f"{cooling}{unit} in the cooling season")
-            else:
-                fields = ['Through: 12/31', 'For: AllDays', f'Until: 24:00,{value}']
-                message = f"Set {label} for '{p_name}': {value}{unit}"
             sch_name = f'Sch_{short_name}_{p_name_san}'
-            _write_compact_schedule(building, sch_name, fields)
+            if callable(value):
+                # A function of an outdoor temperature of the weather file: a Schedule:File object (task H6)
+                path = _write_clothing_schedule(building, sch_name, clothing_values[id(value)], epw)
+                message = (f"Set {label} for '{p_name}': {getattr(value, '__name__', repr(value))} of "
+                           f"{clothing_outdoor_metric} of {Path(os.fspath(epw)).name} (Schedule:File, {path.name})")
+            else:
+                if isinstance(value, tuple):
+                    _, heating, cooling = value
+                    fields = _seasonal_schedule_fields(heating, cooling, season_start, season_end)
+                    message = (f"Set {label} for '{p_name}': {heating}{unit} in the heating season and "
+                               f"{cooling}{unit} in the cooling season")
+                else:
+                    fields = ['Through: 12/31', 'For: AllDays', f'Until: 24:00,{value}']
+                    message = f"Set {label} for '{p_name}': {value}{unit}"
+                _write_compact_schedule(building, sch_name, fields)
             setattr(people, field, sch_name)
             if short_name == 'Clo':
                 # The clothing insulation schedule is only read with the method ClothingInsulationSchedule

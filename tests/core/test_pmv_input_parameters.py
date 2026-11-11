@@ -9,6 +9,9 @@ Calculation Method DynamicClothingModelASHRAE55 of the People objects. The ``sch
 clothing insulation schedule, and ``calculation_method_schedule`` that of the method CalculationMethodSchedule (the
 choice of the author). The tests that simulate run the sample model with EnergyPlus 25.1. The People:Instance objects
 of EnergyPlus 26.2 are tested in test_people_instance.py and test_energyplus_versions.py.
+
+The clothing insulation can also be a function of an outdoor temperature of the weather file (task H6 of the review of
+accim 1.2.0): its hourly values are a Schedule:File object, which EnergyPlus 25.1 reads hour by hour.
 """
 import shutil
 import subprocess
@@ -419,3 +422,142 @@ def test_energyplus_with_the_calculation_method_schedule(tmp_path):
         rows = results[results['date'] == day]
         after_six = rows.index[rows['time'] > '06:00:00']
         np.testing.assert_allclose(clothing[after_six], _ashrae55_clothing(outdoor[after_six[0]]), rtol=1e-6)
+
+
+# The clothing insulation as a function of an outdoor temperature (task H6 of the review of accim 1.2.0) -------------
+
+def _clothing_of_rmot(rmot):
+    """A function of the running mean outdoor temperature, to show the argument (not a published model)."""
+    return np.clip(1.2 - 0.03 * rmot, 0.4, 1.0)
+
+
+def _hourly(temperature):
+    """A function of the dry-bulb temperature of each hour, whose values differ from hour to hour (not a model)."""
+    return 0.5 + temperature / 100
+
+
+def _schedule_file_values(building, name):
+    from accim.sim.schedule_files import schedule_file_path
+
+    return pd.read_csv(schedule_file_path(building, name), float_precision='round_trip')[name].to_numpy()
+
+
+def test_the_clothing_insulation_as_a_function_of_the_outdoor_temperature(tmp_path):
+    from accim.sim.preview import outdoor_metrics
+
+    building = _model(tmp_path)
+    apmv.set_pmv_input_parameters(building, clothing_insulation=_clothing_of_rmot, epw=SAMPLE_EPW, verbose=False)
+    metrics = outdoor_metrics(SAMPLE_EPW)
+    expected = _clothing_of_rmot(metrics['RMOT'].to_numpy())
+    for zone in ZONES:
+        people, name = _people(building, zone)
+        assert people.Clothing_Insulation_Schedule_Name == f'Sch_Clo_{name}'
+        assert building.getobject('Schedule:Compact', f'Sch_Clo_{name}') is None
+        schedule = building.getobject('Schedule:File', f'Sch_Clo_{name}')
+        assert (schedule.Column_Number, schedule.Rows_to_Skip_at_Top, schedule.Number_of_Hours_of_Data,
+                schedule.Interpolate_to_Timestep, schedule.Minutes_per_Item) == (1, 1, 8760, 'No', 60)
+        # In the folder of the model, named after the schedule, the weather file and the values
+        path = Path(schedule.File_Name)
+        assert path.parent == tmp_path and path.name.startswith(f'Sch_Clo_{name}_Seville_')
+        np.testing.assert_array_equal(_schedule_file_values(building, f'Sch_Clo_{name}'), expected)
+        assert people.Thermal_Comfort_Model_1_Type == 'Fanger'
+    # clothing_insulation_values gives them without a model
+    values = apmv.clothing_insulation_values(_clothing_of_rmot, SAMPLE_EPW)
+    assert values.name == 'clothing_insulation' and list(values.index) == list(metrics['datetime'])
+    np.testing.assert_array_equal(values.to_numpy(), expected)
+    # Another outdoor temperature: the dry-bulb temperature of each hour
+    apmv.set_pmv_input_parameters(building, clothing_insulation=_hourly, epw=SAMPLE_EPW,
+                                  clothing_outdoor_metric='Tout', verbose=False)
+    np.testing.assert_array_equal(_schedule_file_values(building, 'Sch_Clo_People_Block1_Zone1'),
+                                  _hourly(metrics['Tout'].to_numpy()))
+
+
+def test_a_function_replaces_the_other_values_of_the_clothing_insulation(tmp_path):
+    building = _model(tmp_path)
+    people, name = _people(building, 'Block1:Zone1')
+    apmv.set_pmv_input_parameters(building, clothing_insulation='dynamic_ashrae55', verbose=False)
+    apmv.set_pmv_input_parameters(building, clothing_insulation=_clothing_of_rmot, epw=SAMPLE_EPW, verbose=False)
+    # The schedule is read again
+    assert people.Clothing_Insulation_Calculation_Method == 'ClothingInsulationSchedule'
+    first = building.getobject('Schedule:File', f'Sch_Clo_{name}').File_Name
+    # The same values, the same file; other values, another file (the first one stays for the models that read it)
+    apmv.set_pmv_input_parameters(building, clothing_insulation=_clothing_of_rmot, epw=SAMPLE_EPW, verbose=False)
+    assert building.getobject('Schedule:File', f'Sch_Clo_{name}').File_Name == first
+    apmv.set_pmv_input_parameters(building, clothing_insulation=_hourly, epw=SAMPLE_EPW, verbose=False)
+    second = building.getobject('Schedule:File', f'Sch_Clo_{name}').File_Name
+    assert second != first and Path(first).is_file() and Path(second).is_file()
+    # A dictionary by season (or a number) replaces it
+    apmv.set_pmv_input_parameters(building, clothing_insulation=CLOTHING, verbose=False)
+    assert building.getobject('Schedule:File', f'Sch_Clo_{name}') is None
+    assert [_value(building, f'Sch_Clo_{name}', day) for day in (120, 121)] == [1.0, 0.5]
+    # The values by zone
+    apmv.set_pmv_input_parameters(building, clothing_insulation={'Block1:Zone1': _clothing_of_rmot,
+                                                                  'Block1:Zone2': 0.7},
+                                  epw=SAMPLE_EPW, verbose=False)
+    _, other = _people(building, 'Block1:Zone2')
+    assert building.getobject('Schedule:File', f'Sch_Clo_{name}') is not None
+    assert building.getobject('Schedule:File', f'Sch_Clo_{other}') is None
+    assert _fields(building, f'Sch_Clo_{other}') == _periods(('12/31', 0.7))
+
+
+@pytest.mark.parametrize('arguments, message', [
+    (dict(clothing_insulation=_clothing_of_rmot), r'needs the weather file of the simulation \(epw\)'),
+    (dict(activity_level=_clothing_of_rmot, epw=SAMPLE_EPW),
+     'is a value of clothing_insulation, not of activity_level'),
+    (dict(air_velocity={'Block1:Zone1': _clothing_of_rmot}, epw=SAMPLE_EPW),
+     'is a value of clothing_insulation, not of air_velocity'),
+    (dict(clothing_insulation=_clothing_of_rmot, epw=SAMPLE_EPW, clothing_outdoor_metric='rmot'),
+     'clothing_outdoor_metric must be one of'),
+    (dict(clothing_insulation=lambda t: 0.5, epw=SAMPLE_EPW),
+     'must return one value for each of the 8760 hours of the weather file'),
+    (dict(clothing_insulation=lambda t: t - 100, epw=SAMPLE_EPW), 'must be numbers of at least 0 clo'),
+    (dict(clothing_insulation=lambda t: 1.0 if t < 15 else 0.5, epw=SAMPLE_EPW),
+     r'could not give the clothing insulation of the hourly values of RMOT \(a pandas Series\)'),
+])
+def test_the_wrong_functions_stop_before_changing_the_model(tmp_path, arguments, message):
+    building = _model(tmp_path)
+    before = building.idfstr()
+
+    with pytest.raises(ValueError, match=message):
+        apmv.set_pmv_input_parameters(building, verbose=False, **arguments)
+    assert building.idfstr() == before
+    assert not list(tmp_path.glob('*.csv'))
+
+
+def test_the_clothing_insulation_of_a_function_out_of_the_ranges_warns(tmp_path):
+    with pytest.warns(UserWarning, match=r'above 1.5 clo, with which ASHRAE 55-2020 does not use the PMV'):
+        apmv.clothing_insulation_values(lambda t: t * 0 + 1.8, SAMPLE_EPW)
+    with pytest.warns(UserWarning, match=r'outside 0.0 to 2.0 clo, the range in which ISO 7730:2025'):
+        apmv.clothing_insulation_values(lambda t: t * 0 + 2.5, SAMPLE_EPW)
+    with warnings.catch_warnings():
+        warnings.simplefilter('error')
+        apmv.clothing_insulation_values(_clothing_of_rmot, SAMPLE_EPW)
+
+
+@pytest.mark.skipif(not (_energyplus() and SAMPLE_IDF.exists() and SAMPLE_EPW.exists()),
+                    reason='needs EnergyPlus 25.1 and the sample files of the repository')
+def test_energyplus_reads_the_clothing_insulation_of_a_function(tmp_path):
+    building = _model(tmp_path)
+    apmv.set_pmv_input_parameters(building, clothing_insulation=_hourly, epw=SAMPLE_EPW, clothing_outdoor_metric='Tout',
+                                  verbose=False)
+    # EnergyPlus 25.1 reports the clothing insulation of its comfort models (Zone Thermal Comfort Clothing Value) with
+    # the methods DynamicClothingModelASHRAE55 and CalculationMethodSchedule, and 0 with ClothingInsulationSchedule:
+    # the method of a schedule whose value is always 1 takes the clothing insulation schedule, and reports it
+    set_clothing_method(building, 'CalculationMethodSchedule',
+                        calculation_method_schedule=_method_schedule(building, values=(1, 1, 1)), verbose=False)
+    # January, and July, with the daylight saving time of the model
+    results = _simulate(tmp_path, building, [((1, 1), (1, 3)), ((7, 1), (7, 3))],
+                        [('People Block1:Zone1', 'Zone Thermal Comfort Clothing Value'),
+                         ('Sch_Clo_People_Block1_Zone1', 'Schedule Value')])
+    clothing = _column(results, 'PEOPLE BLOCK1:ZONE1:Zone Thermal Comfort Clothing Value').to_numpy()
+    schedule = _column(results, 'SCH_CLO_PEOPLE_BLOCK1_ZONE1:Schedule Value').to_numpy()
+    values = apmv.clothing_insulation_values(_hourly, SAMPLE_EPW, 'Tout').to_numpy()
+    # The hour of the year of each timestep (the end of the timestep, in the standard time of the results)
+    days = pd.to_datetime('2002/' + results['date'], format='%Y/%m/%d').dt.dayofyear.to_numpy()
+    hours, minutes = (results['time'].str[:2].astype(int).to_numpy(), results['time'].str[3:5].astype(int).to_numpy())
+    hour_of_day = np.ceil((hours * 60 + minutes) / 60).astype(int)
+    expected = values[(days - 1) * 24 + hour_of_day - 1]
+    assert len(clothing) == 6 * 24 * 6
+    # The values of the hours of the weather file, in standard time also in July (the CSV file has them all)
+    np.testing.assert_allclose(schedule, expected, rtol=0, atol=1e-9)
+    np.testing.assert_allclose(clothing, expected, rtol=0, atol=1e-9)

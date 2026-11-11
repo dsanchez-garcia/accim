@@ -15,6 +15,20 @@ This log is a lightweight, session-scoped complement to the repository's
 existing tracking files — it does not replace them (see
 [[decisions.md#2026-09-13 — `notes/work-log.md` complements, not replaces, existing tracking files|the related decision]]).
 
+## 2026-11-10 — H6: the clothing insulation as a function of the outdoor temperature (branch `v1.2.0`, on the server)
+
+- **Objective**: task H6 of v04 §7 (A5, decision of §6): `clothing_insulation=callable` of `set_pmv_input_parameters`,
+  written as a `Schedule:File` from the weather file with `accim.sim.preview.outdoor_metrics`.
+- **Affected files**: `accim/sim/apmv.py`, `accim/sim/preview.py`, `tests/core/test_pmv_input_parameters.py`,
+  `tests/core/test_preview.py`, [[../docs/source/4_detailed use.md]] (4.8), [[../CHANGELOG.md]],
+  [[../CAMBIOS_CODIGO_v1.2.0.md]] (§37), [[../DEVLOG.md]], [[../TODO.md]], [[questions.md]].
+- **Finding or decision**: EnergyPlus 25.1 reads the Schedule:File hour by hour in standard time (also with the
+  daylight saving time of the model), but reports *Zone Thermal Comfort Clothing Value* as 0 with the method
+  `ClothingInsulationSchedule` (the PMV uses the schedule); `read_epw_dry_bulb` failed on the sample `Seville.epw`
+  (a header in Latin-1), fixed. The choices of the function, its temperature and the CSV name are in [[questions.md]].
+- **Validation**: see the entry of H6 in [[../DEVLOG.md]].
+- **Next step**: the session report (`notes/INFORME_SESION_v1.2.0_2026-11-10_2.md`).
+
 ## 2026-11-10 — H5: the outdoor metric of each regime, and several regimes in the YAML files (branch `v1.2.0`, on the server)
 
 - **Objective**: task H5 of v04 §7 (decisions 1 and 4 of §6, findings B2-1 and B2-2): an outdoor metric for each

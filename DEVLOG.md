@@ -36,6 +36,48 @@ Recommended flow: track active work in `TODO.md`, move completed outcomes to `DE
 ## Entries
 
 ### 2026-11-10
+#### [done] H6: the clothing insulation as a function of the outdoor temperature (branch `v1.2.0`)
+- Context: task H6 of v04 §7 (A5, the decision of its §6): `clothing_insulation=callable` of
+  `set_pmv_input_parameters`, written as a `Schedule:File` generated from the weather file with
+  `accim.sim.preview.outdoor_metrics`; no Erl version by sections.
+- Changes: `accim.sim.apmv`: `CLOTHING_OUTDOOR_METRICS` (the hourly columns of `outdoor_metrics`: 'Tout',
+  'daily_mean', 'daily_max', 'daily_min', 'RMOT', 'RMOT_7day', 'PMOT_n', 'Te_ref_nl', 'monthly_mean');
+  `clothing_insulation_values(function, epw, outdoor_metric='RMOT')` (the function receives the pandas Series of the
+  column, indexed by the end of each hour, and must return one number of at least 0 per hour; `ValueError` otherwise,
+  with a hint for the functions of one value; warnings outside 0–2 clo, `PMV_INPUT_RANGES`, ISO 7730:2025, and above
+  1.5 clo, `ASHRAE55_MAX_CLOTHING_INSULATION`, ASHRAE 55-2020, as the parametric parameter); `_write_clothing_schedule`
+  (`accim.sim.schedule_files.write_schedule_file`; the CSV file `Sch_Clo_<people>_<weather file>_<8 hex of the SHA-1 of
+  the values>.csv` in the folder of the model, so that other values or models do not replace it; the
+  `Schedule:Compact` of that name removed); `set_pmv_input_parameters(clothing_insulation=function, epw=...,
+  clothing_outdoor_metric='RMOT')` (keyword-only; the values of each function calculated before the model changes; a
+  function for another parameter is a `ValueError`; a number or a dictionary removes the `Schedule:File` of a function,
+  if the model has `Schedule:File` objects; the method ClothingInsulationSchedule set as for the numbers).
+  `accim.sim.preview.read_epw_dry_bulb` reads the weather files as Latin-1: the sample `Seville.epw` (a header in
+  Latin-1) stopped `outdoor_metrics`/`compute_setpoints` with a `UnicodeDecodeError`. Docs: section 4.8 (the function,
+  its outdoor temperature, its file, and the output of the clothing of EnergyPlus).
+- Measured with EnergyPlus 25.1 (the sample model, `Seville.epw`, 1-3 January and 1-3 July, timestep): the *Schedule
+  Value* of `Sch_Clo_<people>` is the value of the function in each hour of the weather file, in standard time also in
+  July (the model has daylight saving time; the schedule has Adjust Schedule for Daylight Savings No); *Zone Thermal
+  Comfort Clothing Value* is 0 in every timestep with the method ClothingInsulationSchedule (the same with a
+  `Schedule:Compact`, while the Fanger PMV is calculated), as E-F1 had seen, and it is the value of the schedule with
+  the method CalculationMethodSchedule (a method schedule of 1).
+- Provisional choice (`notes/questions.md`): the function gets a Series of a column of `outdoor_metrics` ('RMOT' by
+  default) and returns one value per hour; the name of the CSV file; the GUI takes numbers only.
+- Files: `accim/sim/apmv.py`, `accim/sim/preview.py`, `tests/core/test_pmv_input_parameters.py`,
+  `tests/core/test_preview.py`, `docs/source/4_detailed use.md`, `CHANGELOG.md`, `TODO.md` (the A5 entry removed),
+  `CAMBIOS_CODIGO_v1.2.0.md` (§37), `notes/questions.md`, `notes/work-log.md`.
+- Verification: `tests/core/test_pmv_input_parameters.py` (11 new tests: the function of RMOT and of `Tout`, the file
+  and its fields, the replacements by a number, a dictionary by season and other values, the values by zone, the errors
+  without changing the model nor writing a file, the warnings, and with EnergyPlus 25.1 the *Schedule Value* and the
+  clothing of the method CalculationMethodSchedule equal to the function hour by hour) and `tests/core/test_preview.py`
+  (a weather file with a Latin-1 header), with `test_people_instance.py` and `test_space_instance_names.py` (their fake
+  models have no `Schedule:File` class: the first run of the suite failed 3 of their tests, fixed by looking for the
+  `Schedule:File` of a function only in the models that have such objects): 119 passed; `tests/core` 1520 passed, 2 skipped (golden
+  master byte-identical); `tests/parametric_and_optimisation` 518 passed; the Sphinx build with the same 35 warnings;
+  the modified modules compile with Python 3.9.
+- Next step: the session report.
+
+### 2026-11-10
 #### [done] H5: the outdoor metric of each regime, and several regimes of a comfort standard (branch `v1.2.0`)
 - Context: task H5 of v04 §7: decision 1 of §6 (an outdoor metric for each regime of the custom model; the conditions
   compare the metric of the zone), decision 4 of §6 (the key `regimes:` of the YAML files of the comfort standards,
