@@ -15,6 +15,17 @@ This log is a lightweight, session-scoped complement to the repository's
 existing tracking files — it does not replace them (see
 [[decisions.md#2026-09-13 — `notes/work-log.md` complements, not replaces, existing tracking files|the related decision]]).
 
+## 2026-11-11 — The report of the session of the review v04 (branch `v1.2.0`, on the server)
+
+- **Objective**: the report that the task asks for once the list of v04 §7 is done: tasks and commits, deviations,
+  TODO entries, provisional decisions, tests and backends, blocked items.
+- **Affected files**: [[INFORME_SESION_v1.2.0_2026-11-10_2.md]], [[../DEVLOG.md]].
+- **Finding or decision**: every task of v04 §7 (Step 0, G1–G5, H1, E-F1, F1–F3, H2–H6) is done and pushed; still
+  blocked: CIBSE TM52/TM59, the jar of the Future Weather Generator and the validation study of F3; 23 provisional
+  decisions wait for the author in [[questions.md]].
+- **Validation**: the report checked against [[../DEVLOG.md]] and `git log`.
+- **Next step**: the answers of the author ([[questions.md]], [[../TODO.md]]).
+
 ## 2026-11-10 — H6: the clothing insulation as a function of the outdoor temperature (branch `v1.2.0`, on the server)
 
 - **Objective**: task H6 of v04 §7 (A5, decision of §6): `clothing_insulation=callable` of `set_pmv_input_parameters`,

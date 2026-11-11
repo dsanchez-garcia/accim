@@ -35,6 +35,20 @@ Recommended flow: track active work in `TODO.md`, move completed outcomes to `DE
 
 ## Entries
 
+### 2026-11-11
+#### [done] The report of the session of the review v04 (branch `v1.2.0`)
+- Context: the task of 2026-11-10 asks, once the list of v04 §7 is finished or every remaining item is blocked, for a
+  report with the sections of the previous one: the tasks and commits, the deviations from v04 and why, the entries
+  added to `TODO.md`, the provisional decisions of `notes/questions.md`, the tests and the comparisons of the backends,
+  and the blocked items with the information they miss.
+- Changes: `notes/INFORME_SESION_v1.2.0_2026-11-10_2.md` (new, in English as the notes of the vault), from this log,
+  `notes/questions.md`, `TODO.md` (compared with `d6dbae1`) and the commits of the branch (`8c63702` to `7ddd446`).
+- Files: `notes/INFORME_SESION_v1.2.0_2026-11-10_2.md`, `DEVLOG.md`, `notes/work-log.md`.
+- Verification: the commits, test counts and comparisons of the report checked against the entries of this log and
+  `git log`; no code changes.
+- Next step: the answers of the author to the provisional decisions (`notes/questions.md`) and to the blocked tasks
+  (`TODO.md`).
+
 ### 2026-11-10
 #### [done] H6: the clothing insulation as a function of the outdoor temperature (branch `v1.2.0`)
 - Context: task H6 of v04 §7 (A5, the decision of its §6): `clothing_insulation=callable` of
