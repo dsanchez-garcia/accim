@@ -15,6 +15,19 @@ This log is a lightweight, session-scoped complement to the repository's
 existing tracking files — it does not replace them (see
 [[decisions.md#2026-09-13 — `notes/work-log.md` complements, not replaces, existing tracking files|the related decision]]).
 
+## 2026-11-11 — Step 0 of session 3: the verdicts on the 23 provisional decisions (branch `v1.2.0`, on the server)
+
+- **Objective**: apply the verdicts of the handoff of Claude Science (§3) to the 23 provisional decisions of the
+  session of the review v04, and record the pending items (comfort standards 9 and 10; the validation study of F3).
+- **Affected files**: [[decisions.md]], [[questions.md]], [[../TODO.md]], [[../DEVLOG.md]].
+- **Finding or decision**: 18 accepted (four with an instruction for S5), 3 changed (#13, #19, #20: tasks S3, S1,
+  S2), 2 open with Ruiji Sun (#9, #12); comfort standards 9 and 10 stay as they are by the decision of the author,
+  with the verified analysis in [[../TODO.md]] and a question in [[questions.md]]. Found while starting: Smart App
+  Control (enforcement) blocks the DLLs of numba 0.68.1 on this server since 2026-11-11, so `pythermalcomfort.models`
+  cannot be imported (the tests of the hooks of the SET and of the ATHB fail or skip).
+- **Validation**: see the entry of Step 0 in [[../DEVLOG.md]].
+- **Next step**: the self-audit of session 2 (`notes/attachments/autoauditoria_sesion2_v1.2.0.json`).
+
 ## 2026-11-11 — The report of the session of the review v04 (branch `v1.2.0`, on the server)
 
 - **Objective**: the report that the task asks for once the list of v04 §7 is done: tasks and commits, deviations,
