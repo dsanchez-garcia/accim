@@ -15,6 +15,19 @@ This log is a lightweight, session-scoped complement to the repository's
 existing tracking files — it does not replace them (see
 [[decisions.md#2026-09-13 — `notes/work-log.md` complements, not replaces, existing tracking files|the related decision]]).
 
+## 2026-11-11 — The fixes of the self-audit of session 2 (branch `v1.2.0`, on the server)
+
+- **Objective**: §7 of the instructions: fix the bugs and scientific findings (A1–A26) with a test that fails before,
+  the small design, test, doc and minor ones in groups, and leave the others to the author.
+- **Affected files**: `accim/sim/comfort_hooks.py` (A7, A3, A5), `accim/data/postprocessing/indoor_adaptation.py`
+  (A12, A13, A14), `accim/sim/ems/drift_limiter.py` and `accim/sim/accis.py` (A9, A11), `param_accis.py` (A9, A23),
+  `accim/sim/ems/outdoor_metric.py` (A21), the documentation (A16–A18, A20, A22, A24, A26), [[questions.md]],
+  [[../TODO.md]], [[../DEVLOG.md]], [[../CAMBIOS_CODIGO_v1.2.0.md]] (§43).
+- **Finding or decision**: the bugs A3, A7, A9 and A12 fixed; A24 (a bug) contradicts the decision of G4, so it is
+  documented and left to the author with A1, A2, A4, A8, A15, A19 and A25 ([[questions.md]]); A10 was covered by S3.
+- **Validation**: see the entries of each fix in [[../DEVLOG.md]].
+- **Next step**: the final checks and the report of the session.
+
 ## 2026-11-11 — S5: the notes of the accepted decisions 1, 7, 16 and 22 (branch `v1.2.0`, on the server)
 
 - **Objective**: the instructions of the verdicts of decisions 1 (an example of a clothing function of the

@@ -36,6 +36,13 @@ Recommended flow: track active work in `TODO.md`, move completed outcomes to `DE
 ## Entries
 
 ### 2026-11-11
+#### [done] The findings of the self-audit of session 2 left to the author, in notes/questions.md and TODO.md (branch `v1.2.0`)
+- Context: §7 of `notes/COPILOT_SIGUIENTE_SESION.md`: the findings whose fix needs a decision of the author, or is not small, go to `notes/questions.md` or `TODO.md`.
+- Changes: `notes/questions.md`, the entry "The findings of the self-audit of session 2 that need a decision of the author" with the options of A1 and A2 (scientific: the body surface area of 1.8258 m² of the Pierce model, and its convective coefficient without the term of the activity), A4 (a model prepared for a hook simulated without it), A8 (the window collapses the band), A15 (the constant range of EN 16798-1, Table B.2), A19 (the tolerance where the minimum or the maximum binds), A24 (the static setpoints of a zone switched to 23 by hand) and A25 (`modify_accis` without `epw` and the zones of 23); `TODO.md`, the entries of A22 and A26 (a warning, or the CSV files shifted, with EnergyPlus 9.4 and 9.6 and daylight saving time), of A1 and A2 (E-F1 measured again; blocked here by numba) and of the tests that need `pythermalcomfort.models` (skip instead of failing).
+- Files: `notes/questions.md`, `TODO.md`, `DEVLOG.md`, `notes/work-log.md`.
+- Verification: documents only.
+
+### 2026-11-11
 #### [done] A21: the name of the CSV file of T0 of 'te_ref_nl' with a hash of its values (self-audit of session 2) (branch `v1.2.0`)
 - Context: finding A21 (design) of the self-audit of session 2: the CSV file of the `Schedule:File` object of T0 (task H2) was named after the weather file only, `<epw>_outdoor_mid_range.csv`, in the folder of the model, and `write_schedule_file` rewrites it when its values change, so two weather files with the same name in other folders (present and 2050) used by models of the same folder replaced each other, and the models written first read the T0 of the other one through their absolute path. H6 had avoided it with 8 characters of the SHA-1 of the values in the name (decision 1, accepted on 2026-11-11).
 - Changes: `accim.sim.ems.outdoor_metric.mid_range_file_name(epw, values=None)` gives `<epw>_outdoor_mid_range_<hash>.csv`; `_set_mid_range_schedule` uses it; `MID_RANGE_FILE_SUFFIX` is `'_outdoor_mid_range'`. Section 4.2.2 and the H2 entry of `CHANGELOG.md`. The golden master has no model with `te_ref_nl`.
