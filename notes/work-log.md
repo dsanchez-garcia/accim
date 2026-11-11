@@ -15,6 +15,18 @@ This log is a lightweight, session-scoped complement to the repository's
 existing tracking files — it does not replace them (see
 [[decisions.md#2026-09-13 — `notes/work-log.md` complements, not replaces, existing tracking files|the related decision]]).
 
+## 2026-11-11 — S3: the reference of the rate of the limiter of the drift (branch `v1.2.0`, on the server)
+
+- **Objective**: decision 13: the reference of the daily limit of `drift_mode='rate'` is the mean of the setpoints
+  applied in the occupied timesteps of the previous day (not those of its last timestep).
+- **Affected files**: `accim/sim/ems/drift_limiter.py`, `accim/sim/accis.py`, `tests/core/test_drift_limiter.py`,
+  [[../docs/source/4_detailed use.md]] (4.2.7), [[../CHANGELOG.md]], [[../CAMBIOS_CODIGO_v1.2.0.md]] (§40),
+  [[decisions.md]], [[../DEVLOG.md]].
+- **Finding or decision**: as decided; the same results with the setpoints of the ACCIS (constant in the occupied
+  timesteps of each day); after a day without occupants, the reference of the last occupied day (decision 14).
+- **Validation**: see the entry of S3 in [[../DEVLOG.md]].
+- **Next step**: S4 (the indicators of the causal band with the SET of pythermalcomfort).
+
 ## 2026-11-11 — S2: the static setpoints of Qatar, 20 and 26 °C (branch `v1.2.0`, on the server)
 
 - **Objective**: decision 20: the static setpoints of the YAML file of Qatar are those of the offices of category II

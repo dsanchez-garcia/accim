@@ -751,8 +751,9 @@ class AddAccis:
         ``StaticACST``); 28.0 by default. It must be higher than ``static_heating_setpoint``.
     :param drift_mode: The limiter of the drift of the setpoints by the indoor thermal history (task F2 of block F,
         after Parkinson, de Dear & Brager, 2020; see :mod:`accim.sim.ems.drift_limiter`): None (the default) for none,
-        and the output IDFs are those without it; 'rate', the setpoints of each day within ``max_drift_rate`` of those
-        applied the day before (the first occupied day without limit); 'window', the setpoints within
+        and the output IDFs are those without it; 'rate', the setpoints of each day within ``max_drift_rate`` of the
+        mean of those applied in the occupied timesteps of the last day with occupants (the first occupied day without
+        limit); 'window', the setpoints within
         [T_rm_in − ``delta_heat``, T_rm_in + ``delta_cool``], with T_rm_in the exponentially weighted daily running
         mean of the operative temperature of the zone in its occupied hours (``alpha_indoor``), inactive until one
         full occupied day unless ``initial_T_rm_in`` is given. It limits the setpoints of any comfort standard (and

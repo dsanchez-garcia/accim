@@ -155,6 +155,9 @@ Lo que ya está en otros documentos no se repite aquí:
 - **S2 (tercera sesión, decisión 20).** Las consignas estáticas del YAML de Qatar (102) son 20 y 26 °C, las de las
   oficinas de la categoría II de la tabla B.2 de EN 16798-1 (25,5 °C era la de refrigeración de la categoría I)
   (sección 39).
+- **S3 (tercera sesión, decisión 13).** El estado del modo `'rate'` del limitador de la deriva es la media de las
+  consignas aplicadas en los pasos ocupados del último día con ocupantes, no la consigna del último paso del día
+  anterior (sección 40).
 - Las categorías del PMV y la aproximación de la corrección del metabolismo se han comprobado en ISO 7730:2025 y
   EN 16798-1:2019, y el modelo dinámico de vestimenta de A5, en Schiavon y Lee (2013) y ASHRAE 55-2020 (sección 6).
 - Lo que quedaba abierto se ha comprobado: el golden master y las pruebas de EnergyPlus 26.1 y 26.2, también la de A5
@@ -2148,3 +2151,37 @@ refrigeración de la categoría I. G5 aplicó los números de la v04 y dejó la 
   oficinas de la categoría II.
 - Documentación: la sección 4.2.5 del uso detallado y la entrada del CHANGELOG del registro; el cuaderno How-to
   `using_comfort_standard_registry` (su texto, y ejecutado y exportado de nuevo, con la evidencia de Qatar actualizada).
+
+## 40. La referencia del modo 'rate' del limitador de la deriva (S3, decisión 13)
+
+La decisión 6 del autor (bloque F) dice que, en el modo `'rate'`, «el estado es la consigna aplicada del día anterior».
+F2 tomó la del último paso del día anterior (decisión provisional). La decisión 13 la cambia por la media de las
+consignas aplicadas en los pasos ocupados del día anterior: es la misma con consignas constantes en el día (las del
+ACCIS) y representa mejor las de un gancho, que cambian dentro del día (el SET del estándar 24 con la humedad y la
+temperatura radiante de la zona). Los días sin pasos ocupados conservan la referencia del último día ocupado, como
+T_rm_in (decisión 14).
+
+**Antes.** `ApplyDriftLimiter_<zona>` guardaba en cada paso la consigna aplicada (`DriftLastAHST_<zona>`,
+`DriftLastACST_<zona>`) y, al cambiar `DayOfYear`, la copiaba en la referencia (`DriftRefAHST_<zona>`,
+`DriftRefACST_<zona>`), también tras los días sin ocupantes.
+
+**Ahora.**
+
+- `accim.sim.ems.drift_limiter.program_lines`: en los pasos ocupados (`Occ_count_<zona>` > 0, fuera del calentamiento),
+  tras los límites, suma las consignas aplicadas en `DriftSumAHST_<zona>` y `DriftSumACST_<zona>` (con el mismo
+  contador `n_occ_<zona>` que la temperatura operativa); al cambiar `DayOfYear`, si el día tuvo pasos ocupados, la
+  referencia es su media (si no, se conserva) y los acumuladores vuelven a 0. Las variables `DriftLast*` desaparecen
+  (`_STATE`, y por tanto `InitDriftLimiter`). Los modelos de versiones de desarrollo con el programa anterior lo
+  reciben nuevo cuando se escribe de nuevo el código del limitador (`set_drift_limiter_code`).
+- Comprobado: con consignas constantes en los pasos ocupados de cada día, la media es la consigna del final del día,
+  así que los resultados no cambian (el test del escalón de 5 K en 10 días sigue igual; en EnergyPlus, la consigna del
+  ACCIS es constante en los pasos ocupados de cada día de la oficina de ejemplo y su media es la del último paso).
+  Cambian tras los días sin ocupantes: la referencia es la del último día ocupado (el test del día sin ocupantes se ha
+  ajustado a la decisión 14).
+- Documentación: el docstring del módulo y de `AddAccis`, la sección 4.2.7 del uso detallado y el CHANGELOG.
+- Pruebas (`tests/core/test_drift_limiter.py`): con el intérprete de Erl, un gancho cuyas consignas suben 0,25 K por
+  hora (la referencia es la media de las horas ocupadas, 23,125 °C, no la del último paso, 25,75 °C); con EnergyPlus
+  25.1, del lunes 1 al martes 9 de abril, las mismas consignas dadas por un gancho de Python (backend de la API) y por
+  las líneas equivalentes al principio de `RunACCIS_<zona>` (backend EMS): resultados idénticos (`check_exact`), la
+  regla de la media comprobada día a día con pandas (también el fin de semana sin ocupantes) y el límite activo; y la
+  prueba de los dos backends del limitador comprueba la nueva referencia.

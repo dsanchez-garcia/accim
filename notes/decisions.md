@@ -218,6 +218,10 @@ template]] to add a new entry.
   DayOfYear), heating and cooling each one.
 - Status: answered on 2026-11-11 (changed; handoff §3, #13).
 - Verdict (handoff §3, #13): Changed: the reference of the daily limit of the rate is the mean of the setpoints applied in the occupied timesteps of the previous day (option (ii)), for each limited setpoint as before: the same for setpoints constant within the day (the ACCIS without hooks), and more representative for those of the hooks, which vary within the day; the days without occupied timesteps keep the reference of the last occupied day (#14); done in task S3 of the session of 2026-11-11.
+- Implementation (task S3, 2026-11-11): `DriftSumAHST_<zone>` and `DriftSumACST_<zone>` add the setpoints applied
+  in the occupied timesteps (counted by `n_occ_<zone>`, as T_rm_in); at the change of DayOfYear, if the day had
+  occupied timesteps, `DriftRefAHST_<zone>`/`DriftRefACST_<zone>` are their means; `DriftLast*` removed (see the
+  entry of S3 in [[../DEVLOG.md]]).
 
 ### 2026-11-10 — F2: the days without occupied hours in the running mean T_rm_in
 - Context: T_rm_in(d) = (1 − alpha_indoor)·T_occ_mean(d − 1) + alpha_indoor·T_rm_in(d − 1), with T_occ_mean the mean

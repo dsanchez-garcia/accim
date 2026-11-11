@@ -3,7 +3,8 @@
 :mod:`accim.sim.ems.drift_limiter`): after Parkinson, de Dear & Brager (2020), Energy and Buildings 206, 109559.
 
 - ``drift_mode='rate'``: |setpoint(d) − applied(d − 1)| <= max_drift_rate (0.5 K/day by default); the first occupied day
-  without limit, and then the state is the setpoint applied at the end of the previous day.
+  without limit, and then the state is the mean of the setpoints applied in the occupied timesteps of the last day with
+  occupants (decision 13 of the review of 1.2.0, task S3).
 - ``drift_mode='window'``: the setpoints within [T_rm_in − delta_heat, T_rm_in + delta_cool] (1.0 K), with T_rm_in(d) =
   (1 − alpha_indoor)·T_occ_mean(d − 1) + alpha_indoor·T_rm_in(d − 1) (0.8), inactive until one full occupied day, which
   starts it, unless ``initial_T_rm_in`` is given.
@@ -95,17 +96,19 @@ def _drift_erl(**arguments):
 
 def _day(erl, day, targets, operative=24.0, occupied_hours=range(8, 18), warmup=False):
     """The 24 hourly timesteps of a day (ZoneTimeStep 1 h) in which a hook gives the targets (heating, cooling) of the
-    setpoints; the operative temperature of the zone is ``operative`` (a number, or one for each hour), and the zone is
-    occupied in ``occupied_hours``. Return the variables of the ACCIS of each timestep."""
+    setpoints (a pair, or a list of 24 pairs, one for each hour); the operative temperature of the zone is ``operative``
+    (a number, or one for each hour), and the zone is occupied in ``occupied_hours``. Return the variables of the ACCIS
+    of each timestep."""
     rows = []
     for hour in range(24):
         temperature = operative[hour] if isinstance(operative, (list, tuple)) else operative
+        heating, cooling = targets[hour] if isinstance(targets, list) else targets
         for name, value in dict(RMOT=20.0, PMOT=20.0, DayOfYear=float(day), CurrentTime=float(hour + 1),
                                 ZoneTimeStep=1.0, WarmupFlag=1.0 if warmup else 0.0, Zone1_OpT=temperature,
                                 Occ_count_Zone1=1.0 if hour in occupied_hours else 0.0).items():
             erl.set(name, value)
-        erl.set('HookAHST_Zone1', targets[0])
-        erl.set('HookACST_Zone1', targets[1])
+        erl.set('HookAHST_Zone1', heating)
+        erl.set('HookACST_Zone1', cooling)
         erl.set('HookSetpoints_Zone1', 1.0)
         erl.run('RunACCIS_Zone1')
         rows.append({name: erl.get(name) for name in (
@@ -161,8 +164,41 @@ def test_the_rate_starts_after_the_first_occupied_day_and_skips_the_warm_up():
     assert {(row['AHSTnoTol_Zone1'], row['ACSTnoTol_Zone1']) for row in limited} == {(24.0, 30.0)}
     # Without occupants, no hours with the limiter active
     assert sum(row['DriftLimitedHours_Zone1'] for row in limited) == 0
+    # A day without occupied timesteps keeps the state of the last occupied day (decisions 13 and 14 of the review of
+    # 1.2.0, task S3): the setpoints of day 103 are within 1 K of those of day 101, not of those applied on day 102
     assert {(row['AHSTnoTol_Zone1'], row['ACSTnoTol_Zone1']) for row in _day(erl, 103, (26.0, 32.0))} == {
+        (24.0, 30.0)}
+    assert {(row['AHSTnoTol_Zone1'], row['ACSTnoTol_Zone1']) for row in _day(erl, 104, (26.0, 32.0))} == {
         (25.0, 31.0)}
+
+
+def test_the_rate_takes_the_mean_of_the_setpoints_applied_in_the_occupied_timesteps():
+    # Decision 13 of the review of 1.2.0 (task S3): the state of the rate is the mean of the setpoints applied in the
+    # occupied timesteps of the previous day (8 to 17 h), not the setpoint of its last timestep: the setpoints of a hook
+    # that rise 0.25 K an hour (exact in binary, as the setpoints without the tolerance)
+    erl = _drift_erl(drift_mode='rate', setpoint_tolerance=0)
+    rising = [(20.0 + 0.25 * hour, 26.0 + 0.25 * hour) for hour in range(24)]
+    occupied = list(range(8, 18))
+    first = _day(erl, 100, rising)
+    # The first occupied day, without limit: its last timestep has 25.75 and 31.75 degC, its occupied ones a mean of
+    # 23.125 and 29.125 degC
+    applied = np.array([(row['DriftAppliedAHST_Zone1'], row['DriftAppliedACST_Zone1']) for row in first])
+    np.testing.assert_array_equal(applied, rising)
+    reference = applied[occupied].mean(axis=0)
+    assert tuple(reference) == (23.125, 29.125) and tuple(applied[-1]) == (25.75, 31.75)
+    for day in (101, 102, 103):
+        rows = _day(erl, day, rising)
+        expected = np.clip(np.array(rising), reference - 0.5, reference + 0.5)
+        applied = np.array([(row['DriftAppliedAHST_Zone1'], row['DriftAppliedACST_Zone1']) for row in rows])
+        np.testing.assert_allclose(applied, expected, rtol=0, atol=1e-12)
+        np.testing.assert_allclose([(row['AHSTnoTol_Zone1'], row['ACSTnoTol_Zone1']) for row in rows], expected,
+                                   rtol=0, atol=1e-4)
+        # The hours of the limiter: the occupied hours with a limited setpoint
+        limited = (np.abs(expected - np.array(rising)) > 1e-12).any(axis=1)
+        assert sum(row['DriftLimitedHours_Zone1'] for row in rows) == sum(limited[hour] for hour in occupied)
+        reference = applied[occupied].mean(axis=0)
+    # The state is not the setpoint of the last timestep, which would have allowed 25.25 to 26.25 degC on day 101
+    assert reference[0] < 23.7
 
 
 def test_the_window_follows_the_running_mean_of_the_occupied_hours():
@@ -442,13 +478,111 @@ def test_the_limiter_in_energyplus_with_both_backends(tmp_path, monkeypatch):
             np.testing.assert_allclose(cooling[active], np.clip(target_cooling, low, high)[active], atol=1e-3)
             assert (heating[active] > target_heating[active] + 1).any()
         else:
-            # The rate: within 0.5 K of the setpoints applied at the end of the previous day
-            last = pd.Series(heating).groupby(days).last().to_numpy()
-            for day in range(1, days.max() + 1):
-                assert np.abs(heating[days == day] - last[day - 1]).max() <= 0.5 + 1e-3
+            # The rate: within 0.5 K of the mean of the setpoints applied in the occupied timesteps of the last day with
+            # occupants (decision 13 of the review of 1.2.0, task S3). The setpoints of the ACCIS are constant in the
+            # occupied timesteps of each day (the first timestep of a day, with the running mean of the previous day,
+            # is not occupied in this office), so that mean is the setpoint of the end of the day, the state before
+            applied = column(f'EMS:DriftAppliedAHST_{zone} [')
+            reference = None
+            for day in range(days.max() + 1):
+                if reference is not None:
+                    assert np.abs(applied[days == day] - reference).max() <= 0.5 + 1e-6, day
+                today = (days == day) & occupied
+                if today.any():
+                    assert np.ptp(applied[today]) < 1e-9, day
+                    reference = applied[today].mean()
+                    assert reference == pytest.approx(applied[days == day][-1], abs=1e-9), day
         np.testing.assert_allclose(heating[~active], target_heating[~active], atol=1e-3)
     # verify_accim_simulation checks the targets of the limiter, not the setpoints applied
     with warnings.catch_warnings():
         warnings.simplefilter('ignore')
         report = verify_accim_simulation(str(tmp_path / 'ems' / 'run.eso'), str(model), epw=str(EPW))
     assert report.empty
+
+
+class _RisingHook:
+    """A hook of the setpoints (as those of :mod:`accim.sim.comfort_hooks`, run before the EMS programs) whose setpoints
+    change within the day: 20 + 0.25·h and 26 + 0.25·h °C in the hour h (0 to 23) of the day."""
+
+    runs_before_programs = True
+
+    def __init__(self, zones):
+        self.zones = list(zones)
+
+    def __call__(self, controller, calling_point):
+        from accim.sim.comfort_hooks import _give_setpoints
+        from accim.sim.energyplus_api.controller import _DYNAMIC_BUILT_INS
+
+        if calling_point.upper() == 'BEGINTIMESTEPBEFOREPREDICTOR':
+            # The hour of the API, as the controller gives the built-in variable Hour to the programs that read it
+            # (it updates only those, and no program of this model reads Hour)
+            hour = _DYNAMIC_BUILT_INS['HOUR'](controller.api.exchange.api, controller.state)
+            for zone in self.zones:
+                _give_setpoints(controller, zone, 20 + 0.25 * hour, 26 + 0.25 * hour)
+
+
+@needs_energyplus
+def test_the_rate_with_the_setpoints_of_a_hook_that_change_within_the_day(tmp_path, monkeypatch):
+    # Decision 13 of the review of 1.2.0 (task S3), with both backends: the setpoints of a hook that rise 0.25 K an hour
+    # (with the backend of the API) and the same setpoints given by the programs of the model at the beginning of
+    # RunACCIS_<zone> (with the EMS backend, which cannot run the hook), and the rate in both zones, from Monday 1 to
+    # Tuesday 9 April 2002 (a weekend without occupants in the office of the sample model)
+    from accim.sim.accis import load_idf, modify_accis
+    from accim.sim.ems.hook_setpoints import set_hook_setpoints_code
+    from accim.sim.ems.programs import set_program_lines
+    from accim.sim.energyplus_api import run_simulations
+
+    model_path = _drift_model(tmp_path / 'model', monkeypatch, end=(4, 9))
+    model = load_idf(model_path)
+    with warnings.catch_warnings():
+        warnings.simplefilter('ignore')
+        modify_accis(model, drift_mode='rate')
+    set_hook_setpoints_code(model, ZONES)
+    model.save()
+    emulated = load_idf(model_path)
+    for zone in ZONES:
+        program = emulated.getobject('EnergyManagementSystem:Program', f'RunACCIS_{zone}')
+        lines = [str(value).strip() for value in program.fieldvalues[2:]]
+        set_program_lines(program, [f'set HookAHST_{zone} = 20+0.25*Hour', f'set HookACST_{zone} = 26+0.25*Hour',
+                                    f'set HookSetpoints_{zone} = 1'] + lines)
+    emulated.saveas(str(tmp_path / 'emulated.idf'))
+    energyplus = _energyplus_with_api() / 'energyplus.exe'
+    ems = subprocess.run([str(energyplus), '-d', str(tmp_path / 'ems'), '-p', 'run', '-s', 'C', '-r', '-x', '-w',
+                          str(EPW), str(tmp_path / 'emulated.idf')], capture_output=True, text=True)
+    assert ems.returncode == 0, ems.stdout[-3000:]
+    [result] = run_simulations([(model_path, EPW, {'output_directory': tmp_path / 'api', 'output_prefix': 'run'})],
+                               processes=1, before_programs=[_RisingHook(ZONES)])
+    assert result.success, result.error
+    results = pd.read_csv(tmp_path / 'ems' / 'run.csv')
+    pd.testing.assert_frame_equal(pd.read_csv(tmp_path / 'api' / 'run.csv'), results, check_exact=True)
+    steps = 6
+    assert len(results) == 9 * 24 * steps
+    days = np.arange(len(results)) // (24 * steps)
+    hours = (np.arange(len(results)) // steps) % 24
+
+    def column(name):
+        return results[next(c for c in results.columns if c.startswith(name))].to_numpy()
+
+    for zone in ZONES:
+        target = column(f'EMS:DriftTargetAHST_{zone} [')
+        applied = column(f'EMS:DriftAppliedAHST_{zone} [')
+        occupied = column(f'EMS:Occupied Hours_{zone} [') > 0
+        # The targets are the setpoints of the hook
+        np.testing.assert_allclose(target, 20 + 0.25 * hours, rtol=0, atol=1e-4)
+        # The state of each day is the mean of the setpoints applied in the occupied timesteps of the last day with
+        # occupants: the first day without limit, and the weekend keeps the state of Friday
+        reference, limited = None, 0
+        for day in range(days.max() + 1):
+            today = days == day
+            expected = target[today] if reference is None else np.clip(target[today], reference - 0.5,
+                                                                         reference + 0.5)
+            np.testing.assert_allclose(applied[today], expected, rtol=0, atol=1e-4, err_msg=f'{zone}, day {day}')
+            limited += int((np.abs(applied[today] - target[today]) > 1e-4).sum())
+            if (today & occupied).any():
+                reference = applied[today & occupied].mean()
+        assert limited > 0
+        # On Tuesday, the setpoints are within 0.5 K of the mean of the occupied timesteps of Monday (6 to 18 h in
+        # standard time, the 7 to 19 h of the schedule of the office with the daylight saving time of the model: 22.875
+        # degC), not of its last timestep (25.75 degC)
+        tuesday = applied[days == 1]
+        assert tuesday.max() == pytest.approx(23.375, abs=1e-4) and tuesday.min() == pytest.approx(22.375, abs=1e-4)

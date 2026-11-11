@@ -17,7 +17,11 @@ F, copied in ``notes/decisions.md``):
 - ``drift_mode='rate'``: the setpoints of each day d are those of the comfort standard (the targets), within
   ``max_drift_rate`` (K/day, 0.5 by default) of the setpoints applied the day before, abs(setpoint(d) − applied(d − 1))
   ≤ max_drift_rate: on the first occupied day, the targets are applied without limit, and from then on the state is the
-  setpoint applied at the end of the previous day (the heating and the cooling setpoint, each one).
+  mean of the setpoints applied in the occupied timesteps of the previous day (the heating and the cooling setpoint,
+  each one; decision 13 of the review of accim 1.2.0, task S3 of its third session: the same as the setpoint of the
+  end of the day when the setpoints are constant within the day, as those of the ACCIS in its occupied timesteps, and
+  more representative for those of a hook, which change within the day); a day without occupied timesteps keeps the
+  state of the last occupied day, as T_rm_in below (decision 14).
 - ``drift_mode='window'``: the targets are clipped to [T_rm_in − ``delta_heat``, T_rm_in + ``delta_cool``] (1.0 K
   each by default), where T_rm_in is the exponentially weighted daily running mean of the operative temperature of the
   zone in its occupied hours, T_rm_in(d) = (1 − alpha_indoor)·T_occ_mean(d − 1) + alpha_indoor·T_rm_in(d − 1)
@@ -32,7 +36,8 @@ maximum of the setpoints of B5 (:mod:`accim.sim.ems.setpoint_limits`), out of th
 (``WarmupFlag``): in each timestep, it adds the operative temperature of the zone (``<zone>_OpT``) to the accumulators
 ``sum_T_occ_<zone>`` and ``n_occ_<zone>`` if the zone has occupants (``Occ_count_<zone>``; as in the hour counters of
 the ACCIS, the EMS reads at the beginning of the timestep its occupants and the operative temperature of the previous
-timestep), and flushes them at the change of DayOfYear, when it updates T_rm_in and the state of the rate. The targets
+timestep) and, after the limits, the setpoints applied to ``DriftSumAHST_<zone>`` and ``DriftSumACST_<zone>``, and
+flushes them at the change of DayOfYear, when it updates T_rm_in and the state of the rate. The targets
 are the setpoints without the tolerance (AHST − AHSTtol and ACST − ACSTtol); where the limiter changes them, it sets
 AHST and ACST to the limited setpoints plus the tolerance and rounds them again
 (:data:`accim.sim.ems.setpoint_lines.ROUNDING`), so the thermostats, the setpoints without the tolerance, the hour
@@ -92,9 +97,10 @@ OUTPUTS = {
     'DriftAppliedACST': ('C', 'Averaged'),
     'DriftLimitedHours': ('H', 'Summed'),
 }
-#: The other EMS global variables of each zone: the accumulators of the day, its DayOfYear, the number of occupied
-#: days, and the setpoints applied in the last timestep and at the end of the previous day (the state of the rate)
-_STATE = ('sum_T_occ', 'n_occ', 'DriftDay', 'DriftOccDays', 'DriftLastAHST', 'DriftLastACST', 'DriftRefAHST',
+#: The other EMS global variables of each zone: the accumulators of the day (of the operative temperature, and of the
+#: setpoints applied, in its occupied timesteps), its DayOfYear, the number of occupied days, and the state of the rate
+#: (the mean of the setpoints applied in the occupied timesteps of the last day with occupants)
+_STATE = ('sum_T_occ', 'n_occ', 'DriftDay', 'DriftOccDays', 'DriftSumAHST', 'DriftSumACST', 'DriftRefAHST',
           'DriftRefACST')
 _RUN_PREFIX = 'run '
 
@@ -179,9 +185,10 @@ def program_lines(zone: str, initial: bool = False) -> List[str]:
         'if WarmupFlag == 0',
         f'if DayOfYear <> DriftDay_{z}',
         f'if DriftDay_{z} > 0',
-        f'set DriftRefAHST_{z} = DriftLastAHST_{z}',
-        f'set DriftRefACST_{z} = DriftLastACST_{z}',
         f'if n_occ_{z} > 0',
+        # The state of the rate: the mean of the setpoints applied in the occupied timesteps of the day that ends
+        f'set DriftRefAHST_{z} = DriftSumAHST_{z}/n_occ_{z}',
+        f'set DriftRefACST_{z} = DriftSumACST_{z}/n_occ_{z}',
     ]
     if initial:
         lines += [f'set T_rm_in_{z} = (1-AlphaIndoor)*sum_T_occ_{z}/n_occ_{z}+AlphaIndoor*T_rm_in_{z}']
@@ -195,6 +202,8 @@ def program_lines(zone: str, initial: bool = False) -> List[str]:
         'endif',
         f'set sum_T_occ_{z} = 0',
         f'set n_occ_{z} = 0',
+        f'set DriftSumAHST_{z} = 0',
+        f'set DriftSumACST_{z} = 0',
         f'set DriftDay_{z} = DayOfYear',
         'endif',
         f'if Occ_count_{z} > 0',
@@ -215,6 +224,10 @@ def program_lines(zone: str, initial: bool = False) -> List[str]:
                   f'elseif {applied} < T_rm_in_{z}-DeltaHeat', f'set {applied} = T_rm_in_{z}-DeltaHeat', 'endif']
     lines += [
         'endif',
+        f'if Occ_count_{z} > 0',
+        f'set DriftSumAHST_{z} = DriftSumAHST_{z}+DriftAppliedAHST_{z}',
+        f'set DriftSumACST_{z} = DriftSumACST_{z}+DriftAppliedACST_{z}',
+        'endif',
         'endif',
         f'if (DriftAppliedAHST_{z} <> DriftTargetAHST_{z}) || (DriftAppliedACST_{z} <> DriftTargetACST_{z})',
         f'set AHST = DriftAppliedAHST_{z}+AHSTtol',
@@ -228,8 +241,6 @@ def program_lines(zone: str, initial: bool = False) -> List[str]:
         'else',
         f'set DriftLimitedHours_{z} = 0',
         'endif',
-        f'set DriftLastAHST_{z} = DriftAppliedAHST_{z}',
-        f'set DriftLastACST_{z} = DriftAppliedACST_{z}',
     ]
     return lines
 
