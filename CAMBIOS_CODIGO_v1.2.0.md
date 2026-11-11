@@ -165,6 +165,8 @@ Lo que ya está en otros documentos no se repite aquí:
   aceptadas: un ejemplo de vestimenta con la temperatura de las 6:00, la ruta absoluta de los CSV de los
   `Schedule:File`, los modos 0 y 3 del estándar 24 y el retraso de un día de las medias móviles de EnergyPlus en el
   primer paso de cada día (sección 42).
+- **Correcciones de la autoauditoría de la sesión 2 (tercera sesión).** Los hallazgos A1–A26 de
+  `notes/attachments/autoauditoria_sesion2_v1.2.0.json` corregidos sin decisión del autor, uno por commit (sección 43).
 - Las categorías del PMV y la aproximación de la corrección del metabolismo se han comprobado en ISO 7730:2025 y
   EN 16798-1:2019, y el modelo dinámico de vestimenta de A5, en Schiavon y Lee (2013) y ASHRAE 55-2020 (sección 6).
 - Lo que quedaba abierto se ha comprobado: el golden master y las pruebas de EnergyPlus 26.1 y 26.2, también la de A5
@@ -2255,3 +2257,30 @@ Los veredictos del 11 de noviembre aceptaron estas decisiones con una instrucci�
   la del resto del día (el 2 de mayo; 0,12 y 0,13 K de media desde el día 9) y hasta 0,13 K con PMOT (2). Documentado en
   la sección del estándar 23 (donde se describe la prueba de 23 frente a 101), en la de `compute_setpoints` y en el
   CHANGELOG.
+
+## 43. Correcciones de la autoauditoría de la sesión 2
+
+La autoauditoría de la sesión 2 (`notes/attachments/autoauditoria_sesion2_v1.2.0.json`, hallazgos A1–A26) se corrige
+según el §7 de `notes/COPILOT_SIGUIENTE_SESION.md`: cada hallazgo de tipo bug o científico con un arreglo sin decisión
+del autor, en su commit, con una prueba que falla antes y pasa después; los de diseño, prueba, documentación o menores,
+en grupos si el arreglo es pequeño; el resto, en `notes/questions.md` o `TODO.md`.
+
+### A7. Las horas saturadas del gancho del ATHB, solo las del periodo de simulación
+
+**Antes.** `AthbSetpointHook` sumaba las horas con una consigna en un límite de `temperature_range`
+(`saturated_hours`, y el aviso de `finish()`) «fuera de los días de calentamiento» con `controller.get('WarmupFlag')`;
+pero el controlador del backend de la API solo actualiza las variables integradas que leen los programas EMS del
+modelo, y ningún programa de un modelo del ACCIS sin la métrica exterior del modelo personalizado ni el limitador de
+la deriva lee `WarmupFlag`: la variable era `None` y se sumaban también los días de calentamiento y los periodos de
+dimensionado (los días de diseño).
+
+**Ahora.** `accim.sim.comfort_hooks._in_run_period(controller)` lo pregunta a la API de EnergyPlus (`kind_of_sim`,
+3 en los periodos de simulación del archivo climático, y `warmup_flag`); con un controlador sin la API (las pruebas),
+`WarmupFlag`. Las salidas `ATHB_saturated_<zona>` no cambian (son de cada paso).
+
+- Pruebas (`tests/core/test_comfort_hooks.py`): una unitaria con un controlador cuya API dice el tipo de simulación y
+  el calentamiento, sin la variable `WarmupFlag` (como el controlador real), que falla sin el arreglo (contaba el
+  calentamiento) y pasa con él; y otra con EnergyPlus 25.1 y el controlador real (dos días de julio del modelo de
+  ejemplo): cuentan exactamente los 288 pasos del periodo de simulación, y quedan fuera los días de diseño y los de
+  calentamiento.
+- Documentación: el docstring de la clase, la sección 4.9.1 y la entrada del ATHB del CHANGELOG.

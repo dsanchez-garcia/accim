@@ -165,6 +165,43 @@ def test_the_hook_reports_the_setpoints_at_the_limits_of_their_range():
         within.finish()
 
 
+class _Exchange:
+    """The functions of the API of EnergyPlus that tell the kind of simulation and the warm-up days."""
+
+    def __init__(self, kind, warmup):
+        self.kind, self.warmup = kind, warmup
+
+    def kind_of_sim(self, state):
+        return self.kind
+
+    def warmup_flag(self, state):
+        return self.warmup
+
+
+def test_the_saturated_hours_are_those_of_the_run_period_out_of_the_warm_up_days(monkeypatch):
+    # Finding A7 of the self-audit of 2026-11-11: the controller updates the built-in variable WarmupFlag only for the
+    # EMS programs that read it (none in the models of the ACCIS without the outdoor metric of the custom model or the
+    # limiter of the drift), so the hook takes the warm-up days and the kind of simulation from the API of EnergyPlus:
+    # neither the warm-up days nor the sizing periods (kind_of_sim 1, the design days) count
+    from types import SimpleNamespace
+
+    monkeypatch.setattr(ch, 'athb_pmv', lambda *arguments, **keywords: 0.0)
+    hook = ch.AthbSetpointHook(ZONES, temperature_range=(10.0, 25.0))
+    monkeypatch.setattr(hook, 'operative_temperatures', lambda humidity, t_running_mean: (20.0, 25.0))
+    values = {'RMOT': 24.0, 'ZoneTimeStep': 1 / STEPS}
+    for zone in ZONES:
+        values.update({f'ATHB_MAT_{zone}': 26.0, f'ATHB_MRT_{zone}': 26.5, f'ATHB_RH_{zone}': 50.0})
+    for kind, warmup, counted in ((3, True, 0), (1, False, 0), (1, True, 0), (2, False, 0), (3, False, 1)):
+        controller = _Controller(dict(values))
+        controller.api, controller.state = SimpleNamespace(exchange=_Exchange(kind, warmup)), object()
+        assert controller.get('WarmupFlag') is None
+        hook.prepare()
+        hook(controller, CALLING_POINT)
+        # The output of the timestep, in any case
+        assert controller.get('ATHB_saturated_Block1_Zone1') == pytest.approx(1 / STEPS)
+        assert hook.saturated_hours.get('Block1_Zone1', 0.0) == pytest.approx(counted / STEPS), (kind, warmup)
+
+
 def test_the_hook_warns_out_of_the_ranges_of_the_pmv():
     # ISO 7730:2025, section 4: 0.8 to 4 met and a relative air speed up to 1 m/s
     from accim.constants import PMV_MET_RANGE
@@ -583,6 +620,51 @@ def test_the_saturated_setpoints_of_the_athb_in_energyplus(tmp_path, monkeypatch
         # The hours of the timesteps whose setpoints are at a limit (the first timestep, with trm = 0, too)
         assert 0 < at_limit.sum() < len(results)
         np.testing.assert_allclose(saturated.to_numpy(), np.where(at_limit, 1 / STEPS, 0.0), atol=1e-9)
+
+
+class _RunPeriodProbe:
+    """A hook that records, at the beginning of each timestep, whether the hooks count its hours
+    (``comfort_hooks._in_run_period``) and what the API of EnergyPlus says, and writes them in a JSON file at the end
+    of the simulation (which runs in another process)."""
+
+    runs_before_programs = True
+
+    def __init__(self, path):
+        self.path, self.records = str(path), []
+
+    def __call__(self, controller, calling_point):
+        if calling_point == CALLING_POINT:
+            exchange = controller.api.exchange
+            self.records.append([ch._in_run_period(controller), exchange.kind_of_sim(controller.state),
+                                 bool(exchange.warmup_flag(controller.state))])
+
+    def finish(self):
+        import json
+
+        Path(self.path).write_text(json.dumps(self.records), encoding='utf-8')
+
+
+@needs_energyplus
+def test_the_hooks_count_the_hours_of_the_run_period_only(tmp_path, monkeypatch):
+    # Finding A7 of the self-audit of 2026-11-11, with the controller of the API: the timesteps of the run period of
+    # the weather file out of its warm-up days, and not those of the design days of the sizing nor of the warm-up days
+    import json
+
+    from accim.sim.energyplus_api import run_simulations
+
+    model, _ = _athb_model(tmp_path / 'model', monkeypatch, end_day=16)
+    probe = _RunPeriodProbe(tmp_path / 'records.json')
+    [result] = run_simulations([(model, EPW, {'output_directory': tmp_path / 'api', 'output_prefix': 'run'})],
+                               processes=1, before_programs=[probe])
+    assert result.success, result.error
+    records = json.loads((tmp_path / 'records.json').read_text(encoding='utf-8'))
+    counted = [record for record in records if record[0]]
+    # Two days of six timesteps per hour
+    assert len(counted) == 2 * 24 * STEPS
+    assert all(kind == 3 and not warmup for _, kind, warmup in counted)
+    # The design days of the sizing (out of their warm-up days too) and the warm-up days are left out
+    assert any(kind != 3 and not warmup for _, kind, warmup in records)
+    assert any(kind == 3 and warmup for _, kind, warmup in records)
 
 
 @needs_energyplus

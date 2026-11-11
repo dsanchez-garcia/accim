@@ -122,6 +122,9 @@ __all__ = [
 ATHB_TEMPERATURE_RANGE = (10.0, 30.0)
 #: The calling point at which the hook sets the setpoints, that of the programs of the ACCIS
 _CALLING_POINT = 'BEGINTIMESTEPBEFOREPREDICTOR'
+#: The kind of simulation of the run periods of the weather file in the API of EnergyPlus (``kind_of_sim``, the
+#: KindOfSim RunPeriodWeather of EnergyPlus; the sizing periods have other values)
+_RUN_PERIOD_WEATHER = 3
 #: The EMS sensors that apply_athb_setpoints adds to each zone: prefix -> output variable of EnergyPlus
 _SENSORS = {
     'ATHB_MAT': 'Zone Mean Air Temperature',
@@ -294,6 +297,18 @@ def _warn_pmv_ranges(met: float, air_speed: float) -> None:
                       f'7730:2025 (section 4) uses the PMV.', UserWarning, stacklevel=3)
 
 
+def _in_run_period(controller) -> bool:
+    """Whether the hours of a timestep count in the hours that a hook adds up: those of the run periods of the weather
+    file out of their warm-up days, which the API of EnergyPlus tells (``kind_of_sim`` and ``warmup_flag``; the
+    controller updates the built-in variable WarmupFlag only for the EMS programs that read it, finding A7 of the
+    self-audit of 2026-11-11); with a controller without the API, those out of the warm-up days (its WarmupFlag)."""
+    api, state = getattr(controller, 'api', None), getattr(controller, 'state', None)
+    if api is None or state is None:
+        return not controller.get('WarmupFlag')
+    exchange = api.exchange
+    return exchange.kind_of_sim(state) == _RUN_PERIOD_WEATHER and not exchange.warmup_flag(state)
+
+
 def _check_before_programs(hook, controller) -> None:
     """Stop if a hook of the setpoints runs after the EMS programs: the program ApplyHookSetpoints_<zone> reads its
     setpoints in the programs of the timestep (:mod:`accim.sim.ems.hook_setpoints`)."""
@@ -358,9 +373,11 @@ class AthbSetpointHook:
     them) and sets the global variables ``ATHB_PMV_<zone>``, ``ATHB_clo_<zone>`` and ``ATHB_met_<zone>``, which
     EnergyPlus reports, and ``ATHB_saturated_<zone>``: the length of the timestep (``ZoneTimeStep``, h) if a setpoint
     is at a limit of ``temperature_range`` (where the bisection stops, the setpoint of the ATHB being out of it), and 0
-    otherwise. It adds up those hours out of the warm-up days of EnergyPlus (:attr:`saturated_hours`), and warns of them
-    at the end of the simulation (:meth:`finish`, which :func:`accim.sim.energyplus_api.run_simulation` calls; in the
-    processes of :func:`accim.run.run_ep`, the warning goes to their console, and the outputs keep the hours).
+    otherwise. It adds up those hours in the run periods of the weather file, out of their warm-up days and not in the
+    sizing periods, as the API of EnergyPlus tells them (:attr:`saturated_hours`; before the self-audit of 2026-11-11,
+    finding A7, they included the warm-up days and the sizing periods), and warns of them at the end of the simulation
+    (:meth:`finish`, which :func:`accim.sim.energyplus_api.run_simulation` calls; in the processes of
+    :func:`accim.run.run_ep`, the warning goes to their console, and the outputs keep the hours).
 
     :param zones: The zones, by their names in the EMS objects (``Block1_Zone1``...).
     :param athb_cooling_setpoint: The cooling setpoint of the ATHB_PMV.
@@ -377,8 +394,9 @@ class AthbSetpointHook:
     :param temperature_range: The range of the operative temperature of the setpoints (°C,
         :data:`ATHB_TEMPERATURE_RANGE`).
     :ivar setpoints: The last setpoints of each zone, ``{zone: (heating, cooling)}``, without the tolerance.
-    :ivar saturated_hours: The hours of each zone in which a setpoint was at a limit of ``temperature_range``, out of
-        the warm-up days, since the hook was made or prepared (:meth:`prepare`).
+    :ivar saturated_hours: The hours of each zone in which a setpoint was at a limit of ``temperature_range``, in the
+        run periods of the weather file out of their warm-up days, since the hook was made or prepared
+        (:meth:`prepare`).
     :raises ValueError: If an argument is not valid (``met`` must be greater than 0).
     """
 
@@ -480,7 +498,7 @@ class AthbSetpointHook:
             step = controller.get('ZoneTimeStep') or 0.0
             saturated = self.saturated(heating, cooling)
             controller.set(f'{ATHB_SATURATED}_{zone}', step if saturated else 0.0)
-            if saturated and not controller.get('WarmupFlag'):
+            if saturated and _in_run_period(controller):
                 self.saturated_hours[zone] = self.saturated_hours.get(zone, 0.0) + step
             controller.set(f'ATHB_PMV_{zone}', athb_pmv(air, radiant, self.air_speed, humidity, self.met,
                                                         t_running_mean, self.clo))
