@@ -47,6 +47,23 @@ def test_the_parameters_of_the_limiter_of_the_drift():
     assert descriptor.name == 'drift_mode' and list(descriptor.options) == [0, 1, 2]
 
 
+def test_the_plans_drop_the_windows_narrower_than_twice_the_tolerance():
+    # Finding A9 of the self-audit of 2026-11-11: with drift_mode 'window' (2), delta_heat + delta_cool below twice the
+    # tolerance of the setpoints crosses the setpoints of the thermostats, so the plans drop those rows (not those of
+    # the rate, nor a window of exactly twice the tolerance)
+    import pandas as pd
+
+    plan = pd.DataFrame({'drift_mode': [2, 'window', 2, 1, 2], 'delta_heat': [0.05, 0.1, 0.1, 0.0, 1.0],
+                         'delta_cool': [0.1, 0.05, 0.1, 0.0, 1.0], 'setpoint_tolerance': [0.1, 0.1, 0.1, 0.1, 1.2]})
+    kept = param_accis.drop_invalid_param_combinations(plan)
+    assert kept.index.tolist() == [2, 3]
+    # With the name of accim 0.x of the tolerance
+    legacy = plan.rename(columns={'setpoint_tolerance': 'ASTtol'})
+    assert param_accis.drop_invalid_param_combinations(legacy).index.tolist() == [2, 3]
+    # Without the tolerance in the plan (that of the model), nothing is dropped
+    assert len(param_accis.drop_invalid_param_combinations(plan.drop(columns='setpoint_tolerance'))) == 5
+
+
 def _model(tmp_path):
     from accim.sim.accis import add_accis_to_idf, load_idf
 

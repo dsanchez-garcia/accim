@@ -54,7 +54,8 @@ from accim.sim.ems.custom_regimes import set_custom_regimes, set_standard_regime
 from accim.sim.ems.drift_limiter import ARGUMENTS as DRIFT_ARGUMENTS
 from accim.sim.ems.drift_limiter import DEFAULTS as DRIFT_DEFAULTS
 from accim.sim.ems.drift_limiter import INPUTS as DRIFT_INPUTS
-from accim.sim.ems.drift_limiter import check_drift_arguments, drift_inputs, set_drift_limiter_code
+from accim.sim.ems.drift_limiter import DRIFT_MODES
+from accim.sim.ems.drift_limiter import check_drift_arguments, check_window_width, drift_inputs, set_drift_limiter_code
 from accim.sim.ems.inputs import (
     check_zone_arguments,
     input_programs,
@@ -440,6 +441,26 @@ def _check_drift_arguments(arguments: Dict[str, Any], zone_arguments: Dict[Any, 
             check_drift_arguments(**given, where=str(zone))
             found = found or given.get('drift_mode') is not None
     return found
+
+
+def _check_window_widths(arguments: Dict[str, Any], zone_arguments: Dict[Any, Dict[str, Any]],
+                         tolerance: Any) -> None:
+    """Check the width of the window of the limiter of the drift of the setpoints
+    (:func:`accim.sim.ems.drift_limiter.check_window_width`) of all the zones and of those of ``zone_arguments``, with
+    their tolerance of the setpoints (that of the zone, or ``tolerance``).
+
+    :raises ValueError: If a window is narrower than twice the tolerance.
+    """
+    def check(own: Dict[str, Any], where: str = '') -> None:
+        values = {**arguments, **{name: own[name] for name in DRIFT_ARGUMENTS if own.get(name) is not None}}
+        if values.get('drift_mode') == 'window':
+            check_window_width(values.get('delta_heat', DRIFT_DEFAULTS['delta_heat']),
+                               values.get('delta_cool', DRIFT_DEFAULTS['delta_cool']),
+                               own.get('setpoint_tolerance', tolerance), where=where)
+
+    check({})
+    for zone, own in zone_arguments.items():
+        check(own, str(zone))
 
 
 def _check_setpoint_limits(minimum: Any, maximum: Any, zone_arguments: Dict[Any, Dict[str, Any]]) -> bool:
@@ -1047,6 +1068,11 @@ class AddAccis:
             cooling_setpoint_maximum=cooling_setpoint_maximum, static_heating_setpoint=static_heating_setpoint,
             static_cooling_setpoint=static_cooling_setpoint, **drift)
         self.arguments.update({k: v for k, v in vars(generation).items()})
+        if has_drift:
+            # The window of the limiter with the largest tolerance of the output IDFs (finding A9 of the self-audit of
+            # 2026-11-11)
+            _check_window_widths(drift, checked_zone_arguments,
+                                 max((abs(value) for value in generation.tolerances()), default=0.0))
         self.arguments.update(verbose=verbose, confirm=confirm, zone_arguments=zone_arguments, epw=epw,
                               report_hours_below=hours_below or None, custom_regimes=list(regimes) or None,
                               report_long_term_discomfort=report_long_term_discomfort, long_term_range=long_term_range)
@@ -1489,6 +1515,16 @@ def modify_accis(
                    for zone, program in zone_programs.items()):
             raise ValueError('The arguments of the limiter of the drift of the setpoints need drift_mode: no zone has '
                              'the limiter, nor gets it in this call.')
+    # The window of the limiter of each zone with it, after this call, against its tolerance of the setpoints (finding
+    # A9 of the self-audit of 2026-11-11), before anything changes
+    for zone, program in zone_programs.items():
+        current = read_inputs(program)
+        own = {**drift, **{name: value for name, value in resolved.get(zone, {}).items() if name in DRIFT_ARGUMENTS}}
+        mode = own.get('drift_mode')
+        if (mode == 'window') if mode is not None else current.get('DriftMode') == DRIFT_MODES['window']:
+            check_window_width(own.get('delta_heat', current.get('DeltaHeat', DRIFT_DEFAULTS['delta_heat'])),
+                               own.get('delta_cool', current.get('DeltaCool', DRIFT_DEFAULTS['delta_cool'])),
+                               resolved.get(zone, {}).get('setpoint_tolerance', setpoint_tolerance), where=zone)
     # The comfort standard of each zone before the changes: the zones that leave a comfort standard with regimes lose
     # them (accim.sim.ems.custom_regimes.set_standard_regimes)
     previous = {zone: read_inputs(program).get('ComfStand') for zone, program in zone_programs.items()}

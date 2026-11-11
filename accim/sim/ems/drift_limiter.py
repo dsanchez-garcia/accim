@@ -68,6 +68,7 @@ __all__ = [
     'OUTPUTS',
     'PROGRAM_PREFIX',
     'check_drift_arguments',
+    'check_window_width',
     'drift_inputs',
     'has_drift_limiter',
     'init_program_lines',
@@ -140,6 +141,28 @@ def check_drift_arguments(drift_mode: Any = None, max_drift_rate: Any = None, al
             _number(name, value, 0, None, where=where)
     if initial_T_rm_in is not None:
         _number('initial_T_rm_in', initial_T_rm_in, where=where)
+
+
+def check_window_width(delta_heat: Any, delta_cool: Any, setpoint_tolerance: Any, where: str = '') -> None:
+    """Check that the window of ``drift_mode='window'`` is not narrower than twice the tolerance of the setpoints:
+    where the heating and cooling setpoints reach the limits of the window, T_rm_in − ``delta_heat`` and T_rm_in +
+    ``delta_cool``, the thermostats get them with the tolerance (the heating setpoint raised by it, and the cooling one
+    lowered), so their setpoints cross (the heating one above the cooling one) if ``delta_heat + delta_cool`` is less
+    than twice ``setpoint_tolerance`` (finding A9 of the self-audit of 2026-11-11; the minimum heating setpoint not
+    lower than the maximum cooling setpoint raises a ValueError too). The values None are not checked.
+
+    :param where: The zone, for the messages.
+    :raises ValueError: If the window is narrower.
+    """
+    if delta_heat is None or delta_cool is None or setpoint_tolerance is None:
+        return
+    width = float(delta_heat) + float(delta_cool)
+    tolerance = abs(float(setpoint_tolerance))
+    if width < 2 * tolerance:
+        suffix = f' (zone {where!r})' if where else ''
+        raise ValueError(f"With drift_mode='window', delta_heat + delta_cool ({width:g} K) must be at least twice the "
+                         f'tolerance of the setpoints ({tolerance:g} K){suffix}: otherwise the setpoints of the '
+                         f'thermostats cross where both reach the limits of the window.')
 
 
 def drift_inputs(arguments: Mapping[str, Any], current: Optional[Mapping[str, Any]] = None) -> Dict[str, Any]:

@@ -360,6 +360,53 @@ def test_the_errors_of_the_arguments_of_the_limiter(tmp_path, monkeypatch):
                  verbose=False, drift_mode='rate', max_drift_rate=0)
 
 
+def test_the_window_cannot_be_narrower_than_twice_the_tolerance(tmp_path, monkeypatch):
+    # Finding A9 of the self-audit of 2026-11-11: where both setpoints reach the limits of the window, the thermostats
+    # get them with the tolerance (the heating one raised, the cooling one lowered), so a window narrower than twice
+    # the tolerance crosses them
+    from accim.sim.accis import AddAccis, modify_accis
+    from accim.sim.ems.inputs import input_programs, read_inputs
+
+    message = r"With drift_mode='window', delta_heat \+ delta_cool \({} K\) must be at least twice the tolerance"
+    with pytest.raises(ValueError, match=message.format('0.15') + r' of the setpoints \(0.1 K\):'):
+        dl.check_window_width(0.05, 0.1, 0.1)
+    for arguments in ((0.1, 0.1, 0.1), (0.1, 0.1, -0.1), (None, 0.1, 0.1), (0.0, 0.0, 0.0)):
+        dl.check_window_width(*arguments)
+    idf = _model(tmp_path)
+    before = idf.idfstr()
+    # The tolerance of modify_accis (0.1 K by default), or that of a zone
+    with pytest.raises(ValueError, match=message.format('0.1') + r".*\(zone 'Block1_Zone[12]'\)"):
+        modify_accis(idf, drift_mode='window', delta_cool=0.0, delta_heat=0.1)
+    with pytest.raises(ValueError, match=message.format('1') + r" of the setpoints \(0.6 K\) \(zone 'Block1_Zone2'\)"):
+        modify_accis(idf, drift_mode='window', delta_cool=0.5, delta_heat=0.5,
+                     zone_arguments={'Block1:Zone2': {'setpoint_tolerance': 0.6}})
+    assert idf.idfstr() == before
+    # A zone with the window keeps its deltas: a larger tolerance later is checked against them
+    with warnings.catch_warnings():
+        warnings.simplefilter('ignore')
+        modify_accis(idf, drift_mode='window', delta_cool=0.3, delta_heat=0.3)
+    assert all(read_inputs(p)['DriftMode'] == 2 for p in input_programs(idf).values())
+    with pytest.raises(ValueError, match=message.format('0.6') + r' of the setpoints \(0.5 K\)'):
+        modify_accis(idf, setpoint_tolerance=0.5)
+    # AddAccis, with the largest tolerance of the output IDFs
+    shutil.copy(SAMPLE_IDF, tmp_path / 'TestModel.idf')
+    monkeypatch.chdir(tmp_path)
+    arguments = dict(script_type='vrf_ac', supply_air_temp_input_method='temperature difference',
+                     output_type='standard', output_frequencies=['hourly'], keep_existing_outputs=False,
+                     energyplus_version='auto', setpoint_type='temperature', comfort_standard=[1], category=[2],
+                     comfort_mode=[3], confirm=True, verbose=False)
+    with pytest.raises(ValueError, match=message.format('0') + r' of the setpoints \(0.1 K\)'):
+        AddAccis(**arguments, drift_mode='window', delta_cool=0.0, delta_heat=0.0)
+    with pytest.raises(ValueError, match=message.format('0.5') + r' of the setpoints \(0.3 K\)'):
+        AddAccis(**arguments, drift_mode='window', delta_cool=0.25, delta_heat=0.25, setpoint_tolerance_start=0.1,
+                 setpoint_tolerance_end=0.3)
+    with pytest.raises(ValueError, match=message.format('0.4') + r".*\(zone 'Block1:Zone1'\)"):
+        AddAccis(**arguments, drift_mode='rate', zone_arguments={'Block1:Zone1': {'drift_mode': 'window',
+                                                                                 'delta_cool': 0.2, 'delta_heat': 0.2,
+                                                                                 'setpoint_tolerance': 0.25}})
+    assert not list(tmp_path.glob('TestModel[[]*.idf'))
+
+
 def test_the_ems_code_of_the_limiter():
     from accim.sim.preview import compute_setpoints
     from accim.utils.ems_code import get_setpoint_ems_code, get_setpoint_ems_programs

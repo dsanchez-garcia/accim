@@ -265,7 +265,9 @@ def drop_invalid_param_combinations(samples_df):
     heating setpoint is not lower than the maximum cooling setpoint (`heating_setpoint_minimum` and
     `cooling_setpoint_maximum`, which the modifiers reject) are dropped too, and so are those whose static heating
     setpoint of JPN Aqilah 2025 is not lower than its static cooling setpoint (`static_heating_setpoint` and
-    `static_cooling_setpoint`).
+    `static_cooling_setpoint`), and, since the self-audit of 2026-11-11 (finding A9), those whose window of the limiter
+    of the drift of the setpoints (`drift_mode` 'window' or 2) is narrower than twice the tolerance of the setpoints
+    (`delta_heat` + `delta_cool` < 2·`setpoint_tolerance`, which crosses the setpoints of the thermostats).
 
     Parameters
     ----------
@@ -327,6 +329,8 @@ def drop_invalid_param_combinations(samples_df):
         # The parameters of accim 1.2.0 have no names of accim 0.x
         'heating_setpoint_minimum': 'heating_setpoint_minimum', 'cooling_setpoint_maximum': 'cooling_setpoint_maximum',
         'static_heating_setpoint': 'static_heating_setpoint', 'static_cooling_setpoint': 'static_cooling_setpoint',
+        'drift_mode': 'drift_mode', 'delta_heat': 'delta_heat', 'delta_cool': 'delta_cool',
+        'setpoint_tolerance': 'ASTtol',
     }
     columns = {new: (old if old in samples_df.columns and new not in samples_df.columns else new)
                for new, old in legacy_names.items()}
@@ -342,6 +346,13 @@ def drop_invalid_param_combinations(samples_df):
                 return v(name) != first[name]
             return v(name) not in valid_params[standard][position]
         return rule
+
+    def narrow_window(v):
+        try:
+            window = _drift_mode_code(v('drift_mode')) == 2
+        except ValueError:
+            return False
+        return window and v('delta_heat') + v('delta_cool') < 2 * abs(v('setpoint_tolerance'))
 
     # The rules that make a combination not valid: each one is checked if the plan has its columns (a missing column,
     # or a comfort_standard that is not in valid_params, such as 99, only skips that rule)
@@ -359,6 +370,9 @@ def drop_invalid_param_combinations(samples_df):
         lambda v: v('min_opening_factor') < 0 or v('min_opening_factor') > 1,
         lambda v: v('heating_setpoint_minimum') >= v('cooling_setpoint_maximum'),
         lambda v: v('static_heating_setpoint') >= v('static_cooling_setpoint'),
+        # The window of the limiter of the drift narrower than twice the tolerance of the setpoints (finding A9 of the
+        # self-audit of 2026-11-11, accim.sim.ems.drift_limiter.check_window_width)
+        narrow_window,
     )
     samples_df['valid'] = True
     for i in samples_df.index:

@@ -2329,3 +2329,25 @@ sobreenfriamiento pero no da ningún umbral de temperatura.
 habitual de verano de las oficinas climatizadas, «current summertime practices (~22 °C)» (comprobado en el texto de
 ambos artículos de la biblioteca). El valor sigue siendo una decisión de diseño de la propuesta; nota en la decisión
 de F3 de `notes/decisions.md`. Solo cambia la documentación (sin prueba: es una cita).
+
+### A9. La ventana del limitador de la deriva, no más estrecha que el doble de la tolerancia
+
+**Antes.** Con `drift_mode='window'`, donde las dos consignas llegan a los límites de la ventana (T_rm_in − `delta_heat`
+y T_rm_in + `delta_cool`), los termostatos las reciben con la tolerancia (la de calefacción subida y la de
+refrigeración bajada), así que con `delta_heat + delta_cool` menor que el doble de la tolerancia se cruzaban (la de
+calefacción por encima de la de refrigeración); se aceptaba sin error ni aviso (también en la GUI y en el módulo
+paramétrico).
+
+**Ahora.** `accim.sim.ems.drift_limiter.check_window_width` da un `ValueError` en ese caso: `AddAccis` lo comprueba con
+la mayor tolerancia de los IDF de salida (y la de cada zona de `zone_arguments`), y `modify_accis` con la tolerancia
+que tendrá cada zona y sus deltas (los dados o los que tiene), antes de cambiar nada; los planes del módulo paramétrico
+(`drop_invalid_param_combinations`) quitan esas filas. El cruce cuando toda la banda queda fuera de la ventana es
+el hallazgo A8 (diseño, en `notes/questions.md`).
+
+- Pruebas: `test_the_window_cannot_be_narrower_than_twice_the_tolerance` (`tests/core/test_drift_limiter.py`: la
+  función, `modify_accis` con su tolerancia, con la de una zona y con una tolerancia mayor después, sin cambiar el
+  modelo, y `AddAccis` con la mayor tolerancia de la serie y con una zona) y
+  `test_the_plans_drop_the_windows_narrower_than_twice_the_tolerance` (el plan paramétrico, también con `ASTtol`); fallan
+  sin el arreglo y pasan con él.
+- Documentación: la sección 4.2.7, la entrada del limitador del CHANGELOG y el docstring de
+  `drop_invalid_param_combinations`.
