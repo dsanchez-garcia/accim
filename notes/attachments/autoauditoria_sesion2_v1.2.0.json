@@ -1,0 +1,754 @@
+[
+ {
+  "reviewer": "Hooks-SET",
+  "frame_id": null,
+  "deviations": [
+   "Self-audit of session 2 (task of notes/COPILOT_SIGUIENTE_SESION.md, section 5): an independent, read-only reviewer (a sub-agent of the third Copilot session, 2026-11-11) with the checklist of notes/TRASPASO_ClaudeScience_2026-11-11_v01.md, Appendix A, on a git worktree at fe42957 (its code is that of 47d0b486), with Python 3.14.3 and EnergyPlus 25.1; Windows Smart App Control blocked the DLLs of numba 0.68.1 on 2026-11-11, so pythermalcomfort.models could not be imported (see tests_run and not_assessed). The ids of the findings (A1, A2...) were given when the three reviews were compiled.",
+   "pythermalcomfort.models cannot be imported (Windows Smart App Control blocks the DLLs of numba 0.68.1: 'numba._devicearray failed to import'), so every test and check that calls set_tmp or pmv_athb failed or skipped, and no simulation with a real ATHB/SET hook could be run; Smart App Control was not touched and no other interpreter was used.",
+   "To check E-F1 without pythermalcomfort, a pure-Python transcription of CalcStandardEffectiveTemp of EnergyPlus 25.1 (ThermalComfort.cc lines 864-1148, read from GitHub NatLabRockies/EnergyPlus, tag v25.1.0) was written in the scratch folder (eplus_pierce_set.py) and validated against EnergyPlus's own Pierce output (within 0.001 K per timestep over a year); no pythermalcomfort or numba code was executed.",
+   "Extra EnergyPlus 25.1 simulations were run in C:\\Users\\Servidor_Enerkea\\AppData\\Local\\Temp\\accim_audit_scratch_hooks_set (the sample model with the ACCIS and Pierce at 110.7 and 130 W/person for a year; dynamic clothing with apply_set_setpoints(clo=None); a probe of controller.get('WarmupFlag') with the API backend), with accim imported from the worktree; the worktree was not modified (git status clean).",
+   "The PDF of Sun, Brager & Schiavon (2026) was not found under D:\\DSG (no file matching S0378778826011576*), so TSV = 0.11·SET − 2.6 was checked against block F §7 and v03 only.",
+   "The first async pytest launch used the shell id 'pytest1', which already belonged to another reviewer's session: my command did not start, and reading that id returned the other reviewer's output (tests/core/test_drift_limiter.py); nothing of theirs was stopped or changed, and all my later runs used unique shell ids.",
+   "EnergyPlus source files (ThermalComfort.cc/.hh 25.1 and 25.2, EMSManager.cc 25.1, from GitHub) and the Engineering and Input Output References 25.2 (text extracted with pypdf) were read to check the claims about EnergyPlus."
+  ],
+  "proposals_reviewed": [
+   "G1",
+   "G3",
+   "E-F1",
+   "F1"
+  ],
+  "verdicts": [
+   {
+    "proposal": "G1",
+    "verdict": "correct",
+    "summary": "The hooks run before the EMS programs (runs_before_programs, routed by run_ep; RuntimeError if they run after them) and set HookAHST/HookACST/HookSetpoints_<zone>; RunACCIS_<zone> runs SetAST → ApplyHookSetpoints_<zone> (AHST/ACST = hook + tolerance, ROUNDING, flag reset) → [drift limiter] → SetASTnoTol → ApplySetpointLimits_<zone> (B5 with and without tolerance) → CountHours/CountHoursNoApp → C2/HoursBelow → ApplyAST, so the hour counters, C2, the 'Adaptive … Setpoint Temperature' outputs and the thermostats follow the hook (Erl tests pass); InitHookSetpoints at BeginNewEnvironment; no TrendVariable; both backends identical with a constant hook and without hook (check_exact tests pass); golden master unchanged (35 passed). HoursBelow depends on OpT only. Decision #23 is sound."
+   },
+   {
+    "proposal": "G3",
+    "verdict": "correct_with_issues",
+    "summary": "method='table'|'bisection' implemented; run_simulation calls prepare_hooks before load_energyplus_api (runner.py:136-137; pyenergyplus is imported lazily); prepare() warms set_tmp with the three call shapes of the bisection (numba sees the same types in prepare and in the callbacks, for both postures); tdb = tr (equal_air) and the air temperature with the MRT of the zone (zone) are bisected correctly; SET_<zone> is the SET of the previous-timestep MAT/MRT/RH; MAT/MRT/RH outputs at the ACCIS frequencies; set_of_results; sitting by default at ≤ 1.2 met; A6-1..A6-4 closed in code and docs. Issue: the central ordering claim has no portable unit test. Real SET runs could not be assessed here (numba blocked)."
+   },
+   {
+    "proposal": "E-F1",
+    "verdict": "correct_with_issues",
+    "summary": "add_thermal_comfort_model is correct and the measurement is reproducible, and ta, tr, RH, clo and v are exactly Pierce's inputs (validated), but met is not: EnergyPlus's Pierce converts the activity level with 1.8258 m² while E-F1 (and the hooks) use 1.8 m², which alone raises the SET by ~0.1 K, the size of the reported differences. Moreover the EnergyPlus 25.1/25.2 code omits the activity term 5.66·(met − 0.85)^0.39 of the real-environment hc (the Engineering Reference and the decision say it is there; pythermalcomfort has it); the sample's 110.7 W/person is just below the ≈1.046 met at which it acts, so the '0.2 K standing / 0.35 K sitting' agreement does not generalize: at 1.1-1.2 met the two SETs are expected to differ by ~0.4-1 K."
+   },
+   {
+    "proposal": "F1",
+    "verdict": "correct_with_issues",
+    "summary": "Comfort standard 24 is a thin layer on the bisection hook as decided: band 19.09/28.18 °C from (∓tsv_limit + 2.6)/0.11, neutral 23.6 ± set_offset (K of SET), 0.7/1.0 with an extrapolation warning, other limits and modes 0/3 raise ValueError, categories 80/90 → 0.5, tr_mode='zone' Top = (ta + tr_prev)/2, B5 minimum after the inversion and a once-per-zone 18 °C warning without minimum, People inputs (activity/104.76, clothing schedule or dynamic output, air velocity schedule), TSV_causal and HoursInCausalBand (occupied, band inclusive), Pierce added, rejected by AddAccis/modify_accis/EMS code/GUI/prompts, TODO P2 for the Erl fallback. Issues: apply_set_setpoints(clo=None) with the dynamic clothing model makes EnergyPlus stop (no Fanger/Pierce/KSU); a prepared model runs silently without its hook; stale outputs when the hook skips a zone; the SET of the hook against Pierce depends on met (see E-F1)."
+   }
+  ],
+  "findings": [
+   {
+    "id": "A1",
+    "proposal": "E-F1",
+    "severity": "scientific",
+    "location": "tests/core/test_pierce_set.py:141 (met = activity/(58.2*1.8)); accim/sim/comfort_hooks.py:169 (MET_ACTIVITY_LEVEL = 58.2*PMV_BODY_SURFACE_AREA, used by SetSetpointHook.zone_inputs at :942); notes/decisions.md:500-509 (E-F1: '1.8 m²', 'met=activity schedule/(58.2·1.8)'); docs/source/4_detailed use.md:1608 (SET_Act_<zone>: 'the body surface area of 1.8 m² with which EnergyPlus gives the activity per person')",
+    "problem": "E-F1 does not use EnergyPlus's input for the metabolic rate: the Pierce model of EnergyPlus converts the activity level with BodySurfAreaPierce = 1.8258 m² (ThermalComfort.hh:69; ThermalComfort.cc 25.1:824 and 25.2:849, ActLevel = activityLevelSched/BodySurfAreaPierce), while 1.8 m² (BodySurfArea) is used only by Fanger and KSU (25.1:570 and :1460). The comparison (and the SET hooks that F1 compares with Pierce) use met = activity/(58.2·1.8), 1.43 % higher (1.0567 against 1.0418 met for 110.7 W/person). The reported differences (−0.045 K standing, −0.116 K sitting; F1 −0.08/−0.155 K) therefore mix an input mismatch with the model differences, while the decision and the docs attribute them to the posture and the model only; the statement that the body area 'does not change them' refers only to the body_surface_area argument of set_tmp (heat storage), not to the met conversion.",
+    "evidence": "A pure-Python transcription of CalcStandardEffectiveTemp (EnergyPlus 25.1) fed with the timestep outputs of a yearly run of the sample model with Pierce (Seville, 6 timesteps/h, Zone Mean Air/Radiant Temperature, Zone Air Relative Humidity, site pressure, schedules) and met = activity/(58.2·1.8258) reproduces 'Zone Thermal Comfort Pierce Model Standard Effective Temperature' within 0.00098/0.00073 K per timestep (52 560 timesteps per zone; 0.00016 K hourly), which confirms the 1.8258 m². With met = activity/(58.2·1.8) the same algorithm gives a SET higher by +0.096 K on average over the year (hourly +0.057 to +0.142 K; +0.082 K at 0.5 clo, +0.110 K at 1.0 clo), the size of the reported differences: with matched met, pythermalcomfort would be roughly 0.1 K further below EnergyPlus than reported.",
+    "fix": "Re-run E-F1 with met = activity/(58.2·1.8258) (the input of the Pierce model) and update notes/decisions.md (E-F1 and F1 entries), docs 4.9.2/4.9.3, CHANGELOG and MEASURED in tests/core/test_pierce_set.py, reporting separately the effect of accim's 1.8 m² convention. Ask the author whether the SET hooks (SetSetpointHook.zone_inputs, Sun2026SetpointHook) should convert with 1.8258 m² (consistent with the Pierce SET that F1 and F3 report beside them) or keep 1.8 m² (the ISO 7730/Fanger convention) with the ~0.1 K offset documented; correct 'the body surface area of 1.8 m² with which EnergyPlus gives the activity per person' (true for Fanger and KSU, not for Pierce)."
+   },
+   {
+    "id": "A2",
+    "proposal": "E-F1",
+    "severity": "scientific",
+    "location": "notes/decisions.md:500-501 and :530-534 (E-F1 context and consequences), :488-493 (F1 consequences); docs/source/4_detailed use.md:1615 and :1648; tests/core/test_pierce_set.py and tests/core/test_sun2026_set.py (one activity level, 110.7 W/person)",
+    "problem": "The description of EnergyPlus's Pierce model on which the comparison is judged (hc = max(8.6·v^0.53, 5.66·(met − 0.85)^0.39) with v ≥ 0.137 m/s, from the Engineering Reference 25.2 §19.1.4, eqs. 19.27-19.28, pp. 1567-1568) is not what EnergyPlus 25.1/25.2 computes: CalcStandardEffectiveTemp uses, in the real environment, Hc = max(3.0·P^0.53, 8.600001·(v·P)^0.53) with v ≥ 0.1 m/s (25.1:888 and :918-920) and applies 5.66·(ActMet − 0.85)^0.39 only to the standard environment (StdHc, 25.1:1108, 25.2:1144), whereas pythermalcomfort's ASHRAE 55 code adds it to the real environment (two_nodes_gagge.py:343-345, unless calculate_ce). The term exceeds 3.0 W/m²K above ≈1.046 met; the sample model's 110.7 W/person is 1.042 met in the Pierce model, just below it, so E-F1's 'within 0.2 K standing and 0.35 K sitting' and F1's −0.08/−0.155 K hold only near 1.0 met and do not carry over to the 1.1-1.2 met of block F §2.3 or of typical offices, where the SET of the hooks and the Pierce SET that F1 reports beside it will differ by several tenths of a kelvin to more than 1 K (≈0.1 of TSV per K).",
+    "evidence": "EnergyPlus 25.1, sample model with its activity schedules set to 130 W/person (1.223 met in Pierce), one year: the transcription WITHOUT the activity term reproduces the Pierce output within 0.0005 K; WITH the term the SET is 1.09 K lower on average (max 1.55 K). On the conditions of the 110.7 W run, adding the term changes EnergyPlus's SET by 0 K at 1.042 met, −0.39 K (−0.24 to −0.57) at 1.1 met and −0.97 K (−0.65 to −1.37) at 1.2 met. A proxy of the hook's inputs at 130 W (met/1.8, radiative fraction 0.73, the activity term, EnergyPlus's algorithm) is 1.04 K below the Pierce output on average (−0.66 to −1.53 K). set_tmp itself could not be run (numba blocked), so the pythermalcomfort figures at 1.1-1.2 met are estimates.",
+    "fix": "Repeat the E-F1 measurement at 1.1 and 1.2 met (e.g. 115 and 126 W/person) and both clothing levels, record the differences by activity level in decisions.md and docs 4.9.2/4.9.3, and restrict the present statements to ≈1.0 met; document that EnergyPlus's code (which cites ASHRAE 55-2017 Appendix D) omits the activity-dependent hc of the real environment, contrary to its Engineering Reference, while pythermalcomfort includes it; parametrize test_pierce_set.py over the activity level; the author decides, together with open question #9, which SET is the reference of F1 and F3 (and whether to report the code/documentation mismatch to EnergyPlus)."
+   },
+   {
+    "id": "A3",
+    "proposal": "F1",
+    "severity": "bug",
+    "location": "accim/sim/comfort_hooks.py:1318 and :1327 (apply_set_setpoints: _people_inputs(building, list(keys), needed) without pierce, then _add_people_sensors) with :1258 (sensor SET_CloValue_<zone> on 'Zone Thermal Comfort Clothing Value')",
+    "problem": "apply_set_setpoints(..., clo=None, method='bisection') on a model whose People objects use DynamicClothingModelASHRAE55 (or CalculationMethodSchedule) adds EMS sensors on 'Zone Thermal Comfort Clothing Value', an output that EnergyPlus only sets up for People objects with Fanger, Pierce or KSU (ThermalComfort.cc 25.1:243-264). The temperature-setpoint ACCIS models that the hooks require have only AdaptiveASH55 and AdaptiveCEN15251 and, unlike apply_sun2026_setpoints (which adds Pierce first), apply_set_setpoints adds no comfort model, so EnergyPlus stops before the simulation (EMSManager.cc, ProcessEMSInput with reportErrors) in both backends.",
+    "evidence": "Scratch dyn_run.py: AddAccis of the sample model (vrf_ac, INT EN16798 II, comfort mode 3), set_clothing_method(idf, 'DynamicClothingModelASHRAE55'), apply_set_setpoints(idf, 27, 21, met=1.1, clo=None, air_speed=0.1, method='bisection') → People models ['AdaptiveASH55', 'AdaptiveCEN15251', ''] and sensors SET_CloValue_Block1_Zone1/2; EnergyPlus 25.1: '** Severe ** Invalid Output:Variable or Output:Meter Name =ZONE THERMAL COMFORT CLOTHING VALUE … Entered in EnergyManagementSystem:Sensor=SET_CLOVALUE_BLOCK1_ZONE1 … Fatal error -- final processing. Program exited before simulations began' (EMS backend exit 1; run_simulation of the API backend exit 1). No test covers clo=None with the dynamic model in apply_set_setpoints (test_the_inputs_of_the_people_objects_of_the_hooks_of_the_set checks it only through apply_sun2026_setpoints).",
+    "fix": "In apply_set_setpoints, when clo is None and a zone's clothing source is 'dynamic' or 'method', call _people_inputs(..., pierce=True) and add_thermal_comfort_model(building, 'Pierce') as apply_sun2026_setpoints does (or raise a ValueError naming the missing comfort model); add an IDF-level test (the People objects get a model that reports Zone Thermal Comfort Clothing Value) and a short EnergyPlus run of the prepared model without the hook."
+   },
+   {
+    "id": "A4",
+    "proposal": "F1",
+    "severity": "design",
+    "location": "accim/run/run.py:170-199 (run_ep); accim/sim/energyplus_api/runner.py (run_simulation, run_simulations); accim/sim/ems/hook_setpoints.py",
+    "problem": "A model prepared with apply_sun2026_setpoints (or apply_athb_setpoints/apply_set_setpoints) and then simulated without its hook — run_ep() with its default EMS backend, or the API backend without hooks — runs without any error or warning, with the adaptive setpoints of the comfort standard the model was generated with (e.g. INT EN16798) and SET_<zone>, TSV_causal_<zone> and HoursInCausalBand_<zone> equal to 0, under output names that keep CS_<base standard>. The clear error asked for comfort standard 24 without the API backend exists only when generating it (AddAccis, modify_accis, EMS code, compute_setpoints) and for run_ep(backend='ems', hooks=...).",
+    "evidence": "test_without_the_hook_both_backends_give_the_same_results_with_comfort_standard_24 (passed here) asserts exactly this silent run (all the hook outputs 0, adaptive setpoints with the minimum of 18 °C); docs 4.9.1 and 4.9.3 only describe it.",
+    "fix": "In run_ep (EMS backend) and run_simulation/run_simulations, detect the models with programs ApplyHookSetpoints_<zone> (accim.sim.ems.hook_setpoints.hook_zones) and raise (EMS backend) or warn (API backend without a hook with runs_before_programs), naming the function that prepared the model; optionally an EMS output of the occupied timesteps after warm-up in which HookSetpoints_<zone> was 0."
+   },
+   {
+    "id": "A5",
+    "proposal": "F1",
+    "severity": "minor",
+    "location": "accim/sim/comfort_hooks.py:959-976 (SetSetpointHook.__call__, 'if inputs is None: continue') and :1144-1151 (Sun2026SetpointHook._report)",
+    "problem": "When the hook skips a zone in a timestep (activity level ≤ 0, clothing value of the dynamic model 0, or a missing sensor value) it does not update SET_<zone>, TSV_causal_<zone> and HoursInCausalBand_<zone>, so their EMS outputs repeat the values of the last timestep in which they were set; HoursInCausalBand_<zone> is a Summed output, so each skipped timestep counts again the hours of the previous one, even if the zone is unoccupied (e.g. in models whose activity level schedule is 0 when unoccupied).",
+    "evidence": "Scratch stale_check.py with the real Sun2026SetpointHook and a fake controller: HoursInCausalBand_Block1_Zone1 = 1/6 before an unoccupied timestep with activity 0 stays 1/6 after it (SET 23.0 and TSV_causal −0.07 unchanged, no setpoints given); ErlController keeps the global variable and EnergyPlus sums the reported value every zone timestep.",
+    "fix": "At the start of each zone in SetSetpointHook.__call__ (or before each 'continue'), set HoursInCausalBand_<zone> to 0 and SET_<zone>/TSV_causal_<zone> to 0 or Null, document it, and add a unit test with a skipped timestep."
+   },
+   {
+    "id": "A6",
+    "proposal": "G3",
+    "severity": "test",
+    "location": "tests/core/test_comfort_hooks.py:734-748 (test_run_simulation_prepares_the_hooks); accim/sim/energyplus_api/runner.py:136-137",
+    "problem": "The central claim of G3 — run_simulation calls prepare() of the hooks in the process of the simulation before load_energyplus_api — is not unit-tested: the test only calls prepare_hooks() on a list. The only guard is test_the_set_setpoints_by_bisection_in_energyplus, which needs pythermalcomfort and would also pass where set_tmp does not crash after the library is loaded (Python 3.12 in the review v04), so a regression of the order would go unnoticed outside the development environment.",
+    "evidence": "No test in tests/ patches load_energyplus_api or records the order (grep of prepare_hooks/load_energyplus_api/.prepare()); the order is right today (runner.py:136 prepare_hooks, :137 load_energyplus_api).",
+    "fix": "Add a unit test that monkeypatches accim.sim.energyplus_api.runner.load_energyplus_api to record its call and raise, runs run_simulation with a hook whose prepare() records its call, and asserts the order ['prepare', 'load']."
+   },
+   {
+    "id": "A7",
+    "proposal": "H4",
+    "severity": "bug",
+    "location": "accim/sim/comfort_hooks.py:483 (AthbSetpointHook.__call__: 'if saturated and not controller.get(\"WarmupFlag\")'); accim/sim/energyplus_api/controller.py:108 and :290-298 (only the built-in variables used by the programs are updated); tests/core/test_comfort_hooks.py:140-152 (the fake controller sets WarmupFlag)",
+    "problem": "Cross-group, in the current comfort_hooks.py: ErlController only updates the built-in variables that the EMS programs of the model use, and an ACCIS model without the custom outdoor metric or the drift limiter has no program that uses WarmupFlag, so controller.get('WarmupFlag') is None in every timestep and saturated_hours (and the warning of finish()) include the warm-up days and the sizing periods, contrary to the docstring and docs 4.9.1 ('out of the warm-up days'). The unit test passes only because its fake controller sets WarmupFlag.",
+    "evidence": "Scratch warmup_run.py: the sample model with the ACCIS (INT EN16798; no EMS program uses WarmupFlag), run_simulation of the API backend with a before_programs hook that records controller.get('WarmupFlag') and api.exchange.warmup_flag(state) at BEGINTIMESTEPBEFOREPREDICTOR over a 2-day run period: {(None, warm-up True): 4476, (None, False): 864} (576 of the 864 non-warm-up calls were sizing design days).",
+    "fix": "Read the flag from the API (controller.api.exchange.warmup_flag(controller.state)) or make ErlController always update WARMUPFLAG (e.g. a controller.warmup property), exclude the sizing environments as well, and test it with the real controller in a short run."
+   }
+  ],
+  "verified_correct": [
+   "G1 order: RunACCIS_<zone> runs … SetAST, ApplyHookSetpoints_<zone> (hook_setpoints.py:109, inserted right after SetAST), [ApplyDriftLimiter_<zone>], SetASTnoTol, ApplySetpointLimits_<zone> (setpoint_limits.py:212), CountHours_<zone>, CountHoursNoApp_<zone>, [C2, CountHoursBelow], ApplyAST_<zone> (programs.py:259-266); the Python hooks run before all the programs of the calling point (ErlController.run_calling_point), after the sensors are read.",
+   "G1 Erl: ApplyHookSetpoints_<zone> sets AHST = HookAHST + AHSTtol and ACST = HookACST + ACSTtol, applies the ROUNDING of SetAST and resets the flag, and SetASTnoTol then gives the hook values exactly; test_the_accis_follows_the_setpoints_of_the_hook (passed): thermostats 22.1/25.9 °C, noTol 22/26 °C, rounded 22.1/25.8999 °C, NoApp and C2 counters (HoursAboveUpperLimit 0.25 h, DegreeHours 0.125 Kh) follow the hook, flag used once; test_the_minimum_and_maximum_bound_the_setpoints_of_the_hook (passed): B5 gives exactly 23/25 °C with and without the tolerance.",
+   "G1: HoursBelow_<T>_<zone> (hours_below_lines) uses only <zone>_OpT and Occ_count_<zone>, so it does not depend on the setpoints; the 'Adaptive … Setpoint Temperature' outputs are roundedACST/AHST and ACSTnoTol/AHSTnoTol (ems/objects.py:28-30), which follow the hook.",
+   "G1: InitHookSetpoints (BeginNewEnvironment) zeroes HookSetpoints/HookAHST/HookACST; run_ep routes the hooks with runs_before_programs to before_programs (test passed) and the hooks raise RuntimeError if run after the programs; no EnergyManagementSystem:TrendVariable is created anywhere in accim.",
+   "G1 backends: test_the_setpoints_of_a_hook_are_the_same_with_both_backends (a constant hook in the API backend against the same lines in the EMS programs, check_exact) and test_without_the_hook_both_backends_give_the_same_results passed with EnergyPlus 25.1; tests/core/test_golden_master.py 35 passed (AddAccis outputs unchanged; the hook objects are only added by apply_*).",
+   "G3: run_simulation calls prepare_hooks([*before_programs, *after_programs]) before load_energyplus_api (runner.py:136-137), and load_energyplus_api imports pyenergyplus lazily (runtime.py); prepare() of the bisection hook calls set_tmp with a scalar, with tdb = tr arrays and with an array tdb and a scalar tr, the three shapes used by inverted_temperatures and zone_set; numpy.vectorize hands numba np.float64/np.str_ for the first element and Python float/str for the rest, typed float64/unicode in both cases (numba registers str), so other postures or values do not trigger a new compilation in the callbacks.",
+   "G3: tr_mode='equal_air' bisects set_tmp(T, T, …) and tr_mode='zone' set_tmp(T, MRT_zone, …), converted to (ta + MRT)/2; SET_<zone> = SET of the previous-timestep MAT/MRT/RH with the inputs of the timestep; apply_set_setpoints requests Zone Mean Air/Radiant Temperature and Zone Air Relative Humidity at the frequencies of the ACCIS outputs; set_of_results refuses hooks without fixed inputs; position=None → sitting at ≤ 1.2 met; A6-1 (docs and decisions rewritten: the access violation only in the Python 3.14 environment when the library was loaded first, the JIT cost, the methods), A6-2 (documented, plus tr_mode='zone'), A6-3 (sensors, outputs, SET_<zone>, set_of_results, Pierce through add_thermal_comfort_model) and A6-4 (posture, insensitivity) are closed.",
+   "pythermalcomfort 4.8.1 source read as text: air_speed = max(v, 0.1) (two_nodes_gagge.py:281), h_cc = max(3.0·P^0.53, 8.6·(v·P)^0.53) and the max with 5.66·(met − 0.85)^0.39 for met > 0.85 unless calculate_ce (338-345), radiative fraction 0.70 sitting and 0.73 standing (369-374); the documented thresholds of 0.164 m/s at 1.1 met and 0.210 m/s at 1.2 met follow from 8.6·v^0.53 = 5.66·(met − 0.85)^0.39.",
+   "E-F1: add_thermal_comfort_model fills the first empty Thermal Comfort Model field, keeps the ACCIS models, is idempotent and raises before any change (test passed). Apart from met, the inputs of the comparison are exactly those of Pierce: with Zone Mean Air/Radiant Temperature, Zone Air Relative Humidity/100, the air velocity (0.137 m/s) and clothing schedules and met = activity/(58.2·1.8258), the transcription of EnergyPlus 25.1 reproduces the Pierce SET within 0.001 K per timestep over a year; Zone Thermal Comfort Clothing Value is 0 all year with ClothingInsulationSchedule (ThermalComfort.cc sets ClothingValue only in the dynamic and calculation-method branches), as decision #18 measured; the site pressure against 101 325 Pa changes the SET by 0.002 K on average (max 0.036 K).",
+   "F1 numbers: sun2026_set_setpoints() = (19.0909, 28.1818) = ((∓0.5 + 2.6)/0.11); tsv_limit 0.7 → (17.27, 30.00) and 1.0 → (14.55, 32.73) with the extrapolation warning; other limits raise; categories 80/90 → 0.5; mode 2 = 23.6 ∓ set_offset (K of SET, > 0); causal_tsv(23.6) = −0.004 (2.6/0.11 = 23.64); comfort modes 0, 3 and '0' raise \"comfort_mode must be one of 1 ('SET band'), 2 ('SET neutral +/- offset')\"; 0.11 and −2.6 are consistent with b2 = −0.49 − 0.11·19.1 = −2.59 (the ratio 0.03/0.26 = 0.115 only reflects the rounding of the published slopes).",
+   "F1 hook: tolerance 0.05 K within 10-40 °C; the 18 °C warning only in the zones without heating_setpoint_minimum (read at preparation), once per zone, on the operative setpoint that B5 bounds; the B5 minimum/maximum act in the EMS after the hook (Erl test); TSV_causal = 0.11·SET − 2.6; HoursInCausalBand = ZoneTimeStep when Occ_count > 0 and band[0] ≤ SET ≤ band[1] (the same band in both modes); People inputs: activity/104.76 (W/person), clothing schedule, dynamic output or calculation-method schedule (1 → schedule, 2 → dynamic, as EnergyPlus), air velocity schedule; Pierce and its output added; AddAccis, modify_accis (zone arguments), the EMS code and compute_setpoints raise ValueError for 24 and the GUI and prompts do not offer it (test_comfort_standard_24_has_no_ems_code passed); TODO.md has the P2 entry for the Erl fallback; the IDF-level tests of apply_sun2026_setpoints passed.",
+   "F1 documentation (docs 4.9.3, CHANGELOG [Unreleased], CAMBIOS §30, docstrings) matches the code for the modes, tsv_limit, categories, tr_mode, B5 and the warning, the People inputs, the outputs and the absence of EMS code (except the met-conversion statement of finding 1 and the generality of the measured differences of finding 2).",
+   "Other test files touched by G1/G3/F1 pass: test_setpoint_limits.py 27, test_energyplus_api.py 33, test_table_optional_outputs.py + test_zone_arguments.py + test_ems_code.py 85."
+  ],
+  "provisional_decisions_review": [
+   {
+    "decision": "#16 F1: the numbers of the comfort modes of comfort standard 24 (1 = 'SET band', 2 = 'SET neutral +/- offset')",
+    "sound": true,
+    "recommendation": "Accept: 0 keeps its meaning of static setpoints elsewhere. The instruction of the verdict is already met: modes 0, 3 and '0' raise a ValueError that lists the valid modes (checked); add mode 0 to the test, which only covers 3."
+   },
+   {
+    "decision": "#17 F1: the 'CustAST_ACSTaul/all and AHSTaul/all limits' of the prompt are not applied to the SET setpoints",
+    "sound": true,
+    "recommendation": "Accept: ACSTaul/ACSTall/AHSTaul/AHSTall are applicability limits of the outdoor metric, and the causal SET model has no outdoor applicability; the setpoints are bounded by the bisection range and the B5 minimum/maximum."
+   },
+   {
+    "decision": "#18 F1: the clothing insulation of the dynamic clothing model read from the output Zone Thermal Comfort Clothing Value",
+    "sound": true,
+    "recommendation": "Accept (confirmed: the output is 0 with ClothingInsulationSchedule and EnergyPlus fills it only in the dynamic and calculation-method branches), but the output exists only for People objects with Fanger, Pierce or KSU: apply_set_setpoints(clo=None) must add Pierce (or raise) as apply_sun2026_setpoints does (finding 3)."
+   },
+   {
+    "decision": "#23 G1: the setpoints of a hook are the limits of the comfort band (without the tolerance) and the thermostats get them with the tolerance",
+    "sound": true,
+    "recommendation": "Accept: the same meaning as the adaptive setpoints, so the counters, C2, B5 and the outputs use the band of the hook and setpoint_tolerance keeps its meaning (verified in the Erl tests); the docs could add that with setpoint_tolerance=0 the strict rounding still puts an exact cooling setpoint one step of SetpointAcc below (25.9999 °C), as for the adaptive setpoints."
+   },
+   {
+    "decision": "Author decision of 2026-11-10: with tr_mode='zone' the inverted air temperature is written as Top = (ta + tr_zone)/2 to the operative-temperature thermostats",
+    "sound": true,
+    "recommendation": "Accept: it matches the radiative fraction 0.5 of the ACCIS thermostats and needs no new actuator; the one-timestep lag of the mean radiant temperature is documented."
+   },
+   {
+    "decision": "G3: position=None → sitting at ≤ 1.2 met, standing above",
+    "sound": true,
+    "recommendation": "Accept as physically right for sedentary occupants, but it moves accim's SET ≈0.07 K further from EnergyPlus's Pierce (radiative fraction 0.72); revisit with open question #9 (which SET implementation Sun et al. used)."
+   },
+   {
+    "decision": "F1/G3 implementation: the metabolic rate of the SET hooks from the People objects = activity/(58.2·1.8) (MET_ACTIVITY_LEVEL)",
+    "sound": false,
+    "recommendation": "EnergyPlus's Pierce model, with which F1 compares and which F1/F3 report, uses 1.8258 m² (about +0.1 K of SET with 1.8 m²): the author should choose 1.8258 m² for the SET hooks (consistency with Pierce) or keep 1.8 m² (ISO/Fanger convention) and document the offset; re-measure E-F1 either way (finding 1)."
+   },
+   {
+    "decision": "E-F1 consequence (decisions.md:530): 'the SET of accim (pythermalcomfort) is that of EnergyPlus within 0.2 K standing and 0.35 K sitting', taken as acceptable for F1",
+    "sound": false,
+    "recommendation": "Valid only near 1.0 met (sample model, 110.7 W/person): EnergyPlus's code has no activity term in the real-environment hc, so at 1.1-1.2 met the difference is expected to be ~0.4-1 K; re-measure at 1.1 and 1.2 met before using F1 in a paper (finding 2)."
+   }
+  ],
+  "tests_run": [
+   {
+    "file": "tests/core/test_comfort_hooks.py",
+    "result": "15 passed, 14 failed, 2 skipped in 61.9 s. All 14 failures are the numba environment (ImportError 'The setpoints of the SET/ATHB need pythermalcomfort' from 'numba._devicearray failed to import', Smart App Control), including the 3 EnergyPlus runs with real hooks; the 2 skips are importorskip('pythermalcomfort.models'). Passed: the Erl tests of G1 (hook → counters, C2, B5), the routing of run_ep, apply_athb_setpoints, both-backend equality with a constant hook and without hook, prepare_hooks."
+   },
+   {
+    "file": "tests/core/test_sun2026_set.py",
+    "result": "6 passed, 4 failed, 8 skipped in 31.5 s. The 4 failures (heating below 18 °C and the minimum, the People inputs, the two EnergyPlus weeks) and the 8 skips (test_the_inversion_of_the_set parametrized) are the numba environment. Passed: the setpoints of comfort standard 24, no EMS code, apply_sun2026_setpoints, the People inputs at IDF level, the set_of_results error, both backends without the hook."
+   },
+   {
+    "file": "tests/core/test_pierce_set.py",
+    "result": "1 passed (add_thermal_comfort_model), 1 skipped (numba environment: the yearly EnergyPlus against set_tmp comparison) in 7.3 s."
+   },
+   {
+    "file": "tests/core/test_golden_master.py",
+    "result": "35 passed in 49.8 s."
+   },
+   {
+    "file": "tests/core/test_setpoint_limits.py",
+    "result": "27 passed in 94.8 s."
+   },
+   {
+    "file": "tests/core/test_energyplus_api.py",
+    "result": "33 passed in 37.8 s."
+   },
+   {
+    "file": "tests/core/test_table_optional_outputs.py tests/core/test_zone_arguments.py tests/core/test_ems_code.py",
+    "result": "85 passed in 24.8 s (one invocation)."
+   },
+   {
+    "file": "scratch: pierce_run.py + compare_pierce_full.py (not pytest)",
+    "result": "EnergyPlus 25.1 yearly run of the sample model with Pierce (52 560 timesteps per zone): the transcription with met/1.8258 reproduces the Pierce SET within 0.001 K per timestep; met/1.8 adds +0.096 K on average (+0.057 to +0.142 K hourly)."
+   },
+   {
+    "file": "scratch: pierce_130W.py and methc_year.py (not pytest)",
+    "result": "130 W/person: the Pierce SET is reproduced within 0.0005 K WITHOUT the activity term in hc; WITH it, −1.09 K on average (max 1.55 K); effect of the term −0.39 K at 1.1 met and −0.97 K at 1.2 met."
+   },
+   {
+    "file": "scratch: dyn_run.py (not pytest)",
+    "result": "apply_set_setpoints(clo=None) with DynamicClothingModelASHRAE55: EnergyPlus 25.1 fatal 'Invalid Output:Variable or Output:Meter Name = ZONE THERMAL COMFORT CLOTHING VALUE' in both backends."
+   },
+   {
+    "file": "scratch: warmup_run.py and stale_check.py (not pytest)",
+    "result": "controller.get('WarmupFlag') is None in all 5340 calls (4476 in warm-up); a skipped zone keeps HoursInCausalBand = 1/6."
+   }
+  ],
+  "not_assessed": [
+   "Everything that needs pythermalcomfort.models (numba blocked by Smart App Control): the accuracy of the inversions against set_tmp (within 0.05 K), the 15.8/15.9 °C heating setpoints, the A6-2 numbers (0.10/0.07 K), the insensitivity of the setpoints at 0.05-0.15 m/s, the posture effects (0.004-0.008/0.05 K), the reproduction of the E-F1 table and of the F1 two-week table, the ATHB EnergyPlus tests, and the actual pythermalcomfort SET at 1.1-1.2 met (only estimated with EnergyPlus's algorithm).",
+   "The access violation of set_tmp after the API library is loaded (Python 3.14.3, numba 0.68.1) and that prepare() avoids it in a real run; the JIT and run-time costs (16 s, 45 s for two days, 1.5 s for the table).",
+   "The paper of Sun, Brager & Schiavon (2026), Fig. 7a: not found under D:\\DSG; TSV = 0.11·SET − 2.6 and the band were checked against block F §7 and v03 only.",
+   "The hooks with EnergyPlus 25.2 and 26.x, the GUI, the parametric module and the documentation build.",
+   "Whether the setpoints given by the hooks during the sizing periods change the autosized VRF capacities compared with the ACCIS (pre-existing behaviour of A4/A6, not changed by G1)."
+  ]
+ },
+ {
+  "reviewer": "Drift-Indicators",
+  "frame_id": null,
+  "deviations": [
+   "Self-audit of session 2 (task of notes/COPILOT_SIGUIENTE_SESION.md, section 5): an independent, read-only reviewer (a sub-agent of the third Copilot session, 2026-11-11) with the checklist of notes/TRASPASO_ClaudeScience_2026-11-11_v01.md, Appendix A, on a git worktree at fe42957 (its code is that of 47d0b486), with Python 3.14.3 and EnergyPlus 25.1; Windows Smart App Control blocked the DLLs of numba 0.68.1 on 2026-11-11, so pythermalcomfort.models could not be imported (see tests_run and not_assessed). The ids of the findings (A1, A2...) were given when the three reviews were compiled.",
+   "Worked in the read-only worktree C:\\Users\\Servidor_Enerkea\\AppData\\Local\\Temp\\accim_audit (accim.__file__ resolved there). All commands after the initial 'py -c \"import accim\"' check ran with PYTHONDONTWRITEBYTECODE=1; that first import (like the concurrent runs of the other reviewers) may have written git-ignored __pycache__ files, which were left in place; git status shows no change to tracked files, nothing was written in D:\\DSG\\accim, and notes/work-log.md was not updated (read-only review).",
+   "Ran one extra test file, tests/core/test_golden_master.py (read-only comparison, ACCIM_UPDATE_GOLDEN=0), to back the claim that drift_mode=None leaves the output IDFs byte-identical.",
+   "Ran extra EnergyPlus 25.1 simulations (EMS backend, energyplus.exe) and Erl-interpreter checks in the scratch folder accim_audit_scratch_drift to quantify the 'window' and 'rate' modes, the hook/limiter/B5 order, the F3 cooling season and the F3 T_rm_in; all their files stay in the scratch folder.",
+   "Extracted text (pypdf) of UNE-EN 16798-1:2020, UNE-CEN/TR 16798-2:2019, UNE-EN ISO 7730:2025, Parkinson, de Dear & Brager 2020 (doi 10.1016/j.enbuild.2019.109559; Fig. 6 read as an image) and Parkinson et al. 2021 (doi 10.1038/s41598-021-03121-1) into the scratch folder, located by DOI in inventario_para_api.json; only short numeric facts are used as evidence.",
+   "Left out as instructed: decision #13 (reference of the 'rate' mode), #9 (which SET for F3), #12, #19 and #20 of the handoff numbering, comfort standards 9/10, CIBSE TM52/TM59, the FWG jar and the F3 validation study."
+  ],
+  "proposals_reviewed": [
+   "F2",
+   "F3",
+   "H3",
+   "H4"
+  ],
+  "verdicts": [
+   {
+    "proposal": "F2",
+    "verdict": "correct_with_issues",
+    "summary": "The Erl limiter implements decisions 6-7 of block F and the provisional #14/#15 as written: T_rm_in = (1-a)*T_occ_mean(d-1) + a*T_rm_in(d-1) over occupied timesteps only, started by the first occupied day (or initial_T_rm_in), unchanged after unoccupied days; 'rate' free on the first occupied day; warm-up skipped; targets are AHST-AHSTtol/ACST-ACSTtol and limited setpoints are rewritten with the tolerance and ROUNDING; order SetAST -> ApplyHookSetpoints -> ApplyDriftLimiter -> SetASTnoTol -> ApplySetpointLimits; no TrendVariable; both backends identical and T_rm_in equal to pandas in EnergyPlus 25.1; drift_mode=None byte-identical (test + golden master 35/35). Issues: the author's 'window' semantics collapses the band to <= 2 K and multiplies heating energy (x258 in April in the sample model); window deltas below 2*setpoint_tolerance give crossed thermostat setpoints; the EnergyPlus test never activates 'rate'; AddAccis silently ignores limiter arguments without drift_mode. The reference of 'rate' (#13) was not reviewed."
+   },
+   {
+    "proposal": "F3",
+    "verdict": "correct_with_issues",
+    "summary": "Definitions match block F: causal band 19.09-28.18 C SET inclusive (TSV = 0.11*SET - 2.6), Tn_exp coefficients of Parkinson 2020 Fig. 6 (AC 1.06+0.951x, MM 2.91+0.879x, NV 2.23+0.897x, checked on the figure), 2.5 K labelled inferred, Pierce SET of EnergyPlus, overcooling below 22 C in the ACCIS cooling season, hourly means documented, Table names consistent. Issues: wrap-around (southern-hemisphere) cooling seasons give 0 overcooling hours, and Table always uses days 121-274 whatever season was simulated (bug); the 22 C threshold is attributed to Parkinson et al. 2021, which has no such threshold (it is Parkinson et al. 2020, section 4.3.2); the docstring of indoor_running_mean overstates its equality with the EMS T_rm_in (0.03-0.06 K apart)."
+   },
+   {
+    "proposal": "H3",
+    "verdict": "correct_with_issues",
+    "summary": "EN16798_TABLE_B2 equals EN 16798-1 Table B.2 (verified in UNE-EN 16798-1:2020, p. 49); long_term_range validation and the building-type rule (#5) are sound; Method C uses wf = PPD(PMV)/PPD(PMVlimit) with ISO 7730:2025 formula (5), the literal half-open range of CEN/TR 16798-2 Annex D (verified), the setpoints converted to the PMV scale with the thermostats' inverse (#6), the PMV of the previous timestep and 0 without occupants; EMS = D1 functions in EnergyPlus with both backends (49 tests passed); Table with source_frequency='timestep' is fixed and the Table-vs-EMS difference documented (v04 C2-1 and D1-1 closed). Only issue: the constant Table B.2 range (e.g. 20-26 C for cat. II all year) cannot see summer overcooling or winter overheating, which the docs do not say."
+   },
+   {
+    "proposal": "H4",
+    "verdict": "correct_with_issues",
+    "summary": "ATHB_saturated_<zone> flags a setpoint exactly at a temperature_range limit (the bisection returns the limits exactly when the target is out of range), is summed in hours, excludes warm-up from saturated_hours and is warned about in finish(), which run_simulation calls; output_frequencies=None takes the model's EMS output frequencies; met > 0 is enforced and the warnings at met outside 0.8-4 and air speed above 1 m/s match ISO 7730:2025 section 4 (verified); 1 met = 104.76 W/person and the relative air speed are documented (v04 A4-2 and A4-3 closed; A4-1 closed for the ATHB only, the SET hooks deferred to a P2 TODO). Issues: the bounded scientific test only checks ATHB_PMV <= setpoint + 0.25 while CHANGELOG/docs claim 'within 0.25'; CHANGELOG line 39 still shows the old default output_frequencies=('hourly',). The EnergyPlus tests with the hook could not run here (numba blocked by Smart App Control)."
+   }
+  ],
+  "findings": [
+   {
+    "id": "A8",
+    "proposal": "F2",
+    "severity": "design",
+    "location": "accim/sim/ems/drift_limiter.py:211-216 (program_lines, 'window' branch clipping both DriftAppliedAHST and DriftAppliedACST to [T_rm_in-DeltaHeat, T_rm_in+DeltaCool]); decision 6 of the author, notes/PROPUESTA_ADAPTACION_INTERIOR_v03.md sections 6 and 7; docs/source/4_detailed use.md section 4.2.7 (line 632)",
+    "problem": "Because T_rm_in is the running mean of the zone's own operative temperature, clipping BOTH setpoints to T_rm_in +/- delta drags the inactive setpoint to the free-floating temperature: the dead band collapses to <= delta_heat + delta_cool (2 K), heating or cooling run to hold the zone within 1 K of its own recent mean (also on unoccupied days), the hour counters measure that 2 K band, and the exposure can drift by only about (1-alpha)*delta = 0.2 K/day while the zone is held in the window, a far stricter and different control than 'rate' (0.5 K/day on the setpoints, full band). The docs state the 2 K band and the April heating setpoint, but not the energy consequence nor this equivalence. This is the author's decision implemented faithfully, not an implementation error.",
+    "evidence": "Scratch EnergyPlus 25.1 runs (sample 2-zone model, Seville_Present.epw, vrf_ac, INT EN16798 cat. II, comfort mode 3, all zones 'window' with the defaults vs no limiter): heating energy April 125.9 -> 32487.9 kWh (cooling 9520 -> 4678 kWh), January 19.7 -> 42814 kWh (cooling 12878 -> 7552 kWh), July 10.4 -> 4464 kWh (cooling 8209 -> 9464 kWh); mean occupied band ACSTnoTol-AHSTnoTol 7.00 K -> 1.97 K (Apr), 1.26 K (Jan), 2.22 K (Jul); mean occupied heating setpoint without tolerance 20.00 -> 24.92 C (Apr), 18.20 -> 23.93 C (Jan); T_rm_in changed at most 0.32 K/day (mean 0.12) in July. 'rate' at 0.5 K/day never limited (0 h) in these months and equals no limiter.",
+    "fix": "Author decision: (a) document in section 4.2.7 and the module docstring the band collapse, the energy effect and the implied exposure-drift cap of about (1-alpha)*delta per day, and warn when drift_mode='window' is used; (b) consider redefining 'window' so that it only limits setpoint changes that would move a setpoint farther than delta from T_rm_in (leaving setpoints that the comfort standard keeps unchanged where they are), or shifts the whole band keeping its width; (c) keep 'rate' as the recommended mode (case v of the validation study already uses it)."
+   },
+   {
+    "id": "A9",
+    "proposal": "F2",
+    "severity": "bug",
+    "location": "accim/sim/ems/drift_limiter.py:134 (check_drift_arguments accepts delta_cool = delta_heat = 0) and program_lines (AHST = DriftAppliedAHST + AHSTtol, ACST = DriftAppliedACST + ACSTtol after the window)",
+    "problem": "With 'window' and delta_heat + delta_cool smaller than 2*setpoint_tolerance (0.2 K by default), both limited setpoints meet near T_rm_in and adding the tolerances crosses the thermostat setpoints (heating above cooling), which EnergyPlus dual setpoints handle with warnings and meaningless results; the arguments are accepted without error or warning (the GUI and the parametric DeltaCool/DeltaHeat take 0 too). B5 raises a ValueError for the analogous floor >= ceiling case (v04 verdict #13).",
+    "evidence": "Erl interpreter (helpers of tests/core/test_drift_limiter.py, initial_T_rm_in = 24, tolerance 0.1, targets 20/27): delta 0/0 -> AHST_Act 24.10, ACST_Act 23.90 (crossed); delta 0.05/0.05 -> 24.05 vs 23.95 (crossed); delta 1/1 -> 23.10 vs 24.90. test_the_arguments_of_the_limiter_are_checked asserts that check_drift_arguments('window', alpha_indoor=0, delta_cool=0, delta_heat=0) passes.",
+    "fix": "In AddAccis, modify_accis, zone_arguments (and the parametric drop of invalid combinations), raise a ValueError (or at least warn) when drift_mode='window' and delta_heat + delta_cool < 2*setpoint_tolerance of the zone; add a test."
+   },
+   {
+    "id": "A10",
+    "proposal": "F2",
+    "severity": "test",
+    "location": "tests/core/test_drift_limiter.py:396-448 (test_the_limiter_in_energyplus_with_both_backends, the 'rate' zone Block1:Zone2 and the assertion '<= 0.5 + 1e-3' at line 448)",
+    "problem": "With max_drift_rate 0.5 K/day and INT EN16798 cat. II comfort mode 3 in April, the adaptive targets never change by 0.5 K/day, so the limiter never acts and the assertion holds trivially; the 'rate' mode is only proven with the Erl interpreter, not in EnergyPlus or through the API backend (the DEVLOG itself says 'the rate never active').",
+    "evidence": "My runs: DriftLimitedHours = 0 h with 'rate' at 0.5 K/day in January, April and July (largest day-to-day change of the heating target 0.42 K in July). With max_drift_rate = 0.05 K/day (April) the mode does work: 252 limited hours per zone, max |applied(d) - last applied(d-1)| = 0.050 K, targets up to 1.44 K away, AHSTnoTol equal to DriftAppliedAHST.",
+    "fix": "Give Block1:Zone2 a small max_drift_rate (e.g. 0.05) in the EnergyPlus test and assert DriftLimitedHours > 0, the 0.05 K/day bound for each day and the equality of both backends."
+   },
+   {
+    "id": "A11",
+    "proposal": "F2",
+    "severity": "minor",
+    "location": "accim/sim/accis.py:428-445 (_check_drift_arguments) and :878 (AddAccis), against accim/sim/accis.py:1488 (modify_accis ValueError)",
+    "problem": "AddAccis (and zone_arguments) silently ignore max_drift_rate, alpha_indoor, delta_cool, delta_heat and initial_T_rm_in when no zone has drift_mode, whereas modify_accis raises 'The arguments of the limiter of the drift of the setpoints need drift_mode'. A user who forgets drift_mode gets no limiter and no message.",
+    "evidence": "test_without_drift_mode_the_output_idfs_do_not_change calls AddAccis(drift_mode=None, max_drift_rate=0.3, alpha_indoor=0.9, delta_cool=2.0, delta_heat=2.0) without error or warning; test_the_errors_of_the_arguments_of_the_limiter expects modify_accis(idf, max_drift_rate=0.3) to raise.",
+    "fix": "Warn (not raise, so the IDFs stay identical) in AddAccis when a limiter argument differs from its default or is given in zone_arguments while no zone has drift_mode."
+   },
+   {
+    "id": "A12",
+    "proposal": "F3",
+    "severity": "bug",
+    "location": "accim/data/postprocessing/indoor_adaptation.py:431 (table_indicators: season = (day >= start) & (day < end)); accim/data/postprocessing/main.py:1981 (Table calls table_indicators with the default season); docs/source/4_detailed use.md section 4.7.6 ('the cooling season is that of the ACCIS')",
+    "problem": "The ACCIS supports cooling seasons that wrap around the year (cooling_season_start > cooling_season_end, southern hemisphere: accim/sim/ems/setast.py:80-84 uses DayOfYear >= start OR DayOfYear < end), but table_indicators takes the intersection, so such a season is empty and the overcooling indicator is 0 h / NaN %. Moreover Table(indoor_adaptation_indicators=True) always uses days 121-274, whatever cooling season the simulations used, while the docs say it is 'that of the ACCIS'.",
+    "evidence": "Scratch check: one year of daily rows at To = 21 C with 1 occupied hour per day: default season -> Overcooling Hours 153 h (100 %); cooling_season_start='01/10', cooling_season_end='01/05' -> 0.0 h and NaN %, while the ACCIS treats 212 days as cooling season with those dates.",
+    "fix": "Use season = (day >= start) & (day < end) if start < end, (day >= start) | (day < end) if start > end, and an empty season if they are equal (as SetAST_Master); add a test; let Table forward the arguments of table_indicators (or read CoolSeasonStart/CoolSeasonEnd from SetInputData_<zone> of idf_path), or state in section 4.7.6 that Table uses 1 May-30 September."
+   },
+   {
+    "id": "A13",
+    "proposal": "F3",
+    "severity": "scientific",
+    "location": "accim/data/postprocessing/indoor_adaptation.py:15-19 (module docstring), :82-84 (OVERCOOLING_TEMPERATURE), :233-238 (overcooling_hours docstring); docs/source/4_detailed use.md section 4.7.6 (overcooling row); notes/decisions.md entry 'F3: the definition of the overcooling'; block F proposal section 4 (F3)",
+    "problem": "The 22 C overcooling threshold is attributed to Parkinson, Schiavon, de Dear & Brager (2021), 'Overcooling of offices...', Scientific Reports 11, but that paper defines no indoor temperature threshold; the ~22 C figure comes from Parkinson, de Dear & Brager (2020), section 4.3.2 ('current summertime practices (~22 C)'). The wrong attribution is inherited from the block F proposal.",
+    "evidence": "Full text of doi 10.1038/s41598-021-03121-1 (Mendeley library PDF, 7 pages): the only temperatures are 1.5 C (summer vs winter comfort range), 20 C and 2.2 C (outdoor temperatures of tweets); no 22 C. Parkinson et al. 2020 (doi 10.1016/j.enbuild.2019.109559), section 4.3.2: the transition 'from current summertime practices (~22 C)' to 24-27 C.",
+    "fix": "Cite Parkinson, de Dear & Brager (2020), section 4.3.2 for the 22 C value (typical overcooled summer setpoint), keep Parkinson et al. (2021) only as context for overcooling, keep the threshold labelled as a design decision, and correct the docstrings, section 4.7.6 and the decision record."
+   },
+   {
+    "id": "A14",
+    "proposal": "F3",
+    "severity": "doc",
+    "location": "accim/data/postprocessing/indoor_adaptation.py:163-167 (indoor_running_mean docstring)",
+    "problem": "The docstring says that with timestep rows T_occ_mean is 'the mean of the EMS of the limiter, which takes the operative temperature of the previous timestep', but the function averages the operative temperature of the same row; it equals the EMS value only if the temperature is shifted by one timestep (section 4.7.6 correctly says 'but for one timestep').",
+    "evidence": "July 'window' run, timestep rows: |indoor_running_mean - EMS T_rm_in_<zone>| max 0.049 K / 0.059 K (mean 0.029 / 0.041 K) for the two zones; with the operative temperature shifted by one timestep the difference is <= 1.1e-14 K.",
+    "fix": "Reword as section 4.7.6: 'with timestep rows, that of the EMS of the limiter but for one timestep (shift the operative temperature by one row to reproduce it)'."
+   },
+   {
+    "id": "A15",
+    "proposal": "H3",
+    "severity": "design",
+    "location": "accim/sim/ems/long_term_discomfort.py:35-41 (module docstring) and :92-132 (long_term_limits); docs/source/4_detailed use.md section 4.2.6 (long_term_range)",
+    "problem": "EN 16798-1 Table B.2 gives seasonal one-sided design values (minimum for heating in winter at about 1.0 clo, maximum for cooling in summer at about 0.5 clo). Using [minimum for heating, maximum for cooling] as a constant range in all timesteps (20-26 C for cat. II) counts summer overcooling between 20 and 23 C and winter overheating between 24 and 26 C as comfortable, which matters when models are compared against the standard (the purpose of C2-1) and is not stated in the docs.",
+    "evidence": "UNE-EN 16798-1:2020 Table B.2 (p. 49), column headings 'minimum for heating (winter season), about 1.0 clo' and 'maximum for cooling (summer season), about 0.5 clo'; CEN/TR 16798-2:2019 Annex D, Method B example: '23,0 C < To <= 26,0 C ... single offices, category II, summer' (p. 68).",
+    "fix": "State the limitation in section 4.2.6 and the docstring (and pair it with the F3 overcooling indicator); optionally offer a seasonal variant using the cooling season of the ACCIS once the author chooses a source for the missing bounds."
+   },
+   {
+    "id": "A16",
+    "proposal": "H4",
+    "severity": "test",
+    "location": "tests/core/test_comfort_hooks.py:556-563 (test_the_athb_setpoints_in_energyplus: np.mean(pmv[selected] <= hook.athb_cooling_setpoint + 0.25) >= 0.95); CHANGELOG.md [Unreleased] ATHB entry ('within 0.25 of the cooling setpoint ... in all the occupied timesteps with the cooling coil on'); docs/source/4_detailed use.md section 4.9.1",
+    "problem": "The bounded test only proves an upper bound (the zone is not more than 0.25 of ATHB_PMV warmer than the cooling setpoint in >= 95 % of the occupied timesteps with cooling), not that the zone is held at the setpoint; the CHANGELOG and docs state a two-sided result ('within 0.25', in all timesteps) that the test does not check.",
+    "evidence": "Code reading; v04 section 3.4 asked for the one-sided bound. The test could not run here (ImportError numba._devicearray, Smart App Control).",
+    "fix": "Add the lower bound (e.g. np.mean(abs(pmv[selected] - athb_cooling_setpoint) <= 0.25) >= 0.95, which the DEVLOG measurement of 93 %/74 % within 0.1 suggests holds) or rephrase CHANGELOG/docs as 'at most 0.25 above the cooling setpoint'."
+   },
+   {
+    "id": "A17",
+    "proposal": "H4",
+    "severity": "doc",
+    "location": "CHANGELOG.md:39 (ATHB entry, signature of apply_athb_setpoints)",
+    "problem": "The entry still lists output_frequencies=('hourly',) in the signature, while the end of the same entry and the code (accim/sim/comfort_hooks.py, apply_athb_setpoints) have output_frequencies=None as the default since H4.",
+    "evidence": "CHANGELOG.md line 39: 'apply_athb_setpoints(building, ..., clo='adaptive', output_frequencies=('hourly',), ...)'; comfort_hooks.apply_athb_setpoints(..., output_frequencies: Optional[Sequence[str]] = None, ...).",
+    "fix": "Write output_frequencies=None in the signature of that entry (the change is internal to the unreleased 1.2.0)."
+   }
+  ],
+  "verified_correct": [
+   "F2: T_rm_in(d) = (1 - alpha_indoor)*T_occ_mean(d-1) + alpha_indoor*T_rm_in(d-1) over the occupied timesteps only (Occ_count_<zone> > 0), started by the mean of the first occupied day or by InitTrmIn, unchanged after unoccupied days; in EnergyPlus 25.1 the EMS T_rm_in equals a pandas recomputation with the operative temperature shifted one timestep (<= 1.1e-14 K in my July run; 1e-4 K in the test).",
+   "F2: the Erl expression (1-AlphaIndoor)*sum_T_occ/n_occ+AlphaIndoor*T_rm_in groups correctly under the EnergyPlus operator order ('/' then '*' then '-'/'+', accim.sim.ems.erl).",
+   "F2: 'rate' works in EnergyPlus when it binds: max_drift_rate 0.05 K/day in April gives 252 limited hours per zone and max |applied(d) - last applied(d-1)| = 0.050 K; the first occupied day is free (DriftOccDays) and the state is the applied setpoint (without tolerance, before B5) of the last timestep of the previous day, as provisional #13 stood before its change.",
+   "F2: since B5 clipping is 1-Lipschitz, the daily rate bound on the pre-B5 state also bounds the post-B5 thermostat setpoints.",
+   "F2: order SetAST -> ApplyHookSetpoints_<zone> -> ApplyDriftLimiter_<zone> -> SetASTnoTol -> ApplySetpointLimits_<zone>, both when the hook objects are added after AddAccis(drift_mode=...) and when modify_accis adds the limiter after set_hook_setpoints_code (scratch check without pythermalcomfort); modify_accis(initial_T_rm_in=...) switches to the 'initial' program variant without duplicating programs or run lines.",
+   "F2: targets are AHST - AHSTtol and ACST - ACSTtol (unrounded); limited setpoints are rewritten with the zone tolerance and ROUNDING, so SetASTnoTol, the hour counters, the outputs and the thermostats follow them; DriftLimitedHours = ZoneTimeStep only in occupied timesteps where a setpoint changed.",
+   "F2: warm-up handled with WarmupFlag (no accumulation, no limiting, DriftDay starts at the first non-warm-up timestep); InitDriftLimiter at BeginNewEnvironment resets all state and outputs; no EnergyManagementSystem:TrendVariable is created anywhere in accim.",
+   "F2: drift_mode=None leaves the output IDFs byte-identical (test_without_drift_mode_the_output_idfs_do_not_change) and the golden master passes 35/35; both backends give identical CSVs (check_exact) in the EnergyPlus test; verify_accim_simulation checks the targets (empty report).",
+   "F2: the 'window' limiter runs in mixed mode (vrf_mm, 1-14 May) with 0 severe errors (smoke test).",
+   "F2: decision #15 as implemented: DriftMode = 0 leaves ApplyDriftLimiter_<zone> a no-op on the setpoints (neither branch runs, DriftApplied = DriftTarget, AHST/ACST untouched) while T_rm_in keeps being reported; modify_DriftMode(0) does nothing in a model without the limiter (test_drift_parameters passed).",
+   "F2 docs: alpha_indoor 0.8 = time constant -1/ln(0.8) = 4.5 days; 'about 5 K over a couple of weeks' = 0.36-0.5 K/day matches Parkinson et al. 2020 section 4.3.2 (a sudden step-change of as much as 5 C would elicit complaints; incremental steps spread out over a couple of weeks instead).",
+   "F3: Parkinson, de Dear & Brager 2020 Fig. 6 coefficients verified on the figure: AC y = 1.06 + 0.951x (R2 0.96), MM 2.91 + 0.879x (0.97), NV 2.23 + 0.897x (0.98), x = mean indoor air temperature; implemented in EXPOSURE_NEUTRAL_TEMPERATURE.",
+   "F3: causal band from sun2026_set_setpoints: (+/-0.5 + 2.6)/0.11 = 19.09-28.18 C SET, both limits inside; mean TSV = 0.11*mean SET - 2.6; tsv_limit 0.7 and 1.0 warn as extrapolation; |To - Tn_exp| > 2.5 K labelled as inferred; Tn_exp only a diagnostic.",
+   "F3: Table names SET_Pierce (C), SET_Pierce_PMV, CoolingEffect (C), CoolingEffect_PMV, CoolingEffect_PPD, averaged over time and occupant instances; indicators per zone and building with hour-weighted means; hourly means and the one-timestep difference with the EMS T_rm_in documented in section 4.7.6.",
+   "H3: EN16798_TABLE_B2 equals UNE-EN 16798-1:2020 Table B.2: residential I 21.0/25.5, II 20.0/26.0, III 18.0/27.0, IV 16.0/28.0; offices I 21.0/25.5, II 20.0/26.0, III 19.0/27.0, IV 18.0/28.0; ('en16798', 3 or 4) without a building type raises a ValueError listing both.",
+   "H3: PPD = 100 - 95*exp(-0.03353*PMV^4 - 0.2179*PMV^2) equals ISO 7730:2025 formula (5) (text and program listing of the standard); the Erl builds the exponent without '*-' and ppd/ppd_limit*ZoneTimeStep groups as (ppd/ppd_limit)*ZoneTimeStep.",
+   "H3: Method C range is half-open as the literal CEN/TR 16798-2:2019 Annex D text (wf = 0 for PMVlimit,lower <= PMV < PMVlimit,upper; a PMV at the upper limit gets wf = 1) in both D1 (ppd_weighted_hours) and the EMS program; Method B keeps both limits inside.",
+   "H3: the index setpoints are converted to the PMV scale with the thermostats' inverse (aPMV x/(1 - lambda*x) with the seasonal lambda or the per-side lambda with pmv_sign; ePMV x/e on the warm side, on both sides with apply_to_heating; PMV identity); the PMV is that of the previous timestep, 0 without occupants; count_ppd_weighted_hours_<zone> runs after count_<index>_comfort_hours_<zone>; report_ppd_weighted_hours=False leaves the models unchanged (test).",
+   "H3: EnergyPlus 25.1, both backends: the EMS PPD Weighted Hours equal the D1 function with the shifted PMV for the aPMV (July) and PMV (January) cases (test passed); Check3_PpdWeightedHours passes.",
+   "H3 / D1-1: Table with source_frequency='timestep' keeps the '(TimeStep)' columns with standard_outputs=True and groups each timestep into the hour it ends in; the difference between Table indicators and the EMS counters is documented (Table docstring and section 4.7.4).",
+   "H4: ATHB_saturated_<zone> = ZoneTimeStep when a setpoint equals a limit of temperature_range (the bisection returns the limits exactly for out-of-range targets), summed; saturated_hours excludes warm-up; prepare() resets and finish() warns, called by run_simulation (finish_hooks).",
+   "H4: ISO 7730:2025 section 4 ranges verified (M 46-232 W/m2 = 0.8-4 met; var 0-1 m/s); met <= 0 raises; 1 met = 58.2 W/m2 x 1.8 m2 = 104.76 W/person (MET_ACTIVITY_LEVEL); output_frequencies=None takes the frequencies of the model's EMS outputs (Hourly fallback).",
+   "v04 findings: C2-1 and D1-1 closed by H3; A4-2 and A4-3 closed by H4; A4-1 closed for the ATHB, the SET part deferred to a P2 TODO; the A4 test finding of section 3.4 implemented (one-sided, see the H4 test finding)."
+  ],
+  "provisional_decisions_review": [
+   {
+    "decision": "#5 (H3): building type of long_term_range in categories III and IV",
+    "sound": true,
+    "recommendation": "Keep: the heating minima of Table B.2 differ only in III (18.0 vs 19.0 C) and IV (16.0 vs 18.0 C), and the ValueError avoids choosing for the user. Keep EN 16798-1 as the normative source (CEN/TR 16798-2 lists 17 C for single offices, cat. IV)."
+   },
+   {
+    "decision": "#6 (H3): Method C range on the PMV scale and one output per zone",
+    "sound": true,
+    "recommendation": "Keep: the PPD of ISO 7730 is that of the PMV and the conversion mirrors the thermostats. Optionally report the warm and cold periods as two outputs, since Annex D sums them separately and they make better optimisation constraints."
+   },
+   {
+    "decision": "#10 (F3): definition of the overcooling (cooling season of the ACCIS, 22 C or a reference heating setpoint)",
+    "sound": true,
+    "recommendation": "Keep the definition, but implement the wrap-around cooling season of the ACCIS and let Table use the simulated season (F3 bug finding), and cite Parkinson, de Dear & Brager 2020 section 4.3.2 for 22 C instead of Parkinson et al. 2021."
+   },
+   {
+    "decision": "#11 (F3): T_rm_in recomputed from the rows and the 2.5 K band of Tn_exp",
+    "sound": true,
+    "recommendation": "Keep the inferred label of 2.5 K; also label as inferred the transfer of Fig. 6 (campaign mean indoor AIR temperature of a building) to an exponential running mean of the zone OPERATIVE temperature of occupied hours, and say that the row-based T_rm_in is 0.03-0.06 K from the EMS one."
+   },
+   {
+    "decision": "#14 (F2): days without occupied hours leave T_rm_in unchanged",
+    "sound": true,
+    "recommendation": "Keep (no exposure, no change). Note that the 'window' still clips the setpoints on those days (energy effect, see the F2 design finding)."
+   },
+   {
+    "decision": "#15 (F2): drift_mode codes 0/1/2 in the parametric module",
+    "sound": true,
+    "recommendation": "Keep; document that code 0 leaves the program as a no-op on the setpoints while T_rm_in and the targets are still reported, and that the program variant created by initial_T_rm_in cannot be undone by a parameter."
+   },
+   {
+    "decision": "Block F decision 6 (author, 2026-11-10): drift_mode='window' clips the heating and cooling setpoints to [T_rm_in - delta_heat, T_rm_in + delta_cool] with alpha 0.8 and delta 1 K",
+    "sound": false,
+    "recommendation": "Reconsider before the validation study: as specified it collapses the band to <= 2 K and multiplies heating energy (sample model, Seville: April 126 -> 32488 kWh; January 20 -> 42814 kWh), capping the exposure drift near (1-alpha)*delta = 0.2 K/day, much stricter than 'rate'. Either limit only setpoint changes that move a setpoint beyond delta from T_rm_in, or shift the whole band keeping its width; at least document and warn."
+   },
+   {
+    "decision": "v04 C2-1 as applied in H3: long_term_range=('en16798', category) with constant Table B.2 limits",
+    "sound": true,
+    "recommendation": "Keep as an option, but document that the constant [winter minimum, summer maximum] range does not detect summer overcooling or winter overheating."
+   }
+  ],
+  "tests_run": [
+   {
+    "file": "tests/core/test_drift_limiter.py",
+    "result": "10 passed, 1 failed (environment): test_addaccis_and_modify_accis_add_the_limiter fails inside apply_set_setpoints with ImportError numba._devicearray (Smart App Control); the assertions before that call passed and the remaining ones (hook before limiter, modify_accis) were reproduced in a scratch script without pythermalcomfort and hold. The EnergyPlus 25.1 two-backend test passed."
+   },
+   {
+    "file": "tests/core/test_indoor_adaptation.py",
+    "result": "20 passed"
+   },
+   {
+    "file": "tests/core/test_long_term_discomfort.py",
+    "result": "10 passed"
+   },
+   {
+    "file": "tests/core/test_long_term_discomfort_counters.py",
+    "result": "52 passed (6 UserWarnings of verify_accim_simulation: no 'Operative Temperature' column for check 1)"
+   },
+   {
+    "file": "tests/core/test_ppd_weighted_hours.py",
+    "result": "49 passed (EnergyPlus 25.1, both backends)"
+   },
+   {
+    "file": "tests/core/test_table_optional_outputs.py",
+    "result": "18 passed"
+   },
+   {
+    "file": "tests/core/test_comfort_hooks.py (H4 parts: 7 selected tests)",
+    "result": "4 passed (the_hook_warns_out_of_the_ranges_of_the_pmv, the_arguments_of_the_hook_are_checked, apply_athb_setpoints_prepares_the_model, run_simulation_prepares_the_hooks); 3 failed with the environment ImportError numba._devicearray (the_hook_reports_the_setpoints_at_the_limits_of_their_range, the_athb_setpoints_in_energyplus, the_saturated_setpoints_of_the_athb_in_energyplus) - not code failures"
+   },
+   {
+    "file": "tests/parametric_and_optimisation/test_drift_parameters.py",
+    "result": "2 passed (besos installed)"
+   },
+   {
+    "file": "tests/core/test_golden_master.py (extra, read-only)",
+    "result": "35 passed"
+   }
+  ],
+  "not_assessed": [
+   "H4: the EnergyPlus results with the ATHB hook (bounded claim, ATHB_PMV 0.62/0.68, 93 %/74 % within 0.1, ATHB_PMV vs the outputs of the previous timestep, saturated hours with temperature_range (10, 27.5)) and the saturation unit test with operative_temperatures: pythermalcomfort.models cannot be imported (numba blocked by Smart App Control).",
+   "F2: the limiter acting on the setpoints of a hook (ATHB, SET by bisection, comfort standard 24) in a simulation, for the same reason; only the program order was checked.",
+   "F2: the reference of the 'rate' mode and its behaviour on unoccupied days (decision #13, being changed), as instructed.",
+   "F3: indicators with the SET of pythermalcomfort (#9) and the design of the validation study (#12), out of scope; the units EnergyPlus writes for '... Cooling Effect Adjusted PPD' (only the Table name depends on them).",
+   "EnergyPlus versions other than 25.1 for F2/H3/H4; the Sphinx build; the GUI beyond the form unit tests; full parametric/optimisation workflows with the new parameters (only unit tests)."
+  ]
+ },
+ {
+  "reviewer": "Preview-Custom",
+  "frame_id": null,
+  "deviations": [
+   "Self-audit of session 2 (task of notes/COPILOT_SIGUIENTE_SESION.md, section 5): an independent, read-only reviewer (a sub-agent of the third Copilot session, 2026-11-11) with the checklist of notes/TRASPASO_ClaudeScience_2026-11-11_v01.md, Appendix A, on a git worktree at fe42957 (its code is that of 47d0b486), with Python 3.14.3 and EnergyPlus 25.1; Windows Smart App Control blocked the DLLs of numba 0.68.1 on 2026-11-11, so pythermalcomfort.models could not be imported (see tests_run and not_assessed). The ids of the findings (A1, A2...) were given when the three reviews were compiled.",
+   "Several test files were run in one pytest invocation each (always sequentially, never two pytest runs at the same time, with the explicit basetemp); the long runs used -W ignore::UserWarning only to shorten the output.",
+   "Extra tests beyond the brief list: tests/core/test_gui.py, tests/core/test_energyplus_api.py and four files of tests/parametric_and_optimisation (test_legacy_names, test_setpoint_limit_parameters, test_registered_comfort_standards, test_pmv_and_metric_parameters), since besos is installed.",
+   "Own checks in the scratch folder: two EnergyPlus 25.1 simulations/models (a model of add_accis_to_idf edited to comfort standard 23; a metric rewrite with modify_accis), numeric re-computations with compute_setpoints, the diff of the decompressed golden files of 6109cc1^ and 6109cc1, and copies of the outputs of the EnergyPlus tests taken from the basetemp before the next pytest run.",
+   "The two scratch scripts run as files (cs23_edit, g4_rewrite) first imported accim from the editable install (D:\\DSG\\accim), because a script does not put the current folder on sys.path; they were re-run with PYTHONPATH set to the worktree and an assertion on accim.__file__, with identical results (the findings use the re-runs). Importing from D:\\DSG\\accim may have written __pycache__ files there; no source file was read or changed there. All stdin scripts and pytest runs (python -m) used the worktree.",
+   "EnergyPlus source read on GitHub (NatLabRockies/EnergyPlus): ThermalComfort.cc and RuntimeLanguageProcessor.cc at tag v25.1.0, ScheduleManager.cc at tag v9.6.0.",
+   "One paper read: Indraganti & Boussaa (2018), found by DOI in D:\\DSG\\accim\\inventario_para_api.json and by file name under D:\\DSG\\Mendeley library (text extracted with pypdf). No manuscript under review was opened.",
+   "pythermalcomfort.models was not needed: no test failed with numba errors.",
+   "Running the tests and the stdin scripts leaves git-ignored __pycache__ folders in the worktree (git status is clean otherwise); no tracked or untracked file of the worktree was created or changed."
+  ],
+  "proposals_reviewed": [
+   "G2",
+   "G4",
+   "G5",
+   "H1",
+   "H2",
+   "H5",
+   "H6"
+  ],
+  "verdicts": [
+   {
+    "proposal": "G2",
+    "verdict": "correct",
+    "summary": "_energyplus_daily replaces, for a run period beginning on day D with 2 <= D <= 30 (index 1 <= first <= 29), the daily mean of day D-1 by that of 31 December in the 30-day window of PMOT, which then stays 30 days; this is exactly the wrap branch of CalcThermalComfortAdaptiveASH55 in EnergyPlus v25.1.0 (days 1..D-1 in positions 32-D..30, days D+335..365 in 1..31-D, avgDryBulbASH left with 31 December, written into DailyAveOutTemp(30) at the first non-warm-up BeginDayFlag); D = 1 and D = 31 are unaffected. RMOT is unaffected (the CEN 15251 wrap branch weights alpha^(k-1) correctly, firstDaySet skips the first update) and its eq. 19.82 start without 1 - alpha^7 is kept. The EnergyPlus 25.1 test from 8 January passes; the documented -0.14 C is (T31Dec 5.908 - T7Jan 10.179)/30 = -0.1424 C. Docstrings, docs 4.3.1 and 4.6.1 (check 4) and the E2 notes (six categories, .stat) match the code."
+   },
+   {
+    "proposal": "G4",
+    "verdict": "correct_with_issues",
+    "summary": "With epw the zones of 23 get rmot_alpha (alpha 0.8) initialised from the weather file (full-year B.1) and the code of 23 reads Tout_metric in SetComfTemp, CountHours_<zone>, SetVST and SetAST_CS23_*; without it, native RMOT with a warning; 23 equals its YAML twin 101 in every timestep with the weather file (compute_setpoints and EnergyPlus 25.1, both backends). The test criterion is sound (re-computed: day-1 transient 0.9204 / 1.4662 / 1.9262 K from 1 Jan / 1 Apr / 1 Jul, i.e. it scales with the outdoor level, and the first hour of each day differs up to 0.1013 K, 0.1028 K from 1 April, because the native RMOT sensor lags one day in the first timestep). Static setpoints wired through SetAST_CS23_0/1, AddAccis, modify_accis, zone_arguments, GUI and parametric module; the golden changes are confined to the six static lines of 23 plus the declaration of StaticAHST/StaticACST. Issues: a zone switched to 23 by editing a model with the code of all the comfort standards now stops EnergyPlus (bug); a metric rewrite without epw silently moves the 23 zones to RMOT (design)."
+   },
+   {
+    "proposal": "G5",
+    "verdict": "correct_with_issues",
+    "summary": "Every item of v04 section 7 G5 is done: the 4 besos tests skip; run_ep/run_simulations(processes=0) run in process (eppy prepare_run/multirunner used correctly; the change of meaning of 0 is declared under Changed); adaptive_coefficients=<key> sets both sides (ValueError with explicit values, warning for a single-side key with the numeric default) and pmv_sign checks the signs; ApplySetpointLimits runs after SetASTnoTol, bounds the setpoints without tolerance too and makes the minimum/maximum exact after rounding (and is moved in older models); the SetVST docstring is right; ValueError for missing months and a shared number formatter; the Qatar YAML loads and its data match the article; categories sorted; offset-sign warning; fwg_add_uhi=False, the ensemble=0 warning and the cleanup after a ValueError; v04 3.4/3.5 items. Issues: the tolerance vanishes where the minimum/maximum bind (design); the Qatar YAML says the article gives no alpha, but it gives 0.8 (doc); the format_number docstring overstates its use (minor; exponents are valid Erl anyway)."
+   },
+   {
+    "proposal": "H1",
+    "verdict": "correct_with_issues",
+    "summary": "heating_setpoint_minimum / cooling_setpoint_maximum, EMS inputs AHSTmin/ACSTmax, Check5_AHSTmin/ACSTmax, parameters HeatingSetpointMinimum/CoolingSetpointMaximum, modifiers modify_AHSTmin/ACSTmax; the old names work with a DeprecationWarning \"since accim 1.2.0\" in AddAccis, modify_accis, zone_arguments (error when both names are given), the EMS code functions and compute_setpoints, the parameter names, classes and modifiers (deprecated_alias with version 1.2.0) and the plan columns; GUI session files are mapped by forms.current_names; golden master byte-identical. Issue: drop_invalid_param_combinations ignores the deprecated column names (minor)."
+   },
+   {
+    "proposal": "H2",
+    "verdict": "correct_with_issues",
+    "summary": "The Schedule:File ACCIS Outdoor Mid Range has, for each hour, (max+min)/2 of its day of the weather file (max abs difference 0.0 against the EPW in the CSV of the test), no interpolation, 60 minutes per item and Adjust Schedule for Daylight Savings No where the IDD has it; the sensor OutdoorMidRangeToday gives the value of the day from the first timestep (EnergyPlus 25.1: Te,ref constant within each day, atol 1e-9; both backends identical); only models with a zone (or regime) with te_ref_nl and epw get it; T0 of the previous day with a warning otherwise; compute_setpoints, the printed code and check 4 follow it. Issues: the CSV is named only after the weather file, so two same-named weather files overwrite each other (design); with EnergyPlus 9.4/9.6 and daylight saving time the schedule shifts by one hour, and the H2 EnergyPlus test has no DST day (minor)."
+   },
+   {
+    "proposal": "H5",
+    "verdict": "correct",
+    "summary": "Per v04 6.1 and decision #4: the conditions compare the metric of the zone (Tout_metric before the chain); the selected regime copies ToutRegime_<regime>_<zone> (and RMOTr_<regime>_<zone> with its own alpha, initialised from the weather file or PMOT) into Tout_metric, so comfort temperature, setpoints, applicability and counters use it, and Tout_metric_<zone> reports the metric of the regime; the YAML key regimes has the eight coefficients required, optional condition/outdoor_metric/alpha/days, the last regime always, and rejects the hvac conditions; a one-regime standard keeps its code (golden master byte-identical); B2-1/B2-2 documented; docs 4.2.4/4.2.5 match the code; EnergyPlus check 4 and both backends identical in the tests."
+   },
+   {
+    "proposal": "H6",
+    "verdict": "correct_with_issues",
+    "summary": "clothing_insulation=callable receives a pandas Series of a column of outdoor_metrics(epw) indexed by the end of each hour and must return one value per hour (shape, finite and >= 0 checked before the model changes; warnings above 2 clo and 1.5 clo); CSV Sch_Clo_<people>_<epw stem>_<sha1[:8]>.csv; read_epw_dry_bulb reads Latin-1 (the header is skipped, the records are ASCII); \"Zone Thermal Comfort Clothing Value\" = 0 with ClothingInsulationSchedule is true in ThermalComfort.cc v25.1.0 (that case sets CloUnit but not comfort.ClothingValue); DynamicClothingModel there equals v03 11.3 (ASHRAE 55-2020 Fig. 5-1). Issue: the \"standard time\" statement does not hold with the IDDs of 9.4/9.6 under daylight saving time (doc)."
+   }
+  ],
+  "findings": [
+   {
+    "id": "A18",
+    "proposal": "G5",
+    "severity": "doc",
+    "location": "accim/sample_files/comfort_standards/qat_indraganti2018_hvac.yaml lines 13 and 30 (and its copy in accim/sample_files/jupyter_notebooks/comfort_standards_registry/, the stored output of docs/source/jupyter_notebooks/comfort_standards_registry/using_comfort_standard_registry.ipynb, and the G5 sentence of CHANGELOG.md [Unreleased] line 35: \"the data that its article does not give ... rmot_alpha with alpha = 0.8\")",
+    "problem": "The Qatar YAML says that the article does not give the alpha of its running mean Tr and presents alpha = 0.8 as the value of EN 16798-1 chosen by the author (\"Tr, a running mean outdoor temperature whose alpha the article does not give\"; evidence alpha: \"0.8 of EN 16798-1, not given by the article\"). The article gives it: the value is right, its source is wrong (the premise of v04 6.3, applied literally). Distinct from the known 25.5 C issue.",
+    "evidence": "Indraganti & Boussaa (2018), Energy and Buildings 159, 201-212, doi:10.1016/j.enbuild.2017.10.087 (found by DOI in the inventory, read with pypdf), paragraph on the running mean before equation 5: after the ASHRAE range 0.6-0.9 and McCartney & Nicol, \"we used the value of 0.8 in this analysis\". The other data of the YAML match the article: equation 5 Tc = 0.049 Tr + 22.5 (N = 3742, R2 = 0.015, p < 0.001, SE = 0.007), Tr mean 30.7 C (SD 6.4, Table 4), mean comfort temperature 24.0 C (Table 10).",
+    "fix": "Write \"alpha 0.8, that of the article (its running mean outdoor temperature)\" in the comment and the evidence, correct the CHANGELOG sentence, re-run the notebook, and give the full citation (Energy and Buildings 159, 201-212, doi:10.1016/j.enbuild.2017.10.087)."
+   },
+   {
+    "id": "A19",
+    "proposal": "G5",
+    "severity": "design",
+    "location": "accim/sim/ems/setpoint_limits.py::limit_program_lines (line 140; program ApplySetpointLimits_<zone>, run after SetASTnoTol) and the module docstring",
+    "problem": "Where the minimum (maximum) binds, the thermostat setpoint and the comfort-band limit are both set to the limit (AHST = AHSTnoTol = AHSTmin; ACST = ACSTnoTol = ACSTmax): the tolerance vanishes exactly where the limit applies. This contradicts the documented purpose of setpoint_tolerance (with the thermostat at the band limit, some hours fall outside the band because of decimal errors of the operative temperature) and the semantics adopted for the hook setpoints in G1 (decision #23: the setpoints without tolerance are the band limits and the thermostats get them plus the tolerance). Under the premise of B5-1 (\"the floor is a limit of the setpoint without the tolerance\"), the thermostat at the limit should be AHSTmin + AHSTtol (ACSTmax + ACSTtol).",
+    "evidence": "Program lines: \"if AHST < AHSTmin / set AHST = AHSTmin\" ... ROUNDING ... \"if AHST <= AHSTmin / set roundedAHST = AHSTmin\" ... \"if AHSTnoTol < AHSTmin / set AHSTnoTol = AHSTmin\" (and the ACST counterparts); docs/source/4_detailed use.md line 298 (purpose of the tolerance); test_setpoint_limits.py::test_the_minimum_maximum_and_hours_below_in_energyplus asserts (heating == 20).all() and (heating_no_tolerance == 20).all() in winter. The effect is not measurable with the sample VRF weeks of that test (outputs copied from the basetemp): while cooling at the maximum 26 C, OpT - 26 ranged -2.0 to +1.7 K, and only 5 and 8 occupied timesteps had the previous OpT within 0.1 K above the band limit.",
+    "fix": "Bound the band and give the thermostat the band plus the tolerance: AHSTnoTol = max(AHSTnoTol, AHSTmin) and AHST = max(AHST, AHSTmin + AHSTtol); ACSTnoTol = min(ACSTnoTol, ACSTmax) and ACST = min(ACST, ACSTmax + ACSTtol) (consistent with G1); or record in questions.md that the tolerance is 0 where the limits bind and document the consequence for the hour counters."
+   },
+   {
+    "id": "A20",
+    "proposal": "G5",
+    "severity": "minor",
+    "location": "accim/sim/ems/erl.py::format_number docstring (line 102: \"All the modules that write numbers in the programs use it\"); accim/sim/ems/inputs.py::input_lines (line 185); accim/sim/accis.py::modify_accis (lines 1507 and 1511); the modifiers of param_accis",
+    "problem": "The claim is inaccurate: the inputs of SetInputData_<zone> (most user numbers) are written with str(value), so input_lines(input_values({setpoint_tolerance: 1e-05, custom_slope: 5e-05})) gives \"set ACSTtol = -1e-05\" and \"set m = 5e-05\" in the output IDFs, while get_setpoint_ems_code prints \"set m = 0.00005\". It is harmless, because the premise of v04 B1-2 that Erl does not read exponents is wrong.",
+    "evidence": "Run in the worktree. EnergyPlus v25.1.0 RuntimeLanguageProcessor.cc (number-literal parsing) accepts the characters eEdD and a +/- after E/D, then converts with Util::ProcessNumber; accim.sim.ems.erl evaluated \"set m = 5e-05\" and \"set t = -1e-05\" as 5e-05 and -1e-05.",
+    "fix": "Correct the docstring (and the premise in CAMBIOS/DEVLOG), or route input_lines and the modifiers through format_number for uniform output; the real fix of B1-2 (ValueError for missing months, no nan) stays."
+   },
+   {
+    "id": "A21",
+    "proposal": "H2",
+    "severity": "design",
+    "location": "accim/sim/ems/outdoor_metric.py::_set_mid_range_schedule (line 546; file name f\"{stem of the weather file}{MID_RANGE_FILE_SUFFIX}\") and accim/sim/schedule_files.py::write_schedule_file (lines 44-68)",
+    "problem": "The CSV of T0 is named only after the base name of the weather file, in the folder of the model, and write_schedule_file rewrites it whenever its content differs. Two weather files with the same file name in different folders (e.g. present/Seville.epw and 2050/Seville.epw) used for models of the same folder overwrite each other, and the models written first silently read the T0 of the other weather file through their absolute path. H6 avoided exactly this with 8 characters of the SHA-1 of the values in the name (decision #1: \"so that other values (or other models in the folder) do not replace the file that a model reads\").",
+    "evidence": "Code: path = model_folder / file_name; \"if not path.is_file() or path.read_text(...) != text: path.write_text(text)\". The decision of 2026-11-10 \"H2: where the CSV file of T0 of te_ref_nl is written\" does not consider name collisions; H6 writes Sch_Clo_<people>_<weather file>_<SHA-1[:8]>.csv.",
+    "fix": "Add a short hash of the values (or of the absolute path of the weather file) to the name, as H6 does, e.g. <epw>_outdoor_mid_range_<sha1[:8]>.csv."
+   },
+   {
+    "id": "A22",
+    "proposal": "H2",
+    "severity": "minor",
+    "location": "accim/sim/schedule_files.py module docstring (\"Adjust Schedule for Daylight Savings No\" only \"in the IDDs that have the field (not those of EnergyPlus 9.4 and 9.6)\"); docs/source/4_detailed use.md line 418 (\"gives the value of the day from its first timestep ... so Te,ref is constant within each day\"); tests/core/test_outdoor_metric.py::test_te_ref_nl_with_the_weather_file_in_both_backends",
+    "problem": "With the IDDs of EnergyPlus 9.4 and 9.6, Schedule:File has no field Adjust Schedule for Daylight Savings and EnergyPlus shifts every schedule by one hour while daylight saving time is active, so in output IDFs of those versions with DST (RunPeriodControl:DaylightSavingTime, or the DST period of the weather file) the sensor OutdoorMidRangeToday reads the T0 of the next day in the last hour of each DST day (Te,ref changes by (T0(d+1) - T0(d))/2.4 for that hour); neither the docstring nor the docs state it. Also, the H2 EnergyPlus test runs 1-10 March, before the DST of the sample model, so the alignment of T0 under DST is only covered by the July week of the H6 test (same writer, EnergyPlus 25.1).",
+    "evidence": "Energy+.idd of C:\\EnergyPlusV9-4-0 and C:\\EnergyPlusV9-6-0: Schedule:File ends at N4 Minutes per Item (no A6); those of 25.1, 25.2 and 26.2 have A6 Adjust Schedule for Daylight Savings (default Yes). EnergyPlus v9.6.0 ScheduleManager.cc: LookUpScheduleValue uses thisHour = ThisHour + DSTIndicator and moves to the next day when thisHour > 24; GetCurrentScheduleValue warns for Schedule:File that \"DaylightSavingTime will shift all scheduled items by one hour\". The model of the H2 test (copied from the basetemp) has RunPeriod 3/1-3/10 and RunPeriodControl:DaylightSavingTime from the last Sunday in March to the last Sunday in October.",
+    "fix": "Warn (AddAccis, modify_accis, and set_pmv_input_parameters with a function) when the IDD lacks the field and the model has daylight saving time, and document it in 4.2 and 4.8; or, for those versions, write the CSV shifted by one hour within the DST period. Optionally run the H2 EnergyPlus test in a week with DST."
+   },
+   {
+    "id": "A23",
+    "proposal": "H1",
+    "severity": "minor",
+    "location": "accim/parametric_and_optimisation/funcs_for_besos/param_accis.py::drop_invalid_param_combinations (legacy_names, lines 321-332)",
+    "problem": "The function maps the parameter names of accim 0.x to the current ones, but not the deprecated names of the development of 1.2.0 (it maps heating_setpoint_minimum to itself), so a plan with the columns heating_setpoint_floor and cooling_setpoint_ceiling keeps, silently, the rows whose minimum is not lower than the maximum (the rule raises KeyError and is skipped), while H1 says that the old names of the parameters keep working with a DeprecationWarning.",
+    "evidence": "Run in the worktree: a plan with heating_setpoint_minimum [20, 27] and cooling_setpoint_maximum [26, 26] keeps 1 row; the same plan with the columns heating_setpoint_floor and cooling_setpoint_ceiling keeps 2 rows, with no warning. Inside ParametricSimulation the columns come from the resolved descriptor names, so only direct calls of the public function (as in the sample scripts) are affected.",
+    "fix": "Map the deprecated names too (legacy_names: heating_setpoint_minimum -> heating_setpoint_floor, cooling_setpoint_maximum -> cooling_setpoint_ceiling), or call params_dicts.rename_legacy_parameter_columns first; add the case to tests/parametric_and_optimisation/test_setpoint_limit_parameters.py."
+   },
+   {
+    "id": "A24",
+    "proposal": "G4",
+    "severity": "bug",
+    "location": "accim/sim/ems/static_setpoints.py::set_static_setpoint_variables (line 92) and accim/sim/ems/inputs.py::input_lines (the static_only inputs, written only in the zones of 23); SETPOINT_LINES[(23, 0)] and [(23, 1)] in accim/sim/ems/setpoint_lines.py (line 2972)",
+    "problem": "In the models with the EMS code of all the comfort standards (add_accis_to_idf; golden s01-s06 and s09), the subprograms of 23 read the global variables StaticAHST/StaticACST, which are declared but set only by the SetInputData_<zone> of zones that are already of 23. Switching a zone to 23 by editing ComfStand in its SetInputData_<zone> (docs 4_detailed use.md line 380 gives the missing code as the reason not to edit the comfort standard and adds that \"the models of add_accis_to_idf have the code of all of them\"; an external tool that rewrites the line \"set ComfStand = n\" does the same) worked with the literals 28/20 before G4 and now stops EnergyPlus.",
+    "evidence": "Reproduced with the worktree code (assertion on accim.__file__): sample IDF + add_accis_to_idf(vrf_ac, setpoint_type temperature); SetInputData_Block1_Zone1 (without Static lines) edited to ComfStand 23, CAT 80, ComfMod 0; RunPeriod 1-2 July; EnergyPlus 25.1 with Seville_Present.epw: \"** Severe ** Problem found in EMS EnergyPlus Runtime Language. Erl program name: SETAST_CS23_0 ... SET ACST = STATICACST+ACSTTOL ... Variable = 'STATICACST' used in expression has not been initialized!\", then Fatal (during warm-up). modify_accis and param_accis.modify_ComfStand add the lines and are not affected.",
+    "fix": "In models with the code of 23, give every zone \"set StaticAHST = 20\" and \"set StaticACST = 28\" (input_lines with the static inputs whenever the model has that code, or set_static_setpoint_variables adds the missing lines), or initialise both globals in an init program; at least document in 4.2/4.4 that a zone switched to 23 by hand needs these two inputs."
+   },
+   {
+    "id": "A25",
+    "proposal": "G4",
+    "severity": "design",
+    "location": "accim/sim/accis.py::modify_accis (lines 1533-1538: \"if metric_given or registered_metric or weather_zones ...: set_outdoor_metric_code(idf, enabled, epw, rewrite=metric_given)\" and \"if given & set(WEATHER_FILE_METRICS) and weather_zones and not begins_with_weather_file(idf): _warn_rmot_start\"); accim/sim/ems/outdoor_metric.py::set_outdoor_metric_code (warning at line 960)",
+    "problem": "A modify_accis call that only changes the outdoor metric of another zone (custom model), without epw, rewrites the programs beginning with PMOT, so the zones of JPN Aqilah 2025 silently move from the running mean of the weather file (Tout_metric, rmot_alpha) to the native RMOT, whose first value is about 21 % low (B4-1): the RMOT warning is not given (the call does not give comfort standard 23), and the only warning says that rmot_alpha begins with PMOT, which is wrong for those zones (their code now reads RMOT; their input CustAST_metric = 2 stays, unused).",
+    "evidence": "Reproduced with the worktree code: add_accis_to_idf(vrf_ac) + modify_accis(comfort_standard=23, category=80, comfort_mode=1, epw=Seville_Present.epw, zone_arguments={Block1:Zone2: {comfort_standard: 99, custom_outdoor_metric: ndrm}}) gives begins_with_weather_file True and \"set ComfTemp = Tout_metric*0.38+16.9\"; then modify_accis(idf, zone_arguments={Block1:Zone2: {custom_outdoor_metric: rmot_7day}}) gives begins_with_weather_file False, \"set ComfTemp = RMOT*0.38+16.9\", zone 1 CustAST_metric still 2, and only the warning \"custom_outdoor_metric [rmot_7day, rmot_alpha] begins with the running mean of ASHRAE 55 that EnergyPlus calculates (PMOT) ...\".",
+    "fix": "Give the RMOT warning whenever the model has zones of 23 and its programs stop beginning with a weather file in the call, and leave the metric of those zones out of the PMOT warning when their code reads RMOT; or keep the weather-file start (do not rewrite without epw when the programs can be kept, or ask for epw); document it in modify_accis."
+   },
+   {
+    "id": "A26",
+    "proposal": "H6",
+    "severity": "doc",
+    "location": "docs/source/4_detailed use.md line 1470 (H6 paragraph of 4.8: \"module accim.sim.schedule_files: the values of the hours of the weather file, in standard time, without interpolation\"); the H6 sentence of CHANGELOG.md [Unreleased] (\"the hours of the weather file, in standard time\"); accim/sim/apmv.py::set_pmv_input_parameters docstring (line 827)",
+    "problem": "The clothing Schedule:File of a function is in standard time only when the IDD has the field Adjust Schedule for Daylight Savings (present in the installed IDDs of EnergyPlus 25.1, 25.2 and 26.2; absent in those of 9.4 and 9.6). With 9.4/9.6 and daylight saving time, EnergyPlus shifts the schedule by one hour, so the clothing of each hour is that of the next hour of the weather file; the documentation states standard time without the caveat (same root cause as the H2 finding on T0).",
+    "evidence": "Energy+.idd of C:\\EnergyPlusV9-4-0 and C:\\EnergyPlusV9-6-0 (Schedule:File ends at N4 Minutes per Item); EnergyPlus v9.6.0 ScheduleManager.cc (\"DaylightSavingTime will shift all scheduled items by one hour\"; LookUpScheduleValue adds DSTIndicator to the hour). The H6 EnergyPlus test (a July week with DST) uses 25.1, which has the field (set to No).",
+    "fix": "Add the version caveat to the docs, CHANGELOG and docstrings (or warn when the IDD lacks the field and the model has DST), together with the H2 finding."
+   }
+  ],
+  "verified_correct": [
+   "G2: ThermalComfort.cc v25.1.0, CalcThermalComfortAdaptiveASH55: the adaptive functions run only when not in warm-up; normal branch (D >= 31) reads days D-30..D-1 with avgDryBulbASH = day D-1 (no anomaly); wrap branch (D <= 30) leaves avgDryBulbASH = 31 December and overwrites position 30 (day D-1) at the first BeginDayFlag; D = 1 is consistent. preview._energyplus_daily reproduces it with day == first - 1 and 1 <= first <= 29.",
+   "G2: CalcThermalComfortAdaptiveCEN15251 (v25.1.0) wrap and normal branches weight day D-k by alpha^(k-1) and multiply by (1 - alpha) without dividing by 1 - alpha^7; firstDaySet skips the first daily update: energyplus_running_means RMOT[0] and its recursion match.",
+   "G2: simulated daily means = file mean + (n-1)/n*(T_prev_last - T_24)/24, the mean of the first-timestep interpolated temperatures of each hour (derivation checked).",
+   "G2: tests/core/test_preview.py::test_compute_setpoints_as_energyplus_from_the_8th_of_january ran with EnergyPlus 25.1 and passed; -0.1424 C on 8 January re-computed.",
+   "G4: rmot_alpha of the 23 zones starts from outdoor_metrics(epw, alpha)[\"RMOT\"] of the first day (B.1 of a repeating year), set at the first timestep of the environment when DayOfYear is the start day; warm-up days not accumulated; first daily update at Hour 0 / TimeStepNum 1 of day 2; without the weather file the code of 23 reads native RMOT and AddAccis/modify_accis warn.",
+   "G4: re-computed with compute_setpoints (Seville, 90, mode 3): day-1 difference 23 (RMOT) vs 101 (hours 2-24) 0.9204 / 1.4662 / 1.9262 K from 1 Jan / 1 Apr / 1 Jul; from day 21 hours 2-24 <= 0.0277 K; first hour <= 0.1013 K (2 May, 1 Jan start) and 0.1028 K (2 May, 1 Apr start), excluded by the test except days 21-30.",
+   "G4: golden files s01-s06 and s09 of 6109cc1^ and 6109cc1 decompressed and diffed: per file, 6 lines of the 23 subprograms change from 28/20 to StaticACST/StaticAHST and one EnergyManagementSystem:GlobalVariable (StaticAHST, StaticACST) is added; nothing else changes.",
+   "G4: writing \"set StaticAHST = x\" in zones of models without the code of 23 (parametric module) is harmless: Erl SET calls NewEMSVariable, which creates a local variable when it is not declared (RuntimeLanguageProcessor.cc v25.1.0).",
+   "G4: static setpoints present in AddAccis/modify_accis (checked: heating < cooling, per zone), zone_arguments, GUI fields and zone table (forms.ZONE_ARGUMENTS), compute_setpoints/print_setpoint_ems_code, parametric StaticHeatingSetpoint/StaticCoolingSetpoint and the validity rule; check 4 reads the inputs of each zone.",
+   "G5: limit program order SetAST -> (ApplyHookSetpoints) -> SetASTnoTol -> ApplySetpointLimits, moved in models of earlier builds; exact minimum/maximum after the strict rounding; check 5 also on the setpoints without tolerance; compute_setpoints and print_setpoint_ems_code follow the order.",
+   "G5: Qatar YAML loads (folder loading in test_comfort_standard_registry.py); its comfort temperature and evidence match Indraganti & Boussaa (2018) eq. 5, Table 4 and Table 10; categories written in numeric order; offset-sign warning.",
+   "G5: pyfwg 0.4.0 morph_epw_global has fwg_add_uhi (Optional[bool]); accim passes False unless pyfwg_arguments gives it; the folder of the current EPW is appended before the call, so the cleanup after a ValueError removes it; the ensemble=0 warning is given for both engines.",
+   "G5: run_ep(processes=0) calls eppy prepare_run/multirunner with the right argument shapes; run_simulations(processes=0) runs _run_job in process (test_energyplus_api.py passed); the change of meaning of processes=0 for the EMS backend is declared under Changed.",
+   "G5: v04 3.5 documentation items: \"a few seconds\" (docs line 696), activity_level not a parameter with the metabolic correction (parametric_and_optimisation.rst line 182), \"(summed)\" of non-additive outputs documented (docs line 1315), BANNER built from __version__, the dependency of _pmv_index_mismatches on the monitor lines commented; the E2 items done in G2.",
+   "G5: ValueError for weather files without the 12 months (outdoor_metric._initial_values) and format_number used by outdoor_metric, custom_regimes, standard_lines, setpoint_limits and ems_code.",
+   "H1: DeprecationWarning texts \"since accim 1.2.0\" via accim._deprecation (version argument) for functions, zone_arguments, parameter names/classes/modifiers; GUI sessions mapped by forms.current_names; tests/parametric_and_optimisation legacy-name tests pass.",
+   "H2: the CSV of the H2 EnergyPlus test equals (max+min)/2 of each EPW day repeated 24 times (max abs diff 0.0); Schedule:File fields: 1 header row, 8760 hours, Comma, Interpolate No, 60 minutes, Adjust Schedule for Daylight Savings No (EnergyPlus 25.1 IDD); Te,ref equals (T0 + 0.8 T-1 + 0.4 T-2 + 0.2 T-3)/2.4 with T0 of the day in every timestep (test, atol 1e-9); T0 of the previous day (Tmid_1) and a warning without epw.",
+   "H5: SelectCustomRegime_<zone> evaluates the conditions before any branch copies ToutRegime into Tout_metric (if/elseif chain), so all conditions use the metric of the zone; SetInputData_<zone> resets CustAST_metric/alpha/days at the start of each zone run, so the regime branch does not leak to the zone running mean or to other zones.",
+   "H6: ThermalComfort.cc v25.1.0: ClothingType::InsulationSchedule sets CloUnit from the schedule but never comfort.ClothingValue, so \"Zone Thermal Comfort Clothing Value\" is 0 with ClothingInsulationSchedule; DynamicClothingModel implements 1.0 / 0.818 - 0.0364 ta6 / 10^(-0.1635 - 0.0066 ta6) / 0.46 with the breakpoints -5, 5 and 26 C, as v03 11.3.",
+   "H6: wrong functions (scalar, wrong length, negative, not callable for other parameters, unknown metric, no epw) raise before the model or the folder change; the July week of the EnergyPlus 25.1 test (with DST) gives the values of the hours of the weather file.",
+   "No EnergyManagementSystem:TrendVariable is created anywhere in accim (grep of accim/).",
+   "accim.constants.EN16798_TABLE_B2 gives offices II 20.0/26.0 C and I 21.0/25.5 C, consistent with the verdict of decision #20."
+  ],
+  "provisional_decisions_review": [
+   {
+    "decision": "#1 H6: the outdoor temperature of the functions of the clothing insulation, and their CSV files",
+    "sound": true,
+    "recommendation": "Keep (a Series in, one value per hour out; SHA-1 in the CSV name). Add the 9.4/9.6 daylight-saving caveat of the Schedule:File (H6 doc finding). For the instructed Tout example (Schiavon & Lee 2013, eq. 4), note that the index is the end of each hour, so the weather-file value at 6 a.m. is the row labelled 06:00, while the dynamic model of EnergyPlus takes the outdoor temperature of the first timestep of hour 7 ((5/6) T(06:00) + (1/6) T(07:00) with 6 timesteps per hour; ThermalComfort.cc v25.1.0, HourOfDay == 7 and TimeStep == 1)."
+   },
+   {
+    "decision": "#2 H5: the schema of the key regimes of the YAML files of the comfort standards",
+    "sound": true,
+    "recommendation": "Keep: eight coefficients required, last regime always, hvac conditions rejected (a comfort standard must not depend on the HVAC system)."
+   },
+   {
+    "decision": "#3 H5: the EMS code of a comfort standard with regimes",
+    "sound": true,
+    "recommendation": "Keep: one-regime standards keep their literal code (golden master byte-identical), several regimes reuse the custom-model machinery."
+   },
+   {
+    "decision": "#4 H5: the outdoor metric of a regime in the outputs, and the programs kept",
+    "sound": true,
+    "recommendation": "Keep the names; consider an optional output of the metric used by the conditions, since Tout_metric_<zone> reports the metric of the regime when a regime with its own metric applies."
+   },
+   {
+    "decision": "#7 H2: where the CSV file of T0 of te_ref_nl is written",
+    "sound": true,
+    "recommendation": "Accept with the note already decided; also add a hash of the values to the file name (H2 design finding), since two same-named weather files overwrite each other in one folder."
+   },
+   {
+    "decision": "#8 H2: which models get the Schedule:File of T0",
+    "sound": true,
+    "recommendation": "Keep (only with a zone or regime with te_ref_nl and epw)."
+   },
+   {
+    "decision": "#19 G5: the warning of verdict 13 compares the floor and ceiling with ACSTaul and AHSTall",
+    "sound": false,
+    "recommendation": "The change verdict is right: _applicability_limits returns ACSTaul/AHSTall of SetAppLimits (30 and 10 C for INT EN16798), limits of the outdoor metric, so the literal comparison has no meaning; replace it as decided."
+   },
+   {
+    "decision": "#20 G5: the static setpoints of the YAML file of Qatar (20 and 25.5 C)",
+    "sound": false,
+    "recommendation": "The change to 20/26 C is right (EN16798_TABLE_B2 offices II); in the same edit, correct the alpha attribution of the YAML (the article gives 0.8: G5 doc finding)."
+   },
+   {
+    "decision": "#21 G5: the floor exact after the rounding, as the ceiling (B5-2)",
+    "sound": true,
+    "recommendation": "Keep the exact limits; independently, decide the tolerance at a binding limit (G5 design finding: the thermostat should keep the tolerance, as with the hooks of G1)."
+   },
+   {
+    "decision": "#22 G4: the criterion of the test of JPN Aqilah 2025 against its YAML twin 101",
+    "sound": true,
+    "recommendation": "Keep: the v04 threshold (> 1 K on day 1) depends on the outdoor level (0.92 K from 1 January in Seville) and the first-hour differences (up to 0.103 K) are the one-day lag of the native RMOT in the first timestep, not the transient. Optionally compute the expected day-1 difference from the formulas (0.38 x (B.1 of the weather file - eq. 19.82 sum)) instead of the regression constants 1.4662/1.9262."
+   },
+   {
+    "decision": "G5 (decisions.md 2026-11-10, \"The floor and ceiling bound the setpoints with and without the tolerance and are exact\"): thermostat and band limit both at the minimum/maximum",
+    "sound": false,
+    "recommendation": "Give the thermostat the bounded band plus the tolerance (AHSTmin + AHSTtol, ACSTmax + ACSTtol), or put the zero tolerance at binding limits to the author in questions.md (G5 design finding)."
+   },
+   {
+    "decision": "G4 (decisions.md 2026-11-10, \"JPN Aqilah 2025 reads the running mean ... and its static setpoints are inputs of its zones\"): the static inputs only in the zones of 23",
+    "sound": false,
+    "recommendation": "In models with the code of 23 (add_accis_to_idf), give all the zones the two inputs, or initialise the globals: otherwise a zone switched to 23 by editing stops EnergyPlus (G4 bug)."
+   },
+   {
+    "decision": "A3 verdict #3 as implemented in G5 (adaptive_coefficients=<key> for both sides; a single-side key fills only its side, with a warning when the other keeps the numeric default)",
+    "sound": true,
+    "recommendation": "Sound and it follows the verdict as transcribed in decisions.md; note that the table of v04 5 (#3) words it differently (\"a key fills both sides unless the other is given\"): the author may confirm which wording is binding."
+   },
+   {
+    "decision": "G5: run_ep(processes=0) and run_simulations(processes=0) run in the current process (before, 0 was all the CPUs with the EMS backend)",
+    "sound": true,
+    "recommendation": "Keep; it is declared under Changed. A one-time note in the migration guide would help users who passed 0 for all the CPUs."
+   }
+  ],
+  "tests_run": [
+   {
+    "file": "tests/core/test_preview.py",
+    "result": "33 passed in 49 s (no skips; includes the EnergyPlus 25.1 test from 8 January)"
+   },
+   {
+    "file": "tests/core/test_jpn_aqilah2025.py",
+    "result": "28 passed, 17 UserWarnings of verification in 130 s (includes EnergyPlus 25.1 and EMS-vs-API backends)"
+   },
+   {
+    "file": "tests/core/test_setpoint_limits.py",
+    "result": "27 passed in 83 s (includes EnergyPlus 25.1 winter/summer weeks and EMS-vs-API backends)"
+   },
+   {
+    "file": "tests/core/test_outdoor_metric.py + tests/core/test_schedule_files.py (one invocation)",
+    "result": "46 passed in 130 s (includes EnergyPlus 25.1 outdoor metrics, te_ref_nl with the weather file and both backends)"
+   },
+   {
+    "file": "tests/core/test_apmv_coefficients.py + tests/core/test_comfort_standard_registry.py + tests/core/test_morphing.py (one invocation)",
+    "result": "73 passed, 1 skipped in 56 s; skipped test_morphing.py:376 (jar of the global Future Weather Generator, ACCIM_FWG_JAR; known, blocked)"
+   },
+   {
+    "file": "tests/core/test_standard_regimes.py + tests/core/test_custom_regimes.py + tests/core/test_regime_metrics.py (one invocation)",
+    "result": "56 passed in 127 s (includes EnergyPlus 25.1 check 4 and both backends)"
+   },
+   {
+    "file": "tests/core/test_pmv_input_parameters.py + tests/core/test_verification.py (one invocation)",
+    "result": "56 passed in 55 s (includes the EnergyPlus 25.1 test of the clothing Schedule:File, January and July with DST)"
+   },
+   {
+    "file": "tests/core/test_golden_master.py",
+    "result": "35 passed in 48 s"
+   },
+   {
+    "file": "tests/core/test_gui.py + tests/core/test_energyplus_api.py (one invocation; extra)",
+    "result": "166 passed in 69 s"
+   },
+   {
+    "file": "tests/parametric_and_optimisation/test_legacy_names.py + test_setpoint_limit_parameters.py + test_registered_comfort_standards.py + test_pmv_and_metric_parameters.py (one invocation; extra, besos installed)",
+    "result": "35 passed in 23 s"
+   }
+  ],
+  "not_assessed": [
+   "The effect of the zero tolerance at a binding minimum/maximum on the hour counters with a tightly controlled system (e.g. IdealLoads): not simulated; with the sample VRF of the tests it was not measurable.",
+   "EnergyPlus 9.4/9.6 simulations with daylight saving time: the one-hour shift of the Schedule:File objects is inferred from their IDDs and the v9.6.0 ScheduleManager source, not simulated.",
+   "The command line that pyfwg builds with fwg_add_uhi=False against the real tool (the jar is not available).",
+   "Aqilah et al. (2025): the PDF was not re-read (G4 did not change its coefficients, bands or limits, checked in v04).",
+   "The PDF of EN 16798-1 Table B.2 was not opened (accim.constants values, which the test suite checks against the standard, were used).",
+   "The full test suite, the Sphinx build and an interactive GUI session were not run (only the listed files and tests/core/test_gui.py).",
+   "CHANGELOG, DEVLOG and CAMBIOS were compared with the code only for the statements cited in this report, not line by line.",
+   "The out-of-scope items of the brief (comfort standards 9 and 10, TM52/TM59, the FWG jar, the F3 validation, the decision changes #19/#20 and the instructions #1/#7/#22) were not reported as findings."
+  ]
+ }
+]

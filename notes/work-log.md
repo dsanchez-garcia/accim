@@ -15,6 +15,17 @@ This log is a lightweight, session-scoped complement to the repository's
 existing tracking files — it does not replace them (see
 [[decisions.md#2026-09-13 — `notes/work-log.md` complements, not replaces, existing tracking files|the related decision]]).
 
+## 2026-11-11 — The self-audit of session 2 (branch `v1.2.0`, on the server)
+
+- **Objective**: audit the 15 code tasks of session 2 with the checklist of the handoff of Claude Science (Appendix A),
+  as an independent reviewer, without fixing anything.
+- **Affected files**: [[attachments/autoauditoria_sesion2_v1.2.0.json]], [[../DEVLOG.md]].
+- **Finding or decision**: three read-only reviewers on a worktree at `fe42957`; G1, G2 and H5 correct, the others
+  correct with issues; 26 findings (5 bug, 3 scientific, 6 design, 3 test, 4 doc, 5 minor). numba is blocked by Smart
+  App Control on this server, so what needs `pythermalcomfort.models` was not assessed.
+- **Validation**: see the entry of the self-audit in [[../DEVLOG.md]].
+- **Next step**: S1; the fixes of the audit after S5.
+
 ## 2026-11-11 — Step 0 of session 3: the verdicts on the 23 provisional decisions (branch `v1.2.0`, on the server)
 
 - **Objective**: apply the verdicts of the handoff of Claude Science (§3) to the 23 provisional decisions of the
