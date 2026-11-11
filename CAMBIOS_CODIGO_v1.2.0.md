@@ -2394,3 +2394,16 @@ Correcciones pequeñas de la documentación, sin cambios del código (un commit)
   (H1 dice que los nombres antiguos siguen funcionando). Ahora los toma, y las columnas del plan no cambian. Prueba en
   `tests/parametric_and_optimisation/test_setpoint_limit_parameters.py`.
 - Las dos pruebas fallan sin los arreglos y pasan con ellos.
+
+### Grupo de los ganchos: A5 y A6
+
+- **A5.** Cuando el gancho del SET no calcula el SET de una zona en un paso (sin el valor de un sensor, con una
+  actividad o una vestimenta dinámica de 0, o sin la temperatura del aire), no actualizaba `HoursInCausalBand_<zona>`,
+  una salida sumada, que repetía así las horas del último paso con SET aunque la zona estuviera desocupada. Ahora
+  `SetSetpointHook` llama a `_skipped` en esos casos, y `Sun2026SetpointHook` pone esa salida a 0; `SET_<zona>` y
+  `TSV_causal_<zona>` (promediadas) conservan su último valor (documentado en 4.9.3). Prueba con un controlador
+  simulado y un SET de prueba (numba no carga en el servidor), que falla sin el arreglo.
+- **A6.** No había prueba de que `run_simulation` llame a `prepare()` de los ganchos antes de cargar la biblioteca de
+  la API de EnergyPlus (el orden que necesita el gancho del SET por bisección): prueba nueva que sustituye
+  `load_energyplus_api` y comprueba el orden (`prepare` de los ganchos de antes y de después de los programas, y luego
+  la carga). El código ya lo hacía.

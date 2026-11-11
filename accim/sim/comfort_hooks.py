@@ -974,6 +974,10 @@ class SetSetpointHook:
     def _report(self, controller, zone: str, value: float) -> None:
         """Called with the SET of a zone, once the hook has set ``SET_<zone>`` (for the subclasses)."""
 
+    def _skipped(self, controller, zone: str) -> None:
+        """Called when the hook does not calculate the SET of a zone in a timestep: without the values of its sensors,
+        or with an activity level or a clothing insulation of the dynamic model of 0 (for the subclasses)."""
+
     def __call__(self, controller, calling_point: str) -> None:
         if calling_point != _CALLING_POINT:
             return
@@ -981,9 +985,11 @@ class SetSetpointHook:
         for zone in self.zones:
             humidity = controller.get(f'SET_RH_{zone}')
             if humidity is None:
+                self._skipped(controller, zone)
                 continue
             inputs = self.zone_inputs(controller, zone)
             if inputs is None:
+                self._skipped(controller, zone)
                 continue
             radiant, met, clo, air_speed = inputs
             if self.table is not None:
@@ -999,6 +1005,8 @@ class SetSetpointHook:
                     value = self.zone_set(air, radiant, humidity, met, clo, air_speed)
                     controller.set(f'SET_{zone}', value)
                     self._report(controller, zone, value)
+                else:
+                    self._skipped(controller, zone)
 
 
 def causal_tsv(set_value):
@@ -1166,6 +1174,12 @@ class Sun2026SetpointHook(SetSetpointHook):
         occupied = occupants is not None and occupants > 0 and step is not None
         controller.set(f'{_SUN2026_HOURS}_{zone}',
                        step if occupied and self.band[0] <= value <= self.band[1] else 0.0)
+
+    def _skipped(self, controller, zone: str) -> None:
+        # A timestep without the SET of the zone has no hours within the band (the output is summed: before finding A5
+        # of the self-audit of 2026-11-11, it kept those of the last timestep with the SET); SET_<zone> and
+        # TSV_causal_<zone>, averaged, keep their last values
+        controller.set(f'{_SUN2026_HOURS}_{zone}', 0.0)
 
 
 def _model_output_frequencies(building) -> List[str]:

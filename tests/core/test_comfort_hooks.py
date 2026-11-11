@@ -830,6 +830,37 @@ def test_run_simulation_prepares_the_hooks():
     assert prepared == [hooks[0], hooks[2]]
 
 
+def test_run_simulation_prepares_the_hooks_before_it_loads_the_api(monkeypatch):
+    # Finding A6 of the self-audit of 2026-11-11: run_simulation calls prepare() of the hooks (before and after the
+    # programs) in the process of the simulation before it loads the library of the API of EnergyPlus, which the hook of
+    # the SET with method='bisection' needs (the first call of set_tmp after loading the library stopped the process)
+    from accim.sim.energyplus_api import runner
+
+    calls = []
+
+    class Stop(Exception):
+        pass
+
+    class Prepared:
+        def __init__(self, name):
+            self.name = name
+
+        def prepare(self):
+            calls.append(f'prepare {self.name}')
+
+        def __call__(self, controller, calling_point):
+            return None
+
+    def load_energyplus_api(version):
+        calls.append('load')
+        raise Stop
+
+    monkeypatch.setattr(runner, 'load_energyplus_api', load_energyplus_api)
+    with pytest.raises(Stop):
+        runner.run_simulation(SAMPLE_IDF, before_programs=[Prepared('before')], after_programs=[Prepared('after')])
+    assert calls == ['prepare before', 'prepare after', 'load']
+
+
 def test_the_set_of_the_results_of_a_simulation(tmp_path):
     pytest.importorskip('pythermalcomfort')
     hook = ch.SetSetpointHook(ZONES, set_cooling_setpoint=27.0, set_heating_setpoint=21.0, met=1.2, clo=0.6,

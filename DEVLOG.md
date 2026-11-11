@@ -36,6 +36,13 @@ Recommended flow: track active work in `TODO.md`, move completed outcomes to `DE
 ## Entries
 
 ### 2026-11-11
+#### [done] A5 and A6: the hours in the causal band of a timestep without the SET, and the order of prepare() and the API (self-audit of session 2) (branch `v1.2.0`)
+- Context: findings A5 (minor) and A6 (test) of the self-audit of session 2: when the hook of the SET calculated no SET of a zone in a timestep, it did not update `HoursInCausalBand_<zone>`, a summed output, which repeated the hours of the last timestep with the SET (also in unoccupied timesteps); and no test checked that `run_simulation` calls `prepare()` of the hooks before it loads the library of the API of EnergyPlus.
+- Changes: `SetSetpointHook._skipped(controller, zone)`, called when the hook calculates no SET of a zone (no value of a sensor, `zone_inputs` None, or no mean air temperature with `method='bisection'`); `Sun2026SetpointHook._skipped` sets `HoursInCausalBand_<zone>` to 0 (`SET_<zone>` and `TSV_causal_<zone>`, averaged, keep their last values). Section 4.9.3 of the detailed use.
+- Files: `accim/sim/comfort_hooks.py`, `tests/core/test_sun2026_set.py`, `tests/core/test_comfort_hooks.py`, `docs/source/4_detailed use.md`, `CAMBIOS_CODIGO_v1.2.0.md` (§43), `DEVLOG.md`.
+- Verification: `test_a_timestep_without_the_set_of_a_zone_has_no_hours_in_the_band` (a fake controller and a SET of the test: numba is blocked here) fails without the fix (the hours of the previous timestep, 1/6 h) and passes with it; `test_run_simulation_prepares_the_hooks_before_it_loads_the_api` (`load_energyplus_api` replaced) checks the order `prepare` of the hooks before and after the programs, then `load` (the code already did it). Compiles with Python 3.9.
+
+### 2026-11-11
 #### [done] A11 and A23: the arguments of the limiter without drift_mode, and the old names of the minimum and maximum in the plans (self-audit of session 2) (branch `v1.2.0`)
 - Context: findings A11 and A23 (minor) of the self-audit of session 2: `AddAccis` ignored silently the arguments of the limiter of the drift without `drift_mode` in any zone (`modify_accis` raises a `ValueError`); `param_accis.drop_invalid_param_combinations` did not map the names of the development of 1.2.0 (`heating_setpoint_floor`, `cooling_setpoint_ceiling`), so their rule was skipped while H1 says that the old names keep working.
 - Changes: `accim.sim.accis._warn_unused_drift_arguments` (a `UserWarning` from `AddAccis`, so the output IDFs do not change); the mapping of the columns of `drop_invalid_param_combinations` takes the old names (the columns of the plan are kept). Section 4.2.7, `CHANGELOG.md` (the entries of the limiter and of the minimum and maximum), the docstring of `drop_invalid_param_combinations`.

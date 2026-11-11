@@ -333,6 +333,38 @@ def test_the_set_of_the_results_needs_the_inputs_of_the_hook():
         ch.set_of_results(pd.DataFrame(), hook)
 
 
+def _mean_set(air_temperature, mean_radiant_temperature, air_speed, relative_humidity, met, clo, position='standing'):
+    """A SET for the tests without pythermalcomfort (numba): the mean of the air and mean radiant temperatures."""
+    value = (np.asarray(air_temperature, dtype=float) + np.asarray(mean_radiant_temperature, dtype=float)) / 2
+    return float(value) if np.ndim(value) == 0 else value
+
+
+def test_a_timestep_without_the_set_of_a_zone_has_no_hours_in_the_band(monkeypatch):
+    # Finding A5 of the self-audit of 2026-11-11: when the hook calculates no SET for a zone in a timestep (no value of
+    # a sensor, an activity level of 0, or no mean air temperature), the summed output HoursInCausalBand_<zone> is 0
+    # (before, it kept the hours of the last timestep with the SET); SET_<zone> and TSV_causal_<zone> keep their values
+    monkeypatch.setattr(ch, 'standard_effective_temperature', _mean_set)
+    hook = ch.Sun2026SetpointHook(ZONES, clothing_sources={zone: 'schedule' for zone in ZONES})
+    controller = _Controller({'ZoneTimeStep': 1 / 6, **_zone_values(ZONES[0], 23.0, 24.0, SET_Clo=0.5),
+                              **_zone_values(ZONES[1], 25.0, 26.0, SET_Clo=0.5)})
+    hook(controller, CALLING_POINT)
+    assert [controller.get(f'HoursInCausalBand_{zone}') for zone in ZONES] == [pytest.approx(1 / 6)] * 2
+    assert controller.get(f'SET_{ZONES[0]}') == 23.5
+    for name, value in ((f'SET_Act_{ZONES[0]}', 0.0), (f'SET_RH_{ZONES[1]}', None)):
+        controller.set(name, value)
+    hook(controller, CALLING_POINT)
+    assert [controller.get(f'HoursInCausalBand_{zone}') for zone in ZONES] == [0.0, 0.0]
+    assert (controller.get(f'SET_{ZONES[0]}'), controller.get(f'TSV_causal_{ZONES[0]}')) == (
+        23.5, pytest.approx(0.11 * 23.5 - 2.6))
+    # The setpoints of the hook without the SET of the zone (no mean air temperature)
+    controller.set(f'SET_Act_{ZONES[0]}', ACTIVITY)
+    hook(controller, CALLING_POINT)
+    assert controller.get(f'HoursInCausalBand_{ZONES[0]}') == pytest.approx(1 / 6)
+    controller.set(f'SET_MAT_{ZONES[0]}', None)
+    hook(controller, CALLING_POINT)
+    assert _given(controller, ZONES[0]) is not None and controller.get(f'HoursInCausalBand_{ZONES[0]}') == 0.0
+
+
 def _comfort_models(people):
     return [str(getattr(people, f'Thermal_Comfort_Model_{n}_Type')).strip() for n in range(1, 8)]
 
