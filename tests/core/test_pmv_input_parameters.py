@@ -472,6 +472,35 @@ def test_the_clothing_insulation_as_a_function_of_the_outdoor_temperature(tmp_pa
                                   _hourly(metrics['Tout'].to_numpy()))
 
 
+def _clothing_at_6am(tout):
+    """The example of the documentation (section 4.8; decision 1 of the review of accim 1.2.0): ASHRAE 55-2020, Figure
+    5-1 (Schiavon & Lee, 2013, equation 4, from 5 to 26 °C), with the outdoor air temperature at 6:00 of each day."""
+    ta6 = np.repeat(tout.to_numpy().reshape(-1, 24)[:, 5], 24)
+    return np.select([ta6 < -5, ta6 < 5, ta6 < 26], [1.0, 0.818 - 0.0364 * ta6, 10 ** (-0.1635 - 0.0066 * ta6)], 0.46)
+
+
+def test_a_clothing_function_of_the_outdoor_temperature_at_6am():
+    from accim.sim.preview import outdoor_metrics
+
+    # The piecewise model of ASHRAE 55-2020, Figure 5-1 (the values of the proposal A5 of the review)
+    temperatures = pd.Series(np.repeat([-10.0, 0.0, 10.0, 20.0, 30.0], 24))
+    np.testing.assert_allclose(_clothing_at_6am(temperatures)[::24],
+                               [1.0, 0.818, 10 ** (-0.1635 - 0.066), 10 ** (-0.1635 - 0.132), 0.46], rtol=0, atol=1e-12)
+    # The sixth value of each day of the Series of 'Tout' is that of 6:00, the clothing insulation of the whole day
+    values = apmv.clothing_insulation_values(_clothing_at_6am, SAMPLE_EPW, 'Tout')
+    tout = outdoor_metrics(SAMPLE_EPW).set_index('datetime')['Tout']
+    at_6am = tout[(tout.index.hour == 6) & (tout.index.minute == 0)]
+    assert len(at_6am) == 365
+    expected = np.repeat(_clothing_at_6am(pd.Series(np.repeat(at_6am.to_numpy(), 24)))[::24], 24)
+    np.testing.assert_array_equal(values.to_numpy(), expected)
+    assert 0.46 <= values.min() < values.max() <= 1.0
+    # The range of the documentation, with the weather file of Seville of the repository
+    present = REPO / 'Seville_Present.epw'
+    if present.exists():
+        values = apmv.clothing_insulation_values(_clothing_at_6am, present, 'Tout')
+        assert values.min() == pytest.approx(0.47, abs=0.005) and values.max() == pytest.approx(0.89, abs=0.005)
+
+
 def test_a_function_replaces_the_other_values_of_the_clothing_insulation(tmp_path):
     building = _model(tmp_path)
     people, name = _people(building, 'Block1:Zone1')

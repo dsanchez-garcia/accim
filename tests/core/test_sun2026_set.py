@@ -9,6 +9,7 @@ The unit tests use a fake controller and the Erl interpreter of accim; the last 
 EnergyPlus 25.1, through its Python API, and compare the SET of the hook with that of the Pierce model of EnergyPlus
 hour by hour (the differences measured are in ``notes/decisions.md``, F1, 2026-11-10; the test reproduces them).
 """
+import re
 import shutil
 import warnings
 
@@ -61,6 +62,25 @@ def test_the_setpoints_of_the_set_of_comfort_standard_24():
                                (dict(comfort_mode=2, set_offset=0), 'set_offset must be greater than 0')):
         with pytest.raises(ValueError, match=message):
             ch.sun2026_set_setpoints(**arguments)
+
+
+@needs_idd
+def test_comfort_modes_0_and_3_of_comfort_standard_24_give_a_clear_error(tmp_path):
+    # Verdict 16 of the review of 1.2.0 (task S5): comfort standard 24 has comfort modes 1 and 2 only; 0 (the static
+    # setpoints of the other comfort standards) and 3 raise a ValueError that names the valid ones, also when the hook
+    # is made and when the model is prepared (before it changes)
+    message = r"comfort_mode must be one of 1 \('SET band'\), 2 \('SET neutral \+/- offset'\), not {}\."
+    idf = _model(tmp_path)
+    before = idf.idfstr()
+    for mode in (0, 3, '0', 0.0):
+        with pytest.raises(ValueError, match=message.format(re.escape(repr(mode)))):
+            ch.sun2026_set_setpoints(mode)
+        with pytest.raises(ValueError, match=message.format(re.escape(repr(mode)))):
+            ch.Sun2026SetpointHook(ZONES, comfort_mode=mode)
+        with pytest.raises(ValueError, match=message.format(re.escape(repr(mode)))):
+            ch.apply_sun2026_setpoints(idf, comfort_mode=mode)
+    assert idf.idfstr() == before
+    assert list(st.get_comfort_standard(24).comfort_modes) == [1, 2]
 
 
 def test_comfort_standard_24_has_no_ems_code():

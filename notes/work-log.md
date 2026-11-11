@@ -15,6 +15,20 @@ This log is a lightweight, session-scoped complement to the repository's
 existing tracking files — it does not replace them (see
 [[decisions.md#2026-09-13 — `notes/work-log.md` complements, not replaces, existing tracking files|the related decision]]).
 
+## 2026-11-11 — S5: the notes of the accepted decisions 1, 7, 16 and 22 (branch `v1.2.0`, on the server)
+
+- **Objective**: the instructions of the verdicts of decisions 1 (an example of a clothing function of the
+  temperature at 6:00), 7 (the absolute path of the CSV files of the `Schedule:File` objects), 16 (comfort modes 0 and
+  3 of comfort standard 24) and 22 (the one-day delay of the running means of EnergyPlus in the first timestep).
+- **Affected files**: [[../docs/source/4_detailed use.md]] (4.2, 4.2.2, 4.3.1, 4.8),
+  `tests/core/test_pmv_input_parameters.py`, `tests/core/test_sun2026_set.py`, [[../TODO.md]], [[../CHANGELOG.md]],
+  [[../CAMBIOS_CODIGO_v1.2.0.md]] (§42), [[../DEVLOG.md]].
+- **Finding or decision**: EnergyPlus 25.1 stops before the simulation when the CSV file of a `Schedule:File` object
+  is not found; the comfort temperature of INT EN16798 in the first timestep of each day is that of the day before (up
+  to 0.44 K away in Seville).
+- **Validation**: see the entry of S5 in [[../DEVLOG.md]].
+- **Next step**: the fixes of the self-audit.
+
 ## 2026-11-11 — S4: the indicators of the causal band with the SET of pythermalcomfort (branch `v1.2.0`, on the server)
 
 - **Objective**: decision 9 (provisional, pending Ruiji Sun): keep the Pierce SET in the indicators of F3 and add,

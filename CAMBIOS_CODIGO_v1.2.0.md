@@ -161,6 +161,10 @@ Lo que ya está en otros documentos no se repite aquí:
 - **S4 (tercera sesión, decisión 9, provisional).** `table_indicators` del módulo de los indicadores de la adaptación
   interior da también, con `pythermalcomfort_set` (desactivado por defecto), los indicadores de la banda causal con el
   SET de pythermalcomfort, en columnas con el sufijo `_pythermalcomfort` (sección 41).
+- **S5 (tercera sesión, decisiones 1, 7, 16 y 22).** Documentación y pruebas de las notas de cuatro decisiones
+  aceptadas: un ejemplo de vestimenta con la temperatura de las 6:00, la ruta absoluta de los CSV de los
+  `Schedule:File`, los modos 0 y 3 del estándar 24 y el retraso de un día de las medias móviles de EnergyPlus en el
+  primer paso de cada día (sección 42).
 - Las categorías del PMV y la aproximación de la corrección del metabolismo se han comprobado en ISO 7730:2025 y
   EN 16798-1:2019, y el modelo dinámico de vestimenta de A5, en Schiavon y Lee (2013) y ASHRAE 55-2020 (sección 6).
 - Lo que quedaba abierto se ha comprobado: el golden master y las pruebas de EnergyPlus 26.1 y 26.2, también la de A5
@@ -2223,3 +2227,31 @@ horas cerca de los bordes de la banda de 19,1 a 28,2 °C.
   desde las fórmulas, el gancho como entrada, la postura y `tsv_limit`; una tabla horaria y otra de pasos de un CSV de
   dos pasos por hora; los errores y el aviso; con la simulación de EnergyPlus 25.1 del test de los indicadores, los
   valores de cada hora del CSV real; y una prueba con pythermalcomfort, que se salta sin él.
+
+## 42. Las notas de las decisiones aceptadas 1, 7, 16 y 22 (S5)
+
+Los veredictos del 11 de noviembre aceptaron estas decisiones con una instrucción; ninguna cambia el código de accim.
+
+- **Decisión 1 (H6).** La sección 4.8 del uso detallado tiene un ejemplo de función de la vestimenta con la columna
+  `'Tout'` (`clothing_outdoor_metric='Tout'`) para los modelos de la temperatura exterior de las 6:00: el de ASHRAE
+  55-2020, figura 5-1 (1,00 clo por debajo de −5 °C; 0,818 − 0,0364·ta6 de −5 a 5 °C;
+  10^(−0,1635 − 0,0066·ta6), la ecuación 4 de Schiavon y Lee, 2013, de 5 a 26 °C; 0,46 clo desde 26 °C). La serie
+  tiene las 24 horas de cada día en orden y la sexta acaba a las 6:00, así que la función da a cada día la vestimenta
+  de su temperatura de las 6:00 (de 0,47 a 0,89 clo con `Seville_Present.epw`). Prueba nueva en
+  `tests/core/test_pmv_input_parameters.py`: los valores de la propuesta A5 en −10, 0, 10, 20 y 30 °C, la hora de las
+  6:00 por su fecha y el rango de la documentación.
+- **Decisión 7 (H2).** Los objetos `Schedule:File` de accim (T0 de `'te_ref_nl'`, `ACCIS Outdoor Mid Range`; y la
+  vestimenta de una función, `Sch_Clo_<people>`, H6) tienen la ruta absoluta de su CSV: un IDF simulado en otro
+  ordenador, o tras mover su carpeta, no lo encuentra, y EnergyPlus 25.1 se detiene antes de simular con el error
+  grave `Schedule:File="...", File Name: "..." not found` (comprobado el 11 de noviembre). Documentado en las
+  secciones 4.2.2 y 4.8 y en el CHANGELOG; el modo relativo es una entrada P2 de `TODO.md`.
+- **Decisión 16 (F1).** Los modos 0 y 3 del estándar 24 ya daban un `ValueError` claro, que nombra los modos 1 y 2:
+  prueba nueva en `tests/core/test_sun2026_set.py` con `sun2026_set_setpoints`, `Sun2026SetpointHook` y
+  `apply_sun2026_setpoints` (0, 3, '0' y 0.0; el modelo no cambia).
+- **Decisión 22 (G4).** En el primer paso de cada día, el EMS lee las medias móviles de EnergyPlus del día anterior,
+  así que las consignas de ese paso llevan un día de retraso; afecta al estándar 23 sin el EPW y también al 1 (RMOT)
+  y, menos, a los de PMOT. Medido con `compute_setpoints` y `Seville_Present.epw` desde el 1 de enero: la temperatura
+  de confort del primer paso de cada día es exactamente la del día anterior, hasta 0,44 K (1) y 0,51 K (23) distinta de
+  la del resto del día (el 2 de mayo; 0,12 y 0,13 K de media desde el día 9) y hasta 0,13 K con PMOT (2). Documentado en
+  la sección del estándar 23 (donde se describe la prueba de 23 frente a 101), en la de `compute_setpoints` y en el
+  CHANGELOG.
