@@ -77,6 +77,11 @@ existing tracking files — it does not replace them (see
     try-runs left an open question ([[questions.md]]): the air speed of the fans is in the heating setpoint of the
     causal SET model too, and the limiter of the drift limits the setpoints of a hook within the day and in the
     unoccupied hours.
+  - Found in the final checks: with the models of `add_accis_to_idf` (the code of all the comfort standards), the
+    EMS and API backends give identical setpoints and EMS outputs, but the other outputs differ in their last digits
+    (up to 5e-10 K and 5e-3 J in two days of July), from the design days on; with the output IDFs of `AddAccis`, which
+    the tests of both backends compare, the files are identical. It is older than this session (the same numbers
+    with `f3f9eb5`); its cause is an entry of [[../TODO.md]]. The test of A24 now runs both backends.
 - **Validation**: in the entry of each task of [[../DEVLOG.md]] (the tests of the task, EnergyPlus 25.1 with both
   backends where the EMS code changes, and the golden master, compared line by line before writing it again).
 - **Next step**: the review of Claude Science of sessions 2 and 3, which also covers this session; the message of the

@@ -2865,3 +2865,23 @@ modelo de pruebas y no el del estudio). Dos cuestiones del diseño de los casos 
    de calefacción en la semana de julio en vez de 10,6, y 1550 kWh de refrigeración en vez de 2044, la mayor parte de
    la diferencia en las horas no ocupadas. Así, el caso (v) del modelo causal mediría sobre todo eso, y no la deriva
    entre días. La sección 4.2.7 del uso detallado lo explica ahora.
+
+## 55. Los dos backends con los modelos de `add_accis_to_idf`: el test de A24 y un hallazgo
+
+Al repasar la definición de terminado de A24 (sección 46: ambos backends cuando cambia el código del EMS), su test con
+EnergyPlus solo simulaba con el backend del EMS. Ahora simula también con el de la API de Python y compara.
+
+**El hallazgo.** Con ese modelo los dos backends no dan ficheros idénticos: las salidas del EMS y las consignas de los
+termostatos (los valores de sus schedules, que son lo único que accim le pasa a EnergyPlus) son idénticas en todos los
+pasos de tiempo, pero el resto de las salidas difiere en las últimas cifras (hasta 5·10⁻¹⁰ K en las temperaturas de las
+zonas y 5·10⁻³ J en las energías horarias, en dos días de julio del modelo de ejemplo). No lo causa A24 ni ninguna
+tarea de esta sesión: ocurre igual, con los mismos números, con el código de `f3f9eb5`, y ocurre con cualquier modelo
+de `add_accis_to_idf` (los que llevan el código de todos los estándares de confort), también sin editar. Con los IDF de
+salida de `AddAccis`, que son los que comparan los tests de ambos backends, los ficheros son idénticos. La diferencia
+nace antes del primer paso de tiempo que se reporta (ya está en el primer día de diseño), probablemente en las primeras
+ejecuciones de los programas que EnergyPlus hace sin callbacks mientras dimensiona; la causa no está encontrada.
+
+**Lo que cambia.** `tests/core/test_jpn_aqilah2025.py`: el test de la zona cambiada a mano compara de forma exacta las
+salidas del EMS y los valores de los schedules, y el resto con una tolerancia relativa de 10⁻⁶. La sección 4.9 del uso
+detallado lo dice, junto al caso ya conocido de los termostatos del PMV. `TODO.md` tiene una entrada P2 para encontrar
+la causa. No cambia código del paquete.

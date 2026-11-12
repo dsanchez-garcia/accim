@@ -36,6 +36,32 @@ Recommended flow: track active work in `TODO.md`, move completed outcomes to `DE
 ## Entries
 
 ### 2026-11-12
+#### [done] Both backends in the test of A24, and a finding: they differ in their last digits with the models of `add_accis_to_idf` (branch `v1.2.0`)
+- Context: in the final checks of the session, the definition of done of A24 (both backends when the EMS code
+  changes) was read again: its EnergyPlus test, a zone switched by hand to comfort standard 23 in a model of
+  `add_accis_to_idf`, ran with the EMS backend only.
+- Changes: the test also runs the model with the backend of the Python API and compares both CSV files. They are not
+  identical: the EMS outputs and the setpoints of the thermostats (their schedule values, the only inputs of accim to
+  EnergyPlus) are, in every timestep, but the other outputs differ in their last digits. It is not of A24 nor of this
+  session (the same numbers with the code of `f3f9eb5`), and it happens with every model of `add_accis_to_idf`, the
+  not edited one too, and not with the output IDFs of `AddAccis`, which are those that the tests of both backends
+  compare. The test compares the EMS outputs and the schedule values exactly, and the other outputs within 1e-6;
+  section 4.9 of the detailed use says it, beside the known case of the thermostats of the PMV; `TODO.md` has a P2
+  entry for its cause, which was not found. No code of the package changes.
+- Files: `tests/core/test_jpn_aqilah2025.py`, `docs/source/4_detailed use.md` (4.9), `TODO.md`,
+  `CAMBIOS_CODIGO_v1.2.0.md` (§55), `notes/work-log.md`.
+- Verification: `tests/core/test_jpn_aqilah2025.py`: 31 passed (EnergyPlus 25.1). The measurements, with scripts of the
+  session (1 and 2 July of the sample model in Seville, both backends in each case): `add_accis_to_idf` with `vrf_ac`
+  and timestep outputs, not edited and with zone 1 edited to comfort standard 23 (comfort modes 0 and 3) and to
+  comfort mode 0 of INT EN16798; with hourly outputs; and with `vrf_mm`: 24 to 35 of the 99 or 110 outputs differ, up
+  to 5e-10 K, 2e-6 W and 5e-3 J (1.5e-7 of the value at most), and none of the 57 or 68 EMS outputs and schedule
+  values. With the warm-up days and the design days reported, the first difference is in the first timestep of the
+  first design day, and no EMS output differs in the whole file. The not edited model and that with comfort mode 0,
+  with the code of `f3f9eb5` (a worktree): the same numbers. The output IDF of `AddAccis` (`vrf_ac`, INT EN16798), 1
+  and 2 July and 1 and 2 January: identical files. The documentation builds with the warnings of the baseline, and
+  the test file compiles with Python 3.9.
+- Next step: the report of the session.
+
 #### [done] The script of the simulations of the validation study of F3; the study itself stays in `TODO.md` (branch `v1.2.0`)
 - Context: the decisions of 2026-11-12 (`notes/decisions.md`, decision 13) made the choices that the design of the
   study of the proposal of block F left open (the static references, the clothing insulation by season, the air

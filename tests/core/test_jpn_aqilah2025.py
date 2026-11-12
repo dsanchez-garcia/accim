@@ -746,6 +746,23 @@ def test_a_zone_switched_to_jpn_aqilah_2025_by_hand_runs_in_energyplus(tmp_path,
     # The other zone keeps the adaptive setpoints of INT EN16798, the default of add_accis_to_idf
     other = results['EMS:Adaptive Cooling Setpoint Temperature_No Tolerance_Block1_Zone2 [C](TimeStep)']
     assert other.iloc[1:].between(22, 33).all() and other.iloc[1:].nunique() > 1
+    # The backend of the Python API gives the same EMS outputs and setpoints of the thermostats (their schedule
+    # values) as the EMS, exactly. The other outputs differ in their last digits in the models of add_accis_to_idf,
+    # unlike in the output IDFs of AddAccis (found here on 2026-11-12, also with the code before A24: an entry of
+    # TODO.md; up to 5e-10 K and 5e-3 J in two days of July)
+    from accim.sim.energyplus_api import run_simulations
+
+    api = run_simulations([(tmp_path / 'edited.idf', EPW, {'output_directory': tmp_path / 'api',
+                                                           'output_prefix': 'run'})], processes=1)
+    assert api[0].success, api[0].error
+    api_results = pd.read_csv(tmp_path / 'api' / 'run.csv')
+    assert list(api_results.columns) == list(results.columns)
+    exact = [column for column in results.columns if column.startswith('EMS:') or 'Schedule Value' in column]
+    assert len(exact) > 50 and f'EMS:Adaptive Cooling Setpoint Temperature_No Tolerance_{zone}' in exact
+    pd.testing.assert_frame_equal(api_results[exact], results[exact], check_exact=True)
+    others = [column for column in results.columns if column not in exact and column != 'Date/Time']
+    np.testing.assert_allclose(api_results[others].to_numpy(float), results[others].to_numpy(float), rtol=1e-6,
+                               atol=1e-6)
 
 
 @needs_energyplus
