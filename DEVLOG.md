@@ -36,6 +36,50 @@ Recommended flow: track active work in `TODO.md`, move completed outcomes to `DE
 ## Entries
 
 ### 2026-11-12
+#### [done] The script of the simulations of the validation study of F3; the study itself stays in `TODO.md` (branch `v1.2.0`)
+- Context: the decisions of 2026-11-12 (`notes/decisions.md`, decision 13) made the choices that the design of the
+  study of the proposal of block F left open (the static references, the clothing insulation by season, the air
+  speeds, the climates), as the position of the author, to be agreed with Ruiji Sun before its simulations; the entry
+  of `TODO.md` asked for the simulations of the study with them.
+- Changes: `tools/indoor_adaptation_study.py` makes the model of each case from a model with the ACCIS (fixed
+  setpoints of 20 and 26 °C; EN 16798-1 and ASHRAE 55; the causal SET model with the clothing by season, with the
+  dynamic clothing model and with air speeds of 0.6, 0.9 and 1.2 m/s in the hours of the fans of the cooling season;
+  and the limiter of the drift at 0.25, 0.5 and 1.0 K/day over the adaptive standards and over the causal SET model
+  with the dynamic clothing model, at 0.1 m/s and with the three air speeds: 26 cases), simulates them with the
+  backend of the API and writes `indicators.csv` (the energy, the long-term discomfort with the seasonal range of EN
+  16798-1, and the indicators of the adaptation to the indoor climate, with the reference SET and the inputs of the
+  occupants of each model, and with the Pierce SET). Section 4.7.6 of the detailed use has the decided choices and
+  points to the script. Not done (the entry of `TODO.md` stays, with what is left): the simulations of the study, a
+  year of each case in each climate; the hot and humid climate; the static reference of the PMV setpoints, whose
+  models have no outputs of the ACCIS for the indicators; the years 2050 and 2080; and a model of the study (the
+  sample model is a test model). The try-runs showed two things of the design of cases (iv) and (v), which are an
+  open question now (`notes/questions.md`, with their numbers and the options): the air speed of the fans raises the
+  heating setpoint of the causal SET model as well as the cooling one (its hook converts both limits of the band with
+  the air speed of the People objects), and the limiter of the drift, which keeps every timestep within its rate of
+  the mean of the setpoints of the occupied timesteps of the day before, acts on the setpoints of a hook within the
+  day and in the unoccupied hours more than on the drift between days; section 4.2.7 of the detailed use says so now.
+- Files: `tools/indoor_adaptation_study.py` (new), `tools/README.md`, `docs/source/4_detailed use.md` (4.2.7 and
+  4.7.6), `CAMBIOS_CODIGO_v1.2.0.md` (§54), `TODO.md`, `notes/questions.md`, `notes/decisions.md`,
+  `notes/work-log.md`.
+- Verification: no tests (a tool of `tools/`, as `compare_backends.py`). The script was run with EnergyPlus 25.1 and the
+  sample model in Seville (`Seville_Present.epw`): three cases for 15-17 July first; its first 23 cases for 8-14
+  January (207 s with 8 processes) and for 15-21 July (174 s); the three cases added afterwards (the limiter over the
+  causal SET model at 0.1 m/s), with `iii_dynamic`, for both weeks (43 and 41 s with 4 processes); and two cases for
+  three days after the last edits. No simulation failed; each week has 120 occupied hours, and every row has every
+  indicator (the limited hours, in the cases with the limiter only). `iii_dynamic` gives the same row in both runs;
+  in January, the cases (iv) are equal to `iii_dynamic` (the air speeds are those of the cooling season), those of
+  the limiter over (iv) to those over `iii_dynamic`, and those over (ii) to (ii) (no limited hour). In July: the
+  fixed setpoints, 3554 kWh of the cooling coils and all the occupied hours within the causal band; EN 16798-1,
+  1782 kWh and 49.2 % of them (43.3 % with the Pierce SET); the causal SET model with the dynamic clothing model,
+  2375 kWh and 59.2 % (54.2 %), and with 0.6 m/s, 2082 kWh and all of them. They are numbers of a test model, not
+  results of the study: in July, 91 of the 120 occupied hours of the fixed setpoints are outside them (its VRF system
+  does not hold 26 °C). The open question comes from these runs: with 1.2 m/s, the heating coils give 10.6 kWh in the
+  week of July, and 343.6 kWh with the limiter at 0.25 K/day, 268.3 of them in the unoccupied hours. The script
+  compiles with Python 3.9, and the documentation builds with the warnings of the baseline (in a temporary worktree
+  with a copy of the working tree).
+- Next step: the final checks and the report of the session; then, with the author, the open question, the message
+  to Ruiji Sun, the weather file of the humid climate and the model of the study.
+
 #### [done] The seasonal range of EN 16798-1 for the long-term discomfort, and the limitation of the constant one (A15; branch `v1.2.0`)
 - Context: finding A15 of the self-audit of 2026-11-11, decided on 2026-11-12 (`notes/decisions.md`, decision 5):
   `long_term_range=('en16798', category)` takes the minimum of the heating season (about 1.0 clo) and the maximum of

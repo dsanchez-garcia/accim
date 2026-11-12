@@ -2823,3 +2823,45 @@ temperatura; `range_limits` (las horas que el rango constante deja fuera, las fi
 modelo de `add_accis_to_idf`; y, con EnergyPlus 25.1 y los dos backends, las dos quincenas de la medición (resultados
 idénticos, comprobación 6 sin discrepancias, y los totales iguales a los de las funciones de D1 con la media móvil del
 paso anterior). `tests/core/test_long_term_discomfort.py`: `table_indicators` con los rangos constante y estacional.
+
+## 54. El script del estudio de validación de F3 (`tools/indoor_adaptation_study.py`)
+
+No es código del paquete: es una herramienta de desarrollo (`tools/`), como `compare_backends.py`. Con las elecciones
+decididas el 12/11/2026 (`notes/decisions.md`, decisión 13), construye a partir de un modelo con el ACCIS los modelos
+de los casos del estudio de validación del bloque F y los simula con el backend de la API de Python:
+
+- `i_fixed`: consignas fijas de 20 y 26 °C (un estándar de confort definido por sus datos, en modo de confort 0);
+- `ii_en16798` y `ii_ashrae55`: las consignas adaptativas de EN 16798-1 (categoría II) y ASHRAE 55 (80 %);
+- `iii_seasonal` y `iii_dynamic`: el modelo causal del SET (estándar 24) con la ropa por estación (1,0 y 0,5 clo) y con
+  el modelo dinámico de ropa de ASHRAE 55;
+- `iv_v06`, `iv_v09` y `iv_v12`: el modelo causal con velocidades del aire de 0,6, 0,9 y 1,2 m/s en las horas de los
+  ventiladores de la estación de refrigeración;
+- `v_<caso>_r025`, `_r05` y `_r10`: los casos (ii) y (iv) (también `iii_dynamic`, que es el caso (iv) a 0,1 m/s) con
+  el limitador de la deriva (`'rate'`) a 0,25, 0,5 y 1,0 K/día. En total, 26 casos.
+
+Escribe `indicators.csv`, una fila por simulación: la energía de las baterías y la electricidad del VRF, la incomodidad
+a largo plazo con el rango estacional de EN 16798-1 (sección 53), y los indicadores de la adaptación al clima interior,
+los de la banda causal con el SET de referencia y las entradas de los People (`pythermalcomfort_set='people'`, sección
+52) y con el SET de Pierce.
+
+**Lo que no hace.** La referencia estática (a) del estudio, las consignas de PMV de `apply_pmv_setpoints`: sus modelos
+no tienen las salidas del ACCIS que necesitan los indicadores de `Table`. Y las simulaciones del estudio en sí (un año
+de cada caso en cada clima: un año de un caso del modelo causal tarda horas) no se han hecho: esperan al acuerdo del
+autor con Ruiji Sun, al fichero climático del clima cálido y húmedo y, para 2050 y 2080, al jar del Future Weather
+Generator. La entrada de `TODO.md` sigue abierta con lo que falta.
+
+**Lo que han enseñado las pruebas** (una semana de enero y otra de julio del modelo de ejemplo en Sevilla, que es un
+modelo de pruebas y no el del estudio). Dos cuestiones del diseño de los casos (iv) y (v) quedan abiertas en
+`notes/questions.md` (12/11/2026), con sus números y sus opciones; el script mantiene los casos como se decidieron:
+
+1. La velocidad del aire de los ventiladores está en las dos consignas. El hook del modelo causal convierte los dos
+   límites de la banda del SET con la velocidad del aire del objeto People, así que los ventiladores suben también la
+   consigna de calefacción (con 1,2 m/s, de unos 19 °C a 25–26,7 °C en sus horas) y las baterías de calefacción
+   trabajan en julio en las primeras horas de los ventiladores (10,6 kWh en la semana con 1,2 m/s). La propuesta del
+   bloque F tenía un `air_speed_cooling`, solo para la consigna de refrigeración.
+2. El limitador (`'rate'`) limita todos los pasos de tiempo, también los no ocupados, a la media de las consignas de
+   los pasos ocupados del día anterior ± la tasa. Con las consignas de un hook, que cambian dentro del día (y mucho
+   más con los ventiladores), mantiene de noche las consignas de las horas ocupadas: con 1,2 m/s y 0,25 K/día, 344 kWh
+   de calefacción en la semana de julio en vez de 10,6, y 1550 kWh de refrigeración en vez de 2044, la mayor parte de
+   la diferencia en las horas no ocupadas. Así, el caso (v) del modelo causal mediría sobre todo eso, y no la deriva
+   entre días. La sección 4.2.7 del uso detallado lo explica ahora.

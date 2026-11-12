@@ -175,6 +175,31 @@ template]] to add a new entry.
        `pythermalcomfort_set`. The rows without a running mean have no limits and are left out.
      - The list of the graphical user interface keeps the ranges of Table B.2 only (the seasonal ones can be added
        when someone needs them; the documentation says so).
+  11. The simulations of the validation study of F3 (decision 13).
+     - What can be done without the author is the script of the study, `tools/indoor_adaptation_study.py`, which
+       makes the models of the cases from a model with the ACCIS with the choices of decision 13, simulates them with
+       the backend of the API and writes the table of their indicators; it was tried with a winter week and a summer
+       week of the sample model in Seville. The simulations of the study (a year of each case, in each climate) are
+       not run: a year of a case of the causal SET model takes hours, and the choices are to be agreed with Ruiji Sun
+       first; the hot and humid climate waits for its weather file, and the years 2050 and 2080 for the jar of the
+       Future Weather Generator. The entry of `TODO.md` stays, with what is left.
+     - The static reference (a), the PMV setpoints of `apply_pmv_setpoints`, is not a case of the script: its models
+       have no outputs of the ACCIS (the occupied hours of each zone), which the indicators of `Table` need. It is
+       recorded in `TODO.md` as part of what is left.
+     - Choices of the script that the decision does not make: the base model of the cases of the causal SET model is
+       an output IDF of INT EN16798 (category II, comfort mode 3), whose comfort temperature stays in the outputs;
+       their minimum heating setpoint is 18 °C (the example of section 4.9.3, an argument of the script); the fans of
+       case (iv) run from 7 to 19 h on the weekdays of the cooling season (the occupied hours of the sample model,
+       an argument); the limiter of the drift of case (v) is applied to the two adaptive standards of (ii) and to the
+       four air speeds of (iv), the 0.1 m/s of the dynamic clothing model of (iii) among them; the long-term
+       discomfort of every case is counted with the seasonal range of the offices of category II; and the comfort
+       standard of the fixed setpoints (number 120) has the comfort temperature and the band of EN 16798-1, which
+       comfort mode 0 does not use.
+     - Not decided here: the try-runs showed that the air speed of the fans of case (iv) raises the heating setpoint
+       of the causal SET model too, and that the limiter of the drift acts on the setpoints of a hook within the day
+       and in the unoccupied hours more than on the drift between days. Both are choices of the design of the study
+       and of the limiter, with their authors: an open question of [[questions.md]] (2026-11-12), with the numbers
+       and the options; the script keeps the cases as decided.
 - **Consequences**: the tasks done leave `TODO.md` for `DEVLOG.md`; the documentation says what each choice means
   for the users (section 4.2 of the detailed use, and `CHANGELOG.md`).
 

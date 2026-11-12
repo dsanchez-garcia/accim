@@ -70,6 +70,13 @@ existing tracking files — it does not replace them (see
     6 and in the postprocessing (`range_limits`, `table_indicators(..., long_term_range=...)`). In two weeks of
     January of the sample model, 70 of the 120 occupied hours of each zone are above the 24 °C of the heating season,
     which the constant range (26 °C) counts as comfortable but for 5 and 19 h.
+  - The validation study of F3: its script, `tools/indoor_adaptation_study.py` (the cases with the decided choices,
+    from a model with the ACCIS, and the table of their indicators), tried with a winter and a summer week in
+    Seville. The simulations of the study (a year of each case, the humid climate, the PMV reference, 2050 and 2080)
+    are not run: they wait for the author (the agreement with Ruiji Sun, the weather files) and take hours. The
+    try-runs left an open question ([[questions.md]]): the air speed of the fans is in the heating setpoint of the
+    causal SET model too, and the limiter of the drift limits the setpoints of a hook within the day and in the
+    unoccupied hours.
 - **Validation**: in the entry of each task of [[../DEVLOG.md]] (the tests of the task, EnergyPlus 25.1 with both
   backends where the EMS code changes, and the golden master, compared line by line before writing it again).
 - **Next step**: the review of Claude Science of sessions 2 and 3, which also covers this session; the message of the
