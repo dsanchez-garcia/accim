@@ -25,7 +25,9 @@ the comfort standard of the zone. Without the hook (the EMS backend, or the back
 setpoints are those of the ACCIS.
 """
 
-from typing import List, Sequence, Tuple
+import os
+import re
+from typing import List, Sequence, Tuple, Union
 
 from accim.sim.ems.setpoint_lines import ROUNDING
 
@@ -34,9 +36,12 @@ __all__ = [
     'HEATING_PREFIX',
     'COOLING_PREFIX',
     'INIT_PROGRAM',
+    'MissingHookWarning',
     'PROGRAM_PREFIX',
     'hook_zones',
+    'hook_zones_of_file',
     'init_program_lines',
+    'missing_hook_message',
     'program_lines',
     'set_hook_setpoints_code',
     'zone_variables',
@@ -77,6 +82,55 @@ def hook_zones(idf) -> List[str]:
     prefix = PROGRAM_PREFIX.upper()
     return [str(p.Name)[len(PROGRAM_PREFIX):] for p in idf.idfobjects['EnergyManagementSystem:Program']
             if str(p.Name).upper().startswith(prefix)]
+
+
+class MissingHookWarning(UserWarning):
+    """A model prepared for the setpoints of a hook is simulated with the backend of the Python API of EnergyPlus
+    without a hook that runs before its EMS programs (finding A4 of the self-audit of 2026-11-11)."""
+
+
+#: The programs ApplyHookSetpoints_<zone> in the text of an IDF file (their name follows the type of the object)
+_PROGRAM_IN_FILE = re.compile(rf'^\s*EnergyManagementSystem:Program\s*,\s*{re.escape(PROGRAM_PREFIX)}([^,;!\s]+)\s*,',
+                              re.IGNORECASE | re.MULTILINE)
+
+
+def hook_zones_of_file(path: Union[str, os.PathLike]) -> List[str]:
+    """The zones of the model of an IDF file whose setpoints a hook can set (those with the program
+    ApplyHookSetpoints_<zone>, as :func:`hook_zones`), read from the text of the file, without eppy, so whatever its
+    EnergyPlus version is; none if the file cannot be read.
+
+    :param path: The path of the IDF file.
+    """
+    try:
+        with open(path, 'r', encoding='utf-8', errors='ignore') as file:
+            text = file.read()
+    except OSError:
+        return []
+    return _PROGRAM_IN_FILE.findall(text)
+
+
+def missing_hook_message(models: Sequence[str], backend: str) -> str:
+    """The message of the error of the EMS backend, or of the warning of the backend of the API, for the models
+    prepared for the setpoints of a hook that are simulated without it (finding A4 of the self-audit of 2026-11-11,
+    decided on 2026-11-12): without the hook, the model runs with the setpoints of the comfort standard of its zones,
+    and the outputs of the hook (``SET_<zone>``, ``ATHB_PMV_<zone>``, ``HoursInCausalBand_<zone>``...) are 0.
+
+    :param models: The names of the IDF files.
+    :param backend: 'ems' (the models cannot be simulated) or 'api' (they are, without the setpoints of the hook).
+    """
+    names = ', '.join(str(model) for model in models)
+    prepared = (f'prepared for the setpoints of a hook of the backend of the Python API of EnergyPlus (the programs '
+                f'{PROGRAM_PREFIX}<zone> of accim.sim.comfort_hooks: apply_athb_setpoints, apply_set_setpoints or '
+                f'apply_sun2026_setpoints)')
+    effect = ('the setpoints of the comfort standard of their zones (those of the names of the output IDFs) and the '
+              'outputs of the hook at 0')
+    how = ("run_ep(backend='api', hooks=[hook]), with the hook that the function that prepared each model returned")
+    if backend == 'ems':
+        return (f'These models are {prepared}, which the EMS backend cannot run: {names}. They would be simulated '
+                f'with {effect}. Simulate them with {how}.')
+    return (f'These models are {prepared}, and no hook runs before their EMS programs: {names}. They are simulated '
+            f'with {effect}. Simulate them with {how} (the argument before_programs of run_simulation and '
+            f'run_simulations).')
 
 
 def set_hook_setpoints_code(idf, zones: Sequence[str]) -> None:

@@ -83,6 +83,20 @@ template]] to add a new entry.
        the SET of ASHRAE 55-2017, Appendix D, which the code of EnergyPlus cites, is not in the library.
      - The comments of `PMV_BODY_SURFACE_AREA` and `MET_ACTIVITY_LEVEL` said that EnergyPlus takes 1.8 m² in all its
        thermal comfort models; they now say which ones do.
+  5. A model prepared for a hook that is simulated without it (decision 3, finding A4).
+     - A model is "prepared for a hook" if its IDF file has a program `ApplyHookSetpoints_<zone>`, read from the text
+       of the file (`hook_zones_of_file`), so that `run_ep` checks the models of the folder without loading them
+       with eppy, whatever their EnergyPlus version is.
+     - The backend of the API warns when a model prepared for a hook gets no hook before its EMS programs
+       (`before_programs`; `hooks` with `runs_before_programs` in `run_ep`), whatever hook it is: the model does not
+       keep which function prepared it (an entry of `TODO.md`), so a hook of another kind is not detected.
+       `run_simulations` warns once for all its models (`MissingHookWarning`, a `UserWarning` that can be filtered).
+     - `run_ep` raises before it prints the simulations and before any of them runs, also for a folder with other
+       models that could run: the user takes the models of the hooks out of the folder, or runs it with the backend
+       of the API.
+     - `tests/core/test_table_optional_outputs.py` simulated a model with the objects of the ATHB with the EMS
+       backend, and checked that the outputs of the ATHB were 0: it now runs it with the backend of the API and the
+       hook (and checks the error of the EMS backend), so `Table` is tested with the outputs of the hook.
 - **Consequences**: the tasks done leave `TODO.md` for `DEVLOG.md`; the documentation says what each choice means
   for the users (section 4.2 of the detailed use, and `CHANGELOG.md`).
 
@@ -364,7 +378,9 @@ template]] to add a new entry.
     that the prompt of F1 asked for comfort standard 24 without the API backend. The test of both backends without the
     hook (`test_without_the_hook_both_backends_give_the_same_results_with_comfort_standard_24`) checks the error and the
     warning instead. The EMS output of the timesteps without the setpoints of the hook, which the finding gives as
-    optional, is not added: the models simulated out of accim stay documented (sections 4.9.1 and 4.9.3).
+    optional, is not added: the models simulated out of accim stay documented (sections 4.9.1 and 4.9.3). Implemented
+    on 2026-11-12 (`DEVLOG.md`; section 48 of `CAMBIOS_CODIGO_v1.2.0.md`), with the choices of the entry "The
+    implementation of the decisions of 2026-11-12" at the top of this file.
   - **A8**: options (i) and (iii); option (ii) is not done in accim 1.2.0. `'window'` stays as decision 6 defines it (it
     is implemented and tested), as an experimental mode: section 4.2.7 and the docstring of
     `accim.sim.ems.drift_limiter` say that both setpoints follow the recent temperature of the zone itself, that the
@@ -410,7 +426,8 @@ template]] to add a new entry.
     in each zone (the golden master s01–s06 and s09 updated, only additions; G4 already changed them, and comfort
     standard 23 is new in 1.2.0, so nothing released changes); the models of `AddAccis` with other comfort standards
     have not that code and do not change. It replaces the part of the decision of G4 that left the zones of the other
-    comfort standards without the inputs, and the warning that session 3 wrote in section 4.2.1.
+    comfort standards without the inputs, and the warning that session 3 wrote in section 4.2.1. Implemented on
+    2026-11-12 (`DEVLOG.md`; section 46 of `CAMBIOS_CODIGO_v1.2.0.md`).
   - **A25**: option (i). When a call of `modify_accis` without `epw` writes again the programs of the outdoor metric of
     a model that began with the values of a weather file, and the model has zones of JPN Aqilah 2025, it gives the
     warning of RMOT (their code reads the RMOT of EnergyPlus again, about 21 % low on the first day), and those zones

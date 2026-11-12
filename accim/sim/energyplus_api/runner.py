@@ -117,7 +117,10 @@ def run_simulation(
     :param design_day: True to simulate the design days only.
     :param before_programs: Functions called at each calling point before the EMS programs, as
         ``hook(controller, calling_point)``; :class:`~accim.sim.energyplus_api.controller.ErlController`
-        gives access to the variables of the programs.
+        gives access to the variables of the programs. A model prepared for the setpoints of a hook (those of
+        :mod:`accim.sim.comfort_hooks`, with the programs ``ApplyHookSetpoints_<zone>``) that gets none here is
+        simulated with the setpoints of the comfort standard of its zones, with a warning
+        (:func:`warn_without_setpoint_hook`).
     :param after_programs: Functions called at each calling point after the EMS programs, before the
         actuators are set. The hooks (before or after the programs) with a method ``prepare()`` get it called once, in
         the process of the simulation, before the library of the API of EnergyPlus is loaded (:func:`prepare_hooks`:
@@ -132,6 +135,7 @@ def run_simulation(
 
     idf = Path(idf).resolve()
     version = read_idf_version(idf)
+    warn_without_setpoint_hook([idf], before_programs, stacklevel=3)
     # Before the library of the API of EnergyPlus is loaded in the process (see prepare_hooks)
     prepare_hooks([*before_programs, *after_programs])
     api = load_energyplus_api(version)
@@ -193,10 +197,35 @@ def run_simulation(
     return result
 
 
+def warn_without_setpoint_hook(idfs: Iterable[PathLike], before_programs: Sequence[Hook], stacklevel: int = 2) -> None:
+    """Warn (:class:`accim.sim.ems.hook_setpoints.MissingHookWarning`) of the models prepared for the setpoints of a
+    hook (those of :func:`accim.sim.comfort_hooks.apply_athb_setpoints`, ``apply_set_setpoints`` and
+    ``apply_sun2026_setpoints``, with the programs ``ApplyHookSetpoints_<zone>``) that are simulated without a hook
+    before their EMS programs: they run with the setpoints of the comfort standard of their zones, and the outputs of
+    the hook are 0 (finding A4 of the self-audit of 2026-11-11, decided on 2026-11-12).
+
+    :param idfs: The paths of the IDF files.
+    :param before_programs: The hooks that run before the EMS programs of their simulations.
+    :param stacklevel: That of the warning.
+    """
+    if before_programs:
+        return
+    from accim.sim.ems.hook_setpoints import MissingHookWarning, hook_zones_of_file, missing_hook_message
+
+    prepared = [Path(idf).name for idf in idfs if hook_zones_of_file(idf)]
+    if prepared:
+        warnings.warn(missing_hook_message(prepared, 'api'), MissingHookWarning, stacklevel=stacklevel + 1)
+
+
 def _run_job(job: Tuple[str, Optional[str], Mapping]) -> SimulationResult:
+    from accim.sim.ems.hook_setpoints import MissingHookWarning
+
     idf, epw, kwargs = job
     try:
-        return run_simulation(idf, epw, raise_errors=False, **kwargs)
+        with warnings.catch_warnings():
+            # run_simulations has warned of the models without their hook, once for all of them
+            warnings.simplefilter('ignore', MissingHookWarning)
+            return run_simulation(idf, epw, raise_errors=False, **kwargs)
     except Exception as error:  # noqa: BLE001 (the error is returned with the result)
         return SimulationResult(str(idf), epw, str(kwargs.get('output_directory') or Path(idf).parent),
                                 str(kwargs.get('output_prefix') or Path(idf).stem), -1,
@@ -218,7 +247,9 @@ def run_simulations(
         stays loaded: the hooks with a method ``prepare()`` (:func:`prepare_hooks`, such as the hook of the SET with
         ``method='bisection'``) must get it called before any library of the API is loaded in the process.
     :param kwargs: Arguments of :func:`run_simulation` for all the simulations (the hooks must be functions
-        defined at the top level of a module, so that they can be sent to the processes).
+        defined at the top level of a module, so that they can be sent to the processes). The models prepared for the
+        setpoints of a hook that get none before their EMS programs (``before_programs``) are simulated without them,
+        with one warning for all of them (:func:`warn_without_setpoint_hook`).
     :return: The results, in the order of the jobs. The simulations that fail have an ``error``.
     :raises ValueError: If ``processes`` is negative.
     """
@@ -234,6 +265,9 @@ def run_simulations(
         prepared.append((idf, epw, arguments))
     if not prepared:
         return []
+    # The models prepared for the setpoints of a hook that get none before their EMS programs (finding A4 of the
+    # self-audit of 2026-11-11): one warning for all of them
+    warn_without_setpoint_hook([idf for idf, _, arguments in prepared if not arguments.get('before_programs')], ())
     if processes == 0:
         results = [_run_job(job) for job in prepared]
     else:

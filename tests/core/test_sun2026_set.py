@@ -573,19 +573,31 @@ def test_comfort_standard_24_in_energyplus(tmp_path, monkeypatch, season, begin,
 
 @needs_energyplus
 def test_without_the_hook_both_backends_give_the_same_results_with_comfort_standard_24(tmp_path, monkeypatch):
+    # Finding A4 of the self-audit of 2026-11-11 (decided on 2026-11-12): a model prepared for comfort standard 24 and
+    # simulated without its hook ran without an error or a warning, with the setpoints of the comfort standard of its
+    # zones and the outputs of the hook at 0. Now run_ep raises with the EMS backend, which cannot run the hook, and
+    # the backend of the API warns; EnergyPlus itself (its EMS, without accim) gives the results that the warning tells
     import subprocess
 
+    from accim.run import run_ep
+    from accim.sim.ems.hook_setpoints import MissingHookWarning
     from accim.sim.energyplus_api import run_simulations
 
     from .test_comfort_hooks import _energyplus_with_api
 
     model, _ = _sun2026_model(tmp_path / 'model', monkeypatch, (1, 8), (1, 10))
+    # The model ('sun.idf') and the weather file are in the working folder
+    with pytest.raises(ValueError, match=r'which the EMS backend cannot run: sun\.idf\. They would be simulated with '
+                                         r'the setpoints of the comfort standard of their zones'):
+        run_ep(only_accim_idfs=False, confirm=True, energyplus_version='auto')
+    assert sorted(path.name for path in model.parent.iterdir()) == ['Seville.epw', 'sun.idf']
     energyplus = _energyplus_with_api() / 'energyplus.exe'
     ems = subprocess.run([str(energyplus), '-d', str(tmp_path / 'ems'), '-p', 'run', '-s', 'C', '-r', '-x', '-w',
                           str(EPW), str(model)], capture_output=True, text=True)
     assert ems.returncode == 0, ems.stdout[-3000:]
-    [result] = run_simulations([(model, EPW, {'output_directory': tmp_path / 'api', 'output_prefix': 'run'})],
-                               processes=1)
+    with pytest.warns(MissingHookWarning, match=r'no hook runs before their EMS programs: sun\.idf\.'):
+        [result] = run_simulations([(model, EPW, {'output_directory': tmp_path / 'api', 'output_prefix': 'run'})],
+                                   processes=1)
     assert result.success, result.error
     ems_results = pd.read_csv(tmp_path / 'ems' / 'run.csv')
     api_results = pd.read_csv(tmp_path / 'api' / 'run.csv')

@@ -36,6 +36,32 @@ Recommended flow: track active work in `TODO.md`, move completed outcomes to `DE
 ## Entries
 
 ### 2026-11-12
+#### [done] A model prepared for a hook is not simulated without it in silence (A4; branch `v1.2.0`)
+- Context: finding A4 of the self-audit of 2026-11-11, decided on 2026-11-12 (`notes/decisions.md`, decision 3): a
+  model prepared by `apply_athb_setpoints`, `apply_set_setpoints` or `apply_sun2026_setpoints` (the programs
+  `ApplyHookSetpoints_<zone>`) that was simulated without the hook (the EMS backend of `run_ep`, its default, or the
+  backend of the API without it) ran with the setpoints of the comfort standard of its zones and the outputs of the
+  hook at 0, without an error or a warning.
+- Changes: `accim.sim.ems.hook_setpoints` has `hook_zones_of_file()` (the zones with that program, from the text of
+  an IDF file), `missing_hook_message()` and `MissingHookWarning`; `run_ep` raises a `ValueError` with the EMS backend
+  that names the models of the folder prepared for a hook, before any simulation; `run_simulation` warns
+  (`MissingHookWarning`) when such a model gets no hook in `before_programs`, and `run_simulations` (also through
+  `run_ep(backend='api')`) once for all its models. The models simulated out of accim still run without the hook
+  (documented); the optional EMS output of the finding is not added.
+- Files: `accim/sim/ems/hook_setpoints.py`, `accim/run/run.py`, `accim/sim/energyplus_api/runner.py`,
+  `tests/core/test_missing_hook.py` (new), `tests/core/test_sun2026_set.py`,
+  `tests/core/test_table_optional_outputs.py`, `docs/source/4_detailed use.md` (4.9.1 and 4.9.3), `CHANGELOG.md`,
+  `CAMBIOS_CODIGO_v1.2.0.md` (§48), `TODO.md`, `notes/decisions.md`, `notes/work-log.md`.
+- Verification: `tests/core/test_missing_hook.py` (5 tests: the message, the zones of an IDF file, the `ValueError` of
+  `run_ep` before anything runs, and the warning of `run_simulation`, `run_simulations` and `run_ep(backend='api')`,
+  once in each call), `tests/core/test_sun2026_set.py` (with EnergyPlus 25.1: `run_ep` raises with the EMS backend for
+  the model of comfort standard 24, the backend of the API warns without the hook, and both backends still give the
+  same results without it) and `tests/core/test_table_optional_outputs.py` (its simulation of the model with the
+  ATHB, now with the backend of the API and the hook): 45 passed. The whole suite of `tests/core` ran with these
+  changes (the run of the entry of A24 below): the other 18 test files that call `run_ep`, `run_simulation` or
+  `run_simulations` passed. The three changed modules compile with Python 3.9.
+- Next step: A25 (the warning of RMOT in `modify_accis`).
+
 #### [done] E-F1 measured again: the SET of EnergyPlus (Pierce) against that of pythermalcomfort, by activity level (A1 and A2; branch `v1.2.0`)
 - Context: findings A1 and A2 of the self-audit of 2026-11-11, decided on 2026-11-12 (`notes/decisions.md`, decisions
   1 and 2): the Pierce model of EnergyPlus converts the activity level with 1.8258 m² (the hooks of accim, with 1.8

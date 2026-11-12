@@ -2609,3 +2609,35 @@ nivel de actividad, y corregida la frase que atribuía los 1,8 m² a EnergyPlus 
 y `notes/BORRADOR_issue_EnergyPlus_SET_Pierce_2026-11-12.md`, el borrador del issue para el repositorio de EnergyPlus
 sobre la diferencia entre su código y su Engineering Reference, que publica el autor si lo ve oportuno (el listado del
 programa del SET de ASHRAE 55 que cita el código no está en la biblioteca: no comprobado).
+
+## 48. Un modelo preparado para un gancho no se simula sin él en silencio (A4)
+
+El hallazgo A4 de la autoauditoría del 11/11/2026: un modelo preparado por `apply_athb_setpoints`,
+`apply_set_setpoints` o `apply_sun2026_setpoints` (con los programas `ApplyHookSetpoints_<zona>`) que se simulaba sin
+el gancho —con el backend EMS de `run_ep`, su valor por defecto, o con el de la API sin pasárselo— corría con las
+consignas del estándar de confort de sus zonas y las salidas del gancho a 0, sin error ni aviso. Decidido el
+12/11/2026 (`notes/decisions.md`): opción (ii).
+
+**Ahora.**
+
+- `accim.sim.ems.hook_setpoints`: `hook_zones_of_file(path)` (las zonas con ese programa, leídas del texto del IDF,
+  sin eppy, sea cual sea su versión de EnergyPlus), `missing_hook_message(models, backend)` y la clase
+  `MissingHookWarning` (un `UserWarning`).
+- `accim.run.run_ep`: con el backend EMS, un `ValueError` que nombra los modelos de la carpeta preparados para un
+  gancho, antes de simular nada (`_check_setpoint_hooks`); dice con qué correrían y cómo simularlos
+  (`run_ep(backend='api', hooks=[hook])`).
+- `accim.sim.energyplus_api.runner`: `warn_without_setpoint_hook(idfs, before_programs)`; `run_simulation` avisa
+  (`MissingHookWarning`) si el modelo está preparado para un gancho y no recibe ninguno en `before_programs`;
+  `run_simulations` avisa una sola vez por todos sus modelos (cada simulación ya no repite el aviso), también a través
+  de `run_ep(backend='api')` sin `hooks` con `runs_before_programs`.
+- Los modelos simulados fuera de accim (EP-Launch, la línea de órdenes de EnergyPlus) siguen corriendo sin el gancho y
+  sin aviso: queda documentado (secciones 4.9.1 y 4.9.3). La salida EMS opcional que proponía el hallazgo (los pasos
+  ocupados sin consignas del gancho) no se añade.
+
+**Pruebas.** `tests/core/test_missing_hook.py` (nuevo: el mensaje, las zonas de un fichero, el `ValueError` de `run_ep`
+antes de simular nada, y el aviso de `run_simulation`, `run_simulations` y `run_ep(backend='api')`, uno solo por
+llamada). En `tests/core/test_sun2026_set.py`, la prueba de los dos backends sin el gancho con el estándar 24
+(`test_without_the_hook_both_backends_give_the_same_results_with_comfort_standard_24`) ahora comprueba con EnergyPlus
+25.1 el error del backend EMS y el aviso del de la API, además de que sin el gancho los dos dan los mismos resultados.
+`tests/core/test_table_optional_outputs.py` simulaba con el backend EMS un modelo con los objetos del ATHB (y
+comprobaba que sus salidas eran 0): ahora lo simula con el backend de la API y el gancho, y comprueba el error del EMS.

@@ -43,6 +43,11 @@ existing tracking files — it does not replace them (see
     model): both SET agree up to about 1.05 met only. The 1.8 m² of the hooks, instead of the 1.8258 m² of the Pierce
     model, change the SET by 0.01 to 0.02 K. The draft of the issue for EnergyPlus, which the author posts, is
     [[BORRADOR_issue_EnergyPlus_SET_Pierce_2026-11-12.md]].
+  - A4: `run_ep` raises a `ValueError` with the EMS backend when a model of the folder is prepared for a hook (the
+    programs `ApplyHookSetpoints_<zone>`), and the backend of the API warns (`MissingHookWarning`) when such a model
+    gets no hook before its EMS programs; before, it ran with the setpoints of the comfort standard of its zones and
+    the outputs of the hook at 0, in silence. A test of `Table` that ran such a model with the EMS backend now runs it
+    with the API and the hook.
 - **Validation**: in the entry of each task of [[../DEVLOG.md]] (the tests of the task, EnergyPlus 25.1 with both
   backends where the EMS code changes, and the golden master, compared line by line before writing it again).
 - **Next step**: the review of Claude Science of sessions 2 and 3, which also covers this session; the message of the

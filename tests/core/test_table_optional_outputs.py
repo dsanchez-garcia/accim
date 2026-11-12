@@ -276,11 +276,14 @@ def _energyplus():
     from accim.energyplus import find_energyplus
 
     folder = find_energyplus('25.1', required=False)
-    return folder if folder is not None and SAMPLE_IDF.exists() and EPW.exists() else None
+    ready = folder is not None and (folder / 'pyenergyplus').is_dir() and SAMPLE_IDF.exists() and EPW.exists()
+    return folder if ready else None
 
 
-@pytest.mark.skipif(_energyplus() is None, reason='needs EnergyPlus 25.1 and the sample files of the repository')
+@pytest.mark.skipif(_energyplus() is None,
+                    reason='needs EnergyPlus 25.1 (with its Python API) and the sample files of the repository')
 def test_the_optional_outputs_of_a_simulation(tmp_path, monkeypatch):
+    pytest.importorskip('pythermalcomfort')
     from accim.data.postprocessing.main import Table
     from accim.run import run_ep
     from accim.sim import comfort_hooks
@@ -288,7 +291,9 @@ def test_the_optional_outputs_of_a_simulation(tmp_path, monkeypatch):
     from accim.sim.arguments import CustomRegime
 
     # The sample model with the custom model, its outdoor metric and two regimes, the hours below 18 and 17.5 °C, the
-    # long-term discomfort and the objects of the ATHB (whose outputs are 0 with the EMS), for 2 days of January
+    # long-term discomfort and the setpoints of the ATHB, for 2 days of January. A model prepared for the hook of the
+    # ATHB runs with the backend of the API and the hook: the EMS backend, with which this test ran it until finding A4
+    # of the self-audit of 2026-11-11 (the outputs of the ATHB were 0), does not simulate it
     shutil.copy(SAMPLE_IDF, tmp_path / 'TestModel.idf')
     model = load_idf(tmp_path / 'TestModel.idf')
     run_period = model.idfobjects['RunPeriod'][0]
@@ -310,12 +315,15 @@ def test_the_optional_outputs_of_a_simulation(tmp_path, monkeypatch):
     (tmp_path / 'TestModel.idf').unlink()
     [path] = tmp_path.glob('TestModel[[]*.idf')
     idf = load_idf(path)
-    comfort_hooks.apply_athb_setpoints(idf, output_frequencies=['hourly'])
+    hook = comfort_hooks.apply_athb_setpoints(idf, output_frequencies=['hourly'])
     idf.save()
     shutil.copy(EPW, tmp_path / 'Seville.epw')
+    with pytest.raises(ValueError, match='which the EMS backend cannot run'):
+        run_ep(only_accim_idfs=True, confirm=True, processes=1, energyplus_version='25.1')
     with warnings.catch_warnings():
         warnings.simplefilter('ignore')
-        run_ep(only_accim_idfs=True, confirm=True, processes=1, energyplus_version='25.1')
+        [result] = run_ep(only_accim_idfs=True, confirm=True, processes=1, backend='api', hooks=[hook])
+    assert result.success, result.error
     [csv] = [p for p in tmp_path.glob('TestModel[[]*.csv') if not p.stem.endswith(('Meter', 'Table', 'Zsz'))]
     results = pd.read_csv(csv)
     with warnings.catch_warnings():
@@ -336,7 +344,8 @@ def test_the_optional_outputs_of_a_simulation(tmp_path, monkeypatch):
             renamed = f'{zone}_{name}' if name else next(c for c in table.df.columns
                                                          if c.startswith(f'EMS:TOUT_METRIC_{zone.upper()} ['))
             assert _values(table, renamed) == pytest.approx(expected.tolist()), (zone, output)
-        assert (table.df[f'{zone}_ATHB_PMV'] == 0).all()
+        # The hook ran: without it, the outputs of the ATHB are 0
+        assert (table.df[f'{zone}_ATHB_PMV'] != 0).all()
     for name in ooc.LONG_TERM_OUTPUTS.values():
         assert _values(table, f'Building_{name}') == pytest.approx(_values(table, f'Building_Total_{name} (summed)'))
     [metric] = [c for c in results.columns if c.startswith('EMS:Tout_metric [')]

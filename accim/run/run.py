@@ -162,6 +162,13 @@ def run_ep(
         (:class:`accim.sim.energyplus_api.SimulationResult`); otherwise, None.
     :raises NotImplementedError: If ``hooks`` are given with ``backend='ems'``, whose EMS runs the programs in
         EnergyPlus.
+    :raises ValueError: With ``backend='ems'``, if a model of the folder is prepared for the setpoints of a hook of the
+        backend of the API (:func:`accim.sim.comfort_hooks.apply_athb_setpoints`, ``apply_set_setpoints`` or
+        ``apply_sun2026_setpoints``: it has the programs ``ApplyHookSetpoints_<zone>``): the EMS backend would run it
+        without the hook, with the setpoints of the comfort standard of its zones and the outputs of the hook at 0
+        (since accim 1.2.0; finding A4 of the self-audit of 2026-11-11). With ``backend='api'``, a model prepared for
+        a hook that gets no hook with ``runs_before_programs`` is simulated like that, with a warning
+        (:class:`accim.sim.ems.hook_setpoints.MissingHookWarning`).
 
     :func:`accim.run.estimate_results_size` estimates the size of the results before running them.
     """
@@ -175,6 +182,7 @@ def run_ep(
     energyplus_version = _ask_version(energyplus_version)
     idfnames = _idf_names(only_accim_idfs)
     epwnames = sorted(x for x in os.listdir() if x.endswith('.epw'))
+    _check_setpoint_hooks(idfnames, backend, hooks)
 
     print('The IDFs we are going to run are:')
     print(*idfnames, sep='\n')
@@ -220,6 +228,26 @@ def run_ep(
     else:
         runIDFs(runs, processes)
     return None
+
+
+def _check_setpoint_hooks(idfnames: Sequence[str], backend: str, hooks: Optional[Sequence[Callable]]) -> None:
+    """The models of the folder prepared for the setpoints of a hook of the backend of the Python API
+    (:func:`accim.sim.comfort_hooks.apply_athb_setpoints`, ``apply_set_setpoints`` and ``apply_sun2026_setpoints``,
+    which give them the programs ``ApplyHookSetpoints_<zone>``) cannot be simulated with the EMS backend, which would
+    run them without the hook, with the setpoints of the comfort standard of their zones and the outputs of the hook at
+    0 (finding A4 of the self-audit of 2026-11-11, decided on 2026-11-12): a ValueError names them. With the backend
+    of the API, :func:`accim.sim.energyplus_api.run_simulations` warns of those that get no hook before their EMS
+    programs (``hooks`` with ``runs_before_programs``).
+
+    :raises ValueError: With ``backend='ems'``, if a model of the folder is prepared for a hook.
+    """
+    if backend != 'ems':
+        return
+    from accim.sim.ems.hook_setpoints import hook_zones_of_file, missing_hook_message
+
+    prepared = [name for name in idfnames if hook_zones_of_file(name)]
+    if prepared:
+        raise ValueError(missing_hook_message(prepared, 'ems'))
 
 
 def _run_idfs_in_this_process(runs) -> None:
