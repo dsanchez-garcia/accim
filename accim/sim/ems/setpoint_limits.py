@@ -12,36 +12,45 @@ cooling systems, whose adaptive limits (Figure B.1) apply in summer and the mid-
 limits change the equation of the setpoints (comfort modes 1, 2 and 3), but they do not bound them.
 
 - ``heating_setpoint_minimum`` and ``cooling_setpoint_maximum`` (the inputs ``AHSTmin`` and ``ACSTmax`` of the program
-  SetInputData_<zone>): the program ``ApplySetpointLimits_<zone>``, which RunACCIS_<zone> runs right after SetASTnoTol
-  (so after SetAST, and after the program that gives the setpoints of a hook of the API backend to the zone,
-  :mod:`accim.sim.ems.hook_setpoints`, if it has one), sets the heating setpoint AHST to AHSTmin if it is lower, and
-  the cooling setpoint ACST to ACSTmax if it is higher, and then rounds them again as the subprograms of SetAST do
+  SetInputData_<zone>) are limits of the comfort band, that is, of the setpoints without the tolerance (AHSTnoTol and
+  ACSTnoTol, with which the hour counters of the ACCIS, the long-term discomfort and the hours below some temperatures
+  count; finding B5-1 of the review of 1.2.0), and the thermostats get them with the tolerance of the setpoints of the
+  zone, as every other setpoint of the ACCIS and as those of the hooks (finding A19 of the self-audit of 2026-11-11,
+  decided on 2026-11-12, ``notes/decisions.md``). The program ``ApplySetpointLimits_<zone>``, which RunACCIS_<zone>
+  runs right after SetASTnoTol (so after SetAST, and after the program that gives the setpoints of a hook of the API
+  backend to the zone, :mod:`accim.sim.ems.hook_setpoints`, if it has one), sets the heating setpoint AHST to AHSTmin +
+  AHSTtol if it is lower, and the cooling setpoint ACST to ACSTmax + ACSTtol if it is higher (ACSTtol is the negative
+  of the tolerance), and then rounds them again as the subprograms of SetAST do
   (:data:`accim.sim.ems.setpoint_lines.ROUNDING`, with SetpointAcc): the setpoints of the thermostats are those of
   bounding AHST and ACST before their rounding, whatever the comfort standard and the comfort mode are, as the
   proposal designs it. The rounding is strict (the cooling setpoint downwards and the heating setpoint upwards), so
-  the program sets the rounded setpoints to the maximum and the minimum when they bound them: otherwise, the cooling
-  setpoint would be one step of SetpointAcc below the maximum (25.9999 °C with a maximum of 26 °C and the default
-  accuracy, 10000: finding B5-2 of the review of 1.2.0), and the heating setpoint one step above a minimum whose product
-  by SetpointAcc is not exact in binary (19.11 °C with a minimum of 19.1 °C and an accuracy of 100). The minimum and the
-  maximum also bound the setpoints without the tolerance
-  (AHSTnoTol and ACSTnoTol, the limits of the comfort band with which the hour counters of the ACCIS, the long-term
-  discomfort and the hours below some temperatures count; finding B5-1): the minimum is a limit of the setpoint without
-  the tolerance, so a heating setpoint without the tolerance of AHSTmin − AHSTtol (0.1 K below the minimum with the
-  default tolerance) becomes AHSTmin: AHSTnoTol = max(AHST − AHSTtol, AHSTmin) and ACSTnoTol = min(ACST −
-  ACSTtol, ACSTmax), with the setpoints AHST and ACST of SetAST, while the thermostats get max(AHST, AHSTmin) and
-  min(ACST, ACSTmax), rounded (so, where the minimum or the maximum bounds them, the setpoints with and without the
-  tolerance are the same). The ventilation setpoint (SetVST, in mixed mode) follows the minimum and maximum only where
+  the program sets the rounded setpoints to those bounds when they bound them: otherwise, the cooling setpoint would be
+  one step of SetpointAcc below its bound (25.9999 °C with a maximum of 26 °C, no tolerance and the default accuracy,
+  10000: finding B5-2 of the review of 1.2.0), and the heating setpoint one step above a bound whose product by
+  SetpointAcc is not exact in binary (19.11 °C with a minimum of 19.1 °C, no tolerance and an accuracy of 100). And it
+  sets the setpoints without the tolerance to the minimum and the maximum themselves: AHSTnoTol = max(AHST − AHSTtol,
+  AHSTmin) and ACSTnoTol = min(ACST − ACSTtol, ACSTmax), with the setpoints AHST and ACST of SetAST, while the
+  thermostats get max(AHST, AHSTmin + AHSTtol) and min(ACST, ACSTmax + ACSTtol), rounded. So the distance between the
+  setpoints with and without the tolerance is the tolerance also where the minimum or the maximum bounds them (before
+  the decision of 2026-11-12, the thermostats got the minimum and the maximum themselves, so the operative temperature
+  settled on the limit of the comfort band, and the hour counters and the hours below the temperature of the minimum
+  counted the decimals of the control as discomfort); with ``setpoint_tolerance=0`` nothing changes. The thermostats
+  stay within the limits: 0.1 K within them with the default tolerance. The ventilation setpoint (SetVST, in mixed
+  mode) follows the minimum and maximum only where
   it comes from the rounded setpoints (``(roundedACST+roundedAHST)/2+VSToffset``, ``roundedAHST+VSToffset``, and
   MinOutTemp, ``roundedAHST - MinOToffset``): within the applicability limits, most comfort standards set it to the
   comfort temperature plus VSToffset (``ComfTemp+VSToffset``), and ESP CTE from 7 to 15 h to 22.5 °C plus VSToffset,
   which the minimum and the maximum do not bound (finding B5-3). The minimum only bounds the heating
   setpoint and the maximum the cooling setpoint: with a minimum above the cooling setpoint of the comfort model (or a
   maximum below its heating setpoint), the heating setpoint is above the cooling setpoint; a minimum not lower than the
-  maximum raises a ValueError, and, given the weather file of the simulations, :func:`warn_crossed_setpoint_limits`
-  warns of the zones whose minimum is at or above the cooling setpoint of their comfort model, or whose maximum is at
-  or below its heating setpoint, in some timestep of the run period (with the setpoints of
-  :func:`accim.sim.preview.compute_setpoints`; decision 19 of the review of 1.2.0, which replaced a comparison with
-  the applicability limits of the outdoor metric, ACSTaul and AHSTall, which are not setpoints). Only the
+  maximum raises a ValueError (and so does a maximum less than twice the tolerance above the minimum, where the
+  tolerance is known: the setpoints of the thermostats on them would cross, :func:`check_setpoint_limits`), and, given
+  the weather file of the simulations, :func:`warn_crossed_setpoint_limits` warns of the zones whose minimum, as the
+  thermostat gets it (plus the tolerance, :func:`thermostat_limits`), is at or above the cooling setpoint of their
+  comfort model, or whose maximum is at or below its heating setpoint, in some timestep of the run period (with the
+  setpoints of :func:`accim.sim.preview.compute_setpoints`; decision 19 of the review of 1.2.0, which replaced a
+  comparison with the applicability limits of the outdoor metric, ACSTaul and AHSTall, which are not setpoints). Only
+  the
   zones with a minimum or a maximum have the program and the inputs, so the output IDFs without them do not change.
   During the development of 1.2.0, the arguments were ``heating_setpoint_floor`` and ``cooling_setpoint_ceiling``
   (the inputs ``AHSTfloor`` and ``ACSTceil``), names that could be read as a physical floor (decision 8 of block F,
@@ -77,6 +86,7 @@ __all__ = [
     'limit_program_lines',
     'set_hours_below_code',
     'set_setpoint_limits_code',
+    'thermostat_limits',
     'warn_crossed_setpoint_limits',
     'zone_limits',
 ]
@@ -92,11 +102,16 @@ HOURS_BELOW_PREFIX = 'HoursBelow_'
 _RUN_PREFIX = 'run '
 
 
-def check_setpoint_limits(minimum: Any, maximum: Any, where: str = '') -> None:
-    """Check a minimum heating setpoint and a maximum cooling setpoint: numbers (in °C) or None, and the
-    minimum lower than the maximum.
+def check_setpoint_limits(minimum: Any, maximum: Any, where: str = '', setpoint_tolerance: Any = None) -> None:
+    """Check a minimum heating setpoint and a maximum cooling setpoint: numbers (in °C) or None, the minimum lower than
+    the maximum and, given the tolerance of the setpoints, at least twice the tolerance between them: the thermostats
+    get the minimum plus the tolerance and the maximum minus it (finding A19 of the self-audit of 2026-11-11), so their
+    setpoints would cross (the heating one above the cooling one) where both bound them, as with a window of the
+    limiter of the drift narrower than twice the tolerance
+    (:func:`accim.sim.ems.drift_limiter.check_window_width`).
 
     :param where: The zone, for the messages.
+    :param setpoint_tolerance: The tolerance of the setpoints of the zone (K), or None not to check it.
     :raises ValueError: If they are not valid.
     """
     suffix = f' (zone {where!r})' if where else ''
@@ -106,6 +121,14 @@ def check_setpoint_limits(minimum: Any, maximum: Any, where: str = '') -> None:
     if minimum is not None and maximum is not None and not minimum < maximum:
         raise ValueError(f'heating_setpoint_minimum ({minimum}) must be lower than cooling_setpoint_maximum '
                          f'({maximum}){suffix}.')
+    if minimum is not None and maximum is not None and setpoint_tolerance is not None:
+        tolerance = abs(float(setpoint_tolerance))
+        # 1e-9: the difference of two decimal numbers is not exact in binary (20.2 - 20 is 0.1999999999999993)
+        if float(maximum) - float(minimum) < 2 * tolerance - 1e-9:
+            raise ValueError(f'cooling_setpoint_maximum ({maximum}) must be at least twice the tolerance of the '
+                             f'setpoints ({tolerance:g} K) above heating_setpoint_minimum ({minimum}){suffix}: the '
+                             f'thermostats get the minimum plus the tolerance and the maximum minus it, so their '
+                             f'setpoints cross where both bound them.')
 
 
 def check_hours_below(thresholds: Any) -> List[float]:
@@ -141,22 +164,23 @@ def hours_below_variable(threshold: float, zone: str) -> str:
 
 def limit_program_lines(minimum: bool, maximum: bool) -> List[str]:
     """The lines of the program ApplySetpointLimits_<zone> (run after SetASTnoTol): the minimum heating setpoint
-    and the maximum cooling setpoint (those of the zone) on the setpoints with the tolerance, which the
-    thermostats get, the rounding of the setpoints, the minimum and the maximum as the rounded setpoints when they
-    bound them (the rounding is strict, so the maximum would otherwise be one step of SetpointAcc below it, and a
-    minimum whose product by SetpointAcc is not exact in binary, such as 19.1 °C with an accuracy of 100, one step
-    above it: finding B5-2 of the review of 1.2.0), and the minimum and the maximum on the setpoints without the
-    tolerance too (the comfort band of the hour counters: finding B5-1)."""
+    and the maximum cooling setpoint (those of the zone) plus the tolerance of the setpoints of the zone on the
+    setpoints with the tolerance, which the thermostats get (AHSTmin + AHSTtol and ACSTmax + ACSTtol: finding A19 of
+    the self-audit of 2026-11-11, decided on 2026-11-12), the rounding of the setpoints, those values as the rounded
+    setpoints when they bound them (the rounding is strict, so the maximum would otherwise be one step of SetpointAcc
+    below it, and a minimum whose product by SetpointAcc is not exact in binary, such as 19.1 °C with an accuracy of
+    100, one step above it: finding B5-2 of the review of 1.2.0), and the minimum and the maximum themselves on the
+    setpoints without the tolerance (the comfort band of the hour counters: finding B5-1)."""
     lines: List[str] = []
     if minimum:
-        lines += ['if AHST < AHSTmin', 'set AHST = AHSTmin', 'endif']
+        lines += ['if AHST < AHSTmin+AHSTtol', 'set AHST = AHSTmin+AHSTtol', 'endif']
     if maximum:
-        lines += ['if ACST > ACSTmax', 'set ACST = ACSTmax', 'endif']
+        lines += ['if ACST > ACSTmax+ACSTtol', 'set ACST = ACSTmax+ACSTtol', 'endif']
     lines += list(ROUNDING)
     if minimum:
-        lines += ['if AHST <= AHSTmin', 'set roundedAHST = AHSTmin', 'endif']
+        lines += ['if AHST <= AHSTmin+AHSTtol', 'set roundedAHST = AHSTmin+AHSTtol', 'endif']
     if maximum:
-        lines += ['if ACST >= ACSTmax', 'set roundedACST = ACSTmax', 'endif']
+        lines += ['if ACST >= ACSTmax+ACSTtol', 'set roundedACST = ACSTmax+ACSTtol', 'endif']
     if minimum:
         lines += ['if AHSTnoTol < AHSTmin', 'set AHSTnoTol = AHSTmin', 'endif']
     if maximum:
@@ -337,10 +361,32 @@ def _days(count: int) -> str:
     return f'{count} day' if count == 1 else f'{count} days'
 
 
+def thermostat_limits(minimum: Optional[float], maximum: Optional[float], heating_tolerance: Any = 0,
+                      cooling_tolerance: Any = 0) -> Tuple[Optional[float], Optional[float]]:
+    """The setpoints that the thermostats of a zone get where its minimum heating setpoint and its maximum cooling
+    setpoint bound them: the minimum plus the tolerance of the heating setpoint (``AHSTtol``) and the maximum plus that
+    of the cooling setpoint (``ACSTtol``, the negative of the tolerance), as the program ApplySetpointLimits_<zone>
+    sets them (:func:`limit_program_lines`; finding A19 of the self-audit of 2026-11-11); None without a limit.
+
+    :param heating_tolerance: The input ``AHSTtol`` of the zone (0 if it is not a number).
+    :param cooling_tolerance: The input ``ACSTtol`` of the zone (0 if it is not a number).
+    """
+    def bound(limit, tolerance):
+        if limit is None:
+            return None
+        if isinstance(tolerance, bool) or not isinstance(tolerance, numbers.Real):
+            tolerance = 0
+        return float(limit) + float(tolerance)
+
+    return bound(minimum, heating_tolerance), bound(maximum, cooling_tolerance)
+
+
 def _crossing_message(zone: str, minimum: Optional[float], maximum: Optional[float], setpoints,
-                      last_day: Optional[Tuple[int, int]], timesteps_per_hour: int, epw) -> Optional[str]:
-    """The warning of a zone whose minimum heating setpoint is at or above the cooling setpoint of its comfort model,
-    or whose maximum cooling setpoint is at or below its heating setpoint, in some timestep of ``setpoints`` (those of
+                      last_day: Optional[Tuple[int, int]], timesteps_per_hour: int, epw,
+                      heating_tolerance: Any = 0, cooling_tolerance: Any = 0) -> Optional[str]:
+    """The warning of a zone whose minimum heating setpoint, as its thermostat gets it (with the tolerance,
+    :func:`thermostat_limits`), is at or above the cooling setpoint of its comfort model, or whose maximum cooling
+    setpoint is at or below its heating setpoint, in some timestep of ``setpoints`` (those of
     :func:`accim.sim.preview.compute_setpoints` by timestep), or None if they do not cross."""
     import os
 
@@ -355,12 +401,20 @@ def _crossing_message(zone: str, minimum: Optional[float], maximum: Optional[flo
             inside = None
         if inside is not None:
             setpoints, days = setpoints[inside], days[inside]
+    heating, cooling = thermostat_limits(minimum, maximum, heating_tolerance, cooling_tolerance)
+
+    def limit_text(limit: float, thermostat: float) -> str:
+        # The limit, and the setpoint of the thermostat on it if the tolerance changes it
+        if thermostat == limit:
+            return f'{_number(limit)} °C'
+        return f'{_number(limit)} °C, {_number(round(thermostat, 10))} °C in its thermostat with the tolerance'
+
     parts = []
-    for limit, column, crossed_of, text in (
-            (minimum, 'ACST', lambda values: values <= minimum, 'its minimum heating setpoint ({limit} °C) is at or '
-             'above the cooling setpoint of its comfort model (as low as {extreme} °C)'),
-            (maximum, 'AHST', lambda values: values >= maximum, 'its maximum cooling setpoint ({limit} °C) is at or '
-             'below the heating setpoint of its comfort model (as high as {extreme} °C)')):
+    for limit, thermostat, column, crossed_of, text in (
+            (minimum, heating, 'ACST', lambda values: values <= heating, 'its minimum heating setpoint ({limit}) is at '
+             'or above the cooling setpoint of its comfort model (as low as {extreme} °C)'),
+            (maximum, cooling, 'AHST', lambda values: values >= cooling, 'its maximum cooling setpoint ({limit}) is at '
+             'or below the heating setpoint of its comfort model (as high as {extreme} °C)')):
         if limit is None:
             continue
         values = setpoints[column].to_numpy(dtype=float)
@@ -369,7 +423,7 @@ def _crossing_message(zone: str, minimum: Optional[float], maximum: Optional[flo
             continue
         crossed_days = days[crossed]
         extreme = values[crossed].min() if column == 'ACST' else values[crossed].max()
-        parts.append(f'{text.format(limit=_number(limit), extreme=_number(extreme))} on '
+        parts.append(f'{text.format(limit=limit_text(limit, thermostat), extreme=_number(extreme))} on '
                      f'{_days(crossed_days.nunique())}, the first {crossed_days.iloc[0]:%d/%m}')
     if not parts:
         return None
@@ -383,9 +437,12 @@ def warn_crossed_setpoint_limits(idf, epw=None) -> List[str]:
     comfort model, or whose maximum cooling setpoint is at or below its heating setpoint, with the weather file of the
     simulations (decision 19 of the review of accim 1.2.0, option (ii): ``notes/decisions.md``, 2026-11-11).
 
-    The minimum only bounds the heating setpoint and the maximum the cooling setpoint, so, where the minimum is at or
-    above the cooling setpoint of the comfort model of the zone (or the maximum at or below its heating setpoint), the
-    heating setpoint of its thermostats is at or above their cooling setpoint, with which EnergyPlus gives warnings and
+    The minimum only bounds the heating setpoint and the maximum the cooling setpoint, so, where the heating setpoint
+    of the thermostat on the minimum (the minimum plus the tolerance of the setpoints of the zone,
+    :func:`thermostat_limits`: finding A19 of the self-audit of 2026-11-11, decided on 2026-11-12) is at or above the
+    cooling setpoint of the comfort model of the zone (or the cooling setpoint of the thermostat on the maximum, the
+    maximum minus the tolerance, at or below its heating setpoint), the heating setpoint of its thermostats is at or
+    above their cooling setpoint, with which EnergyPlus gives warnings and
     meaningless results. The setpoints of the comfort model of each zone with a minimum or a maximum are those of
     :func:`accim.sim.preview.compute_setpoints` with the arguments of the zone (its program SetInputData_<zone>, without
     the minimum and maximum; and the regimes of its program SelectCustomRegime_<zone> in the custom model) in each
@@ -394,9 +451,9 @@ def warn_crossed_setpoint_limits(idf, epw=None) -> List[str]:
     custom model beginning as its programs begin: the setpoints that the thermostats get from the comfort model
     (``ACST`` and ``AHST``, with the tolerance, rounded), also in the first timestep of the run period, in which the EMS
     reads running means of 0, as in EnergyPlus (the setpoints of a running mean below the applicability limits). The
-    warning of a zone gives the limit, the extreme setpoint of
-    the comfort model with which it crosses, the number of days with a crossing and the first of them. A minimum not
-    lower than the maximum is a ValueError (:func:`check_setpoint_limits`).
+    warning of a zone gives the limit (and the setpoint of the thermostat on it, if the tolerance is not 0), the extreme
+    setpoint of the comfort model with which it crosses, the number of days with a crossing and the first of them. A
+    minimum not lower than the maximum is a ValueError (:func:`check_setpoint_limits`).
 
     Without the weather file (``epw`` None), it warns of nothing: the setpoints of most comfort models depend on the
     outdoor temperature. The zones that :func:`accim.sim.preview.compute_setpoints` does not cover are left out with a
@@ -469,7 +526,7 @@ def warn_crossed_setpoint_limits(idf, epw=None) -> List[str]:
                          'of its comfort model: %s', zone, error)
             continue
         message = _crossing_message(zone, *(inputs.get(name) for name in INPUTS), previews[key], last_day,
-                                    timesteps_per_hour, epw)
+                                    timesteps_per_hour, epw, inputs.get('AHSTtol', 0), inputs.get('ACSTtol', 0))
         if message is not None:
             messages.append(message)
     for message in messages:

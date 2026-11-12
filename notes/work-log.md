@@ -29,6 +29,10 @@ existing tracking files — it does not replace them (see
     setpoint of comfort mode 1 of 9 out of its limits takes the minus sign. A model without that code whose zone is
     edited by hand to comfort standard 9 stops EnergyPlus (documented); a zone that leaves 9 gets `'pmot'` again. With
     `Seville_Present.epw` and a year, their comfort temperatures change by up to 2.0 and 1.7 K (0.6 K on average).
+  - A19 with S1: where the minimum or the maximum of the setpoints binds, the thermostat gets it with the tolerance
+    (20.1 and 25.9 °C with limits of 20 and 26 °C), and the setpoints without the tolerance are the limits. A maximum
+    less than twice the tolerance above the minimum is now a `ValueError` (the thermostats on both would cross), as
+    the window of the limiter of the drift; the warning of S1 and check 5 compare the setpoints of the thermostats.
 - **Validation**: in the entry of each task of [[../DEVLOG.md]] (the tests of the task, EnergyPlus 25.1 with both
   backends where the EMS code changes, and the golden master, compared line by line before writing it again).
 - **Next step**: the review of Claude Science of sessions 2 and 3, which also covers this session; the message of the

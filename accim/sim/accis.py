@@ -483,19 +483,27 @@ def _check_window_widths(arguments: Dict[str, Any], zone_arguments: Dict[Any, Di
         check(own, str(zone))
 
 
-def _check_setpoint_limits(minimum: Any, maximum: Any, zone_arguments: Dict[Any, Dict[str, Any]]) -> bool:
+def _check_setpoint_limits(minimum: Any, maximum: Any, zone_arguments: Dict[Any, Dict[str, Any]],
+                           tolerance: Optional[Number] = None) -> bool:
     """Check the minimum heating setpoint and the maximum cooling setpoint, of all the zones and of those
-    of ``zone_arguments``; return True if a zone has one of them.
+    of ``zone_arguments``; return True if a zone has one of them. With ``tolerance`` (the largest tolerance of the
+    setpoints of the output IDFs), also that the maximum of each zone is at least twice its tolerance (that of the
+    zone in ``zone_arguments``, or ``tolerance``) above its minimum: the thermostats get the minimum plus the tolerance
+    and the maximum minus it (finding A19 of the self-audit of 2026-11-11,
+    :func:`accim.sim.ems.setpoint_limits.check_setpoint_limits`).
 
     :raises ValueError: If they are not valid.
     """
-    check_setpoint_limits(minimum, maximum)
+    check_setpoint_limits(minimum, maximum, setpoint_tolerance=tolerance)
     found = minimum is not None or maximum is not None
     for zone, arguments in zone_arguments.items():
-        if any(name in arguments for name in _SETPOINT_LIMIT_ARGUMENTS):
-            check_setpoint_limits(arguments.get('heating_setpoint_minimum', minimum),
-                                  arguments.get('cooling_setpoint_maximum', maximum), where=str(zone))
-            found = True
+        own = any(name in arguments for name in _SETPOINT_LIMIT_ARGUMENTS)
+        if own or (tolerance is not None and 'setpoint_tolerance' in arguments):
+            check_setpoint_limits(
+                arguments.get('heating_setpoint_minimum', minimum), arguments.get('cooling_setpoint_maximum', maximum),
+                where=str(zone),
+                setpoint_tolerance=None if tolerance is None else arguments.get('setpoint_tolerance', tolerance))
+        found = found or own
     return found
 
 
@@ -744,17 +752,22 @@ class AddAccis:
         comfort standard and comfort mode, the heating setpoint is not lower (the input ``AHSTmin`` of each zone,
         see :mod:`accim.sim.ems.setpoint_limits`); EN 16798-1:2019 (B.2.2) applies in winter the minimums of its Table
         B.2 (:data:`accim.constants.EN16798_TABLE_B2`). Also for each zone in ``zone_arguments``. Only with
-        ``setpoint_type`` 'temperature' (the setpoints based on the PMV have none). The setpoints are bounded before
-        their rounding, and the setpoints without the tolerance (the limits of the comfort band of the hour counters)
-        are bounded too (finding B5-1 of the review of accim 1.2.0).
+        ``setpoint_type`` 'temperature' (the setpoints based on the PMV have none). It is a limit of the comfort band:
+        the setpoints without the tolerance (those of the hour counters) are not lower than it (finding B5-1 of the
+        review of accim 1.2.0), and the thermostats get it with the tolerance of the setpoints, the minimum plus the
+        tolerance, as every other setpoint of the ACCIS (finding A19 of the self-audit of 2026-11-11). The setpoints
+        are bounded before their rounding.
     :param cooling_setpoint_maximum: The maximum cooling setpoint (°C), or None (the default) for none: the
-        cooling setpoint is not higher (the input ``ACSTmax``), as the maximums of Table B.2 of EN 16798-1. A cooling
-        setpoint bounded by the maximum is the maximum, and a heating setpoint bounded by the minimum the minimum (not
-        one step of ``setpoint_accuracy`` beyond them, as the strict rounding would give: finding B5-2). It must be
-        higher than the minimum. With the weather file of the simulations (``epw``), a warning tells of the zones whose
-        minimum is at or above the cooling setpoint of their comfort model, or whose maximum is at or below its heating
-        setpoint, in some timestep of the run period of the model, since the heating setpoint is then at or above the
-        cooling setpoint (:func:`accim.sim.ems.setpoint_limits.warn_crossed_setpoint_limits`, with the setpoints of
+        cooling setpoint is not higher (the input ``ACSTmax``), as the maximums of Table B.2 of EN 16798-1: that
+        without the tolerance is not higher than the maximum, and that of the thermostats, than the maximum minus the
+        tolerance. A setpoint bounded by the maximum or the minimum is exactly that value (not one step of
+        ``setpoint_accuracy`` beyond it, as the strict rounding would give: finding B5-2). It must be higher than the
+        minimum, by at least twice the largest tolerance of the setpoints of the output IDFs (otherwise the setpoints
+        of the thermostats on both would cross: a ValueError). With the weather file of the simulations (``epw``), a
+        warning tells of the zones whose minimum, as the thermostat gets it, is at or above the cooling setpoint of
+        their comfort model, or whose maximum is at or below its heating setpoint, in some timestep of the run period
+        of the model, since the heating setpoint is then at or above the cooling setpoint
+        (:func:`accim.sim.ems.setpoint_limits.warn_crossed_setpoint_limits`, with the setpoints of
         :func:`accim.sim.preview.compute_setpoints`); without it, no warning.
     :param report_hours_below: A list of temperatures (°C), such as ``[18, 17, 16]``, or None (or an empty list) for
         none: the output IDFs report the occupied hours of each zone with the operative temperature below each of
@@ -1101,6 +1114,11 @@ class AddAccis:
             # 2026-11-11)
             _check_window_widths(drift, checked_zone_arguments,
                                  max((abs(value) for value in generation.tolerances()), default=0.0))
+        if has_limits:
+            # The minimum and the maximum of each zone with the largest tolerance of the output IDFs: the thermostats
+            # get them with the tolerance (finding A19 of the self-audit of 2026-11-11)
+            _check_setpoint_limits(heating_setpoint_minimum, cooling_setpoint_maximum, checked_zone_arguments,
+                                   tolerance=max((abs(value) for value in generation.tolerances()), default=0.0))
         self.arguments.update(verbose=verbose, confirm=confirm, zone_arguments=zone_arguments, epw=epw,
                               report_hours_below=hours_below or None, custom_regimes=list(regimes) or None,
                               report_long_term_discomfort=report_long_term_discomfort, long_term_range=long_term_range)
@@ -1405,10 +1423,13 @@ def modify_accis(
     ``cooling_setpoint_maximum``, see :class:`AddAccis`) keep their values if they are None (the models without them
     have none): a number, here or in ``zone_arguments``, gives it to the zones, with the program
     ApplySetpointLimits_<zone> (:func:`accim.sim.ems.setpoint_limits.set_setpoint_limits_code`). They bound the
-    setpoint temperatures of the ACCIS, with and without the tolerance: the zones controlled by the thermostats of the
+    setpoint temperatures of the ACCIS: those without the tolerance, with the minimum and the maximum, and those of the
+    thermostats, with the minimum plus the tolerance of the setpoints and the maximum minus it (finding A19 of the
+    self-audit of 2026-11-11), so the maximum of each zone must be at least twice its tolerance (``setpoint_tolerance``
+    of this call) above its minimum, also those that the zones keep; the zones controlled by the thermostats of the
     PMV (``setpoint_type`` 'pmv', or :mod:`accim.sim.pmv_index`) do not use them. A model with them, given ``epw``,
-    warns of the zones whose minimum is at or above the cooling setpoint of their comfort model, or whose maximum is at
-    or below its heating setpoint, in some timestep of its run period
+    warns of the zones whose minimum, as their thermostat gets it, is at or above the cooling setpoint of their comfort
+    model, or whose maximum is at or below its heating setpoint, in some timestep of its run period
     (:func:`accim.sim.ems.setpoint_limits.warn_crossed_setpoint_limits`); without ``epw``, it does not warn.
 
     The static setpoints of JPN Aqilah 2025 (``static_heating_setpoint`` and ``static_cooling_setpoint``, see
@@ -1537,8 +1558,9 @@ def modify_accis(
     if metric_given:
         epw = _check_zone_outdoor_metrics(zone_programs, outdoor_metric, resolved, epw)
     limits_given = bool(limits) or any(name in own for own in resolved.values() for name in _SETPOINT_LIMIT_ARGUMENTS)
-    if limits_given:
-        _check_zone_setpoint_limits(zone_programs, limits, resolved)
+    # Also the limits that the zones keep, with the tolerance of the setpoints of this call (finding A19 of the
+    # self-audit of 2026-11-11: the thermostats get them with the tolerance)
+    _check_zone_setpoint_limits(zone_programs, limits, resolved, setpoint_tolerance)
     _check_zone_static_setpoints(zone_programs, statics, comfort_standard, resolved)
     if regimes:
         _check_zone_custom_regimes(idf, zone_programs, regimes, comfort_standard, resolved)
@@ -1665,15 +1687,18 @@ def _check_zone_custom_regimes(idf, zone_programs: Dict[str, Any], regimes: Sequ
 
 
 def _check_zone_setpoint_limits(zone_programs: Dict[str, Any], limits: Dict[str, Any],
-                                zone_arguments: Dict[str, Dict[str, Any]]) -> None:
+                                zone_arguments: Dict[str, Dict[str, Any]], tolerance: Optional[Number] = None) -> None:
     """Check the minimum and maximum of the setpoints that each zone gets in :func:`modify_accis` (those of the call,
-    those of ``zone_arguments`` or those it has)."""
+    those of ``zone_arguments`` or those it has), with the tolerance of the setpoints that it gets (that of
+    ``zone_arguments``, or ``tolerance``, that of the call): the maximum of a zone must be at least twice its tolerance
+    above its minimum, since the thermostats get the minimum plus the tolerance and the maximum minus it (finding A19
+    of the self-audit of 2026-11-11)."""
     for zone, program in zone_programs.items():
         current = read_inputs(program)
         own = zone_arguments.get(zone, {})
         values = [own.get(name, limits.get(name, current.get(variable)))
                   for name, variable in zip(_SETPOINT_LIMIT_ARGUMENTS, SETPOINT_LIMIT_INPUTS)]
-        check_setpoint_limits(*values, where=zone)
+        check_setpoint_limits(*values, where=zone, setpoint_tolerance=own.get('setpoint_tolerance', tolerance))
 
 
 def _check_zone_outdoor_metrics(zone_programs: Dict[str, Any], outdoor_metric: Dict[str, Any],

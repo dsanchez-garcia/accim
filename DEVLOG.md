@@ -36,6 +36,39 @@ Recommended flow: track active work in `TODO.md`, move completed outcomes to `DE
 ## Entries
 
 ### 2026-11-12
+#### [done] The thermostats get the minimum and the maximum of the setpoints with the tolerance (A19, with S1; branch `v1.2.0`)
+- Context: finding A19 of the self-audit of 2026-11-11, decided on 2026-11-12 (`notes/decisions.md`, decisions 6 and
+  10): where the minimum heating setpoint or the maximum cooling setpoint binds, the thermostat got the limit itself,
+  so the tolerance vanished there, unlike in every other setpoint of the ACCIS and in those of the hooks, and the hour
+  counters, the long-term discomfort and `report_hours_below` counted the decimals of the control as discomfort.
+- Changes: `limit_program_lines` bounds `AHST` and `ACST` with `AHSTmin+AHSTtol` and `ACSTmax+ACSTtol` (exact after
+  the rounding) and `AHSTnoTol` and `ACSTnoTol` with the limits, as before; `check_setpoint_limits` takes
+  `setpoint_tolerance` and raises a `ValueError` when the maximum is less than twice the tolerance above the minimum
+  (from `AddAccis`, with the largest tolerance of its output IDFs; `modify_accis`, in every call, also for the limits
+  that the zones keep; the EMS code of `accim.utils.ems_code`; and the parameters of the parametric module);
+  `thermostat_limits` gives the setpoints of the thermostats on the limits, which `warn_crossed_setpoint_limits` (S1)
+  compares with those of the comfort model and names in its message; check 5 of `verify_accim_simulation` compares the
+  setpoints of the thermostats with the limits with the tolerance. `compute_setpoints` and `print_setpoint_ems_code`
+  follow the program. Nothing changes with `setpoint_tolerance=0`, nor in the models without limits.
+- Files: `accim/sim/ems/setpoint_limits.py`, `accim/utils/verification.py`, `accim/sim/accis.py`,
+  `accim/utils/ems_code.py`, `accim/parametric_and_optimisation/funcs_for_besos/param_accis.py`,
+  `tests/core/test_setpoint_limits.py`, `tests/core/test_comfort_hooks.py`, `tests/core/test_sun2026_set.py`,
+  `docs/source/4_detailed use.md` (4.2.3 and 4.6.1), `CHANGELOG.md`, `CAMBIOS_CODIGO_v1.2.0.md` (§45), `TODO.md`,
+  `notes/decisions.md`, `notes/work-log.md`.
+- Verification: `tests/core/test_setpoint_limits.py` (32 tests: the lines; the Erl interpreter with tolerances of 0, 0.1
+  and 0.25 K; `compute_setpoints` with and without the tolerance; the `ValueError` of twice the tolerance in
+  `check_setpoint_limits`, `AddAccis`, `modify_accis`, the EMS code and the parametric module; the warning with a
+  minimum that only crosses with the tolerance; and, with EnergyPlus 25.1, a winter and a summer week of Seville with
+  limits of 20 and 26 °C: the thermostats are exactly at 20.1 and 25.9 °C where the limits bind, checks 4 and 5 find
+  no mismatch, and the EMS and API backends give identical results). The test files of the limits, the hooks, the
+  limiter of the drift, the verification, the EMS code, the preview, the graphical user interface, the long-term
+  counters and the parameters of the limits: 390 passed, once the measurement of the winter week of comfort standard
+  24 was made again (its zone with a minimum of 18 °C now heats to 18.1 °C: the largest hourly difference of the SET
+  goes from 0.191 to 0.187 K, and the other zone is within the causal band in 58.2 of its 60 occupied hours instead
+  of 56.3; the commit before the change, in a temporary worktree, gives the old values). The golden master: 35
+  passed, without changes (no configuration has limits). The changed modules compile with Python 3.9.
+- Next step: A24 (the static inputs of JPN Aqilah 2025 in every zone).
+
 #### [done] Comfort standards 9 and 10, IND IMAC R 7DRM and 30DRM, read the running means of their models (branch `v1.2.0`)
 - Context: the decisions of 2026-11-12 (`notes/decisions.md`, decision 11) correct in accim 1.2.0 the running means of
   comfort standards 9 and 10, which the review of Claude Science of 2026-11-11 found swapped (Rawal et al., 2022,

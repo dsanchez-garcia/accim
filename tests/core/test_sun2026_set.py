@@ -175,10 +175,11 @@ def test_the_heating_setpoint_below_18_and_the_minimum():
     with warnings.catch_warnings():
         warnings.simplefilter('error')
         hook(controller, CALLING_POINT)
-    # The minimum of B5 (18 °C) bounds it in the EMS after the hook, with and without the tolerance; without it, the
-    # thermostats get the setpoint of the hook with the tolerance (0.1 K)
+    # The minimum of B5 (18 °C) bounds it in the EMS after the hook: the setpoint without the tolerance is the minimum,
+    # and the thermostat gets it with the tolerance (0.1 K; finding A19 of the self-audit of 2026-11-11); without the
+    # minimum, the thermostats get the setpoint of the hook with the tolerance
     bounded = _hook_timestep(_hook_erl(heating_setpoint_minimum=18.0), setpoints=(heating, cooling))
-    assert (bounded['AHST_Act_Zone1'], bounded['AHSTnoTol_Zone1']) == (18.0, 18.0)
+    assert (bounded['AHST_Act_Zone1'], bounded['AHSTnoTol_Zone1']) == (18.0 + 0.1, 18.0)
     free = _hook_timestep(_hook_erl(), setpoints=(heating, cooling))
     assert free['AHST_Act_Zone1'] == pytest.approx(heating + 0.1, abs=1e-4) and free['AHST_Act_Zone1'] < 18
 
@@ -443,9 +444,12 @@ def test_the_model_of_the_hook_of_the_set_with_the_dynamic_clothing_model_runs(t
 
 #: The hourly differences measured on 2026-11-10 between the SET of each zone that the hook reports (``SET_<zone>``,
 #: hourly means) and the SET of the Pierce model of EnergyPlus (K): (mean, mean of the absolute values, maximum absolute
-#: value), in 8-14 January and 15-21 July (``notes/decisions.md``, F1)
+#: value), in 8-14 January and 15-21 July (``notes/decisions.md``, F1). Those of winter were measured again on
+#: 2026-11-12: since finding A19 of the self-audit of 2026-11-11, the thermostat of Block1:Zone1 on its minimum of 18 °C
+#: heats to 18.1 °C (the minimum plus the tolerance), which changed them from (-0.080, 0.081, 0.191) and (-0.082,
+#: 0.083, 0.204)
 MEASURED = {
-    ('winter', 'Block1_Zone1'): (-0.080, 0.081, 0.191), ('winter', 'Block1_Zone2'): (-0.082, 0.083, 0.204),
+    ('winter', 'Block1_Zone1'): (-0.080, 0.081, 0.187), ('winter', 'Block1_Zone2'): (-0.082, 0.082, 0.204),
     ('summer', 'Block1_Zone1'): (-0.156, 0.156, 0.262), ('summer', 'Block1_Zone2'): (-0.154, 0.154, 0.291),
 }
 

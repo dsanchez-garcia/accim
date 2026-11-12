@@ -470,8 +470,9 @@ def test_the_accis_follows_the_setpoints_of_the_hook():
 def test_the_minimum_and_maximum_bound_the_setpoints_of_the_hook():
     erl = _hook_erl(heating_setpoint_minimum=23.0, cooling_setpoint_maximum=25.0)
     hooked = _hook_timestep(erl, setpoints=(22.0, 26.0))
-    # Exactly the minimum and the maximum (finding B5-2), with and without the tolerance (finding B5-1)
-    assert (hooked['AHST_Act_Zone1'], hooked['ACST_Act_Zone1']) == (23.0, 25.0)
+    # Without the tolerance, exactly the minimum and the maximum (findings B5-1 and B5-2); the thermostats get them with
+    # the tolerance (0.1 K), as the setpoints of the hook (finding A19 of the self-audit of 2026-11-11)
+    assert (hooked['AHST_Act_Zone1'], hooked['ACST_Act_Zone1']) == (23.0 + 0.1, 25.0 + -0.1)
     assert (hooked['AHSTnoTol_Zone1'], hooked['ACSTnoTol_Zone1']) == (23.0, 25.0)
 
 

@@ -85,9 +85,11 @@ _OUTDOOR_METRIC_LEGEND = (
 )
 _LIMIT_LEGEND = (
     '! AHSTmin and ACSTmax: the minimum heating setpoint and the maximum cooling setpoint of the',
-    '! zone (heating_setpoint_minimum and cooling_setpoint_maximum), whatever the comfort standard and comfort mode;',
-    '! ApplySetpointLimits_<zone>, after SetASTnoTol, bounds AHST and ACST and rounds them again (the setpoints',
-    '! bounded by the minimum or the maximum are the minimum or the maximum), and bounds AHSTnoTol and ACSTnoTol too.',
+    '! zone (heating_setpoint_minimum and cooling_setpoint_maximum), whatever the comfort standard and comfort mode:',
+    '! limits of the setpoints without the tolerance. ApplySetpointLimits_<zone>, after SetASTnoTol, bounds AHST and',
+    '! ACST, which the thermostats get, with AHSTmin+AHSTtol and ACSTmax+ACSTtol (the minimum plus the tolerance and',
+    '! the maximum minus it) and rounds them again (the setpoints that they bound are exactly those values), and',
+    '! bounds AHSTnoTol and ACSTnoTol with AHSTmin and ACSTmax.',
 )
 _DRIFT_LEGEND = (
     '! ApplyDriftLimiter_<zone>: the limiter of the drift of the setpoints (drift_mode, task F2 of block F), after',
@@ -255,7 +257,8 @@ def _input_lines(comfort_standard: int, category: Optional[Number], comfort_mode
 def _limit_program(arguments: dict) -> List[str]:
     """The lines of the program of the minimum and maximum of the setpoints of a zone (none without them)."""
     minimum, maximum = arguments.get('heating_setpoint_minimum'), arguments.get('cooling_setpoint_maximum')
-    sl.check_setpoint_limits(minimum, maximum)
+    # With the tolerance: the thermostats get the minimum plus it and the maximum minus it (finding A19)
+    sl.check_setpoint_limits(minimum, maximum, setpoint_tolerance=arguments.get('setpoint_tolerance'))
     if minimum is None and maximum is None:
         return []
     return sl.limit_program_lines(minimum is not None, maximum is not None)

@@ -43,6 +43,25 @@ template]] to add a new entry.
      - The golden master changes in the output IDFs of 9 and 10, in one line of `SetVST` of every model in mixed mode
        (its branch of INT EN16798 named comfort standard 10) and in the models with the code of all the comfort
        standards; checked line by line before writing the golden files again.
+  2. The minimum and maximum of the setpoints with the tolerance (decision 6, finding A19; and decision 10, task S1).
+     - A maximum less than twice the tolerance of the setpoints above the minimum of the same zone is a `ValueError`
+       (`check_setpoint_limits(..., setpoint_tolerance=...)`), as a window of the limiter of the drift narrower than
+       twice the tolerance (finding A9): the setpoints of the thermostats on both limits would cross. The decision does
+       not mention it; without it, limits less than 0.2 K apart (valid until now) would give EnergyPlus a heating
+       setpoint above the cooling setpoint. `AddAccis` checks it with the largest tolerance of its output IDFs, and
+       `modify_accis` in every call, also for the limits that the zones keep (the tolerance of the setpoints is an
+       argument of every call).
+     - The warning of S1 compares the setpoints of the thermostats on the limits, and its message gives both values
+       when the tolerance is not 0 ("24.5 °C, 24.6 °C in its thermostat with the tolerance").
+     - Check 5 of `verify_accim_simulation` compares the setpoints of the thermostats with the limits with the
+       tolerance, and those without the tolerance with the limits themselves.
+     - The models written with the limits before this change keep their program until their limits are written again
+       (`modify_accis` with a limit); the limits are new in 1.2.0, so no released model has them.
+     - The measurement of F1 of the winter week of comfort standard 24 (8–14 January, the sample model with a minimum
+       of 18 °C in one zone) was made again, since that thermostat now heats to 18.1 °C: the largest hourly difference
+       between the SET of the hook and that of EnergyPlus in that zone is 0.187 K (it was 0.191 K), and the other zone
+       is within the causal band in 58.2 of its 60 occupied hours (56.3 before); checked against the commit before the
+       change in a temporary worktree. The summer week does not change.
 - **Consequences**: the tasks done leave `TODO.md` for `DEVLOG.md`; the documentation says what each choice means
   for the users (section 4.2 of the detailed use, and `CHANGELOG.md`).
 
@@ -272,6 +291,8 @@ template]] to add a new entry.
     and nothing changes with `setpoint_tolerance=0`. The limits are new in 1.2.0, so no released output changes. The
     comparison of S1 follows it (its verdict below), and so do the documentation (section 4.2 and the module
     `accim.sim.ems.setpoint_limits`), check 5 of `verify_accim_simulation` and `tests/core/test_setpoint_limits.py`.
+    Implemented on 2026-11-12 (`DEVLOG.md`; section 45 of `CAMBIOS_CODIGO_v1.2.0.md`), with the choices of the entry
+    "The implementation of the decisions of 2026-11-12" at the top of this file.
   - **A24**: option (ii). Every zone of a model with the code of JPN Aqilah 2025 (its subprograms `SetAST_CS23_<chunk>`)
     gets the inputs `StaticAHST` and `StaticACST` in its program `SetInputData_<zone>`, with the defaults (20 and 28 °C)
     in the zones of the other comfort standards, which do not read them. The zones share those global variables, so a

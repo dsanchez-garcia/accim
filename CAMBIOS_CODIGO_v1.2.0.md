@@ -2489,3 +2489,48 @@ climático desde tres fechas de inicio, el inicio con `PMOT`, el signo, `AddAcci
 la comprobación 4 sin discrepancias con y sin el archivo climático, y los dos backends con resultados idénticos);
 `tests/core/test_comfort_standard_code.py` da `Tout_metric` a sus programas, y `tests/core/test_table_columns.py` y
 `tests/core/test_comfort_standard_registry.py` siguen las cadenas nuevas.
+
+## 45. El mínimo y el máximo de las consignas llegan al termostato con la tolerancia (A19, con S1)
+
+El hallazgo A19 de la autoauditoría del 11/11/2026: donde el mínimo de calefacción o el máximo de refrigeración
+limitan, el termostato recibía el propio límite (AHST = AHSTnoTol = AHSTmin), de modo que la tolerancia desaparecía
+justo ahí, al contrario que en el resto de consignas del ACCIS y en las de los ganchos. Con el termostato en el límite
+de la banda de confort, la temperatura operativa se asienta sobre él, y los contadores de horas, el disconfort de largo
+plazo y `report_hours_below` cuentan como disconfort los decimales del control. Decidido el 12/11/2026
+(`notes/decisions.md`): opción (ii).
+
+**Ahora.**
+
+- `limit_program_lines` (`accim.sim.ems.setpoint_limits`): `ApplySetpointLimits_<zona>` acota `AHST` con
+  `AHSTmin+AHSTtol` y `ACST` con `ACSTmax+ACSTtol` (`ACSTtol` es la tolerancia con signo menos), redondea, deja esos
+  valores exactos donde limitan, y acota `AHSTnoTol` y `ACSTnoTol` con los límites, como antes. Con 20 y 26 °C y la
+  tolerancia por defecto (0,1 K), el termostato calienta a 20,1 °C y enfría a 25,9 °C donde los límites acotan, y la
+  banda de confort es de 20 a 26 °C. Con `setpoint_tolerance=0` nada cambia, ni en los IDF sin límites.
+- `check_setpoint_limits(minimum, maximum, where='', setpoint_tolerance=None)`: con la tolerancia, el máximo tiene que
+  estar al menos dos tolerancias por encima del mínimo (si no, las consignas de los termostatos sobre los dos límites
+  se cruzan): `ValueError`. Lo comprueban `AddAccis` (con la mayor tolerancia de sus IDF de salida, o la de la zona en
+  `zone_arguments`), `modify_accis` (en cada llamada, también con los límites que las zonas conservan),
+  `print_setpoint_ems_code` y los parámetros del módulo paramétrico (con la tolerancia de cada zona).
+- `thermostat_limits(minimum, maximum, heating_tolerance, cooling_tolerance)`: las consignas del termostato sobre los
+  límites. El aviso de S1 (`warn_crossed_setpoint_limits`) compara esas consignas con las del modelo de confort, y su
+  mensaje las nombra («24,5 °C, 24,6 °C in its thermostat with the tolerance»); sin tolerancia, el mensaje es el de
+  antes.
+- `verify_accim_simulation`, comprobación 5: las consignas de los termostatos frente al mínimo más la tolerancia y el
+  máximo menos ella (`Check5_AHSTmin`, `Check5_ACSTmax`), y las de sin tolerancia frente a los límites
+  (`Check5_AHSTmin_noTol`, `Check5_ACSTmax_noTol`).
+- `compute_setpoints` y `print_setpoint_ems_code` siguen el programa (la leyenda del código lo explica).
+
+**Pruebas.** `tests/core/test_setpoint_limits.py`: las líneas del programa; el intérprete de Erl con tolerancias de 0,
+0,1 y 0,25 K (también una consigna entre el límite y el límite más la tolerancia); `compute_setpoints` con y sin
+tolerancia; el `ValueError` de las dos tolerancias en `check_setpoint_limits`, `AddAccis`, `modify_accis`, el código
+EMS y el módulo paramétrico; el aviso con un mínimo que solo cruza por la tolerancia (23,95 °C frente a 23,9999 °C); y
+EnergyPlus 25.1: en una semana de invierno y otra de verano, los termostatos están exactamente en 20,1 y 25,9 °C donde
+los límites acotan, las comprobaciones 4 y 5 no dan discrepancias y los dos backends dan resultados idénticos.
+`tests/core/test_comfort_hooks.py` y `tests/core/test_sun2026_set.py`: las consignas de un gancho acotadas por el
+mínimo llegan al termostato con la tolerancia.
+
+**Medición de F1 repetida.** La semana de invierno de la prueba del estándar 24 (8–14 de enero, con un mínimo de
+18 °C en una zona) cambia porque ese termostato calienta ahora a 18,1 °C: la mayor diferencia horaria entre el SET del
+gancho y el de EnergyPlus en esa zona pasa de 0,191 a 0,187 K, y la otra zona está dentro de la banda causal 58,2 de
+sus 60 horas ocupadas (antes, 56,3). Comprobado con el commit anterior en un árbol de trabajo temporal; la semana de
+verano no cambia. Actualizados `MEASURED` de `tests/core/test_sun2026_set.py` y la sección 4.9.3.

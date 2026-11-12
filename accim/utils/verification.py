@@ -130,13 +130,15 @@ def verify_accim_simulation(
     from the monthly means of the .stat file, which check 4 does not reproduce (its summary says so).
 
     **Check 5 – The minimum and maximum of the setpoints (per zone, output IDFs of AddAccis):**
-    The heating setpoint of each zone with a minimum (``heating_setpoint_minimum``, the input ``AHSTmin`` of its program
-    ``SetInputData_<zone>``, see :mod:`accim.sim.ems.setpoint_limits`) is not below it (``Check5_AHSTmin``), and the
-    cooling setpoint of each zone with a maximum (``cooling_setpoint_maximum``, ``ACSTmax``) is not above it
-    (``Check5_ACSTmax``), in the outputs at timestep frequency, or else hourly. The setpoints without the tolerance
-    (the outputs ``..._No Tolerance``, the limits of the comfort band of the hour counters) are checked too
-    (``Check5_AHSTmin_noTol`` and ``Check5_ACSTmax_noTol``): since finding B5-1 of the review of accim 1.2.0, the
-    minimum and the maximum bound them as well.
+    The heating setpoint of the thermostat of each zone with a minimum (``heating_setpoint_minimum``, the input
+    ``AHSTmin`` of its program ``SetInputData_<zone>``, see :mod:`accim.sim.ems.setpoint_limits`) is not below the
+    minimum plus the tolerance of the setpoints of the zone (``Check5_AHSTmin``), and the cooling setpoint of each zone
+    with a maximum (``cooling_setpoint_maximum``, ``ACSTmax``) is not above the maximum minus that tolerance
+    (``Check5_ACSTmax``), in the outputs at timestep frequency, or else hourly: the thermostats get the minimum and
+    the maximum with the tolerance (finding A19 of the self-audit of 2026-11-11, decided on 2026-11-12). The setpoints
+    without the tolerance (the outputs ``..._No Tolerance``, the limits of the comfort band of the hour counters) are
+    checked against the minimum and the maximum themselves (``Check5_AHSTmin_noTol`` and ``Check5_ACSTmax_noTol``):
+    since finding B5-1 of the review of accim 1.2.0, the minimum and the maximum bound them as well.
 
     **Check 6 – The long-term discomfort (per zone and building, output IDFs of AddAccis with**
     ``report_long_term_discomfort=True`` **, see** :mod:`accim.sim.ems.long_term_discomfort` **):**
@@ -1408,23 +1410,36 @@ def _setpoint_mismatches(building, data: Mapping[str, pd.DataFrame], epw: str,
 
 def _setpoint_limit_mismatches(building, data: Mapping[str, pd.DataFrame],
                                tolerance: float) -> Tuple[List[dict], List[str]]:
-    """Check 5 of :func:`verify_accim_simulation`: the heating setpoint of each zone with a minimum (``AHSTmin`` in
-    its program SetInputData_<zone>, :mod:`accim.sim.ems.setpoint_limits`) is not below it, and the cooling setpoint
-    of each zone with a maximum (``ACSTmax``) is not above it, with and without the tolerance, in the outputs of the
-    setpoints of the zone at timestep frequency, or else hourly (whose means keep the limits too).
+    """Check 5 of :func:`verify_accim_simulation`: the heating setpoint without the tolerance of each zone with a
+    minimum (``AHSTmin`` in its program SetInputData_<zone>, :mod:`accim.sim.ems.setpoint_limits`) is not below it, and
+    the cooling setpoint without the tolerance of each zone with a maximum (``ACSTmax``) is not above it; and the
+    setpoints of its thermostats (with the tolerance) are not below the minimum plus the tolerance of the setpoints of
+    the zone, nor above the maximum minus it (:func:`accim.sim.ems.setpoint_limits.thermostat_limits`: finding A19 of
+    the self-audit of 2026-11-11, decided on 2026-11-12), in the outputs of the setpoints of the zone at timestep
+    frequency, or else hourly (whose means keep the limits too).
 
     :return: The mismatches, and the lines of the summary (none if no zone has a minimum or a maximum).
     """
-    from accim.sim.ems.setpoint_limits import zone_limits
+    from accim.sim.ems.inputs import input_programs, read_inputs
+    from accim.sim.ems.setpoint_limits import thermostat_limits, zone_limits
 
     limits = {zone: values for zone, values in zone_limits(building).items()
               if any(value is not None for value in values.values())}
     if not limits:
         return [], []
+    # The limits of the thermostats: with the tolerance of the setpoints of each zone
+    for zone, program in input_programs(building).items():
+        if zone in limits:
+            inputs = read_inputs(program)
+            heating, cooling = thermostat_limits(limits[zone]['AHSTmin'], limits[zone]['ACSTmax'],
+                                                 inputs.get('AHSTtol', 0), inputs.get('ACSTtol', 0))
+            limits[zone] = dict(limits[zone], AHSTmin_thermostat=heating, ACSTmax_thermostat=cooling)
     outputs_of_limits = {
-        'AHSTmin': ('AHSTmin', 'Adaptive Heating Setpoint Temperature', np.maximum, 'minimum'),
+        'AHSTmin': ('AHSTmin_thermostat', 'Adaptive Heating Setpoint Temperature', np.maximum,
+                    'minimum plus the tolerance'),
         'AHSTmin_noTol': ('AHSTmin', 'Adaptive Heating Setpoint Temperature_No Tolerance', np.maximum, 'minimum'),
-        'ACSTmax': ('ACSTmax', 'Adaptive Cooling Setpoint Temperature', np.minimum, 'maximum'),
+        'ACSTmax': ('ACSTmax_thermostat', 'Adaptive Cooling Setpoint Temperature', np.minimum,
+                    'maximum minus the tolerance'),
         'ACSTmax_noTol': ('ACSTmax', 'Adaptive Cooling Setpoint Temperature_No Tolerance', np.minimum, 'maximum'),
     }
     chosen = None
@@ -1444,13 +1459,13 @@ def _setpoint_limit_mismatches(building, data: Mapping[str, pd.DataFrame],
     lines = [f'  {frequency} outputs']
     for zone, values in limits.items():
         for check, (variable, output, bound, side) in outputs_of_limits.items():
-            limit = values[variable]
+            limit = values.get(variable)
             found = outputs.get('EMS', f'{output}_{zone}')
             if limit is None or found is None:
                 continue
             new_rows, line = _mismatch_rows(outputs.timestamps, found, bound(found, float(limit)), zone,
-                                            f'Check5_{check}', f'{output}_{zone} within the {side} {limit}',
-                                            tolerance)
+                                            f'Check5_{check}', f'{output}_{zone} within the {side} '
+                                            f'{round(float(limit), 10):g}', tolerance)
             mismatches.extend(new_rows)
             lines.append(line)
     return mismatches, lines

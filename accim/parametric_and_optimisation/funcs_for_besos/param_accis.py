@@ -550,16 +550,22 @@ def _set_setpoint_limit(idf, variable: str, value: float) -> None:
     and the programs ApplySetpointLimits_<zone> (:mod:`accim.sim.ems.setpoint_limits`).
 
     :raises ValueError: If the model has the ACCIS of an earlier version, the value is not a number, or the minimum of a
-        zone would not be lower than its maximum.
+        zone would not be lower than its maximum (or its maximum less than twice the tolerance of its setpoints above
+        its minimum).
     """
     zone_programs = input_programs(idf)
     if not zone_programs:
         raise ValueError('The model has the ACCIS of an earlier version of accim, whose setpoints have neither minimum '
                          'nor maximum. Add the ACCIS with this version of accim to the model without it.')
     for zone, program in zone_programs.items():
-        limits = {name: read_inputs(program).get(name) for name in ('AHSTmin', 'ACSTmax')}
+        inputs = read_inputs(program)
+        limits = {name: inputs.get(name) for name in ('AHSTmin', 'ACSTmax')}
         limits[variable] = value
-        check_setpoint_limits(limits['AHSTmin'], limits['ACSTmax'], where=zone)
+        # With the tolerance of the setpoints of the zone: its thermostat gets the minimum plus the tolerance and the
+        # maximum minus it (finding A19 of the self-audit of 2026-11-11)
+        tolerance = inputs.get('AHSTtol')
+        check_setpoint_limits(limits['AHSTmin'], limits['ACSTmax'], where=zone,
+                              setpoint_tolerance=tolerance if isinstance(tolerance, (int, float)) else None)
     for program in zone_programs.values():
         if set_inputs(program, {variable: value}):
             set_program_lines(program, [str(line).strip() for line in program.fieldvalues[2:]]

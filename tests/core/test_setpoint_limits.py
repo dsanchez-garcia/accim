@@ -64,6 +64,27 @@ def test_the_minimum_and_maximum_are_checked():
     with pytest.raises(ValueError, match=r"heating_setpoint_minimum \(26\) must be lower than cooling_setpoint_maximum "
                                          r"\(26\) \(zone 'Zone1'\)"):
         sl.check_setpoint_limits(26, 26, where='Zone1')
+    # With the tolerance of the setpoints (finding A19 of the self-audit of 2026-11-11): the thermostats get the minimum
+    # plus the tolerance and the maximum minus it, so the maximum must be at least twice the tolerance above the minimum
+    sl.check_setpoint_limits(20, 20.2, setpoint_tolerance=0.1)
+    sl.check_setpoint_limits(20, 20.15, setpoint_tolerance=0)
+    sl.check_setpoint_limits(20, 20.15, setpoint_tolerance=None)
+    sl.check_setpoint_limits(20, None, setpoint_tolerance=5)
+    with pytest.raises(ValueError, match=r"cooling_setpoint_maximum \(20.15\) must be at least twice the tolerance of "
+                                         r"the setpoints \(0.1 K\) above heating_setpoint_minimum \(20\) \(zone "
+                                         r"'Zone1'\)"):
+        sl.check_setpoint_limits(20, 20.15, where='Zone1', setpoint_tolerance=0.1)
+    with pytest.raises(ValueError, match='must be at least twice the tolerance'):
+        sl.check_setpoint_limits(20, 20.3, setpoint_tolerance=-0.25)
+
+
+def test_the_limits_of_the_thermostats():
+    # The setpoints that the thermostats get where the minimum and the maximum bound them: with the tolerances of the
+    # zone (AHSTtol, and ACSTtol, its negative)
+    assert sl.thermostat_limits(20, 26, 0.1, -0.1) == (20 + 0.1, 26 + -0.1)
+    assert sl.thermostat_limits(20, None, 0.25, -0.25) == (20.25, None)
+    assert sl.thermostat_limits(None, 26) == (None, 26.0)
+    assert sl.thermostat_limits(20, 26, 'x', None) == (20.0, 26.0)
 
 
 def test_the_temperatures_of_the_hours_below_are_checked():
@@ -85,11 +106,13 @@ def test_the_names_of_the_hours_below():
 
 
 def test_the_lines_of_the_program_of_the_limits():
-    minimum = ['if AHST < AHSTmin', 'set AHST = AHSTmin', 'endif']
-    maximum = ['if ACST > ACSTmax', 'set ACST = ACSTmax', 'endif']
-    # The minimum and the maximum are the rounded setpoints when they bound them (finding B5-2 of the review of 1.2.0)
-    exact_floor = ['if AHST <= AHSTmin', 'set roundedAHST = AHSTmin', 'endif']
-    exact = ['if ACST >= ACSTmax', 'set roundedACST = ACSTmax', 'endif']
+    # The thermostats get the minimum and the maximum with the tolerance of the setpoints (finding A19 of the self-audit
+    # of 2026-11-11, decided on 2026-11-12): AHSTtol is the tolerance, and ACSTtol its negative
+    minimum = ['if AHST < AHSTmin+AHSTtol', 'set AHST = AHSTmin+AHSTtol', 'endif']
+    maximum = ['if ACST > ACSTmax+ACSTtol', 'set ACST = ACSTmax+ACSTtol', 'endif']
+    # Those bounds are the rounded setpoints when they bound them (finding B5-2 of the review of 1.2.0)
+    exact_floor = ['if AHST <= AHSTmin+AHSTtol', 'set roundedAHST = AHSTmin+AHSTtol', 'endif']
+    exact = ['if ACST >= ACSTmax+ACSTtol', 'set roundedACST = ACSTmax+ACSTtol', 'endif']
     # The setpoints without the tolerance are bounded too (finding B5-1)
     floor_no_tolerance = ['if AHSTnoTol < AHSTmin', 'set AHSTnoTol = AHSTmin', 'endif']
     ceiling_no_tolerance = ['if ACSTnoTol > ACSTmax', 'set ACSTnoTol = ACSTmax', 'endif']
@@ -106,6 +129,8 @@ def test_the_minimum_and_maximum_are_the_rounded_setpoints_that_they_bound():
     # 1910.0000000000002), but the program sets the rounded setpoints to the minimum and the maximum
     programs = {'Rounding': list(ROUNDING), 'Limits': sl.limit_program_lines(True, True)}
     erl = ErlProgramSet(programs, global_variables=set().union(*variables_in_programs(programs).values()))
+    erl.set('AHSTtol', 0)
+    erl.set('ACSTtol', 0)
     for accuracy, minimum, maximum in ((10000, 20, 26), (100, 19.1, 26.1), (10, 18.6, 25.3)):
         for name, value in dict(AHST=minimum - 1, ACST=maximum + 1, AHSTmin=minimum, ACSTmax=maximum,
                                 SetpointAcc=accuracy, AHSTnoTol=minimum - 1.1, ACSTnoTol=maximum + 1.1).items():
@@ -113,6 +138,27 @@ def test_the_minimum_and_maximum_are_the_rounded_setpoints_that_they_bound():
         erl.run('Limits')
         assert (erl.get('roundedAHST'), erl.get('roundedACST')) == (minimum, maximum)
         assert (erl.get('AHSTnoTol'), erl.get('ACSTnoTol')) == (minimum, maximum)
+        # With a tolerance (finding A19): the thermostats get the minimum plus it and the maximum minus it, whatever
+        # the accuracy of the rounding, and the setpoints without the tolerance, the minimum and the maximum
+        for tolerance in (0.1, 0.25):
+            for name, value in dict(AHST=minimum - 1, ACST=maximum + 1, AHSTtol=tolerance, ACSTtol=-tolerance,
+                                    AHSTnoTol=minimum - 1 - tolerance, ACSTnoTol=maximum + 1 + tolerance).items():
+                erl.set(name, value)
+            erl.run('Limits')
+            assert (erl.get('roundedAHST'), erl.get('roundedACST')) == (minimum + tolerance, maximum + -tolerance)
+            assert (erl.get('AHSTnoTol'), erl.get('ACSTnoTol')) == (minimum, maximum)
+            assert sl.thermostat_limits(minimum, maximum, tolerance, -tolerance) == (minimum + tolerance,
+                                                                                    maximum + -tolerance)
+            # A setpoint of the comfort model between the minimum and the minimum plus the tolerance (its value without
+            # the tolerance, below the minimum): the thermostat gets the minimum plus the tolerance too
+            for name, value in dict(AHST=minimum + tolerance / 2, ACST=maximum - tolerance / 2,
+                                    AHSTnoTol=minimum - tolerance / 2, ACSTnoTol=maximum + tolerance / 2).items():
+                erl.set(name, value)
+            erl.run('Limits')
+            assert (erl.get('roundedAHST'), erl.get('roundedACST')) == (minimum + tolerance, maximum + -tolerance)
+            assert (erl.get('AHSTnoTol'), erl.get('ACSTnoTol')) == (minimum, maximum)
+        erl.set('AHSTtol', 0)
+        erl.set('ACSTtol', 0)
         # As the rounding alone would give them
         erl.set('AHST', minimum)
         erl.set('ACST', maximum)
@@ -209,7 +255,8 @@ def test_the_minimum_and_maximum_bound_the_setpoints_without_the_tolerance(comfo
     # Finding B5-1 of the review of 1.2.0: with a tolerance of 0.1 K, the setpoints without the tolerance (the limits
     # of the comfort band of the hour counters) are bounded by the minimum and the maximum themselves, not by the
     # minimum minus the tolerance (and the maximum plus it); the thermostats get the bounded setpoints with the
-    # tolerance: the minimum or the maximum where they bound them
+    # tolerance: the minimum plus the tolerance, or the maximum minus it, where they bound them (finding A19 of the
+    # self-audit of 2026-11-11, decided on 2026-11-12; before, the minimum and the maximum themselves)
     arguments = dict(frequency='timestep', start_date='01/07', setpoint_tolerance=0.1, setpoint_accuracy=10)
     reference = compute_setpoints(EPW, comfort_standard, category, comfort_mode, **arguments)
     heating, cooling = reference['AHSTnoTol'].to_numpy(), reference['ACSTnoTol'].to_numpy()
@@ -224,11 +271,18 @@ def test_the_minimum_and_maximum_bound_the_setpoints_without_the_tolerance(comfo
     near_floor = (heating > minimum - 0.1) & (heating < minimum)
     near_ceiling = (cooling < maximum + 0.1) & (cooling > maximum)
     assert near_floor.any() or near_ceiling.any()
-    # The setpoints of the thermostats, with the tolerance
-    np.testing.assert_array_equal(bounded['AHST'], np.where(heating + 0.1 < minimum, minimum, reference['AHST']))
-    np.testing.assert_array_equal(bounded['ACST'], np.where(cooling - 0.1 > maximum, maximum, reference['ACST']))
-    assert bounded['AHST'].min() == minimum and bounded['ACST'].max() == maximum
+    # The setpoints of the thermostats, with the tolerance: where the minimum bounds the setpoint without the tolerance,
+    # the minimum plus the tolerance (and the maximum minus it), also for the setpoints that were between the limit and
+    # the limit with the tolerance
+    np.testing.assert_array_equal(bounded['AHST'], np.where(heating < minimum, minimum + 0.1, reference['AHST']))
+    np.testing.assert_array_equal(bounded['ACST'], np.where(cooling > maximum, maximum + -0.1, reference['ACST']))
+    assert bounded['AHST'].min() == minimum + 0.1 and bounded['ACST'].max() == maximum + -0.1
     assert (bounded['AHST'] >= bounded['AHSTnoTol']).all() and (bounded['ACST'] <= bounded['ACSTnoTol']).all()
+    # The tolerance is kept where they bound them: the thermostat is 0.1 K within the limit of the comfort band
+    bound_heating, bound_cooling = (heating < minimum), (cooling > maximum)
+    assert bound_heating.any() and bound_cooling.any()
+    np.testing.assert_allclose((bounded['AHST'] - bounded['AHSTnoTol'])[bound_heating], 0.1, rtol=0, atol=1e-12)
+    np.testing.assert_allclose((bounded['ACSTnoTol'] - bounded['ACST'])[bound_cooling], 0.1, rtol=0, atol=1e-12)
     others = [column for column in reference.columns if column not in ('AHST', 'ACST', 'AHSTnoTol', 'ACSTnoTol')]
     pd.testing.assert_frame_equal(bounded[others], reference[others])
 
@@ -237,7 +291,7 @@ def test_the_setpoint_ems_code_with_the_minimum_and_maximum():
     code = get_setpoint_ems_code(1, 2, 3)
     assert 'AHSTmin' not in code and 'ApplySetpointLimits' not in code
     code = get_setpoint_ems_code(1, 2, 3, heating_setpoint_minimum=20)
-    assert 'set AHSTmin = 20' in code and 'if AHST < AHSTmin' in code
+    assert 'set AHSTmin = 20' in code and 'if AHST < AHSTmin+AHSTtol' in code
     assert 'set ACSTmax' not in code and 'if ACST > ACSTmax' not in code
     assert '! --- ApplySetpointLimits_<zone>: after SetASTnoTol, the minimum heating setpoint' in code
     assert code.index('! --- SetASTnoTol') < code.index('! --- ApplySetpointLimits_<zone>')
@@ -248,6 +302,12 @@ def test_the_setpoint_ems_code_with_the_minimum_and_maximum():
     assert {'set AHSTmin = 20', 'set ACSTmax = 26.5'} <= set(programs['SetInputData_<zone>'])
     with pytest.raises(ValueError, match='must be lower than'):
         get_setpoint_ems_code(1, 2, 3, heating_setpoint_minimum=27, cooling_setpoint_maximum=26)
+    # With the tolerance of the setpoints (0.1 K by default): the thermostats on the minimum and the maximum would cross
+    with pytest.raises(ValueError, match=r'must be at least twice the tolerance of the setpoints \(0.1 K\)'):
+        get_setpoint_ems_code(1, 2, 3, heating_setpoint_minimum=26, cooling_setpoint_maximum=26.1)
+    assert 'set ACSTmax = 26.1' in get_setpoint_ems_code(1, 2, 3, heating_setpoint_minimum=26,
+                                                         cooling_setpoint_maximum=26.1, setpoint_tolerance=0.05)
+    assert 'AHSTmin+AHSTtol and ACSTmax+ACSTtol' in code
 
 
 def test_the_names_of_the_development_of_accim_1_2_0():
@@ -373,6 +433,16 @@ def test_add_accis_checks_the_minimum_and_maximum(tmp_path, monkeypatch):
                    zone_arguments={'Block1:Zone1': {'cooling_setpoint_maximum': 21}})
     with pytest.raises(ValueError, match='must be a number'):
         _add_accis(tmp_path, monkeypatch, cooling_setpoint_maximum='26')
+    # The thermostats get them with the tolerance (finding A19 of the self-audit of 2026-11-11): the maximum must be
+    # at least twice the largest tolerance of the output IDFs (or that of the zone) above the minimum
+    with pytest.raises(ValueError, match=r'cooling_setpoint_maximum \(20.3\) must be at least twice the tolerance of '
+                                         r'the setpoints \(0.2 K\) above heating_setpoint_minimum \(20\)'):
+        _add_accis(tmp_path, monkeypatch, heating_setpoint_minimum=20, cooling_setpoint_maximum=20.3,
+                   setpoint_tolerance_start=0.1, setpoint_tolerance_end=0.2, setpoint_tolerance_step=0.1)
+    with pytest.raises(ValueError, match=r"must be at least twice the tolerance of the setpoints \(0.3 K\) above "
+                                         r"heating_setpoint_minimum \(20\) \(zone 'Block1:Zone1'\)"):
+        _add_accis(tmp_path, monkeypatch, heating_setpoint_minimum=20, cooling_setpoint_maximum=20.5,
+                   zone_arguments={'Block1:Zone1': {'setpoint_tolerance': 0.3}})
     # The PMV-based setpoints have neither minimum nor maximum (decision D5)
     with pytest.raises(ValueError, match="need setpoint_type 'temperature'"):
         _add_accis(tmp_path, monkeypatch, setpoint_type='pmv', heating_setpoint_minimum=20)
@@ -440,6 +510,13 @@ def test_modify_accis_adds_and_keeps_the_minimum_and_maximum(tmp_path):
     with pytest.raises(ValueError, match=r"heating_setpoint_minimum \(27\) must be lower than cooling_setpoint_maximum "
                                          r"\(26.5\)"):
         modify_accis(idf, heating_setpoint_minimum=27)
+    # The limits that the zones keep, with the tolerance of the setpoints of each call (finding A19 of the self-audit
+    # of 2026-11-11): the thermostats on the minimum (20 + 4) and the maximum (26.5 - 4) would cross
+    with pytest.raises(ValueError, match=r"cooling_setpoint_maximum \(26.5\) must be at least twice the tolerance of "
+                                         r"the setpoints \(4 K\) above heating_setpoint_minimum \(20\) \(zone "
+                                         r"'Block1_Zone1'\)"):
+        modify_accis(idf, setpoint_tolerance=4)
+    assert sl.zone_limits(idf)['Block1_Zone1'] == {'AHSTmin': 20, 'ACSTmax': 26.5}
     # The parametric module sets them in all the zones, as modify_accis does (it needs besos)
     pytest.importorskip('besos')
     from accim.parametric_and_optimisation.funcs_for_besos import param_accis
@@ -458,6 +535,9 @@ def test_modify_accis_adds_and_keeps_the_minimum_and_maximum(tmp_path):
     with pytest.raises(ValueError, match=r"heating_setpoint_minimum \(27\) must be lower than "
                                          r"cooling_setpoint_maximum"):
         param_accis.modify_AHSTmin(other, 27)
+    # With the tolerance of the setpoints of the zones (0.25 K in the models of add_accis_to_idf)
+    with pytest.raises(ValueError, match=r'must be at least twice the tolerance of the setpoints \(0.25 K\)'):
+        param_accis.modify_ACSTmax(other, 20.4)
 
 
 def _accis_model(folder):
@@ -530,9 +610,15 @@ def test_the_program_of_the_limits_runs_after_the_setpoints_without_the_toleranc
         assert run[run.index('run SetASTnoTol') + 1] == f'run ApplySetpointLimits_{zone}'
 
 
+#: The tolerance of the setpoints of the models of these tests (the default of modify_accis and compute_setpoints)
+TOLERANCE = 0.1
+
+
 def _expected_crossings(setpoints, minimum=None, maximum=None, last_day=None):
     """The crossings of a minimum and a maximum with the setpoints of compute_setpoints by timestep, calculated here by
-    day: (number of days, first day 'dd/mm', extreme setpoint) of the minimum and of the maximum (None without them)."""
+    day: (number of days, first day 'dd/mm', extreme setpoint) of the minimum and of the maximum (None without them).
+    The thermostats get the minimum plus the tolerance and the maximum minus it (finding A19 of the self-audit of
+    2026-11-11), so those are the values compared with the setpoints of the comfort model."""
     days = (setpoints['datetime'] - pd.Timedelta(minutes=60 // STEPS)).dt.normalize()
     if last_day is not None:
         inside = days <= days.iloc[0].replace(month=last_day[0], day=last_day[1])
@@ -543,8 +629,9 @@ def _expected_crossings(setpoints, minimum=None, maximum=None, last_day=None):
         if limit is None:
             result.append(None)
             continue
-        # The lowest cooling setpoint of each day at or below the minimum, the highest heating setpoint at or above
-        # the maximum
+        # The lowest cooling setpoint of each day at or below the minimum plus the tolerance, the highest heating
+        # setpoint at or above the maximum minus it
+        limit = limit + TOLERANCE if sign < 0 else limit + -TOLERANCE
         extremes = daily[column].min() if sign < 0 else daily[column].max()
         crossed = extremes <= limit if sign < 0 else extremes >= limit
         if not crossed.any():
@@ -558,16 +645,18 @@ def _expected_crossings(setpoints, minimum=None, maximum=None, last_day=None):
 
 def _crossing_warning(zone, minimum, maximum, crossings):
     parts = []
-    for limit, crossing, text in (
-            (minimum, crossings[0], 'its minimum heating setpoint ({} °C) is at or above the cooling setpoint of its '
-                                    'comfort model (as low as {} °C)'),
-            (maximum, crossings[1], 'its maximum cooling setpoint ({} °C) is at or below the heating setpoint of its '
-                                    'comfort model (as high as {} °C)')):
+    for limit, thermostat, crossing, text in (
+            (minimum, None if minimum is None else minimum + TOLERANCE, crossings[0],
+             'its minimum heating setpoint ({} °C, {} °C in its thermostat with the tolerance) is at or above the '
+             'cooling setpoint of its comfort model (as low as {} °C)'),
+            (maximum, None if maximum is None else maximum - TOLERANCE, crossings[1],
+             'its maximum cooling setpoint ({} °C, {} °C in its thermostat with the tolerance) is at or below the '
+             'heating setpoint of its comfort model (as high as {} °C)')):
         if crossing is not None:
             days, first, extreme = crossing
             plural = '' if days == 1 else 's'
-            parts.append(f'{text.format(sl._number(limit), sl._number(extreme))} on {days} day{plural}, '
-                         f'the first {first}')
+            parts.append(f'{text.format(sl._number(limit), sl._number(round(thermostat, 10)), sl._number(extreme))} '
+                         f'on {days} day{plural}, the first {first}')
     return (f'In the zone {zone}, with the weather file {EPW.name}, {"; and ".join(parts)}: its heating setpoint is '
             f'then at or above its cooling setpoint, with which EnergyPlus gives warnings and meaningless results.')
 
@@ -643,6 +732,37 @@ def test_a_warning_if_the_minimum_or_maximum_crosses_the_setpoints_of_the_comfor
     assert messages == [
         _crossing_warning('Block1_Zone2', 24, 25.5, _expected_crossings(summer, 24, 25.5, last_day=(8, 31))),
         _crossing_warning('Block1_Zone1', None, 25.5, _expected_crossings(summer, maximum=25.5, last_day=(8, 31)))]
+
+
+@needs_idd
+def test_the_warning_compares_the_setpoints_of_the_thermostats_on_the_limits(tmp_path):
+    # Finding A19 of the self-audit of 2026-11-11 (decided on 2026-11-12): the thermostat on the minimum has the minimum
+    # plus the tolerance, so a minimum of 23.95 degC, below the lowest cooling setpoint of the comfort model (23.9999
+    # degC), crosses it with the tolerance of 0.1 K (24.05 degC)
+    from accim.sim.accis import modify_accis
+
+    idf = _accis_model(tmp_path)
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter('always')
+        modify_accis(idf, comfort_standard=1, category=1, comfort_mode=3, heating_setpoint_minimum=23.95,
+                     epw=str(EPW))
+    messages = _caught_crossings(caught)
+    setpoints = compute_setpoints(EPW, 1, 1, 3, frequency='timestep')
+    assert setpoints['ACST'].min() == pytest.approx(23.9999, abs=1e-9)
+    assert sorted(messages) == [_crossing_warning(zone, 23.95, None, _expected_crossings(setpoints, minimum=23.95))
+                                for zone in ZONES]
+    assert all('(23.95 °C, 24.05 °C in its thermostat with the tolerance)' in message for message in messages)
+    # Without the tolerance, the thermostat gets the minimum itself, which is below the cooling setpoints of the
+    # comfort model (24.0999 degC at least): no warning, and the message of a crossing names the limit only
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter('always')
+        modify_accis(idf, setpoint_tolerance=0, epw=str(EPW))
+    assert _caught_crossings(caught) == []
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter('always')
+        modify_accis(idf, setpoint_tolerance=0, heating_setpoint_minimum=24.5, epw=str(EPW))
+    messages = _caught_crossings(caught)
+    assert len(messages) == 2 and all('its minimum heating setpoint (24.5 °C) is at or above' in m for m in messages)
 
 
 @needs_idd
@@ -788,17 +908,21 @@ def test_the_minimum_maximum_and_hours_below_in_energyplus(tmp_path, monkeypatch
             assert re.search(rf"'{zone}' {check} \(.*\): 0 mismatch\(es\) in 1008 timesteps", output), (zone, check)
         heating = results[f'EMS:Adaptive Heating Setpoint Temperature_{zone} [C](TimeStep)']
         cooling = results[f'EMS:Adaptive Cooling Setpoint Temperature_{zone} [C](TimeStep)']
-        assert heating.min() >= 20 and cooling.max() <= 26
+        # The thermostats get the minimum plus the tolerance (0.1 K) and the maximum minus it (finding A19 of the
+        # self-audit of 2026-11-11, decided on 2026-11-12)
+        assert heating.min() >= 20.1 - 1e-9 and cooling.max() <= 25.9 + 1e-9
         heating_no_tolerance = results[f'EMS:Adaptive Heating Setpoint Temperature_No Tolerance_{zone} [C](TimeStep)']
         cooling_no_tolerance = results[f'EMS:Adaptive Cooling Setpoint Temperature_No Tolerance_{zone} [C](TimeStep)']
         assert heating_no_tolerance.min() >= 20 and cooling_no_tolerance.max() <= 26
-        # The minimum in winter and the maximum in summer bound the setpoints, which are exactly the minimum and the
-        # maximum (finding B5-2 of the review of 1.2.0), with and without the tolerance (finding B5-1)
+        # The minimum in winter and the maximum in summer bound the setpoints: those without the tolerance are exactly
+        # the minimum and the maximum (findings B5-1 and B5-2 of the review of 1.2.0), and those of the thermostats,
+        # exactly the minimum plus the tolerance and the maximum minus it
         if week == 'winter':
-            assert (heating == 20).all() and (heating_no_tolerance == 20).all()
+            assert np.allclose(heating, 20.1, rtol=0, atol=1e-9) and (heating_no_tolerance == 20).all()
         else:
-            assert (cooling == 26).sum() > 0.9 * len(cooling)
-            assert ((cooling == 26) <= (cooling_no_tolerance == 26)).all()
+            on_maximum = np.isclose(cooling, 25.9, rtol=0, atol=1e-9)
+            assert on_maximum.sum() > 0.9 * len(cooling)
+            assert (on_maximum <= (cooling_no_tolerance == 26)).all()
 
         # The occupied hours below each temperature: the length of the timestep when the zone has occupants and its
         # operative temperature of the previous timestep (that which the EMS reads) is below the temperature
@@ -831,11 +955,14 @@ def test_the_ems_and_api_backends_give_the_same_minimum_maximum_and_hours_below(
     api_results = pd.read_csv(tmp_path / 'api' / 'run.csv')
     assert len(ems_results) == 10 * 24
     assert any(column.startswith('EMS:HoursBelow_24p5_Block1_Zone2 [') for column in ems_results.columns)
-    assert (ems_results['EMS:Adaptive Heating Setpoint Temperature_Block1_Zone1 [C](Hourly)'] >= 21).all()
-    # The maximum bounds the cooling setpoint, which is the maximum where it bounds it (finding B5-2 of the review of
-    # 1.2.0), with and without the tolerance (finding B5-1)
+    # The thermostats get the minimum plus the tolerance (0.1 K) and the maximum minus it (finding A19 of the
+    # self-audit of 2026-11-11, decided on 2026-11-12)
+    assert (ems_results['EMS:Adaptive Heating Setpoint Temperature_Block1_Zone1 [C](Hourly)'] >= 21.1 - 1e-9).all()
+    # The maximum bounds the cooling setpoint: without the tolerance it is the maximum where it bounds it (findings
+    # B5-1 and B5-2 of the review of 1.2.0), and in the thermostat, the maximum minus the tolerance
     cooling = ems_results['EMS:Adaptive Cooling Setpoint Temperature_Block1_Zone2 [C](Hourly)']
     cooling_no_tolerance = ems_results[
         'EMS:Adaptive Cooling Setpoint Temperature_No Tolerance_Block1_Zone2 [C](Hourly)']
-    assert (cooling <= 24).all() and (cooling == 24).any() and (cooling_no_tolerance <= 24).all()
+    assert (cooling <= 23.9 + 1e-9).all() and np.isclose(cooling, 23.9, rtol=0, atol=1e-9).any()
+    assert (cooling_no_tolerance <= 24).all() and (cooling_no_tolerance == 24).any()
     pd.testing.assert_frame_equal(api_results, ems_results, check_exact=True)
