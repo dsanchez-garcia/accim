@@ -114,7 +114,7 @@ def test_the_constant_limits_of_table_b2(long_term_range, limits):
     (('en16798', 2.0), 'The category of long_term_range must be 1, 2, 3 or 4'),
     (('en16798', True), 'The category of long_term_range must be 1, 2, 3 or 4'),
     (('en16798', 2, 'hospital'), "The building type of long_term_range must be one of \\['residential', 'office'\\]"),
-    (('iso7730', 2), "The range of long_term_range must be one of \\['en16798'\\]"),
+    (('iso7730', 2), "The range of long_term_range must be one of \\['en16798', 'en16798_seasonal'\\]"),
     ('en16798', 'long_term_range must be None or'),
     (('en16798',), 'long_term_range must be None or'),
     (('en16798', 2, 'office', 1), 'long_term_range must be None or'),
@@ -148,6 +148,110 @@ def test_the_counters_with_a_constant_range_are_methods_a_and_b_of_d1(occupants,
     assert found['Hours Below Lower Limit'] == pytest.approx(method_a['cold_h'], abs=1e-12)
     assert found['Degree Hours Above Upper Limit'] == pytest.approx(method_b['hot_Kh'], abs=1e-12)
     assert found['Degree Hours Below Lower Limit'] == pytest.approx(method_b['cold_Kh'], abs=1e-12)
+
+
+# The seasonal range of EN 16798-1, Table B.5 (finding A15 of the self-audit of 2026-11-11) --------------------------
+
+#: UNE-EN 16798-1:2020, Table B.5 (B.2.4, p. 54), the temperature ranges for the hourly calculation of the heating and
+#: cooling energy (°C): (type of building, category) -> ((lower, upper) of the heating seasons, (lower, upper) of the
+#: cooling seasons)
+TABLE_B5 = {
+    ('residential', 1): ((21.0, 25.0), (23.5, 25.5)),
+    ('residential', 2): ((20.0, 25.0), (23.0, 26.0)),
+    ('residential', 3): ((18.0, 25.0), (22.0, 27.0)),
+    ('residential', 4): ((17.0, 25.0), (21.0, 28.0)),
+    ('office', 1): ((21.0, 23.0), (23.5, 25.5)),
+    ('office', 2): ((20.0, 24.0), (23.0, 26.0)),
+    ('office', 3): ((19.0, 25.0), (22.0, 27.0)),
+    ('office', 4): ((17.0, 25.0), (21.0, 28.0)),
+}
+
+
+def test_the_seasonal_ranges_of_table_b5():
+    from accim.constants import EN16798_SEASON_RUNNING_MEANS, EN16798_TABLE_B2, EN16798_TABLE_B5
+
+    assert EN16798_TABLE_B5 == TABLE_B5
+    # The note of Table B.5: the intervals between the seasons, with a running mean of 10 to 15 °C
+    assert EN16798_SEASON_RUNNING_MEANS == (10.0, 15.0)
+    assert ltd.LONG_TERM_RANGES == ('en16798', 'en16798_seasonal')
+    for (building_type, category), (heating, cooling) in TABLE_B5.items():
+        found = ltd.long_term_limits(('en16798_seasonal', category, building_type))
+        assert found == ltd.SeasonalRange(heating, cooling, 10.0, 15.0)
+        # The range of the heating season below 10 °C, that of the cooling season above 15 °C, and between them the
+        # lower limit of the heating season and the upper limit of the cooling season
+        assert found.limits(9.99) == heating and found.limits(15.01) == cooling
+        assert found.limits(10.0) == found.limits(12.5) == found.limits(15.0) == (heating[0], cooling[1])
+        # Those two limits are the design values of Table B.2 (the constant range), but in category IV
+        if category < 4:
+            assert (heating[0], cooling[1]) == EN16798_TABLE_B2[building_type, category]
+    # The building type is needed where the ranges differ: categories I to III
+    assert ltd.long_term_limits(['EN16798_Seasonal', 4]) == ltd.SeasonalRange((17.0, 25.0), (21.0, 28.0))
+    for category in (1, 2, 3):
+        with pytest.raises(ValueError, match=rf"category {category} of EN 16798-1, Table B.5, depend on the building "
+                                             rf"type.*long_term_range=\('en16798_seasonal', {category}, "
+                                             rf"building_type\)"):
+            ltd.long_term_limits(('en16798_seasonal', category))
+    with pytest.raises(ValueError, match=r'must be 1, 2, 3 or 4 \(I to IV of EN 16798-1, Table B.5\)'):
+        ltd.long_term_limits(('en16798_seasonal', 5, 'office'))
+    with pytest.raises(ValueError, match="The building type of long_term_range must be one of"):
+        ltd.long_term_limits(('en16798_seasonal', 2, 'school'))
+
+
+SEASONAL_LINES = ['if RMOT < 10', 'set LongTermLower = 20', 'set LongTermUpper = 24', 'elseif RMOT > 15',
+                  'set LongTermLower = 23', 'set LongTermUpper = 26', 'else', 'set LongTermLower = 20',
+                  'set LongTermUpper = 26', 'endif']
+
+
+@pytest.mark.parametrize('running_mean, temperature', [
+    (5.0, 24.5), (5.0, 19.0), (9.99, 23.0), (10.0, 24.5), (12.5, 22.0), (12.5, 26.5), (15.0, 19.5), (15.01, 22.0),
+    (20.0, 26.5), (20.0, 24.0)])
+def test_the_counters_with_the_seasonal_range_are_methods_a_and_b_of_d1(running_mean, temperature):
+    from accim.data.postprocessing.long_term_discomfort import range_limits
+
+    limits = ltd.long_term_limits(('en16798_seasonal', 2, 'office'))
+    lines = ltd.zone_lines('Z', limits)
+    # The program sets the limits of the timestep first, from the running mean outdoor temperature of CEN 15251 of
+    # EnergyPlus (the sensor RMOT of the ACCIS), and compares the operative temperature with them
+    assert lines[:len(SEASONAL_LINES)] == ltd.seasonal_lines(limits) == SEASONAL_LINES
+    assert lines[len(SEASONAL_LINES):] == [line.replace('ACSTnoTol', 'LongTermUpper').replace(
+        'AHSTnoTol', 'LongTermLower') for line in ltd.zone_lines('Z')]
+    names = [ltd.long_term_variable(output, 'Z') for output in OUTPUTS]
+    erl = ErlProgramSet({f'{ltd.PROGRAM_PREFIX}Z': lines}, global_variables=['Occ_count_Z', 'Z_OpT', 'RMOT'] + names)
+    erl.set('ZoneTimeStep', 0.25)
+    erl.set('Occ_count_Z', 2)
+    erl.set('Z_OpT', temperature)
+    erl.set('RMOT', running_mean)
+    erl.run(f'{ltd.PROGRAM_PREFIX}Z')
+    found = {output: erl.get(ltd.long_term_variable(output, 'Z')) for output in OUTPUTS}
+    # The limits of the row of the functions of D1 are those of the season of its running mean
+    lower, upper = range_limits(('en16798_seasonal', 2, 'office'), [running_mean])
+    assert (lower[0], upper[0]) == limits.limits(running_mean)
+    method_a = hours_outside_range([temperature], lower, upper, occupied=[2], timestep_h=0.25)
+    method_b = degree_hours([temperature], lower, upper, occupied=[2], timestep_h=0.25)
+    assert found['Hours Above Upper Limit'] == pytest.approx(method_a['hot_h'], abs=1e-12)
+    assert found['Hours Below Lower Limit'] == pytest.approx(method_a['cold_h'], abs=1e-12)
+    assert found['Degree Hours Above Upper Limit'] == pytest.approx(method_b['hot_Kh'], abs=1e-12)
+    assert found['Degree Hours Below Lower Limit'] == pytest.approx(method_b['cold_Kh'], abs=1e-12)
+
+
+def test_the_seasonal_range_counts_the_hours_that_the_constant_range_leaves_out():
+    # Finding A15: with the constant range of category II (20.0 to 26.0 °C), 21 °C in summer and 25.5 °C in winter are
+    # comfortable; with the seasonal one of the offices (20.0 to 24.0 and 23.0 to 26.0 °C), they are not
+    from accim.data.postprocessing.long_term_discomfort import range_limits
+
+    temperature, running_mean = [21.0, 25.5, 22.0], [22.0, 6.0, 12.0]
+    constant = hours_outside_range(temperature, *range_limits(('en16798', 2)))
+    seasonal = hours_outside_range(temperature, *range_limits(('en16798_seasonal', 2, 'office'), running_mean))
+    assert (constant['cold_h'], constant['hot_h']) == (0.0, 0.0)
+    assert (seasonal['cold_h'], seasonal['hot_h']) == (1.0, 1.0)
+    # The rows without a running mean have no limits, and are left out
+    lower, upper = range_limits(('en16798_seasonal', 2, 'office'), [np.nan, 6.0])
+    assert np.isnan(lower[0]) and np.isnan(upper[0]) and (lower[1], upper[1]) == (20.0, 24.0)
+    assert hours_outside_range([30.0, 30.0], lower, upper)['occupied_h'] == 1.0
+    with pytest.raises(ValueError, match='needs the running mean outdoor temperature of each row'):
+        range_limits(('en16798_seasonal', 2, 'office'))
+    with pytest.raises(ValueError, match='not None: the limits of the default range are the setpoints'):
+        range_limits(None)
 
 
 def test_the_building_adds_up_its_zones():
@@ -276,6 +380,28 @@ def test_add_accis_to_idf_with_a_constant_range(tmp_path):
         _model(tmp_path / 'no', long_term_range=('en16798', 2))
     with pytest.raises(ValueError, match='depend on the building type'):
         _model(tmp_path / 'no', report_long_term_discomfort=True, long_term_range=('en16798', 4))
+
+
+@needs_idd
+def test_add_accis_to_idf_with_the_seasonal_range(tmp_path):
+    # Finding A15 of the self-audit of 2026-11-11: the ranges of the heating and cooling seasons of EN 16798-1, Table
+    # B.5, of the offices of category II
+    idf = _model(tmp_path, output_frequencies=['hourly'], report_long_term_discomfort=True,
+                 long_term_range=('en16798_seasonal', 2, 'office'))
+    _check_the_objects(idf, ['Hourly'], limits=ltd.SeasonalRange((20.0, 24.0), (23.0, 26.0)))
+    assert _programs(idf)[f'{ltd.PROGRAM_PREFIX}Block1_Zone1'][:len(SEASONAL_LINES)] == SEASONAL_LINES
+    # The limits of each timestep are local variables of the programs: the model declares and reports what it does
+    # with the constant range, and its other programs are the same
+    for name in ('constant', 'no'):
+        (tmp_path / name).mkdir()
+    constant = _model(tmp_path / 'constant', report_long_term_discomfort=True, long_term_range=('en16798', 2))
+    assert _declared(idf) == _declared(constant)
+    assert ([o.Name for o in idf.idfobjects['EnergyManagementSystem:OutputVariable']]
+            == [o.Name for o in constant.idfobjects['EnergyManagementSystem:OutputVariable']])
+    assert {name: lines for name, lines in _programs(idf).items() if not name.startswith(ltd.PROGRAM_PREFIX)} == {
+        name: lines for name, lines in _programs(constant).items() if not name.startswith(ltd.PROGRAM_PREFIX)}
+    with pytest.raises(ValueError, match='Table B.5, depend on the building type'):
+        _model(tmp_path / 'no', report_long_term_discomfort=True, long_term_range=('en16798_seasonal', 2))
 
 
 @needs_idd
@@ -508,6 +634,75 @@ def test_the_constant_range_in_energyplus_with_both_backends(tmp_path, monkeypat
         discomfortable = results[f'EMS:Occupied Discomfortable Hours_No Applicability_{zone} [H](TimeStep)'].sum()
         assert expected['Hours Above Upper Limit'] + expected['Hours Below Lower Limit'] != pytest.approx(
             discomfortable)
+
+
+@needs_energyplus
+@pytest.mark.parametrize('period, begin, end, lower_limits, upper_limits', [
+    # 15-28 January: the heating season (20.0 to 24.0 degC) and the interval between the seasons (20.0 to 26.0 degC)
+    ('january', (1, 15), (1, 28), {20.0}, {24.0, 26.0}),
+    # 12-25 March: the interval between the seasons and the cooling season (23.0 to 26.0 degC)
+    ('march', (3, 12), (3, 25), {20.0, 23.0}, {26.0}),
+])
+def test_the_seasonal_range_in_energyplus_with_both_backends(tmp_path, monkeypatch, capsys, period, begin, end,
+                                                             lower_limits, upper_limits):
+    from accim.data.postprocessing.long_term_discomfort import range_limits
+    from accim.sim.energyplus_api import run_simulations
+    from accim.utils.verification import verify_accim_simulation
+
+    # Two weeks at timestep frequency in which the running mean outdoor temperature of Seville passes 10 or 15 degC,
+    # with the ranges of the offices of category II of EN 16798-1, Table B.5
+    long_term_range = ('en16798_seasonal', 2, 'office')
+    model = _output_idf(tmp_path / 'model', monkeypatch, begin, end, 'timestep', report_long_term_discomfort=True,
+                        long_term_range=long_term_range)
+    results = _run_energyplus(model, tmp_path / 'ems')
+    assert len(results) == 14 * 24 * STEPS
+    api = run_simulations([(model, EPW, {'output_directory': tmp_path / 'api', 'output_prefix': 'run'})],
+                          processes=1)
+    assert api[0].success, api[0].error
+    pd.testing.assert_frame_equal(pd.read_csv(tmp_path / 'api' / 'run.csv'), results, check_exact=True)
+
+    # Check 6 of verify_accim_simulation, with the seasonal range of the programs
+    mismatches = verify_accim_simulation(str(tmp_path / 'ems' / 'run.eso'), str(model), epw=str(EPW))
+    output = capsys.readouterr().out
+    assert len(mismatches) == 0
+    for zone in ZONES:
+        assert (f"'{zone}': the seasonal range of long_term_range, 20.0 to 24.0 °C with a running mean outdoor "
+                f"temperature below 10.0 °C, 23.0 to 26.0 °C above 15.0 °C, and 20.0 to 26.0 °C between "
+                f"them.") in output
+        for name in OUTPUTS:
+            assert f"'{zone}' Check6_{name} ({name}_{zone} from the operative temperature of the previous " \
+                   f"timestep): 0 mismatch(es) in {14 * 24 * STEPS - 1} timesteps" in output
+
+    # The EMS reads at the beginning of each timestep the running mean outdoor temperature of CEN 15251 of the
+    # previous one: two seasons are in the run, each one for more than a day
+    column = next(c for c in results.columns
+                  if 'CEN 15251 Adaptive Model Running Average Outdoor Air Temperature' in c)
+    running_mean = results[column].shift(1)
+    rows = slice(1, None)
+    lower, upper = range_limits(long_term_range, running_mean[rows])
+    assert set(lower) == lower_limits and set(upper) == upper_limits
+    seasons = pd.Series(list(zip(lower, upper))).value_counts()
+    assert len(seasons) == 2 and seasons.min() > 24 * STEPS
+    # The totals of the two weeks are those of the functions of D1 with the limits of the season of each timestep
+    hot = {}
+    for zone in ZONES:
+        key = zone.replace('_', ':').upper()
+        previous = results[f'{key}:Zone Operative Temperature [C](TimeStep)'].shift(1)
+        hours = results[f'EMS:Occupied Hours_{zone} [H](TimeStep)']
+        method_a = hours_outside_range(previous[rows], lower, upper, occupied=hours[rows], timestep_h=hours[rows])
+        method_b = degree_hours(previous[rows], lower, upper, occupied=hours[rows], timestep_h=hours[rows])
+        expected = {'Hours Above Upper Limit': method_a['hot_h'], 'Hours Below Lower Limit': method_a['cold_h'],
+                    'Degree Hours Above Upper Limit': method_b['hot_Kh'],
+                    'Degree Hours Below Lower Limit': method_b['cold_Kh']}
+        for name, (_, units) in ltd.OUTPUTS.items():
+            found = results[f'EMS:{name}_{zone} [{units.upper()}](TimeStep)']
+            assert found.iloc[1:].sum() == pytest.approx(expected[name], abs=1e-6)
+        constant = hours_outside_range(previous[rows], 20.0, 26.0, occupied=hours[rows], timestep_h=hours[rows])
+        hot[zone] = (expected['Hours Above Upper Limit'], constant['hot_h'])
+    if period == 'january':
+        # The hours of the heating season above its upper limit (24 degC), which the constant range of Table B.2 (20
+        # to 26 degC) counts as comfortable
+        assert all(seasonal > constant for seasonal, constant in hot.values()), hot
 
 
 @needs_energyplus

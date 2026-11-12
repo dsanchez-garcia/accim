@@ -146,8 +146,10 @@ def verify_accim_simulation(
     ``Hours Above Upper Limit_<zone>`` and ``Hours Below Lower Limit_<zone>`` are the length of the timestep if the
     operative temperature of the zone of the previous timestep (that which the EMS reads) is above the cooling setpoint
     without the tolerance (``Adaptive Cooling Setpoint Temperature_No Tolerance_<zone>``), or below the heating
-    setpoint without the tolerance (or above and below the constant limits of ``long_term_range`` that the program of
-    the zone has, those of EN 16798-1, Table B.2), and ``Degree Hours Above Upper Limit_<zone>`` and
+    setpoint without the tolerance (or above and below the limits of ``long_term_range`` that the program of the zone
+    has: the constant ones of EN 16798-1, Table B.2, or those of the season of its Table B.5, by the running mean
+    outdoor temperature of CEN 15251 of the previous timestep, which needs its output), and ``Degree Hours Above Upper
+    Limit_<zone>`` and
     ``Degree Hours Below Lower Limit_<zone>`` are the difference times that length (Methods A and B of CEN/TR
     16798-2:2019, Annex D); in the timesteps without occupants, they are 0 (``Check6_<output>``). The outputs of the
     building (``..._Building``) are the sums of those of the zones. They are checked with the outputs at timestep
@@ -1481,8 +1483,8 @@ def _long_term_mismatches(building, data: Mapping[str, pd.DataFrame],
 
     :return: The mismatches, and the lines of the summary (none if the model has no long-term discomfort).
     """
-    from accim.sim.ems.long_term_discomfort import (BUILDING, BUILDING_PROGRAM, OUTPUTS, PROGRAM_PREFIX,
-                                                    model_long_term_limits)
+    from accim.sim.ems.long_term_discomfort import (BUILDING, BUILDING_PROGRAM, OUTPUTS, PROGRAM_PREFIX, RUNNING_MEAN,
+                                                    SeasonalRange, model_long_term_limits)
 
     zones = [str(p.Name)[len(PROGRAM_PREFIX):] for p in building.idfobjects['EnergyManagementSystem:Program']
              if str(p.Name).upper().startswith(PROGRAM_PREFIX.upper())
@@ -1506,6 +1508,25 @@ def _long_term_mismatches(building, data: Mapping[str, pd.DataFrame],
         if limits is None:
             upper = outputs.get('EMS', f'Adaptive Cooling Setpoint Temperature_No Tolerance_{zone}')
             lower = outputs.get('EMS', f'Adaptive Heating Setpoint Temperature_No Tolerance_{zone}')
+        elif isinstance(limits, SeasonalRange):
+            # The seasonal range (finding A15 of the self-audit of 2026-11-11): the limits of each timestep are those
+            # of the running mean outdoor temperature that the EMS reads at its beginning, that of the previous one
+            lines.append(f"  '{zone}': the seasonal range of long_term_range, {limits.heating[0]} to "
+                         f"{limits.heating[1]} °C with a running mean outdoor temperature below "
+                         f"{limits.heating_below} °C, {limits.cooling[0]} to {limits.cooling[1]} °C above "
+                         f"{limits.cooling_above} °C, and {limits.heating[0]} to {limits.cooling[1]} °C between them.")
+            sensor = sensors.get(RUNNING_MEAN.upper())
+            running_mean = None if sensor is None else outputs.get(*sensor)
+            if running_mean is None:
+                lower = upper = None
+            else:
+                season = outputs.previous(running_mean)
+                lower = np.where(season < limits.heating_below, limits.heating[0],
+                                 np.where(season > limits.cooling_above, limits.cooling[0], limits.heating[0]))
+                upper = np.where(season < limits.heating_below, limits.heating[1],
+                                 np.where(season > limits.cooling_above, limits.cooling[1], limits.cooling[1]))
+                # No limits in the first timestep of each environment, whose running mean is that of the warm-up days
+                lower, upper = (np.where(np.isnan(season), np.nan, values) for values in (lower, upper))
         else:
             lower, upper = limits
             lines.append(f"  '{zone}': the constant range of long_term_range, {lower} to {upper} °C.")
@@ -1515,8 +1536,9 @@ def _long_term_mismatches(building, data: Mapping[str, pd.DataFrame],
         for output, values in found.items():
             totals[output].append(values)
         if any(values is None for values in (hours, upper, lower, temperature)):
-            lines.append(f"  '{zone}': not checked, without its occupied hours, setpoints without the tolerance or "
-                         f"operative temperature at timestep frequency.")
+            lines.append(f"  '{zone}': not checked, without its occupied hours, setpoints without the tolerance (or "
+                         f"the running mean outdoor temperature of its seasonal range) or operative temperature at "
+                         f"timestep frequency.")
             continue
         previous = outputs.previous(temperature)
         occupied = hours > 0

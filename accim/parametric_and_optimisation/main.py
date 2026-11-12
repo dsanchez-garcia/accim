@@ -3116,7 +3116,9 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         :param long_term_range: forwarded to ``accim.sim.accis.add_accis_to_idf``, with
             ``report_long_term_discomfort``: None (the default) for the range of the setpoints without the
             tolerance, or ``('en16798', category)`` or ``('en16798', category, building_type)`` for the constant
-            limits of EN 16798-1:2019, Table B.2, the same for all the comfort standards of the plan
+            limits of EN 16798-1:2019, Table B.2, the same for all the comfort standards of the plan, or
+            `('en16798_seasonal', category, building_type)` for the ranges of the heating and cooling seasons of
+            its Table B.5, by the running mean outdoor temperature of each timestep
             (:func:`accim.sim.ems.long_term_discomfort.long_term_limits`); a ``ValueError`` with 'apmv setpoints'
             and 'epmv setpoints', whose range is that of their setpoints.
         
@@ -13533,7 +13535,9 @@ class ParametricSimulation(SimulationBase):
         :param long_term_range: forwarded to ``accim.sim.accis.add_accis_to_idf``, with
             ``report_long_term_discomfort``: None (the default) for the range of the setpoints without the
             tolerance, or ``('en16798', category)`` or ``('en16798', category, building_type)`` for the constant
-            limits of EN 16798-1:2019, Table B.2, the same for all the comfort standards of the plan
+            limits of EN 16798-1:2019, Table B.2, the same for all the comfort standards of the plan, or
+            `('en16798_seasonal', category, building_type)` for the ranges of the heating and cooling seasons of
+            its Table B.5, by the running mean outdoor temperature of each timestep
             (:func:`accim.sim.ems.long_term_discomfort.long_term_limits`); a ``ValueError`` with 'apmv setpoints'
             and 'epmv setpoints', whose range is that of their setpoints.
         
@@ -13733,7 +13737,9 @@ class OptimisationSimulation(SimulationBase):
         :param long_term_range: forwarded to ``accim.sim.accis.add_accis_to_idf``, with
             ``report_long_term_discomfort``: None (the default) for the range of the setpoints without the
             tolerance, or ``('en16798', category)`` or ``('en16798', category, building_type)`` for the constant
-            limits of EN 16798-1:2019, Table B.2, the same for all the comfort standards of the plan
+            limits of EN 16798-1:2019, Table B.2, the same for all the comfort standards of the plan, or
+            `('en16798_seasonal', category, building_type)` for the ranges of the heating and cooling seasons of
+            its Table B.5, by the running mean outdoor temperature of each timestep
             (:func:`accim.sim.ems.long_term_discomfort.long_term_limits`); a ``ValueError`` with 'apmv setpoints'
             and 'epmv setpoints', whose range is that of their setpoints.
         
@@ -14056,7 +14062,9 @@ class AccimPredefModelsParamSim(ParametricSimulation):
         :param long_term_range: forwarded to ``accim.sim.accis.add_accis_to_idf``, with
             ``report_long_term_discomfort``: None (the default) for the range of the setpoints without the
             tolerance, or ``('en16798', category)`` or ``('en16798', category, building_type)`` for the constant
-            limits of EN 16798-1:2019, Table B.2, the same for all the comfort standards of the plan
+            limits of EN 16798-1:2019, Table B.2, the same for all the comfort standards of the plan, or
+            `('en16798_seasonal', category, building_type)` for the ranges of the heating and cooling seasons of
+            its Table B.5, by the running mean outdoor temperature of each timestep
             (:func:`accim.sim.ems.long_term_discomfort.long_term_limits`); a ``ValueError`` with 'apmv setpoints'
             and 'epmv setpoints', whose range is that of their setpoints.
         

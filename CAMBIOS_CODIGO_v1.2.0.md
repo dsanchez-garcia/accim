@@ -2780,3 +2780,46 @@ no cambia.
 con el modelo dinámico de ropa, y sin cambiar nada cuando falta un modelo que la reporte), `set_of_results` con cada
 fuente de la ropa, la postura y entradas mezcladas, `table_indicators` con `'people'`, con la clave `'idf'` y con un
 gancho, sus errores, y la simulación con EnergyPlus 25.1 contra las salidas del gancho del estándar 24.
+
+## 53. El rango estacional de EN 16798-1 para la incomodidad a largo plazo, y la limitación del constante (A15)
+
+El hallazgo A15 de la autoauditoría del 11/11/2026: `long_term_range=('en16798', categoría)` toma el mínimo de la
+estación de calefacción (pensado para 1,0 clo) y el máximo de la de refrigeración (0,5 clo) de la tabla B.2 como un
+rango constante de todos los pasos de tiempo, así que da por confortables las horas de verano demasiado frías y las de
+invierno demasiado cálidas (21 °C en julio o 25,5 °C en enero, en una oficina de categoría II). Decidido el 12/11/2026
+(`notes/decisions.md`): opciones (i), documentarlo, y (ii), un rango estacional con los límites de la propia norma.
+
+**Ahora.**
+
+- `accim.constants`: `EN16798_TABLE_B5` (los rangos de las estaciones de calefacción y de refrigeración de la tabla
+  B.5 de EN 16798-1:2019, por tipo de edificio y categoría, leídos el 12/11/2026 en UNE-EN 16798-1:2020, p. 54) y
+  `EN16798_SEASON_RUNNING_MEANS` (10 y 15 °C: los umbrales de θrm de la nota de la tabla).
+- `accim.sim.ems.long_term_discomfort`: `LONG_TERM_RANGES` gana `'en16798_seasonal'`; `long_term_limits` devuelve
+  para él un `SeasonalRange` (rangos de calefacción y refrigeración y sus umbrales; su método `limits(θrm)` da los
+  límites); `seasonal_lines` escribe las líneas que fijan los límites del paso de tiempo en las variables locales
+  `LongTermLower` y `LongTermUpper` del programa `CountLongTermDiscomfort_<zona>` a partir del sensor `RMOT`;
+  `zone_lines` las pone delante y compara con ellas; `model_long_term_limits` las reconoce. El modelo declara y
+  reporta lo mismo que con el rango constante. Hace falta el tipo de edificio en las categorías I a III.
+- `accim.utils.verification` (comprobación 6): con el rango estacional, los límites de cada paso son los de la
+  estación de la media móvil del paso anterior (la que lee el EMS), que necesita su salida.
+- `accim.data.postprocessing.long_term_discomfort`: `range_limits(long_term_range, running_mean=None)` (los límites de
+  un rango para `hours_outside_range` y `degree_hours`: dos números, o los de cada fila) y
+  `table_indicators(df, zones, long_term_range=None, running_mean=None)` (los indicadores de una tabla con un rango de
+  EN 16798-1, en lugar de las consignas de cada simulación; `Table(long_term_indicators=True)` no cambia).
+- Docstrings de `AddAccis`, `add_accis_to_idf` y las clases del módulo paramétrico. La lista de la interfaz gráfica
+  sigue teniendo solo los rangos de la tabla B.2.
+
+Sin `long_term_range`, o con `'en16798'`, los IDF de salida no cambian (golden master idéntico).
+
+**Medición** (modelo de ejemplo, Sevilla, INT EN16798 categoría II, modo de confort 3, EnergyPlus 25.1; rangos de las
+oficinas de categoría II; dos semanas, 120 horas ocupadas por zona): del 15 al 28 de enero (θrm de 6,7 a 11,3 °C:
+estación de calefacción diez de los días), 69,7 y 70,3 horas por encima del límite superior del rango estacional
+(24 °C en la estación de calefacción), frente a 4,8 y 19,3 por encima de los 26 °C del constante; del 12 al 25 de marzo
+(θrm de 11,0 a 18,3 °C), las mismas horas con ambos (58,2 y 55,7 por encima de 26 °C, ninguna por debajo).
+
+**Pruebas.** `tests/core/test_long_term_discomfort_counters.py`: la tabla B.5 (los ocho rangos, tecleados de la norma)
+y sus errores; el programa con el intérprete de Erl frente a las funciones de D1 con diez pares de media móvil y
+temperatura; `range_limits` (las horas que el rango constante deja fuera, las filas sin media móvil y sus errores); el
+modelo de `add_accis_to_idf`; y, con EnergyPlus 25.1 y los dos backends, las dos quincenas de la medición (resultados
+idénticos, comprobación 6 sin discrepancias, y los totales iguales a los de las funciones de D1 con la media móvil del
+paso anterior). `tests/core/test_long_term_discomfort.py`: `table_indicators` con los rangos constante y estacional.

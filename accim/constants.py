@@ -7,7 +7,9 @@
 __all__ = [
     'APMV_ADAPTIVE_COEFFICIENTS',
     'ASHRAE55_MAX_CLOTHING_INSULATION',
+    'EN16798_SEASON_RUNNING_MEANS',
     'EN16798_TABLE_B2',
+    'EN16798_TABLE_B5',
     'ENERGYPLUS_VERSIONS_WITH_SPACES',
     'EPMV_EXPECTANCY_RANGES',
     'EPMV_MET_REDUCTION_PER_PMV',
@@ -86,6 +88,34 @@ EN16798_TABLE_B2 = {
     ('office', 3): (19.0, 27.0),
     ('office', 4): (18.0, 28.0),
 }
+
+#: The temperature ranges (°C) for the hourly calculation of the heating and cooling energy of EN 16798-1:2019, Table
+#: B.5 (B.2.4), by type of building and category: ((lower, upper) of the heating seasons, with about 1.0 clo; (lower,
+#: upper) of the cooling seasons, with about 0.5 clo), with sedentary activity (about 1.2 met), air speeds below 0.1
+#: m/s and a relative humidity of about 40 % in the heating season and 60 % in the cooling season. 'residential' are
+#: the living spaces of the residential buildings, and 'office' the offices and spaces with similar activity, as in
+#: :data:`EN16798_TABLE_B2`, whose minimums for heating and maximums for cooling they have as the lower limit of the
+#: heating season and the upper limit of the cooling season, but in category IV (17.0 °C in both types of building;
+#: 16.0 and 18.0 °C in Table B.2). Read in UNE-EN 16798-1:2020, p. 54, on 2026-11-12 (finding A15 of the self-audit of
+#: 2026-11-11): the seasonal range of the long-term discomfort, ``long_term_range=('en16798_seasonal', category,
+#: building_type)`` (:mod:`accim.sim.ems.long_term_discomfort`).
+EN16798_TABLE_B5 = {
+    ('residential', 1): ((21.0, 25.0), (23.5, 25.5)),
+    ('residential', 2): ((20.0, 25.0), (23.0, 26.0)),
+    ('residential', 3): ((18.0, 25.0), (22.0, 27.0)),
+    ('residential', 4): ((17.0, 25.0), (21.0, 28.0)),
+    ('office', 1): ((21.0, 23.0), (23.5, 25.5)),
+    ('office', 2): ((20.0, 24.0), (23.0, 26.0)),
+    ('office', 3): ((19.0, 25.0), (22.0, 27.0)),
+    ('office', 4): ((17.0, 25.0), (21.0, 28.0)),
+}
+
+#: The running mean outdoor temperatures (°C) between which the note of Table B.5 of EN 16798-1:2019 places the
+#: intervals between the heating and cooling seasons (θrm between 10 and 15 °C, in which "temperature limits that lie
+#: within the winter and summer values" can be used): the heating season below the first one and the cooling season
+#: above the second one (CEN/TR 16798-2:2019, 7.2.2 and the remarks on its Figure B.1, applies the criteria of the
+#: heating season below a running mean of 10 °C; the decision of 2026-11-12 on finding A15, ``notes/decisions.md``).
+EN16798_SEASON_RUNNING_MEANS = (10.0, 15.0)
 
 _ZHANG_2024 = '10.1016/j.buildenv.2024.111481 (Zhang, Yao and Li, 2024), Table 6 (lambda_N)'
 _GB_T_50785 = 'GB/T 50785-2012, via 10.1016/j.buildenv.2024.111481 (Zhang, Yao and Li, 2024), Table 1'

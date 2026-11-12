@@ -823,7 +823,13 @@ class AddAccis:
         needed in categories III and IV) for the constant limits of EN 16798-1:2019, Table B.2, the minimum for heating
         and the maximum for cooling of the category (20.0 and 26.0 °C in category II), so that models with different
         comfort standards are compared with the same range (finding C2-1 of the review of accim 1.2.0;
-        :func:`accim.sim.ems.long_term_discomfort.long_term_limits`).
+        :func:`accim.sim.ems.long_term_discomfort.long_term_limits`). That constant range counts as comfortable the
+        summer hours that are too cold and the winter hours that are too warm within it; ``('en16798_seasonal',
+        category, building_type)`` (the building type is needed in categories I to III) takes instead the ranges of
+        the heating and cooling seasons of its Table B.5 (20.0 to 24.0 and 23.0 to 26.0 °C in the offices of category
+        II), by the running mean outdoor temperature of each timestep (below 10 °C, the heating season; above 15 °C,
+        the cooling season; between them, the lower limit of the first one and the upper limit of the second one:
+        finding A15 of the self-audit of 2026-11-11, :mod:`accim.sim.ems.long_term_discomfort`).
     :param static_heating_setpoint: The static heating setpoint (°C) of the comfort standards whose standard does not
         give it, in comfort mode 0 and out of the applicability limits in comfort mode 1: only JPN Aqilah 2025
         (comfort standard 23), whose paper gives no static setpoints (decision D2 of the brief of 1.2.0); 20.0 by
@@ -1297,8 +1303,9 @@ def add_accis_to_idf(
     :param report_long_term_discomfort: True to report the long-term thermal discomfort of the occupied hours of each
         zone and of the building (see :class:`AddAccis`); False (the default) for none.
     :param long_term_range: With ``report_long_term_discomfort``, its range: None (the default) for the setpoints
-        without the tolerance, or ``('en16798', category[, building_type])`` for the constant limits of EN 16798-1,
-        Table B.2 (see :class:`AddAccis`).
+        without the tolerance, ``('en16798', category[, building_type])`` for the constant limits of EN 16798-1,
+        Table B.2, or ``('en16798_seasonal', category, building_type)`` for the ranges of the heating and cooling
+        seasons of its Table B.5 (see :class:`AddAccis`).
     :return: The model, whose attributes give its occupied zones and windows.
     :raises ValueError: If an argument is missing or not valid.
     """

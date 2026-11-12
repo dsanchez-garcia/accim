@@ -64,6 +64,12 @@ existing tracking files — it does not replace them (see
     week of July with comfort standard 24, the hours within the causal band are those of the hook (27.8 and 34.3 of
     60), and 24.7 and 31.2 with the Pierce SET. Found on the way: the sensor of the mean radiant temperature of the
     hooks reads that of the timestep itself, not that of the previous one (the documentation is corrected).
+  - A15: the documentation says what the constant range of `long_term_range` leaves out, and
+    `('en16798_seasonal', category, building_type)` takes the ranges of the heating and cooling seasons of EN 16798-1,
+    Table B.5, by the RMOT of each timestep (below 10 °C, above 15 °C, or between them), in the EMS counters, in check
+    6 and in the postprocessing (`range_limits`, `table_indicators(..., long_term_range=...)`). In two weeks of
+    January of the sample model, 70 of the 120 occupied hours of each zone are above the 24 °C of the heating season,
+    which the constant range (26 °C) counts as comfortable but for 5 and 19 h.
 - **Validation**: in the entry of each task of [[../DEVLOG.md]] (the tests of the task, EnergyPlus 25.1 with both
   backends where the EMS code changes, and the golden master, compared line by line before writing it again).
 - **Next step**: the review of Claude Science of sessions 2 and 3, which also covers this session; the message of the

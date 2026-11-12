@@ -153,6 +153,28 @@ template]] to add a new entry.
        outputs: those of the air temperature and the humidity are those of the previous row, exactly, and that of
        the mean radiant temperature, that of the same row), and the documentation and the docstrings, which said
        that the three were those of the previous timestep, were corrected; no code changes for it.
+  10. The seasonal range of the long-term discomfort (decision 5, finding A15).
+     - The value is `('en16798_seasonal', category, building_type)`, with the ranges of Table B.5 of EN 16798-1 as
+       constants (`EN16798_TABLE_B5`, read in UNE-EN 16798-1:2020, p. 54: the eight rows of the living spaces of the
+       dwellings and of the offices; its row of the other rooms of the dwellings, which has no cooling range, is left
+       out). The building type is needed where the ranges of both types differ (categories I to III), as with the
+       constant range in III and IV.
+     - The running mean outdoor temperature is the RMOT of EnergyPlus (the running mean of CEN 15251, α = 0.8, a
+       sensor of every model with the ACCIS), not that of a weather file: the counters then need nothing else, at the
+       price of its low start in the first days of a run period (finding B4-1), which can take them for a colder
+       season, and of the first timestep of each day, which reads that of the day before; both are documented. The
+       thresholds of 10 and 15 °C (`EN16798_SEASON_RUNNING_MEANS`) are those of the decision, an inference from the
+       note of the table: 10 and 15 °C themselves are between the seasons.
+     - The limits of each timestep are local variables of the program of each zone (`LongTermLower` and
+       `LongTermUpper`), so the model declares and reports what it does with the constant range; check 6 of
+       `verify_accim_simulation` calculates them from the output of the running mean of the previous timestep (not
+       checked without that output).
+     - In the postprocessing, `range_limits` gives the limits of a range (of each row, with the running mean of each
+       row) for the functions of Methods A and B, and `table_indicators` takes `long_term_range` (and the column of
+       the running mean); `Table(long_term_indicators=True)` is not given the argument, as with
+       `pythermalcomfort_set`. The rows without a running mean have no limits and are left out.
+     - The list of the graphical user interface keeps the ranges of Table B.2 only (the seasonal ones can be added
+       when someone needs them; the documentation says so).
 - **Consequences**: the tasks done leave `TODO.md` for `DEVLOG.md`; the documentation says what each choice means
   for the users (section 4.2 of the detailed use, and `CHANGELOG.md`).
 
@@ -460,7 +482,9 @@ template]] to add a new entry.
     temperature of the standard, θrm: the heating season below 10 °C, the cooling season above 15 °C, and between them
     the lower limit of the heating season and the upper limit of the cooling season, as the note of the table allows
     (**[inferred]** from that note and from CEN/TR 16798-2:2019, 7.2.2 and the remarks on Figure B.1), in the EMS
-    counters and in the functions of the postprocessing. A P2 task, not needed to release 1.2.0.
+    counters and in the functions of the postprocessing. A P2 task, not needed to release 1.2.0. Both implemented on
+    2026-11-12 (`DEVLOG.md`; section 53 of `CAMBIOS_CODIGO_v1.2.0.md`), with the choices of the entry "The
+    implementation of the decisions of 2026-11-12" at the top of this file.
   - **A19**: option (ii). The minimum and the maximum are limits of the comfort band (finding B5-1: the minimum is a
     limit of the setpoint without the tolerance), so the thermostats get them with the tolerance, as every other
     setpoint of the ACCIS and as those of the hooks (decision 23 of G1): AHSTnoTol = max(AHSTnoTol, AHSTmin) and

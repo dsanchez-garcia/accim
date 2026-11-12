@@ -220,6 +220,70 @@ def test_the_table_gives_the_indicators_of_each_zone_and_the_building(tmp_path, 
     assert row['Building_Hours Below Lower Limit (%)'] == pytest.approx(100 * 2.0 / 5.5)
 
 
+@pytest.mark.parametrize('rename_cols', [True, False])
+def test_the_indicators_of_the_table_with_a_range_of_en16798(tmp_path, monkeypatch, rename_cols):
+    # Finding A15 of the self-audit of 2026-11-11: the indicators with a range that does not depend on the comfort
+    # model of each simulation, the constant one of EN 16798-1, Table B.2, or the seasonal one of its Table B.5, by
+    # the running mean outdoor temperature of each row (the output of EnergyPlus: 8 °C in the first two hours, the
+    # heating season, and 16 °C in the last two, the cooling season)
+    columns = {'Environment:Site Outdoor Air Drybulb Temperature [C](Hourly)': [10.0, 11.0, 12.0, 13.0]}
+    for target, values in zip(resolve_targets(BUILDING), ZONES.values()):
+        suffix, zone = target.ems_suffix, target.zone_name.upper()
+        columns.update({
+            f'EMS:Comfortable Hours_No Applicability_{suffix} [H](Hourly)': [0.0] * 4,
+            f'EMS:Zone Floor Area_{suffix} [m2](Hourly)': [10.0] * 4,
+            f'EMS:Zone Air Volume_{suffix} [m3](Hourly)': [30.0] * 4,
+            f'EMS:Adaptive Cooling Setpoint Temperature_No Tolerance_{suffix} [C](Hourly)': values['upper'],
+            f'EMS:Adaptive Heating Setpoint Temperature_No Tolerance_{suffix} [C](Hourly)': values['lower'],
+            f'EMS:Occupied Hours_{suffix} [H](Hourly)': values['occupied'],
+            f'{zone}:Zone Operative Temperature [C](Hourly)': values['temperature'],
+            f'PEOPLE {zone}:Zone Thermal Comfort CEN 15251 Adaptive Model Running Average Outdoor Air Temperature '
+            f'[C](Hourly)': [8.0, 8.0, 16.0, 16.0],
+        })
+    table = _table(tmp_path, monkeypatch, columns=columns, rename_cols=rename_cols, long_term_indicators=False)
+    df, zones = table.df, table.occupied_zone_list
+    default = ltd.table_indicators(df, zones)
+    pd.testing.assert_frame_equal(ltd.table_indicators(df, zones, long_term_range=None), default)
+
+    def indicators(row, zone):
+        return {title: row[f'{zone}_{title}'] for title in (
+            'Occupied Hours (h)', 'Hours Above Upper Limit (h)', 'Hours Below Lower Limit (h)',
+            'Degree Hours Above Upper Limit (Kh)', 'Degree Hours Below Lower Limit (Kh)')}
+
+    # The constant range of category II, 20.0 to 26.0 °C. Zone 1 (19, 22, 27.5 and 30 °C; 1, 1, 0.5 and 0 h): 1 h
+    # below (1 Kh) and 0.5 h above (0.75 Kh). Zone 2 (21, 25, 26.5 and 18 °C; 0, 1, 1 and 1 h): 1 h above (0.5 Kh) and
+    # 1 h below (2 Kh)
+    constant = ltd.table_indicators(df, zones, long_term_range=('en16798', 2)).iloc[0]
+    assert list(constant.index) == list(default.columns)
+    assert indicators(constant, 'Block1:Zone1') == pytest.approx(dict(zip(indicators(constant, 'Block1:Zone1'),
+                                                                        (2.5, 0.5, 1.0, 0.75, 1.0))))
+    assert indicators(constant, 'Block1:Zone2') == pytest.approx(dict(zip(indicators(constant, 'Block1:Zone2'),
+                                                                        (3.0, 1.0, 1.0, 0.5, 2.0))))
+    # The seasonal range of the offices of category II: 20.0 to 24.0 °C in the first two hours, and 23.0 to 26.0 °C in
+    # the last two. Zone 1 does not change; in zone 2, 25 °C in the heating season is above 24 °C (1 K), and 18 °C in
+    # the cooling season is 5 K below 23 °C
+    seasonal = ltd.table_indicators(df, zones, long_term_range=('en16798_seasonal', 2, 'office')).iloc[0]
+    assert indicators(seasonal, 'Block1:Zone1') == pytest.approx(indicators(constant, 'Block1:Zone1'))
+    assert indicators(seasonal, 'Block1:Zone2') == pytest.approx(dict(zip(indicators(seasonal, 'Block1:Zone2'),
+                                                                        (3.0, 2.0, 1.0, 1.5, 5.0))))
+    assert seasonal['Building_Hours Above Upper Limit (h)'] == pytest.approx(2.5)
+    # The column of the running mean can be given
+    [column] = [c for c in df.columns if 'RUNNING' in str(c).upper()][:1]
+    pd.testing.assert_series_equal(ltd.table_indicators(df, zones, long_term_range=('en16798_seasonal', 2, 'office'),
+                                                        running_mean=column).iloc[0], seasonal)
+    with pytest.raises(ValueError, match=r"The table has no column 'Running mean' \(running_mean\)"):
+        ltd.table_indicators(df, zones, long_term_range=('en16798_seasonal', 2, 'office'), running_mean='Running mean')
+    with pytest.raises(ValueError, match='needs the running mean outdoor temperature of each row'):
+        ltd.table_indicators(df.drop(columns=[c for c in df.columns if 'RUNNING' in str(c).upper()]), zones,
+                             long_term_range=('en16798_seasonal', 2, 'office'))
+    with pytest.raises(ValueError, match='depend on the building type'):
+        ltd.table_indicators(df, zones, long_term_range=('en16798_seasonal', 2))
+    # The ranges do not need the setpoints of the zones
+    without = df.drop(columns=[c for c in df.columns if 'SETPOINT TEMPERATURE_NO TOLERANCE' in str(c).upper()])
+    pd.testing.assert_series_equal(ltd.table_indicators(without, zones, long_term_range=('en16798', 2)).iloc[0],
+                                   constant)
+
+
 def test_the_table_checks_the_indicators(tmp_path, monkeypatch):
     with pytest.raises(ValueError, match="long_term_indicators needs the rows of each timestep or hour"):
         _table(tmp_path, monkeypatch, frequency='daily')

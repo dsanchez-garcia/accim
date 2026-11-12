@@ -35,10 +35,12 @@ occupancy: ``occupied`` (None: all the rows are occupied; or a Series of boolean
 occupants, occupied if they are greater than 0) and ``timestep_h``, the hours of each row (a number, or a Series,
 such as the occupied hours of each row of the hourly outputs of the ACCIS). The rows whose values are missing (NaN)
 are left out. :func:`table_indicators` gives them for the zones of a :class:`accim.data.postprocessing.main.Table`
-(``Table(long_term_indicators=True)``).
+(``Table(long_term_indicators=True)``), and :func:`range_limits` the limits of the ranges of EN 16798-1 of
+``long_term_range`` of the ACCIS: the constant one of its Table B.2, or that of the heating and cooling seasons of its
+Table B.5, by the running mean outdoor temperature of each row (finding A15 of the self-audit of 2026-11-11).
 """
 
-from typing import Any, Dict, Iterable, List, Optional, Sequence, Union
+from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -52,6 +54,7 @@ __all__ = [
     'hours_outside_range',
     'ppd_from_pmv',
     'ppd_weighted_hours',
+    'range_limits',
     'table_indicators',
 ]
 
@@ -102,6 +105,49 @@ def _frame(values: Dict[str, Values], occupied: Any, timestep_h: Any) -> pd.Data
     frame = pd.DataFrame(data)
     frame['hours'] = np.where(occupancy, np.nan_to_num(hours), 0.0)
     return frame.dropna()
+
+
+def range_limits(long_term_range: Any, running_mean: Optional[Values] = None) -> Tuple[Values, Values]:
+    """The lower and upper limits of a range of the long-term discomfort of the ACCIS (``long_term_range`` of
+    :class:`accim.sim.accis.AddAccis`, :func:`accim.sim.ems.long_term_discomfort.long_term_limits`), to give them to
+    :func:`hours_outside_range` and :func:`degree_hours`:
+
+    - ``('en16798', category)`` or ``('en16798', category, building_type)``: two numbers, the minimum for heating and
+      the maximum for cooling of EN 16798-1:2019, Table B.2 (20.0 and 26.0 °C in category II), the same in all the
+      rows. It counts as comfortable the summer hours that are too cold and the winter hours that are too warm within
+      them (finding A15 of the self-audit of 2026-11-11).
+    - ``('en16798_seasonal', category, building_type)``: the limits of each row, those of the heating season of its
+      Table B.5 (20.0 to 24.0 °C in the offices of category II) in the rows whose running mean outdoor temperature is
+      below 10 °C, those of the cooling season (23.0 to 26.0 °C) in those above 15 °C, and the lower limit of the
+      heating season and the upper limit of the cooling season (20.0 to 26.0 °C) between them
+      (:data:`accim.constants.EN16798_TABLE_B5` and :data:`accim.constants.EN16798_SEASON_RUNNING_MEANS`).
+
+    :param long_term_range: The range.
+    :param running_mean: With the seasonal range, the running mean outdoor temperature of EN 16798-1 of each row
+        (°C): the output *Zone Thermal Comfort CEN 15251 Adaptive Model Running Average Outdoor Air Temperature* of
+        EnergyPlus (the EMS of the ACCIS reads that of the previous timestep), or that of
+        :func:`accim.sim.preview.outdoor_metrics`. The rows without it (NaN) have no limits (NaN).
+    :return: The lower and the upper limit: two numbers, or two arrays with the seasonal range.
+    :raises ValueError: If the range is not valid or is None, or the seasonal range has no running mean.
+    """
+    from accim.sim.ems.long_term_discomfort import SeasonalRange, long_term_limits
+
+    limits = long_term_limits(long_term_range)
+    if limits is None:
+        raise ValueError("long_term_range must be ('en16798', category, building_type) or ('en16798_seasonal', "
+                         "category, building_type), not None: the limits of the default range are the setpoints "
+                         "without the tolerance of each row.")
+    if not isinstance(limits, SeasonalRange):
+        return limits
+    if running_mean is None:
+        raise ValueError("The seasonal range ('en16798_seasonal') needs the running mean outdoor temperature of each "
+                         "row (running_mean).")
+    values = np.asarray(running_mean, dtype=float).reshape(-1)
+    heating, cooling = values < limits.heating_below, values > limits.cooling_above
+    lower = np.where(heating, limits.heating[0], np.where(cooling, limits.cooling[0], limits.heating[0]))
+    upper = np.where(heating, limits.heating[1], np.where(cooling, limits.cooling[1], limits.cooling[1]))
+    missing = np.isnan(values)
+    return np.where(missing, np.nan, lower), np.where(missing, np.nan, upper)
 
 
 def hours_outside_range(top: Values, lower: Values, upper: Values, occupied: Any = None,
@@ -268,7 +314,32 @@ def _zone_column(columns: Sequence[str], zone: str, prefix: Optional[str] = None
     return None
 
 
-def table_indicators(df: pd.DataFrame, zones: Sequence[str]) -> pd.DataFrame:
+#: The names of the columns of Table with the running mean outdoor temperature of EN 16798-1 that EnergyPlus calculates
+#: (CEN 15251, α = 0.8): that of its output, and that of Table with rename_cols
+_RUNNING_MEAN_COLUMNS = ('CEN 15251 ADAPTIVE MODEL RUNNING AVERAGE OUTDOOR AIR TEMPERATURE',
+                         'EN16798-1 RUNNING MEAN OUTDOOR TEMPERATURE')
+
+
+def _running_mean_column(columns: Sequence[str], name: Optional[str]) -> str:
+    """The column of a table with the running mean outdoor temperature of the seasonal range: that given, or the first
+    one of the output of EnergyPlus (:data:`_RUNNING_MEAN_COLUMNS`).
+
+    :raises ValueError: If the table has not it.
+    """
+    if name is not None:
+        if name not in columns:
+            raise ValueError(f'The table has no column {name!r} (running_mean).')
+        return name
+    for column in columns:
+        if any(text in str(column).upper() for text in _RUNNING_MEAN_COLUMNS):
+            return column
+    raise ValueError("The seasonal range ('en16798_seasonal') needs the running mean outdoor temperature of each row: "
+                     "the output Zone Thermal Comfort CEN 15251 Adaptive Model Running Average Outdoor Air Temperature "
+                     "(a standard output of AddAccis), which the table has not; give its column as running_mean.")
+
+
+def table_indicators(df: pd.DataFrame, zones: Sequence[str], long_term_range: Any = None,
+                     running_mean: Optional[str] = None) -> pd.DataFrame:
     """The indicators of Methods A and B of CEN/TR 16798-2:2019, Annex D, of each simulation of a table of
     :class:`accim.data.postprocessing.main.Table` with timestep or hourly rows, for each occupied zone and for the
     building: the occupied hours, the hours above the upper limit and below the lower limit and their percentages of
@@ -279,21 +350,38 @@ def table_indicators(df: pd.DataFrame, zones: Sequence[str]) -> pd.DataFrame:
     the time. The building adds up the hours of its zones. With hourly rows (and timestep outputs aggregated by Table),
     the operative temperature and the limits are the means of each hour.
 
+    With ``long_term_range``, the limits are those of a range that does not depend on the comfort model of each
+    simulation (:func:`range_limits`), so that simulations of different comfort standards are measured with the same
+    range: the constant one of EN 16798-1:2019, Table B.2, or the seasonal one of its Table B.5, with the running mean
+    outdoor temperature of each row (finding A15 of the self-audit of 2026-11-11). ``Table(long_term_indicators=True)``
+    gives those of the setpoints.
+
     :param df: The table (``Table.df``), with the column ``Source`` (the CSV file of each simulation).
     :param zones: The occupied zones (``Table.occupied_zone_list``).
+    :param long_term_range: None (the default) for the setpoints without the tolerance of each simulation;
+        ``('en16798', category, building_type)`` or ``('en16798_seasonal', category, building_type)``, as that of
+        :class:`accim.sim.accis.AddAccis`.
+    :param running_mean: With the seasonal range, the column of the table with the running mean outdoor temperature
+        of EN 16798-1 of each row (°C); None (the default) for that of the output of EnergyPlus *Zone Thermal Comfort
+        CEN 15251 Adaptive Model Running Average Outdoor Air Temperature* (the first one, if the table has several).
     :return: A DataFrame with a row for each simulation: ``Source``, the columns that describe the simulations
         (``Model``, ``ComfStand``... ``EPW``, those that the table has), and ``<zone>_<indicator>`` and
         ``Building_<indicator>`` for each indicator of :data:`TABLE_INDICATORS`.
-    :raises ValueError: If a zone does not have the outputs that the indicators need.
+    :raises ValueError: If a zone does not have the outputs that the indicators need, the range is not valid, or the
+        table has not the running mean outdoor temperature of the seasonal range.
     """
+    from accim.sim.ems.long_term_discomfort import SeasonalRange, long_term_limits
+
+    limits = long_term_limits(long_term_range)
     columns = list(df.columns)
+    needed = ('top', 'hours') if limits is not None else ('top', 'upper', 'lower', 'hours')
     found: Dict[str, Dict[str, str]] = {}
     missing: List[str] = []
     for zone in zones:
         zone_columns = {'top': _zone_column(columns, zone), 'upper': _zone_column(columns, zone, _UPPER_LIMIT),
                         'lower': _zone_column(columns, zone, _LOWER_LIMIT),
                         'hours': _zone_column(columns, zone, _OCCUPIED_HOURS)}
-        absent = [name for name, column in zone_columns.items() if column is None]
+        absent = [name for name in needed if zone_columns[name] is None]
         if absent:
             missing.append(f"{zone} ({', '.join(absent)})")
         found[zone] = zone_columns
@@ -301,15 +389,24 @@ def table_indicators(df: pd.DataFrame, zones: Sequence[str]) -> pd.DataFrame:
         raise ValueError('long_term_indicators needs the operative temperature, the setpoints without the tolerance '
                          'and the occupied hours of each occupied zone (the standard outputs of AddAccis), which '
                          'these zones do not have: ' + '; '.join(missing) + '.')
+    season = _running_mean_column(columns, running_mean) if isinstance(limits, SeasonalRange) else None
     descriptive = [column for column in _DESCRIPTIVE_COLUMNS if column in df.columns]
     rows = []
     for source, group in df.groupby('Source', sort=False):
         row: Dict[str, Any] = {'Source': source}
         row.update({column: group[column].iloc[0] for column in descriptive})
         totals = dict.fromkeys(('occupied_h', 'hot_h', 'cold_h', 'hot_Kh', 'cold_Kh'), 0.0)
+        if limits is not None:
+            # The limits of the range, the same for all the zones: two numbers, or those of the season of each row
+            range_of_rows = range_limits(long_term_range, None if season is None else pd.to_numeric(
+                group[season], errors='coerce'))
         for zone, zone_columns in found.items():
             hours = pd.to_numeric(group[zone_columns['hours']], errors='coerce').fillna(0.0)
-            values = [pd.to_numeric(group[zone_columns[name]], errors='coerce') for name in ('top', 'lower', 'upper')]
+            if limits is not None:
+                values = [pd.to_numeric(group[zone_columns['top']], errors='coerce'), *range_of_rows]
+            else:
+                values = [pd.to_numeric(group[zone_columns[name]], errors='coerce')
+                          for name in ('top', 'lower', 'upper')]
             results = hours_outside_range(*values, occupied=hours, timestep_h=hours)
             results.update(degree_hours(*values, occupied=hours, timestep_h=hours))
             for title, key in TABLE_INDICATORS.items():

@@ -36,6 +36,41 @@ Recommended flow: track active work in `TODO.md`, move completed outcomes to `DE
 ## Entries
 
 ### 2026-11-12
+#### [done] The seasonal range of EN 16798-1 for the long-term discomfort, and the limitation of the constant one (A15; branch `v1.2.0`)
+- Context: finding A15 of the self-audit of 2026-11-11, decided on 2026-11-12 (`notes/decisions.md`, decision 5):
+  `long_term_range=('en16798', category)` takes the minimum of the heating season (about 1.0 clo) and the maximum of
+  the cooling season (about 0.5 clo) of Table B.2 as a constant range of all the timesteps, so it counts as
+  comfortable the summer hours that are too cold and the winter hours that are too warm within it.
+- Changes: the documentation and the docstrings say so (option (i)), and point to the overcooling indicator. Option
+  (ii): `long_term_range=('en16798_seasonal', category, building_type)` takes the ranges of the heating and cooling
+  seasons of EN 16798-1:2019, Table B.5 (`accim.constants.EN16798_TABLE_B5`, read in UNE-EN 16798-1:2020, p. 54), by
+  the running mean outdoor temperature of CEN 15251 of EnergyPlus of each timestep (the sensor `RMOT`): the heating
+  season below 10 °C, the cooling season above 15 °C, and between them the lower limit of the first one and the upper
+  limit of the second one (`EN16798_SEASON_RUNNING_MEANS`). `accim.sim.ems.long_term_discomfort` has `SeasonalRange`
+  and `seasonal_lines()`, and the programs `CountLongTermDiscomfort_<zone>` set the limits of each timestep in local
+  variables; check 6 of `verify_accim_simulation` follows them; and
+  `accim.data.postprocessing.long_term_discomfort` has `range_limits()` and `table_indicators(...,
+  long_term_range=None, running_mean=None)`. Without `long_term_range`, or with `'en16798'`, the output IDFs do not
+  change.
+- Files: `accim/constants.py`, `accim/sim/ems/long_term_discomfort.py`,
+  `accim/data/postprocessing/long_term_discomfort.py`, `accim/utils/verification.py`, `accim/sim/accis.py` and
+  `accim/parametric_and_optimisation/main.py` (docstrings), `tests/core/test_long_term_discomfort_counters.py`,
+  `tests/core/test_long_term_discomfort.py`, `docs/source/4_detailed use.md` (4.2, 4.2.6, 4.6.1, 4.7.4 and 4.10),
+  `CHANGELOG.md`, `CAMBIOS_CODIGO_v1.2.0.md` (§53), `TODO.md`, `notes/decisions.md`, `notes/work-log.md`.
+- Verification: `tests/core/test_long_term_discomfort_counters.py` and `tests/core/test_long_term_discomfort.py` (the
+  eight ranges of Table B.5, typed from the standard, and their errors; the program of a zone with the Erl interpreter
+  against the functions of D1, with ten pairs of running mean and temperature; `range_limits`; the model of
+  `add_accis_to_idf`; `table_indicators` with the constant and the seasonal range; and, with EnergyPlus 25.1 and both
+  backends, 15-28 January and 12-25 March of the sample model in Seville with the ranges of the offices of category
+  II: identical results, check 6 without mismatches, two seasons in each run, and the totals of the counters equal to
+  those of the functions of D1 with the running mean of the previous timestep; in January, 69.7 and 70.3 of the 120
+  occupied hours of each zone are above the upper limit, against 4.8 and 19.3 above the 26 °C of the constant range).
+  With the test files of the verification and of the graphical user interface, the golden master (35 passed, without
+  changes) and `tests/parametric_and_optimisation`: 779 passed. The documentation builds without new warnings, and
+  the changed modules compile with Python 3.9 (the tests and the build, in a temporary worktree with a copy of the
+  working tree).
+- Next step: the script of the validation study of F3.
+
 #### [done] `pythermalcomfort_set` with the inputs of the occupants of the People objects (S4, option (ii); branch `v1.2.0`)
 - Context: the decisions of 2026-11-12 (`notes/decisions.md`, decision 9): the indicators of the causal band with the
   SET of pythermalcomfort are those of reference, so they must take the inputs of the occupants that the hook of
