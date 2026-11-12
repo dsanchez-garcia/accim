@@ -36,6 +36,25 @@ Recommended flow: track active work in `TODO.md`, move completed outcomes to `DE
 ## Entries
 
 ### 2026-11-12
+#### [done] The final checks and the report of session 4 (branch `v1.2.0`)
+- Context: the last step of the implementation session of the decisions of 2026-11-12: the checks of the whole
+  repository with all its tasks together, and the report of the session, as in the review sessions.
+- Changes: `notes/INFORME_SESION_v1.2.0_2026-11-12_4.md` (the tasks and their commits, the deviations and why, the
+  entries of `TODO.md`, the choices and the open question, the tests and the backend comparisons, what is left to the
+  author, and the environment). The entry of the backends of `TODO.md` has the three things that were checked and
+  discarded while its cause was looked for. No code changes.
+- Files: `notes/INFORME_SESION_v1.2.0_2026-11-12_4.md` (new), `notes/work-log.md`, `TODO.md`, `DEVLOG.md`.
+- Verification: on the code of `f808f24`, in a temporary worktree: `py -m pytest tests/core -q -p no:cacheprovider`,
+  1615 passed and 2 skipped (EnergyPlus 26.1; the jar of the Future Weather Generator), no failure, in 34 min 29 s;
+  `py -m pytest tests/parametric_and_optimisation -q -p no:cacheprovider`, 520 passed. On `aa4931c`, which changed
+  one test after them: `tests/core/test_jpn_aqilah2025.py`, 31 passed, and the golden master, 35 passed
+  (byte-identical). The documentation build after the last change of the documentation: the warnings of the baseline
+  (no new one, none gone). The 45 Python files changed since `f3f9eb5` compile with Python 3.9.
+- Next step: for the author, the open question of the validation study (`notes/questions.md`), the message to Ruiji
+  Sun, the weather file of the humid climate and a model of the study, the jar of the Future Weather Generator and
+  the issue for EnergyPlus; the review of Claude Science; and the entries of `TODO.md` (one P1 left: check 1 of
+  `verify_accim_simulation`).
+
 #### [done] Both backends in the test of A24, and a finding: they differ in their last digits with the models of `add_accis_to_idf` (branch `v1.2.0`)
 - Context: in the final checks of the session, the definition of done of A24 (both backends when the EMS code
   changes) was read again: its EnergyPlus test, a zone switched by hand to comfort standard 23 in a model of

@@ -83,9 +83,13 @@ existing tracking files — it does not replace them (see
     the tests of both backends compare, the files are identical. It is older than this session (the same numbers
     with `f3f9eb5`); its cause is an entry of [[../TODO.md]]. The test of A24 now runs both backends.
 - **Validation**: in the entry of each task of [[../DEVLOG.md]] (the tests of the task, EnergyPlus 25.1 with both
-  backends where the EMS code changes, and the golden master, compared line by line before writing it again).
-- **Next step**: the review of Claude Science of sessions 2 and 3, which also covers this session; the message of the
-  author to Ruiji Sun, the jar of the Future Weather Generator and the issue for EnergyPlus.
+  backends where the EMS code changes, and the golden master, compared line by line before writing it again). The
+  final checks of the whole repository, with all the tasks together, are in the report of the session,
+  [[INFORME_SESION_v1.2.0_2026-11-12_4.md]] (section 5).
+- **Next step**: for the author, the open question of the validation study ([[questions.md]]), the message to Ruiji
+  Sun, the weather file of the humid climate and a model of the study, the jar of the Future Weather Generator and
+  the issue for EnergyPlus; the review of Claude Science of sessions 2 and 3, which also covers this session; and the
+  entries of [[../TODO.md]] (one P1 left: check 1 of `verify_accim_simulation`).
 
 ## 2026-11-12 — The decisions on the six open questions, taken for the author (branch `v1.2.0`, on the server)
 
