@@ -58,6 +58,12 @@ existing tracking files — it does not replace them (see
   - The reference SET: the documentation and the docstrings say that the SET of reference of the causal band is that
     of pythermalcomfort (that of the database of the model, calculated standing), no longer "provisional", and that
     the Pierce SET of EnergyPlus is the indicator that every model has, an approximation up to about 1.05 met.
+  - S4 (ii): `table_indicators(..., pythermalcomfort_set='people')` and `set_of_results` take the metabolic rate, the
+    clothing insulation and the air speed of the People objects of each zone in each row (the outputs of
+    `add_thermal_comfort_outputs(..., occupant_inputs=True)`; the schedules, from the model of each simulation). In a
+    week of July with comfort standard 24, the hours within the causal band are those of the hook (27.8 and 34.3 of
+    60), and 24.7 and 31.2 with the Pierce SET. Found on the way: the sensor of the mean radiant temperature of the
+    hooks reads that of the timestep itself, not that of the previous one (the documentation is corrected).
 - **Validation**: in the entry of each task of [[../DEVLOG.md]] (the tests of the task, EnergyPlus 25.1 with both
   backends where the EMS code changes, and the golden master, compared line by line before writing it again).
 - **Next step**: the review of Claude Science of sessions 2 and 3, which also covers this session; the message of the

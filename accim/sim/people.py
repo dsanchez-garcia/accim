@@ -183,7 +183,8 @@ def add_thermal_comfort_model(building: Any, comfort_model: str, verbose: bool =
 
 
 def add_thermal_comfort_outputs(building: Any, models: Union[str, Sequence[str]] = ('Pierce',),
-                                output_frequencies: Optional[Sequence[str]] = None, verbose: bool = False) -> None:
+                                output_frequencies: Optional[Sequence[str]] = None, verbose: bool = False,
+                                occupant_inputs: bool = False) -> None:
     """Add some thermal comfort models to the People objects (:func:`add_thermal_comfort_model`) and request their
     outputs for each occupant instance (:data:`THERMAL_COMFORT_OUTPUTS`), which ``Table`` names and with which
     :mod:`accim.data.postprocessing.indoor_adaptation` calculates the indicators of the adaptation to the indoor
@@ -202,18 +203,34 @@ def add_thermal_comfort_outputs(building: Any, models: Union[str, Sequence[str]]
     of the People objects (Input Output Reference 25.2, 1.14.2.1) and the conditions of their zones. The outputs that
     the model requests already (with the key of the occupant instance or '*') are not requested again.
 
+    With ``occupant_inputs`` (task S4 of the review of accim 1.2.0, option (ii)), it also requests the outputs from
+    which the SET of pythermalcomfort, the reference SET of the causal band of comfort standard 24, is calculated after
+    the simulation with the inputs of the occupants of each row
+    (:func:`accim.data.postprocessing.indoor_adaptation.table_indicators` with ``pythermalcomfort_set='people'``, and
+    :func:`accim.sim.comfort_hooks.set_of_results`): the mean air temperature, the mean radiant temperature and the
+    relative humidity of the occupied zones, the *Schedule Value* of the activity level, clothing insulation and air
+    velocity schedules of their People objects and, with the dynamic clothing model of ASHRAE 55, their *Zone Thermal
+    Comfort Clothing Value* (:func:`accim.sim.comfort_hooks.add_people_input_outputs`).
+
     :param building: The eppy or besos IDF object, changed in place.
     :param models: The models, one or several of 'Fanger', 'Pierce' and 'CoolingEffectASH55', in any case.
     :param output_frequencies: The reporting frequencies of the outputs ('timestep', 'hourly'...); None (the default)
         for those of the EMS outputs of the model (those of the ACCIS), or hourly if it has none.
     :param verbose: If True, prints the models added.
+    :param occupant_inputs: True to request also the outputs of the inputs of the occupants of the SET of
+        pythermalcomfort (see above); False (the default) for the outputs of the models only.
     :raises ValueError: Before changing anything, if a model is not one of :data:`THERMAL_COMFORT_OUTPUTS`, the model
         has no occupants, an object of the occupants has not the schedules that the models need (the work efficiency,
         the air velocity and the clothing insulation schedules, the latter not with the dynamic clothing model of
-        ASHRAE 55, and the calculation method schedule with 'CalculationMethodSchedule'), or a model cannot be added
-        (see :func:`add_thermal_comfort_model`).
+        ASHRAE 55, and the calculation method schedule with 'CalculationMethodSchedule'), a model cannot be added
+        (see :func:`add_thermal_comfort_model`), or, with ``occupant_inputs``, the People objects of a zone have
+        different schedules, no activity level schedule or a clothing insulation calculation method that is not read
+        (:func:`accim.sim.comfort_hooks.people_inputs`), or have the dynamic clothing model and neither Fanger nor
+        Pierce is one of ``models`` or of their thermal comfort models (EnergyPlus reports its clothing insulation
+        with them).
     """
-    from accim.sim.comfort_hooks import _add_zone_output_variables, _model_output_frequencies
+    from accim.sim.comfort_hooks import (_add_zone_output_variables, _model_output_frequencies, _needs_comfort_model,
+                                         add_people_input_outputs, people_inputs)
     from accim.sim.targets import resolve_targets
 
     names = {m.upper(): m for m in THERMAL_COMFORT_OUTPUTS}
@@ -244,6 +261,14 @@ def add_thermal_comfort_outputs(building: Any, models: Union[str, Sequence[str]]
                          'schedules of the occupants (Input Output Reference 25.2, 1.14.2.1), which these objects '
                          'have not: ' + '; '.join(missing) + '.')
     changes = _comfort_model_changes(building, chosen)
+    if occupant_inputs:
+        # The schedules of the People objects of each zone, and a model that reports the clothing insulation of the
+        # dynamic clothing model, before anything changes
+        inputs = people_inputs(building)
+        if _needs_comfort_model(building, inputs) and not {'Fanger', 'Pierce'} & set(chosen):
+            raise ValueError('The clothing insulation of the dynamic clothing model of ASHRAE 55 is the output Zone '
+                             'Thermal Comfort Clothing Value, which EnergyPlus reports for the People objects with the '
+                             "Fanger, Pierce or KSU model: add 'Pierce' or 'Fanger' to models.")
     if output_frequencies is None:
         frequencies = _model_output_frequencies(building)
     else:
@@ -252,6 +277,8 @@ def add_thermal_comfort_outputs(building: Any, models: Union[str, Sequence[str]]
     keys = {key: key for target in targets for key in target.instance_keys}
     _add_zone_output_variables(building, keys, [output for model in chosen
                                                 for output in THERMAL_COMFORT_OUTPUTS[model]], frequencies)
+    if occupant_inputs:
+        add_people_input_outputs(building, frequencies)
 
 
 def set_clothing_method(building: Any, method: str, schedule: Optional[str] = None,

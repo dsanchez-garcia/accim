@@ -36,6 +36,38 @@ Recommended flow: track active work in `TODO.md`, move completed outcomes to `DE
 ## Entries
 
 ### 2026-11-12
+#### [done] `pythermalcomfort_set` with the inputs of the occupants of the People objects (S4, option (ii); branch `v1.2.0`)
+- Context: the decisions of 2026-11-12 (`notes/decisions.md`, decision 9): the indicators of the causal band with the
+  SET of pythermalcomfort are those of reference, so they must take the inputs of the occupants that the hook of
+  comfort standard 24 takes (those of the People objects of each zone in each timestep), not only constant values;
+  cases (iii) and (iv) of the validation study need them.
+- Changes: `accim.sim.comfort_hooks.people_inputs()` (the schedules of the People objects of each occupied zone) and
+  `add_people_input_outputs()` (the outputs of those schedules, of the clothing insulation of the dynamic clothing
+  model and of the conditions of the zones), which `accim.sim.people.add_thermal_comfort_outputs(...,
+  occupant_inputs=True)` calls; `set_of_results(..., people=None)` reads the metabolic rate, the clothing insulation
+  and the air speed of each row from those outputs for the hooks that read them from the People objects (a
+  `ValueError` before), with the posture of each row, and `apply_set_setpoints` and `apply_sun2026_setpoints` give
+  their hooks the schedules (`hook.people`); `table_indicators(..., pythermalcomfort_set='people')` (or `'people'` as
+  an input of the dict, and the key `'idf'`) reads the schedules from the model of each simulation.
+  `MissingOccupantInputs` (a `ValueError`) says how to request the outputs. The documentation and the docstrings of
+  the hooks now say that the sensor of the mean radiant temperature reads that of the timestep itself (measured here),
+  not that of the previous one.
+- Files: `accim/sim/comfort_hooks.py`, `accim/sim/people.py`, `accim/data/postprocessing/indoor_adaptation.py`,
+  `tests/core/test_people_set_inputs.py` (new), `docs/source/4_detailed use.md` (4.7.6, 4.9.1 and 4.9.2),
+  `CHANGELOG.md`, `CAMBIOS_CODIGO_v1.2.0.md` (§52), `TODO.md`, `notes/decisions.md`, `notes/work-log.md`.
+- Verification: `tests/core/test_people_set_inputs.py` (7 tests: the schedules of the People objects of a model; the
+  outputs requested, also with the dynamic clothing model; `set_of_results` with each source of the clothing
+  insulation, the posture and mixed inputs, and its errors; `table_indicators` with `'people'`, with the key `'idf'`
+  and with a hook, and its errors; and, with EnergyPlus 25.1 and the backend of the API, a week of July with comfort
+  standard 24: with the values that the sensors of the hook read, the SET of the results is that of the hook within
+  0.001 K, and with those of each row, 0.012 and 0.013 K away on average and 0.14 K at most; with the rows of each
+  timestep, the hours within the causal band with `'people'` are those of the hook, 27.8 and 34.3 of the 60 occupied
+  hours of each zone, against 24.7 and 31.2 with the Pierce SET). With the test files of the hooks, comfort standard
+  24, the indicators, E-F1, the optional outputs of `Table`, the limiter of the drift, the missing hook and the
+  graphical user interface: 268 passed. The documentation builds without new warnings, and the three changed modules
+  compile with Python 3.9 (the tests and the build, in a temporary worktree with a copy of the working tree).
+- Next step: the seasonal range of the long-term discomfort (A15).
+
 #### [done] The SET of pythermalcomfort is the reference of the causal band: the documentation (decision 9; branch `v1.2.0`)
 - Context: the documentation and the docstrings said that the indicators of the causal band with the SET of
   pythermalcomfort were provisional until the authors of the causal model said which SET they used, and sent to a

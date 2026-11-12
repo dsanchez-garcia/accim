@@ -2735,3 +2735,48 @@ igual). Cambian los textos:
 
 Queda para el autor preguntar a Ruiji Sun si el SET del artículo es la columna `set` de la base de datos (inferido de
 su script y del artículo anterior de los mismos autores); nada espera a esa respuesta.
+
+## 52. `pythermalcomfort_set` con las entradas de los ocupantes de los objetos People (S4, opción (ii))
+
+Decidido el 12/11/2026 (`notes/decisions.md`, decisión 9): los indicadores de la banda causal con el SET de
+pythermalcomfort son los de referencia, así que deben poder tomar las entradas de los ocupantes que toma el gancho del
+estándar 24 (las de los objetos People de cada zona en cada paso de tiempo), no solo valores constantes; lo necesitan
+los casos (iii) y (iv) del estudio de validación (ropa por estación, modelo dinámico de ropa, velocidades del aire).
+
+**Ahora.**
+
+- `accim.sim.comfort_hooks.people_inputs(building, zones=None)`: los horarios de los objetos People de cada zona
+  ocupada (actividad, ropa, método de cálculo de la ropa y velocidad del aire), la clave de sus salidas y la de las de
+  sus ocupantes; `add_people_input_outputs(building, output_frequencies=None)`: pide las salidas con las que se calcula
+  el SET después de la simulación (las condiciones de la zona, el *Schedule Value* de esos horarios y, con el modelo
+  dinámico de ropa, *Zone Thermal Comfort Clothing Value*).
+- `accim.sim.people.add_thermal_comfort_outputs(..., occupant_inputs=False)`: con `True`, las pide también (comprueba
+  antes de cambiar nada que, con el modelo dinámico de ropa, haya un modelo Fanger o Pierce que la reporte).
+- `set_of_results(results, hook, keys=None, frequency=None, people=None)`: con un gancho que lee entradas de los People
+  (`met`, `clo` o `air_speed` None), las toma de esas salidas en cada fila (antes daba un `ValueError`), con la postura
+  del metabolismo de cada fila; `people` son los horarios (`people_inputs`), o `hook.people`, que ahora ponen
+  `apply_set_setpoints` y `apply_sun2026_setpoints`. Las filas en las que el gancho no calcularía el SET (actividad 0,
+  ropa del modelo dinámico 0) son NaN. Si faltan las salidas: `MissingOccupantInputs` (un `ValueError`), que dice cómo
+  pedirlas.
+- `accim.data.postprocessing.indoor_adaptation.table_indicators(..., pythermalcomfort_set=...)`: además de números,
+  `'people'` (para las tres entradas, o para cada una en el diccionario: `{'met': 'people', 'clo': 0.5, 'air_speed':
+  'people'}`); los horarios se leen del modelo de cada simulación (el IDF de la carpeta actual cuyo nombre es el de su
+  CSV hasta el fichero climático, o el de la clave `'idf'`), una vez por modelo; un gancho que lee entradas de los
+  People da los de su modelo. Errores claros: falta el modelo, una zona de la tabla sin People, o faltan las salidas.
+
+**Medición** (semana del 15 al 21 de julio del modelo de ejemplo con el estándar 24, Sevilla, EnergyPlus 25.1, 6 pasos
+por hora): con los valores que leen los sensores del gancho, el SET de `set_of_results` es el del gancho (a 0,001 K);
+con los de cada fila, difiere 0,012–0,013 K de media (0,14 K como máximo). Con filas de paso de tiempo, las horas dentro
+de la banda causal con `'people'` son las mismas que las del gancho (27,8 y 34,3 de las 60 horas ocupadas de cada zona;
+28 y 35 con filas horarias), frente a 24,7 y 31,2 con el SET de Pierce, 0,2 K más alto.
+
+**De paso.** Esa medición mostró que el sensor de la temperatura radiante media de los ganchos (`SET_MRT_<zona>`) lee
+la que EnergyPlus ha calculado para el propio paso de tiempo (igual a la salida de la misma fila), no la del paso
+anterior, como decían la documentación y las docstrings; los de la temperatura del aire y la humedad sí leen las del
+paso anterior. Corregido el texto (secciones 4.9.1 y 4.9.2, y las docstrings de `accim.sim.comfort_hooks`); el código
+no cambia.
+
+**Pruebas.** `tests/core/test_people_set_inputs.py` (nuevo): los horarios de un modelo, las salidas pedidas (también
+con el modelo dinámico de ropa, y sin cambiar nada cuando falta un modelo que la reporte), `set_of_results` con cada
+fuente de la ropa, la postura y entradas mezcladas, `table_indicators` con `'people'`, con la clave `'idf'` y con un
+gancho, sus errores, y la simulación con EnergyPlus 25.1 contra las salidas del gancho del estándar 24.

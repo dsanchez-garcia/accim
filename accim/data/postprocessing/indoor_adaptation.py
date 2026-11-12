@@ -131,6 +131,13 @@ PYTHERMALCOMFORT_SET_INDICATORS = {
 #: The inputs of the SET of pythermalcomfort that ``pythermalcomfort_set`` gives, those of
 #: :class:`accim.sim.comfort_hooks.SetSetpointHook`
 _SET_INPUTS = ('met', 'clo', 'air_speed', 'position')
+#: The value of ``pythermalcomfort_set``, or of its metabolic rate, clothing insulation or air speed, with which the
+#: inputs of the occupants of each row are those of the People objects of the model of each simulation (task S4 of the
+#: review of accim 1.2.0, option (ii), decided on 2026-11-12)
+PEOPLE_INPUTS = 'people'
+#: The key of ``pythermalcomfort_set`` with the path of the model whose People objects are read, for all the
+#: simulations (by default, the model of each simulation, in the current folder)
+_MODEL_KEY = 'idf'
 #: The beginning of the keys of the results of the indicators of the SET of pythermalcomfort
 _PYTHERMALCOMFORT = 'pythermalcomfort_'
 #: The month, day, hour and minute of the dates of the CSV files of EnergyPlus (' 07/15  10:20:00')
@@ -371,29 +378,50 @@ def _mean_of(group: pd.DataFrame, columns: list) -> Optional[pd.Series]:
     return group[columns].apply(pd.to_numeric, errors='coerce').mean(axis=1)
 
 
+def _is_people(value: Any) -> bool:
+    return isinstance(value, str) and value.strip().lower() == PEOPLE_INPUTS
+
+
 def _pythermalcomfort_hook(pythermalcomfort_set: Any, zones: Sequence[str]):
     """The hook of the SET with which :func:`table_indicators` calculates the SET of pythermalcomfort of the zones, with
-    the inputs of ``pythermalcomfort_set`` (``method='bisection'``, so that nothing is calculated when it is made)."""
+    the inputs of ``pythermalcomfort_set`` (``method='bisection'``, so that nothing is calculated when it is made), and
+    where the schedules of the People objects come from when it reads inputs of the occupants from them: ``(hook,
+    people, idf)``, with ``people`` the schedules of the hook given (``hook.people``) and ``idf`` the path of the
+    model given, or None for both (the model of each simulation)."""
     from accim.sim.comfort_hooks import SetSetpointHook, sun2026_set_setpoints
 
-    if isinstance(pythermalcomfort_set, Mapping):
+    people, idf, given_hook = None, None, False
+    if _is_people(pythermalcomfort_set):
+        inputs = dict.fromkeys(_SET_INPUTS[:3], PEOPLE_INPUTS)
+    elif isinstance(pythermalcomfort_set, Mapping):
         inputs = dict(pythermalcomfort_set)
-        unknown = [name for name in inputs if name not in _SET_INPUTS]
+        unknown = [name for name in inputs if name not in (*_SET_INPUTS, _MODEL_KEY)]
         if unknown:
-            raise ValueError(f'pythermalcomfort_set takes {list(_SET_INPUTS)}, not {unknown}.')
-    elif all(hasattr(pythermalcomfort_set, name) for name in _SET_INPUTS):
+            raise ValueError(f'pythermalcomfort_set takes {list(_SET_INPUTS)} (and {_MODEL_KEY!r}), not {unknown}.')
+        idf = inputs.pop(_MODEL_KEY, None)
+    elif not isinstance(pythermalcomfort_set, str) and all(hasattr(pythermalcomfort_set, name)
+                                                           for name in _SET_INPUTS):
         inputs = {name: getattr(pythermalcomfort_set, name) for name in _SET_INPUTS}
+        people = dict(getattr(pythermalcomfort_set, 'people', None) or {}) or None
+        given_hook = True
     else:
         raise ValueError(f'pythermalcomfort_set must be None, a dict with the inputs of the occupants '
-                         f'{list(_SET_INPUTS)} or a hook of the SET, not {pythermalcomfort_set!r}.')
+                         f'{list(_SET_INPUTS)}, {PEOPLE_INPUTS!r} or a hook of the SET, not {pythermalcomfort_set!r}.')
     missing = [name for name in _SET_INPUTS[:3] if inputs.get(name) is None]
-    if missing:
+    if missing and not (given_hook and people):
+        hint = ('the hook reads them from the People objects, and has not their schedules (hook.people, which '
+                'apply_set_setpoints and apply_sun2026_setpoints set)' if given_hook else 'they are not given')
         raise ValueError(f'pythermalcomfort_set needs the metabolic rate, clothing insulation and air speed of the '
-                         f'occupants (met, clo and air_speed) as numbers, not None for {missing}: the SET of '
-                         f'pythermalcomfort of the indicators takes them in all the rows (a hook that reads them from '
-                         f'the People objects in each timestep reports its own SET, the output SET_<zone>).')
+                         f'occupants (met, clo and air_speed) as numbers, or {PEOPLE_INPUTS!r} for those of the People '
+                         f'objects of the model of each simulation in each row, not None for {missing}: {hint}.')
+    # The inputs of the People objects are those of the hook without them (None)
+    from_people = [name for name in _SET_INPUTS[:3] if inputs.get(name) is None or _is_people(inputs.get(name))]
+    inputs.update(dict.fromkeys(from_people))
+    if not from_people:
+        people, idf = None, None
     heating, cooling = sun2026_set_setpoints(1)
-    return SetSetpointHook(list(zones) or ['Building'], cooling, heating, method='bisection', **inputs)
+    hook = SetSetpointHook(list(zones) or ['Building'], cooling, heating, method='bisection', **inputs)
+    return hook, people, idf
 
 
 def _date_parts(values: Iterable[Any]) -> np.ndarray:
@@ -406,22 +434,74 @@ def _date_parts(values: Iterable[Any]) -> np.ndarray:
     return np.array(parts, dtype=float).reshape(-1, 4)
 
 
-def _pythermalcomfort_set_of_rows(group: pd.DataFrame, source: Any, hook,
-                                  zones: Sequence[str]) -> Dict[str, Optional[np.ndarray]]:
+def _people_of_simulation(source: Any, zones: Sequence[str], people: Optional[Dict[str, dict]], idf: Any,
+                          models: Dict[str, Dict[str, dict]]) -> Dict[str, dict]:
+    """The schedules of the People objects of the zones of a simulation (:func:`accim.sim.comfort_hooks.people_inputs`),
+    by their names in the table (the keys of their outputs): those of the hook given (``people``), or those of the
+    model ``idf``, or of the model of the simulation, the IDF file in the current folder whose name is that of its CSV
+    file up to its weather file ('<model>[<weather file>.csv', as :func:`accim.run.run_ep` names them); the zones
+    whose People objects are not found are left out.
+
+    :param models: The schedules of the models read in this call, by their paths.
+    :raises ValueError: If the model is not found, or :func:`accim.sim.comfort_hooks.people_inputs` raises it.
+    """
+    if people is None:
+        name = str(source)[:-4] if str(source).lower().endswith('.csv') else str(source)
+        path = str(idf) if idf is not None else f"{name.rsplit('[', 1)[0]}.idf"
+        if path not in models:
+            if not os.path.isfile(path):
+                which = ('its key idf' if idf is not None
+                         else 'the name of the CSV file of the simulation up to its weather file')
+                raise ValueError(f'pythermalcomfort_set reads the inputs of the occupants of each row from the People '
+                                 f'objects of the model of each simulation: {path!r} ({which}) is not a file of the '
+                                 f'current folder {os.getcwd()!r}. Give the path of the model with the key '
+                                 f"{_MODEL_KEY!r} ({{'met': 'people', 'clo': 'people', 'air_speed': 'people', "
+                                 f"'idf': path}}), or the hook of the SET of the model.")
+            import accim.sim.accis as accis
+            from accim.sim.comfort_hooks import people_inputs
+
+            models[path] = people_inputs(accis.load_idf(path))
+        people = models[path]
+    by_key = {str(values.get('key', '')).upper(): values for values in people.values()}
+    return {zone: by_key[str(zone).upper()] for zone in zones if str(zone).upper() in by_key}
+
+
+def _pythermalcomfort_set_of_rows(group: pd.DataFrame, source: Any, hook, zones: Sequence[str],
+                                  people: Optional[Dict[str, dict]] = None, idf: Any = None,
+                                  models: Optional[Dict[str, Dict[str, dict]]] = None
+                                  ) -> Dict[str, Optional[np.ndarray]]:
     """The SET of pythermalcomfort of each zone in each row of the table of a simulation (see :func:`table_indicators`):
     that of each row of its CSV file (:func:`accim.sim.comfort_hooks.set_of_results`, keyed by the name of the zone),
     averaged over the rows of the CSV file of each row of the table, by its month, day and hour, and its minute in the
     tables of timesteps (EnergyPlus labels each timestep and hour with its end, and Table gives each row the hour that
     it is part of: that of the label, minus 1 for the labels that end an hour, such as 01:00 and 24:00); None for the
-    zones whose outputs the CSV file has not."""
-    from accim.sim.comfort_hooks import _SET_ZONE_VARIABLES, set_of_results
+    zones whose outputs the CSV file has not. With a hook that reads inputs of the occupants from the People objects
+    (``met``, ``clo`` or ``air_speed`` None), those of each row are those of the People objects of each zone
+    (:func:`_people_of_simulation`), whose outputs the CSV file must have.
+
+    :raises ValueError: If the CSV file is not found, or, with the inputs of the People objects, the model is not
+        found, a zone has no People object in it, or the CSV file has not the outputs of their schedules.
+    """
+    from accim.sim.comfort_hooks import (_CLOTHING_VALUE_OUTPUT, _SET_ZONE_VARIABLES, MissingOccupantInputs,
+                                         set_of_results)
 
     path = str(source) if str(source).lower().endswith('.csv') else f'{source}.csv'
     if not os.path.isfile(path):
         raise ValueError(f'The SET of pythermalcomfort of the indicators is calculated from the CSV file of each '
                          f'simulation (the column Source, with .csv), {path!r}, which is not in the current folder '
                          f'{os.getcwd()!r}: use the folder of the table.')
+    from_people = any(getattr(hook, name) is None for name in _SET_INPUTS[:3])
+    schedules: Dict[str, dict] = {}
+    if from_people:
+        schedules = _people_of_simulation(source, zones, people, idf, {} if models is None else models)
+        without = [zone for zone in zones if zone not in schedules]
+        if without:
+            raise ValueError(f'The zones {without} of the table have no People objects in the model of the simulation '
+                             f'{source!r}, whose schedules give the inputs of the occupants of the SET of '
+                             f'pythermalcomfort ({PEOPLE_INPUTS!r}).')
     wanted = [f':{variable} ['.upper() for variable in _SET_ZONE_VARIABLES]
+    if from_people:
+        wanted += [':SCHEDULE VALUE [', f':{_CLOTHING_VALUE_OUTPUT} ['.upper()]
     results = pd.read_csv(path, skip_blank_lines=False, usecols=lambda column: column.strip() == 'Date/Time' or any(
         name in column.upper() for name in wanted))
     results.columns = [str(column).strip() for column in results.columns]
@@ -444,7 +524,12 @@ def _pythermalcomfort_set_of_rows(group: pd.DataFrame, source: Any, hook,
         single = copy.copy(hook)
         single.zones = [zone]
         try:
-            values = set_of_results(results, single, keys={zone: zone})[f'SET_{zone}'].to_numpy(dtype=float)
+            values = set_of_results(results, single, keys={zone: zone},
+                                    people={zone: schedules[zone]} if from_people else None
+                                    )[f'SET_{zone}'].to_numpy(dtype=float)
+        except MissingOccupantInputs:
+            # The outputs of the schedules of the People objects are asked for: a clear error, not NaN
+            raise
         except ValueError:
             found[zone] = None
             continue
@@ -497,9 +582,11 @@ def table_indicators(df: pd.DataFrame, zones: Sequence[str], tsv_limit: Optional
       names after their spaces, have NaN, with a warning), and the metabolic rate, clothing insulation, air speed and
       posture of ``pythermalcomfort_set``, averaged over the rows of the CSV file of each row of the table (the
       timesteps of each hour, as Table averages the SET of the Pierce model). These are the inputs that task E-F1
-      compared, with constant inputs of the occupants: E-F1 took those of the schedules of the People objects in each
-      timestep, as EnergyPlus does, so the two SET have the same inputs only where those schedules give the values of
-      ``pythermalcomfort_set`` (not with a seasonal clothing insulation or the dynamic clothing model). With the same
+      compared. With numbers, those of the occupants are constant, so the SET of pythermalcomfort and that of the
+      Pierce model have the same inputs only where the schedules of the People objects give those values (not with a
+      seasonal clothing insulation or the dynamic clothing model); with ``'people'`` (task S4, option (ii), decided on
+      2026-11-12), they are those of the People objects of each zone in each row, as E-F1 took them and as the hook of
+      comfort standard 24 reads them in each timestep (:func:`accim.sim.comfort_hooks.set_of_results`). With the same
       inputs, in a year in Seville, E-F1 measured the SET of pythermalcomfort below that of EnergyPlus by 0.045 K on
       average (at most 0.20 K in the hourly means) standing and by 0.116 K (at most 0.34 K) sitting with 1.06 met,
       which moves the hours near the limits of the band, and by 0.33 to 0.40 K with 1.1 met and 0.94 to 1.02 K with
@@ -533,14 +620,25 @@ def table_indicators(df: pd.DataFrame, zones: Sequence[str], tsv_limit: Optional
         causal model calculated it, 0.03 to 0.07 K above that of the occupants sitting), such as ``{'met': 1.1,
         'clo': 0.5, 'air_speed': 0.1}``, or a hook of the SET with them
         (:class:`accim.sim.comfort_hooks.SetSetpointHook`, as that of
-        :func:`accim.sim.comfort_hooks.apply_sun2026_setpoints` with its own inputs). It needs pythermalcomfort and the
-        hour of each row.
+        :func:`accim.sim.comfort_hooks.apply_sun2026_setpoints` with its own inputs). The metabolic rate, the clothing
+        insulation and the air speed can also be ``'people'`` (:data:`PEOPLE_INPUTS`; ``pythermalcomfort_set='people'``
+        for the three): those of the People objects of each zone in each row of the CSV file, that is, the values of
+        their activity level (divided by 58.2 W/m² and 1.8 m²), clothing insulation and air velocity schedules, or the
+        clothing insulation of the dynamic clothing model of ASHRAE 55. Their schedules are read from the model of each
+        simulation, the IDF file of the current folder whose name is that of its CSV file up to its weather file
+        (``'<model>[<weather file>.csv'``, as :func:`accim.run.run_ep` names them), or from the model of the key
+        ``'idf'``, for all the simulations; and their outputs are those that
+        :func:`accim.sim.people.add_thermal_comfort_outputs` requests with ``occupant_inputs=True``. A hook that reads
+        inputs from the People objects (that of :func:`accim.sim.comfort_hooks.apply_sun2026_setpoints`) gives the
+        schedules of those of its model, for all the simulations. It needs pythermalcomfort and the hour of each row.
     :return: A DataFrame with a row for each simulation: ``Source``, the columns that describe the simulations
         (``Model``, ``ComfStand``... ``EPW``, those that the table has), and ``<zone>_<indicator>`` and
         ``Building_<indicator>`` for each indicator.
     :raises ValueError: If the table has no months and days (or hours, with ``pythermalcomfort_set``), a zone has not
         the operative temperature or the occupied hours, an argument is not valid, or the CSV file of a simulation is
-        not found with ``pythermalcomfort_set``.
+        not found with ``pythermalcomfort_set``; and, with the inputs of the People objects, if the model of a
+        simulation is not found, a zone of the table has no People objects in it, or its CSV file has not the outputs
+        of their schedules (:class:`accim.sim.comfort_hooks.MissingOccupantInputs`).
     :raises ImportError: With ``pythermalcomfort_set``, if pythermalcomfort cannot be imported.
     """
     from accim.sim.arguments import to_day_of_year
@@ -562,7 +660,10 @@ def table_indicators(df: pd.DataFrame, zones: Sequence[str], tsv_limit: Optional
 
         sun2026_set_setpoints(1, tsv_limit)
     zones = list(zones)
-    hook = None if pythermalcomfort_set is None else _pythermalcomfort_hook(pythermalcomfort_set, zones)
+    hook, people, idf = (None, None, None) if pythermalcomfort_set is None else _pythermalcomfort_hook(
+        pythermalcomfort_set, zones)
+    # The schedules of the People objects of the models of the simulations, read once
+    models: Dict[str, Dict[str, dict]] = {}
     if hook is not None and 'Hour' not in df.columns:
         raise ValueError('The indicators of the SET of pythermalcomfort need the hour of each row (a table of '
                          'timesteps or hours).')
@@ -602,7 +703,8 @@ def table_indicators(df: pd.DataFrame, zones: Sequence[str], tsv_limit: Optional
         day = _day_of_year(group['Month'], group['Day'])
         season = _cooling_season(day, start, end)
         dates = list(zip(group['Month'].astype(str), group['Day'].astype(str)))
-        python_set = {} if hook is None else _pythermalcomfort_set_of_rows(group, source, hook, list(found))
+        python_set = {} if hook is None else _pythermalcomfort_set_of_rows(group, source, hook, list(found), people,
+                                                                           idf, models)
         totals: Dict[str, List[float]] = {}
         for zone, zone_columns in found.items():
             hours = pd.to_numeric(group[zone_columns['hours']], errors='coerce').fillna(0.0).to_numpy()

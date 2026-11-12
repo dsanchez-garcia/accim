@@ -33,8 +33,11 @@ comfort band, so that the thermostats get them with the tolerance of the setpoin
 maximum of the setpoints, the hour counters and the outputs of the setpoints of the zone follow them); it also reports
 the ATHB_PMV of each zone (``ATHB_PMV_<zone>``, from its mean air and mean radiant temperatures and relative humidity)
 and the adapted clothing and metabolic rate (``ATHB_clo_<zone>`` and ``ATHB_met_<zone>``). As the other sensors of the
-EMS at the beginning of the timestep, those of the zone are those of the previous timestep, and trm is the running mean
-outdoor temperature of CEN 15251 of EnergyPlus (the sensor ``RMOT`` of the ACCIS, α = 0.8, as EN 16798-1). The
+EMS at the beginning of the timestep, those of the air temperature and the relative humidity of the zone are those of
+the previous timestep (that of its mean radiant temperature is the one that EnergyPlus has calculated for the timestep
+itself: measured on 2026-11-12 with the sensors of the hook of the SET, which read the same outputs), and trm is the
+running mean outdoor temperature of CEN 15251 of EnergyPlus (the sensor ``RMOT`` of the ACCIS, α = 0.8, as EN 16798-1).
+The
 setpoints out of ``temperature_range`` are its limits: the hook reports the hours in which a setpoint of a zone is at
 one of them (``ATHB_saturated_<zone>``, summed) and warns at the end of the simulation (task H4 of the review of accim
 1.2.0, finding A4-1). The metabolic rate and the air speed of the hook are not those of the People objects, which
@@ -90,6 +93,7 @@ __all__ = [
     'ATHB_TEMPERATURE_RANGE',
     'AthbSetpointHook',
     'MET_ACTIVITY_LEVEL',
+    'MissingOccupantInputs',
     'SET_HEATING_WARNING_TEMPERATURE',
     'SET_METHODS',
     'SET_TEMPERATURE_RANGE',
@@ -102,6 +106,7 @@ __all__ = [
     'SetSetpointHook',
     'Sun2026SetpointHook',
     'TR_MODES',
+    'add_people_input_outputs',
     'apply_athb_setpoints',
     'apply_set_setpoints',
     'apply_sun2026_setpoints',
@@ -109,6 +114,7 @@ __all__ = [
     'athb_met',
     'athb_pmv',
     'causal_tsv',
+    'people_inputs',
     'set_of_results',
     'set_zone_outputs',
     'standard_effective_temperature',
@@ -683,9 +689,11 @@ class SetSetpointHook:
       the hook is made, and interpolated linearly in each timestep (:meth:`setpoints_of_humidity`), so pythermalcomfort
       does not run in the callbacks of EnergyPlus (about 1.5 s to make the hook).
     - ``'bisection'``: the setpoints are calculated by bisection in each timestep (about ten SET for each zone), and the
-      SET of each zone, from its mean air temperature, mean radiant temperature and relative humidity of the previous
-      timestep (the sensors ``SET_MAT_<zone>``, ``SET_MRT_<zone>`` and ``SET_RH_<zone>``), is the global variable
-      ``SET_<zone>``, which EnergyPlus reports. ``set_tmp`` of pythermalcomfort is compiled by numba: in the development
+      SET of each zone, from the values of its sensors ``SET_MAT_<zone>``, ``SET_MRT_<zone>`` and ``SET_RH_<zone>``
+      (its mean air temperature and relative humidity of the previous timestep, and the mean radiant temperature that
+      EnergyPlus has calculated for the timestep itself: measured on 2026-11-12,
+      ``tests/core/test_people_set_inputs.py``), is the global variable ``SET_<zone>``, which EnergyPlus reports.
+      ``set_tmp`` of pythermalcomfort is compiled by numba: in the development
       environment of accim 1.2.0 (Python 3.14.3, numba 0.68.1, pythermalcomfort 4.8.1, EnergyPlus 25.1), its first
       call in a process stopped it with an access violation (exit code -1073741819) when the library of the API of
       EnergyPlus had been loaded in the process before, inside a callback or not, and worked when it was made before
@@ -709,7 +717,7 @@ class SetSetpointHook:
       None, the posture is then that of the metabolic rate of each timestep. The work efficiency of the People objects
       is not read: the external work of the SET is 0, as in the SET of the hook with its own inputs.
     - ``tr_mode='zone'``: the mean radiant temperature is that of the zone (the sensor ``SET_MRT_<zone>``, that of the
-      previous timestep), and the unknown of the bisection is the air temperature (:meth:`inverted_temperatures`); the
+      timestep itself), and the unknown of the bisection is the air temperature (:meth:`inverted_temperatures`); the
       hook gives the ACCIS, whose thermostats control the operative temperature, the operative temperatures (air
       temperature + mean radiant temperature)/2 of the air temperatures found (:meth:`operative_temperatures`; decision
       of the author of 2026-11-10 in ``notes/decisions.md``). With ``'equal_air'`` (the default), the mean radiant
@@ -748,6 +756,9 @@ class SetSetpointHook:
     :ivar setpoints: The last setpoints of each zone, ``{zone: (heating, cooling)}``, without the tolerance.
     :ivar keys: The key of each zone in the outputs of EnergyPlus (``{'Block1_Zone1': 'Block1:Zone1'}``), which
         :func:`apply_set_setpoints` sets and :func:`set_of_results` uses.
+    :ivar people: With ``met``, ``clo`` or ``air_speed`` None, the schedules of the People objects of each zone
+        (:func:`people_inputs`), which :func:`apply_set_setpoints` and :func:`apply_sun2026_setpoints` set and with
+        which :func:`set_of_results` reads the inputs of the occupants from the results.
     :raises ImportError: If pythermalcomfort is not installed.
     """
 
@@ -811,6 +822,7 @@ class SetSetpointHook:
                              f'{unknown}.')
         self.setpoints: Dict[str, Tuple[float, float]] = {}
         self.keys: Dict[str, str] = {}
+        self.people: Dict[str, dict] = {}
         # The setpoints of each relative humidity of the table, calculated now (out of the callbacks of EnergyPlus)
         self.table = ([self.operative_temperatures(humidity) for humidity in _SET_HUMIDITIES]
                       if method == 'table' else None)
@@ -1331,6 +1343,81 @@ def _needs_comfort_model(building, people: Dict[str, dict]) -> bool:
     return False
 
 
+def people_inputs(building, zones: Optional[Sequence[str]] = None) -> Dict[str, dict]:
+    """The schedules of the People objects of the occupied zones of a model from which :func:`set_of_results` takes the
+    metabolic rate, the clothing insulation and the air speed of the occupants in each row of the results of a
+    simulation, as the hooks of the SET read them in each timestep with ``met``, ``clo`` and ``air_speed`` None (task
+    S4 of the review of accim 1.2.0, option (ii), decided on 2026-11-12): ``{zone: {'activity': its activity level
+    schedule, 'clothing': its clothing insulation schedule, 'clothing_method_schedule': that of its calculation method,
+    'air_speed': its air velocity schedule, 'clothing_source': 'schedule', 'dynamic' (the dynamic clothing model of
+    ASHRAE 55) or 'method' (one of them, as the calculation method schedule says), 'occupants': the key of the outputs
+    of its first occupant instance, 'key': the key of the outputs of the zone}}``, by the names of the zones in the EMS
+    objects ('Block1_Zone1'). :func:`add_people_input_outputs` requests the outputs of these schedules.
+
+    :param building: The model (eppy).
+    :param zones: The zones, by their names in the EMS objects; None (the default) for all the occupied zones.
+    :raises ValueError: If a zone has no People object, its People objects have different schedules or a clothing
+        insulation calculation method that is not read, or a schedule is missing.
+    """
+    from accim.sim.targets import resolve_targets
+
+    targets = {target.ems_suffix.upper(): target for target in resolve_targets(building)}
+    names = [target.ems_suffix for target in targets.values()] if zones is None else [str(zone) for zone in zones]
+    found = _people_inputs(building, names, ('met', 'clo', 'air_speed'))
+    return {zone: dict(values, key=targets[zone.upper()].zone_name) for zone, values in found.items()}
+
+
+def add_people_input_outputs(building, output_frequencies: Optional[Sequence[str]] = None) -> Dict[str, dict]:
+    """Request the outputs of EnergyPlus from which :func:`set_of_results` calculates the SET of pythermalcomfort of
+    the occupied zones of a model with the inputs of the occupants of their People objects in each row (task S4 of the
+    review of accim 1.2.0, option (ii): the reference SET of the causal band of comfort standard 24 in the simulations
+    of any comfort model, :func:`accim.data.postprocessing.indoor_adaptation.table_indicators` with
+    ``pythermalcomfort_set='people'``):
+
+    - *Zone Mean Air Temperature*, *Zone Mean Radiant Temperature* and *Zone Air Relative Humidity* of each zone;
+    - the *Schedule Value* of the activity level, clothing insulation and air velocity schedules of its People objects
+      (and of their clothing insulation calculation method schedule, with CalculationMethodSchedule);
+    - with the dynamic clothing model of ASHRAE 55, *Zone Thermal Comfort Clothing Value* of its occupants, which
+      EnergyPlus reports for the People objects with the Fanger, Pierce or KSU model.
+
+    The outputs that the model requests already (with their key or '*') are not requested again.
+    :func:`accim.sim.people.add_thermal_comfort_outputs` calls it with ``occupant_inputs=True``.
+
+    :param building: The model (eppy), changed in place.
+    :param output_frequencies: The reporting frequencies of the outputs ('timestep', 'hourly'...); None (the default)
+        for those of the EMS outputs of the model (those of the ACCIS), or hourly if it has none.
+    :return: The schedules of the People objects of each zone (:func:`people_inputs`).
+    :raises ValueError: Before changing anything, if the model has no occupants, :func:`people_inputs` raises it, or,
+        with the dynamic clothing model, an object of the occupants has none of the Fanger, Pierce and KSU models (add
+        one with :func:`accim.sim.people.add_thermal_comfort_model`).
+    """
+    inputs = people_inputs(building)
+    if not inputs:
+        raise ValueError('The model has no occupants (People objects), whose inputs these outputs are.')
+    if _needs_comfort_model(building, inputs):
+        raise ValueError('The clothing insulation of the dynamic clothing model of ASHRAE 55 is the output Zone '
+                         'Thermal Comfort Clothing Value, which EnergyPlus reports for the People objects with the '
+                         'Fanger, Pierce or KSU model: add one with '
+                         "accim.sim.people.add_thermal_comfort_model(building, 'Pierce') (or with "
+                         'add_thermal_comfort_outputs).')
+    frequencies = _output_frequencies(building, output_frequencies)
+    _add_zone_output_variables(building, {zone: values['key'] for zone, values in inputs.items()},
+                               _SET_ZONE_VARIABLES, frequencies)
+    schedules: Dict[str, str] = {}
+    occupants: Dict[str, str] = {}
+    for zone, values in inputs.items():
+        source = values['clothing_source']
+        names = [values['activity'], values['air_speed']]
+        names += [values['clothing']] if source in ('schedule', 'method') else []
+        names += [values['clothing_method_schedule']] if source == 'method' else []
+        schedules.update({name.upper(): name for name in names})
+        if source in ('dynamic', 'method'):
+            occupants[zone] = values['occupants']
+    _add_zone_output_variables(building, schedules, ['Schedule Value'], frequencies)
+    _add_zone_output_variables(building, occupants, [_CLOTHING_VALUE_OUTPUT], frequencies)
+    return inputs
+
+
 def apply_set_setpoints(building, set_cooling_setpoint: float, set_heating_setpoint: float,
                         met: Optional[float] = None, clo: Optional[float] = None, air_speed: Optional[float] = None,
                         position: Optional[str] = None, tolerance_k: float = 0.1, max_iterations: int = 20,
@@ -1391,6 +1478,7 @@ def apply_set_setpoints(building, set_cooling_setpoint: float, set_heating_setpo
                            temperature_range=temperature_range, method=method, tr_mode=tr_mode,
                            clothing_sources={zone: values['clothing_source'] for zone, values in people.items()})
     hook.keys = dict(keys)
+    hook.people = {zone: dict(values, key=keys[zone]) for zone, values in people.items()}
     if pierce:
         from accim.sim.people import add_thermal_comfort_model
 
@@ -1476,6 +1564,7 @@ def apply_sun2026_setpoints(building, comfort_mode: Any = 1, category: int = 80,
                                heating_minimums={zone: limits.get(zone, {}).get('AHSTmin') for zone in keys},
                                clothing_sources={zone: values['clothing_source'] for zone, values in people.items()})
     hook.keys = dict(keys)
+    hook.people = {zone: dict(values, key=keys[zone]) for zone, values in people.items()}
     # The Pierce model first: add_thermal_comfort_model raises its errors before changing anything
     add_thermal_comfort_model(building, 'Pierce')
     frequencies = _output_frequencies(building, output_frequencies)
@@ -1496,39 +1585,118 @@ def _results_column(results, key: str, variable: str, frequency: Optional[str]):
     return results[names[0]] if names else None
 
 
+class MissingOccupantInputs(ValueError):
+    """The results of a simulation have not the outputs of the schedules of the People objects from which
+    :func:`set_of_results` reads the inputs of the occupants (:func:`add_people_input_outputs` requests them)."""
+
+
+def _people_input_columns(results, zone: str, people: dict, needed: Sequence[str],
+                          frequency: Optional[str]) -> Dict[str, Any]:
+    """The inputs of the occupants of a zone in each row of the results of a simulation, from the outputs of the
+    schedules of its People objects (:func:`people_inputs`), as the hook of the SET reads them in each timestep
+    (:meth:`SetSetpointHook.zone_inputs`): ``{'met': array, 'clo': array, 'air_speed': array}`` (those of ``needed``),
+    with NaN where the hook would calculate no SET (an activity level of 0, a negative clothing insulation or air
+    speed, or a clothing insulation of the dynamic clothing model of 0).
+
+    :raises ValueError: If the results have not an output that it needs.
+    """
+    import numpy as np
+
+    missing: List[str] = []
+
+    def column(key: str, variable: str):
+        found = _results_column(results, key, variable, frequency)
+        if found is None:
+            missing.append(f'{variable} of {key!r}')
+            return np.full(len(results), np.nan)
+        return found.to_numpy(dtype=float)
+
+    inputs: Dict[str, Any] = {}
+    if 'met' in needed:
+        activity = column(people['activity'], 'Schedule Value')
+        inputs['met'] = np.where(activity > 0, activity / MET_ACTIVITY_LEVEL, np.nan)
+    if 'clo' in needed:
+        source = people['clothing_source']
+        scheduled = dynamic = None
+        if source in ('schedule', 'method'):
+            scheduled = column(people['clothing'], 'Schedule Value')
+            scheduled = np.where(scheduled >= 0, scheduled, np.nan)
+        if source in ('dynamic', 'method'):
+            dynamic = column(people['occupants'], _CLOTHING_VALUE_OUTPUT)
+            dynamic = np.where(dynamic > 0, dynamic, np.nan)
+        if source == 'method':
+            method = column(people['clothing_method_schedule'], 'Schedule Value')
+            inputs['clo'] = np.where(method == 2, dynamic, scheduled)
+        else:
+            inputs['clo'] = scheduled if source == 'schedule' else dynamic
+    if 'air_speed' in needed:
+        speed = column(people['air_speed'], 'Schedule Value')
+        inputs['air_speed'] = np.where(speed >= 0, speed, np.nan)
+    if missing:
+        raise MissingOccupantInputs(
+            f'The results have not the outputs of the inputs of the occupants of the zone {zone} '
+            f'({"; ".join(missing)}): request them before the simulation with '
+            f'accim.sim.people.add_thermal_comfort_outputs(building, occupant_inputs=True), or with '
+            f'accim.sim.comfort_hooks.add_people_input_outputs(building).')
+    return inputs
+
+
 def set_of_results(results, hook: SetSetpointHook, keys: Optional[Dict[str, str]] = None,
-                   frequency: Optional[str] = None):
+                   frequency: Optional[str] = None, people: Optional[Dict[str, dict]] = None):
     """The SET of the zones of a hook of the SET in each row of the results of a simulation (task G3 of the review of
     accim 1.2.0): :func:`standard_effective_temperature` of the outputs *Zone Mean Air Temperature*, *Zone Mean Radiant
     Temperature* and *Zone Air Relative Humidity* of each zone (those that :func:`apply_set_setpoints` requests), with
     the metabolic rate, clothing insulation, air speed and posture of the hook. The outputs of each row are those of the
     timestep or hour (means), so this SET is that of the row, while the output ``SET_<zone>`` of the hook with
-    ``method='bisection'`` is that of the values of the previous timestep, which the sensors read.
+    ``method='bisection'`` is that of the values that its sensors read: the air temperature and the relative humidity
+    of the previous timestep, and the mean radiant temperature of the timestep itself (with them, this function gives
+    the output of the hook; with those of each row, 0.013 K away on average and 0.14 K at most in a week of July of
+    the sample model with comfort standard 24: ``tests/core/test_people_set_inputs.py``).
+
+    With a hook that reads inputs of the occupants from the People objects (``met``, ``clo`` or ``air_speed`` None),
+    those of each row are the values of the schedules of the People objects of each zone in the results (task S4 of the
+    review of accim 1.2.0, option (ii)): the *Schedule Value* of their activity level schedule (divided by
+    :data:`MET_ACTIVITY_LEVEL`), of their air velocity schedule and of their clothing insulation schedule, or, with the
+    dynamic clothing model of ASHRAE 55, the output *Zone Thermal Comfort Clothing Value* of their occupants (with
+    CalculationMethodSchedule, one of them as the calculation method schedule says), which
+    :func:`add_people_input_outputs` requests; and, without ``position``, the posture of the metabolic rate of each row
+    ('sitting' with 1.2 met or less). The rows in which the hook would calculate no SET (an activity level or a
+    clothing insulation of the dynamic model of 0) are NaN. These inputs are those of the row, and the clothing
+    insulation of the dynamic model that of the row itself, while the hook takes that of the previous timestep.
 
     :param results: The results: a DataFrame of the CSV file of the simulation (with the names of the columns of
         EnergyPlus, ``BLOCK1:ZONE1:Zone Mean Air Temperature [C](Hourly)``), or its path.
     :param hook: The hook (:class:`SetSetpointHook`).
     :param keys: The key of each zone of the hook in the outputs (``{'Block1_Zone1': 'Block1:Zone1'}``); by default,
-        ``hook.keys`` (set by :func:`apply_set_setpoints`), or the name of the zone with ':' for '_'.
+        ``hook.keys`` (set by :func:`apply_set_setpoints`), that of ``people``, or the name of the zone with ':' for
+        '_'.
     :param frequency: The frequency of the columns ('Hourly', 'TimeStep'...), if the results have several; by default,
         the first column of each output.
+    :param people: With a hook that reads inputs from the People objects, the schedules of the People objects of each
+        zone (:func:`people_inputs`); by default, ``hook.people`` (set by :func:`apply_set_setpoints` and
+        :func:`apply_sun2026_setpoints`).
     :return: A DataFrame with the index of the results and a column ``SET_<zone>`` for each zone (NaN in the rows
-        without the three outputs).
-    :raises ValueError: If the results have not the three outputs of a zone.
+        without the three outputs, or without the inputs of the occupants).
+    :raises ValueError: If the results have not the three outputs of a zone, or, with a hook that reads inputs from the
+        People objects, their schedules are not given or the results have not their outputs.
     """
     import numpy as np
     import pandas as pd
 
-    missing = [name for name in ('met', 'clo', 'air_speed') if getattr(hook, name) is None]
-    if missing:
-        raise ValueError(f'The hook reads {missing} from the People objects of the zones in each timestep, which the '
-                         f"results have not: its SET is the output SET_<zone> (method='bisection').")
+    needed = [name for name in ('met', 'clo', 'air_speed') if getattr(hook, name) is None]
+    people = dict(people if people is not None else getattr(hook, 'people', None) or {})
+    without = [zone for zone in hook.zones if zone not in people] if needed else []
+    if without:
+        raise ValueError(f'The hook reads {needed} from the People objects of the zones in each timestep: give the '
+                         f'schedules of the People objects of the zones {without} (people, as '
+                         f'accim.sim.comfort_hooks.people_inputs(building) gives them), whose outputs the results must '
+                         f"have; or take its SET from the output SET_<zone> (method='bisection').")
     if not isinstance(results, pd.DataFrame):
         results = pd.read_csv(results)
     keys = dict(keys or hook.keys or {})
     columns = {}
     for zone in hook.zones:
-        key = keys.get(zone, zone.replace('_', ':'))
+        key = keys.get(zone) or people.get(zone, {}).get('key') or zone.replace('_', ':')
         found = [_results_column(results, key, variable, frequency) for variable in _SET_ZONE_VARIABLES]
         if any(column is None for column in found):
             missing = [variable for variable, column in zip(_SET_ZONE_VARIABLES, found) if column is None]
@@ -1536,7 +1704,24 @@ def set_of_results(results, hook: SetSetpointHook, keys: Optional[Dict[str, str]
         air, radiant, humidity = (column.to_numpy(dtype=float) for column in found)
         valid = ~(np.isnan(air) | np.isnan(radiant) | np.isnan(humidity))
         values = np.full(len(results), np.nan)
-        if valid.any():
-            values[valid] = np.asarray(hook.zone_set(air[valid], radiant[valid], humidity[valid]), dtype=float)
+        if not needed:
+            if valid.any():
+                values[valid] = np.asarray(hook.zone_set(air[valid], radiant[valid], humidity[valid]), dtype=float)
+            columns[f'SET_{zone}'] = values
+            continue
+        # The inputs of the occupants of each row: those of the hook, or those of the People objects of the zone
+        inputs = _people_input_columns(results, zone, people[zone], needed, frequency)
+        met, clo, air_speed = (np.asarray(inputs[name], dtype=float) if name in inputs
+                               else np.full(len(results), float(getattr(hook, name)))
+                               for name in ('met', 'clo', 'air_speed'))
+        valid &= ~(np.isnan(met) | np.isnan(clo) | np.isnan(air_speed))
+        # The posture of the hook, or that of the metabolic rate of each row (SetSetpointHook.posture)
+        sitting = (np.full(len(results), hook.position == 'sitting') if hook.position is not None
+                   else np.nan_to_num(met, nan=0.0) <= 1.2)
+        for position, rows in (('sitting', valid & sitting), ('standing', valid & ~sitting)):
+            if rows.any():
+                values[rows] = np.asarray(standard_effective_temperature(
+                    air[rows], radiant[rows], air_speed[rows], humidity[rows], met[rows], clo[rows], position),
+                    dtype=float)
         columns[f'SET_{zone}'] = values
     return pd.DataFrame(columns, index=results.index)

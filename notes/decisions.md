@@ -128,6 +128,31 @@ template]] to add a new entry.
        of the decision (0.07 K is the mean of the year of E-F1 at 1.06 and 1.1 met).
      - The documentation says that the confirmation of the authors of the model is still to be asked: the reference
        is an inference from the script of the database and from the earlier paper of the same authors.
+  9. The inputs of the occupants of the People objects in `pythermalcomfort_set` (decision 9, task S4, option (ii)).
+     - The value is the string `'people'`: `pythermalcomfort_set='people'` for the three inputs, or `'people'` as the
+       metabolic rate, the clothing insulation or the air speed of the dict, so that some can be constant. None is
+       still an error in the dict (an input that is forgotten is not read from the model in silence); in a hook, None
+       is what the hook reads from the People objects, so it is taken so if the hook has their schedules.
+     - The schedules of the People objects are read from the model of each simulation, the IDF file of the current
+       folder whose name is that of its CSV file up to its weather file (the names of `run_ep`), once for each model;
+       the key `'idf'` gives another model for all the simulations, and a hook of `apply_set_setpoints` or
+       `apply_sun2026_setpoints`, those of its model (`hook.people`, which these functions now set). `Table` is not
+       given the argument (the verdict keeps it in `table_indicators`).
+     - The outputs are requested by `add_thermal_comfort_outputs(..., occupant_inputs=True)` (off by default, so the
+       outputs of the models that call it do not change), through `add_people_input_outputs`, which any model can
+       call. `apply_set_setpoints` and `apply_sun2026_setpoints` do not request them: their models report the SET of
+       the hook, and their outputs do not change.
+     - `set_of_results` with a hook that reads inputs from the People objects no longer raises: it reads them from
+       the results (a `ValueError` if they have not the outputs, `MissingOccupantInputs`, which `table_indicators`
+       does not turn into NaN, unlike the missing conditions of a zone: the decision asks for a clear error). The rows
+       in which the hook calculates no SET (an activity level of 0, a clothing insulation of the dynamic model of 0)
+       are NaN.
+     - The SET of each row takes the conditions of the row (the means of its timestep), as before; the hook takes
+       the air temperature and the relative humidity of the previous timestep and the mean radiant temperature of
+       the timestep itself. That was measured while testing this task (the values of its sensors against the
+       outputs: those of the air temperature and the humidity are those of the previous row, exactly, and that of
+       the mean radiant temperature, that of the same row), and the documentation and the docstrings, which said
+       that the three were those of the previous timestep, were corrected; no code changes for it.
 - **Consequences**: the tasks done leave `TODO.md` for `DEVLOG.md`; the documentation says what each choice means
   for the users (section 4.2 of the detailed use, and `CHANGELOG.md`).
 
@@ -512,6 +537,8 @@ template]] to add a new entry.
   keeps giving the indicators that need nothing but EnergyPlus, and neither `Table` nor the GUI get the argument (option
   (iii)) until someone needs it; and the conditions of the zones are not taken from the columns of the table (option
   (iv)), which drop the mean radiant temperature and the relative humidity and add up the timesteps of each hour.
+  Option (ii) implemented on 2026-11-12 (`DEVLOG.md`; section 52 of `CAMBIOS_CODIGO_v1.2.0.md`), with the choices of
+  the entry "The implementation of the decisions of 2026-11-12" at the top of this file.
 
 ### 2026-11-11 — S1: the details of the comparison of the minimum and maximum with the setpoints of the comfort model
 - Context: decision 19 (the verdicts of 2026-11-11 in [[decisions.md]]; task S1 of `notes/COPILOT_SIGUIENTE_SESION.md`)
