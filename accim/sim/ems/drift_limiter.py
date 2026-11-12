@@ -52,6 +52,23 @@ The inputs of each zone (its program SetInputData_<zone>, only in the zones with
 without it do not change): ``DriftMode`` (1, 'rate'; 2, 'window'; 0, none), ``MaxDriftRate``, ``AlphaIndoor``,
 ``DeltaCool``, ``DeltaHeat`` and, with ``initial_T_rm_in``, ``InitTrmIn``. The setpoints based on the PMV (the
 thermostats of the PMV of :mod:`accim.sim.pmv_index`) have no limiter: their setpoints are not temperatures.
+
+'rate' is the recommended mode, and 'window' an experimental one (finding A8 of the self-audit of 2026-11-11, decided
+on 2026-11-12): :class:`accim.sim.accis.AddAccis` and :func:`accim.sim.accis.modify_accis` warn when a zone gets it
+(:data:`WINDOW_WARNING`). T_rm_in is the running mean of the operative temperature of the zone itself, so clipping both
+setpoints to T_rm_in ± delta takes the setpoint that the comfort standard leaves far from the zone to its temperature:
+the band between the setpoints is ``delta_heat`` + ``delta_cool`` at most (2 K by default), and the heating or the
+cooling run to keep the zone within about 1 K of its own recent mean, also where the comfort standard would let it
+float. In April of the sample model in Seville (INT EN16798, category II, comfort mode 3, full air-conditioning,
+EnergyPlus 25.1; measured again on 2026-11-12), the energy of the heating coils went from 125.9 kWh without the
+limiter to 32 488 kWh with the window in all the zones (that of the cooling coils, from 9520 to 4678 kWh), and the mean
+band between the setpoints in the occupied hours from 7.00 to 1.97 K; with the rate (0.5 K/day), which changed the
+setpoints on two days, they were 152.9 and 9499 kWh (``tests/core/test_drift_limiter.py``; January and July are in
+section 4.2.7 of the detailed use). While the zone is held within the window, its exposure can drift by about (1 −
+``alpha_indoor``)·delta per day only (0.2 K/day by default), a much stricter control than that of the rate. The source
+of the limiter supports the rate (the changes of the setpoints spread over a couple of weeks: Parkinson et al., 2020,
+section 4.3.2); the window and its 1.0 K are values of the proposal of block F without a source, which accim 1.2.0
+keeps as the author decided them.
 """
 
 import numbers
@@ -67,6 +84,7 @@ __all__ = [
     'INPUTS',
     'OUTPUTS',
     'PROGRAM_PREFIX',
+    'WINDOW_WARNING',
     'check_drift_arguments',
     'check_window_width',
     'drift_inputs',
@@ -85,6 +103,13 @@ INPUTS = ('DriftMode', 'MaxDriftRate', 'AlphaIndoor', 'DeltaCool', 'DeltaHeat', 
 #: The defaults of the arguments of the limiter (decision 6 of the author of 2026-11-10)
 DEFAULTS = {'drift_mode': None, 'max_drift_rate': 0.5, 'alpha_indoor': 0.8, 'delta_cool': 1.0, 'delta_heat': 1.0,
             'initial_T_rm_in': None}
+#: The warning of AddAccis and modify_accis when a zone gets the window, an experimental mode (finding A8 of the
+#: self-audit of 2026-11-11, decided on 2026-11-12; see the module)
+WINDOW_WARNING = ("drift_mode='window' is an experimental mode of the limiter of the drift of the setpoints: both "
+                  "setpoints follow the running mean of the operative temperature of the zone itself (T_rm_in), so the "
+                  "band between them is delta_heat + delta_cool at most (2 K with the defaults), and the heating or "
+                  "the cooling run to keep the zone within it, with much more energy than with the setpoints of the "
+                  "comfort standard (section 4.2.7 of the detailed use). drift_mode='rate' is the recommended mode.")
 #: The program of the limiter of each zone is this prefix and the name of the zone
 PROGRAM_PREFIX = 'ApplyDriftLimiter_'
 #: The program that resets the variables of the limiter at the beginning of each environment

@@ -436,6 +436,73 @@ def test_addaccis_warns_of_the_arguments_of_the_limiter_without_drift_mode(tmp_p
         assert not [w for w in caught if 'are not used: no zone has drift_mode' in str(w.message)], extra
 
 
+WINDOW_WARNING = "drift_mode='window' is an experimental mode of the limiter of the drift of the setpoints"
+
+
+def _window_warnings(caught):
+    return [w for w in caught if WINDOW_WARNING in str(w.message)]
+
+
+@needs_idd
+def test_the_window_is_an_experimental_mode_with_a_warning(tmp_path, monkeypatch):
+    # Finding A8 of the self-audit of 2026-11-11 (decided on 2026-11-12): the window clips both setpoints to the
+    # running mean of the temperature of the zone itself, so the band between them is delta_heat + delta_cool at most
+    # and the heating or the cooling run to keep the zone within it. It stays as it is, as an experimental mode:
+    # AddAccis and modify_accis warn, once in each call, when a zone gets it, and 'rate' is the recommended mode
+    from accim.sim.accis import AddAccis, modify_accis
+
+    idf = _model(tmp_path)
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter('always')
+        modify_accis(idf, drift_mode='window')
+    # Once in the call, for its two zones
+    [warning] = _window_warnings(caught)
+    assert issubclass(warning.category, UserWarning)
+    assert "drift_mode='rate' is the recommended mode" in str(warning.message)
+    assert 'delta_heat + delta_cool' in str(warning.message) and 'section 4.2.7' in str(warning.message)
+    # Not for the zones that keep it in a call that does not give it, nor with 'rate'
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter('always')
+        modify_accis(idf, delta_cool=1.5)
+        modify_accis(idf, drift_mode='rate')
+    assert not _window_warnings(caught)
+    # In zone_arguments
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter('always')
+        modify_accis(idf, zone_arguments={'Block1:Zone2': {'drift_mode': 'window'}})
+    assert len(_window_warnings(caught)) == 1
+    # The errors of the arguments come before it
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter('always')
+        with pytest.raises(ValueError, match='must be at least twice the tolerance'):
+            modify_accis(idf, drift_mode='window', delta_cool=0.0, delta_heat=0.1)
+    assert not _window_warnings(caught)
+
+    # AddAccis: once for all its output IDFs
+    shutil.copy(SAMPLE_IDF, tmp_path / 'TestModel.idf')
+    monkeypatch.chdir(tmp_path)
+    arguments = dict(script_type='vrf_ac', supply_air_temp_input_method='temperature difference',
+                     output_type='standard', output_frequencies=['hourly'], keep_existing_outputs=False,
+                     energyplus_version='auto', setpoint_type='temperature', comfort_standard=[1, 2],
+                     category=[2, 80], comfort_mode=[3], confirm=True, verbose=False)
+    for extra, expected in ((dict(drift_mode='window'), 1),
+                            (dict(drift_mode='rate', zone_arguments={'Block1:Zone1': {'drift_mode': 'window'}}), 1),
+                            (dict(drift_mode='rate'), 0), ({}, 0)):
+        for output in tmp_path.glob('TestModel[[]*.idf'):
+            output.unlink()
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter('always')
+            AddAccis(**arguments, **extra)
+        assert len(_window_warnings(caught)) == expected, extra
+        assert len(list(tmp_path.glob('TestModel[[]*.idf'))) == 2
+    # With the PMV-based setpoints, the error of the limiter, without the warning
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter('always')
+        with pytest.raises(ValueError, match="drift_mode needs setpoint_type 'temperature'"):
+            AddAccis(**dict(arguments, setpoint_type='pmv'), drift_mode='window')
+    assert not _window_warnings(caught)
+
+
 def test_the_ems_code_of_the_limiter():
     from accim.sim.preview import compute_setpoints
     from accim.utils.ems_code import get_setpoint_ems_code, get_setpoint_ems_programs
@@ -662,3 +729,99 @@ def test_the_rate_with_the_setpoints_of_a_hook_that_change_within_the_day(tmp_pa
         # degC), not of its last timestep (25.75 degC)
         tuesday = applied[days == 1]
         assert tuesday.max() == pytest.approx(23.375, abs=1e-4) and tuesday.min() == pytest.approx(22.375, abs=1e-4)
+
+
+#: Finding A8 of the self-audit of 2026-11-11, measured again on 2026-11-12: April of the sample model in Seville (INT
+#: EN16798, category II, comfort mode 3, full air-conditioning, EnergyPlus 25.1) without the limiter, with the window
+#: and with the rate, with their defaults in all the zones: the energy of the heating and of the cooling coils (kWh),
+#: and, in the occupied hours of Block1:Zone1, the mean band between the setpoints without the tolerance (K), the mean
+#: heating setpoint without the tolerance (°C) and the hours in which the limiter changed a setpoint
+A8_MEASURED = {
+    None: (125.881, 9520.358, 7.0, 20.003, None),
+    'window': (32487.905, 4677.723, 1.967, 24.921, 252.0),
+    'rate': (152.945, 9498.941, 7.0, 20.003, 24.0),
+}
+
+
+def _april(folder, drift_mode):
+    """The output IDF of AddAccis of the sample model for April (INT EN16798, category II, comfort mode 3, full
+    air-conditioning, hourly outputs, with those of the energy of its coils), with a mode of the limiter in all its
+    zones, simulated in its folder; return its results."""
+    import os
+
+    from accim.sim.accis import AddAccis, load_idf
+
+    folder.mkdir(parents=True)
+    shutil.copy(SAMPLE_IDF, folder / 'TestModel.idf')
+    model = load_idf(folder / 'TestModel.idf')
+    run_period = model.idfobjects['RunPeriod'][0]
+    run_period.Begin_Month, run_period.Begin_Day_of_Month = 4, 1
+    run_period.End_Month, run_period.End_Day_of_Month = 4, 30
+    model.save()
+    here = os.getcwd()
+    os.chdir(folder)
+    try:
+        with warnings.catch_warnings():
+            warnings.simplefilter('ignore')
+            AddAccis(script_type='vrf_ac', supply_air_temp_input_method='temperature difference',
+                     output_type='standard', output_frequencies=['hourly'], keep_existing_outputs=False,
+                     energyplus_version='auto', setpoint_type='temperature', comfort_standard=[1], category=[2],
+                     comfort_mode=[3], confirm=True, verbose=False, drift_mode=drift_mode)
+    finally:
+        os.chdir(here)
+    [path] = folder.glob('TestModel[[]*.idf')
+    idf = load_idf(path)
+    for name in ('Heating Coil Heating Energy', 'Cooling Coil Total Cooling Energy'):
+        idf.newidfobject('Output:Variable', Key_Value='*', Variable_Name=name, Reporting_Frequency='Hourly')
+    idf.saveas(str(folder / 'april.idf'))
+    return folder / 'april.idf'
+
+
+def _simulate(model):
+    # In its own folder: the programs of EnergyPlus write files with fixed names in the working folder
+    energyplus = _energyplus_with_api() / 'energyplus.exe'
+    done = subprocess.run([str(energyplus), '-d', str(model.parent / 'out'), '-p', 'run', '-s', 'C', '-r', '-x', '-w',
+                           str(EPW), str(model)], capture_output=True, text=True, cwd=str(model.parent))
+    assert done.returncode == 0, done.stdout[-3000:]
+    return pd.read_csv(model.parent / 'out' / 'run.csv')
+
+
+@needs_energyplus
+def test_the_window_keeps_the_zone_near_its_own_recent_temperature_in_energyplus(tmp_path):
+    # Finding A8 of the self-audit of 2026-11-11: the window takes the heating setpoint to 1 K below the recent
+    # temperature of the zone, about 5 K above that of the comfort standard in April, so the heating coils use 258
+    # times the energy of the model without the limiter, while the rate changes its setpoints on two Mondays only
+    from concurrent.futures import ThreadPoolExecutor
+
+    models = {mode: _april(tmp_path / str(mode), mode) for mode in A8_MEASURED}
+    with ThreadPoolExecutor(max_workers=len(models)) as pool:
+        results = dict(zip(models, pool.map(_simulate, models.values())))
+    measured = {}
+    for mode, frame in results.items():
+        def column(name, frame=frame):
+            return frame[next(c for c in frame.columns if c.startswith(name))].to_numpy(dtype=float)
+
+        def energy(name, frame=frame):
+            return float(frame[[c for c in frame.columns if f':{name} [J]' in c]].sum().sum() / 3.6e6)
+
+        occupied = column('EMS:Occupied Hours_Block1_Zone1 [') > 0
+        heating = column('EMS:Adaptive Heating Setpoint Temperature_No Tolerance_Block1_Zone1 [')
+        cooling = column('EMS:Adaptive Cooling Setpoint Temperature_No Tolerance_Block1_Zone1 [')
+        assert occupied.sum() == 264
+        limited = None if mode is None else float(column('EMS:DriftLimitedHours_Block1_Zone1 [').sum())
+        measured[mode] = (energy('Heating Coil Heating Energy'), energy('Cooling Coil Total Cooling Energy'),
+                          float((cooling - heating)[occupied].mean()), float(heating[occupied].mean()), limited)
+    for mode, expected in A8_MEASURED.items():
+        for value, reference, tolerance in zip(measured[mode], expected, (0.01, 0.01, 0.001, 0.001, 1e-6)):
+            if reference is None:
+                assert value is None
+            else:
+                assert value == pytest.approx(reference, abs=tolerance), (mode, measured[mode])
+    # The window: all the occupied hours but those of the first occupied day, and a band of 2 K at most from then on
+    assert measured['window'][0] > 250 * measured[None][0]
+    frame = results['window']
+    heating = frame[next(c for c in frame.columns if c.startswith(
+        'EMS:Adaptive Heating Setpoint Temperature_No Tolerance_Block1_Zone1 ['))].to_numpy(dtype=float)
+    cooling = frame[next(c for c in frame.columns if c.startswith(
+        'EMS:Adaptive Cooling Setpoint Temperature_No Tolerance_Block1_Zone1 ['))].to_numpy(dtype=float)
+    assert (cooling - heating)[24:].max() <= 2.0 + 1e-3

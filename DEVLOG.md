@@ -36,6 +36,34 @@ Recommended flow: track active work in `TODO.md`, move completed outcomes to `DE
 ## Entries
 
 ### 2026-11-12
+#### [done] `drift_mode='window'` is an experimental mode, with a warning; `'rate'` is the recommended one (A8; branch `v1.2.0`)
+- Context: finding A8 of the self-audit of 2026-11-11, decided on 2026-11-12 (`notes/decisions.md`, decision 4): the
+  window clips both setpoints to T_rm_in ± delta, and T_rm_in is the running mean of the operative temperature of
+  the zone itself, so the band between the setpoints is `delta_heat` + `delta_cool` at most (2 K) and the heating or
+  the cooling run to keep the zone within about 1 K of its own recent mean. It is decision 6 of the author as it was
+  implemented, not an error; it is not redefined in accim 1.2.0.
+- Changes: `accim.sim.ems.drift_limiter.WINDOW_WARNING` and `accim.sim.accis._warn_window_drift_mode`: `AddAccis` and
+  `modify_accis` warn (`UserWarning`), once in each call, when a zone gets `drift_mode='window'` (in the arguments or
+  in `zone_arguments`), after the checks of the arguments. The docstring of the module, section 4.2.7 of the detailed
+  use, the table of the parameters of the parametric module and `CHANGELOG.md` say that the window is experimental
+  and `'rate'` the recommended mode, with the measurements of the finding, made again: in the sample model in Seville
+  (INT EN16798, category II, comfort mode 3), the heating coils use 42 814, 32 488 and 4464 kWh in January, April and
+  July with the window, instead of 19.7, 125.9 and 10.4 kWh, and the VRF system 32 654, 21 715 and 11 709 kWh of
+  electricity instead of 9918, 7817 and 8249 kWh; the rate (0.5 K/day) changed the setpoints by about 0.2 K on two
+  Mondays of April and one of July (the finding had it equal to no limiter).
+- Files: `accim/sim/ems/drift_limiter.py`, `accim/sim/accis.py`, `tests/core/test_drift_limiter.py`,
+  `docs/source/4_detailed use.md` (4.2.7), `docs/source/parametric_and_optimisation.rst`, `CHANGELOG.md`,
+  `CAMBIOS_CODIGO_v1.2.0.md` (§50), `TODO.md`, `notes/decisions.md`, `notes/work-log.md`.
+- Verification: `tests/core/test_drift_limiter.py` (17 tests: the warning, once in each call of `modify_accis` and of
+  `AddAccis`, also with `zone_arguments`, and not with `'rate'`, nor for the zones that keep the window, nor when the
+  arguments are not valid; and April with EnergyPlus 25.1, without the limiter, with the window and with the rate:
+  the energy of the coils within 0.01 kWh, the mean band and the mean heating setpoint within 0.001 K, and the hours
+  limited). With the test files of the indicators of the indoor adaptation, the limits of the setpoints, the graphical
+  user interface and the parameters of the limiter of the parametric module: 229 passed. The measurements of January
+  and July are those of a script of the session (nine simulations of a month: each month without the limiter, with
+  the window and with the rate), not of a test. The two changed modules compile with Python 3.9.
+- Next step: the documentation of the reference SET of the causal band.
+
 #### [done] `modify_accis` warns when the zones of JPN Aqilah 2025 lose the start with the weather file (A25; branch `v1.2.0`)
 - Context: finding A25 of the self-audit of 2026-11-11, decided on 2026-11-12 (`notes/decisions.md`, decision 8): a
   call of `modify_accis` without `epw` that writes the programs of the outdoor metric again (one that only changes the

@@ -51,6 +51,10 @@ existing tracking files — it does not replace them (see
   - A25: `modify_accis` gives the warning of RMOT when a call without `epw` writes the programs of the outdoor metric
     again and the zones of JPN Aqilah 2025 of the model lose the running mean of the weather file, and the warning of
     the metrics that begin with PMOT no longer names theirs.
+  - A8: `AddAccis` and `modify_accis` warn when a zone gets `drift_mode='window'`, an experimental mode; `'rate'` is
+    the recommended one. Measured again (the sample model in Seville): with the window, the heating coils use 32 488
+    kWh in April instead of 125.9 kWh, and the VRF system 21 715 kWh of electricity instead of 7817 kWh; the rate
+    changes the setpoints on two Mondays of April only (152.9 kWh).
 - **Validation**: in the entry of each task of [[../DEVLOG.md]] (the tests of the task, EnergyPlus 25.1 with both
   backends where the EMS code changes, and the golden master, compared line by line before writing it again).
 - **Next step**: the review of Claude Science of sessions 2 and 3, which also covers this session; the message of the

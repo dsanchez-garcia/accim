@@ -55,7 +55,7 @@ from accim.sim.ems.custom_regimes import set_custom_regimes, set_standard_regime
 from accim.sim.ems.drift_limiter import ARGUMENTS as DRIFT_ARGUMENTS
 from accim.sim.ems.drift_limiter import DEFAULTS as DRIFT_DEFAULTS
 from accim.sim.ems.drift_limiter import INPUTS as DRIFT_INPUTS
-from accim.sim.ems.drift_limiter import DRIFT_MODES
+from accim.sim.ems.drift_limiter import DRIFT_MODES, WINDOW_WARNING
 from accim.sim.ems.drift_limiter import check_drift_arguments, check_window_width, drift_inputs, set_drift_limiter_code
 from accim.sim.ems.inputs import (
     check_zone_arguments,
@@ -472,6 +472,20 @@ def _warn_unused_drift_arguments(arguments: Dict[str, Any], zone_arguments: Dict
                       f'drift_mode, so the output IDFs have no limiter.', UserWarning, stacklevel=3)
 
 
+def _warn_window_drift_mode(arguments: Dict[str, Any], zone_arguments: Dict[Any, Dict[str, Any]]) -> None:
+    """Warn, once, if a zone gets ``drift_mode='window'`` in a call of :class:`AddAccis` or :func:`modify_accis`: an
+    experimental mode of the limiter of the drift of the setpoints, which keeps both setpoints around the recent
+    temperature of the zone itself (finding A8 of the self-audit of 2026-11-11, decided on 2026-11-12;
+    :data:`accim.sim.ems.drift_limiter.WINDOW_WARNING`). ``'rate'`` is the recommended mode.
+
+    :param arguments: The arguments of the limiter of the call (None is not given).
+    :param zone_arguments: Those of the zones.
+    """
+    if arguments.get('drift_mode') == 'window' or any(own.get('drift_mode') == 'window'
+                                                      for own in zone_arguments.values()):
+        warnings.warn(WINDOW_WARNING, UserWarning, stacklevel=3)
+
+
 def _check_window_widths(arguments: Dict[str, Any], zone_arguments: Dict[Any, Dict[str, Any]],
                          tolerance: Any) -> None:
     """Check the width of the window of the limiter of the drift of the setpoints
@@ -830,7 +844,10 @@ class AddAccis:
         program ApplyDriftLimiter_<zone> and the outputs ``T_rm_in_<zone>``, ``DriftTargetAHST_<zone>``,
         ``DriftTargetACST_<zone>``, ``DriftAppliedAHST_<zone>``, ``DriftAppliedACST_<zone>`` and
         ``DriftLimitedHours_<zone>``. Also for each zone in ``zone_arguments``. Only with ``setpoint_type``
-        'temperature'.
+        'temperature'. 'rate' is the recommended mode; 'window' is an experimental one, with a warning (finding A8 of
+        the self-audit of 2026-11-11): it keeps both setpoints within ``delta_heat`` and ``delta_cool`` of the recent
+        temperature of the zone itself, so the heating or the cooling run to keep the zone there, with much more
+        energy than the comfort standard alone (:mod:`accim.sim.ems.drift_limiter`).
     :param max_drift_rate: 'rate': the largest change of the setpoints from one day to the next (K/day), greater than
         0; 0.5 by default.
     :param alpha_indoor: 'window': the weight of the running mean of the day before, from 0 to 1 (1 excluded); 0.8 by
@@ -1123,6 +1140,8 @@ class AddAccis:
             # 2026-11-11)
             _check_window_widths(drift, checked_zone_arguments,
                                  max((abs(value) for value in generation.tolerances()), default=0.0))
+            # The window is an experimental mode (finding A8 of the self-audit of 2026-11-11)
+            _warn_window_drift_mode(drift, checked_zone_arguments)
         if has_limits:
             # The minimum and the maximum of each zone with the largest tolerance of the output IDFs: the thermostats
             # get them with the tolerance (finding A19 of the self-audit of 2026-11-11)
@@ -1484,7 +1503,8 @@ def modify_accis(
         list removes them.
     :param static_heating_setpoint: The static heating setpoint of JPN Aqilah 2025 (°C), or None to keep it.
     :param static_cooling_setpoint: The static cooling setpoint of JPN Aqilah 2025 (°C), or None to keep it.
-    :param drift_mode: The limiter of the drift of the setpoints, 'rate' or 'window', or None to keep it.
+    :param drift_mode: The limiter of the drift of the setpoints, 'rate' or 'window', or None to keep it ('window' is
+        an experimental mode, with a warning when a zone gets it: see :class:`AddAccis`).
     :param max_drift_rate: 'rate': the largest change of the setpoints from one day to the next (K/day), or None to
         keep it.
     :param alpha_indoor: 'window': the weight of the running mean of the day before, or None to keep it.
@@ -1595,6 +1615,9 @@ def modify_accis(
             check_window_width(own.get('delta_heat', current.get('DeltaHeat', DRIFT_DEFAULTS['delta_heat'])),
                                own.get('delta_cool', current.get('DeltaCool', DRIFT_DEFAULTS['delta_cool'])),
                                resolved.get(zone, {}).get('setpoint_tolerance', setpoint_tolerance), where=zone)
+    # The window is an experimental mode: a warning when the call gives it to a zone (finding A8 of the self-audit of
+    # 2026-11-11), not for the zones that keep it
+    _warn_window_drift_mode(drift, resolved)
     # Whether the programs of the outdoor metric begin with the values of a weather file before the changes (finding
     # A25 of the self-audit of 2026-11-11: the zones of JPN Aqilah 2025 read RMOT again if the call loses them)
     began_with_weather_file = begins_with_weather_file(idf)

@@ -139,7 +139,9 @@ the object does to each model when it is created:
        their names (see :doc:`4_detailed use`); since accim 1.2.0, also ``heating_setpoint_minimum`` and
        ``cooling_setpoint_maximum`` (the minimum heating setpoint and the maximum of the cooling
        setpoint of all the zones), and the limiter of the drift of the setpoints: ``drift_mode`` (the codes
-       0, none; 1, ``'rate'``; 2, ``'window'``, as options), ``max_drift_rate``, ``alpha_indoor``,
+       0, none; 1, ``'rate'``, the recommended mode; 2, ``'window'``, an experimental one that keeps both
+       setpoints around the recent temperature of the zone, with much more energy: section 4.2.7 of
+       :doc:`4_detailed use`; as options), ``max_drift_rate``, ``alpha_indoor``,
        ``delta_cool``, ``delta_heat`` and ``initial_T_rm_in``
    * - ``'accim custom model'``
      - Adds accim to each model, with the custom adaptive model

@@ -2669,3 +2669,44 @@ del hallazgo (un aviso de RMOT con el motivo, y el de PMOT solo con `rmot_7day`)
 (conserva el inicio, sin avisos), otra posterior sin `epw` (no repite el aviso), la vuelta con `epw`, y un modelo con
 todas las zonas del 23 (solo el aviso de RMOT). Documentación: la sección 4.2 (JPN Aqilah 2025) y la docstring de
 `modify_accis`.
+
+## 50. `drift_mode='window'` es un modo experimental, con un aviso; `'rate'` es el recomendado (A8)
+
+El hallazgo A8 de la autoauditoría del 11/11/2026: con `drift_mode='window'` las dos consignas se recortan a
+T_rm_in ± delta, y T_rm_in es la media móvil de la temperatura operativa de la propia zona, así que la consigna que el
+estándar de confort deja lejos de la zona se va a su temperatura: la banda entre consignas queda en `delta_heat` +
+`delta_cool` como mucho (2 K), y la calefacción o la refrigeración funcionan para mantener la zona a 1 K de su media
+reciente. Es la decisión 6 del autor implementada tal cual, no un error. Decidido el 12/11/2026
+(`notes/decisions.md`): opciones (i) y (iii); `'window'` no se redefine en la 1.2.0.
+
+**Ahora.**
+
+- `accim.sim.ems.drift_limiter.WINDOW_WARNING`: el texto del aviso (qué hace el modo, su banda, su coste y que `'rate'`
+  es el modo recomendado); la docstring del módulo lo explica, con la medición de abril.
+- `accim.sim.accis._warn_window_drift_mode`: `AddAccis` y `modify_accis` dan ese aviso (`UserWarning`) una vez por
+  llamada cuando una zona recibe `drift_mode='window'` (en los argumentos o en `zone_arguments`), después de comprobar
+  los argumentos; no cuando las zonas lo conservan en una llamada que no lo da, ni con `'rate'`.
+- El módulo paramétrico (parámetro `drift_mode`, código 2) no avisa: daría un aviso por simulación; su documentación
+  dice que es un modo experimental.
+
+**La medición, repetida el 12/11/2026** (modelo de ejemplo, Sevilla, INT EN16798 categoría II, modo de confort 3,
+`vrf_ac`, EnergyPlus 25.1; sin limitador → con `'window'` y sus valores por defecto en todas las zonas):
+
+| Mes | Baterías de calefacción (kWh) | Baterías de refrigeración (kWh) | Electricidad del VRF (kWh) | Banda media (K) |
+|---|---|---|---|---|
+| Enero | 19,7 → 42 814 | 12 878 → 7552 | 9918 → 32 654 | 7,00 → 1,26 |
+| Abril | 125,9 → 32 488 | 9520 → 4678 | 7817 → 21 715 | 7,00 → 1,97 |
+| Julio | 10,4 → 4464 | 8209 → 9464 | 8249 → 11 709 | 7,00 → 2,22 |
+
+(la banda media entre consignas en las horas ocupadas de Block1:Zone1, con el primer día ocupado, sin limitador).
+Coincide con la del hallazgo salvo en `'rate'`: con 0,5 K/día ya no da exactamente lo mismo que no tener limitador,
+como decía la autoauditoría, sino que limitó las consignas unos 0,2 K dos lunes de abril y uno de julio (12 h ocupadas
+cada uno; ninguno de enero), con 27 kWh más en las baterías de calefacción de abril. La causa probable es la tarea S3,
+posterior a la autoauditoría, que cambió el estado de la tasa a la media de las consignas aplicadas en las horas
+ocupadas del último día ocupado (no se ha comprobado con el código anterior).
+
+**Pruebas.** `tests/core/test_drift_limiter.py`: el aviso (una vez por llamada en `modify_accis` y en `AddAccis`,
+también con `zone_arguments`; no con `'rate'`, ni cuando las zonas lo conservan, ni cuando los argumentos no son
+válidos) y la medición de abril con EnergyPlus 25.1 (sin limitador, con `'window'` y con `'rate'`: energía de las
+baterías, banda media, consigna media de calefacción y horas limitadas). Documentación: sección 4.2.7 del uso
+detallado y la tabla de parámetros del módulo paramétrico.

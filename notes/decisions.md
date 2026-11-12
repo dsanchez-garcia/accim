@@ -108,6 +108,19 @@ template]] to add a new entry.
        metric begins with PMOT.
      - The input of the outdoor metric of those zones (`CustAST_metric = 2`) stays, unused, as before: a later call
        with `epw` gives them the running mean of the weather file again.
+  7. The warning of `drift_mode='window'` (decision 4, finding A8).
+     - The warning is given when a call gives the window to a zone (in its arguments or in `zone_arguments`), once in
+       the call, after the checks of the arguments; not for the zones that keep it in a call that does not give it,
+       and not by the parameter `drift_mode` of the parametric module, which would warn in every simulation (its
+       documentation says that the window is experimental).
+     - The measurements of the finding were made again before documenting them (the sample model in Seville, January,
+       April and July, without the limiter, with the window and with the rate): those of the window are the same; the
+       rate no longer gives exactly the results of no limiter, as the finding said, since it changed the setpoints by
+       about 0.2 K on two Mondays of April and one of July (probably since task S3, which came after the self-audit:
+       not checked with the earlier code). The documentation gives what was measured on 2026-11-12, and
+       `tests/core/test_drift_limiter.py` reproduces April (three simulations of a month).
+     - The documentation also gives the electricity of the VRF system (from 7817 to 21 715 kWh in April), which the
+       finding did not have, since the energy of the coils alone hides that the cooling energy falls.
 - **Consequences**: the tasks done leave `TODO.md` for `DEVLOG.md`; the documentation says what each choice means
   for the users (section 4.2 of the detailed use, and `CHANGELOG.md`).
 
@@ -403,6 +416,8 @@ template]] to add a new entry.
     Parkinson et al., 2020, section 4.3.2), while the window and its 1.0 K have no source (they are values that the
     proposal of block F chose for the author to correct, §6.6), and no paper read gives another rule either, so a new
     definition would be an invented one. If the validation study needs a window, it is designed then with its authors.
+    Implemented on 2026-11-12 (`DEVLOG.md`; section 50 of `CAMBIOS_CODIGO_v1.2.0.md`), with the measurements made
+    again that day.
   - **A15**: options (i) and (ii). (i) Section 4.2.6 and the docstring of `accim.sim.ems.long_term_discomfort` say that
     `('en16798', category)` takes the two design values of Table B.2 (the minimum of the heating season, with about 1.0
     clo, and the maximum of the cooling season, with about 0.5 clo) as a constant range of all the timesteps, so the
