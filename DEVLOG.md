@@ -35,6 +35,29 @@ Recommended flow: track active work in `TODO.md`, move completed outcomes to `DE
 
 ## Entries
 
+### 2026-11-12
+#### [done] The final checks and the report of session 3 (branch `v1.2.0`)
+- Context: §8 of `notes/COPILOT_SIGUIENTE_SESION.md`: the whole suites, the golden master, the documentation build, the
+  compilation with Python 3.9, and the report. The session of GitHub Copilot stopped on 2026-11-11 (its monthly quota)
+  with every task committed and pushed (`7cb4058`), the report drafted and the suite of `tests/core` still running;
+  the report was completed on 2026-11-12 with Claude Code, from the logs of those checks.
+- Changes: `notes/INFORME_SESION_v1.2.0_2026-11-11_3.md` (new): the tasks and their commits, the deviations, the
+  entries of `TODO.md`, the provisional decisions, the tests and the comparisons of the backends, the blocked items,
+  the environment and the self-audit (the findings by severity, those fixed and those left open). No code changes.
+- Files: `notes/INFORME_SESION_v1.2.0_2026-11-11_3.md`, `DEVLOG.md`, `notes/work-log.md`.
+- Verification: on `7cb4058`, `py -m pytest tests/core -q -p no:cacheprovider`: 1511 passed, 19 failed, 14 skipped
+  (22 min 43 s); `py -m pytest tests/parametric_and_optimisation -q -p no:cacheprovider`: 520 passed; the golden
+  master, 35 passed (byte-identical); the documentation build, succeeded with the 47 warnings of session 2 (the file
+  of warnings is identical); the 9 modules of accim changed in the session compile with Python 3.9. The 19 failures
+  are tests of session 2, not changed, that need `pythermalcomfort.models`, which cannot be imported on the server
+  since 2026-11-11 (Windows Smart App Control blocks the DLLs of numba 0.68.1); 12 of the skipped ones too. With a
+  pure-Python stand-in of numba on the `PYTHONPATH` of the test processes (the appendix of the report; nothing
+  installed, no setting changed), the five test files that hold them pass: 99 passed, none skipped; it does not check
+  the compiled code of numba nor its behaviour in the callbacks of EnergyPlus.
+- Next step: the review of Claude Science of sessions 2 and 3 (the v05); the answers of the author
+  (`notes/questions.md`); the tests that need pythermalcomfort run again on a computer where numba loads (and the
+  `TODO.md` entry that makes them skip where it does not).
+
 ### 2026-11-11
 #### [done] The findings of the self-audit of session 2 left to the author, in notes/questions.md and TODO.md (branch `v1.2.0`)
 - Context: §7 of `notes/COPILOT_SIGUIENTE_SESION.md`: the findings whose fix needs a decision of the author, or is not small, go to `notes/questions.md` or `TODO.md`.

@@ -15,6 +15,22 @@ This log is a lightweight, session-scoped complement to the repository's
 existing tracking files — it does not replace them (see
 [[decisions.md#2026-09-13 — `notes/work-log.md` complements, not replaces, existing tracking files|the related decision]]).
 
+## 2026-11-12 — The final checks and the report of session 3 (branch `v1.2.0`, on the server)
+
+- **Objective**: §8 of the instructions: the whole suites, the golden master, the documentation build, Python 3.9,
+  and the report. Copilot stopped on 2026-11-11 (its monthly quota) with the tasks pushed and the report drafted;
+  completed with Claude Code from the logs of its checks.
+- **Affected files**: [[INFORME_SESION_v1.2.0_2026-11-11_3.md]], [[../DEVLOG.md]].
+- **Finding or decision**: `tests/core`, 1511 passed, 19 failed and 14 skipped; the parametric suite, 520 passed; the
+  golden master byte-identical; the documentation with the warnings of session 2. The 19 failures (and 12 of the
+  skipped tests) are tests of session 2 that need pythermalcomfort, whose numba Windows Smart App Control blocks on
+  the server since 2026-11-11; with a pure-Python stand-in of numba (the appendix of the report), the 99 tests of
+  their five files pass.
+- **Validation**: the report checked against `git log`, [[../TODO.md]], [[questions.md]] and the JSON file of the
+  self-audit; the logs of the checks belong to `7cb4058`.
+- **Next step**: the review of Claude Science of sessions 2 and 3; the answers of the author ([[questions.md]]); those
+  tests again where numba loads.
+
 ## 2026-11-11 — The fixes of the self-audit of session 2 (branch `v1.2.0`, on the server)
 
 - **Objective**: §7 of the instructions: fix the bugs and scientific findings (A1–A26) with a test that fails before,
