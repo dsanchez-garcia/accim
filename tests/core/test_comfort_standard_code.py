@@ -47,9 +47,11 @@ INPUTS = [line[len('set '):].split(' = ')[0] for line in input_lines({'ComfStand
 #: Their defaults, for the zones that do not have them
 DEFAULTS = {item.variable: item.default for item in INPUT_VARIABLES}
 #: The timesteps run with each comfort standard, category and comfort mode (RMOT and PMOT differ, as the branches that
-#: use one or the other).
-TIMESTEPS = [dict(RMOT=t, PMOT=t - 1.5, DayOfYear=d, CurrentTime=h, Zone1_OpT=op, Zone2_OpT=op, ZoneTimeStep=0.25,
-                  Occ_count_Zone1=1.0, Occ_count_Zone2=1.0)
+#: use one or the other; and so does Tout_metric, the outdoor metric that the EMS code of the outdoor metric calculates
+#: in the models of IND IMAC R 7DRM, 9, which reads it since the decisions of 2026-11-12: these models do not have that
+#: code, tested in test_imac_r.py and test_outdoor_metric.py, so it is given as the running means of EnergyPlus are).
+TIMESTEPS = [dict(RMOT=t, PMOT=t - 1.5, Tout_metric=t - 0.7, DayOfYear=d, CurrentTime=h, Zone1_OpT=op, Zone2_OpT=op,
+                  ZoneTimeStep=0.25, Occ_count_Zone1=1.0, Occ_count_Zone2=1.0)
              for t in (2.0, 21.0, 37.0) for d in (30.0, 200.0) for h in (6.0, 12.0, 24.0) for op in (17.0, 31.0)]
 
 

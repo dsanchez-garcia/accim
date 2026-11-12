@@ -2420,3 +2420,72 @@ modelos escritos antes leían sin aviso el T0 del otro archivo.
 vestimenta de una función (H6, decisión 1). `MID_RANGE_FILE_SUFFIX` es ahora `'_outdoor_mid_range'`. Prueba nueva:
 dos EPW llamados `Seville.epw` en dos carpetas dan dos nombres, y dos modelos de la misma carpeta leen cada uno los
 valores de su archivo; las pruebas de H2 usan el nombre nuevo. Documentado en la sección 4.2.2 y el CHANGELOG.
+
+## 44. Los estándares de confort 9 y 10 leen las medias de sus modelos (decisión del 12/11/2026)
+
+Los estándares 9 y 10, IND IMAC R 7DRM y 30DRM, son los modelos A y B de Rawal et al. (2022), Building and Environment
+219, 109187 (§4.4 y fig. 15): Tneut = 0,39·Tout-7DRM + 18,42 y Tneut = 0,42·Tout-30DRM + 17,60, con las medias simples
+de la temperatura exterior de los 7 y de los 30 días anteriores (el artículo las distingue de sus versiones
+ponderadas), aplicables de 5,5 a 33 °C, con bandas de ±2,15 K (90 %) y ±3,6 K (80 %). La revisión de Claude Science del
+11/11/2026 encontró sus medias cambiadas, y las decisiones del 12/11/2026 (`notes/decisions.md`) las corrigen en la
+1.2.0.
+
+**Antes.**
+
+- El 9 (7DRM) leía `PMOT`, la media simple de 30 días de EnergyPlus.
+- Las consignas, los contadores de horas y la consigna de ventilación del 10 (30DRM) leían `RMOT`, la media exponencial
+  de CEN 15251 de EnergyPlus (α = 0,8), mientras su temperatura de confort leía `PMOT`.
+- En el modo de confort 1 del 9, fuera de los límites de aplicabilidad, la consigna de calefacción era la recta del
+  código indio más 2,72 o 1,5 K (los valores de la de refrigeración), así que las dos consignas coincidían salvo por
+  las tolerancias.
+
+**Ahora.**
+
+- El 10 lee `PMOT` en todo: `SETPOINT_LINES[(10, 1..3)]`, `COUNT_HOURS` (su condición es `if ComfStand == 1`) y
+  `SET_VST` (`elseif ComfStand == 1`).
+- El 9 lee la media aritmética de las medias diarias de los 7 días anteriores. EnergyPlus no la calcula, así que la
+  calcula el EMS con el código de la métrica exterior del modelo personalizado (B1): `'ndrm'` con 7 días, en
+  `Tout_metric`. `accim.sim.ems.standard_lines` tiene `BUILT_IN_METRICS = {9: ('ndrm', 0.8, 7)}`, `built_in_metric()`,
+  `own_metric_inputs()` (las entradas `CustAST_metric = 5`, `CustAST_alpha = 0.8` y `CustAST_days = 7` de las zonas del
+  9, o las de un estándar del registro) y `left_metric_inputs()`; `outdoor_metric_standards()` incluye el 9. Sus líneas
+  (`SET_COMF_TEMP`, `SETPOINT_LINES[(9, 1..3)]` y sus ramas de `CountHours` y `SetVST` en `BUILT_IN_BRANCHES[9]`) leen
+  `Tout_metric`; las consignas estáticas (la recta 0,078·T + 23,25 de los modos 0 y 1) siguen con `PMOT`, como en el 7,
+  el 8 y el 10.
+- Las zonas del 9 tienen siempre el código de la métrica exterior: lo ponen `AddAccis`, `modify_accis`
+  (`input_values`, `uses_outdoor_metric`, `_set_built_in_metric_inputs` en `set_outdoor_metric_code`) y el parámetro
+  `comfort_standard` del módulo paramétrico (`modify_ComfStand`). Con el archivo climático (`epw`), la media empieza el
+  primer día del periodo con los 7 días anteriores del archivo; sin él, con `PMOT`, con el aviso de las métricas que
+  calcula el EMS (que ahora nombra el 9). Los argumentos `custom_outdoor_metric`, `custom_alpha` y `custom_days` no la
+  cambian.
+- Una zona que deja el 9 por un estándar sin métrica propia vuelve a `'pmot'` (salvo que la llamada le dé otra
+  métrica), para que el modelo personalizado no herede la media de 7 días, y el modelo pierde el código de la métrica
+  exterior si ninguna zona lo necesita.
+- El signo de la consigna de calefacción del modo 1 del 9 fuera de los límites: menos 2,72 o 1,5 K.
+- `compute_setpoints` (la columna `Tout_metric` y `attrs['metric'] == 'ndrm'` para el 9), `print_setpoint_ems_code`
+  (los programas de la métrica exterior del 9 y un comentario con su métrica), `verify_accim_simulation` (la
+  comprobación 4, con `Check4_Tout_metric` en el 9) y la tabla de temperaturas de `Table` (la columna
+  `Tout_metric (°C)` para el 9 en los modos 1 a 3, y la media de ASHRAE 55 para el 10).
+- Los modelos de versiones anteriores de accim (un programa `SetInputData`) conservan su código del 9 y del 10; los
+  anteriores a la 0.8, que reciben los subprogramas de esta versión, los reciben con `PMOT` en lugar de `Tout_metric`.
+
+**Limitación documentada.** En un modelo sin el código de la métrica exterior (los de `add_accis_to_idf`, que tienen
+el código de todos los estándares, o los IDF de salida de otros estándares), una zona cuyo estándar se cambia al 9
+editando su programa `SetInputData_<zona>` detiene EnergyPlus («Variable = 'TOUT_METRIC' used in expression has not been
+initialized») en lugar de leer otra media; `modify_accis` añade ese código.
+
+**Migración.** Los resultados del 9 y del 10 cambian: con `Seville_Present.epw` y un año, la media de 7 días se aparta
+de `PMOT` hasta 5,2 K (1,6 K de media), y `PMOT` de `RMOT` hasta 4,1 K desde el día 22 (1,5 K de media en el año), así
+que sus temperaturas de confort cambian hasta 2,0 K y 1,7 K (0,6 K de media en los dos). Los resultados publicados con
+accim 1.1.0 o anteriores se reproducen con esas versiones.
+
+**IDF de salida y golden master.** Cambian a propósito: los IDF del 9 (el código de la métrica exterior y
+`Tout_metric`) y del 10 (`PMOT`), en `b01` (16 de 200 archivos) y `b03`; una línea del programa `SetVST` de todos los
+modelos en modo mixto (`elseif ComfStand == 1 || ComfStand == 10` pasa a `elseif ComfStand == 1`; `b02`, `b03`, `b05`,
+`b07` a `b10`, `b12`, `b13`, `b15` a `b17` y `b22`); y los modelos con el código de todos los estándares (`s01` a `s06`
+y `s09`). Comprobado línea a línea antes de reescribir los archivos: no cambia ninguna otra línea.
+
+**Pruebas.** `tests/core/test_imac_r.py` (las líneas, `compute_setpoints` frente a la media de 7 días del archivo
+climático desde tres fechas de inicio, el inicio con `PMOT`, el signo, `AddAccis` y `modify_accis`, y EnergyPlus 25.1:
+la comprobación 4 sin discrepancias con y sin el archivo climático, y los dos backends con resultados idénticos);
+`tests/core/test_comfort_standard_code.py` da `Tout_metric` a sus programas, y `tests/core/test_table_columns.py` y
+`tests/core/test_comfort_standard_registry.py` siguen las cadenas nuevas.

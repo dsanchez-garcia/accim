@@ -160,7 +160,11 @@ def chain_comfort_standards(lines: Iterable[str]) -> Optional[Set[int]]:
     return standards
 
 
-#: Comfort (neutral) temperature of each comfort standard.
+#: Comfort (neutral) temperature of each comfort standard. That of IND IMAC R 7DRM (9) is a line of the arithmetic mean
+#: of the daily means of the 7 previous days, which the EMS code of the outdoor metric calculates (Tout_metric,
+#: :data:`accim.sim.ems.standard_lines.BUILT_IN_METRICS`), and that of IND IMAC R 30DRM (10), of the running mean of 30
+#: days of EnergyPlus (PMOT): models A and B of Rawal et al. (2022), Building and Environment 219, 109187. Until accim
+#: 1.2.0, 9 read PMOT and the setpoints of 10 read RMOT (the decisions of 2026-11-12, ``notes/decisions.md``).
 SET_COMF_TEMP = _lines("""
 if ComfStand == 99
 set ComfTemp = PMOT*m+n
@@ -181,7 +185,7 @@ set ComfTemp = PMOT*0.54+12.83
 elseif ComfStand == 8
 set ComfTemp = PMOT*0.28+17.87
 elseif ComfStand == 9
-set ComfTemp = PMOT*0.39+18.42
+set ComfTemp = Tout_metric*0.39+18.42
 elseif ComfStand == 10
 set ComfTemp = PMOT*0.42+17.6
 elseif ComfStand == 11
@@ -269,9 +273,11 @@ def _count_hours_body(metric: str) -> str:
 
 #: Comfortable and discomfortable hours of a zone, within the applicability limits: in each timestep, one of the five
 #: counters is the length of the timestep and the others are 0. The operative temperature is compared with the
-#: setpoints without tolerance of the timestep (RunACCIS_<zone> runs it after SetASTnoTol).
-COUNT_HOURS = _join('if (ComfStand == 1) || (ComfStand == 10)', _count_hours_body('RMOT'), 'else',
-                    _count_hours_body('PMOT'), 'endif')
+#: setpoints without tolerance of the timestep (RunACCIS_<zone> runs it after SetASTnoTol). The running mean compared
+#: with the applicability limits is RMOT for INT EN16798 (1) and PMOT for the others (also for IND IMAC R 30DRM, 10,
+#: which read RMOT until accim 1.2.0); the comfort standards with another one have their own branch
+#: (:data:`BUILT_IN_BRANCHES` and :data:`REGISTERED_BRANCHES`, :func:`count_hours_lines`).
+COUNT_HOURS = _join('if ComfStand == 1', _count_hours_body('RMOT'), 'else', _count_hours_body('PMOT'), 'endif')
 
 #: The variable with the outdoor metric of the custom model (ComfStand 99) in the models with the EMS code of its
 #: outdoor metric (:mod:`accim.sim.ems.outdoor_metric`); the other models use PMOT, as before accim 1.2.0.
@@ -281,7 +287,7 @@ SET_COMF_TEMP_OUTDOOR_METRIC = tuple(line.replace('PMOT*m+n', f'{OUTDOOR_METRIC_
                                      for line in SET_COMF_TEMP)
 #: COUNT_HOURS in the models with the EMS code of the outdoor metric of the custom model: the custom model compares its
 #: outdoor metric with its limits.
-COUNT_HOURS_OUTDOOR_METRIC = _join('if (ComfStand == 1) || (ComfStand == 10)', _count_hours_body('RMOT'),
+COUNT_HOURS_OUTDOOR_METRIC = _join('if ComfStand == 1', _count_hours_body('RMOT'),
                                    'elseif ComfStand == 99', _count_hours_body(OUTDOOR_METRIC_VARIABLE), 'else',
                                    _count_hours_body('PMOT'), 'endif')
 
@@ -648,7 +654,7 @@ set VST = (roundedACST+roundedAHST)/2+VSToffset
 elseif (CurrentTime < 24)
 set VST = (roundedACST+roundedAHST)/2+VSToffset
 endif
-elseif ComfStand == 1 || ComfStand == 10
+elseif ComfStand == 1
 if (RMOT >= AHSTall) && (RMOT <= ACSTaul)
 set VST = ComfTemp+VSToffset
 else
@@ -977,8 +983,17 @@ set AHST_Act_{zone} = AHST
 #: from 5 to 30 °C, with the offsets ±2.0 K (category 80) and ±1.5 K (category 90) (Aqilah, Rijal, Yoshida & Nicol,
 #: 2025, equation 8 and conclusions 5 and 6). They are added at the end of the chains above, which do not change, so
 #: the output IDFs of the other comfort standards do not change either; :mod:`accim.sim.ems.standard_lines` writes the
-#: same lines from the definition (tested).
+#: same lines from the definition (tested). And the branches of CountHours and SetVST of IND IMAC R 7DRM (9), which
+#: compares the outdoor metric that the EMS calculates for it (Tout_metric, the arithmetic mean of the 7 previous days,
+#: :data:`accim.sim.ems.standard_lines.BUILT_IN_METRICS`) with its applicability limits; its other branches are in the
+#: chains above.
 BUILT_IN_BRANCHES: Dict[int, Dict[str, Tuple[str, ...]]] = {
+    9: {
+        'CountHours': ('elseif ComfStand == 9', *_count_hours_body(OUTDOOR_METRIC_VARIABLE).split('\n')),
+        'SetVST': ('elseif ComfStand == 9',
+                   f'if ({OUTDOOR_METRIC_VARIABLE} >= AHSTall) && ({OUTDOOR_METRIC_VARIABLE} <= ACSTaul)',
+                   'set VST = ComfTemp+VSToffset', 'else', 'set VST = (roundedACST+roundedAHST)/2+VSToffset', 'endif'),
+    },
     23: {
         'SetComfTemp': ('elseif ComfStand == 23', 'set ComfTemp = RMOT*0.38+16.9'),
         'SetAppLimits': ('elseif ComfStand == 23', 'set ACSTaul = 30', 'set ACSTall = 5', 'set AHSTaul = 30',

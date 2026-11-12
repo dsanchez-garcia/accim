@@ -964,8 +964,9 @@ def weather_file_arguments(form: Mapping[str, Any]) -> Dict[str, Any]:
 
 
 def registered_metric_standards(standards: Iterable[Any]) -> List[int]:
-    """The comfort standards defined by their data (:mod:`accim.sim.standards`) among some, whose outdoor metric the
-    EMS calculates (as that of the custom model): the weather file of the simulations (``epw``) begins it."""
+    """The comfort standards among some whose outdoor metric the EMS calculates (as that of the custom model): those
+    defined by their data (:mod:`accim.sim.standards`) with such a metric, and IND IMAC R 7DRM (9), with the mean of
+    the 7 previous days. The weather file of the simulations (``epw``) begins it."""
     from accim.sim.ems.standard_lines import outdoor_metric_standards
 
     found = outdoor_metric_standards()

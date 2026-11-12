@@ -52,6 +52,11 @@ of the simulation (argument ``epw`` of AddAccis or modify_accis), its zones get 
 'rmot_alpha' (α = 0.8) that begins with the values of the weather file, and its code reads ``Tout_metric`` (finding B4-1
 of the review of 1.2.0, :data:`accim.sim.ems.standard_lines.WEATHER_FILE_METRICS`).
 
+IND IMAC R 7DRM (comfort standard 9) reads the arithmetic mean of the daily means of the 7 previous days (Rawal et al.,
+2022, model A), which EnergyPlus does not calculate: its zones always get these EMS objects, with the metric 'ndrm' and
+7 days, and its code reads ``Tout_metric`` (:data:`accim.sim.ems.standard_lines.BUILT_IN_METRICS`, the decisions of
+2026-11-12); without the weather file, its mean begins with PMOT, as those of the custom model, with the same warning.
+
 The equations (section 11.4 of ``notes/PROPUESTAS_MEJORAS_post_1.1.0_v03.md``): EN 16798-1:2019, Annex B, formula
 (B.1), Θrm = (1 − α)·{Θed−1 + α·Θed−2 + α²·Θed−3 + ...}, in its recursive form Θrm = (1 − α)·Θed−1 + α·Θrm−1, with α
 recommended 0.8, and its approximate formula (B.2), (Θed−1 + 0.8·Θed−2 + 0.6·Θed−3 + 0.5·Θed−4 + 0.4·Θed−5 +
@@ -600,15 +605,17 @@ def uses_outdoor_metric(idf) -> bool:
     the comfort standards of :data:`accim.sim.ems.standard_lines.WEATHER_FILE_METRICS` (JPN Aqilah 2025) do not count:
     their inputs are those of their outdoor metric with the weather file (:func:`outdoor_metric_needed`). The zones of
     the comfort standards of the registry with regimes count, whatever their outdoor metric: their code reads
-    Tout_metric (:func:`accim.sim.ems.standard_lines.uses_regimes`)."""
+    Tout_metric (:func:`accim.sim.ems.standard_lines.uses_regimes`); and so do those of the built-in comfort standards
+    whose outdoor metric the EMS calculates (IND IMAC R 7DRM, 9:
+    :data:`accim.sim.ems.standard_lines.BUILT_IN_METRICS`), whatever their inputs."""
     from accim.sim.ems.inputs import input_programs, read_inputs
-    from accim.sim.ems.standard_lines import WEATHER_FILE_METRICS, regime_standards
+    from accim.sim.ems.standard_lines import BUILT_IN_METRICS, WEATHER_FILE_METRICS, regime_standards
 
-    with_regimes = regime_standards()
+    always = regime_standards() | set(BUILT_IN_METRICS)
     for program in input_programs(idf).values():
         inputs = read_inputs(program)
         comfort_standard = _number_or_none(inputs.get('ComfStand'))
-        if comfort_standard in with_regimes:
+        if comfort_standard in always:
             return True
         if inputs.get(INPUTS[0], 0) != 0 and comfort_standard not in WEATHER_FILE_METRICS:
             return True
@@ -707,9 +714,29 @@ def _set_weather_file_inputs(idf, zone_programs: Mapping[str, Any], rewritten: b
                       f'simulation (epw) to begin it with the alpha 0.8 of JPN Aqilah 2025.')
 
 
+def _set_built_in_metric_inputs(zone_programs: Mapping[str, Any]) -> None:
+    """Give the inputs of their outdoor metric (``CustAST_metric``, ``CustAST_alpha`` and ``CustAST_days``) to the
+    zones of the built-in comfort standards whose outdoor metric the EMS calculates (IND IMAC R 7DRM, 9: the arithmetic
+    mean of the 7 previous days, :data:`accim.sim.ems.standard_lines.BUILT_IN_METRICS`), whatever the inputs that they
+    had (those of the outdoor metric of the custom model, or of another comfort standard)."""
+    from accim.sim.ems.inputs import read_inputs, set_inputs
+    from accim.sim.ems.programs import set_program_lines
+    from accim.sim.ems.standard_lines import built_in_metric, own_metric_inputs
+
+    for program in zone_programs.values():
+        comfort_standard = read_inputs(program).get('ComfStand')
+        if built_in_metric(comfort_standard) is None:
+            continue
+        values = own_metric_inputs(comfort_standard)
+        missing = set_inputs(program, values)
+        if missing:
+            set_program_lines(program, _program_lines(program) + [f'set {name} = {values[name]}' for name in missing])
+
+
 def metric_comfort_standards() -> set:
-    """The comfort standards that use the EMS code of the outdoor metric: the custom model (99), and the registered
-    comfort standards whose outdoor metric EnergyPlus does not calculate (:mod:`accim.sim.standards`)."""
+    """The comfort standards that use the EMS code of the outdoor metric: the custom model (99), the registered
+    comfort standards whose outdoor metric EnergyPlus does not calculate (:mod:`accim.sim.standards`), and the built-in
+    ones whose outdoor metric the EMS calculates (IND IMAC R 7DRM, 9)."""
     from accim.sim.ems.setast import CUSTOM_COMFORT_STANDARD
     from accim.sim.ems.standard_lines import outdoor_metric_standards
 
@@ -917,6 +944,8 @@ def set_outdoor_metric_code(idf, enabled: bool, epw: Union[str, Any, None] = Non
         missing = [name for name in INPUTS if name not in inputs]
         if missing:
             set_program_lines(program, _program_lines(program) + [f'set {name} = {defaults[name]}' for name in missing])
+    # The zones of IND IMAC R 7DRM (9) have the inputs of its outdoor metric, the arithmetic mean of the 7 previous days
+    _set_built_in_metric_inputs(zone_programs)
     # The zones of JPN Aqilah 2025 have the inputs of its outdoor metric with the values of the weather file; without
     # them, its code reads RMOT, and their inputs are not used
     weather_zones = set(weather_file_zones(idf))
@@ -972,9 +1001,13 @@ def set_outdoor_metric_code(idf, enabled: bool, epw: Union[str, Any, None] = Non
             _remove_mid_range_schedule(idf)
         if epw is None and metrics & _NEEDS_INITIAL_VALUES:
             names = sorted(metric_name(code) for code in metrics & _NEEDS_INITIAL_VALUES)
+            # The outdoor metric of the custom model, of a comfort standard defined by its data or of IND IMAC R 7DRM
+            # (9, 'ndrm' with 7 days)
             warnings.warn(f'custom_outdoor_metric {names} begins with the running mean of ASHRAE 55 that EnergyPlus '
                           f'calculates (PMOT), without a weather file (argument epw): give the weather file of the '
-                          f'simulation to begin with its values.')
+                          f'simulation to begin with its values (also the outdoor metric of the comfort standard of a '
+                          f'zone: IND IMAC R 7DRM, 9, reads the mean of the 7 previous days, which then begins with '
+                          f'PMOT, the mean of 30 days).')
 
         def write(name: str, lines: List[str]) -> None:
             program = idf.getobject('EnergyManagementSystem:Program', name)

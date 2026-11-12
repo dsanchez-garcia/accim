@@ -11,6 +11,41 @@ Durable architectural/process decisions for this repository and its Obsidian
 vault. Newest first. Use [[templates/decision-record.md|the decision-record
 template]] to add a new entry.
 
+## 2026-11-12 — The implementation of the decisions of 2026-11-12: the choices that they do not cover
+
+- **Status**: accepted provisionally (taken on 2026-11-12 by Claude Code, the model Claude Fable 5.2, while it
+  implemented the decisions of that day for the author, who asked it to work autonomously; the author can change any of
+  them, and the review of Claude Science of sessions 2 and 3 can contrast them)
+- **Context**: on 2026-11-12 the author asked for the implementation of the P1 and P2 tasks of
+  [[decisions.md#2026-11-12 — The decisions on the six questions left open after session 3 of the review of 1.2.0|the decisions of that day]]
+  (the entry below). The decisions say what to do; these are the choices of how, with the most conservative option
+  where there was one, as the rules of the review sessions ask (`notes/COPILOT_SIGUIENTE_SESION.md` §2, rule 3). Each
+  task is one commit, and `DEVLOG.md` has its verification.
+- **Decision** (by task, in the order in which they were done):
+  1. Comfort standards 9 and 10 (decision 11).
+     - The code of 9 reads `Tout_metric` in every model, with no fallback to `PMOT`: in a model without the EMS code of
+       the outdoor metric (those of `add_accis_to_idf`, or the output IDFs of other comfort standards), a zone whose
+       program is edited to `set ComfStand = 9` stops EnergyPlus (the variable is not initialised). The alternatives
+       were to write the lines of 9 with `PMOT` in the models without that code, as the custom model does (a silent
+       running mean that is not that of the model, the error that the decision corrects), or to give that code to every
+       model with the code of 9 (all the models of `add_accis_to_idf`, which would get the programs of the outdoor
+       metric and the outputs `Tout_metric_<zone>` without using them). `AddAccis`, `modify_accis` and the parameter
+       `comfort_standard` of the parametric module add the code.
+     - A zone that leaves 9 gets the outdoor metric `'pmot'` again, unless the call gives it one, and the model loses
+       the code of the outdoor metric when no zone needs it: otherwise the custom model would inherit the mean of 7
+       days without being asked. The zones that leave a comfort standard of the registry keep theirs, as before.
+     - The arguments `custom_outdoor_metric`, `custom_alpha` and `custom_days` do not change the metric of 9.
+     - The static line 0.078·T + 23.25 keeps `PMOT` in 9 and takes it in 10, as decided; it is still not verified in
+       the National Building Code of India 2016.
+     - The models of earlier versions of accim (one program `SetInputData`) keep their code of 9 and 10; those of
+       accim before 0.8, which get the subprograms of this version, get those of 9 with `PMOT`.
+     - `Table.format_table(type_of_table='temperature')` takes `Tout_metric (°C)` for 9 in comfort modes 1 to 3.
+     - The golden master changes in the output IDFs of 9 and 10, in one line of `SetVST` of every model in mixed mode
+       (its branch of INT EN16798 named comfort standard 10) and in the models with the code of all the comfort
+       standards; checked line by line before writing the golden files again.
+- **Consequences**: the tasks done leave `TODO.md` for `DEVLOG.md`; the documentation says what each choice means
+  for the users (section 4.2 of the detailed use, and `CHANGELOG.md`).
+
 ## 2026-11-12 — The decisions on the six questions left open after session 3 of the review of 1.2.0
 
 - **Status**: accepted (decided on 2026-11-12 by Claude Code, the model Claude Fable 5.2, for the author, who delegated
@@ -369,6 +404,9 @@ template]] to add a new entry.
   golden master is updated, and `CHANGELOG.md` (Fixed) has the note of migration: the results of comfort standards 9 and
   10 change, and those published with accim 1.1.0 or earlier are reproduced with those versions. Rule 7 of the
   instructions of session 3, with which the author kept them unchanged, was for that session only.
+- Implemented on 2026-11-12 (`DEVLOG.md`; `CHANGELOG.md`, Fixed; section 44 of `CAMBIOS_CODIGO_v1.2.0.md`;
+  `tests/core/test_imac_r.py`), with the choices of the entry "The implementation of the decisions of 2026-11-12" at
+  the top of this file.
 
 ### 2026-11-10 — F3: the SET of the indicators of the causal band
 - Context: the proposal of block F (§4 F3) asks for the hours within the causal band of every model; the SET can be

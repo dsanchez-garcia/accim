@@ -338,12 +338,16 @@ def _running_mean_outputs(comfort_standards, comfort_modes) -> list:
     The running mean outdoor temperatures that the adaptive setpoints of some simulations use, as in the names of the
     columns of Table: 'EN16798-1' (that of CEN 15251 in EnergyPlus, RMOT in the EMS programs of accim) and 'ASHRAE 55'
     (the prevailing mean outdoor temperature, PMOT), from their comfort standards and comfort modes as in the
-    columns ComfStand and ComfMod ('CS_INT EN16798', 'CM_3'...). The static setpoints use neither.
+    columns ComfStand and ComfMod ('CS_INT EN16798', 'CM_3'...). The static setpoints use neither. The adaptive
+    setpoints of IND IMAC R 7DRM use the outdoor metric that the EMS calculates, the mean of the 7 previous days:
+    'Tout_metric', the beginning of the name of its column (``Tout_metric (°C)``,
+    :mod:`accim.data.postprocessing.optional_output_columns`).
     """
     from accim.sim.ems.setpoint_lines import SETPOINT_LINES
     from accim.sim.standards import COMFORT_STANDARDS
 
     numbers = {f'CS_{standard.label}': number for number, standard in COMFORT_STANDARDS.items()}
+    metric = optional_output_columns.OUTDOOR_METRIC
     variables = set()
     for standard, mode in set(zip(comfort_standards, comfort_modes)):
         try:
@@ -351,8 +355,9 @@ def _running_mean_outputs(comfort_standards, comfort_modes) -> list:
         except ValueError:
             continue
         lines = ' '.join(SETPOINT_LINES.get((numbers.get(standard), mode), ()))
-        variables.update(variable for variable in ('RMOT', 'PMOT') if variable in lines)
-    return [name for variable, name in (('RMOT', 'EN16798-1'), ('PMOT', 'ASHRAE 55')) if variable in variables]
+        variables.update(variable for variable in ('RMOT', 'PMOT', metric) if variable in lines)
+    return [name for variable, name in (('RMOT', 'EN16798-1'), ('PMOT', 'ASHRAE 55'), (metric, metric))
+            if variable in variables]
 
 
 class Table:
@@ -2228,10 +2233,14 @@ class Table:
                 if 'Running mean outdoor temperature' in col
             ]
             # The running mean outdoor temperature that the setpoints of the simulations use (before, the first
-            # column, that of ASHRAE 55 for EN 16798-1), or the first one if they use none (static setpoints)
+            # column, that of ASHRAE 55 for EN 16798-1), or the first one if they use none (static setpoints); with
+            # IND IMAC R 7DRM, the outdoor metric that the EMS calculates ('Tout_metric (°C)'), if the table has it
             used = _running_mean_outputs(self.df['ComfStand'], self.df['ComfMod'])
             chosen = [next(col for col in RMOT_cols if name in col) for name in used
                       if any(name in col for col in RMOT_cols)]
+            metric_column = optional_output_columns.OUTDOOR_METRIC_NAME
+            if metric_column in self.df.columns and optional_output_columns.OUTDOOR_METRIC in used:
+                chosen.append(metric_column)
             self.val_cols.extend(chosen or RMOT_cols[:1])
         # elif type_of_table == 'all':
         #     # self.val_cols = list(set(self.df.columns) - set(self.indexcols))

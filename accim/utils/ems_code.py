@@ -34,6 +34,7 @@ from accim.sim.ems.setast import (
 )
 from accim.sim.ems.standard_lines import (
     WEATHER_FILE_METRICS,
+    built_in_metric,
     metric_variable,
     needs_outdoor_metric_code,
     standard_inputs,
@@ -73,14 +74,14 @@ _LEGEND = (
     '! the heating setpoint up).',
 )
 _OUTDOOR_METRIC_LEGEND = (
-    '! Tout_metric: the outdoor metric of the custom model (custom_outdoor_metric), or of a comfort standard defined',
-    '! by its data, with which it calculates its comfort temperature, setpoints and applicability. SetOutdoorMetric',
-    '! runs in each timestep before the programs of the zones, and InitOutdoorMetric at the beginning of each',
-    '! environment; OutT is the outdoor dry-bulb temperature (Site Outdoor Air Drybulb Temperature). Without the',
-    '! weather file (argument epw of AddAccis), the daily means begin with PMOT; with it, with those of the weather',
-    '! file. te_ref_nl: T0 (OutdoorMidRange) is, with the weather file, OutdoorMidRangeToday, the mean of the maximum',
-    '! and minimum of the day of the weather file (the Schedule Value of the Schedule:File ACCIS Outdoor Mid Range);',
-    '! without it, that of the previous day (Tmid_1).',
+    '! Tout_metric: the outdoor metric of the custom model (custom_outdoor_metric), or of a comfort standard with its',
+    '! own (IND IMAC R 7DRM, or one defined by its data), for its comfort temperature and applicability.',
+    '! SetOutdoorMetric runs in each timestep before the programs of the zones, and InitOutdoorMetric at the beginning',
+    '! of each environment; OutT is the outdoor dry-bulb temperature (Site Outdoor Air Drybulb Temperature). Without',
+    '! the weather file (argument epw of AddAccis), the daily means begin with PMOT; with it, with those of the',
+    '! weather file. te_ref_nl: T0 (OutdoorMidRange) is, with the weather file, OutdoorMidRangeToday, the mean of the',
+    '! maximum and minimum of the day of the weather file (the Schedule Value of the',
+    '! Schedule:File ACCIS Outdoor Mid Range); without it, that of the previous day (Tmid_1).',
 )
 _LIMIT_LEGEND = (
     '! AHSTmin and ACSTmax: the minimum heating setpoint and the maximum cooling setpoint of the',
@@ -171,7 +172,14 @@ def _definition_lines(comfort_standard: int, arguments: dict, weather_file: bool
     (:mod:`accim.sim.ems.static_setpoints`)."""
     definition = definition_of(comfort_standard)
     if definition is None:
-        return []
+        metric = built_in_metric(comfort_standard)
+        if metric is None:
+            return []
+        # IND IMAC R 7DRM (9): its outdoor metric, which the EMS calculates
+        name, alpha, days = metric
+        text = name + (f' ({days} days)' if name == 'ndrm' else f' (alpha {alpha})' if name == 'rmot_alpha' else '')
+        return [f'! Outdoor metric: {text}, in the EMS {metric_variable(name)}, which the EMS calculates '
+                f'(SetOutdoorMetric); the static setpoints read PMOT']
     kind = 'defined by its data' if definition.number >= FIRST_REGISTRY_NUMBER else 'built in, defined by its data'
     lines = [f'! Comfort standard {kind} (accim.sim.standards): {definition.citation}']
     if weather_file and comfort_standard in WEATHER_FILE_METRICS:
@@ -305,8 +313,9 @@ def _outdoor_metric_programs(comfort_standard: int, arguments: dict, epw, start_
     """The programs of the outdoor metric of the custom model, as in the output IDFs of AddAccis with the weather file
     ``epw`` and a RunPeriod that begins on ``start_date`` (none if the comfort standard is not the custom model or its
     metric is 'pmot'), or those of the outdoor metric of a comfort standard defined by its data (none if EnergyPlus
-    calculates it), or, with ``epw``, those of the outdoor metric of JPN Aqilah 2025 with the weather file
-    (:data:`accim.sim.ems.standard_lines.WEATHER_FILE_METRICS`)."""
+    calculates it), or those of IND IMAC R 7DRM (9), the mean of the 7 previous days
+    (:data:`accim.sim.ems.standard_lines.BUILT_IN_METRICS`), or, with ``epw``, those of the outdoor metric of JPN
+    Aqilah 2025 with the weather file (:data:`accim.sim.ems.standard_lines.WEATHER_FILE_METRICS`)."""
     definition = comfort_standard_definition(comfort_standard)
     if definition is None and epw is not None:
         definition = weather_file_definition(comfort_standard)
@@ -314,6 +323,9 @@ def _outdoor_metric_programs(comfort_standard: int, arguments: dict, epw, start_
         if not needs_outdoor_metric_code(definition):
             return {}
         metric, alpha, days = definition.outdoor_metric, definition.alpha, definition.days
+    elif built_in_metric(comfort_standard) is not None:
+        # IND IMAC R 7DRM (9): the mean of the 7 previous days, which the EMS always calculates
+        metric, alpha, days = built_in_metric(comfort_standard)
     elif comfort_standard != _CUSTOM:
         return {}
     else:

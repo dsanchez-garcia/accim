@@ -378,9 +378,11 @@ def test_table_that_keeps_the_names_of_the_outputs(tmp_path, monkeypatch):
 
 @pytest.mark.parametrize('standard, mode, expected', [
     ('INT EN16798', 3, ['EN16798-1']), ('INT ASHRAE55', 3, ['ASHRAE 55']),
-    # IMAC R 30DRM uses the prevailing mean outdoor temperature with the comfort mode 0, and the running mean with
-    # the others
-    ('IND IMAC R 30DRM', 0, ['ASHRAE 55']), ('IND IMAC R 30DRM', 3, ['EN16798-1']),
+    # IMAC R 30DRM uses the prevailing mean outdoor temperature (the mean of 30 days) with every comfort mode since
+    # the decisions of 2026-11-12 (before, the running mean of EN 16798-1 with the comfort modes 1 to 3)
+    ('IND IMAC R 30DRM', 0, ['ASHRAE 55']), ('IND IMAC R 30DRM', 3, ['ASHRAE 55']),
+    # IMAC R 7DRM with the comfort mode 0: the line of the Indian building code, with the mean of 30 days
+    ('IND IMAC R 7DRM', 0, ['ASHRAE 55']),
 ])
 def test_the_temperature_table_takes_the_running_mean_that_the_setpoints_use(tmp_path, monkeypatch, standard, mode,
                                                                              expected):

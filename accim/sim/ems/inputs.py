@@ -133,9 +133,9 @@ def input_values(arguments: Mapping) -> Dict[str, Any]:
 
     The arguments that are None or missing are left out. The tolerance of the cooling setpoint is the negative of
     ``setpoint_tolerance``, and the dates of the cooling season can be 'dd/mm' dates. With a comfort standard defined by
-    its data (:mod:`accim.sim.standards`), the inputs of the outdoor metric are those of the comfort standard
-    (:func:`accim.sim.ems.standard_lines.standard_inputs`). The inputs of the limiter of the drift of the setpoints are
-    only those of a ``drift_mode`` given, with the defaults of the arguments not given
+    its data (:mod:`accim.sim.standards`), or with IND IMAC R 7DRM (9), the inputs of the outdoor metric are those of
+    the comfort standard (:func:`accim.sim.ems.standard_lines.own_metric_inputs`). The inputs of the limiter of the
+    drift of the setpoints are only those of a ``drift_mode`` given, with the defaults of the arguments not given
     (:func:`accim.sim.ems.drift_limiter.drift_inputs`).
 
     :param arguments: The arguments, ``{'comfort_standard': 1, 'setpoint_tolerance': 0.1...}``.
@@ -157,13 +157,13 @@ def input_values(arguments: Mapping) -> Dict[str, Any]:
             value = metric_code(value)
         values[item.variable] = value
     values.update(drift_inputs(arguments))
-    # The zones of a comfort standard defined by its data have its outdoor metric (accim.sim.standards)
-    from accim.sim.standards import comfort_standard_definition
+    # The zones of a comfort standard with its own outdoor metric have it: those defined by their data
+    # (accim.sim.standards), and IND IMAC R 7DRM (9), whose 7-day running mean the EMS calculates
+    from accim.sim.ems.standard_lines import own_metric_inputs
 
-    definition = comfort_standard_definition(arguments.get('comfort_standard'))
-    if definition is not None:
-        from accim.sim.ems.standard_lines import standard_inputs
-        values.update(standard_inputs(definition))
+    own = own_metric_inputs(arguments.get('comfort_standard'))
+    if own is not None:
+        values.update(own)
     return values
 
 

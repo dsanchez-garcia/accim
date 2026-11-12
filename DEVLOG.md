@@ -36,6 +36,56 @@ Recommended flow: track active work in `TODO.md`, move completed outcomes to `DE
 ## Entries
 
 ### 2026-11-12
+#### [done] Comfort standards 9 and 10, IND IMAC R 7DRM and 30DRM, read the running means of their models (branch `v1.2.0`)
+- Context: the decisions of 2026-11-12 (`notes/decisions.md`, decision 11) correct in accim 1.2.0 the running means of
+  comfort standards 9 and 10, which the review of Claude Science of 2026-11-11 found swapped (Rawal et al., 2022,
+  Building and Environment 219, 109187: model A with the 7-day running mean and model B with the 30-day one, both
+  simple means), and the sign of the heating setpoint of comfort mode 1 of 9 out of its applicability limits. The
+  first task of the implementation session of those decisions (Claude Code, autonomous, asked by the author).
+- Changes: comfort standard 10 reads `PMOT` in its setpoints, `CountHours_<zone>` and `SetVST` (they read `RMOT`).
+  Comfort standard 9 reads `Tout_metric`, the arithmetic mean of the daily means of the 7 previous days that the EMS
+  code of the outdoor metric of the custom model calculates (`'ndrm'` with 7 days): `BUILT_IN_METRICS`,
+  `built_in_metric()`, `own_metric_inputs()`, `left_metric_inputs()` and `DEFAULT_METRIC_INPUTS` in
+  `accim.sim.ems.standard_lines`; its branches of `CountHours` and `SetVST` in `BUILT_IN_BRANCHES[9]`; its zones get
+  the inputs of its metric and the model the code (`input_values`, `uses_outdoor_metric`,
+  `_set_built_in_metric_inputs` in `set_outdoor_metric_code`, `modify_accis`, `modify_ComfStand` of the parametric
+  module), beginning with the weather file or, without it, with PMOT and the warning of the outdoor metrics of the EMS;
+  a zone that leaves 9 gets `'pmot'` again and the model loses the code if no zone needs it. The heating setpoint of
+  comfort mode 1 of 9 out of the limits takes the minus sign. `get_setpoint_ems_code` and
+  `get_setpoint_ems_programs` have the programs of the outdoor metric of 9 (and a comment with its metric),
+  `compute_setpoints` runs them (`attrs['metric']` is `'ndrm'`), `verify_accim_simulation` checks them (check 4), and
+  the temperature table of `Table` takes `Tout_metric (°C)` for 9 and the running mean of ASHRAE 55 for 10. The models
+  of earlier versions of accim keep their code (those before 0.8 get the subprograms of 9 with `PMOT`). The choices
+  that the decision does not cover are in `notes/decisions.md` (the implementation of the decisions of 2026-11-12).
+- Files: `accim/sim/ems/standard_lines.py`, `accim/sim/ems/program_lines.py`, `accim/sim/ems/setpoint_lines.py`,
+  `accim/sim/ems/outdoor_metric.py`, `accim/sim/ems/inputs.py`, `accim/sim/accis.py`, `accim/sim/preview.py`,
+  `accim/utils/ems_code.py`, `accim/data/postprocessing/main.py`,
+  `accim/parametric_and_optimisation/funcs_for_besos/param_accis.py`, `accim/gui/forms.py`, `accim/gui/app.py`,
+  `tests/core/test_imac_r.py` (new), `tests/core/test_comfort_standard_code.py`,
+  `tests/core/test_comfort_standard_registry.py`, `tests/core/test_table_columns.py`, the golden files of the golden
+  master, `docs/source/4_detailed use.md`, `CHANGELOG.md`, `CAMBIOS_CODIGO_v1.2.0.md` (§44), `TODO.md`,
+  `notes/decisions.md`, `notes/work-log.md`.
+- Verification: `tests/core/test_imac_r.py` (32 tests: the lines; `compute_setpoints` of 9 against the mean of the 7
+  previous days of the weather file from 1 January, 8 January and 1 July, within 1e-9 K, and of 10 against PMOT; the
+  start with PMOT; the sign; `AddAccis` and `modify_accis`; a zone edited by hand; and, with EnergyPlus 25.1, check 4
+  of `verify_accim_simulation` without mismatches for 9 with and without the weather file and for 10, and the EMS and
+  API backends with identical results for 9, with and without the weather file, and for 10). `py -m pytest tests/core
+  -q -p no:cacheprovider` without the golden master: 1536 passed, 2 skipped and 3 failed; the three pass when run
+  again: two fixed the old chains (`test_comfort_standard_registry.py` and `test_table_columns.py`, changed with this
+  task), and the third (`test_energyplus_reads_the_clothing_insulation_of_a_function`) ran EnergyPlus in the working
+  folder at the same time as three simulations of the measurement of E-F1 of this session, which wrote there the files
+  of ExpandObjects. `tests/parametric_and_optimisation`: 520 passed. The golden master: 21 of its 31 configurations
+  change, compared line by line before `--update-golden` (the output IDFs of 9 and 10 in `b01` and `b03`; the line
+  `elseif ComfStand == 1 || ComfStand == 10` of `SetVST`, now `elseif ComfStand == 1`, in the models in mixed mode; and
+  the chains and subprograms of 9 and 10 in `s01` to `s06` and `s09`), and it passes again (35 passed). The
+  documentation build (with the pandoc of `pypandoc_binary` on the `PATH`): the same distinct warnings as the baseline
+  of session 3. The changed modules compile with Python 3.9. With `Seville_Present.epw` and a year, the mean of the 7
+  previous days is up to 5.15 K from PMOT (1.64 K on average), and PMOT up to 4.11 K from RMOT from day 22 (1.47 K on
+  average), so the comfort temperatures of 9 and 10 change by up to 2.0 and 1.7 K (0.6 K on average).
+- Next step: the next tasks of `TODO.md` (A19 with S1, A24, A25, A4, A8, E-F1, the documentation of the reference SET,
+  and the P2 ones); the line 0.078·T + 23.25 is still to be checked in the National Building Code of India 2016 (a P2
+  entry of `TODO.md`).
+
 #### [done] The decisions on the six questions left open after session 3, taken for the author (branch `v1.2.0`)
 - Context: after session 3, `notes/questions.md` had six open entries (the eight findings of the self-audit of session
   2 that needed a decision of the author, the details of tasks S4 and S1, comfort standards 9 and 10, and the two

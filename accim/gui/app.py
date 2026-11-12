@@ -978,7 +978,7 @@ class AddAccisTab(_Tab):
         standards = self.selected_standards() if temperature else []
         _set_state(self.custom_widgets, 99 in standards)
         # The weather file also begins the outdoor metric of the comfort standards defined by their data that the EMS
-        # calculates, and that of JPN Aqilah 2025
+        # calculates, that of IND IMAC R 7DRM (9) and that of JPN Aqilah 2025
         if 99 not in standards and forms.weather_file_standards(standards):
             _set_state([self.epw_entry, self.epw_button], True)
         self.categories.configure(text=forms.categories_hint(standards))

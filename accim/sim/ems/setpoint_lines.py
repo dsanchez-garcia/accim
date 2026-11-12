@@ -700,9 +700,15 @@ elseif CAT==90
 set AHST = PMOT*0.078+23.25-1.5+AHSTtol
 endif
 """),
+    # IND IMAC R 7DRM (9), comfort modes 1 to 3: the adaptive setpoints and their applicability read Tout_metric, the
+    # arithmetic mean of the daily means of the 7 previous days that the EMS code of the outdoor metric calculates
+    # (accim.sim.ems.standard_lines.BUILT_IN_METRICS; Rawal et al., 2022, model A), instead of PMOT, the mean of 30
+    # days, as until accim 1.2.0. The static setpoints of the Indian building code keep PMOT, as in 7, 8 and 10; in
+    # comfort mode 1, the heating setpoint out of the limits is 2.72 or 1.5 K below their line (it was above, the
+    # values of the cooling setpoint; the decisions of 2026-11-12, notes/decisions.md).
     (9, 1): _lines("""
-if (PMOT >= ACSTall) && (PMOT <= ACSTaul)
-set ACST = PMOT*0.39+18.42+ACSToffset+ACSTtol
+if (Tout_metric >= ACSTall) && (Tout_metric <= ACSTaul)
+set ACST = Tout_metric*0.39+18.42+ACSToffset+ACSTtol
 else
 if CAT==80
 set ACST = PMOT*0.078+23.25+2.72+ACSTtol
@@ -710,61 +716,61 @@ elseif CAT==90
 set ACST = PMOT*0.078+23.25+1.5+ACSTtol
 endif
 endif
-if (PMOT >= AHSTall) && (PMOT <= AHSTaul)
-set AHST = PMOT*0.39+18.42+AHSToffset+AHSTtol
+if (Tout_metric >= AHSTall) && (Tout_metric <= AHSTaul)
+set AHST = Tout_metric*0.39+18.42+AHSToffset+AHSTtol
 else
 if CAT==80
-set AHST = PMOT*0.078+23.25+2.72+AHSTtol
+set AHST = PMOT*0.078+23.25-2.72+AHSTtol
 elseif CAT==90
-set AHST = PMOT*0.078+23.25+1.5+AHSTtol
+set AHST = PMOT*0.078+23.25-1.5+AHSTtol
 endif
 endif
 """),
     (9, 2): _lines("""
-if (PMOT >= ACSTall) && (PMOT <= ACSTaul)
-set ACST = PMOT*0.39+18.42+ACSToffset+ACSTtol
+if (Tout_metric >= ACSTall) && (Tout_metric <= ACSTaul)
+set ACST = Tout_metric*0.39+18.42+ACSToffset+ACSTtol
 elseif CAT==80
-if PMOT < ACSTall
+if Tout_metric < ACSTall
 set ACST = 25+ACSTtol
-elseif PMOT > ACSTaul
+elseif Tout_metric > ACSTaul
 set ACST = 27+ACSTtol
 endif
 elseif CAT==90
-if PMOT < ACSTall
+if Tout_metric < ACSTall
 set ACST = 24+ACSTtol
-elseif PMOT > ACSTaul
+elseif Tout_metric > ACSTaul
 set ACST = 26+ACSTtol
 endif
 endif
-if (PMOT >= AHSTall) && (PMOT <= AHSTaul)
-set AHST = PMOT*0.39+18.42+AHSToffset+AHSTtol
+if (Tout_metric >= AHSTall) && (Tout_metric <= AHSTaul)
+set AHST = Tout_metric*0.39+18.42+AHSToffset+AHSTtol
 elseif CAT==80
-if PMOT < AHSTall
+if Tout_metric < AHSTall
 set AHST = 19+AHSTtol
-elseif PMOT > AHSTaul
+elseif Tout_metric > AHSTaul
 set AHST = 22+AHSTtol
 endif
 elseif CAT==90
-if PMOT < AHSTall
+if Tout_metric < AHSTall
 set AHST = 20+AHSTtol
-elseif PMOT > AHSTaul
+elseif Tout_metric > AHSTaul
 set AHST = 23+AHSTtol
 endif
 endif
 """),
     (9, 3): _lines("""
-if (PMOT >= ACSTall) && (PMOT <= ACSTaul)
-set ACST = PMOT*0.39+18.42+ACSToffset+ACSTtol
-elseif PMOT < ACSTall
+if (Tout_metric >= ACSTall) && (Tout_metric <= ACSTaul)
+set ACST = Tout_metric*0.39+18.42+ACSToffset+ACSTtol
+elseif Tout_metric < ACSTall
 set ACST = ACSTall*0.39+18.42+ACSToffset+ACSTtol
-elseif PMOT > ACSTaul
+elseif Tout_metric > ACSTaul
 set ACST = ACSTaul*0.39+18.42+ACSToffset+ACSTtol
 endif
-if (PMOT >= AHSTall) && (PMOT <= AHSTaul)
-set AHST = PMOT*0.39+18.42+AHSToffset+AHSTtol
-elseif PMOT < AHSTall
+if (Tout_metric >= AHSTall) && (Tout_metric <= AHSTaul)
+set AHST = Tout_metric*0.39+18.42+AHSToffset+AHSTtol
+elseif Tout_metric < AHSTall
 set AHST = AHSTall*0.39+18.42+AHSToffset+AHSTtol
-elseif PMOT > AHSTaul
+elseif Tout_metric > AHSTaul
 set AHST = AHSTaul*0.39+18.42+AHSToffset+AHSTtol
 endif
 """),
@@ -784,71 +790,74 @@ elseif CAT==90
 set AHST = PMOT*0.078+23.25-1.5+AHSTtol
 endif
 """),
+    # IND IMAC R 30DRM (10), comfort modes 1 to 3: PMOT, the running mean of 30 days of EnergyPlus (Rawal et al., 2022,
+    # model B), as its comfort temperature and its static setpoints; until accim 1.2.0 they read RMOT, the exponential
+    # running mean of EnergyPlus (the decisions of 2026-11-12, notes/decisions.md).
     (10, 1): _lines("""
-if (RMOT >= ACSTall) && (RMOT <= ACSTaul)
-set ACST = RMOT*0.42+17.6+ACSToffset+ACSTtol
+if (PMOT >= ACSTall) && (PMOT <= ACSTaul)
+set ACST = PMOT*0.42+17.6+ACSToffset+ACSTtol
 else
 if CAT==80
-set ACST = RMOT*0.078+23.25+2.72+ACSTtol
+set ACST = PMOT*0.078+23.25+2.72+ACSTtol
 elseif CAT==90
-set ACST = RMOT*0.078+23.25+1.5+ACSTtol
+set ACST = PMOT*0.078+23.25+1.5+ACSTtol
 endif
 endif
-if (RMOT >= AHSTall) && (RMOT <= AHSTaul)
-set AHST = RMOT*0.42+17.6+AHSToffset+AHSTtol
+if (PMOT >= AHSTall) && (PMOT <= AHSTaul)
+set AHST = PMOT*0.42+17.6+AHSToffset+AHSTtol
 else
 if CAT==80
-set AHST = RMOT*0.078+23.25-2.72+AHSTtol
+set AHST = PMOT*0.078+23.25-2.72+AHSTtol
 elseif CAT==90
-set AHST = RMOT*0.078+23.25-1.5+AHSTtol
+set AHST = PMOT*0.078+23.25-1.5+AHSTtol
 endif
 endif
 """),
     (10, 2): _lines("""
-if (RMOT >= ACSTall) && (RMOT <= ACSTaul)
-set ACST = RMOT*0.42+17.6+ACSToffset+ACSTtol
+if (PMOT >= ACSTall) && (PMOT <= ACSTaul)
+set ACST = PMOT*0.42+17.6+ACSToffset+ACSTtol
 elseif CAT==80
-if RMOT < ACSTall
+if PMOT < ACSTall
 set ACST = 25+ACSTtol
-elseif RMOT > ACSTaul
+elseif PMOT > ACSTaul
 set ACST = 27+ACSTtol
 endif
 elseif CAT==90
-if RMOT < ACSTall
+if PMOT < ACSTall
 set ACST = 24+ACSTtol
-elseif RMOT > ACSTaul
+elseif PMOT > ACSTaul
 set ACST = 26+ACSTtol
 endif
 endif
-if (RMOT >= AHSTall) && (RMOT <= AHSTaul)
-set AHST = RMOT*0.42+17.6+AHSToffset+AHSTtol
+if (PMOT >= AHSTall) && (PMOT <= AHSTaul)
+set AHST = PMOT*0.42+17.6+AHSToffset+AHSTtol
 elseif CAT==80
-if RMOT < AHSTall
+if PMOT < AHSTall
 set AHST = 19+AHSTtol
-elseif RMOT > AHSTaul
+elseif PMOT > AHSTaul
 set AHST = 22+AHSTtol
 endif
 elseif CAT==90
-if RMOT < AHSTall
+if PMOT < AHSTall
 set AHST = 20+AHSTtol
-elseif RMOT > AHSTaul
+elseif PMOT > AHSTaul
 set AHST = 23+AHSTtol
 endif
 endif
 """),
     (10, 3): _lines("""
-if (RMOT >= ACSTall) && (RMOT <= ACSTaul)
-set ACST = RMOT*0.42+17.6+ACSToffset+ACSTtol
-elseif RMOT < ACSTall
+if (PMOT >= ACSTall) && (PMOT <= ACSTaul)
+set ACST = PMOT*0.42+17.6+ACSToffset+ACSTtol
+elseif PMOT < ACSTall
 set ACST = ACSTall*0.42+17.6+ACSToffset+ACSTtol
-elseif RMOT > ACSTaul
+elseif PMOT > ACSTaul
 set ACST = ACSTaul*0.42+17.6+ACSToffset+ACSTtol
 endif
-if (RMOT >= AHSTall) && (RMOT <= AHSTaul)
-set AHST = RMOT*0.42+17.6+AHSToffset+AHSTtol
-elseif RMOT < AHSTall
+if (PMOT >= AHSTall) && (PMOT <= AHSTaul)
+set AHST = PMOT*0.42+17.6+AHSToffset+AHSTtol
+elseif PMOT < AHSTall
 set AHST = AHSTall*0.42+17.6+AHSToffset+AHSTtol
-elseif RMOT > AHSTaul
+elseif PMOT > AHSTaul
 set AHST = AHSTaul*0.42+17.6+AHSToffset+AHSTtol
 endif
 """),

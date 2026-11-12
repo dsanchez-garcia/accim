@@ -11,7 +11,13 @@ after checking that only these numbers changed and that EnergyPlus gives the sam
 In accim 1.2.0, the models of the in-memory functions with the EMS code of all the comfort standards (`s01` to `s06`
 and `s09`) got that of the new comfort standard JPN Aqilah 2025 (23, at the end of the chains): their golden files
 were written again after checking that only its code was added (the output IDFs of `AddAccis`, which only have the
-code of the comfort standards of their zones, did not change).
+code of the comfort standards of their zones, did not change). Also in accim 1.2.0 (the decisions of 2026-11-12),
+comfort standards 9 and 10, IND IMAC R 7DRM and 30DRM, read the running means of their comfort models: the golden files
+of 21 configurations were written again after checking, line by line, that only this changed: the output IDFs of 9
+(with the EMS code of its outdoor metric, the mean of the 7 previous days) and of 10 (PMOT instead of RMOT) in `b01`
+(16 of 200 files) and `b03`, one line of the program `SetVST` of every model in mixed mode (its branch of INT EN16798
+no longer names comfort standard 10: `b02`, `b03`, `b05`, `b07` to `b10`, `b12`, `b13`, `b15` to `b17` and `b22`), and
+the models with the code of all the comfort standards (`s01` to `s06` and `s09`).
 
 | File | What it holds |
 | --- | --- |

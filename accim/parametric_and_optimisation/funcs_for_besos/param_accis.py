@@ -402,6 +402,9 @@ def modify_ComfStand(idf: besos.IDF_class, value: int):
     (:mod:`accim.sim.standards`), the zones also get its outdoor metric (and its EMS code, if the EMS calculates it),
     and its regimes if it has several (:func:`accim.sim.ems.custom_regimes.set_standard_regimes`, which removes them
     from the zones when they get another comfort standard).
+    With IND IMAC R 7DRM (9), the zones get its outdoor metric, the arithmetic mean of the 7 previous days, and the EMS
+    code that calculates it (it begins with the running mean of ASHRAE 55 of EnergyPlus, with a warning, unless the
+    programs of the outdoor metric of the model begin with the values of a weather file).
     With JPN Aqilah 2025 (23), the zones get its static setpoints (20 and 28 °C, unless a parameter
     ``static_heating_setpoint`` or ``static_cooling_setpoint`` gave them before), and the running mean of EN 16798-1
     with α = 0.8 if the programs of the outdoor metric of the model begin with the values of a weather file (AddAccis
@@ -421,7 +424,7 @@ def modify_ComfStand(idf: besos.IDF_class, value: int):
     --------
     result = modify_ComfStand(idf=..., value=...)
     """
-    from accim.sim.standards import comfort_standard_definition, definition_of
+    from accim.sim.standards import definition_of
 
     if not input_programs(idf) and definition_of(value) is not None:
         raise ValueError(f'The model has the ACCIS of an earlier version of accim, which does not have the EMS code of '
@@ -435,12 +438,25 @@ def modify_ComfStand(idf: besos.IDF_class, value: int):
         # The regimes of the comfort standards of the registry with regimes, before their outdoor metric
         regimes_changed = set_standard_regimes(idf, previous)
         add_comfort_standard_code(idf, [value])
-        definition = comfort_standard_definition(value)
-        if definition is not None:
-            from accim.sim.ems.standard_lines import standard_inputs
-            _set_outdoor_metric_inputs(idf, standard_inputs(definition))
-        elif regimes_changed:
-            _refresh_outdoor_metric_code(idf)
+        # The outdoor metric of the comfort standards with their own: those of the registry, and IND IMAC R 7DRM (9),
+        # the mean of the 7 previous days that the EMS calculates
+        from accim.sim.ems.standard_lines import left_metric_inputs, own_metric_inputs
+
+        own_metric = own_metric_inputs(value)
+        if own_metric is not None:
+            _set_outdoor_metric_inputs(idf, own_metric)
+        else:
+            # The zones that leave IND IMAC R 7DRM (9) with its outdoor metric do not keep it (the custom model would
+            # inherit the mean of the 7 previous days): 'pmot', unless a parameter of the outdoor metric gave them
+            # another one before
+            left = False
+            for zone, program in input_programs(idf).items():
+                inputs = left_metric_inputs(previous.get(zone), value, read_inputs(program))
+                if inputs is not None:
+                    set_inputs(program, inputs)
+                    left = True
+            if left or regimes_changed:
+                _refresh_outdoor_metric_code(idf)
         if has_static_setpoints(value):
             # The static setpoints of JPN Aqilah 2025 that the zones do not have yet (a parameter of the static
             # setpoints applied before keeps its value), and the outdoor metric of the weather file of the model

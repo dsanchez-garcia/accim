@@ -15,6 +15,25 @@ This log is a lightweight, session-scoped complement to the repository's
 existing tracking files — it does not replace them (see
 [[decisions.md#2026-09-13 — `notes/work-log.md` complements, not replaces, existing tracking files|the related decision]]).
 
+## 2026-11-12 — The implementation of the decisions of 2026-11-12 (branch `v1.2.0`, on the server)
+
+- **Objective**: the author asked Claude Code to implement, autonomously, the P1 and P2 tasks that the decisions of
+  2026-11-12 left in [[../TODO.md]], one commit and one push for each task, with the rules of the review sessions
+  (`COPILOT_SIGUIENTE_SESION.md` §2).
+- **Affected files**: those of each task, in its entry of [[../DEVLOG.md]].
+- **Finding or decision**: the choices that the decisions do not cover are in
+  [[decisions.md#2026-11-12 — The implementation of the decisions of 2026-11-12: the choices that they do not cover|the entry of the implementation]].
+  By task:
+  - Comfort standards 9 and 10: 10 reads PMOT, and 9 the mean of the 7 previous days that the EMS calculates (the
+    code of the outdoor metric of the custom model, `'ndrm'` with 7 days, in every model with a zone of 9); the heating
+    setpoint of comfort mode 1 of 9 out of its limits takes the minus sign. A model without that code whose zone is
+    edited by hand to comfort standard 9 stops EnergyPlus (documented); a zone that leaves 9 gets `'pmot'` again. With
+    `Seville_Present.epw` and a year, their comfort temperatures change by up to 2.0 and 1.7 K (0.6 K on average).
+- **Validation**: in the entry of each task of [[../DEVLOG.md]] (the tests of the task, EnergyPlus 25.1 with both
+  backends where the EMS code changes, and the golden master, compared line by line before writing it again).
+- **Next step**: the review of Claude Science of sessions 2 and 3, which also covers this session; the message of the
+  author to Ruiji Sun, the jar of the Future Weather Generator and the issue for EnergyPlus.
+
 ## 2026-11-12 — The decisions on the six open questions, taken for the author (branch `v1.2.0`, on the server)
 
 - **Objective**: the author delegated to Claude Code all the decisions that were open in [[questions.md]] after

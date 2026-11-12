@@ -37,20 +37,29 @@ have its own (:func:`standard_metric_variable`).
 The built-in comfort standards of :data:`WEATHER_FILE_METRICS` (JPN Aqilah 2025, 23) have another outdoor metric in
 the models with the values of the weather file of the simulation (the argument ``epw`` of AddAccis or modify_accis):
 their code then reads Tout_metric instead of RMOT (:func:`weather_file_lines`, finding B4-1 of the review of 1.2.0).
+
+The built-in comfort standards of :data:`BUILT_IN_METRICS` (IND IMAC R 7DRM, 9) have an outdoor metric that EnergyPlus
+does not calculate: their code always reads Tout_metric, and their zones have the inputs of their outdoor metric
+(:func:`own_metric_inputs`), with or without the weather file.
 """
 
 import re
-from typing import Any, Dict, Iterable, List, Optional, Tuple
+from typing import Any, Dict, Iterable, List, Mapping, Optional, Tuple
 
 from accim.sim.ems.erl import format_number
 
 __all__ = [
+    'BUILT_IN_METRICS',
+    'DEFAULT_METRIC_INPUTS',
     'ISO7730_STATIC_SETPOINTS',
     'WEATHER_FILE_METRICS',
     'add_standard_lines',
+    'built_in_metric',
+    'left_metric_inputs',
     'metric_variable',
     'needs_outdoor_metric_code',
     'outdoor_metric_standards',
+    'own_metric_inputs',
     'regime_standards',
     'remove_standard_lines',
     'setpoint_lines',
@@ -79,6 +88,20 @@ ISO7730_STATIC_SETPOINTS = {
 #: Reference, not divided by 1 − α⁷ (finding B4-1 of the review of 1.2.0, section 3.1 of
 #: ``notes/PROPUESTAS_MEJORAS_post_1.1.0_v04.md``)
 WEATHER_FILE_METRICS: Dict[int, str] = {23: 'rmot_alpha'}
+#: The built-in comfort standards whose outdoor metric EnergyPlus does not calculate, with its name of
+#: :data:`accim.sim.ems.outdoor_metric.OUTDOOR_METRICS`, its alpha and its days: the EMS code of the outdoor metric of
+#: the custom model calculates it in every model with a zone of them, as that of the comfort standards defined by their
+#: data, and their code reads Tout_metric (:func:`own_metric_inputs`). IND IMAC R 7DRM (9) is model A of Rawal et al.
+#: (2022), Building and Environment 219, 109187 (section 4.4 and Fig. 15), Tneut = 0.39·Tout-7DRM + 18.42, whose metric
+#: is the 7-day running mean of the outdoor temperature, which the paper tells apart from its weighted version
+#: (Tout-7DRM-W): the arithmetic mean of the daily means of the 7 previous days, 'ndrm' with 7 days. EnergyPlus has no
+#: such mean (PMOT is that of 30 days, and RMOT is exponential), and until accim 1.2.0 comfort standard 9 read PMOT
+#: (the decisions of 2026-11-12, ``notes/decisions.md``). The alpha is that of the inputs of the zones, which 'ndrm'
+#: does not use.
+BUILT_IN_METRICS: Dict[int, Tuple[str, float, int]] = {9: ('ndrm', 0.8, 7)}
+#: The inputs of the outdoor metric of the zones without an outdoor metric of their own: 'pmot', the defaults of
+#: :data:`accim.sim.ems.inputs.INPUT_VARIABLES` (:func:`left_metric_inputs`)
+DEFAULT_METRIC_INPUTS: Dict[str, Any] = {'CustAST_metric': 0, 'CustAST_alpha': 0.8, 'CustAST_days': 30}
 #: The variables of the outdoor metrics that EnergyPlus calculates; the EMS calculates the others (Tout_metric)
 _NATIVE_METRICS = {'pmot': 'PMOT', 'rmot': 'RMOT'}
 _CHAIN_PROGRAMS = ('SETCOMFTEMP', 'SETVST')
@@ -134,11 +157,62 @@ def standard_metric_variable(definition) -> str:
 
 
 def outdoor_metric_standards() -> set:
-    """The registered comfort standards whose outdoor metric needs the EMS code of the outdoor metric."""
+    """The comfort standards whose outdoor metric needs the EMS code of the outdoor metric: the registered ones whose
+    outdoor metric EnergyPlus does not calculate (or with regimes), and the built-in ones of :data:`BUILT_IN_METRICS`
+    (IND IMAC R 7DRM, 9)."""
     from accim.sim.standards import registered_comfort_standards
 
     return {number for number, definition in registered_comfort_standards().items()
-            if needs_outdoor_metric_code(definition)}
+            if needs_outdoor_metric_code(definition)} | set(BUILT_IN_METRICS)
+
+
+def built_in_metric(number: Any) -> Optional[Tuple[str, float, int]]:
+    """The outdoor metric of a built-in comfort standard of :data:`BUILT_IN_METRICS` (its name, alpha and days), or
+    None for the other comfort standards."""
+    try:
+        return BUILT_IN_METRICS.get(int(number))
+    except (TypeError, ValueError):
+        return None
+
+
+def own_metric_inputs(number: Any) -> Optional[Dict[str, Any]]:
+    """The inputs of the outdoor metric (``CustAST_metric``, ``CustAST_alpha`` and ``CustAST_days``) of the zones of a
+    comfort standard with its own outdoor metric: one defined by its data and registered (:func:`standard_inputs`), or
+    a built-in one of :data:`BUILT_IN_METRICS` (IND IMAC R 7DRM, 9: 'ndrm' with 7 days). None for the other comfort
+    standards, whose zones keep the inputs of the outdoor metric of the custom model."""
+    from accim.sim.ems.outdoor_metric import metric_code
+    from accim.sim.standards import comfort_standard_definition
+
+    definition = comfort_standard_definition(number)
+    if definition is not None:
+        return standard_inputs(definition)
+    metric = built_in_metric(number)
+    if metric is None:
+        return None
+    name, alpha, days = metric
+    return {'CustAST_metric': metric_code(name), 'CustAST_alpha': alpha, 'CustAST_days': days}
+
+
+def left_metric_inputs(previous: Any, new: Any, current: Mapping[str, Any]) -> Optional[Dict[str, Any]]:
+    """The inputs of the outdoor metric that a zone gets when it leaves a built-in comfort standard whose outdoor
+    metric the EMS calculates (:data:`BUILT_IN_METRICS`: IND IMAC R 7DRM, 9) for a comfort standard without an outdoor
+    metric of its own, while its inputs are still those of the comfort standard that it leaves: those of 'pmot'
+    (:data:`DEFAULT_METRIC_INPUTS`), the default of the custom model, which would otherwise inherit the mean of the 7
+    previous days. None otherwise: the zone keeps its inputs, or gets those of its new comfort standard.
+
+    :param previous: The comfort standard that the zone leaves.
+    :param new: The comfort standard that it gets.
+    :param current: The inputs of the zone (:func:`accim.sim.ems.inputs.read_inputs`).
+    """
+    if built_in_metric(previous) is None or own_metric_inputs(new) is not None:
+        return None
+    try:
+        if int(previous) == int(new):
+            return None
+        same = all(float(current.get(name)) == float(value) for name, value in own_metric_inputs(previous).items())
+    except (TypeError, ValueError):
+        return None
+    return dict(DEFAULT_METRIC_INPUTS) if same else None
 
 
 def standard_inputs(definition) -> Dict[str, Any]:

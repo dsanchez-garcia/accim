@@ -13,6 +13,7 @@ The ACCIS is an EnergyManagementSystem script that applies adaptive setpoint tem
 """
 
 import os
+import re
 import tempfile
 import warnings
 from io import StringIO
@@ -77,6 +78,7 @@ from accim.sim.ems.outdoor_metric import (
     set_outdoor_metric_code,
     weather_file_zones,
 )
+from accim.sim.ems.program_lines import OUTDOOR_METRIC_VARIABLE
 from accim.sim.ems.programs import (
     add_comfort_standard_code,
     add_program,
@@ -102,7 +104,12 @@ from accim.sim.ems.setpoint_limits import (
     set_setpoint_limits_code,
     warn_crossed_setpoint_limits,
 )
-from accim.sim.ems.standard_lines import WEATHER_FILE_METRICS, outdoor_metric_standards, standard_inputs
+from accim.sim.ems.standard_lines import (
+    WEATHER_FILE_METRICS,
+    left_metric_inputs,
+    outdoor_metric_standards,
+    own_metric_inputs,
+)
 from accim.sim.ems.static_setpoints import (
     ARGUMENTS as STATIC_SETPOINT_ARGUMENTS,
     DEFAULTS as STATIC_SETPOINT_DEFAULTS,
@@ -122,7 +129,7 @@ from accim.sim.generation import (
 from accim.sim.model import AccimModel, hvac_template_types
 from accim.sim.outputs import OUTPUT_DATAFRAME_COLUMNS, enable_sizing_calculations, output_variables_dataframe
 from accim.sim.results_size import SIZE_COLUMNS, SimulationSize, estimate_simulation_size, format_size
-from accim.sim.standards import comfort_standard_definition, definition_of
+from accim.sim.standards import definition_of
 from accim.sim.targets import resolve_targets
 
 __all__ = ['AddAccis', 'add_accis_to_idf', 'addAccis', 'gen_outputs_df', 'load_idf', 'modify_accis']
@@ -607,7 +614,12 @@ class AddAccis:
         13 = AUS Williamson; 14 = AUS DeDear; 15 = BRA Rupp NV; 16 = BRA Rupp AC; 17 = MEX Oropeza Arid;
         18 = MEX Oropeza DryTropic; 19 = MEX Oropeza Temperate; 20 = MEX Oropeza HumTropic;
         21 = CHL Perez-Fargallo; 22 = INT ISO7730; 23 = JPN Aqilah2025; 99 = CUSTOM; and those of the comfort standards
-        defined by their data of the registry (100 or more, :mod:`accim.sim.standards`).
+        defined by their data of the registry (100 or more, :mod:`accim.sim.standards`). IND IMAC R 7DRM and 30DRM are
+        models A and B of Rawal et al. (2022), Building and Environment 219, 109187: 9 reads the arithmetic mean of the
+        daily means of the 7 previous days, which the EMS calculates (its zones get the EMS code of the outdoor
+        metric, 'ndrm' with 7 days, which begins with the values of ``epw``, or with PMOT without it, with a warning),
+        and 10 the running mean of 30 days of EnergyPlus (PMOT). Until accim 1.2.0, 9 read PMOT and the setpoints of
+        10 the exponential running mean of EnergyPlus (RMOT): their results differ from those of accim 1.1.0.
     :param category: The categories (a list): 1, 2 or 3 (CAT I, II, III), or 80, 85 or 90 (% of acceptability).
     :param category_cooling_offset: An offset summed to the cooling setpoint offset of the category.
     :param category_heating_offset: An offset summed to the heating setpoint offset of the category.
@@ -718,7 +730,8 @@ class AddAccis:
     :param custom_days: Custom model, 'ndrm': the number of previous days (30 by default); outside 7 to 30 (ASHRAE
         55-2020, 5.4.2.1) it warns.
     :param epw: The weather file (EPW) of the simulations, with which the outdoor metrics of the custom model that the
-        EMS calculates begin on the first day of the RunPeriod of the model (the running means of the previous days,
+        EMS calculates (and the mean of the 7 previous days of IND IMAC R 7DRM, comfort standard 9) begin on the first
+        day of the RunPeriod of the model (the running means of the previous days,
         as :func:`accim.sim.preview.outdoor_metrics` calculates them), and whose monthly means 'monthly_mean' needs.
         Without it, they begin with the running mean of ASHRAE 55 of EnergyPlus, with a warning. With it, JPN Aqilah
         2025 (comfort standard 23) uses the running mean of EN 16798-1:2019 (B.1) with α = 0.8 that the EMS calculates
@@ -1364,8 +1377,10 @@ def modify_accis(
     by the subprograms of the comfort standard (SetAST_Master), so these arguments can also be changed later in
     the programs SetInputData_<zone>, except the comfort standard in the output IDFs of :class:`AddAccis`, which only
     have the EMS code of the comfort standards of their zones: this function adds that of the comfort standards that
-    it sets (the models of :func:`add_accis_to_idf` have that of all of them). The lines of the EMS programs of the
-    model are indented inside the blocks IF and WHILE.
+    it sets (the models of :func:`add_accis_to_idf` have that of all of them), and IND IMAC R 7DRM (comfort standard
+    9), which also needs the EMS code of its outdoor metric, which this function adds: in a model without it, a zone
+    whose program is edited to ``set ComfStand = 9`` stops EnergyPlus (``Tout_metric`` is not initialised). The lines
+    of the EMS programs of the model are indented inside the blocks IF and WHILE.
 
     The outdoor metric of the custom model (``custom_outdoor_metric``, ``custom_alpha`` and ``custom_days``, see
     :class:`AddAccis`) keeps its value if it is None (the models without its EMS code have 'pmot'). If one of them (or
@@ -1375,12 +1390,16 @@ def modify_accis(
     ASHRAE 55 of EnergyPlus (:func:`accim.sim.ems.outdoor_metric.set_outdoor_metric_code`). The zones of JPN Aqilah
     2025 (comfort standard 23) use the running mean of EN 16798-1 with α = 0.8 that the EMS calculates if ``epw`` is
     given or the programs of the outdoor metric of the model begin with the values of a weather file, and the RMOT of
-    EnergyPlus otherwise (with a warning if this call gives them comfort standard 23; see :class:`AddAccis`).
+    EnergyPlus otherwise (with a warning if this call gives them comfort standard 23; see :class:`AddAccis`). The zones
+    of IND IMAC R 7DRM (comfort standard 9) always have the EMS code of the outdoor metric, with the mean of the 7
+    previous days ('ndrm' with 7 days), which begins with the values of ``epw`` or, without it, with the running mean
+    of ASHRAE 55 of EnergyPlus, with the warning of the outdoor metrics that the EMS calculates.
 
     The models of earlier versions of accim, which have one program SetInputData for all the zones, can only have
     the same arguments in all the zones, and they get the subprograms of this version where they behave
     differently (those of ESP CTE and INT ISO7730 set the setpoints whatever the comfort mode is). Their custom model
-    only has the outdoor metric 'pmot', and their setpoints have neither minimum nor maximum.
+    only has the outdoor metric 'pmot', their setpoints have neither minimum nor maximum, and their comfort standards
+    9 and 10 are those of their version (IND IMAC R 7DRM with PMOT: they have no EMS code of the outdoor metric).
 
     The minimum heating setpoint and the maximum cooling setpoint (``heating_setpoint_minimum`` and
     ``cooling_setpoint_maximum``, see :class:`AddAccis`) keep their values if they are None (the models without them
@@ -1543,6 +1562,7 @@ def modify_accis(
     # The comfort standard of each zone before the changes: the zones that leave a comfort standard with regimes lose
     # them (accim.sim.ems.custom_regimes.set_standard_regimes)
     previous = {zone: read_inputs(program).get('ComfStand') for zone, program in zone_programs.items()}
+    left_built_in_metric = False
     for zone, program in zone_programs.items():
         current = read_inputs(program)
         values = input_values({**arguments, **outdoor_metric, **limits, **statics, **resolved.get(zone, {})})
@@ -1550,10 +1570,19 @@ def modify_accis(
         values = {name: value for name, value in values.items() if name not in DRIFT_INPUTS}
         values.update(drift_inputs({name: value for name, value in {**drift, **resolved.get(zone, {})}.items()
                                     if name in DRIFT_ARGUMENTS}, current))
-        # The zones that keep a comfort standard defined by its data keep its outdoor metric (accim.sim.standards)
-        definition = comfort_standard_definition(current.get('ComfStand')) if 'ComfStand' not in values else None
-        if definition is not None:
-            values.update(standard_inputs(definition))
+        # The zones that keep a comfort standard with its own outdoor metric keep it: those defined by their data
+        # (accim.sim.standards), and IND IMAC R 7DRM (9)
+        own_metric = own_metric_inputs(current.get('ComfStand')) if 'ComfStand' not in values else None
+        if own_metric is not None:
+            values.update(own_metric)
+        elif 'ComfStand' in values and 'CustAST_metric' not in values:
+            # The zones that leave IND IMAC R 7DRM (9) for a comfort standard without an outdoor metric of its own do
+            # not keep its mean of the 7 previous days (the custom model would inherit it): 'pmot', unless the call
+            # gives them an outdoor metric
+            left = left_metric_inputs(current.get('ComfStand'), values['ComfStand'], current)
+            if left is not None:
+                values.update({name: value for name, value in left.items() if name not in values})
+                left_built_in_metric = True
         not_set = set_inputs(program, values)
         # The inputs of the outdoor metric of the models without its EMS code, and the minimum and maximum of the
         # setpoints of the zones without them
@@ -1582,8 +1611,10 @@ def modify_accis(
     # 1.2.0)
     registered_metric = bool({int(n) for n in zone_comfort_standards(idf)} & outdoor_metric_standards())
     weather_zones = weather_file_zones(idf)
-    # The regimes can have their own outdoor metric (task H5 of the review of accim 1.2.0)
-    if metric_given or registered_metric or weather_zones or regimes is not None or regimes_changed:
+    # The regimes can have their own outdoor metric (task H5 of the review of accim 1.2.0); and the model loses the EMS
+    # code of the outdoor metric if its last zone of IND IMAC R 7DRM (9) left it
+    if (metric_given or registered_metric or weather_zones or regimes is not None or regimes_changed
+            or left_built_in_metric):
         enabled = outdoor_metric_needed(idf, code_comfort_standards(idf), epw)
         set_outdoor_metric_code(idf, enabled, epw, rewrite=metric_given)
     given = {comfort_standard, *(own.get('comfort_standard') for own in resolved.values())}
@@ -1709,12 +1740,14 @@ def _modify_accis_of_earlier_versions(
     app_limits.Program_Line_5 = f'set AHSTall = {custom_heating_lower_limit}'
     set_program_lines(programs['SetAST'], [f'set SetpointAcc = {setpoint_accuracy}', f'set m = {custom_slope}',
                                            f'set n = {custom_intercept}', 'run SetAST_Master'])
-    # The models of accim before 0.8 have no SetAST_Master
+    # The models of accim before 0.8 have no SetAST_Master. They have no EMS code of the outdoor metric either, so
+    # their subprograms of IND IMAC R 7DRM (9) read PMOT, as their program SetComfTemp, instead of the mean of the 7
+    # previous days that the EMS calculates in the models of this version (Tout_metric)
     if 'SetAST_Master' not in programs:
         add_program(idf, 'SetAST_Master', master_program_lines())
         for name, lines in subprograms().items():
             if name not in programs:
-                add_program(idf, name, lines)
+                add_program(idf, name, [re.sub(rf'\b{OUTDOOR_METRIC_VARIABLE}\b', 'PMOT', line) for line in lines])
     else:
         # The models of accim before 1.0 only set the setpoints of ESP CTE and INT ISO7730 if ComfMod is 0
         static = [cs for cs in MODULAR_COMFORT_MODES if not depends_on_comfort_mode(cs)]
