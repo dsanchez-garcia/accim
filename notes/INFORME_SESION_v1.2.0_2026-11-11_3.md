@@ -95,7 +95,7 @@ Added in this session:
 - [P2][todo] The `Schedule:File` objects of accim with EnergyPlus 9.4 and 9.6 and daylight saving time (A22, A26: a
   warning, or the CSV files shifted by one hour).
 - [P2][blocked] E-F1 measured again with the body surface area of the Pierce model (1.8258 m²) and at 1.1 and 1.2 met
-  (A1, A2; blocked here by numba).
+  (A1, A2; blocked here by numba until 2026-11-12, the addendum of section 5: `[todo]` since then).
 - [P2][todo] The tests that need `pythermalcomfort.models` skip instead of failing when numba cannot be loaded.
 
 Changed (Step 0):
@@ -171,6 +171,16 @@ digits) nor its behaviour in the callbacks of EnergyPlus (the rule of v04 §7.1 
 the result of this server is still that of the first table, and those tests are to be run again where numba loads.
 The new measurements that A1 and A2 ask for (`TODO.md`) were not made.
 
+**Addendum of 2026-11-12: with numba itself.** After this report was pushed, the author turned Smart App Control off
+(Windows Security; this version of Windows lets it be turned on again), and numba 0.68.1 loads. On `bf05404` (the
+code of `7cb4058`), with numba and pythermalcomfort 4.8.1: the five test files of the table above, 99 passed (7 min
+36 s); `py -m pytest tests/core -q -p no:cacheprovider`, **1542 passed and 2 skipped** (EnergyPlus 26.1; the jar of
+the Future Weather Generator), no failure (29 min 34 s). So the 19 failures and the 12 skips of the first table were
+the environment only. For the record: Smart App Control was already on on 2026-11-03 (it blocked DLLs of other
+programs then); numba was installed on 2026-11-10 and loaded that day, and its files were blocked one after another
+from 2026-11-11 at 17:23, without a restart in between: the verdict of the reputation service of Microsoft is given
+file by file and changes with time, so an unsigned package can load on the day it is installed and not on the next.
+
 | Task | New or changed tests | Result after it |
 | :--- | :--- | :--- |
 | Step 0, audit | none (documents) | — |
@@ -213,7 +223,8 @@ modules that this session did not change). The How-to notebook of the registry w
 
 - **The SET of the indicators of F3 and of comfort standard 24 (decision 9, A1, A2).** Which implementation of the SET
   Sun, Brager & Schiavon (2026) used (a question for Ruiji Sun); and, to measure the effect of the body surface area of
-  the Pierce model (1.8258 m²) and of other activity levels, a computer where numba loads (pythermalcomfort).
+  the Pierce model (1.8258 m²) and of other activity levels, a computer where numba loads (pythermalcomfort): this
+  server again since 2026-11-12 (the addendum of section 5).
 - **The static reference of case (i) of the validation study (decision 12)** and the simulations of the study: the
   decisions of the author with Ruiji Sun on the proposal of the handoff §4 (the climates, the reference, the clothing of
   case (iii), the air speeds of case (iv)), and the future weather files of 2050 and 2080 (the jar of the Future Weather
@@ -229,7 +240,8 @@ modules that this session did not change). The How-to notebook of the registry w
   for the compatibility checks (the 9 modules changed in the session compile). EnergyPlus 9.4, 9.6, 25.1 (with its
   Python API), 25.2 and 26.2.
 - **Windows Smart App Control is on (enforcement)** and blocks the DLLs of numba (`_dynfunc`, `_devicearray`,
-  `_nrt_python`): `import pythermalcomfort.models` raises an `ImportError`. Not changed.
+  `_nrt_python`): `import pythermalcomfort.models` raises an `ImportError`. Not changed in the session; the author
+  turned it off on 2026-11-12 (the addendum of section 5).
 - The documentation build needs pandoc: that of `pypandoc_binary` (installed in session 2) is not on the `PATH`, so its
   folder was added to the `PATH` of the build process.
 - `inventario_para_api.json` was added to `.git/info/exclude` (it is never committed).

@@ -37,14 +37,15 @@ it here as answered).
     1.042 met for 110.7 W/person), so the differences of E-F1 and F1 (−0.045 K standing, −0.116 K sitting; −0.08 and
     −0.155 K) mix an input difference with the model difference. (i) Keep 1.8 m² and document the offset (about
     0.1 K, to be measured); (ii) convert with 1.8258 m² in the hooks, consistent with the Pierce SET that F1 and F3
-    report beside them. The new measurement needs pythermalcomfort, blocked on this server (numba and Smart App
-    Control; `TODO.md`).
+    report beside them. The new measurement needs pythermalcomfort, which was blocked on this server on 2026-11-11
+    (numba and Smart App Control) and is imported again since the author turned Smart App Control off on 2026-11-12
+    (`TODO.md`).
   - **A2 (scientific, E-F1)**: in the real environment, EnergyPlus 25.1/25.2 computes the convective coefficient of
     the Pierce model without the term of the activity, 5.66·(met − 0.85)^0.39 (which it applies only to the standard
     environment), unlike its Engineering Reference and pythermalcomfort; above about 1.046 met that term is the larger
     one, so the agreement of E-F1 (the sample model is at 1.042 met in the Pierce model) holds near 1 met only. (i)
-    Repeat E-F1 at 1.1 and 1.2 met and restrict the present statements to about 1 met (blocked here, as A1); (ii) the
-    choice of the reference SET of F1 and F3 together with decision 9 (Ruiji Sun).
+    Repeat E-F1 at 1.1 and 1.2 met and restrict the present statements to about 1 met (not blocked here any more, as
+    A1); (ii) the choice of the reference SET of F1 and F3 together with decision 9 (Ruiji Sun).
   - **A4 (design, F1)**: a model prepared by `apply_athb_setpoints`, `apply_set_setpoints` or
     `apply_sun2026_setpoints` simulated without its hook (the EMS backend, or the API without hooks) runs without an
     error or a warning, with the setpoints of the ACCIS and the outputs of the hook at 0. (i) As now, documented; (ii)

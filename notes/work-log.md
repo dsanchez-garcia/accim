@@ -15,6 +15,20 @@ This log is a lightweight, session-scoped complement to the repository's
 existing tracking files — it does not replace them (see
 [[decisions.md#2026-09-13 — `notes/work-log.md` complements, not replaces, existing tracking files|the related decision]]).
 
+## 2026-11-12 — The tests of pythermalcomfort with numba again (branch `v1.2.0`, on the server)
+
+- **Objective**: run again the tests that Smart App Control kept from running (the report of session 3, section 5),
+  once the author turned it off.
+- **Affected files**: [[../TODO.md]], [[questions.md]], [[INFORME_SESION_v1.2.0_2026-11-11_3.md]] (an addendum),
+  [[../DEVLOG.md]].
+- **Finding or decision**: with numba 0.68.1, the five test files give 99 passed and `tests/core` 1542 passed and 2
+  skipped: the 19 failures were the environment only. Smart App Control decides file by file with the reputation
+  service of Microsoft, and its verdict changes (numba loaded on the day it was installed and was blocked from the
+  next one).
+- **Validation**: see the entry in [[../DEVLOG.md]].
+- **Next step**: the review of Claude Science; the `TODO.md` entries of A1 and A2 and of the tests that skip without
+  numba.
+
 ## 2026-11-12 — The final checks and the report of session 3 (branch `v1.2.0`, on the server)
 
 - **Objective**: §8 of the instructions: the whole suites, the golden master, the documentation build, Python 3.9,

@@ -36,6 +36,29 @@ Recommended flow: track active work in `TODO.md`, move completed outcomes to `DE
 ## Entries
 
 ### 2026-11-12
+#### [done] The tests that need pythermalcomfort, with numba again on the server (branch `v1.2.0`)
+- Context: the final checks of session 3 left 19 failed and 12 skipped tests of `tests/core` because Windows Smart App
+  Control blocked the DLLs of numba 0.68.1 on the server (the report
+  `notes/INFORME_SESION_v1.2.0_2026-11-11_3.md`, sections 2 and 5), to be run again where numba loads. The author
+  turned Smart App Control off on 2026-11-12.
+- Changes: none in the code or the tests. `TODO.md`: the entry of E-F1 measured again (A1, A2) is not blocked any
+  more, and the context of the entry of the tests that fail instead of skipping without numba; `notes/questions.md`:
+  A1 and A2 can be measured on the server; the report: an addendum to section 5, and its sections 3, 6 and 7 point
+  to it.
+- Files: `TODO.md`, `notes/questions.md`, `notes/INFORME_SESION_v1.2.0_2026-11-11_3.md`, `DEVLOG.md`,
+  `notes/work-log.md`.
+- Verification: on `bf05404` (the code of `7cb4058`), with numba 0.68.1 and pythermalcomfort 4.8.1: the five test
+  files that need them (`test_comfort_hooks.py`, `test_sun2026_set.py`, `test_drift_limiter.py`,
+  `test_indoor_adaptation.py`, `test_pierce_set.py`), 99 passed (7 min 36 s); `py -m pytest tests/core -q -p
+  no:cacheprovider`, 1542 passed and 2 skipped (EnergyPlus 26.1; the jar of the Future Weather Generator), no failure
+  (29 min 34 s). The 19 failures were the environment only. Smart App Control had been on since 2026-11-03 at least;
+  numba, installed on 2026-11-10, loaded that day and was blocked file by file from 2026-11-11 at 17:23 (the verdict
+  of the reputation service of Microsoft changes with time).
+- Next step: the review of Claude Science of sessions 2 and 3 (the v05); the answers of the author
+  (`notes/questions.md`); the `TODO.md` entries of A1 and A2 (E-F1 measured again) and of the tests that skip
+  without numba.
+
+### 2026-11-12
 #### [done] The final checks and the report of session 3 (branch `v1.2.0`)
 - Context: §8 of `notes/COPILOT_SIGUIENTE_SESION.md`: the whole suites, the golden master, the documentation build, the
   compilation with Python 3.9, and the report. The session of GitHub Copilot stopped on 2026-11-11 (its monthly quota)
