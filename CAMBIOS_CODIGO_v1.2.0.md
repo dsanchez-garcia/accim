@@ -2710,3 +2710,28 @@ también con `zone_arguments`; no con `'rate'`, ni cuando las zonas lo conservan
 válidos) y la medición de abril con EnergyPlus 25.1 (sin limitador, con `'window'` y con `'rate'`: energía de las
 baterías, banda media, consigna media de calefacción y horas limitadas). Documentación: sección 4.2.7 del uso
 detallado y la tabla de parámetros del módulo paramétrico.
+
+## 51. El SET de referencia de la banda causal es el de pythermalcomfort: la documentación (decisión 9)
+
+La documentación y las docstrings decían que los indicadores de la banda causal con el SET de pythermalcomfort eran
+provisionales, hasta que los autores del modelo causal dijeran qué SET habían usado, y remitían a una pregunta de
+`notes/questions.md` que ya está respondida. Decidido el 12/11/2026 (`notes/decisions.md`): el modelo de Sun, Brager y
+Schiavon (2026) toma el SET de la ASHRAE Global Thermal Comfort Database II, versión 2.1, y el script que genera esa
+versión de la base de datos lo calcula con `set_tmp` de pythermalcomfort (con sus valores por defecto: de pie); así que
+ese es el SET de referencia, y el SET de Pierce de EnergyPlus queda como el indicador que cualquier modelo tiene sin
+pythermalcomfort (lo aproxima solo hasta unos 1,05 met: sección 47).
+
+**El código no cambia** (ninguna salida ni columna cambia de nombre; `Table(indoor_adaptation_indicators=True)` sigue
+igual). Cambian los textos:
+
+- Sección 4.7.6 del uso detallado: el párrafo «The indicators with the SET of pythermalcomfort (provisional)» pasa a
+  ser «The reference SET of the causal band: that of pythermalcomfort», con el porqué, qué indicadores son los de
+  referencia (las salidas del gancho del estándar 24 y los de `table_indicators(..., pythermalcomfort_set=...)`), qué
+  queda con el SET de Pierce, y la nota de la postura: la base de datos calculó su SET de pie y los ganchos de accim
+  sientan a los ocupantes con 1,2 met o menos (0,03–0,07 K menos); `'position': 'standing'` da el de la base de datos.
+- Secciones 4.9.2 (la conclusión de E-F1) y 4.9.3 (un punto nuevo en las decisiones del estándar 24).
+- Docstrings de `accim.data.postprocessing.indoor_adaptation` (el módulo, `PYTHERMALCOMFORT_SET_INDICATORS` y
+  `table_indicators`) y de `accim.sim.comfort_hooks.apply_sun2026_setpoints` (`position`), y `CHANGELOG.md`.
+
+Queda para el autor preguntar a Ruiji Sun si el SET del artículo es la columna `set` de la base de datos (inferido de
+su script y del artículo anterior de los mismos autores); nada espera a esa respuesta.

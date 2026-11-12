@@ -121,6 +121,13 @@ template]] to add a new entry.
        `tests/core/test_drift_limiter.py` reproduces April (three simulations of a month).
      - The documentation also gives the electricity of the VRF system (from 7817 to 21 715 kWh in April), which the
        finding did not have, since the energy of the coils alone hides that the cooling energy falls.
+  8. The documentation of the reference SET of the causal band (decision 12).
+     - Only texts change: section 4.7.6 (the paragraph of the SET of pythermalcomfort), 4.9.2 and 4.9.3 of the
+       detailed use, the docstrings of `accim.data.postprocessing.indoor_adaptation` and of
+       `apply_sun2026_setpoints`, and `CHANGELOG.md`. The difference of the posture is given as the 0.03 to 0.07 K
+       of the decision (0.07 K is the mean of the year of E-F1 at 1.06 and 1.1 met).
+     - The documentation says that the confirmation of the authors of the model is still to be asked: the reference
+       is an inference from the script of the database and from the earlier paper of the same authors.
 - **Consequences**: the tasks done leave `TODO.md` for `DEVLOG.md`; the documentation says what each choice means
   for the users (section 4.2 of the detailed use, and `CHANGELOG.md`).
 
@@ -623,7 +630,8 @@ template]] to add a new entry.
   with 1.2 met or less (the decision of G3, not reopened), 0.03 to 0.07 K lower: it is documented, and
   `position='standing'` gives that of the database. The confirmation of Ruiji Sun is still worth asking (that the SET of
   the paper is the column `set` of the database), but nothing waits for it: with another answer, this verdict is
-  reviewed.
+  reviewed. The documentation and the docstrings say so since 2026-11-12 (`DEVLOG.md`; section 51 of
+  `CAMBIOS_CODIGO_v1.2.0.md`).
 
 ### 2026-11-10 — F3: the static reference of case (i) of the validation study
 - Context: the design of the study (§4 F3) has the case "(i) referencia estática PMV (24–26 / 20–22 °C)".

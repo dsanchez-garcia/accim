@@ -8,13 +8,16 @@ simulations, for the comparison of the setpoints of several comfort models in th
 
 - The causal SET band of Sun, Brager & Schiavon (2026), Energy and Buildings 370, 118097, Fig. 7a: TSV = 0.11·SET −
   2.6, whose band of TSV ±0.5 is 19.1 to 28.2 °C of SET (comfort standard 24, :mod:`accim.sim.comfort_hooks`):
-  :func:`causal_band_hours`, the occupied hours with the SET within the band, above it and below it. The SET is that
-  of the Pierce two-node model of EnergyPlus (Engineering Reference 25.2, 19.1.4), which any model reports with
-  :func:`accim.sim.people.add_thermal_comfort_outputs`, so the setpoints of every comfort model are measured with the
-  same SET (that of the hook of comfort standard 24, ``SET_<zone>``, is that of pythermalcomfort; their differences
-  are in ``notes/decisions.md``, task E-F1). With ``pythermalcomfort_set``, :func:`table_indicators` also gives them
-  with the SET of pythermalcomfort (task S4 of the review of accim 1.2.0, provisional until the authors of the causal
-  model say which SET they used).
+  :func:`causal_band_hours`, the occupied hours with the SET within the band, above it and below it. The SET of
+  reference of the band is that of pythermalcomfort (``set_tmp``), with which the SET of the database of the model was
+  calculated (the ASHRAE Global Thermal Comfort Database II, version 2.1, with the defaults of the function: the
+  posture, standing; decided on 2026-11-12, ``notes/decisions.md``): that of the hook of comfort standard 24
+  (``SET_<zone>``), and that of :func:`table_indicators` with ``pythermalcomfort_set`` (task S4 of the review of
+  accim 1.2.0), in any simulation. Without it, :func:`table_indicators` takes the SET of the Pierce two-node model of
+  EnergyPlus (Engineering Reference 25.2, 19.1.4), which any model reports with
+  :func:`accim.sim.people.add_thermal_comfort_outputs`, without pythermalcomfort, so that the setpoints of every
+  comfort model are measured with the same SET: it approximates the reference SET with activity levels up to about
+  1.05 met only, and is 0.3 K higher at 1.1 met and 1 K higher at 1.2 met (task E-F1, ``notes/decisions.md``).
 - The overcooling (:func:`overcooling_hours`): the occupied hours of the cooling season with the operative temperature
   below a temperature, 22 °C by default, the typical setpoint of the air-conditioned offices in summer that Parkinson,
   de Dear & Brager (2020), Energy and Buildings 206, 109559, section 4.3.2, describe as overcooled ("current
@@ -114,8 +117,9 @@ TABLE_INDICATORS = {
     'Mean CoolingEffect (°C)': 'mean_cooling_effect',
     'Drift Limited Hours (h)': 'drift_h',
 }
-#: The columns of the indicators of the causal band with the SET of pythermalcomfort that :func:`table_indicators` adds
-#: with ``pythermalcomfort_set`` (task S4 of the review of accim 1.2.0, provisional), with their keys
+#: The columns of the indicators of the causal band with the SET of pythermalcomfort, the reference SET of the band,
+#: that :func:`table_indicators` adds with ``pythermalcomfort_set`` (task S4 of the review of accim 1.2.0), with their
+#: keys
 PYTHERMALCOMFORT_SET_INDICATORS = {
     'Mean SET_pythermalcomfort (°C)': 'mean_set',
     'Mean TSV_causal_pythermalcomfort': 'mean_tsv',
@@ -478,9 +482,10 @@ def table_indicators(df: pd.DataFrame, zones: Sequence[str], tsv_limit: Optional
       timestep, is the output ``T_rm_in (°C)``);
     - with the cooling effect of EnergyPlus (``CoolingEffect (°C)``): ``Mean CoolingEffect (°C)``;
     - with the limiter of the drift of the setpoints: ``Drift Limited Hours (h)``, the sum of its output;
-    - with ``pythermalcomfort_set`` (None by default; task S4 of the review of accim 1.2.0, a provisional option until
-      the authors of the causal model say which implementation of the SET they used, ``notes/questions.md``): the
-      indicators of the causal band with the SET of pythermalcomfort, ``Mean SET_pythermalcomfort (°C)``, ``Mean
+    - with ``pythermalcomfort_set`` (None by default; task S4 of the review of accim 1.2.0): the indicators of the
+      causal band with the SET of pythermalcomfort, the reference SET of the band (that of the database of the causal
+      model, which was calculated with ``set_tmp``: decided on 2026-11-12, ``notes/decisions.md``), ``Mean
+      SET_pythermalcomfort (°C)``, ``Mean
       TSV_causal_pythermalcomfort``, ``Hours In Causal Band_pythermalcomfort (h)``, ``Hours Above Causal
       Band_pythermalcomfort (h)``, ``Hours Below Causal Band_pythermalcomfort (h)`` and ``Hours In Causal
       Band_pythermalcomfort (%)`` (:data:`PYTHERMALCOMFORT_SET_INDICATORS`), after those of each zone and of the
@@ -524,8 +529,10 @@ def table_indicators(df: pd.DataFrame, zones: Sequence[str], tsv_limit: Optional
     :param pythermalcomfort_set: None (the default), or the inputs of the occupants of the SET of pythermalcomfort,
         to add its indicators of the causal band (see above): a dict with ``'met'`` (met), ``'clo'`` (clo),
         ``'air_speed'`` (m/s) and, optionally, ``'position'`` ('sitting' or 'standing'; by default, sitting with 1.2
-        met or less and standing above it, as the hooks of the SET), such as ``{'met': 1.1, 'clo': 0.5, 'air_speed':
-        0.1}``, or a hook of the SET with them (:class:`accim.sim.comfort_hooks.SetSetpointHook`, as that of
+        met or less and standing above it, as the hooks of the SET; 'standing' gives the SET as the database of the
+        causal model calculated it, 0.03 to 0.07 K above that of the occupants sitting), such as ``{'met': 1.1,
+        'clo': 0.5, 'air_speed': 0.1}``, or a hook of the SET with them
+        (:class:`accim.sim.comfort_hooks.SetSetpointHook`, as that of
         :func:`accim.sim.comfort_hooks.apply_sun2026_setpoints` with its own inputs). It needs pythermalcomfort and the
         hour of each row.
     :return: A DataFrame with a row for each simulation: ``Source``, the columns that describe the simulations

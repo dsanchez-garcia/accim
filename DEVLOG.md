@@ -36,6 +36,28 @@ Recommended flow: track active work in `TODO.md`, move completed outcomes to `DE
 ## Entries
 
 ### 2026-11-12
+#### [done] The SET of pythermalcomfort is the reference of the causal band: the documentation (decision 9; branch `v1.2.0`)
+- Context: the documentation and the docstrings said that the indicators of the causal band with the SET of
+  pythermalcomfort were provisional until the authors of the causal model said which SET they used, and sent to a
+  question of `notes/questions.md` that is answered. Decided on 2026-11-12 (`notes/decisions.md`, decision 12): the
+  model takes the SET of the ASHRAE Global Thermal Comfort Database II, version 2.1, which the script of the database
+  calculates with `set_tmp` of pythermalcomfort, so that is the reference SET, and the Pierce SET of EnergyPlus is
+  the indicator that every model has without pythermalcomfort.
+- Changes: only texts. Section 4.7.6 of the detailed use (the paragraph of the SET of pythermalcomfort: which SET is
+  the reference and why, which indicators are those of reference, what stays with the Pierce SET, and the posture:
+  the database calculated its SET standing and the hooks of accim sit the occupants with 1.2 met or less, 0.03 to
+  0.07 K lower, so `'position': 'standing'` gives that of the database), sections 4.9.2 and 4.9.3, the docstrings of
+  `accim.data.postprocessing.indoor_adaptation` and of `apply_sun2026_setpoints`, and `CHANGELOG.md`. No output or
+  column changes its name, and `Table(indoor_adaptation_indicators=True)` does not change.
+- Files: `docs/source/4_detailed use.md` (4.7.6, 4.9.2 and 4.9.3), `accim/data/postprocessing/indoor_adaptation.py`,
+  `accim/sim/comfort_hooks.py` (docstrings), `CHANGELOG.md`, `CAMBIOS_CODIGO_v1.2.0.md` (§51), `TODO.md`,
+  `notes/decisions.md`, `notes/work-log.md`.
+- Verification: the documentation builds without new warnings (the same lines as the baseline of session 3), with the
+  references between its sections resolved; `tests/core/test_indoor_adaptation.py`: 26 passed; the two modules whose
+  docstrings change compile with Python 3.9 (the build and the tests, in a temporary worktree with a copy of the
+  working tree).
+- Next step: the inputs of the occupants of the People objects in `pythermalcomfort_set` (S4, option (ii)).
+
 #### [done] `drift_mode='window'` is an experimental mode, with a warning; `'rate'` is the recommended one (A8; branch `v1.2.0`)
 - Context: finding A8 of the self-audit of 2026-11-11, decided on 2026-11-12 (`notes/decisions.md`, decision 4): the
   window clips both setpoints to T_rm_in ± delta, and T_rm_in is the running mean of the operative temperature of

@@ -55,6 +55,9 @@ existing tracking files — it does not replace them (see
     the recommended one. Measured again (the sample model in Seville): with the window, the heating coils use 32 488
     kWh in April instead of 125.9 kWh, and the VRF system 21 715 kWh of electricity instead of 7817 kWh; the rate
     changes the setpoints on two Mondays of April only (152.9 kWh).
+  - The reference SET: the documentation and the docstrings say that the SET of reference of the causal band is that
+    of pythermalcomfort (that of the database of the model, calculated standing), no longer "provisional", and that
+    the Pierce SET of EnergyPlus is the indicator that every model has, an approximation up to about 1.05 met.
 - **Validation**: in the entry of each task of [[../DEVLOG.md]] (the tests of the task, EnergyPlus 25.1 with both
   backends where the EMS code changes, and the golden master, compared line by line before writing it again).
 - **Next step**: the review of Claude Science of sessions 2 and 3, which also covers this session; the message of the

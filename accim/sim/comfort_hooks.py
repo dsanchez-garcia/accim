@@ -1448,7 +1448,11 @@ def apply_sun2026_setpoints(building, comfort_mode: Any = 1, category: int = 80,
     :param set_offset: With comfort mode 2, the offset of the setpoints from the neutral SET (K of SET).
     :param tr_mode: 'zone' (the default) or 'equal_air' (the mean radiant temperature equal to the air temperature).
     :param position: The posture of the SET, or None (the default) for 'sitting' with 1.2 met or less and 'standing'
-        above it, with the metabolic rate of each timestep.
+        above it, with the metabolic rate of each timestep. The SET of the database with which the model was built (the
+        ASHRAE Global Thermal Comfort Database II, version 2.1) was calculated with ``set_tmp`` of pythermalcomfort,
+        the SET of this hook, with its default posture, standing (the reference SET of the causal band: decided on
+        2026-11-12, ``notes/decisions.md``): 'standing' gives the SET as the database calculated it, 0.03 to 0.07 K
+        above that of the occupants sitting.
     :param tolerance_k: The largest width of the interval of the bisection (K), 0.05 by default.
     :param max_iterations: The largest number of iterations of the bisection.
     :param temperature_range: The range of the temperatures of the bisection (°C), 10 to 40 °C by default.
