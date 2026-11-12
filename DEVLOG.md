@@ -36,6 +36,37 @@ Recommended flow: track active work in `TODO.md`, move completed outcomes to `DE
 ## Entries
 
 ### 2026-11-12
+#### [done] The decisions on the six questions left open after session 3, taken for the author (branch `v1.2.0`)
+- Context: after session 3, `notes/questions.md` had six open entries (the eight findings of the self-audit of session
+  2 that needed a decision of the author, the details of tasks S4 and S1, comfort standards 9 and 10, and the two
+  questions of F3 that waited for the author with Ruiji Sun). On 2026-11-12 the author delegated all of them to Claude
+  Code, and said where the papers are on the server.
+- Changes: none in the code, the tests or the documentation. `notes/decisions.md`: the entry of 2026-11-12, with what
+  was checked in the sources and the six entries moved from `notes/questions.md` with their verdicts (A1 (i); A2 (i)
+  and (ii); A4 (ii); A8 (i) and (iii); A15 (i) and (ii); A19 (ii); A24 (ii); A25 (i); S4 accepted, with option (ii)
+  added; S1 accepted, with the change of A19; comfort standards 9 and 10 corrected in 1.2.0; the SET of
+  pythermalcomfort as the reference of the causal band; both static references of the validation study), and notes in
+  the status of the entries of 2026-11-10 and 2026-11-11 that they change (F3, F2, E-F1, G4, G5 and the verdicts of
+  2026-11-11). `notes/questions.md`: no open question. `TODO.md`: the entries of comfort standards 9 and 10 and of
+  E-F1 with what was decided, that of the validation study with its choices (not blocked any more, but for the future
+  weather files), eight new entries (A19 with S1, A24, A4, A8, A25, the documentation of the reference SET, the
+  inputs of the People objects in `pythermalcomfort_set`, A15) and that of the message of the author to Ruiji Sun;
+  the entry of CIBSE TM52 and TM59 moved to `ROADMAP.md` (R-07).
+- Files: `notes/decisions.md`, `notes/questions.md`, `TODO.md`, `ROADMAP.md`, `DEVLOG.md`, `notes/work-log.md`.
+- Verification: the sources read on the server on 2026-11-12: Sun, Brager & Schiavon (2026) and Sun et al. (2024),
+  Rawal et al. (2022), UNE-EN 16798-1:2020 (Tables B.2, B.4 and B.5) and UNE-CEN/TR 16798-2:2019 (Table B.4, 7.2.2,
+  Annex D), `ThermalComfort.cc` of EnergyPlus 25.1 (the body surface area and the convective coefficient of its Pierce
+  model), the script that makes version 2.1 of the ASHRAE Global Thermal Comfort Database II (its column `set`, with
+  `set_tmp` of pythermalcomfort) and the notebook of the paper of 2024 (which reads that column), pythermalcomfort
+  4.8.1 (`two_nodes_gagge.py`, and the SET at 1.0 to 1.2 met with and without the term of the activity of the
+  convective coefficient: 0.16 and 0.40 K at 1.1 and 1.2 met with 0.5 clo, 0.06 and 0.16 K with 1.0 clo), and the code
+  of accim of each finding. No test run: nothing but notes changed.
+- Next step: the tasks of `TODO.md` (P1 first: comfort standards 9 and 10, A19 with S1, A24, A4, A8, A25, E-F1
+  measured again, the documentation of the reference SET), in the next implementation session; the review of Claude
+  Science of sessions 2 and 3 (the v05), which can contrast these decisions; for the author, the message to Ruiji Sun,
+  the jar of the Future Weather Generator and, after E-F1, the issue for EnergyPlus.
+
+### 2026-11-12
 #### [done] The tests that need pythermalcomfort, with numba again on the server (branch `v1.2.0`)
 - Context: the final checks of session 3 left 19 failed and 12 skipped tests of `tests/core` because Windows Smart App
   Control blocked the DLLs of numba 0.68.1 on the server (the report

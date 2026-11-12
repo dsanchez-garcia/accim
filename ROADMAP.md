@@ -63,3 +63,10 @@ Mid- and long-term technical plan.
 - Exit criteria: the full-workflow tests give the same results; pip install accim does not install besos; requirements-dev.txt has no inherited pins.
 - Dependencies: E3 (pyproject with extras), regression tests of the full workflow.
 
+### [R-07] The overheating criteria of CIBSE TM52 and TM59
+- Horizon: Long term (after accim 1.2.0, when the documents are available)
+- Objective: Give the overheating criteria of CIBSE TM52 (2013) and TM59 (2017) as indicators of the long-term discomfort and, if the author wants, as objectives of the optimisation.
+- Scope: the criteria (TM52: the hours of exceedance, the weighted exceedance of a day and the upper limit; TM59: those of dwellings) as functions of `accim.data.postprocessing.long_term_discomfort`, with tests from the examples of the texts. Out of the scope of accim 1.2.0 since 2026-11-12 (`notes/decisions.md`; the recommendation of the review of Claude Science of 2026-11-11, `notes/TRASPASO_ClaudeScience_2026-11-11_v01.md` §4: CEN/TR 16798-2:2019, Annex D, already gives the long-term indicators): until then it was a blocked entry of `TODO.md` (C2 and D1 of `notes/PROPUESTAS_MEJORAS_post_1.1.0_v03.md`).
+- Exit criteria: the functions give the results of the examples of both documents.
+- Dependencies: the texts of CIBSE TM52 and TM59, which are not in the sources of the sessions of accim 1.2.0 (decision D12 of `notes/COPILOT_BRIEF_v1.2.0_v01.md`: no code about them without the texts).
+

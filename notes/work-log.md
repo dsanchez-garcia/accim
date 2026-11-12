@@ -15,6 +15,24 @@ This log is a lightweight, session-scoped complement to the repository's
 existing tracking files — it does not replace them (see
 [[decisions.md#2026-09-13 — `notes/work-log.md` complements, not replaces, existing tracking files|the related decision]]).
 
+## 2026-11-12 — The decisions on the six open questions, taken for the author (branch `v1.2.0`, on the server)
+
+- **Objective**: the author delegated to Claude Code all the decisions that were open in [[questions.md]] after
+  session 3, to be taken with the papers of his library where needed.
+- **Affected files**: [[decisions.md]], [[questions.md]], [[../TODO.md]], [[../ROADMAP.md]], [[../DEVLOG.md]].
+- **Finding or decision**: the thirteen verdicts are in
+  [[decisions.md#2026-11-12 — The decisions on the six questions left open after session 3 of the review of 1.2.0|the decisions of 2026-11-12]].
+  The two that waited for Ruiji Sun could be decided with sources: the paper builds its model with the SET of the
+  ASHRAE Global Thermal Comfort Database II, version 2.1, whose script calculates it with `set_tmp` of pythermalcomfort
+  (and the earlier paper of the same authors reads that column), so the reference SET of the causal band is that of
+  pythermalcomfort; and EN 16798-1, Table B.5, has the seasonal limits that finding A15 missed. The code of EnergyPlus
+  25.1 confirms findings A1 and A2 (1.8258 m², and no term of the activity in the convective coefficient of the real
+  environment of its Pierce model).
+- **Validation**: the sources of each verdict, read on the server (the entry in [[../DEVLOG.md]]); no code changed, no
+  test run.
+- **Next step**: the tasks of [[../TODO.md]] in the next implementation session; the review of Claude Science; the
+  message of the author to Ruiji Sun, the jar of the Future Weather Generator and the issue for EnergyPlus.
+
 ## 2026-11-12 — The tests of pythermalcomfort with numba again (branch `v1.2.0`, on the server)
 
 - **Objective**: run again the tests that Smart App Control kept from running (the report of session 3, section 5),

@@ -11,6 +11,440 @@ Durable architectural/process decisions for this repository and its Obsidian
 vault. Newest first. Use [[templates/decision-record.md|the decision-record
 template]] to add a new entry.
 
+## 2026-11-12 — The decisions on the six questions left open after session 3 of the review of 1.2.0
+
+- **Status**: accepted (decided on 2026-11-12 by Claude Code, the model Claude Fable 5.2, for the author, who delegated
+  to it all the decisions that were open in [[questions.md]]; the author can change any of them, and the review of
+  Claude Science of sessions 2 and 3 can contrast them)
+- **Context**: after session 3 ([[INFORME_SESION_v1.2.0_2026-11-11_3.md]]), [[questions.md]] had six open entries: the
+  eight findings of the self-audit of session 2 that needed a decision of the author (A1, A2, A4, A8, A15, A19, A24 and
+  A25), the details of tasks S4 and S1 (implemented provisionally), comfort standards 9 and 10, and the two questions of
+  F3 that waited for the author with Ruiji Sun (#9, the SET of the indicators of the causal band, and #12, the static
+  reference of case (i) of the validation study). Their sources were read again on the server before deciding; nothing
+  of the code was changed.
+- **What was checked** (on 2026-11-12; **[verified]** in the source, **[inferred]**, or as said):
+  - The SET of the causal model **[verified]**: Sun, Brager & Schiavon (2026), Energy and Buildings 370, 118097 (the PDF
+    is now with the other pending articles of the server, those of Appendix B of the handoff of Claude Science), builds
+    its model with the ASHRAE Global Thermal Comfort Database II, version 2.1 (809 buildings and more than 100 000
+    records, §3.1), with the SET as the metric of the indoor thermal environment, which takes in the metabolic rate and
+    the clothing insulation (§3.2 and §4.1), and it describes no calculation of the SET of its own (its data are
+    available on request). §4.3 gives TSV = 0.11·SET − 2.6 and the band of 19 to 28 °C of SET, 7 °C wider than that of
+    the PMV model (24 to 26 °C), and proposes the limits of the band as the heating and cooling setpoints of the
+    thermostats, and the band to assess the thermal comfort of building energy simulations. The script that makes that
+    version of the database (`v2.1.0/main.py` of the repository `CenterForTheBuiltEnvironment/ashrae-db-II` of GitHub,
+    which holds the code that maintains the database from version 2.1) drops the columns `pmv`, `ppd` and `set` of the
+    earlier version and calculates `set` with `set_tmp(tdb=ta, tr=tr, v=vel, rh=rh, met=met, clo=clo)` of
+    pythermalcomfort and no other argument: the air speed and the clothing insulation as recorded, and the defaults of
+    the function (the posture, standing). And the code of the earlier paper of the same authors with the same database
+    and metric (Sun et al., 2024, Building and Environment, 111530, doi:10.1016/j.buildenv.2024.111530; its notebook
+    `neutral_temperature.ipynb`, in the repository `ruijis/paper-causal-thinking` of GitHub) reads the file of the
+    measurements of version 2.1 from that repository and regresses the votes on its column `set`, without calculating
+    the SET.
+  - The Pierce model of EnergyPlus **[verified]**: in `src/EnergyPlus/ThermalComfort.cc` of EnergyPlus 25.1 (the tag
+    `v25.1.0` of its repository), the Pierce model divides the activity level by `BodySurfAreaPierce` and the Fanger
+    model by `BodySurfArea`; the convective coefficient of the real environment is the larger of 3.0·P^0.53 and
+    8.600001·(v·P)^0.53, with an air velocity of at least 0.1 m/s, and 5.66·(met − 0.85)^0.39 is only in that of the
+    standard environment; the function cites ASHRAE 55-2017, Appendix D. In pythermalcomfort 4.8.1
+    (`two_nodes_gagge.py`) the real environment has that term too (unless `calculate_ce`). With `set_tmp` (standing, the
+    air and mean radiant temperatures equal, 0.137 m/s, 50 %), that term lowers the SET by 0.16 K at 1.1 met and by 0.40
+    K at 1.2 met with 0.5 clo and 26 °C, by 0.06 and 0.16 K with 1.0 clo and 21 °C, and by nothing at 1.042 met;
+    standing is 0.03 to 0.04 K above sitting; and 110.7 W/person converted with 1.8 m² instead of 1.8258 m² give 0.01 K
+    (0.5 clo) to 0.07 K (1.0 clo) more. These are two conditions, not the measurement of E-F1 (the self-audit estimated
+    −0.39 K at 1.1 met and −0.97 K at 1.2 met with the conditions of the year of E-F1 and the algorithm of EnergyPlus).
+  - Comfort standards 9 and 10 **[verified]**: Rawal et al. (2022), Building and Environment 219, 109187: its
+    nomenclature tells the 7-day and 30-day running means of the outdoor temperature (Tout-7DRM and Tout-30DRM) apart
+    from their weighted versions (Tout-7DRM-W and Tout-30DRM-W); §4.4 and Fig. 15 give model A with Tout-7DRM and model
+    B with Tout-30DRM, both from 5.5 to 33 °C, for dwellings in natural ventilation or mixed mode; §5.1 weights them
+    exponentially (α = 0.8) only to compare the model with others (Fig. 17); §3.2 says that both were calculated with
+    functions written in R from hourly weather data, without a formula. In accim (`accim/sim/ems/setpoint_lines.py` and
+    `program_lines.py`), 9 reads `PMOT`, 10 reads `RMOT`, and comfort mode 1 of 9 adds 2.72 and 1.5 to the heating
+    setpoint out of the limits. The line 0.078·T + 23.25 (±1.5 °C for 90 %) is the model of the air-conditioned
+    buildings of the National Building Code of India 2016 and of the Energy Conservation Building Code 2017, with the
+    30-day outdoor running mean air temperature, according to two secondary sources found on the web (a course handout
+    that reproduces the code of 2017, and a report of TERI); neither code is in the library **[not verified in the
+    codes]**.
+  - EN 16798-1 **[verified]**: UNE-EN 16798-1:2020, Table B.5 (B.2.4, p. 54), the temperature ranges for the hourly
+    calculation of the heating and cooling energy, has the two limits of each season (with about 1.0 clo in the heating
+    season and 0.5 clo in the cooling season): in category II, 20.0–24.0 and 23.0–26.0 °C in the offices, and 20.0–25.0
+    and 23.0–26.0 °C in the living spaces of the dwellings; its note lets the limits within the winter and summer values
+    be used between the seasons, with θrm between 10 and 15 °C. CEN/TR 16798-2:2019 has the same ranges in its Table B.4
+    (p. 34; it differs in the heating range of the offices of category IV), repeats that note (7.2.2) and applies the
+    criteria of the heating season below a running mean of 10 °C (its remarks on Figure B.1). Table B.4 of EN 16798-1
+    (B.2.3, p. 54) gives the corrections for air speeds of 0.6, 0.9 and 1.2 m/s under personal control, with operative
+    temperatures above 25 °C.
+- **Decision** (the six entries of [[questions.md]] are below, moved as they were, each with its verdict):
+  1. A1: the hooks keep the conversion of the activity level with 1.8 m² (option (i)); E-F1 is measured again with the
+    1.8258 m² of the Pierce model too.
+  2. A2: E-F1 is measured at 1.1 and 1.2 met, and its statements hold near 1 met until then (option (i)); the reference
+    SET of F1 and F3 is that of pythermalcomfort (option (ii), with #9).
+  3. A4: `run_ep` raises with the EMS backend, and the API backend warns, when a model prepared for a hook is simulated
+    without it (option (ii)).
+  4. A8: `'window'` stays as it is, documented with its energy cost and with a warning, and `'rate'` is the recommended
+    mode (options (i) and (iii)); it is not redefined in 1.2.0.
+  5. A15: the limitation of the constant range is documented (option (i)), and a seasonal range with the limits of EN
+    16798-1, Table B.5, is a P2 task (option (ii)).
+  6. A19: where the minimum or the maximum binds, the thermostats get it with the tolerance (option (ii)).
+  7. A24: every zone of the models with the code of comfort standard 23 gets the inputs of its static setpoints (option
+    (ii)).
+  8. A25: `modify_accis` gives the warning of RMOT when the zones of 23 lose the start with the weather file (option
+    (i)).
+  9. S4: `pythermalcomfort_set` of `table_indicators` is final (option (i)), and it also takes the inputs of the
+    occupants from the People objects (option (ii)).
+  10. S1: the comparison stays as implemented (option (i)), with the thermostat setpoints of the verdict of A19.
+  11. Comfort standards 9 and 10 are corrected in 1.2.0 as the review of Claude Science recommends (option (i)).
+  12. #9: the reference SET of the causal band is that of pythermalcomfort, with which the SET of the database of the
+    model was calculated; the Pierce SET of EnergyPlus stays as the indicator that every model has.
+  13. #12: the validation study has both static references, the PMV setpoints of category II and the fixed 20 and 26 °C
+    of EN 16798-1; its climates, clothing insulation and air speeds are chosen too.
+- **Consequences**: [[questions.md]] has no open question. None of the decisions is implemented yet: `TODO.md` has their
+  tasks (P1: comfort standards 9 and 10, A19 with S1, A24, A4, A8, A25, E-F1 measured again with the corrections of its
+  documentation, and the documentation of the reference SET; P2: the inputs of the People objects in
+  `pythermalcomfort_set`, the seasonal range of A15 and the simulations of the validation study). The overheating
+  criteria of CIBSE TM52 and TM59 leave the scope of 1.2.0 for `ROADMAP.md` (the recommendation of the handoff of Claude
+  Science, §4). Three things are left to the author, who is the one who can do them: the message to Ruiji Sun (to
+  confirm the SET of the paper and to agree the choices of the study), the jar of the Future Weather Generator, and the
+  issue for EnergyPlus on the convective coefficient of its Pierce model, once E-F1 is measured again.
+
+### 2026-11-11 — The findings of the self-audit of session 2 that need a decision of the author
+- Context: the self-audit of session 2 (`notes/attachments/autoauditoria_sesion2_v1.2.0.json`, findings A1–A26;
+  §5 and §7 of `notes/COPILOT_SIGUIENTE_SESION.md`). The bugs and the small fixes are done in session 3 (see the entry
+  of the report `notes/INFORME_SESION_v1.2.0_2026-11-11_3.md`); these need a choice of the author, so nothing was
+  changed (the most conservative option), except the documentation where it says so.
+- Why it matters: each one changes the results, the outputs or the model of some users.
+- Options considered, by finding:
+  - **A1 (scientific, E-F1 and F1)**: EnergyPlus converts the activity level of its Pierce model with a body surface
+    area of 1.8258 m² (ThermalComfort.cc of EnergyPlus 25.1), and accim (the hooks of the SET and the comparison of
+    E-F1) with 1.8 m² (`MET_ACTIVITY_LEVEL`, the convention of Fanger and ISO 7730): 1.43 % more met (1.057 against
+    1.042 met for 110.7 W/person), so the differences of E-F1 and F1 (−0.045 K standing, −0.116 K sitting; −0.08 and
+    −0.155 K) mix an input difference with the model difference. (i) Keep 1.8 m² and document the offset (about
+    0.1 K, to be measured); (ii) convert with 1.8258 m² in the hooks, consistent with the Pierce SET that F1 and F3
+    report beside them. The new measurement needs pythermalcomfort, which was blocked on this server on 2026-11-11
+    (numba and Smart App Control) and is imported again since the author turned Smart App Control off on 2026-11-12
+    (`TODO.md`).
+  - **A2 (scientific, E-F1)**: in the real environment, EnergyPlus 25.1/25.2 computes the convective coefficient of
+    the Pierce model without the term of the activity, 5.66·(met − 0.85)^0.39 (which it applies only to the standard
+    environment), unlike its Engineering Reference and pythermalcomfort; above about 1.046 met that term is the larger
+    one, so the agreement of E-F1 (the sample model is at 1.042 met in the Pierce model) holds near 1 met only. (i)
+    Repeat E-F1 at 1.1 and 1.2 met and restrict the present statements to about 1 met (not blocked here any more, as
+    A1); (ii) the choice of the reference SET of F1 and F3 together with decision 9 (Ruiji Sun).
+  - **A4 (design, F1)**: a model prepared by `apply_athb_setpoints`, `apply_set_setpoints` or
+    `apply_sun2026_setpoints` simulated without its hook (the EMS backend, or the API without hooks) runs without an
+    error or a warning, with the setpoints of the ACCIS and the outputs of the hook at 0. (i) As now, documented; (ii)
+    `run_ep` and `run_simulation` raise (EMS backend) or warn (API backend without a hook) when the model has the
+    programs `ApplyHookSetpoints_<zone>`.
+  - **A8 (design, F2)**: `drift_mode='window'` clips both setpoints to T_rm_in ± delta, and T_rm_in is the running
+    mean of the operative temperature of the zone itself, so the dead band collapses to `delta_heat + delta_cool` (2 K)
+    around the recent temperature of the zone (or to a point, with crossed thermostats, when the band of the comfort
+    model is all out of the window), with much more heating or cooling, and the exposure can drift by only about
+    (1 − α)·delta per day: a stricter control than `'rate'`. It is decision 6 of the author, implemented as written.
+    (i) Document the collapse and its energy effect, and warn with `'window'`; (ii) redefine `'window'` to limit only
+    the changes that move a setpoint farther than delta from T_rm_in, or to shift the whole band keeping its width;
+    (iii) keep `'rate'` as the recommended mode (case (v) of the validation study uses it). The narrow window of
+    finding A9 raises a `ValueError` since session 3.
+  - **A15 (design, H3)**: the range of `long_term_range` of the long-term discomfort uses the minimum for heating and
+    the maximum for cooling of EN 16798-1, Table B.2 (20–26 °C for category II) in all the timesteps, while the table
+    gives seasonal one-sided design values (about 1.0 clo in winter and 0.5 clo in summer), so summer overcooling between
+    20 and 23 °C and winter overheating between 24 and 26 °C count as comfortable. (i) State the limitation in section
+    4.2.6 (and pair it with the overcooling indicator of F3); (ii) a seasonal variant with the cooling season of the
+    ACCIS, once the author chooses a source for the missing bounds.
+  - **A19 (design, G5)**: where the minimum (maximum) of the setpoints binds, the thermostat setpoint and the limit of
+    the comfort band are both the limit (AHST = AHSTnoTol = AHSTmin), so the tolerance vanishes there, unlike the
+    setpoints of the hooks (decision 23 of G1: the thermostats get the band plus the tolerance). (i) As now, documented
+    (the hour counters at the limit); (ii) AHST = max(AHST, AHSTmin + AHSTtol) and ACST = min(ACST, ACSTmax +
+    ACSTtol), with AHSTnoTol and ACSTnoTol bounded by the limits (changes the output IDFs with limits).
+  - **A24 (bug, G4)**: in the models of `add_accis_to_idf` (the code of all the comfort standards), a zone switched to
+    comfort standard 23 by editing `set ComfStand = 23` in its program `SetInputData_<zone>` stops EnergyPlus during
+    the warm-up ("Variable = 'STATICACST' used in expression has not been initialized"), since only the zones of 23
+    have the inputs `StaticAHST` and `StaticACST` (decision of G4: the zones of the other comfort standards do not get
+    them, and their output IDFs do not change). (i) As now, documented in section 4.2.1 (session 3); (ii) give every
+    zone of the models with the code of 23 the two inputs (changes the output IDFs of `add_accis_to_idf`, golden
+    master s01–s06 and s09); (iii) initialise both global variables in a program at the beginning of each environment
+    (changes them too).
+  - **A25 (design, G4)**: a `modify_accis` call that changes the outdoor metric of another zone without `epw`
+    rewrites the programs of the outdoor metric beginning with PMOT, so the zones of JPN Aqilah 2025 move silently from
+    the running mean of the weather file to the RMOT of EnergyPlus (about 21 % low on the first day, B4-1), without the
+    warning of RMOT, and the warning that is given says that `rmot_alpha` begins with PMOT, which is wrong for those
+    zones. (i) Give the warning of RMOT whenever the model has zones of 23 and its programs stop beginning with a
+    weather file, and leave those zones out of the warning of PMOT; (ii) keep the start with the weather file (do not
+    rewrite without `epw` when the programs can be kept, or ask for `epw`); document it in `modify_accis`.
+- Owner: the author (A1 and A2 with Ruiji Sun, as decision 9).
+- Provisional decision (pending author until 2026-11-12): nothing changed but the documentation of A24 (section 4.2.1).
+- Status: answered on 2026-11-12 (A1 (i); A2 (i) and (ii); A4 (ii); A8 (i) and (iii); A15 (i) and (ii); A19 (ii); A24
+  (ii); A25 (i); decided by Claude Code for the author).
+- Verdict (2026-11-12), by finding:
+  - **A1**: option (i). The hooks keep the conversion with 1.8 m² (`MET_ACTIVITY_LEVEL`). The activity level of a People
+    object is the heat of an activity that the user knows in met, which the documentation of EnergyPlus relates with
+    58.2 W/m² and 1.8 m² (Input Output Reference 25.2, 1.14.2.1.10, as the decision of F1 records), the convention of
+    ISO 7730 and ASHRAE 55 and of the other hooks of accim; `set_tmp` takes the metabolic rate in met (its own body
+    surface area changes nothing at 0.001 K, E-F1), and the SET of the database of the causal model was calculated with
+    the metabolic rate of its records (the verdict on the SET of the indicators, below). So the metabolic rate of the
+    hook must be that of the activity, and the 1.8258 m² are a detail of the Pierce model of EnergyPlus, which reads
+    1.43 % less met from the same schedule. To do (the entry of E-F1 of `TODO.md`): E-F1 also with met =
+    activity/(58.2·1.8258), which compares both models with the same inputs, and the effect of the convention of accim
+    reported apart; the sentence of section 4.9.2 on "the body surface area of 1.8 m² with which EnergyPlus gives the
+    activity per person" corrected (true of its Fanger and KSU models, not of its Pierce model); the entries of E-F1 and
+    F1 of this file, sections 4.9.2 and 4.9.3, `CHANGELOG.md` and the values of `tests/core/test_pierce_set.py` updated.
+  - **A2**: options (i) and (ii). (i) E-F1 is repeated at 1.1 and 1.2 met (for instance, 115 and 126 W/person) with both
+    clothing levels, and `tests/core/test_pierce_set.py` takes the activity level as a parameter; until then, the
+    statements of E-F1 and F1 ("within 0.2 K standing and 0.35 K sitting", −0.08 and −0.155 K) hold near 1 met only, and
+    the documentation says so, and that the code of EnergyPlus 25.1 and 25.2 follows the program of ASHRAE 55-2017,
+    Appendix D, whose real environment has no term of the activity in the convective coefficient, unlike its Engineering
+    Reference (19.1.4, equations 19.27 and 19.28) and unlike pythermalcomfort. (ii) The reference SET of F1 and F3 is
+    that of pythermalcomfort (the verdict on the SET of the indicators, below). The difference between the code of
+    EnergyPlus and its Engineering Reference is worth an issue in the repository of EnergyPlus
+    (NatLabRockies/EnergyPlus) once it is measured: its draft, with the measurement, is part of the task, and the author
+    posts it.
+  - **A4**: option (ii). A model with the programs `ApplyHookSetpoints_<zone>` was prepared for a hook, and without it
+    its results are those of the comfort standard of its zones, with the outputs of the hook at 0: `run_ep` raises a
+    `ValueError` with the EMS backend (its default), which cannot run a hook, naming the models and
+    `run_ep(backend='api', hooks=[...])`; with the API backend (`run_ep`, `run_simulation` and `run_simulations`), a
+    warning when no hook that runs before the programs (`runs_before_programs`) is given. It completes the clear error
+    that the prompt of F1 asked for comfort standard 24 without the API backend. The test of both backends without the
+    hook (`test_without_the_hook_both_backends_give_the_same_results_with_comfort_standard_24`) checks the error and the
+    warning instead. The EMS output of the timesteps without the setpoints of the hook, which the finding gives as
+    optional, is not added: the models simulated out of accim stay documented (sections 4.9.1 and 4.9.3).
+  - **A8**: options (i) and (iii); option (ii) is not done in accim 1.2.0. `'window'` stays as decision 6 defines it (it
+    is implemented and tested), as an experimental mode: section 4.2.7 and the docstring of
+    `accim.sim.ems.drift_limiter` say that both setpoints follow the recent temperature of the zone itself, that the
+    dead band is `delta_heat` + `delta_cool` at most (2 K by default), what that costs (the measurements of the finding:
+    the heating energy of April of the sample model in Seville, from 125.9 to 32 488 kWh) and that the exposure can then
+    drift by about (1 − `alpha_indoor`)·delta per day; `AddAccis` and `modify_accis` warn when a zone gets
+    `drift_mode='window'`; and `'rate'` is the recommended mode (in the documentation, and in case (v) of the validation
+    study). The reason: the source of F2 supports the rate (the changes of the setpoints spread over a couple of weeks:
+    Parkinson et al., 2020, section 4.3.2), while the window and its 1.0 K have no source (they are values that the
+    proposal of block F chose for the author to correct, §6.6), and no paper read gives another rule either, so a new
+    definition would be an invented one. If the validation study needs a window, it is designed then with its authors.
+  - **A15**: options (i) and (ii). (i) Section 4.2.6 and the docstring of `accim.sim.ems.long_term_discomfort` say that
+    `('en16798', category)` takes the two design values of Table B.2 (the minimum of the heating season, with about 1.0
+    clo, and the maximum of the cooling season, with about 0.5 clo) as a constant range of all the timesteps, so the
+    summer hours that are too cold and the winter hours that are too warm within it count as comfortable, and point to
+    the overcooling indicator of F3. (ii) The source of the missing limits is the standard itself: EN 16798-1:2019,
+    Table B.5 (see "What was checked" above). A seasonal range is another value of `long_term_range` (the constant one
+    does not change), with the limits of that table and the season of each day from the running mean of the outdoor
+    temperature of the standard, θrm: the heating season below 10 °C, the cooling season above 15 °C, and between them
+    the lower limit of the heating season and the upper limit of the cooling season, as the note of the table allows
+    (**[inferred]** from that note and from CEN/TR 16798-2:2019, 7.2.2 and the remarks on Figure B.1), in the EMS
+    counters and in the functions of the postprocessing. A P2 task, not needed to release 1.2.0.
+  - **A19**: option (ii). The minimum and the maximum are limits of the comfort band (finding B5-1: the minimum is a
+    limit of the setpoint without the tolerance), so the thermostats get them with the tolerance, as every other
+    setpoint of the ACCIS and as those of the hooks (decision 23 of G1): AHSTnoTol = max(AHSTnoTol, AHSTmin) and
+    ACSTnoTol = min(ACSTnoTol, ACSTmax), as now, and AHST = max(AHST, AHSTmin + AHSTtol) and ACST = min(ACST, ACSTmax +
+    ACSTtol), exact after the rounding (decision 21: the rounded setpoints are AHSTmin + AHSTtol and ACSTmax + ACSTtol
+    where they bind). With the thermostat on the limit itself, the operative temperature settles on the limit of the
+    band, and the hour counters, the long-term discomfort and the hours below the temperature of the minimum
+    (`report_hours_below`, the use for which B5 was proposed) count the decimals of the control as discomfort, which is
+    what the tolerance is for. The thermostats still respect the limits (0.1 K within them with the default tolerance),
+    and nothing changes with `setpoint_tolerance=0`. The limits are new in 1.2.0, so no released output changes. The
+    comparison of S1 follows it (its verdict below), and so do the documentation (section 4.2 and the module
+    `accim.sim.ems.setpoint_limits`), check 5 of `verify_accim_simulation` and `tests/core/test_setpoint_limits.py`.
+  - **A24**: option (ii). Every zone of a model with the code of JPN Aqilah 2025 (its subprograms `SetAST_CS23_<chunk>`)
+    gets the inputs `StaticAHST` and `StaticACST` in its program `SetInputData_<zone>`, with the defaults (20 and 28 °C)
+    in the zones of the other comfort standards, which do not read them. The zones share those global variables, so a
+    program that initialised them (option (iii)) would leave a zone switched by hand with the values of the zone that
+    ran before it; and the documentation says that the models of `add_accis_to_idf` have the code of all the comfort
+    standards, so they must work with any of them in any zone. The output IDFs of `add_accis_to_idf` change by two lines
+    in each zone (the golden master s01–s06 and s09 updated, only additions; G4 already changed them, and comfort
+    standard 23 is new in 1.2.0, so nothing released changes); the models of `AddAccis` with other comfort standards
+    have not that code and do not change. It replaces the part of the decision of G4 that left the zones of the other
+    comfort standards without the inputs, and the warning that session 3 wrote in section 4.2.1.
+  - **A25**: option (i). When a call of `modify_accis` without `epw` writes again the programs of the outdoor metric of
+    a model that began with the values of a weather file, and the model has zones of JPN Aqilah 2025, it gives the
+    warning of RMOT (their code reads the RMOT of EnergyPlus again, about 21 % low on the first day), and those zones
+    are left out of the warning of the metrics that begin with PMOT; documented in `modify_accis`. It is what accim does
+    with the custom model in the same case (decision D3: without the weather file, the fallback, with a warning) and
+    what G4 decided for 23 (RMOT without the weather file, with a warning): the fault is the missing warning and the
+    wrong one. An error, or keeping programs that the call must write again (option (ii)), would treat these zones
+    unlike those of the custom model.
+
+### 2026-11-11 — S4: how the indicators of the causal band are given with the SET of pythermalcomfort
+- Context: decision 9 (provisional, the entry "F3: the SET of the indicators of the causal band" below; task S4 of
+  `notes/COPILOT_SIGUIENTE_SESION.md`): keep the Pierce SET of EnergyPlus and add, behind an optional argument off by
+  default, the same indicators with the SET of pythermalcomfort, through `set_of_results` (G3) and the inputs that
+  E-F1 compared. It does not say where the argument goes, how the inputs of the occupants are given, where the
+  conditions of the zones come from, nor how the rows of the CSV files are matched with those of the table.
+- Why it matters: `set_of_results` takes constant inputs of the occupants (those of a hook), while E-F1 took the
+  values of the schedules of the People objects in each timestep, as EnergyPlus does; and `Table` drops the mean
+  radiant temperature and the relative humidity with `standard_outputs=True` (and adds them up over the timesteps of
+  each hour with `frequency_agg_func='sum'`).
+- Options considered: (i) the argument `pythermalcomfort_set` of
+  `accim.data.postprocessing.indoor_adaptation.table_indicators` only (not of `Table` nor of the GUI): a dict with
+  `met`, `clo`, `air_speed` and, optionally, `position` (the posture of the hooks by default), or a hook of the SET
+  with them; the SET of `set_of_results` of the outputs *Zone Mean Air Temperature*, *Zone Mean Radiant Temperature*
+  and *Zone Air Relative Humidity* of each zone, keyed by its name in the table, in each row of the CSV file of each
+  simulation (the column `Source` with `.csv`, in the current folder), averaged over the rows of the CSV file of each
+  row of the table (as `Table` averages the Pierce SET; the hour of each row as `Table` gives it); the columns
+  `<zone>_Mean SET_pythermalcomfort (°C)`, `<zone>_Mean TSV_causal_pythermalcomfort` and `<zone>_Hours In / Above /
+  Below Causal Band_pythermalcomfort (h)` and `(%)` after those of each zone and of the building; NaN, with a
+  warning, for the zones without those outputs (such as those that `Table` names after their spaces); a `ValueError`
+  if a CSV file is not found (implemented); (ii) the inputs of the occupants of each row from the schedules of the
+  People objects (their outputs *Schedule Value*, as E-F1), which cases (iii) and (iv) of the validation study need
+  (a seasonal clothing insulation, the dynamic clothing model): it needs those outputs requested and the People
+  objects of each zone; (iii) an argument of `Table` too (and its box in the GUI); (iv) the conditions of the zones
+  from the columns of the table.
+- Owner: the author (with the answer of Ruiji Sun on decision 9).
+- Provisional decision (pending author until 2026-11-12): option (i) implemented provisionally: off by default, the
+  other indicators and the outputs do not change.
+- Status: answered on 2026-11-12 (accepted as implemented, and option (ii) added; decided by Claude Code for the
+  author).
+- Verdict (2026-11-12): option (i), accepted as implemented and no longer provisional, with option (ii) as another value
+  of the same argument; options (iii) and (iv) are not done. With the verdict on the SET of the indicators (the entry of
+  F3 below), the indicators of `pythermalcomfort_set` are those of reference of the causal band, so they must be able to
+  take the inputs of the occupants that the hook of comfort standard 24 takes: besides constant inputs (a dict, or a
+  hook), the values of the People objects of each zone in each row of the CSV file (their activity level, clothing
+  insulation and air velocity, as E-F1 read them and as the hook reads them with `met`, `clo` and `air_speed` None),
+  which cases (iii) and (iv) of the validation study need; the outputs that it needs are requested with those of
+  `add_thermal_comfort_outputs`. The argument stays in `table_indicators`: `Table(indoor_adaptation_indicators=True)`
+  keeps giving the indicators that need nothing but EnergyPlus, and neither `Table` nor the GUI get the argument (option
+  (iii)) until someone needs it; and the conditions of the zones are not taken from the columns of the table (option
+  (iv)), which drop the mean radiant temperature and the relative humidity and add up the timesteps of each hour.
+
+### 2026-11-11 — S1: the details of the comparison of the minimum and maximum with the setpoints of the comfort model
+- Context: decision 19 (the verdicts of 2026-11-11 in [[decisions.md]]; task S1 of `notes/COPILOT_SIGUIENTE_SESION.md`)
+  replaces the comparison with `ACSTaul`/`AHSTall` by option (ii): with the weather file, the setpoints of the comfort
+  model of each zone with `accim.sim.preview.compute_setpoints`, and a warning for each zone whose minimum is at or
+  above the lowest cooling setpoint, or whose maximum is at or below the highest heating setpoint, with the value, the
+  first date and the number of days; the zones that `compute_setpoints` does not cover are left out with a debug
+  message. It does not say which setpoints, which days, nor when `modify_accis` compares them.
+- Why it matters: what the warning reports, and when it is given.
+- Options considered: (i) the setpoints of the thermostats (`ACST`/`AHST`, with the tolerance, rounded: where they
+  cross, the heating setpoint of the thermostats is at or above the cooling one), by timestep, with the timesteps per
+  hour of the model, from the first day of its first `RunPeriod` to its last day (to the end of the year if the run
+  period goes on in the next one), including the first timestep of the run period, whose running means are 0 in the
+  EMS as in EnergyPlus; `modify_accis` compares whenever the model has a minimum or a maximum (given in the call or
+  before) and `epw` is given; the zones left out: those whose setpoints a hook gives and those with the limiter of the
+  drift of the setpoints (their setpoints are not those of `compute_setpoints`), and those whose arguments it rejects
+  (with the debug message of the logger `accim.sim.ems.setpoint_limits`, the first use of `logging` in accim)
+  (implemented); (ii) the setpoints without the tolerance (`ACSTnoTol`/`AHSTnoTol`, the comfort band), which cross
+  later; (iii) the whole year of the weather file, whatever the run period; (iv) leave out the first timestep of the
+  run period.
+- Owner: the author.
+- Provisional decision (pending author until 2026-11-12): option (i) implemented provisionally
+  (`accim.sim.ems.setpoint_limits.warn_crossed_setpoint_limits`): it only adds warnings.
+- Status: answered on 2026-11-12 (accepted as implemented, with the change of the verdict of finding A19; decided by
+  Claude Code for the author).
+- Verdict (2026-11-12): option (i), accepted as implemented, with the change that the verdict of finding A19 brings. The
+  thermostats are what EnergyPlus gets, so the setpoints compared are theirs (with the tolerance, rounded), not the
+  limits of the comfort band (option (ii)); the days are those of the run period of the model, which is what is
+  simulated (option (iii) would warn of days that the model does not simulate); and the first timestep stays (option
+  (iv) would hide a crossing that the EMS of the simulation gives too, with the same running means of 0). With the
+  verdict of A19 (the entry of the self-audit above), the heating setpoint of the thermostat on the minimum is AHSTmin +
+  AHSTtol and the cooling one on the maximum is ACSTmax + ACSTtol, so the warning compares these values with the cooling
+  and heating setpoints of the comfort model.
+
+### 2026-11-11 — Comfort standards 9 and 10 (IND IMAC R 7DRM and 30DRM): their running means, and the heating setpoint of 9 in comfort mode 1
+- Context: the review of Claude Science of 2026-11-11 (`notes/TRASPASO_ClaudeScience_2026-11-11_v01.md` §2.1)
+  checked the source of comfort standards 9 and 10, Rawal et al. (2022), Building and Environment 219, 109187
+  (doi:10.1016/j.buildenv.2022.109187), Fig. 15: model A, Tneut = 0.39·Tout-7DRM + 18.42, with the simple mean of the 7
+  previous days (the paper tells it apart from the weighted one, Tout-7DRM-W), and model B, Tneut = 0.42·Tout-30DRM +
+  17.60. In accim the coefficients, the bands and the applicability limits are right, but the metrics are swapped: 9
+  (7DRM) uses PMOT, the simple mean of 30 days of EnergyPlus, and 10 (30DRM) uses RMOT, the exponential running mean
+  with α = 0.8 of EnergyPlus (`SetComfTemp` uses PMOT for both). In comfort mode 1 of 9, out of the applicability
+  limits, the heating setpoint is `PMOT*0.078+23.25+2.72` (category 80) or `+1.5` (90), that of cooling, where comfort
+  mode 0 of 9 and comfort mode 1 of 10 use the minus sign. The static equation 0.078·T + 23.25 could not be verified
+  (it is not in Manu et al., 2016; probably the National Building Code of India 2016, not in the library). The
+  analysis is in the entry of `TODO.md`.
+- Why it matters: the setpoints of 9 and 10 follow other outdoor temperatures than those of their models, and the
+  heating and cooling setpoints of 9 in comfort mode 1 are equal (but the tolerances) out of the limits; fixing them
+  changes the results of 9 and 10 and their output IDFs.
+- Options considered: (i) the recommendation of the review: 10 with PMOT (exactly the 30DRM); 9 with the arithmetic
+  mean of the 7 previous days of the machinery of B1 (`'ndrm'`, 7 days, started from the weather file; without it, the
+  start of B1); `SetComfTemp`, the setpoints and `CountHours` consistent; the minus sign in comfort mode 1 of 9; the
+  golden master updated; `CHANGELOG.md` (Fixed) with a note of migration (the results published with accim 1.1.0 or
+  earlier are reproduced with those versions); and, with the metrics corrected, the outdoor mean of the static line
+  checked in its source (in 10 it reads RMOT today); (ii) keep them as they are, documented; (iii) fix the sign only.
+- Owner: the author.
+- Provisional decision (pending author until 2026-11-12): the author decided on 2026-11-11 not to change them in session
+  3 (`notes/COPILOT_SIGUIENTE_SESION.md` §2, rule 7): nothing was changed.
+- Status: answered on 2026-11-12 (option (i); decided by Claude Code for the author).
+- Verdict (2026-11-12): option (i), the whole recommendation of the review, in accim 1.2.0. Checked again in Rawal et
+  al. (2022) (see "What was checked" above): model A (0.39·T + 18.42) is defined with the 7-day running mean of the
+  outdoor temperature and model B (0.42·T + 17.60) with the 30-day one, neither of them weighted, so comfort standard 10
+  reads `PMOT` (the 30-day mean of EnergyPlus) and 9 the arithmetic mean of the 7 previous days of the machinery of B1
+  (`'ndrm'` with 7 days, beginning with the values of the weather file; without it, the start of B1, with its warning);
+  `SetComfTemp`, the setpoints and `CountHours` agree; the heating setpoint of comfort mode 1 of 9 out of the limits
+  takes the minus sign; and the line 0.078·T + 23.25 reads `PMOT` in 10 too, as in 7, 8 and 9 (the 30-day running mean
+  of the model of the air-conditioned buildings of the National Building Code of India 2016, according to secondary
+  sources: to be checked in the code if the author gets it). Keeping them (option (ii)) would leave two comfort
+  standards that do not follow the models of their names, and the sign alone (option (iii)) would leave the metrics. The
+  golden master is updated, and `CHANGELOG.md` (Fixed) has the note of migration: the results of comfort standards 9 and
+  10 change, and those published with accim 1.1.0 or earlier are reproduced with those versions. Rule 7 of the
+  instructions of session 3, with which the author kept them unchanged, was for that session only.
+
+### 2026-11-10 — F3: the SET of the indicators of the causal band
+- Context: the proposal of block F (§4 F3) asks for the hours within the causal band of every model; the SET can be
+  that of the Pierce model of EnergyPlus (any model, with the outputs of `add_thermal_comfort_outputs`) or that of
+  pythermalcomfort of the hook of comfort standard 24 (`SET_<zone>`, only in its simulations).
+- Why it matters: the SET of the hook is 0.08–0.155 K below that of EnergyPlus on average (E-F1, F1), so the hours of
+  the band of a simulation of comfort standard 24 differ slightly between both.
+- Options considered: (i) the SET of EnergyPlus for every simulation (implemented: the same measure for every model;
+  the hook still reports its own hours, `HoursInCausalBand_<zone>`); (ii) the SET of the hook where it exists.
+- Review (2026-11-11, the handoff of Claude Science, `notes/TRASPASO_ClaudeScience_2026-11-11_v01.md` §2.3 and
+  §3, #9): pending a question for Ruiji Sun: the text of Sun, Brager & Schiavon (2026) does not say which
+  implementation of the SET they used. Until the answer, keep the Pierce SET of EnergyPlus as the SET of the
+  indicators, and report also the indicators of the SET of pythermalcomfort (recalculated with `set_of_results`):
+  E-F1 measured differences of −0.045 K on average and 0.18–0.20 K at most standing, and −0.12 K and 0.32–0.34 K
+  sitting, of the order of what moves the hours near the limits of the band of 19–28 °C. Done provisionally in
+  task S4 of the session of 2026-11-11.
+- Owner: the author, with Ruiji Sun.
+- Provisional decision (pending author until 2026-11-12): option (i) implemented provisionally, and the indicators of
+  the SET of pythermalcomfort as an option (task S4 of the session of 2026-11-11).
+- Status: answered on 2026-11-12 (changed: the SET of pythermalcomfort is the reference; decided by Claude Code for the
+  author).
+- Verdict (2026-11-12): the reference SET of the causal band is that of pythermalcomfort (`set_tmp`) in every
+  simulation, and the Pierce SET of EnergyPlus stays as the indicator that every model has without pythermalcomfort. The
+  paper builds its model with the SET of the ASHRAE Global Thermal Comfort Database II, version 2.1, and describes no
+  calculation of its own, and the script that makes that version of the database calculates its column `set` with
+  `set_tmp` of pythermalcomfort, from the air and mean radiant temperatures, the air speed, the relative humidity, the
+  metabolic rate and the clothing insulation of each record, with the defaults of the function, and the earlier paper of
+  the same authors took that column as its SET (see "What was checked" above): so that is the SET of the paper
+  (**[inferred]**: its authors are of the Center for the Built Environment, which maintains both the database and
+  pythermalcomfort). Hence: comfort standard 24 is right as it is (its hook inverts the SET of pythermalcomfort); the
+  indicators of reference of the causal band are those of the SET of pythermalcomfort (the outputs of the hook in the
+  simulations of comfort standard 24, and `table_indicators(..., pythermalcomfort_set=...)` in any simulation: the
+  verdict of S4 above), and the validation study reports them, with those of the Pierce SET beside them; the Pierce SET
+  approximates it near 1 met (E-F1: within 0.2 K standing) and is higher above about 1.05 met, where the code of
+  EnergyPlus has not the term of the activity of the convective coefficient (finding A2: tenths of a kelvin at 1.1 and
+  1.2 met, to be measured; the causal TSV changes by 0.11 per kelvin). No output or column changes its name, and
+  `Table(indoor_adaptation_indicators=True)` does not change; the documentation (sections 4.7.6, 4.9.2 and 4.9.3) and
+  the docstrings stop calling the indicators of pythermalcomfort provisional, and say which SET is the reference. The
+  database calculated its SET with the default posture of `set_tmp` (standing), and the hooks of accim sit the occupants
+  with 1.2 met or less (the decision of G3, not reopened), 0.03 to 0.07 K lower: it is documented, and
+  `position='standing'` gives that of the database. The confirmation of Ruiji Sun is still worth asking (that the SET of
+  the paper is the column `set` of the database), but nothing waits for it: with another answer, this verdict is
+  reviewed.
+
+### 2026-11-10 — F3: the static reference of case (i) of the validation study
+- Context: the design of the study (§4 F3) has the case "(i) referencia estática PMV (24–26 / 20–22 °C)".
+- Why it matters: accim has the PMV setpoints of `apply_pmv_setpoints` (category II: −0.5 and 0.5), the static
+  setpoints of comfort mode 0 of the comfort standards (those of ISO 7730 of categories 80 and 90 are 25 and 27 °C or
+  24 and 26 °C for cooling, and 19 and 22 °C or 20 and 23 °C for heating), and fixed thermostats.
+- Options considered: one of them, or fixed setpoints of 24–26 °C and 20–22 °C (which accim would set with the static
+  setpoints of a comfort standard defined by its data, section 4.2.5).
+- Review (2026-11-11, the handoff of Claude Science, `notes/TRASPASO_ClaudeScience_2026-11-11_v01.md` §3, #12):
+  a decision of the author with Ruiji Sun. Recommendation: (a) the PMV setpoints of `apply_pmv_setpoints`,
+  category II (±0.5), as the reference of a "fixed PMV" (question 1 of `01_informe/propuesta_paper_RuijiSun_v02.md`
+  of the folder *Indoor adaptive setpoints* of the author); (b) besides, fixed static setpoints of EN 16798-1:2019,
+  Table B.2, category II (offices, 20 and 26 °C).
+- Owner: the author, with Ruiji Sun.
+- Provisional decision (pending author until 2026-11-12): section 4.7.6 of the detailed use lists the first two; no
+  simulation run (`TODO.md`).
+- Status: answered on 2026-11-12 (both references of the recommendation of the review; decided by Claude Code for the
+  author).
+- Verdict (2026-11-12): both references of the recommendation of the review, as the position of the author for the study
+  (to be agreed with Ruiji Sun before its simulations; nothing of accim 1.2.0 depends on it): (a) the PMV setpoints of
+  `apply_pmv_setpoints`, category II (PMV ±0.5), the "fixed PMV" reference, which is the comparison of the paper itself
+  (it measures its band against that of the PMV model, 24 to 26 °C, §4.3); and (b) fixed setpoints of 20 and 26 °C (EN
+  16798-1:2019, Table B.2, category II: the minimum of the heating season and the maximum of the cooling season,
+  which are also the lower limit of the heating range and the upper limit of the cooling range of its Table B.5 for the
+  energy calculations), the usual static baseline, which accim sets as the static setpoints of a comfort standard
+  defined by its data (section 4.2.5) in comfort mode 0. The static setpoints of comfort mode 0 of the built-in comfort
+  standards are not a reference of the study. The other choices of the study that the review proposed are taken with it
+  (the entry of the study in `TODO.md`): the climates, Seville and a hot and humid one, Singapore, unless Ruiji Sun
+  prefers a humid one with a heating season (Shanghai or Ningbo); the clothing insulation by season of case (iii), 1.0
+  and 0.5 clo with the cooling season from day 121 to 274, and the dynamic clothing model as a sensitivity; and the air
+  speeds of case (iv), 0.6, 0.9 and 1.2 m/s (those of Table B.4 of EN 16798-1) in the occupied hours of the cooling
+  season, besides 0.1 m/s.
+
 ## 2026-11-11 — The verdicts on the 23 provisional decisions of the session of the review v04
 
 - **Status**: accepted (the verdicts of the review of Claude Science of 2026-11-11,
@@ -27,8 +461,9 @@ template]] to add a new entry.
   changed: #13 (F2, the reference of the rate: task S3), #19 (G5, the warning of verdict 13: task S1) and #20 (G5, the
   static setpoints of Qatar: task S2); #9 (F3, the SET of the indicators) and #12 (F3, the static reference of case (i)
   of the validation study) stay open in [[questions.md]], pending the author with Ruiji Sun (#9 done provisionally in
-  task S4). The 21 entries of [[questions.md]] are below, moved as they were, with their verdicts (numbered as in the
-  handoff §3, in the order of [[questions.md]], newest first).
+  task S4; both decided on 2026-11-12: the decisions of 2026-11-12 above). The 21 entries of [[questions.md]] are below,
+  moved as they were, with their verdicts (numbered as in the handoff §3, in the order of [[questions.md]], newest
+  first).
 - **Consequences**: the decisions of 2026-11-10 that said "provisional" are final, but for the changed details (tasks
   S1 to S3, and the instructions of S5) and the two open questions; the tasks are those of
   `notes/COPILOT_SIGUIENTE_SESION.md` §6.
@@ -396,7 +831,9 @@ template]] to add a new entry.
 - **Status**: accepted (task F3 of block F, `notes/PROPUESTA_ADAPTACION_INTERIOR_v03.md` §4 F3; the cooling effect of A6
   as an indicator, v04 §5 #35 and §6.8); the choices that the proposal does not fix were provisional in
   `notes/questions.md`: accepted on 2026-11-11 (the verdicts of 2026-11-11 above), but for the SET of the
-  indicators and the static reference of case (i) of the study, still open in `notes/questions.md`.
+  indicators and the static reference of case (i) of the study, decided on 2026-11-12 (the decisions of 2026-11-12
+  above): the reference SET of the causal band is that of pythermalcomfort, and the Pierce SET of EnergyPlus of this
+  decision stays as the indicator that every model has.
 - **Context**: the article of validation of block F compares the setpoints of the comfort standards, of the causal SET
   model of comfort standard 24 and of the limiter of the drift in the same terms: the hours within the causal band, the
   overcooling, the neutrality by exposure and the cooling effect.
@@ -416,7 +853,9 @@ template]] to add a new entry.
 ## 2026-11-10 — The limiter of the drift of the setpoints is an option of the ACCIS of each zone, in Erl (F2)
 
 - **Status**: accepted (task F2 of block F; decisions 6 and 7 of the author of 2026-11-10,
-  `notes/PROPUESTA_ADAPTACION_INTERIOR_v03.md` §6, copied here as the prompt of F2 asks, not reopened)
+  `notes/PROPUESTA_ADAPTACION_INTERIOR_v03.md` §6, copied here as the prompt of F2 asks, not reopened; since
+  2026-11-12, `'window'` is an experimental mode, with a warning, and `'rate'` the recommended one: finding A8 in the
+  decisions of 2026-11-12 above)
 - **Context**: Parkinson, de Dear & Brager (2020), Energy and Buildings 206, 109559: the occupants adapt to the mean
   indoor temperature they are exposed to (Fig. 6), and the changes of the setpoints should be spread over days to
   weeks (section 4.3.2).
@@ -504,7 +943,11 @@ template]] to add a new entry.
 ## 2026-11-10 — The SET of EnergyPlus (Pierce) against that of pythermalcomfort, measured (E-F1)
 
 - **Status**: accepted (task E-F1 of `notes/PROPUESTA_ADAPTACION_INTERIOR_v03.md` §3 and §5, and of the session of
-  2026-11-10; a measurement, not a tolerance decided beforehand)
+  2026-11-10; a measurement, not a tolerance decided beforehand). Findings A1 and A2 of the self-audit of 2026-11-11
+  (the decisions of 2026-11-12 above): this measurement holds near 1 met only (the code of EnergyPlus has not the term
+  of the activity of the convective coefficient that the context below gives to its Pierce model, and that
+  pythermalcomfort has), and its metabolic rate, converted with 1.8 m², is 1.43 % above that of the Pierce model
+  (1.8258 m²); to be measured again (`TODO.md`)
 - **Context**: F1 inverts the SET of pythermalcomfort (`set_tmp`, the code of ASHRAE 55) in the hook of the SET, while
   EnergyPlus reports the SET of its Pierce two-node model (Engineering Reference 25.2, 19.1.4: hc = max(8.6·v^0.53,
   5.66·(met − 0.85)^0.39) with v ≥ 0.137 m/s, radiative area 0.72 of the body, 1.8 m²). Block F asked to compare them,
@@ -563,7 +1006,9 @@ template]] to add a new entry.
 - **Status**: accepted (task G5 of `notes/PROPUESTAS_MEJORAS_post_1.1.0_v04.md` §7, findings A3-1, A3-2, B5-1 to B5-3,
   B1-2, B3-1 to B3-3, E4-1 to E4-3 and §3.4–§3.5, verdicts #3, #13, #26 and #28); three points were provisional
   (`notes/questions.md`: the literal reading of verdict #13 and the static setpoints of Qatar, changed by tasks S1
-  and S2 of 2026-11-11; the exact floor, accepted: the verdicts of 2026-11-11 above)
+  and S2 of 2026-11-11; the exact floor, accepted: the verdicts of 2026-11-11 above). Changed in part on 2026-11-12
+  (finding A19 in the decisions of 2026-11-12 above): where the minimum or the maximum binds, the thermostats get it
+  with the tolerance, and the setpoints without the tolerance are the limit
 - **Context**: the floor bounded only the setpoints with the tolerance (the comfort band of the counters was 0.1 K
   below it) and the strict rounding put the cooling setpoint one step below the ceiling; a key of the catalogue of the
   aPMV filled one side only; the YAML file of Qatar was incomplete; the outdoor metric could write `nan`; pyfwg added the
@@ -589,7 +1034,9 @@ template]] to add a new entry.
 
 - **Status**: accepted (task G4 of `notes/PROPUESTAS_MEJORAS_post_1.1.0_v04.md` §7, findings B4-1 and B4-2, verdicts
   #29 and #30, decision §6.2); the criterion of its test was provisional (`notes/questions.md`;
-  accepted on 2026-11-11, with the documentation of task S5: the verdicts of 2026-11-11 above)
+  accepted on 2026-11-11, with the documentation of task S5: the verdicts of 2026-11-11 above). Changed in part on
+  2026-11-12 (findings A24 and A25 in the decisions of 2026-11-12 above): every zone of the models with the code of 23
+  gets the inputs of the static setpoints, and `modify_accis` warns when its zones go back to RMOT
 - **Context**: comfort standard 23 read the RMOT of EnergyPlus, whose first value in a run period is not divided by
   1 − α⁷, and its static setpoints were literals. The author decided `rmot_alpha` from the weather file when `AddAccis`
   gets one (RMOT otherwise, with a warning) and the arguments `static_heating_setpoint`/`static_cooling_setpoint`
