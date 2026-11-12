@@ -457,6 +457,82 @@ def test_modify_accis_gives_it_the_weather_file_and_the_static_setpoints(tmp_pat
     assert all(read_inputs(p)['CustAST_metric'] == 2 for p in input_programs(idf).values())
 
 
+def _pmot_start_warnings(caught):
+    return [w for w in caught if 'begins with the running mean of ASHRAE 55 that EnergyPlus calculates' in
+            str(w.message)]
+
+
+@needs_idd
+def test_modify_accis_warns_when_its_zones_lose_the_weather_file(tmp_path):
+    # Finding A25 of the self-audit of 2026-11-11 (decided on 2026-11-12): a call that writes the programs of the
+    # outdoor metric again without the weather file (here, one that only changes the outdoor metric of the custom
+    # model of another zone) takes the zones of JPN Aqilah 2025 from the running mean of the weather file back to
+    # RMOT. Before, it did so without the warning of RMOT (the call does not give comfort standard 23), and the only
+    # warning said that their 'rmot_alpha' begins with PMOT, which their code does not read any more
+    from accim.sim.accis import add_accis_to_idf, load_idf, modify_accis
+    from accim.sim.ems.inputs import input_programs, read_inputs
+    from accim.sim.ems.outdoor_metric import begins_with_weather_file
+
+    shutil.copy(SAMPLE_IDF, tmp_path / 'model.idf')
+    idf = load_idf(tmp_path / 'model.idf')
+    add_accis_to_idf(idf, script_type='vrf_ac', supply_air_temp_input_method='temperature difference',
+                     output_type='standard', output_frequencies=['hourly'], keep_existing_outputs=False,
+                     setpoint_type='temperature', verbose=False)
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter('always')
+        modify_accis(idf, comfort_standard=23, category=80, comfort_mode=1, epw=str(EPW),
+                     zone_arguments={'Block1:Zone2': {'comfort_standard': 99, 'custom_outdoor_metric': 'ndrm'}})
+    assert not _rmot_warnings(caught) and not _pmot_start_warnings(caught)
+    assert begins_with_weather_file(idf)
+    assert 'set ComfTemp = Tout_metric*0.38+16.9' in _programs(idf)['SetComfTemp']
+
+    # A call that changes nothing of the outdoor metric keeps the programs, and the values of the weather file
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter('always')
+        modify_accis(idf, static_heating_setpoint=19)
+    assert not _rmot_warnings(caught) and not _pmot_start_warnings(caught)
+    assert begins_with_weather_file(idf)
+
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter('always')
+        modify_accis(idf, zone_arguments={'Block1:Zone2': {'custom_outdoor_metric': 'rmot_7day'}})
+    assert not begins_with_weather_file(idf)
+    assert 'set ComfTemp = RMOT*0.38+16.9' in _programs(idf)['SetComfTemp']
+    # The warning of RMOT says why: the call wrote the programs again without the weather file
+    [rmot] = _rmot_warnings(caught)
+    assert 'this call has written again without the weather file of the simulation' in str(rmot.message)
+    assert 'argument epw' in str(rmot.message)
+    # The warning of the start with PMOT names the outdoor metric of the zone of the custom model only: the input of
+    # that of the zone of JPN Aqilah 2025 ('rmot_alpha') stays, but its code does not read it
+    [pmot] = _pmot_start_warnings(caught)
+    assert "custom_outdoor_metric ['rmot_7day'] begins" in str(pmot.message)
+    assert read_inputs(input_programs(idf)['Block1_Zone1'])['CustAST_metric'] == 2
+
+    # The model reads RMOT now: another call without the weather file, which does not give comfort standard 23, does
+    # not repeat the warning; and the weather file gives the zones their running mean again, without it
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter('always')
+        modify_accis(idf, static_heating_setpoint=18)
+    assert not _rmot_warnings(caught)
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter('always')
+        modify_accis(idf, epw=str(EPW))
+    assert not _rmot_warnings(caught) and not _pmot_start_warnings(caught)
+    assert begins_with_weather_file(idf)
+    assert 'set ComfTemp = Tout_metric*0.38+16.9' in _programs(idf)['SetComfTemp']
+
+    # With only zones of JPN Aqilah 2025, the warning of the start with PMOT is not given at all (no outdoor metric of
+    # the model begins with it), only that of RMOT
+    modify_accis(idf, zone_arguments={'Block1:Zone2': {'comfort_standard': 23, 'category': 80, 'comfort_mode': 1}},
+                 epw=str(EPW))
+    assert begins_with_weather_file(idf)
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter('always')
+        modify_accis(idf, custom_outdoor_metric='pmot')
+    assert not begins_with_weather_file(idf)
+    assert len(_rmot_warnings(caught)) == 1 and not _pmot_start_warnings(caught)
+
+
 @needs_idd
 def test_the_models_of_add_accis_to_idf_declare_its_static_setpoints(tmp_path):
     from accim.sim.accis import add_accis_to_idf, load_idf, modify_accis

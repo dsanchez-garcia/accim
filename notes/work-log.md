@@ -48,6 +48,9 @@ existing tracking files — it does not replace them (see
     gets no hook before its EMS programs; before, it ran with the setpoints of the comfort standard of its zones and
     the outputs of the hook at 0, in silence. A test of `Table` that ran such a model with the EMS backend now runs it
     with the API and the hook.
+  - A25: `modify_accis` gives the warning of RMOT when a call without `epw` writes the programs of the outdoor metric
+    again and the zones of JPN Aqilah 2025 of the model lose the running mean of the weather file, and the warning of
+    the metrics that begin with PMOT no longer names theirs.
 - **Validation**: in the entry of each task of [[../DEVLOG.md]] (the tests of the task, EnergyPlus 25.1 with both
   backends where the EMS code changes, and the golden master, compared line by line before writing it again).
 - **Next step**: the review of Claude Science of sessions 2 and 3, which also covers this session; the message of the

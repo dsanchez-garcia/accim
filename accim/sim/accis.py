@@ -396,9 +396,18 @@ _NOT_ASKED_ARGUMENTS = (('custom_outdoor_metric', 'pmot'), ('custom_alpha', 0.8)
                         *zip(STATIC_SETPOINT_ARGUMENTS, STATIC_SETPOINT_DEFAULTS), *DRIFT_DEFAULTS.items())
 
 
+#: The text of :func:`_warn_rmot_start` for the zones of JPN Aqilah 2025 that lose the running mean of the weather file
+#: in a call of :func:`modify_accis` (finding A25 of the self-audit of 2026-11-11)
+_RMOT_START_LOST = (', whose programs of the outdoor metric this call has written again without the weather file of '
+                    'the simulation,')
+
+
 def _warn_rmot_start(where: str) -> None:
     """Warn that JPN Aqilah 2025 reads the RMOT of EnergyPlus, without the weather file of the simulation (finding B4-1
-    of the review of accim 1.2.0)."""
+    of the review of accim 1.2.0).
+
+    :param where: A text after the name of the comfort standard ('' for none; :data:`_RMOT_START_LOST`).
+    """
     warnings.warn(f'JPN Aqilah 2025 (comfort standard 23){where} reads the running mean outdoor temperature of CEN '
                   f'15251 that EnergyPlus calculates (RMOT), whose first value in a run period is the sum of the 7 '
                   f'previous days of equation 19.82 of the Engineering Reference, not divided by 1 - 0.8**7 (about '
@@ -1408,7 +1417,12 @@ def modify_accis(
     ASHRAE 55 of EnergyPlus (:func:`accim.sim.ems.outdoor_metric.set_outdoor_metric_code`). The zones of JPN Aqilah
     2025 (comfort standard 23) use the running mean of EN 16798-1 with α = 0.8 that the EMS calculates if ``epw`` is
     given or the programs of the outdoor metric of the model begin with the values of a weather file, and the RMOT of
-    EnergyPlus otherwise (with a warning if this call gives them comfort standard 23; see :class:`AddAccis`). The zones
+    EnergyPlus otherwise (with a warning if this call gives them comfort standard 23; see :class:`AddAccis`). A call
+    without ``epw`` that writes those programs again (one that gives an outdoor metric, here or in ``zone_arguments``,
+    also to another zone) loses the values of the weather file with which they began: the zones of JPN Aqilah 2025
+    then read the RMOT of EnergyPlus again, with the same warning, and their outdoor metric is not one of those of the
+    warning of the metrics that begin with PMOT (finding A25 of the self-audit of 2026-11-11); give ``epw`` in that
+    call to keep the running mean of the weather file. The zones
     of IND IMAC R 7DRM (comfort standard 9) always have the EMS code of the outdoor metric, with the mean of the 7
     previous days ('ndrm' with 7 days), which begins with the values of ``epw`` or, without it, with the running mean
     of ASHRAE 55 of EnergyPlus, with the warning of the outdoor metrics that the EMS calculates.
@@ -1581,6 +1595,9 @@ def modify_accis(
             check_window_width(own.get('delta_heat', current.get('DeltaHeat', DRIFT_DEFAULTS['delta_heat'])),
                                own.get('delta_cool', current.get('DeltaCool', DRIFT_DEFAULTS['delta_cool'])),
                                resolved.get(zone, {}).get('setpoint_tolerance', setpoint_tolerance), where=zone)
+    # Whether the programs of the outdoor metric begin with the values of a weather file before the changes (finding
+    # A25 of the self-audit of 2026-11-11: the zones of JPN Aqilah 2025 read RMOT again if the call loses them)
+    began_with_weather_file = begins_with_weather_file(idf)
     # The comfort standard of each zone before the changes: the zones that leave a comfort standard with regimes lose
     # them (accim.sim.ems.custom_regimes.set_standard_regimes)
     previous = {zone: read_inputs(program).get('ComfStand') for zone, program in zone_programs.items()}
@@ -1640,8 +1657,14 @@ def modify_accis(
         enabled = outdoor_metric_needed(idf, code_comfort_standards(idf), epw)
         set_outdoor_metric_code(idf, enabled, epw, rewrite=metric_given)
     given = {comfort_standard, *(own.get('comfort_standard') for own in resolved.values())}
-    if given & set(WEATHER_FILE_METRICS) and weather_zones and not begins_with_weather_file(idf):
-        _warn_rmot_start('')
+    if weather_zones and not begins_with_weather_file(idf):
+        if began_with_weather_file:
+            # The call has written the programs of the outdoor metric again, without the weather file: the zones of
+            # JPN Aqilah 2025, which read the running mean of the weather file, read RMOT again (finding A25 of the
+            # self-audit of 2026-11-11: before, without this warning unless the call gave them the comfort standard)
+            _warn_rmot_start(_RMOT_START_LOST)
+        elif given & set(WEATHER_FILE_METRICS):
+            _warn_rmot_start('')
     if has_setpoint_limits(idf):
         warn_crossed_setpoint_limits(idf, epw)
     indent_programs(idf)

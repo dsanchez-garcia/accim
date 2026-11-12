@@ -2641,3 +2641,31 @@ llamada). En `tests/core/test_sun2026_set.py`, la prueba de los dos backends sin
 25.1 el error del backend EMS y el aviso del de la API, además de que sin el gancho los dos dan los mismos resultados.
 `tests/core/test_table_optional_outputs.py` simulaba con el backend EMS un modelo con los objetos del ATHB (y
 comprobaba que sus salidas eran 0): ahora lo simula con el backend de la API y el gancho, y comprueba el error del EMS.
+
+## 49. `modify_accis` avisa cuando las zonas del estándar 23 pierden el inicio con el fichero climático (A25)
+
+El hallazgo A25 de la autoauditoría del 11/11/2026: una llamada a `modify_accis` sin `epw` que reescribe los programas
+de la métrica exterior (por ejemplo, la que solo cambia la métrica exterior del modelo personalizado de otra zona) los
+deja empezando con PMOT, y las zonas de JPN Aqilah 2025 (23) pasan de la media móvil del fichero climático
+(`Tout_metric`, `rmot_alpha`) al RMOT nativo de EnergyPlus, cuyo primer valor es un 21 % bajo (B4-1). Lo hacía sin el
+aviso de RMOT (la llamada no da el estándar 23) y con un aviso que decía que su `rmot_alpha` empieza con PMOT, lo que
+no es cierto para esas zonas (su código ya no lo lee). Decidido el 12/11/2026 (`notes/decisions.md`): opción (i).
+
+**Ahora.**
+
+- `accim.sim.accis.modify_accis`: guarda si los programas de la métrica exterior empezaban con los valores de un
+  fichero climático antes de los cambios (`begins_with_weather_file`), y da el aviso de RMOT (`_warn_rmot_start`, con
+  el texto `_RMOT_START_LOST`: «whose programs of the outdoor metric this call has written again without the weather
+  file of the simulation») siempre que el modelo tiene zonas del 23 y deja de empezar con ellos en la llamada; si no
+  empezaba con ellos, avisa como antes, solo cuando la llamada da el estándar 23.
+- `accim.sim.ems.outdoor_metric.set_outdoor_metric_code`: el aviso de las métricas que empiezan con PMOT ya no
+  incluye la de las zonas del 23 cuando los programas se escriben sin fichero climático (su código lee RMOT y su
+  métrica no se usa); si ninguna otra métrica empieza con PMOT, no se da.
+- La entrada `CustAST_metric = 2` de esas zonas se queda (sin usar), como antes, y vuelve a usarse si una llamada
+  posterior da `epw`.
+
+**Pruebas.** `tests/core/test_jpn_aqilah2025.py::test_modify_accis_warns_when_its_zones_lose_the_weather_file`: el caso
+del hallazgo (un aviso de RMOT con el motivo, y el de PMOT solo con `rmot_7day`), una llamada que no toca la métrica
+(conserva el inicio, sin avisos), otra posterior sin `epw` (no repite el aviso), la vuelta con `epw`, y un modelo con
+todas las zonas del 23 (solo el aviso de RMOT). Documentación: la sección 4.2 (JPN Aqilah 2025) y la docstring de
+`modify_accis`.

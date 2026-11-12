@@ -97,6 +97,17 @@ template]] to add a new entry.
      - `tests/core/test_table_optional_outputs.py` simulated a model with the objects of the ATHB with the EMS
        backend, and checked that the outputs of the ATHB were 0: it now runs it with the backend of the API and the
        hook (and checks the error of the EMS backend), so `Table` is tested with the outputs of the hook.
+  6. The warning of RMOT of `modify_accis` (decision 8, finding A25).
+     - The warning is that of JPN Aqilah 2025 without the weather file, with the reason before its text ("whose
+       programs of the outdoor metric this call has written again without the weather file of the simulation"), once
+       in the call. A model that already read RMOT is not warned again by the calls that do not give comfort standard
+       23, as before.
+     - The warning of the outdoor metrics that begin with PMOT leaves out the metric of the zones of JPN Aqilah 2025
+       whenever the programs are written without a weather file (it already did in the models that did not begin with
+       one; the fix is in `set_outdoor_metric_code`, so the parametric module follows), and is not given if no other
+       metric begins with PMOT.
+     - The input of the outdoor metric of those zones (`CustAST_metric = 2`) stays, unused, as before: a later call
+       with `epw` gives them the running mean of the weather file again.
 - **Consequences**: the tasks done leave `TODO.md` for `DEVLOG.md`; the documentation says what each choice means
   for the users (section 4.2 of the detailed use, and `CHANGELOG.md`).
 
@@ -435,7 +446,8 @@ template]] to add a new entry.
     with the custom model in the same case (decision D3: without the weather file, the fallback, with a warning) and
     what G4 decided for 23 (RMOT without the weather file, with a warning): the fault is the missing warning and the
     wrong one. An error, or keeping programs that the call must write again (option (ii)), would treat these zones
-    unlike those of the custom model.
+    unlike those of the custom model. Implemented on 2026-11-12 (`DEVLOG.md`; section 49 of
+    `CAMBIOS_CODIGO_v1.2.0.md`).
 
 ### 2026-11-11 — S4: how the indicators of the causal band are given with the SET of pythermalcomfort
 - Context: decision 9 (provisional, the entry "F3: the SET of the indicators of the causal band" below; task S4 of

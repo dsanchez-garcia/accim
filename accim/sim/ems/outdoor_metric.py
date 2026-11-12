@@ -999,8 +999,15 @@ def set_outdoor_metric_code(idf, enabled: bool, epw: Union[str, Any, None] = Non
             _set_mid_range_schedule(idf, epw)
         else:
             _remove_mid_range_schedule(idf)
-        if epw is None and metrics & _NEEDS_INITIAL_VALUES:
-            names = sorted(metric_name(code) for code in metrics & _NEEDS_INITIAL_VALUES)
+        # Written without a weather file, the programs begin with PMOT, and the code of the zones of JPN Aqilah 2025
+        # reads RMOT again: their outdoor metric is not used, so it is not one of those that begin with PMOT (finding
+        # A25 of the self-audit of 2026-11-11; accim.sim.accis.modify_accis gives the warning of RMOT)
+        started: set = set()
+        if epw is None:
+            started = {metric_code(values[zone]['CustAST_metric']) for zone in zones if zone not in weather_zones}
+            started |= {code for specs in regime_metrics.values() for code, _, _ in specs.values()}
+        if started & _NEEDS_INITIAL_VALUES:
+            names = sorted(metric_name(code) for code in started & _NEEDS_INITIAL_VALUES)
             # The outdoor metric of the custom model, of a comfort standard defined by its data or of IND IMAC R 7DRM
             # (9, 'ndrm' with 7 days)
             warnings.warn(f'custom_outdoor_metric {names} begins with the running mean of ASHRAE 55 that EnergyPlus '

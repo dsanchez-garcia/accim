@@ -36,6 +36,32 @@ Recommended flow: track active work in `TODO.md`, move completed outcomes to `DE
 ## Entries
 
 ### 2026-11-12
+#### [done] `modify_accis` warns when the zones of JPN Aqilah 2025 lose the start with the weather file (A25; branch `v1.2.0`)
+- Context: finding A25 of the self-audit of 2026-11-11, decided on 2026-11-12 (`notes/decisions.md`, decision 8): a
+  call of `modify_accis` without `epw` that writes the programs of the outdoor metric again (one that only changes the
+  outdoor metric of the custom model of another zone, for instance) leaves them beginning with PMOT, and the zones of
+  JPN Aqilah 2025 go from the running mean of the weather file back to the RMOT of EnergyPlus (about 21 % low on the
+  first day), without the warning of RMOT and with a warning that named their `rmot_alpha` among the metrics that
+  begin with PMOT, which their code no longer read.
+- Changes: `modify_accis` records whether the programs of the outdoor metric began with the values of a weather file
+  before its changes, and gives the warning of RMOT (with the reason) whenever the model has zones of 23 and its
+  programs do not begin with them after the call; if they did not begin with them, it warns as before (when the call
+  gives comfort standard 23). `set_outdoor_metric_code` leaves the metric of the zones of 23 out of the warning of the
+  metrics that begin with PMOT when the programs are written without a weather file. The setpoints and the output
+  IDFs do not change: only the warnings.
+- Files: `accim/sim/accis.py`, `accim/sim/ems/outdoor_metric.py`, `tests/core/test_jpn_aqilah2025.py`,
+  `docs/source/4_detailed use.md` (4.2, JPN Aqilah 2025), `CHANGELOG.md`, `CAMBIOS_CODIGO_v1.2.0.md` (§49), `TODO.md`,
+  `notes/decisions.md`, `notes/work-log.md`.
+- Verification: `tests/core/test_jpn_aqilah2025.py::test_modify_accis_warns_when_its_zones_lose_the_weather_file` (the
+  case of the finding: one warning of RMOT, with the reason, and that of PMOT with `rmot_7day` only; a call that does
+  not touch the outdoor metric keeps the start with the weather file, without warnings; a later call without `epw`
+  does not repeat the warning; `epw` gives the running mean of the weather file back; and a model whose zones are all
+  of 23 gets the warning of RMOT only). The test files of JPN Aqilah 2025, the outdoor metric, IND IMAC R, the
+  registry of comfort standards, the regimes, the zone arguments and `modify_accis`, the golden master (35 passed,
+  without changes: only the warnings change) and `tests/parametric_and_optimisation`: 802 passed. The two changed
+  modules compile with Python 3.9.
+- Next step: A8 (the warning of `drift_mode='window'` and its cost in the documentation).
+
 #### [done] A model prepared for a hook is not simulated without it in silence (A4; branch `v1.2.0`)
 - Context: finding A4 of the self-audit of 2026-11-11, decided on 2026-11-12 (`notes/decisions.md`, decision 3): a
   model prepared by `apply_athb_setpoints`, `apply_set_setpoints` or `apply_sun2026_setpoints` (the programs
