@@ -572,14 +572,14 @@ def _thermal_comfort_fields(people):
     return [str(getattr(people, f'Thermal_Comfort_Model_{n}_Type')).strip() for n in range(1, 8)]
 
 
-def test_add_thermal_comfort_outputs(tmp_path, monkeypatch):
+def test_add_thermal_comfort_outputs(tmp_path):
     from accim.sim.people import THERMAL_COMFORT_OUTPUTS, add_thermal_comfort_outputs
 
     from .test_pierce_set import _accis_model, needs_idd
 
     if needs_idd.args[0]:
         pytest.skip(needs_idd.kwargs['reason'])
-    idf = _accis_model(tmp_path / 'model', monkeypatch)
+    idf = _accis_model(tmp_path / 'model')
     before = len(idf.idfobjects['Output:Variable'])
     people = idf.idfobjects['People'][0]
     fields = [_thermal_comfort_fields(p) for p in idf.idfobjects['People']]

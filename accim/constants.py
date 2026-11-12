@@ -40,8 +40,10 @@ EPMV_EXPECTANCY_RANGES = {'high': (0.9, 1.0), 'moderate': (0.7, 0.9), 'low': (0.
 EPMV_MET_REDUCTION_PER_PMV = 0.067
 
 #: The body surface area (m²) with which the metabolic rate per person is divided to get it per unit of area: the
-#: commonly accepted mean value of ISO 7730:2025 (section 4), A_Du = 1.8 m², which EnergyPlus uses in all its thermal
-#: comfort models (Engineering Reference 25.2, section 19.1).
+#: commonly accepted mean value of ISO 7730:2025 (section 4), A_Du = 1.8 m², which the Engineering Reference of
+#: EnergyPlus gives for all its thermal comfort models (25.2, section 19.1) and its Fanger and KSU models take; the code
+#: of its Pierce model divides the activity level by 1.8258 m² (``BodySurfAreaPierce``, ThermalComfort.hh of EnergyPlus
+#: 25.1), 1.4 % less met from the same schedule (task E-F1 of accim 1.2.0, measured again on 2026-11-12).
 PMV_BODY_SURFACE_AREA = 1.8
 
 #: The ranges of the inputs of the PMV within which ISO 7730:2025 (section 4) uses the PMV: the metabolic rate,

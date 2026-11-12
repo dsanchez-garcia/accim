@@ -39,8 +39,9 @@ setpoints out of ``temperature_range`` are its limits: the hook reports the hour
 one of them (``ATHB_saturated_<zone>``, summed) and warns at the end of the simulation (task H4 of the review of accim
 1.2.0, finding A4-1). The metabolic rate and the air speed of the hook are not those of the People objects, which
 EnergyPlus uses for the internal gains and its own thermal comfort outputs: their activity level is in W/person, and
-1 met is 58.2 W/m² (ISO 7730:2025) times the body surface area of 1.8 m² of EnergyPlus (Input Output Reference, the
-field Activity Level Schedule Name of People), about 104.8 W/person (:data:`MET_ACTIVITY_LEVEL`); and ``air_speed`` is
+1 met is 58.2 W/m² (ISO 7730:2025) times the body surface area of 1.8 m² of the Input Output Reference of EnergyPlus
+(the field Activity Level Schedule Name of People; that of its Fanger and KSU models, while the code of its Pierce model
+takes 1.8258 m²), about 104.8 W/person (:data:`MET_ACTIVITY_LEVEL`); and ``air_speed`` is
 the relative air speed of pythermalcomfort, which for met > 1 is the air speed of the zone plus 0.3·(met − 1)
 (``pythermalcomfort.utilities.v_relative``, as ASHRAE 55 and ISO 7730). The hook warns with a metabolic rate out of
 0.8 to 4 met or an air speed above 1 m/s, the ranges within which ISO 7730:2025 (section 4) uses the PMV
@@ -168,7 +169,10 @@ _SET_HUMIDITIES = tuple(float(value) for value in range(0, 101))
 TR_MODES = ('equal_air', 'zone')
 #: The activity level (W/person) of a metabolic rate of 1 met: 58.2 W/m² (Engineering Reference 25.2, equation 19.28,
 #: hc = 5.66·(M/58.2 − 0.85)^0.39) times the body surface area with which EnergyPlus gives the activity levels per
-#: person, 1.8 m² (Input Output Reference 25.2, 1.14.2.1.10; :data:`accim.constants.PMV_BODY_SURFACE_AREA`)
+#: person, 1.8 m² (Input Output Reference 25.2, 1.14.2.1.10; :data:`accim.constants.PMV_BODY_SURFACE_AREA`). The code
+#: of the Pierce model of EnergyPlus divides the activity level by 1.8258 m² instead, so it reads 1.4 % less met from
+#: the same schedule, which changes the SET by 0.01 to 0.02 K on average; the hooks keep 1.8 m² (task E-F1 measured
+#: again, and decision 1 of 2026-11-12, ``notes/decisions.md``)
 MET_ACTIVITY_LEVEL = 58.2 * PMV_BODY_SURFACE_AREA
 #: The EMS sensors of the inputs of the People object of each zone (output variable Schedule Value of its schedules,
 #: and Zone Thermal Comfort Clothing Value of the dynamic clothing model): input -> prefix

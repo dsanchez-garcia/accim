@@ -36,6 +36,38 @@ Recommended flow: track active work in `TODO.md`, move completed outcomes to `DE
 ## Entries
 
 ### 2026-11-12
+#### [done] E-F1 measured again: the SET of EnergyPlus (Pierce) against that of pythermalcomfort, by activity level (A1 and A2; branch `v1.2.0`)
+- Context: findings A1 and A2 of the self-audit of 2026-11-11, decided on 2026-11-12 (`notes/decisions.md`, decisions
+  1 and 2): the Pierce model of EnergyPlus converts the activity level with 1.8258 m² (the hooks of accim, with 1.8
+  m²), and its code has no term of the activity in the convective coefficient of the real environment, so the
+  measurement of E-F1, made with the 110.7 W/person of the sample model, held near 1 met only.
+- Changes: no code of accim changes (the hooks keep 1.8 m²). `tests/core/test_pierce_set.py` is written again with
+  the activity level as its parameter (110.7, 115 and 126 W/person: three simulations of a year, run at the same
+  time, each one in its folder), both conversions (1.8 and 1.8258 m²) and both postures; it also checks that the
+  difference grows with the activity level, and that without the term of the activity in the real environment of
+  pythermalcomfort (a copy of its source 4.8.1 with that condition disabled) it is 0.05 to 0.06 K at the three levels.
+  Standing, with the conversion of the Pierce model, the SET of pythermalcomfort is 0.058, 0.331 and 0.966 K below
+  that of EnergyPlus on average (1.04, 1.08 and 1.19 met); the conversion of accim changes it by 0.01 to 0.02 K. The
+  comments of `PMV_BODY_SURFACE_AREA` and `MET_ACTIVITY_LEVEL` and the docstring of
+  `accim.data.postprocessing.indoor_adaptation` say which models of EnergyPlus take 1.8 m², and give the differences
+  by activity level. The documentation (sections 4.9.2, 4.9.3 and 4.7.6) and `CHANGELOG.md` give the table by activity
+  level and what the code of EnergyPlus does against its Engineering Reference; `notes/decisions.md` has all the
+  values; and `notes/BORRADOR_issue_EnergyPlus_SET_Pierce_2026-11-12.md` is the draft of the issue for the repository
+  of EnergyPlus, which the author posts (it asks which behaviour is intended: the program of the SET of ASHRAE
+  55-2017 that the code cites is not in the library).
+- Files: `tests/core/test_pierce_set.py`, `tests/core/test_indoor_adaptation.py` (the call of its helper),
+  `accim/constants.py`, `accim/sim/comfort_hooks.py`, `accim/data/postprocessing/indoor_adaptation.py` (comments and
+  docstrings), `docs/source/4_detailed use.md` (4.7.6, 4.9.2 and 4.9.3), `CHANGELOG.md`, `CAMBIOS_CODIGO_v1.2.0.md`
+  (§47), `TODO.md`, `notes/decisions.md`, `notes/work-log.md`,
+  `notes/BORRADOR_issue_EnergyPlus_SET_Pierce_2026-11-12.md`.
+- Verification: `tests/core/test_pierce_set.py`: 6 passed with EnergyPlus 25.1 and pythermalcomfort 4.8.1 (the three
+  simulations of a year: the 24 measured cases within 0.001 K, the growth of the difference with the activity level,
+  and the difference without the term of the activity), and `tests/core/test_indoor_adaptation.py`, which calls its
+  helper: 26 passed. The convective coefficient and the body surface areas of EnergyPlus were read in its sources (the
+  tag `v25.1.0`: `ThermalComfort.cc`, `ThermalComfort.hh` and `occupant-thermal-comfort.tex` of the Engineering
+  Reference). The changed modules compile with Python 3.9, and the documentation builds without new warnings.
+- Next step: A4 (the error and the warning when a model prepared for a hook is simulated without it).
+
 #### [done] The static setpoints of JPN Aqilah 2025 in every zone of the models with its code (A24; branch `v1.2.0`)
 - Context: finding A24 of the self-audit of 2026-11-11, decided on 2026-11-12 (`notes/decisions.md`, decision 7): in
   the models with the EMS code of all the comfort standards (`add_accis_to_idf`), a zone switched to comfort standard

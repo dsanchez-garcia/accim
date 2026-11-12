@@ -2565,3 +2565,47 @@ código anterior, comprobado en un árbol de trabajo temporal del commit previo)
 con una zona del 23 tienen las entradas, y los IDF sin su código, ninguna; un modelo que pierde el código del 23 las
 pierde. `tests/core/test_zone_arguments.py` y `tests/core/test_modifyaccis_setast.py` esperan las dos líneas nuevas.
 Documentación: la sección 4.2.1 ya no avisa de este fallo.
+
+## 47. E-F1 medida otra vez: el SET de EnergyPlus (Pierce) y el de pythermalcomfort según el nivel de actividad (A1 y A2)
+
+Los hallazgos A1 y A2 de la autoauditoría del 11/11/2026: el modelo de Pierce de EnergyPlus convierte el nivel de
+actividad con 1,8258 m² (accim, con 1,8 m²), y su código no tiene el término de la actividad en el coeficiente
+convectivo del ambiente real, que sí tienen su Engineering Reference y pythermalcomfort; así que la medición de E-F1,
+hecha con los 110,7 W/persona del modelo de ejemplo, mezclaba una diferencia de entradas con la del modelo y solo valía
+cerca de 1 met. Decidido el 12/11/2026 (`notes/decisions.md`): medirla otra vez con las dos conversiones y a 1,1 y
+1,2 met; los ganchos conservan los 1,8 m².
+
+**El código de accim no cambia** (solo comentarios y docstrings: `accim.constants.PMV_BODY_SURFACE_AREA`,
+`accim.sim.comfort_hooks.MET_ACTIVITY_LEVEL` y `accim.data.postprocessing.indoor_adaptation`, que decían que EnergyPlus
+usa 1,8 m² en todos sus modelos de confort, o daban las diferencias de E-F1 sin el nivel de actividad).
+
+**La medición** (modelo de ejemplo con el ACCIS, un año en Sevilla, EnergyPlus 25.1, 6 pasos por hora, 0,137 m/s, 1,0
+clo en invierno y 0,5 clo en verano; medias horarias del SET de pythermalcomfort 4.8.1 menos el de EnergyPlus; media
+del año y, entre paréntesis, máximo en valor absoluto de las dos zonas). Columnas: (a) conversión de accim (1,8 m²),
+de pie; (b) la misma, sentado; (c) conversión del modelo de Pierce (1,8258 m²), de pie; (d) como (c), sin el término de
+la actividad en el coeficiente convectivo del ambiente real de pythermalcomfort:
+
+| Nivel de actividad | (a) | (b) | (c) | (d) |
+|---|---|---|---|---|
+| 110,7 W/persona | −0,045 K (0,20) | −0,116 K (0,34) | −0,058 K (0,14) | −0,058 K (0,14) |
+| 115 W/persona | −0,325 K (0,60) | −0,398 K (0,75) | −0,331 K (0,53) | −0,056 K (0,14) |
+| 126 W/persona | −0,943 K (1,44) | −1,021 K (1,58) | −0,966 K (1,41) | −0,051 K (0,13) |
+
+Conclusiones (`notes/decisions.md`, «E-F1 measured again»): los dos SET coinciden (0,05–0,2 K) solo hasta unos
+1,05 met; por encima, el de EnergyPlus es más alto (0,3 K a 1,1 met y 1 K a 1,2 met), y toda esa dependencia del nivel
+de actividad es el término 5,66·(met − 0,85)^0,39 del coeficiente convectivo del ambiente real, que el código de
+EnergyPlus solo tiene en el ambiente estándar; la superficie corporal de la conversión cambia el SET 0,01–0,02 K de
+media.
+
+**Pruebas.** `tests/core/test_pierce_set.py`, reescrito: el nivel de actividad es su parámetro (110,7, 115 y 126
+W/persona; las tres simulaciones de un año corren a la vez, cada una en su carpeta), con las dos conversiones y las dos
+posturas (24 casos medidos, dentro de 0,001 K); comprueba que la diferencia crece con el nivel de actividad, y que sin
+el término de la actividad en el ambiente real de pythermalcomfort (una copia de su fuente 4.8.1 con esa condición
+anulada; se omite con otra versión) queda en 0,05–0,06 K en los tres niveles. `_accis_model` ya no recibe
+`monkeypatch` (lo usa una fixture de módulo), y `tests/core/test_indoor_adaptation.py`, que lo importa, lo llama así.
+
+**Documentación.** Sección 4.9.2 (qué hace el código de EnergyPlus y qué dice su Engineering Reference, la tabla por
+nivel de actividad, y corregida la frase que atribuía los 1,8 m² a EnergyPlus sin más), 4.9.3 y 4.7.6; `CHANGELOG.md`;
+y `notes/BORRADOR_issue_EnergyPlus_SET_Pierce_2026-11-12.md`, el borrador del issue para el repositorio de EnergyPlus
+sobre la diferencia entre su código y su Engineering Reference, que publica el autor si lo ve oportuno (el listado del
+programa del SET de ASHRAE 55 que cita el código no está en la biblioteca: no comprobado).

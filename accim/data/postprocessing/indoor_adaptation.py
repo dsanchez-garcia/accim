@@ -496,8 +496,10 @@ def table_indicators(df: pd.DataFrame, zones: Sequence[str], tsv_limit: Optional
       timestep, as EnergyPlus does, so the two SET have the same inputs only where those schedules give the values of
       ``pythermalcomfort_set`` (not with a seasonal clothing insulation or the dynamic clothing model). With the same
       inputs, in a year in Seville, E-F1 measured the SET of pythermalcomfort below that of EnergyPlus by 0.045 K on
-      average (at most 0.20 K in the hourly means) standing and by 0.116 K (at most 0.34 K) sitting
-      (``notes/decisions.md``), which moves the hours near the limits of the band.
+      average (at most 0.20 K in the hourly means) standing and by 0.116 K (at most 0.34 K) sitting with 1.06 met,
+      which moves the hours near the limits of the band, and by 0.33 to 0.40 K with 1.1 met and 0.94 to 1.02 K with
+      1.2 met, since the code of EnergyPlus has no term of the activity in the convective coefficient of the real
+      environment (``notes/decisions.md``, E-F1 measured again on 2026-11-12).
 
     The building adds up the hours of its zones and weights their means by their hours, of the zones that have each
     output. With hourly rows (and timestep outputs aggregated by Table with ``frequency_agg_func='sum'``), the

@@ -36,6 +36,13 @@ existing tracking files — it does not replace them (see
   - A24: every zone of a model with the code of JPN Aqilah 2025 has the inputs of its static setpoints (the defaults
     in the zones of the other comfort standards), so a zone edited by hand to comfort standard 23 runs in EnergyPlus;
     the golden master changes in `s01` to `s06` and `s09` only (two lines in each zone).
+  - E-F1 measured again (A1 and A2): with 110.7, 115 and 126 W/person, the SET of pythermalcomfort is 0.05, 0.33 and
+    0.94 to 0.97 K below the Pierce SET of EnergyPlus on average (standing, a year in Seville), and 0.05 to 0.06 K at
+    the three activity levels without the term of the activity of the convective coefficient of its real environment,
+    which the code of EnergyPlus has only in the standard environment (its Engineering Reference gives it for the
+    model): both SET agree up to about 1.05 met only. The 1.8 m² of the hooks, instead of the 1.8258 m² of the Pierce
+    model, change the SET by 0.01 to 0.02 K. The draft of the issue for EnergyPlus, which the author posts, is
+    [[BORRADOR_issue_EnergyPlus_SET_Pierce_2026-11-12.md]].
 - **Validation**: in the entry of each task of [[../DEVLOG.md]] (the tests of the task, EnergyPlus 25.1 with both
   backends where the EMS code changes, and the golden master, compared line by line before writing it again).
 - **Next step**: the review of Claude Science of sessions 2 and 3, which also covers this session; the message of the

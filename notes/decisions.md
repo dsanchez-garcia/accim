@@ -70,8 +70,104 @@ template]] to add a new entry.
        `AddAccis` or `modify_accis` are given other static setpoints for the zones of 23.
      - A model that loses the code of 23 (`set_comfort_standard_code` without it) loses these inputs in the zones of
        the other comfort standards, so that the output IDFs of `AddAccis` without that code do not change.
+  4. E-F1 measured again (decisions 1 and 2, findings A1 and A2); the measurement is in the entry below.
+     - The activity levels are 110.7 (that of the sample model), 115 and 126 W/person (the examples of the decision:
+       1.1 and 1.2 met with the 1.8 m² of the hooks), constant all the year, each one in a simulation of a year; the
+       clothing insulation is that of the sample model (1.0 and 0.5 clo by season), and its two levels are reported
+       apart.
+     - That the term of the activity of the convective coefficient is the difference is checked with a copy of the
+       source of the two-node model of pythermalcomfort 4.8.1 in which the condition of that term is disabled in the
+       real environment only (the test builds it from the installed source, and is skipped with another version):
+       its argument `calculate_ce` removes the term from both environments, so it does not reproduce EnergyPlus.
+     - The draft of the issue asks which behaviour is intended and does not say which one is right: the program of
+       the SET of ASHRAE 55-2017, Appendix D, which the code of EnergyPlus cites, is not in the library.
+     - The comments of `PMV_BODY_SURFACE_AREA` and `MET_ACTIVITY_LEVEL` said that EnergyPlus takes 1.8 m² in all its
+       thermal comfort models; they now say which ones do.
 - **Consequences**: the tasks done leave `TODO.md` for `DEVLOG.md`; the documentation says what each choice means
   for the users (section 4.2 of the detailed use, and `CHANGELOG.md`).
+
+## 2026-11-12 — E-F1 measured again: the SET of EnergyPlus (Pierce) against that of pythermalcomfort, by activity level
+
+- **Status**: accepted (a measurement; task of `TODO.md` from findings A1 and A2 of the self-audit of 2026-11-11,
+  decided on 2026-11-12: decisions 1 and 2 of the entry of the decisions below). It completes the measurement of
+  2026-11-10 ([[decisions.md#2026-11-10 — The SET of EnergyPlus (Pierce) against that of pythermalcomfort, measured (E-F1)|E-F1]]),
+  which holds near 1 met only.
+- **Context**: the self-audit found that the Pierce model of EnergyPlus converts the activity level with 1.8258 m²
+  (accim, with 1.8 m²: finding A1) and has no term of the activity in the convective coefficient of the real
+  environment (finding A2), so E-F1, measured at the 110.7 W/person of the sample model, mixed an input difference with
+  the model difference and could not be extended to other activity levels. Both were checked in the sources on
+  2026-11-12 (the tag `v25.1.0` of the repository of EnergyPlus): in `ThermalComfort.cc`, `CalcStandardEffectiveTemp`
+  takes an air velocity of at least 0.1 m/s and the convective coefficient of the real environment max(3.0·P^0.53,
+  8.600001·(v·P)^0.53), with 5.66·(met − 0.85)^0.39 only in that of the standard environment, and its header cites
+  ASHRAE 55-2017, Appendix D; `ThermalComfort.hh` has `BodySurfArea = 1.8` (Dubois) and `BodySurfAreaPierce = 1.8258`;
+  and the Engineering Reference (`occupant-thermal-comfort.tex`) says that the convective coefficient of the Pierce
+  model is the larger of 8.6·v^0.53 and 5.66·(M/58.2 − 0.85)^0.39, with the air velocity reset to 0.137 m/s, and that
+  all the thermal comfort models take 1.8 m². pythermalcomfort 4.8.1 (`two_nodes_gagge.py`) has that term in both
+  environments, unless `calculate_ce`. The listings of the SET of ASHRAE 55-2017 and 55-2020 are not in the library
+  **[not verified]**.
+- **Measurement** (2026-11-12, `tests/core/test_pierce_set.py`): the model of E-F1 (the sample model with the ACCIS,
+  `vrf_ac`, INT EN16798, category II, comfort mode 3, and Pierce in its People objects; a year in Seville, EnergyPlus
+  25.1, 6 timesteps per hour; air velocity 0.137 m/s; clothing insulation 1.0 clo until 1 April and from 1 October, 0.5
+  clo between them), with the activity level schedules of its People objects at 110.7 (the sample model), 115 and 126
+  W/person. Differences of the hourly means (`set_tmp` of pythermalcomfort 4.8.1 minus the Pierce SET of EnergyPlus),
+  all the hours of the year, Block1:Zone1 / Block1:Zone2: mean, mean absolute and maximum absolute (K).
+
+  With the metabolic rate of the hooks of accim, activity/(58.2·1.8):
+
+  | Activity (met) | Posture | Mean | Mean absolute | Maximum absolute |
+  |---|---|---|---|---|
+  | 110.7 W (1.057) | standing | −0.045 / −0.045 | 0.057 / 0.056 | 0.181 / 0.196 |
+  | 110.7 W (1.057) | sitting | −0.116 / −0.116 | 0.118 / 0.117 | 0.324 / 0.344 |
+  | 115 W (1.098) | standing | −0.325 / −0.325 | 0.325 / 0.325 | 0.578 / 0.603 |
+  | 115 W (1.098) | sitting | −0.398 / −0.397 | 0.398 / 0.397 | 0.711 / 0.746 |
+  | 126 W (1.203) | standing | −0.943 / −0.943 | 0.943 / 0.943 | 1.411 / 1.441 |
+  | 126 W (1.203) | sitting | −1.021 / −1.020 | 1.021 / 1.020 | 1.537 / 1.580 |
+
+  With the metabolic rate of the Pierce model of EnergyPlus, activity/(58.2·1.8258) (the same inputs for both models):
+
+  | Activity (met) | Posture | Mean | Mean absolute | Maximum absolute |
+  |---|---|---|---|---|
+  | 110.7 W (1.042) | standing | −0.058 / −0.058 | 0.058 / 0.058 | 0.132 / 0.144 |
+  | 110.7 W (1.042) | sitting | −0.128 / −0.128 | 0.128 / 0.128 | 0.273 / 0.290 |
+  | 115 W (1.082) | standing | −0.331 / −0.331 | 0.331 / 0.331 | 0.516 / 0.535 |
+  | 115 W (1.082) | sitting | −0.403 / −0.403 | 0.403 / 0.403 | 0.649 / 0.677 |
+  | 126 W (1.186) | standing | −0.966 / −0.966 | 0.966 / 0.966 | 1.387 / 1.411 |
+  | 126 W (1.186) | sitting | −1.043 / −1.043 | 1.043 / 1.043 | 1.512 / 1.546 |
+
+  By clothing insulation (the metabolic rate of the Pierce model, standing, Block1:Zone1; mean): −0.065 K (0.5 clo) and
+  −0.051 K (1.0 clo) at 110.7 W/person; −0.373 and −0.290 K at 115 W/person; −1.090 and −0.843 K at 126 W/person.
+
+  The body surface area of the conversion alone (`set_tmp` with 1.8 m² minus `set_tmp` with 1.8258 m², standing): +0.013
+  K on average in the year at 110.7 W/person (+0.037 K with 1.0 clo and −0.012 K with 0.5 clo; at most 0.071 K), +0.006
+  K at 115 W/person and +0.023 K at 126 W/person (at most 0.078 K).
+
+  Without the term of the activity in the convective coefficient of the real environment of pythermalcomfort (its
+  two-node model run from a copy of its source with that one condition disabled; the metabolic rate of the Pierce model,
+  standing), as in the code of EnergyPlus:
+
+  | Activity (met) | Mean | Mean absolute | Maximum absolute |
+  |---|---|---|---|
+  | 110.7 W (1.042) | −0.058 / −0.058 | 0.058 / 0.058 | 0.132 / 0.144 |
+  | 115 W (1.082) | −0.056 / −0.056 | 0.056 / 0.056 | 0.130 / 0.141 |
+  | 126 W (1.186) | −0.051 / −0.051 | 0.051 / 0.051 | 0.125 / 0.134 |
+
+- **Decision**: (1) the statements of E-F1 and F1 on the agreement of both SET (0.05 to 0.2 K) hold near 1 met only
+  (up to about 1.05 met, where the term of the activity is not the larger one at 0.137 m/s); at 1.1 met the SET of
+  pythermalcomfort is 0.33 K below that of EnergyPlus on average, and at 1.2 met, 0.94 to 0.97 K (standing; 0.07 K more
+  sitting). (2) That term of the convective coefficient of the real environment accounts for all the dependence on the
+  activity level: without it, the difference is 0.05 to 0.06 K at the three activity levels, of the order of the other
+  differences of both codes (the radiative fraction of the body, 0.72 in EnergyPlus and 0.73 standing or 0.70 sitting
+  in pythermalcomfort). (3) The body surface area of the conversion (1.8 m² in the hooks of accim, kept by decision 1 of
+  2026-11-12) changes the SET by 0.01 to 0.02 K on average (at most 0.08 K), so it is not what makes both SET differ.
+  (4) The reference SET of F1 and F3 is that of pythermalcomfort (decision 12 of 2026-11-12), so these differences are
+  the error of the Pierce SET of EnergyPlus as an approximation of it: the indicators of the causal band with the
+  Pierce SET are comparable with those of the reference SET only for activity levels of about 1 met.
+- **Consequences**: `tests/core/test_pierce_set.py` reproduces the three tables (the activity level is its parameter;
+  the three simulations run at the same time), and sections 4.9.2, 4.9.3 and 4.7.6 of the detailed use give the
+  differences by activity level. The draft of an issue for the repository of EnergyPlus
+  ([[BORRADOR_issue_EnergyPlus_SET_Pierce_2026-11-12.md]]) has the measurement and the two differences between its
+  code and its Engineering Reference; the author posts it, if he sees fit, once he has checked the program of the SET
+  of ASHRAE 55 that the code cites.
 
 ## 2026-11-12 — The decisions on the six questions left open after session 3 of the review of 1.2.0
 
@@ -246,6 +342,8 @@ template]] to add a new entry.
     reported apart; the sentence of section 4.9.2 on "the body surface area of 1.8 m² with which EnergyPlus gives the
     activity per person" corrected (true of its Fanger and KSU models, not of its Pierce model); the entries of E-F1 and
     F1 of this file, sections 4.9.2 and 4.9.3, `CHANGELOG.md` and the values of `tests/core/test_pierce_set.py` updated.
+    Done on 2026-11-12 (the entry "E-F1 measured again" above: the conversion changes the SET by 0.01 to 0.02 K on
+    average).
   - **A2**: options (i) and (ii). (i) E-F1 is repeated at 1.1 and 1.2 met (for instance, 115 and 126 W/person) with both
     clothing levels, and `tests/core/test_pierce_set.py` takes the activity level as a parameter; until then, the
     statements of E-F1 and F1 ("within 0.2 K standing and 0.35 K sitting", −0.08 and −0.155 K) hold near 1 met only, and
@@ -255,7 +353,9 @@ template]] to add a new entry.
     that of pythermalcomfort (the verdict on the SET of the indicators, below). The difference between the code of
     EnergyPlus and its Engineering Reference is worth an issue in the repository of EnergyPlus
     (NatLabRockies/EnergyPlus) once it is measured: its draft, with the measurement, is part of the task, and the author
-    posts it.
+    posts it. Measured on 2026-11-12 (the entry "E-F1 measured again" above): standing, the SET of pythermalcomfort is
+    0.33 K below that of EnergyPlus at 1.1 met and 0.94 to 0.97 K at 1.2 met, and 0.05 to 0.06 K at the three activity
+    levels without that term; the draft of the issue is `notes/BORRADOR_issue_EnergyPlus_SET_Pierce_2026-11-12.md`.
   - **A4**: option (ii). A model with the programs `ApplyHookSetpoints_<zone>` was prepared for a hook, and without it
     its results are those of the comfort standard of its zones, with the outputs of the hook at 0: `run_ep` raises a
     `ValueError` with the EMS backend (its default), which cannot run a hook, naming the models and
@@ -471,7 +571,8 @@ template]] to add a new entry.
   verdict of S4 above), and the validation study reports them, with those of the Pierce SET beside them; the Pierce SET
   approximates it near 1 met (E-F1: within 0.2 K standing) and is higher above about 1.05 met, where the code of
   EnergyPlus has not the term of the activity of the convective coefficient (finding A2: tenths of a kelvin at 1.1 and
-  1.2 met, to be measured; the causal TSV changes by 0.11 per kelvin). No output or column changes its name, and
+  1.2 met, to be measured; measured on 2026-11-12, 0.33 K at 1.1 met and 0.94 to 0.97 K at 1.2 met, standing: the entry
+  "E-F1 measured again" above; the causal TSV changes by 0.11 per kelvin). No output or column changes its name, and
   `Table(indoor_adaptation_indicators=True)` does not change; the documentation (sections 4.7.6, 4.9.2 and 4.9.3) and
   the docstrings stop calling the indicators of pythermalcomfort provisional, and say which SET is the reference. The
   database calculated its SET with the default posture of `set_tmp` (standing), and the hooks of accim sit the occupants
@@ -1014,7 +1115,8 @@ template]] to add a new entry.
   (the decisions of 2026-11-12 above): this measurement holds near 1 met only (the code of EnergyPlus has not the term
   of the activity of the convective coefficient that the context below gives to its Pierce model, and that
   pythermalcomfort has), and its metabolic rate, converted with 1.8 m², is 1.43 % above that of the Pierce model
-  (1.8258 m²); to be measured again (`TODO.md`)
+  (1.8258 m²); measured again on 2026-11-12, with 110.7, 115 and 126 W/person and both conversions (the entry "E-F1
+  measured again" of that day, above), which keeps the values of this table for 110.7 W/person
 - **Context**: F1 inverts the SET of pythermalcomfort (`set_tmp`, the code of ASHRAE 55) in the hook of the SET, while
   EnergyPlus reports the SET of its Pierce two-node model (Engineering Reference 25.2, 19.1.4: hc = max(8.6·v^0.53,
   5.66·(met − 0.85)^0.39) with v ≥ 0.137 m/s, radiative area 0.72 of the body, 1.8 m²). Block F asked to compare them,
