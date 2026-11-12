@@ -62,6 +62,14 @@ template]] to add a new entry.
        between the SET of the hook and that of EnergyPlus in that zone is 0.187 K (it was 0.191 K), and the other zone
        is within the causal band in 58.2 of its 60 occupied hours (56.3 before); checked against the commit before the
        change in a temporary worktree. The summer week does not change.
+  3. The static setpoints of JPN Aqilah 2025 in every zone (decision 7, finding A24).
+     - The inputs are added where the EMS global variables of the static setpoints are declared
+       (`set_static_setpoint_variables`, which `add_accis_to_idf` and `set_comfort_standard_code` already call), so
+       every function that writes the code of 23 gives them to all the zones, in the place of the inputs of the zones.
+     - The zones of the other comfort standards get the defaults (20 and 28 °C), as the decision says, also when
+       `AddAccis` or `modify_accis` are given other static setpoints for the zones of 23.
+     - A model that loses the code of 23 (`set_comfort_standard_code` without it) loses these inputs in the zones of
+       the other comfort standards, so that the output IDFs of `AddAccis` without that code do not change.
 - **Consequences**: the tasks done leave `TODO.md` for `DEVLOG.md`; the documentation says what each choice means
   for the users (section 4.2 of the detailed use, and `CHANGELOG.md`).
 

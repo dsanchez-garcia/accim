@@ -2534,3 +2534,34 @@ mínimo llegan al termostato con la tolerancia.
 gancho y el de EnergyPlus en esa zona pasa de 0,191 a 0,187 K, y la otra zona está dentro de la banda causal 58,2 de
 sus 60 horas ocupadas (antes, 56,3). Comprobado con el commit anterior en un árbol de trabajo temporal; la semana de
 verano no cambia. Actualizados `MEASURED` de `tests/core/test_sun2026_set.py` y la sección 4.9.3.
+
+## 46. Las consignas estáticas del estándar 23 en todas las zonas de los modelos con su código (A24)
+
+El hallazgo A24 de la autoauditoría del 11/11/2026: en los modelos con el código EMS de todos los estándares de
+confort (`add_accis_to_idf`), una zona cuyo estándar se cambiaba al 23 (JPN Aqilah 2025) editando
+`set ComfStand = 23` en su programa `SetInputData_<zona>` detenía EnergyPlus en el calentamiento («Variable =
+'STATICACST' used in expression has not been initialized»), porque solo las zonas del 23 tenían las entradas
+`StaticAHST` y `StaticACST` (decisión de G4). Decidido el 12/11/2026 (`notes/decisions.md`): opción (ii).
+
+**Ahora.**
+
+- `accim.sim.ems.static_setpoints.set_static_setpoint_inputs(idf, enabled=True)`: da a todas las zonas del modelo las
+  dos entradas que les falten, con sus valores por defecto (20,0 y 28,0 °C), en el sitio que les corresponde en el
+  orden de `INPUT_VARIABLES` (antes de las del mínimo y el máximo, del limitador de la deriva y del factor de
+  apertura); sin `enabled`, las quita de las zonas cuyo estándar no las usa.
+- `set_static_setpoint_variables(idf)` (que ya llamaban `add_accis_to_idf`, al añadir las variables globales, y
+  `set_comfort_standard_code`, y por tanto `AddAccis`, `modify_accis` y el módulo paramétrico) la llama: con el código
+  del 23 (sus subprogramas `SetAST_CS23_<trozo>`), todas las zonas tienen las entradas; sin él, ni variables globales
+  ni entradas.
+- Las zonas de otros estándares las ignoran. Los IDF de salida de `AddAccis` sin el código del 23 no cambian; en los
+  que tienen una zona del 23 (con `zone_arguments`), las demás zonas reciben los valores por defecto.
+
+**Golden master.** Cambian solo `s01` a `s06` y `s09` (los modelos de las funciones en memoria, con el código de todos
+los estándares): dos líneas más en cada `SetInputData_<zona>`, comprobado línea a línea antes de reescribirlos.
+
+**Pruebas.** `tests/core/test_jpn_aqilah2025.py`: un modelo de `add_accis_to_idf` con una zona cambiada a mano al 23
+(solo `ComfStand`, `CAT` y `ComfMod`) se simula con EnergyPlus 25.1 y sus consignas son 20 y 28 °C (falla con el
+código anterior, comprobado en un árbol de trabajo temporal del commit previo); todas las zonas de un IDF de `AddAccis`
+con una zona del 23 tienen las entradas, y los IDF sin su código, ninguna; un modelo que pierde el código del 23 las
+pierde. `tests/core/test_zone_arguments.py` y `tests/core/test_modifyaccis_setast.py` esperan las dos líneas nuevas.
+Documentación: la sección 4.2.1 ya no avisa de este fallo.

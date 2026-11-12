@@ -17,7 +17,9 @@ of 21 configurations were written again after checking, line by line, that only 
 (with the EMS code of its outdoor metric, the mean of the 7 previous days) and of 10 (PMOT instead of RMOT) in `b01`
 (16 of 200 files) and `b03`, one line of the program `SetVST` of every model in mixed mode (its branch of INT EN16798
 no longer names comfort standard 10: `b02`, `b03`, `b05`, `b07` to `b10`, `b12`, `b13`, `b15` to `b17` and `b22`), and
-the models with the code of all the comfort standards (`s01` to `s06` and `s09`).
+the models with the code of all the comfort standards (`s01` to `s06` and `s09`). And these seven were written again
+once more when every zone of a model with the code of JPN Aqilah 2025 got the inputs of its static setpoints (finding
+A24 of the self-audit of 2026-11-11): two lines more in each program `SetInputData_<zone>`, and nothing else.
 
 | File | What it holds |
 | --- | --- |

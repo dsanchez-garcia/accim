@@ -36,6 +36,35 @@ Recommended flow: track active work in `TODO.md`, move completed outcomes to `DE
 ## Entries
 
 ### 2026-11-12
+#### [done] The static setpoints of JPN Aqilah 2025 in every zone of the models with its code (A24; branch `v1.2.0`)
+- Context: finding A24 of the self-audit of 2026-11-11, decided on 2026-11-12 (`notes/decisions.md`, decision 7): in
+  the models with the EMS code of all the comfort standards (`add_accis_to_idf`), a zone switched to comfort standard
+  23 by editing `set ComfStand = 23` in its program `SetInputData_<zone>` stopped EnergyPlus in the warm-up
+  ("Variable = 'STATICACST' used in expression has not been initialized"), since only the zones of 23 had the inputs
+  `StaticAHST` and `StaticACST`.
+- Changes: `accim.sim.ems.static_setpoints.set_static_setpoint_inputs(idf, enabled=True)` gives every zone the two
+  inputs that it lacks, with their defaults (20.0 and 28.0 °C), in the place of the inputs of the zones, or removes
+  them from the zones whose comfort standard does not use them; `set_static_setpoint_variables` calls it (with the
+  code of 23, every zone has them; without it, none), so `add_accis_to_idf`, `AddAccis`, `modify_accis` and the
+  parametric module follow. The output IDFs of `AddAccis` without the code of 23 do not change.
+- Files: `accim/sim/ems/static_setpoints.py`, `tests/core/test_jpn_aqilah2025.py`, `tests/core/test_zone_arguments.py`,
+  `tests/core/test_modifyaccis_setast.py`, the golden files `s01` to `s06` and `s09`,
+  `tests/core/golden_master/README.md`, `docs/source/4_detailed use.md` (4.2 and 4.2.1), `CHANGELOG.md`,
+  `CAMBIOS_CODIGO_v1.2.0.md` (§46), `TODO.md`, `notes/decisions.md`, `notes/work-log.md`.
+- Verification: `tests/core/test_jpn_aqilah2025.py`, `tests/core/test_zone_arguments.py` and
+  `tests/core/test_modifyaccis_setast.py`: 71 passed, with EnergyPlus 25.1 for the zone switched by hand (a model of
+  `add_accis_to_idf` whose zone 1 gets only `ComfStand = 23`, `CAT = 80` and `ComfMod = 0` runs two days of July with
+  setpoints of 20 and 28 °C, and the other zone keeps the adaptive setpoints of INT EN16798; with the commit before
+  the change, in a temporary worktree, the test fails with the error of EnergyPlus). The golden master: only `s01` to
+  `s06` and `s09` change, two added lines in each program `SetInputData_<zone>` (`set StaticAHST = 20.0` and
+  `set StaticACST = 28.0`), compared line by line before writing them again; 35 passed. The whole suite of
+  `tests/core`, run with the working tree of that moment, which also had the changes in progress of the next tasks
+  (A4 and E-F1): 1585 passed, 2 skipped and 3 failed, the three from those changes and none from this one (a helper
+  of the test of E-F1 that another test calls, a wrong expectation of a new test of A4, and a test that simulated a
+  model prepared for a hook with the EMS backend, which A4 no longer allows), corrected in their tasks;
+  `tests/parametric_and_optimisation`: 520 passed. `accim/sim/ems/static_setpoints.py` compiles with Python 3.9.
+- Next step: E-F1 measured again (findings A1 and A2).
+
 #### [done] The thermostats get the minimum and the maximum of the setpoints with the tolerance (A19, with S1; branch `v1.2.0`)
 - Context: finding A19 of the self-audit of 2026-11-11, decided on 2026-11-12 (`notes/decisions.md`, decisions 6 and
   10): where the minimum heating setpoint or the maximum cooling setpoint binds, the thermostat got the limit itself,

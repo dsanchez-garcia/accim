@@ -298,8 +298,14 @@ def test_add_accis_to_idf_adds_the_programs_of_each_zone(building, script_type):
 
     programs = {p.Name: p for p in building.idfobjects['EnergyManagementSystem:Program']}
     mixed_mode = script_type == 'vrf_mm'
+    # The inputs with their defaults, and those of the static setpoints of JPN Aqilah 2025, which every zone of a model
+    # with its EMS code has (finding A24 of the self-audit of 2026-11-11), in the place of the inputs of its zones
+    expected = [line.replace('set ComfStand = 23', 'set ComfStand = 1')
+                for line in input_lines({'ComfStand': 23}, mixed_mode=mixed_mode)]
+    assert [line for line in expected if 'Static' not in line] == input_lines(mixed_mode=mixed_mode)
+    assert [line for line in expected if 'Static' in line] == ['set StaticAHST = 20.0', 'set StaticACST = 28.0']
     for zone in ['Block1_Zone1', 'Block1_Zone2']:
-        assert list(programs[f'SetInputData_{zone}'].obj[2:]) == input_lines(mixed_mode=mixed_mode)
+        assert list(programs[f'SetInputData_{zone}'].obj[2:]) == expected
         lines = list(programs[f'RunACCIS_{zone}'].obj[2:])
         assert lines[0] == f'run SetInputData_{zone}'
         assert ('run SetVST' in lines) is mixed_mode

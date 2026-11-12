@@ -33,6 +33,9 @@ existing tracking files — it does not replace them (see
     (20.1 and 25.9 °C with limits of 20 and 26 °C), and the setpoints without the tolerance are the limits. A maximum
     less than twice the tolerance above the minimum is now a `ValueError` (the thermostats on both would cross), as
     the window of the limiter of the drift; the warning of S1 and check 5 compare the setpoints of the thermostats.
+  - A24: every zone of a model with the code of JPN Aqilah 2025 has the inputs of its static setpoints (the defaults
+    in the zones of the other comfort standards), so a zone edited by hand to comfort standard 23 runs in EnergyPlus;
+    the golden master changes in `s01` to `s06` and `s09` only (two lines in each zone).
 - **Validation**: in the entry of each task of [[../DEVLOG.md]] (the tests of the task, EnergyPlus 25.1 with both
   backends where the EMS code changes, and the golden master, compared line by line before writing it again).
 - **Next step**: the review of Claude Science of sessions 2 and 3, which also covers this session; the message of the

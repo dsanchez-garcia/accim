@@ -104,7 +104,10 @@ def test_modify_accis_sets_the_input_data_and_none_keeps_it(building):
             'set AHSTtol = 0.2', 'set CoolSeasonStart = 152', 'set CoolSeasonEnd = 250', 'set CATcoolOffset = 0',
             'set CATheatOffset = 0', 'set SetpointAcc = 10000', 'set m = 0', 'set n = 0', 'set CustAST_ACSToffset = 0',
             'set CustAST_AHSToffset = 0', 'set CustAST_ACSTaul = 0', 'set CustAST_ACSTall = 0',
-            'set CustAST_AHSTaul = 0', 'set CustAST_AHSTall = 0', 'set MaxTempDiffVOF = 6',
+            'set CustAST_AHSTaul = 0', 'set CustAST_AHSTall = 0',
+            # The static setpoints of JPN Aqilah 2025, which every zone of a model with its EMS code has (finding A24
+            # of the self-audit of 2026-11-11); the other comfort standards ignore them
+            'set StaticAHST = 20.0', 'set StaticACST = 28.0', 'set MaxTempDiffVOF = 6',
             'set MinTempDiffVOF = 1', 'set MultiplierVOF = 0.25']
 
     accis.modify_accis(building, comfort_standard=1)

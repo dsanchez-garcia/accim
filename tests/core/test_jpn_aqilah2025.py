@@ -467,16 +467,60 @@ def test_the_models_of_add_accis_to_idf_declare_its_static_setpoints(tmp_path):
     add_accis_to_idf(idf, script_type='vrf_ac', supply_air_temp_input_method='temperature difference',
                      output_type='standard', output_frequencies=['hourly'], keep_existing_outputs=False,
                      setpoint_type='temperature', verbose=False)
-    # The code of all the comfort standards: the static setpoints are declared, and only the zones of JPN Aqilah 2025
-    # have them
+    # The code of all the comfort standards: the static setpoints are declared, and every zone has them, with the
+    # defaults, whatever its comfort standard is (finding A24 of the self-audit of 2026-11-11, decided on 2026-11-12:
+    # before, only the zones of JPN Aqilah 2025 had them, so a zone switched to it by editing its program stopped
+    # EnergyPlus), at the end of the inputs of the zones with full air-conditioning
     assert _static_variables(idf) == [['StaticAHST', 'StaticACST']]
-    assert not any('StaticAHST' in read_inputs(p) for p in input_programs(idf).values())
+    for program in input_programs(idf).values():
+        assert read_inputs(program)['ComfStand'] == 1
+        assert [str(line).strip() for line in program.fieldvalues[-2:]] == ['set StaticAHST = 20.0',
+                                                                            'set StaticACST = 28.0']
     with pytest.warns(UserWarning, match='reads the running mean outdoor temperature of CEN 15251'):
         modify_accis(idf, comfort_standard=23, category=80, comfort_mode=0,
                      zone_arguments={'Block1:Zone2': {'comfort_standard': 1, 'category': 2}})
     inputs = {zone: read_inputs(p) for zone, p in input_programs(idf).items()}
     assert (inputs['Block1_Zone1']['StaticAHST'], inputs['Block1_Zone1']['StaticACST']) == (20.0, 28.0)
-    assert 'StaticAHST' not in inputs['Block1_Zone2']
+    # The zone of INT EN16798 keeps them, and ignores them
+    assert (inputs['Block1_Zone2']['StaticAHST'], inputs['Block1_Zone2']['StaticACST']) == (20.0, 28.0)
+    # A model that loses the code of JPN Aqilah 2025 loses them in the zones of the other comfort standards
+    from accim.sim.ems.programs import set_comfort_standard_code
+
+    modify_accis(idf, comfort_standard=1, category=2, comfort_mode=3)
+    set_comfort_standard_code(idf, [1])
+    assert _static_variables(idf) == []
+    assert not any('StaticAHST' in read_inputs(p) or 'StaticACST' in read_inputs(p)
+                   for p in input_programs(idf).values())
+
+
+@needs_idd
+def test_every_zone_of_a_model_with_its_code_has_its_static_setpoints(tmp_path, monkeypatch):
+    # Finding A24 of the self-audit of 2026-11-11: an output IDF of AddAccis with a zone of JPN Aqilah 2025 has its
+    # code, so its other zones have the inputs of its static setpoints too, with the defaults (they ignore them)
+    from accim.sim.accis import load_idf
+    from accim.sim.ems.inputs import input_programs, read_inputs
+
+    written = _add_accis(tmp_path / 'model', monkeypatch, comfort_standard=[1], category=[1], comfort_mode=[3],
+                         static_heating_setpoint=19, static_cooling_setpoint=27,
+                         zone_arguments={'Block1:Zone2': {'comfort_standard': 23, 'category': 80, 'comfort_mode': 1}})
+    [path] = written.values()
+    idf = load_idf(path)
+    inputs = {zone: read_inputs(program) for zone, program in input_programs(idf).items()}
+    assert (inputs['Block1_Zone2']['ComfStand'], inputs['Block1_Zone1']['ComfStand']) == (23, 1)
+    assert (inputs['Block1_Zone2']['StaticAHST'], inputs['Block1_Zone2']['StaticACST']) == (19, 27)
+    assert (inputs['Block1_Zone1']['StaticAHST'], inputs['Block1_Zone1']['StaticACST']) == (20.0, 28.0)
+    # In the same place in both programs: before the inputs of the venting opening factor (mixed mode)
+    for program in input_programs(idf).values():
+        lines = [str(line).strip() for line in program.fieldvalues[2:]]
+        position = next(n for n, line in enumerate(lines) if line.startswith('set StaticAHST'))
+        assert lines[position + 1].startswith('set StaticACST') and lines[position + 2] == 'set MaxTempDiffVOF = 6'
+    assert _static_variables(idf) == [['StaticAHST', 'StaticACST']]
+    # The output IDFs without its code have neither the variables nor the inputs
+    reference = _add_accis(tmp_path / 'reference', monkeypatch, comfort_mode=[3], static_heating_setpoint=19)
+    [path] = reference.values()
+    other = load_idf(path)
+    assert _static_variables(other) == []
+    assert not any('StaticAHST' in read_inputs(p) for p in input_programs(other).values())
 
 
 @needs_idd
@@ -592,6 +636,40 @@ def test_jpn_aqilah_2025_in_energyplus(tmp_path, monkeypatch, capsys):
     found = results['EMS:Adaptive Cooling Setpoint Temperature_No Tolerance_Block1_Zone1 [C](TimeStep)']
     # The static setpoint of comfort mode 1 at the first timestep (RMOT is 0 for the EMS), then 0.38·RMOT + 16.9 + 2
     assert found.iloc[0] == pytest.approx(28) and found.iloc[1:].between(16, 30).all()
+
+
+@needs_energyplus
+def test_a_zone_switched_to_jpn_aqilah_2025_by_hand_runs_in_energyplus(tmp_path, monkeypatch):
+    # Finding A24 of the self-audit of 2026-11-11 (decided on 2026-11-12): in a model with the EMS code of all the
+    # comfort standards (add_accis_to_idf), a zone whose program SetInputData_<zone> was edited to comfort standard 23
+    # stopped EnergyPlus in the warm-up ("Variable = 'STATICACST' used in expression has not been initialized"), since
+    # only the zones of 23 had the inputs of its static setpoints. Now every zone has them
+    from accim.sim.accis import add_accis_to_idf, load_idf
+    from accim.sim.ems.inputs import input_programs, set_inputs
+
+    shutil.copy(SAMPLE_IDF, tmp_path / 'model.idf')
+    idf = load_idf(tmp_path / 'model.idf')
+    run_period = idf.idfobjects['RunPeriod'][0]
+    run_period.Begin_Month, run_period.Begin_Day_of_Month = 7, 1
+    run_period.End_Month, run_period.End_Day_of_Month = 7, 2
+    with warnings.catch_warnings():
+        warnings.simplefilter('ignore')
+        add_accis_to_idf(idf, script_type='vrf_ac', supply_air_temp_input_method='temperature difference',
+                         output_type='standard', output_frequencies=['timestep'], keep_existing_outputs=False,
+                         setpoint_type='temperature', verbose=False)
+    # By hand: only the comfort standard, the category and the comfort mode of one zone (static setpoints)
+    assert set_inputs(input_programs(idf)['Block1_Zone1'], {'ComfStand': 23, 'CAT': 80, 'ComfMod': 0}) == []
+    idf.saveas(str(tmp_path / 'edited.idf'))
+    monkeypatch.chdir(tmp_path)
+    results = _run_energyplus(tmp_path / 'edited.idf', tmp_path / 'out')
+    assert len(results) == 2 * 24 * STEPS
+    # Its static setpoints are the defaults, 20 and 28 °C
+    zone = 'Block1_Zone1 [C](TimeStep)'
+    assert (results[f'EMS:Adaptive Cooling Setpoint Temperature_No Tolerance_{zone}'] == 28).all()
+    assert (results[f'EMS:Adaptive Heating Setpoint Temperature_No Tolerance_{zone}'] == 20).all()
+    # The other zone keeps the adaptive setpoints of INT EN16798, the default of add_accis_to_idf
+    other = results['EMS:Adaptive Cooling Setpoint Temperature_No Tolerance_Block1_Zone2 [C](TimeStep)']
+    assert other.iloc[1:].between(22, 33).all() and other.iloc[1:].nunique() > 1
 
 
 @needs_energyplus
