@@ -35,6 +35,54 @@ Recommended flow: track active work in `TODO.md`, move completed outcomes to `DE
 
 ## Entries
 
+### 2026-11-13
+#### [done] Checks 1 and 2 of `verify_accim_simulation` and `AccimSimulationVerifier` find the zones and the windows whose names have ':' (branch `v1.2.0`)
+- Context: the P1 entry of `TODO.md` of 2026-11-09 (found with E2), the only P1 left after the session of 2026-11-12;
+  the author asked for it on 2026-11-13. Checks 1 and 2 split the names of the outputs, `<key>:<variable>`, at their
+  first ':', so the key of the zone `Block1:Zone1` was `BLOCK1`: `verify_accim_simulation` skipped the zones and the
+  windows of the models whose names have ':' (those of DesignBuilder, as the sample model) with a warning, and
+  `AccimSimulationVerifier` raised a `ValueError` with them.
+- Changes: `accim.utils.verification` has `_key_and_variable()` (the key of a column is the text before its last
+  ':', as `read_eso_using_readvarseso` reads it; also for the columns of the CSV files, with their units and
+  frequency) and `_find_column()`, which the searches of the function and of the class use: of the columns with both
+  fragments, it takes the one whose key is closest to the fragment (the fragment itself, then with it as whole words,
+  then within a longer name) and then the one whose variable is, so the outputs of `Block1:Zone1` are not taken from
+  `Block1:Zone10`. Each window is checked with the opening factor of its own surface (the component that its EMS
+  actuator `<window>_VentOpenFact` sets: `_window_components()`), not with that of the first window of its zone, and
+  with the cooling setpoint and the occupancy of its own zone, not of the first one (`_own_zone_first()`). The logic
+  of the checks does not change. They report now what they skipped: check 1, the timesteps in which the system of a
+  zone is on and the zone is beyond its setpoint (the system of the sample model does not hold the cooling setpoint
+  in many hours); check 2 of the function, the windows open against the conditions of the same timestep, with
+  constants for the ventilation setpoint and the minimum outdoor temperature, which include the timesteps of the
+  delay of the EMS (the class has neither). The docstring of `verify_accim_simulation`, section 4.6.1 of the detailed
+  use and `CHANGELOG.md` say what each check reports; what to do with it is an open question (`notes/questions.md`),
+  and the entry of `AccimSimulationVerifier` of `TODO.md` has the differences between the checks of the function and
+  of the class. Four tests (six cases: that of the limiter of the drift and those of the long-term discomfort)
+  asserted that `verify_accim_simulation` had no mismatch at all in simulations of the sample model, when check 1
+  skipped its zones: they assert it now of the other checks.
+- Files: `accim/utils/verification.py`, `tests/core/test_verification.py`, `tests/core/test_drift_limiter.py`,
+  `tests/core/test_long_term_discomfort_counters.py`, `docs/source/4_detailed use.md` (4.6.1), `CHANGELOG.md`,
+  `CAMBIOS_CODIGO_v1.2.0.md` (§56), `TODO.md`, `notes/questions.md`, `notes/decisions.md`, `notes/work-log.md`,
+  `notes/INFORME_SESION_v1.2.0_2026-11-12_4.md` (an addendum).
+- Verification: `tests/core/test_verification.py`: 18 passed, with its six new tests: the key and the variable of a
+  column; the closest column, with `Block1:Zone1` and `Block1:Zone10`; check 1 and check 2 with made-up outputs of the
+  sample model, whose two zones and six windows the code before the fix skips with warnings (run with the module of
+  the commit before, loaded from a file); and, with EnergyPlus 25.1, check 1 of 1 and 2 July, whose mismatches are
+  the timesteps of the CSV file in which a zone is cooled and above its setpoint by more than 0.1 °C, and both checks
+  and `AccimSimulationVerifier` (which raised a `ValueError` before) with 29 April to 1 May in mixed mode. The
+  fourteen test files that use the module of the verification, with the four tests whose assertion changes: 400
+  passed (16 min 54 s). What the checks report, measured with scripts of the session (the sample model in Seville):
+  check 1, with the hourly outputs of the weeks of January and July of the try-runs of F3 (fixed setpoints, EN
+  16798-1 and ASHRAE 55), 6 to 77 of the 168 hours of each zone, in which the cooling coils give 86 to 99 % of their
+  largest output of the week and the zones are 0.2 to 1.2 K above their setpoint on average; and none in the week of
+  29 April in mixed mode (timestep outputs). Check 2 of the function in that week: 213 mismatches of the six windows
+  (12 or 13 timesteps of each one with the HVAC system on, 21 or 23 with the zone at or below 20 °C, and 1 with it at
+  or above the cooling setpoint), and none of `AccimSimulationVerifier` in the 42 or 45 timesteps of each window that
+  it checks. The documentation builds with the warnings of the baseline, and the changed files compile with Python
+  3.9.
+- Next step: the decision of the author on what checks 1 and 2 report (`notes/questions.md`, 2026-11-13), and one
+  implementation of them for the function and the class (`TODO.md`).
+
 ### 2026-11-12
 #### [done] The final checks and the report of session 4 (branch `v1.2.0`)
 - Context: the last step of the implementation session of the decisions of 2026-11-12: the checks of the whole

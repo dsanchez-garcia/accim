@@ -19,9 +19,12 @@ import pytest
 
 from accim.energyplus import find_energyplus
 from accim.utils.verification import (
+    AccimSimulationVerifier,
     _compute_setpoints_arguments,
     _dates_and_times,
     _environment_starts,
+    _find_column,
+    _key_and_variable,
     _pmv_index_mismatches,
     _setpoint_mismatches,
     _weighted_mean,
@@ -291,13 +294,15 @@ def _add_accis(tmp_path, frequency, zone_arguments, **arguments):
     shutil.copy(SAMPLE_IDF, tmp_path / 'TestModel.idf')
     cwd = os.getcwd()
     os.chdir(tmp_path)
+    values = dict(script_type='vrf_ac', supply_air_temp_input_method='temperature difference',
+                  output_type='standard', output_frequencies=[frequency], keep_existing_outputs=False,
+                  energyplus_version='auto', setpoint_type='temperature', confirm=True, verbose=False,
+                  zone_arguments=zone_arguments)
+    values.update(arguments)
     try:
         with warnings.catch_warnings():
             warnings.simplefilter('ignore')
-            AddAccis(script_type='vrf_ac', supply_air_temp_input_method='temperature difference',
-                     output_type='standard', output_frequencies=[frequency], keep_existing_outputs=False,
-                     energyplus_version='auto', setpoint_type='temperature', confirm=True, verbose=False,
-                     zone_arguments=zone_arguments, **arguments)
+            AddAccis(**values)
     finally:
         os.chdir(cwd)
     return load_idf(sorted(tmp_path.glob('TestModel[[]*.idf'))[0])
@@ -403,3 +408,211 @@ def test_verify_accim_simulation_against_compute_setpoints(tmp_path):
     zones = set(wrong['zone_or_window'])
     assert 'Block1_Zone1' in zones and 'Block1_Zone2' not in zones
     assert {'Check4_RMOT', 'Check4_PMOT', 'Check4_ACST', 'Check4_AHST'} <= set(wrong['check'])
+
+# ─────────────────────────────────────────────────────────────────────────────
+# CHECKS 1 AND 2: THE OUTPUTS WHOSE KEYS HAVE ':'
+# ─────────────────────────────────────────────────────────────────────────────
+
+def test_the_key_and_the_variable_of_a_column():
+    # The key of an output is the text before the last ':'. Checks 1 and 2 split the names at the first one, so the
+    # key of the zone 'Block1:Zone1' was 'BLOCK1', and they skipped the zones and the windows of the models whose
+    # names have ':', as those of DesignBuilder (an entry of TODO.md of 2026-11-09)
+    assert _key_and_variable('Block1:Zone1:Zone Operative Temperature') == ('BLOCK1:ZONE1',
+                                                                            'ZONE OPERATIVE TEMPERATURE')
+    assert _key_and_variable('Environment:Site Wind Speed') == ('ENVIRONMENT', 'SITE WIND SPEED')
+    # The columns of the CSV files of EnergyPlus, with the units and the frequency
+    assert _key_and_variable(' BLOCK1:ZONE1 VRF INDOOR UNIT DX COOLING COIL:Cooling Coil Total Cooling Rate '
+                             '[W](TimeStep)') == ('BLOCK1:ZONE1 VRF INDOOR UNIT DX COOLING COIL',
+                                                  'COOLING COIL TOTAL COOLING RATE')
+    assert _key_and_variable('ACST_SCH_BLOCK1_ZONE1:Schedule Value [](Hourly)') == ('ACST_SCH_BLOCK1_ZONE1',
+                                                                                    'SCHEDULE VALUE')
+    assert _key_and_variable('EMS:Ventilation Setpoint Temperature_Block1_Zone1 [C](Hourly)') == (
+        'EMS', 'VENTILATION SETPOINT TEMPERATURE_BLOCK1_ZONE1')
+    # Without ':', no key
+    assert _key_and_variable('Date/Time') == ('', 'DATE/TIME')
+
+
+def test_the_column_of_a_key_and_a_variable():
+    columns = ['BLOCK1:ZONE10:Zone Operative Temperature', 'BLOCK1:ZONE1:Zone Operative Temperature',
+               'BLOCK1:ZONE1:Zone Thermostat Operative Temperature',
+               'BLOCK1:ZONE10 VRF INDOOR UNIT DX COOLING COIL:Cooling Coil Total Cooling Rate',
+               'BLOCK1:ZONE1 VRF INDOOR UNIT DX COOLING COIL:Cooling Coil Total Cooling Rate',
+               'VRF OUTDOOR UNIT_BLOCK1:ZONE1:VRF Heat Pump Cooling Electricity Energy',
+               'EMS:People Occupant Count_Block1_Zone10', 'EMS:People Occupant Count_Block1_Zone1',
+               'ACST_SCH_BLOCK1_ZONE1:Schedule Value', 'Environment:Site Outdoor Air Drybulb Temperature', 'Date/Time']
+    # The key with its ':', and the outputs of the zone itself, not those of 'Block1:Zone10', which are first
+    assert _find_column(columns, 'Block1:Zone1', 'Operative Temperature') == columns[1]
+    assert _find_column(columns, 'Block1:Zone10', 'Operative Temperature') == columns[0]
+    # A key that has the zone as whole words (its coil, its outdoor unit), not within a longer name
+    assert _find_column(columns, 'Block1:Zone1', 'Cooling Coil Total Cooling Rate') == columns[4]
+    assert _find_column(columns, 'Block1:Zone1', 'VRF Heat Pump Cooling Electricity') == columns[5]
+    # The closest variable too
+    assert _find_column(columns, 'EMS', 'People Occupant Count_Block1_Zone1') == columns[7]
+    assert _find_column(columns, 'ACST_Sch_Block1_Zone1', 'Schedule Value') == columns[8]
+    assert _find_column(columns, 'environment', 'Drybulb') == columns[9]
+    # Within a longer name, if nothing is closer (as before)
+    assert _find_column(columns[:1], 'Block1:Zone1', 'Operative Temperature') == columns[0]
+    assert _find_column(columns, 'Block1:Zone', 'Thermostat Operative') == columns[2]
+    # Without one of the fragments, none
+    assert _find_column(columns, 'Block1:Zone3', 'Operative Temperature') is None
+    assert _find_column(columns, 'Block1:Zone1', 'Mean Air Temperature') is None
+    # A column without a key is taken by its variable alone only if asked
+    assert _find_column(columns, 'Block1:Zone1', 'Date/Time') is None
+    assert _find_column(columns, 'Block1:Zone1', 'Date/Time', keyless=True) == 'Date/Time'
+    # The columns of the CSV files of EnergyPlus
+    csv = ['Date/Time', 'BLOCK1:ZONE10:Zone Operative Temperature [C](Hourly)',
+           'BLOCK1:ZONE1:Zone Operative Temperature [C](Hourly)']
+    assert _find_column(csv, 'Block1:Zone1', 'Zone Operative Temperature') == csv[2]
+
+
+def _zone_columns(rows, keys=('BLOCK1:ZONE2', 'BLOCK1:ZONE1')):
+    """Outputs of checks 1 and 2 of the zones of the sample model, at 23 °C with setpoints of 20 and 26 °C and their
+    coils off, after those of another zone, 'Block1:Zone10', which is cooled and far above them."""
+    columns = {('BLOCK1:ZONE10', 'Zone Operative Temperature', 'C'): np.full(rows, 40.0),
+               ('BLOCK1:ZONE10 VRF INDOOR UNIT DX COOLING COIL', 'Cooling Coil Total Cooling Rate', 'W'):
+                   np.full(rows, 5000.0),
+               ('BLOCK1:ZONE10 VRF INDOOR UNIT DX HEATING COIL', 'Heating Coil Heating Rate', 'W'):
+                   np.full(rows, 5000.0),
+               ('Environment', 'Site Outdoor Air Drybulb Temperature', 'C'): np.full(rows, 15.0),
+               ('Environment', 'Site Wind Speed', 'm/s'): np.full(rows, 2.0)}
+    for key in keys:
+        zone = key.replace(':', '_')
+        columns[(key, 'Zone Operative Temperature', 'C')] = np.full(rows, 23.0)
+        columns[(f'ACST_SCH_{zone}', 'Schedule Value', '')] = np.full(rows, 26.0)
+        columns[(f'AHST_SCH_{zone}', 'Schedule Value', '')] = np.full(rows, 20.0)
+        columns[(f'{key} VRF INDOOR UNIT DX COOLING COIL', 'Cooling Coil Total Cooling Rate', 'W')] = np.zeros(rows)
+        columns[(f'{key} VRF INDOOR UNIT DX HEATING COIL', 'Heating Coil Heating Rate', 'W')] = np.zeros(rows)
+    return columns
+
+
+def _verify_outputs(monkeypatch, tmp_path, timestamps, columns, frequency='Hourly'):
+    """verify_accim_simulation of the output IDF of tmp_path with made-up outputs: its result, and the warnings."""
+    data = {'data': {frequency: _frame(timestamps, columns)}, 'metadata': {}}
+    monkeypatch.setattr('accim.utils.verification.read_eso_using_readvarseso', lambda **arguments: data)
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter('always')
+        result = verify_accim_simulation(str(tmp_path / 'run.eso'), str(sorted(tmp_path.glob('TestModel[[]*.idf'))[0]))
+    return result, [str(warning.message) for warning in caught if issubclass(warning.category, UserWarning)]
+
+
+def test_check_1_checks_the_zones_whose_names_have_colons(tmp_path, monkeypatch, capsys):
+    # The zones of the sample model are 'Block1:Zone1' and 'Block1:Zone2': check 1 skipped them with the warning
+    # "No 'Operative Temperature' column found" (an entry of TODO.md of 2026-11-09)
+    _add_accis(tmp_path, 'hourly', None, comfort_standard=[1], category=[2], comfort_mode=[3])
+    timestamps = _timestamps(begin='07/01', days=1, timesteps_per_hour=1)
+    columns = _zone_columns(len(timestamps))
+    temperature = columns[('BLOCK1:ZONE2', 'Zone Operative Temperature', 'C')]
+    cooling = columns[('BLOCK1:ZONE2 VRF INDOOR UNIT DX COOLING COIL', 'Cooling Coil Total Cooling Rate', 'W')]
+    heating = columns[('BLOCK1:ZONE2 VRF INDOOR UNIT DX HEATING COIL', 'Heating Coil Heating Rate', 'W')]
+    # Zone 2: heated and below its heating setpoint by more than the tolerance (0.1 °C) at 4:00, and within it at 5:00
+    temperature[[3, 4]], heating[[3, 4]] = [19.5, 19.95], 500
+    # Cooled and above its cooling setpoint by more than the tolerance at 11:00 and 12:00, and within it at 13:00;
+    # above it but not cooled at 14:00 (not a mismatch of check 1)
+    temperature[[10, 11, 12, 13]], cooling[[10, 11, 12]] = [26.5, 27.0, 26.05, 28.0], 1000
+    result, messages = _verify_outputs(monkeypatch, tmp_path, timestamps, columns)
+    output = capsys.readouterr().out
+    assert not [message for message in messages if 'Skipping' in message]
+    assert result[['timestep', 'zone_or_window', 'check']].values.tolist() == [
+        [timestamps[3], 'Block1_Zone2', 'Check1_Heating'], [timestamps[10], 'Block1_Zone2', 'Check1_Cooling'],
+        [timestamps[11], 'Block1_Zone2', 'Check1_Cooling']]
+    assert result['value_found'].tolist() == [19.5, 26.5, 27.0]
+    # Each zone with its own outputs: zone 1 is not taken for 'Block1:Zone10', whose outputs are first
+    assert "Zone 'Block1_Zone1': OpT col='BLOCK1:ZONE1:Zone Operative Temperature'" in output
+    assert "cool col='BLOCK1:ZONE1 VRF INDOOR UNIT DX COOLING COIL:Cooling Coil Total Cooling Rate'" in output
+    assert "Zone 'Block1_Zone1': Cooling mismatches: 0/24 | Heating mismatches: 0/24" in output
+    assert "Zone 'Block1_Zone2': Cooling mismatches: 2/24 | Heating mismatches: 1/24" in output
+
+
+def test_check_2_checks_the_windows_whose_names_have_colons(tmp_path, monkeypatch, capsys):
+    # The windows of the sample model are 'Block1:Zone1_Wall_2_0_0_0_0_0_Win'... (their surfaces, the keys of their
+    # outputs), and 'Block1_Zone1_Wall_2_0_0_0_0_0_Win'... in the EMS: check 2 skipped them with the warning "No
+    # opening factor / ventilation schedule column found"
+    building = _add_accis(tmp_path, 'hourly', None, script_type='vrf_mm', comfort_standard=[1], category=[2],
+                          comfort_mode=[3], hvac_mode=[0], ventilation_control=[0])
+    surfaces = {actuator.Name[:-len('_VentOpenFact')]: str(actuator.Actuated_Component_Unique_Name)
+                for actuator in building.idfobjects['EnergyManagementSystem:Actuator']
+                if actuator.Name.endswith('_VentOpenFact')}
+    assert len(surfaces) == 6 and all(':' in surface and ':' not in window for window, surface in surfaces.items())
+    timestamps = _timestamps(begin='07/01', days=1, timesteps_per_hour=1)
+    columns = _zone_columns(len(timestamps))
+    for surface in surfaces.values():
+        columns[(surface.upper(), 'AFN Surface Venting Window or Door Opening Factor', '')] = np.zeros(len(timestamps))
+    # With hvac_mode 0 the windows stay closed: the second window of zone 1 is open at 9:00 and 10:00
+    opened = sorted(window for window in surfaces if window.startswith('Block1_Zone1_'))[1]
+    columns[(surfaces[opened].upper(), 'AFN Surface Venting Window or Door Opening Factor', '')][[8, 9]] = 0.5
+    result, messages = _verify_outputs(monkeypatch, tmp_path, timestamps, columns)
+    output = capsys.readouterr().out
+    assert not [message for message in messages if 'Skipping' in message]
+    assert result[['timestep', 'zone_or_window', 'check']].values.tolist() == [
+        [timestamps[8], opened, 'Check2_HVACmode0'], [timestamps[9], opened, 'Check2_HVACmode0']]
+    # Each window with the opening factor of its own surface, not with that of the first window of its zone
+    for window, surface in surfaces.items():
+        assert (f"Window '{window}': opening-factor col='{surface.upper()}:AFN Surface Venting Window or Door "
+                f"Opening Factor'") in output
+        assert f"Window '{window}': {2 if window == opened else 0}/24 timesteps open" in output
+
+
+@pytest.mark.skipif(_energyplus() is None or not EPW.exists(),
+                    reason='needs EnergyPlus 25.1 and the sample files of the repository')
+def test_check_1_of_a_simulation_of_the_sample_model(tmp_path, capsys):
+    building = _add_accis(tmp_path, 'timestep', None, comfort_standard=[1], category=[2], comfort_mode=[3])
+    eso, model = _run_energyplus(tmp_path, building, (7, 1), (7, 2))
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter('always')
+        result = verify_accim_simulation(str(eso), str(model), eplus_install_dir=str(_energyplus()))
+    output = capsys.readouterr().out
+    assert not [warning for warning in caught if 'Skipping' in str(warning.message)]
+    # Check 1 finds the outputs of both zones, and its mismatches are the timesteps in which the zone is cooled (or
+    # heated) and its operative temperature is beyond its setpoint by more than the tolerance (0.1 °C): those of the
+    # CSV file that ReadVarsESO leaves next to the ESO file
+    outputs = pd.read_csv(tmp_path / 'out' / 'run.csv')
+    outputs.columns = [column.strip() for column in outputs.columns]
+    assert len(outputs) == 2 * 24 * 6
+    found = result[result['check'].str.startswith('Check1')] if len(result) else result
+    for zone in ZONES:
+        key = zone.replace('_', ':').upper()
+        assert f"Zone '{zone}': OpT col='{key}:Zone Operative Temperature'" in output
+        temperature = outputs[f'{key}:Zone Operative Temperature [C](TimeStep)']
+        cooled = outputs[f'{key} VRF INDOOR UNIT DX COOLING COIL:Cooling Coil Total Cooling Rate [W](TimeStep)'] > 0
+        heated = outputs[f'{key} VRF INDOOR UNIT DX HEATING COIL:Heating Coil Heating Rate [W](TimeStep)'] > 0
+        too_hot = cooled & (temperature > outputs[f'ACST_SCH_{zone.upper()}:Schedule Value [](TimeStep)'] + 0.1)
+        too_cold = heated & (temperature < outputs[f'AHST_SCH_{zone.upper()}:Schedule Value [](TimeStep)'] - 0.1)
+        for check, expected in (('Check1_Cooling', too_hot), ('Check1_Heating', too_cold)):
+            rows = found[(found['zone_or_window'] == zone) & (found['check'] == check)] if len(found) else found
+            assert sorted(rows['timestep']) == sorted(outputs.loc[expected, 'Date/Time']), (zone, check)
+            assert f"{'Cooling' if check == 'Check1_Cooling' else 'Heating'} mismatches: {expected.sum()}/288" in output
+    # The system of the sample model, cooling, does not hold the cooling setpoint in the afternoons of July
+    assert (found['check'] == 'Check1_Cooling').sum() > 0 and not (found['check'] == 'Check1_Heating').any()
+
+
+@pytest.mark.skipif(_energyplus() is None or not EPW.exists(),
+                    reason='needs EnergyPlus 25.1 and the sample files of the repository')
+def test_checks_1_and_2_of_a_simulation_of_the_sample_model_in_mixed_mode(tmp_path, capsys):
+    building = _add_accis(tmp_path, 'timestep', None, script_type='vrf_mm', comfort_standard=[1], category=[2],
+                          comfort_mode=[3], hvac_mode=[2], ventilation_control=[0])
+    surfaces = {actuator.Name[:-len('_VentOpenFact')]: str(actuator.Actuated_Component_Unique_Name)
+                for actuator in building.idfobjects['EnergyManagementSystem:Actuator']
+                if actuator.Name.endswith('_VentOpenFact')}
+    eso, model = _run_energyplus(tmp_path, building, (4, 29), (5, 1))
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter('always')
+        verify_accim_simulation(str(eso), str(model), eplus_install_dir=str(_energyplus()))
+    output = capsys.readouterr().out
+    assert not [warning for warning in caught if 'Skipping' in str(warning.message)]
+    # Both checks find the outputs of the zones and of each window
+    for zone in ZONES:
+        assert f"Zone '{zone}': OpT col='{zone.replace('_', ':').upper()}:Zone Operative Temperature'" in output
+    assert len(surfaces) == 6
+    for window, surface in surfaces.items():
+        assert (f"Window '{window}': opening-factor col='{surface.upper()}:AFN Surface Venting Window or Door "
+                f"Opening Factor'") in output
+    # AccimSimulationVerifier raised a ValueError ("Required 'Operative Temperature' output not found for zone...")
+    with warnings.catch_warnings():
+        warnings.simplefilter('ignore')
+        verifier = AccimSimulationVerifier(str(eso), str(model), eplus_install_dir=str(_energyplus()))
+    summary = verifier.summary
+    assert 'Checked 432 timesteps.' in summary
+    for zone in ZONES:
+        assert f"Zone '{zone}': too-hot=" in summary
+    for window in surfaces:
+        assert f"Window '{window}': " in summary

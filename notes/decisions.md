@@ -11,6 +11,39 @@ Durable architectural/process decisions for this repository and its Obsidian
 vault. Newest first. Use [[templates/decision-record.md|the decision-record
 template]] to add a new entry.
 
+## 2026-11-13 — Checks 1 and 2 of the verification find the outputs whose keys have ':': the choices of the fix
+
+- **Status**: accepted (the fix of the search, which the author asked for on 2026-11-13); what the checks report now
+  is an open question of [[questions.md]], and the choices of point 4 are provisional (Claude Code, the model Claude
+  Fable 5.2)
+- **Context**: `verify_accim_simulation` and `AccimSimulationVerifier` split the names of the outputs at their first
+  ':', so checks 1 and 2 did not find the outputs of the zones and the windows whose names have ':' (those of the
+  models of DesignBuilder, as the sample model): the function skipped them with a warning, and the class raised a
+  `ValueError`. It was the P1 entry of `TODO.md` of 2026-11-09, which said that check 1 would then report the
+  mismatches of the models where it did nothing.
+- **Decision**:
+  1. The key of an output is the text before its last ':' (the names of the output variables of EnergyPlus have
+     none), as `read_eso_using_readvarseso` reads it: one function for the names that `verify_accim_simulation`
+     makes and for the columns of the CSV files that the class reads.
+  2. Of the columns with both fragments, the closest one: its key is the fragment, or has it as whole words, or has
+     it within a longer name; then the same for its variable; then the first one. The search by fragments stays (the
+     coils and the People objects of a zone have its name within theirs), but `Block1:Zone1` does not take the
+     outputs of `Block1:Zone10`, which the fix would have made possible in the models that it reaches.
+  3. Each window is checked with the opening factor of its own surface, the component that its EMS actuator sets
+     (the name of the window in the EMS has '_' where that of its surface has ':'), and with the cooling setpoint
+     and the occupancy of its own zone: before, with those of the first window of the zone and of the first zone
+     with them.
+  4. The logic of the checks and their identifiers do not change: what they report in the models that they skipped
+     is for the author to decide. Meanwhile, their documentation says what their mismatches are (check 1, the system
+     on and the zone beyond its setpoint, which tells of the system; check 2 of the function, the conditions of the
+     same timestep with constants, which include the timesteps of the delay of the EMS), and the six tests of accim
+     that asserted that `verify_accim_simulation` had no mismatch at all in simulations of the sample model, when
+     check 1 skipped its zones, assert it of the other checks.
+- **Consequences**: `TODO.md` has no P1 entry. Its entry of `AccimSimulationVerifier` has the differences between
+  checks 1 and 2 of the function and of the class, to make them one. The results of `verify_accim_simulation` of the
+  simulations of the sample model have the mismatches of check 1 now: its VRF system does not hold the cooling
+  setpoint in many hours, in July and in January.
+
 ## 2026-11-12 — The implementation of the decisions of 2026-11-12: the choices that they do not cover
 
 - **Status**: accepted provisionally (taken on 2026-11-12 by Claude Code, the model Claude Fable 5.2, while it

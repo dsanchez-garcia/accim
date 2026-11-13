@@ -268,3 +268,14 @@ Backend comparisons and EnergyPlus runs (EnergyPlus 25.1, the sample model in Se
   A15, the try-runs of F3 and the comparisons of the backends) are in the scratch folder of the Claude Code session,
   out of the repository; what they measured is in `DEVLOG.md`, [[decisions.md]] and [[questions.md]].
 - The connector of GitHub of Claude Code did not connect; git was used from the shell.
+
+## Addendum of 2026-11-13: the P1 entry that was left
+
+The author asked for the P1 entry of section 2 (check 1 of `verify_accim_simulation`), and it was done on 2026-11-13
+(its entry of that day in `DEVLOG.md`, and `CAMBIOS_CODIGO_v1.2.0.md` §56): checks 1 and 2 of the function and of
+`AccimSimulationVerifier` find the zones and the windows whose names have ':' (the class raised a `ValueError` with
+them). As its entry of `TODO.md` expected, they report now what they skipped in the sample model: check 1, the hours
+in which its VRF system, on, does not hold the cooling setpoint; and check 2 of the function, in mixed mode,
+mismatches that are not errors of the EMS (it compares the conditions with the outputs of the same timestep and with
+constants; the class reports none in the same simulation). What the two checks should report is a second open
+question of [[questions.md]], with the options and a recommendation. `TODO.md` has 21 entries now, none of them P1.

@@ -22,6 +22,86 @@ __all__ = [
     'verify_accim_simulation',
 ]
 
+#: The units and the frequency after the variable in the columns of the CSV files of EnergyPlus: ' [C](Hourly)'
+_UNITS_AND_FREQUENCY = re.compile(r'\s*\[[^\]]*\]\s*(\([A-Za-z]+\))?\s*$')
+
+
+def _key_and_variable(column: Any) -> Tuple[str, str]:
+    """The key and the variable of a column of the outputs, ``'<key>:<variable>'`` (with or without the units and the
+    frequency of the CSV files of EnergyPlus after the variable), in upper case.
+
+    The key is all the text before the last ':', as :func:`accim.utils.outputs.read_eso_using_readvarseso` reads it:
+    the names of the output variables of EnergyPlus have no ':', and the keys can have them (the zones
+    ``Block1:Zone1`` of the models of DesignBuilder, and their coils, surfaces and People objects). A name without
+    ':' has no key (``''``)."""
+    key, separator, variable = str(column).upper().rpartition(':')
+    variable = _UNITS_AND_FREQUENCY.sub('', variable).strip()
+    return (key.strip(), variable) if separator else ('', variable)
+
+
+def _fragment_rank(name: str, fragment: str) -> Optional[int]:
+    """How a name contains a fragment (both in upper case): 0, it is the fragment; 1, it has it as whole words
+    ('BLOCK1:ZONE1' in 'BLOCK1:ZONE1 VRF INDOOR UNIT DX COOLING COIL', but not in 'BLOCK1:ZONE10'); 2, it has it
+    within a longer word or number; None, it does not have it."""
+    if fragment not in name:
+        return None
+    if name == fragment:
+        return 0
+    # Whole words: no letter or digit right before or after the fragment
+    return 1 if re.search(r'(?<![^\W_])' + re.escape(fragment) + r'(?![^\W_])', name) else 2
+
+
+def _find_column(columns, key_fragment: Any, variable_fragment: Any, keyless: bool = False) -> Optional[Any]:
+    """The column of the outputs whose key contains ``key_fragment`` and whose variable contains
+    ``variable_fragment`` (not case-sensitive), or None.
+
+    Of several, the one whose key is closest to the fragment (the fragment itself, then with it as whole words, then
+    with it within a longer name), then the one whose variable is, then the first one: the outputs of the zone
+    ``Block1:Zone1`` are not taken from those of ``Block1:Zone10``. The keys keep their ':' (see
+    :func:`_key_and_variable`). With ``keyless``, a column without a key is taken by its variable alone if no column
+    with a key has both fragments."""
+    wanted_key, wanted_variable = str(key_fragment).upper().strip(), str(variable_fragment).upper().strip()
+    best, best_rank = None, None
+    for column in columns:
+        key, variable = _key_and_variable(column)
+        variable_rank = _fragment_rank(variable, wanted_variable)
+        if variable_rank is None:
+            continue
+        if key:
+            key_rank = _fragment_rank(key, wanted_key)
+        else:
+            key_rank = 3 if keyless else None
+        if key_rank is None:
+            continue
+        if best_rank is None or (key_rank, variable_rank) < best_rank:
+            best, best_rank = column, (key_rank, variable_rank)
+    return best
+
+
+def _window_components(building, window_names: Sequence[str]) -> Dict[str, str]:
+    """The component that the EMS actuator of each window sets (``<window>_VentOpenFact``): the surface of the window
+    in the models with the AirflowNetwork, whose name is the key of its outputs (the surface
+    ``Block1:Zone1_Wall_2_0_0_0_0_0_Win`` of the window ``Block1_Zone1_Wall_2_0_0_0_0_0_Win`` of the EMS), or its
+    ventilation schedule. The actuator of a window is that of its name; else, the first one whose name contains that
+    of the window."""
+    components: Dict[str, str] = {}
+    for actuator in building.idfobjects['EnergyManagementSystem:Actuator']:
+        name = actuator.Name.upper()
+        named = [window for window in window_names if name == f'{window}_VentOpenFact'.upper()]
+        for window in named or window_names:
+            if window.upper() in name:
+                component = str(actuator.Actuated_Component_Unique_Name)
+                if component and component not in ('', 'None'):
+                    components[window] = component
+                break
+    return components
+
+
+def _own_zone_first(zones: Sequence[str], keys: Mapping[str, str], key: Any) -> List[str]:
+    """The comfort zones (their names in the EMS), with that of a key of EnergyPlus first: the zone of a window."""
+    own = [zone for zone in zones if str(keys.get(zone, zone)).upper() == str(key).upper()]
+    return own + [zone for zone in zones if zone not in own]
+
 
 def verify_accim_simulation(
         eso_file_path: str,
@@ -40,6 +120,12 @@ def verify_accim_simulation(
     **Check 1 – HVAC Setpoint Adherence (per zone):**
     - If cooling is active (CoolCoil > 0): Zone Operative Temperature <= ACST_Sch + tolerance
     - If heating is active (HeatCoil > 0): Zone Operative Temperature >= AHST_Sch - tolerance
+
+    Its mismatches are the timesteps (or hours) in which the system of a zone is on and the zone is beyond its
+    setpoint: they tell of the capacity or the response of the HVAC system, which does not hold the setpoint, not of
+    the EMS programs. The outputs of each zone are found by its key and those that contain it (its coils), also with
+    ':' in it: the zones ``Block1:Zone1`` of the models of DesignBuilder, which checks 1 and 2 skipped with a warning
+    until accim 1.2.0.
 
     **Check 2 – Window Operation Logic (per window in mixed-mode models):**
     Replicates the explicit conditions of the EMS program ``SetWindowOperation_<windowname>``:
@@ -64,6 +150,17 @@ def verify_accim_simulation(
     *HVACmode = 2 (Changeover / Free-running):*
       Window may open when:
       NoH_NoC_reqs == 1 AND meets_base_reqs == 1 AND OpT > VST
+
+    Each window is checked with the opening factor of its own surface (the component that its EMS actuator
+    ``<window>_VentOpenFact`` sets), also with ':' in its name. The conditions are compared with the outputs of the
+    same timestep, and with the constants ``VST`` and ``MinOutTemp`` of the arguments of the model, 20 and 6 °C if it
+    has none (as the models whose EMS calculates the ventilation setpoint and the minimum outdoor temperature of each
+    timestep: their outputs ``Ventilation Setpoint Temperature_<zone>`` and ``Minimum Outdoor Temperature for
+    ventilation_<zone>``). The program opens and closes the window with the operative temperature of the previous
+    timestep, so this check also reports the timesteps of that delay (a window that cools its zone below the
+    ventilation setpoint, or whose zone the system starts to heat, in the timestep before it closes).
+    :class:`AccimSimulationVerifier` checks the windows of ``HVACmode`` 2 with the ventilation setpoint and the minimum
+    outdoor temperature of each timestep, and leaves those timesteps out.
 
     **Check 3 – Setpoints based on the PMV (per zone, models of** :func:`accim.sim.pmv_index.apply_pmv_index_setpoints`,
     **such as those of** :func:`accim.sim.apmv.apply_apmv_setpoints` **and** :func:`accim.sim.apmv.apply_epmv_setpoints`
@@ -246,43 +343,21 @@ def verify_accim_simulation(
     # HELPER: case-insensitive column searcher
     # ─────────────────────────────────────────────
     def find_col(df, area_fragment: str, variable_fragment: str) -> Optional[str]:
-        """Return the first column whose 'area:variable' pattern (case-insensitive)
-        contains both fragments."""
-        area_frag_up = area_fragment.upper()
-        var_frag_up  = variable_fragment.upper()
-        for col in df.columns:
-            col_up = col.upper()
-            parts = col_up.split(':', 1)
-            if len(parts) == 2:
-                if area_frag_up in parts[0] and var_frag_up in parts[1]:
-                    return col
-            else:
-                if var_frag_up in col_up:
-                    return col
-        return None
+        """Return the column whose 'area:variable' name (case-insensitive) contains both fragments: the area (the
+        key of the output) is the text before the last ':', so the keys with ':' are whole (the zones
+        'Block1:Zone1' of the models of DesignBuilder), and the closest key and variable are preferred
+        (see _find_column)."""
+        return _find_column(df.columns, area_fragment, variable_fragment, keyless=True)
 
     def find_cols_by_variable(df, variable_fragment: str) -> List[str]:
         """Return all columns whose variable part contains the fragment (case-insensitive)."""
         var_frag_up = variable_fragment.upper()
-        matches = []
-        for col in df.columns:
-            col_up = col.upper()
-            parts = col_up.split(':', 1)
-            var_part = parts[1] if len(parts) == 2 else col_up
-            if var_frag_up in var_part:
-                matches.append(col)
-        return matches
+        return [col for col in df.columns if var_frag_up in _key_and_variable(col)[1]]
 
     def find_cols_by_area(df, area_fragment: str) -> List[str]:
         """Return all columns whose area part contains the fragment (case-insensitive)."""
         area_frag_up = area_fragment.upper()
-        matches = []
-        for col in df.columns:
-            col_up = col.upper()
-            parts = col_up.split(':', 1)
-            if len(parts) == 2 and area_frag_up in parts[0]:
-                matches.append(col)
-        return matches
+        return [col for col in df.columns if _key_and_variable(col)[0] and area_frag_up in _key_and_variable(col)[0]]
 
     # ─────────────────────────────────────────────
     # 3. DETECT ZONES AND WINDOWS FROM EMS OBJECTS
@@ -312,17 +387,10 @@ def verify_accim_simulation(
     # (window zones have no ACST/AHST schedules)
     comfort_zone_names: List[str] = [z for z in ems_zone_names if z not in window_names]
 
-    # Build map {window_ems_name: ventilation_schedule_name} for non-AFN models
-    # by scanning EMS actuators whose name contains the window name
-    window_vent_sch_map: Dict[str, str] = {}
-    for act in building.idfobjects['EnergyManagementSystem:Actuator']:
-        act_name_up = act.Name.upper()
-        for wname in window_names:
-            if wname.upper() in act_name_up:
-                comp_id = str(act.Actuated_Component_Unique_Name)
-                if comp_id and comp_id not in ('', 'None'):
-                    window_vent_sch_map[wname] = comp_id
-                break
+    # Build map {window_ems_name: actuated component} by scanning the EMS actuators of the windows: the surface of
+    # the window (AFN models, with its own name: 'Block1:Zone1_Wall_2_0_0_0_0_0_Win') or its ventilation schedule
+    # (non-AFN models)
+    window_vent_sch_map = _window_components(building, window_names)
 
     is_mixed_mode = len(window_names) > 0
     print(f"Detected {len(ems_zone_names)} EMS zone(s): {ems_zone_names}")
@@ -476,9 +544,13 @@ def verify_accim_simulation(
             actual_win_key = ems_zone_map.get(wname, wname)
 
             # ── Opening factor
-            # 1. Try AFN surface opening factor
+            # 1. Try AFN surface opening factor: that of the surface that the actuator of the window sets (its own
+            #    key, which has the ':' that the name of the window in the EMS does not), then by the names
+            window_surface = window_vent_sch_map.get(wname)
             vof_col = (
-                find_col(chosen_df, wname, 'AFN Surface Venting Window or Door Opening Factor')
+                (find_col(chosen_df, window_surface, 'AFN Surface Venting Window or Door Opening Factor')
+                 if window_surface else None)
+                or find_col(chosen_df, wname, 'AFN Surface Venting Window or Door Opening Factor')
                 or find_col(chosen_df, actual_win_key, 'AFN Surface Venting Window or Door Opening Factor')
                 or find_col(chosen_df, wname, 'Opening Factor')
             )
@@ -523,17 +595,18 @@ def verify_accim_simulation(
                 find_col(chosen_df, actual_win_key, 'People Occupant Count')
                 or find_col(chosen_df, wname, 'People Occupant Count')
             )
-            # Last resort: use any EMS occupancy output (first comfort zone)
+            # Last resort: use any EMS occupancy output (that of the comfort zone of the window, then the others)
+            window_zones = _own_zone_first(comfort_zone_names, ems_zone_map, actual_win_key)
             if occ_col is None:
-                for cz in comfort_zone_names:
+                for cz in window_zones:
                     occ_col = find_col(chosen_df, 'EMS', f'People Occupant Count_{cz}')
                     if occ_col:
                         break
 
-            # ── ACST reference for window zone: take from first comfort zone
+            # ── ACST reference for window zone: that of its comfort zone, else of the first one with it
             # (ACSTnoTol is a global EMS variable, approximated here by the schedule value)
             acst_no_tol_col = None
-            for cz in comfort_zone_names:
+            for cz in window_zones:
                 cand = find_col(chosen_df, f'ACST_Sch_{cz}', 'Schedule Value')
                 if cand:
                     acst_no_tol_col = cand
@@ -1833,12 +1906,9 @@ class AccimSimulationVerifier:
         _timestamps = _timestamps.reset_index(drop=True)
 
         def _find(area_frag: str, var_frag: str) -> Optional[str]:
-            au, vu = area_frag.upper(), var_frag.upper()
-            for col in chosen_df.columns:
-                parts = col.upper().split(':', 1)
-                if len(parts) == 2 and au in parts[0] and vu in parts[1]:
-                    return col
-            return None
+            # The key of each column is the text before its last ':', so the keys with ':' are whole (the zones
+            # 'Block1:Zone1' of the models of DesignBuilder); the closest key and variable are preferred
+            return _find_column(chosen_df.columns, area_frag, var_frag)
 
         # ─────────────────────────────────────────────────────────────────────────
         # 2. READ IDF — zone names, window names, EMS params
@@ -1872,15 +1942,8 @@ class AccimSimulationVerifier:
         HVACmode    = int(float(accim_args['HVACmode']))
         MaxWindSpeed= float(accim_args['MaxWindSpeed'])
 
-        window_vent_sch_map: Dict[str, str] = {}
-        for act in building.idfobjects['EnergyManagementSystem:Actuator']:
-            act_name_up = act.Name.upper()
-            for wname in window_names:
-                if wname.upper() in act_name_up:
-                    comp_id = str(act.Actuated_Component_Unique_Name)
-                    if comp_id and comp_id not in ('', 'None'):
-                        window_vent_sch_map[wname] = comp_id
-                    break
+        # The component that the actuator of each window sets: its surface (AFN models) or its ventilation schedule
+        window_vent_sch_map = _window_components(building, window_names)
 
         _acst_tol_col = _find('EMS', 'z_test_ACSTtol')
         _ahst_tol_col = _find('EMS', 'z_test_AHSTtol')
@@ -2005,12 +2068,15 @@ class AccimSimulationVerifier:
             for wname in window_names:
                 actual_win_key = ems_zone_map.get(wname, wname)
 
+                # The opening factor of the surface that the actuator of the window sets (its own key, which has
+                # the ':' that the name of the window in the EMS does not), then by the names
+                sch_name = window_vent_sch_map.get(wname)
                 vof_col = (
-                    _find(wname, 'AFN Surface Venting Window or Door Opening Factor')
+                    (_find(sch_name, 'AFN Surface Venting Window or Door Opening Factor') if sch_name else None)
+                    or _find(wname, 'AFN Surface Venting Window or Door Opening Factor')
                     or _find(actual_win_key, 'AFN Surface Venting Window or Door Opening Factor')
                 )
                 if not vof_col:
-                    sch_name = window_vent_sch_map.get(wname)
                     if sch_name: vof_col = _find(sch_name, 'Schedule Value')
                 if not vof_col:
                     vof_col = _find(f'Vent_Sch_{actual_win_key}', 'Schedule Value')
@@ -2027,14 +2093,16 @@ class AccimSimulationVerifier:
                 if not heat_w_col: raise ValueError(f"Required 'Heating Rate' output not found for zone '{actual_win_key}'.")
                 
                 occ_col    = _find(actual_win_key, 'People Occupant Count') or _find(wname, 'People Occupant Count')
+                # The comfort zone of the window first, then the others
+                window_zones = _own_zone_first(comfort_zones, ems_zone_map, actual_win_key)
                 if not occ_col:
-                    for cz in comfort_zones:
+                    for cz in window_zones:
                         occ_col = _find('EMS', f'People Occupant Count_{cz}')
                         if occ_col: break
                 if not occ_col: raise ValueError(f"Required 'People Occupant Count' output not found for zone '{actual_win_key}'.")
 
                 acst_ref = None
-                for cz in comfort_zones:
+                for cz in window_zones:
                     cz_col = _find(f'ACST_Sch_{cz}', 'Schedule Value')
                     if cz_col:
                         acst_ref = chosen_df[cz_col].astype(float) - acst_tol

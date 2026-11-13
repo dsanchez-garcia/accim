@@ -2885,3 +2885,52 @@ ejecuciones de los programas que EnergyPlus hace sin callbacks mientras dimensio
 salidas del EMS y los valores de los schedules, y el resto con una tolerancia relativa de 10⁻⁶. La sección 4.9 del uso
 detallado lo dice, junto al caso ya conocido de los termostatos del PMV. `TODO.md` tiene una entrada P2 para encontrar
 la causa. No cambia código del paquete.
+
+## 56. Los checks 1 y 2 de `verify_accim_simulation` encuentran las zonas y las ventanas con «:» en el nombre
+
+Era la única entrada P1 que quedaba en `TODO.md` (del 9/11/2026), hecha el 13/11/2026 a petición del autor.
+
+**El fallo.** Los checks 1 y 2 partían el nombre de cada salida, `<clave>:<variable>`, por el primer «:». Con los
+nombres de DesignBuilder (`Block1:Zone1`, como los del modelo de ejemplo) la clave quedaba en `BLOCK1` y no
+encontraban ninguna salida: `verify_accim_simulation` se saltaba las zonas y las ventanas con un aviso, y
+`AccimSimulationVerifier` lanzaba un `ValueError`. Es decir, con los modelos de la mayoría de los usuarios estos dos
+checks no comprobaban nada.
+
+**La corrección** (`accim/utils/verification.py`; la lógica de los checks no cambia):
+
+- `_key_and_variable()`: la clave de una salida es el texto anterior a su último «:», como la lee
+  `read_eso_using_readvarseso` (los nombres de las variables de EnergyPlus no llevan «:»). Sirve también para las
+  columnas de los CSV, con sus unidades y su frecuencia.
+- `_find_column()`: entre las columnas que contienen los dos fragmentos, se queda con la de clave más cercana (la
+  clave exacta; luego la que contiene el fragmento como palabras completas; luego dentro de un nombre más largo), y lo
+  mismo con la variable. Así las salidas de `Block1:Zone1` no se toman de `Block1:Zone10`.
+- Cada ventana se comprueba con el factor de apertura de su propia superficie (la que mueve su actuador
+  `<ventana>_VentOpenFact`) y con la consigna de refrigeración y la ocupación de su propia zona; antes, con los de la
+  primera ventana de la zona y los de la primera zona.
+
+**Lo que informan ahora** (antes se lo saltaban), medido con el modelo de ejemplo en Sevilla:
+
+- *Check 1*: los pasos de tiempo en que el sistema de una zona está encendido y la zona, fuera de su consigna. En la
+  semana de julio de las pruebas de F3, 77 y 71 horas (de las 168 de cada zona) con las consignas fijas de 20 y 26 °C,
+  6 y 17 con EN 16798-1 y 15 y 26 con ASHRAE 55; en la de enero, 18 y 21, 43 y 43, y 55 y 50. En esas horas las
+  baterías dan del 86 al 99 % de su máximo de la semana: el sistema está al límite. No es un error del EMS, sino del
+  sistema del modelo de ejemplo, que no mantiene la consigna.
+- *Check 2 de la función*: en una semana de abril en modo mixto, 213 desajustes que no son errores del EMS. Compara las
+  condiciones con las salidas del mismo paso de tiempo (el EMS abre y cierra con la temperatura operativa del paso
+  anterior) y con constantes de 20 y 6 °C para la consigna de ventilación y la temperatura exterior mínima, que en los
+  modelos de accim se calculan en cada paso. La clase `AccimSimulationVerifier`, que las lee de las salidas del EMS y
+  descarta los pasos del retardo, no da ninguno en la misma simulación.
+
+**Los tests.** Seis tests nuevos en `tests/core/test_verification.py`: la clave y la variable de una columna; la
+columna más cercana; el check 1 y el check 2 con salidas inventadas del modelo de ejemplo (con el código anterior se
+saltaban las 2 zonas y las 6 ventanas); y dos con EnergyPlus (el check 1 de dos días de julio, igual que el cálculo
+directo con el CSV, y los dos checks y la clase con tres días en modo mixto). Cuatro tests antiguos (seis casos: el del
+limitador de la deriva y los de la incomodidad a largo plazo) exigían que `verify_accim_simulation` no diera ningún
+desajuste en simulaciones del modelo de ejemplo, cuando el check 1 se saltaba sus zonas; ahora exigen que no lo dé
+ningún otro check. No son más laxos en lo que comprobaban: los checks 3 a 6.
+
+**Lo que queda por decidir** (`notes/questions.md`, 13/11/2026): qué deben informar los checks 1 y 2. Para el check 1:
+dejarlo así, informarlo aparte de los desajustes (para que un resultado vacío signifique que el EMS funciona) o poder
+saltárselo. Para el check 2: dejarlo así, darle a la función el de la clase, o escribirlo como los checks 3 a 6 (la
+apertura de cada ventana contra las condiciones de su programa con los valores que lee el EMS, exacto). Mientras
+tanto queda como estaba, con la documentación (sección 4.6.1) diciendo qué informa cada uno.

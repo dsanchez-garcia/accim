@@ -15,6 +15,25 @@ This log is a lightweight, session-scoped complement to the repository's
 existing tracking files — it does not replace them (see
 [[decisions.md#2026-09-13 — `notes/work-log.md` complements, not replaces, existing tracking files|the related decision]]).
 
+## 2026-11-13 — Checks 1 and 2 of the verification with the names that have ':' (branch `v1.2.0`, on the server)
+
+- **Objective**: the last P1 entry of [[../TODO.md]], which the author asked for after the session of 2026-11-12:
+  check 1 of `verify_accim_simulation` skipped the zones whose names have ':'.
+- **Affected files**: `accim/utils/verification.py`, `tests/core/test_verification.py`,
+  `tests/core/test_drift_limiter.py`, `tests/core/test_long_term_discomfort_counters.py`, section 4.6.1 of the
+  detailed use, [[../CHANGELOG.md]] and the notes.
+- **Finding or decision**: the key of an output is the text before its last ':'; the closest key and variable are
+  preferred, and each window has the outputs of its own surface and zone
+  ([[decisions.md#2026-11-13 — Checks 1 and 2 of the verification find the outputs whose keys have ':': the choices of the fix|the choices]]).
+  Check 2 and `AccimSimulationVerifier` had the same fault (the class raised a `ValueError`). The checks report now
+  what they skipped: check 1, the hours in which the system of the sample model, on, does not hold the cooling
+  setpoint (77 and 71 of the 168 hours of each zone in a week of July with fixed setpoints); check 2 of the
+  function, 213 mismatches in a week in mixed mode that are not errors of the EMS (the class reports none in it).
+  What to do with them is an open question ([[questions.md]]).
+- **Validation**: in the entry of [[../DEVLOG.md]].
+- **Next step**: the decision of the author on what checks 1 and 2 report, and one implementation of them for the
+  function and the class ([[../TODO.md]]).
+
 ## 2026-11-12 — The implementation of the decisions of 2026-11-12 (branch `v1.2.0`, on the server)
 
 - **Objective**: the author asked Claude Code to implement, autonomously, the P1 and P2 tasks that the decisions of
