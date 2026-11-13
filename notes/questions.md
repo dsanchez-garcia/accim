@@ -24,52 +24,6 @@ it here as answered).
 
 ## Open
 
-### 2026-11-13 — Checks 1 and 2 of `verify_accim_simulation`, now that they find the zones and the windows with ':' in their names
-- Context: until 2026-11-13, checks 1 and 2 skipped the zones and the windows whose names have ':' (those of the
-  models of DesignBuilder, as the sample model), and `AccimSimulationVerifier` raised a `ValueError` with them. With
-  the search of their outputs fixed (the P1 entry of `TODO.md` of 2026-11-09), they report what they skipped, measured
-  with the sample model in Seville (EnergyPlus 25.1):
-  1. Check 1 (`Check1_Cooling` and `Check1_Heating`: the system of a zone on, and the zone beyond its setpoint by more
-     than `tolerance`, 0.1 °C) reports the hours in which the VRF system of the sample model does not hold the cooling
-     setpoint. In the week of July of the try-runs of F3 (hourly outputs, 168 hours of each zone): 77 and 71 hours
-     with the fixed setpoints of 20 and 26 °C, 6 and 17 with EN 16798-1, and 15 and 26 with ASHRAE 55; in the week of
-     January, 18 and 21, 43 and 43, and 55 and 50. In those hours the cooling coils give 86 to 99 % of their largest
-     output of the week (about 50 % in the other hours in which they are on) and the zones are 0.2 to 1.2 K above the
-     setpoint on average (1.9 K at most): the system is at its limit, and the EMS is not wrong. In a mild week (29
-     April to 5 May, mixed mode, timestep outputs) check 1 has no mismatch.
-  2. Check 2 of `verify_accim_simulation` compares the conditions of the program `SetWindowOperation_<window>` with
-     the outputs of the same timestep, and with a ventilation setpoint and a minimum outdoor temperature that are
-     constants of the arguments of the model, 20 and 6 °C by default (the EMS of the models of accim calculates them
-     in each timestep, and they have no such arguments). In that week of 29 April (`hvac_mode=[2]`,
-     `ventilation_control=[0]`; 1008 timesteps, each window open in 107 or 108) it reports 213 mismatches of the six
-     windows: 12 or 13 timesteps of each window open with the HVAC system on, 21 or 23 open with the zone at or below
-     20 °C, and 1 open with the zone at or above the cooling setpoint. In the same simulation,
-     `AccimSimulationVerifier` reports none in the 42 or 45 timesteps of each window that it checks: it reads the
-     ventilation setpoint and the minimum outdoor temperature of each timestep from the outputs of the EMS, and
-     leaves out the timesteps of the delay of the EMS (the last one before a window closes, and the first one of the
-     HVAC system). An example of that delay: on 29 April a window opens at 6:40, since its zone was at 22.29 °C at
-     6:30, above its ventilation setpoint (22.28 °C); in that timestep the zone falls to 18.62 °C and is heated, and
-     the window closes at 6:50.
-- Why it matters: `verify_accim_simulation` is the documented way to verify a simulation (section 4.6.1 of the
-  detailed use). For the models of DesignBuilder, most of those of the users of accim, it gave warnings and now it
-  gives mismatches: true ones of check 1 (a system that does not hold the setpoints, which is not an error of accim)
-  and, in mixed mode, mismatches of check 2 that are not errors of the EMS. The function and the class have
-  different checks 1 and 2 (the entry of `AccimSimulationVerifier` of `TODO.md`).
-- Options considered. For check 1: (a) leave it as it is (implemented): its mismatches are the hours in which the
-  system does not hold the setpoint, as its documentation says now, and the tests of accim that check other things do
-  not look at them; (b) report them apart from the mismatches (a summary, and the rows on request), so that an empty
-  result means that the EMS works; (c) an argument to skip it. For check 2: (a) leave it (implemented), with what it
-  reports in its documentation, which points to the class; (b) give `verify_accim_simulation` the check 2 of the
-  class for `HVACmode` 2 (the ventilation setpoint and the minimum outdoor temperature of each timestep, and the
-  timesteps of the delay left out), and keep its own for 0 and 1; (c) write check 2 as checks 3 to 6 are written: the
-  opening of each window in each timestep against the conditions of its program with the values that the EMS reads
-  (the operative temperature of the previous timestep), exactly, with `calculation_tolerance`, for the three modes,
-  and use it in the function and in the class.
-- Recommendation of Claude Code: (b) for check 1; (c) for check 2, with (b) meanwhile if (c) has to wait; and one
-  implementation of both checks for the function and the class.
-- Owner: the author.
-- Status: open. Implemented meanwhile: (a) for both.
-
 ### 2026-11-12 — The validation study of F3: the air speed of case (iv), and the limiter of the drift with setpoints that change within the day
 - Context: the try-runs of `tools/indoor_adaptation_study.py` (8–14 January and 15–21 July of the sample model in
   Seville, 120 occupied hours each; the sample model is a test model, not a model of the study: `DEVLOG.md`) showed two
@@ -127,3 +81,9 @@ clothing insulation schedule, and another argument for `CalculationMethodSchedul
 were answered on 2026-11-10 (`notes/PROPUESTAS_MEJORAS_post_1.1.0_v04.md` §5): see [[decisions.md#2026-11-10 — The verdicts of the author on the 36 provisional decisions of the proposals of 1.2.0|the verdicts of 2026-11-10]]. The 23 provisional decisions of the session of the review v04 (2026-11-10 and 2026-11-11) were answered on
 2026-11-11 (the verdicts of the handoff of Claude Science, §3), but for two that stayed open until 2026-11-12, pending the author with Ruiji Sun (the SET of the indicators of F3 and the static reference of case (i) of its validation study): see
 [[decisions.md#2026-11-11 — The verdicts on the 23 provisional decisions of the session of the review v04|the verdicts of 2026-11-11]]. The six questions left open after session 3 of the review of 1.2.0 (the eight findings of the self-audit of session 2 that needed a decision of the author, the details of tasks S4 and S1, comfort standards 9 and 10, and those two of F3) were decided on 2026-11-12 by Claude Code for the author, who delegated them: see [[decisions.md#2026-11-12 — The decisions on the six questions left open after session 3 of the review of 1.2.0|the decisions of 2026-11-12]].
+
+The question of 2026-11-13 on what checks 1 and 2 of `verify_accim_simulation` report, now that they find the zones
+and the windows with ':' in their names, was answered by the author that day ("Haz los checks 1 y 2", the
+recommendation: check 1 apart from the mismatches, an exact check 2, and one implementation for the function and the
+class): see
+[[decisions.md#2026-11-13 — Checks 1 and 2 of the verification: check 1 apart, an exact check 2, and one implementation|the decision of 2026-11-13]].

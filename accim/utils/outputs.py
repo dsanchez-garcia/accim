@@ -2,7 +2,7 @@
 # Copyright (C) 2021-2026 Daniel Sánchez-García
 # Distributed under the GNU General Public License v3 or later.
 
-"""The outputs of the simulations: the outputs available in a model, and the ESO files."""
+"""The outputs of the simulations: the outputs available in a model, and the ESO files and their CSV files."""
 
 import os
 import platform
@@ -23,6 +23,7 @@ from accim.utils.people import get_idf_hierarchy_with_people
 __all__ = [
     'identify_variable_key_pattern',
     'print_available_outputs_mod',
+    'read_csv_outputs',
     'read_eso_using_readvarseso',
 ]
 
@@ -96,95 +97,26 @@ class print_available_outputs_mod:
                 pass
 
 
-def read_eso_using_readvarseso(
-        eso_file_path: str = 'eplusout.eso',
-        eplus_install_dir: Optional[str] = None,
-        only_run_period: bool = True,
-        cleanup: bool = True
-) -> Dict[str, Dict[str, pd.DataFrame]]:
+def read_csv_outputs(csv_path: str, only_run_period: bool = True) -> Dict[str, Dict[str, pd.DataFrame]]:
+    """The outputs of a CSV file of ReadVarsESO (as that which EnergyPlus leaves next to its ESO file), as
+    :func:`read_eso_using_readvarseso` returns them, which reads its CSV file with this function.
+
+    The columns of the DataFrame of each frequency are (key, variable, units): the key is the text before the last
+    ':' of each name, so the keys with ':' are whole (the zones ``Block1:Zone1``); its index is the date and time of
+    each row.
+
+    :param csv_path: The CSV file.
+    :type csv_path: str
+    :param only_run_period: True to keep the rows of the last environment only (the run period, without the
+        sizing periods before it).
+    :type only_run_period: bool
+    :return: ``{'data': {frequency: DataFrame}, 'metadata': {frequency: DataFrame}}``, with the frequencies of the
+        file ('Timestep', 'Hourly', 'Daily', 'Monthly', 'Runperiod'...).
+    :rtype: dict
     """
-    Lee el archivo .eso usando ReadVarsESO y parsea correctamente los nombres de objetos
-    que contienen dos puntos (ej: Nombres de Zonas o Equipos VRF).
-    """
-
-    # --- 1. ENCONTRAR EJECUTABLE READVARSESO ---
-    exe_name = 'ReadVarsESO'
-    if platform.system() == 'Windows':
-        exe_name += '.exe'
-
-    readvars_path = None
-
-    # A. Verificar si el usuario dio una ruta específica
-    if eplus_install_dir:
-        paths_to_check = [
-            eplus_install_dir,
-            os.path.join(eplus_install_dir, exe_name),
-            os.path.join(eplus_install_dir, 'PostProcess', exe_name)
-        ]
-        for p in paths_to_check:
-            if os.path.isfile(p) and p.endswith(exe_name):
-                readvars_path = p
-                break
-
-    # B. Búsqueda automática en rutas por defecto
-    if not readvars_path:
-        common_paths = [
-            r'C:\EnergyPlusV26-2-0', r'C:\EnergyPlusV26-1-0',
-            r'C:\EnergyPlusV25-2-0', r'C:\EnergyPlusV25-1-0', r'C:\EnergyPlusV24-2-0', r'C:\EnergyPlusV24-1-0',
-            r'C:\EnergyPlusV23-2-0', r'C:\EnergyPlusV23-1-0',
-            r'C:\EnergyPlusV22-2-0', r'C:\EnergyPlusV22-1-0',
-            r'C:\EnergyPlusV9-6-0', r'C:\EnergyPlusV9-5-0', r'C:\EnergyPlusV9-4-0',
-            '/usr/local/bin', '/Applications/EnergyPlus-23-1-0'
-        ]
-
-        for base_path in common_paths:
-            potential_paths = [
-                os.path.join(base_path, 'PostProcess', exe_name),
-                os.path.join(base_path, exe_name)
-            ]
-            for p in potential_paths:
-                if os.path.exists(p):
-                    readvars_path = p
-                    break
-            if readvars_path: break
-
-    if not readvars_path:
-        raise FileNotFoundError(
-            f"No se pudo encontrar '{exe_name}'. Por favor, especifica 'eplus_install_dir'."
-        )
-
-    # --- 2. PREPARAR ARCHIVOS ---
-    abs_eso_path = os.path.abspath(eso_file_path)
-    if not os.path.exists(abs_eso_path):
-        raise FileNotFoundError(f"No se encuentra el archivo .eso: {abs_eso_path}")
-
-    work_dir = os.path.dirname(abs_eso_path)
-    eso_filename = os.path.basename(abs_eso_path)
-
-    csv_filename = os.path.splitext(eso_filename)[0] + '.csv'
-    csv_output_path = os.path.join(work_dir, csv_filename)
-    rvi_filename = 'temp_readvars.rvi'
-    rvi_path = os.path.join(work_dir, rvi_filename)
-
-    with open(rvi_path, 'w') as f:
-        f.write(f"{eso_filename}\n")
-        f.write(f"{csv_filename}\n")
-
-    # --- 3. EJECUTAR READVARSESO ---
-    cmd = [readvars_path, rvi_filename]
-    try:
-        subprocess.run(cmd, cwd=work_dir, check=True, capture_output=True)
-    except subprocess.CalledProcessError as e:
-        err_msg = e.stderr.decode() if e.stderr else "Sin mensaje de error."
-        raise RuntimeError(f"ReadVarsESO falló.\nError: {err_msg}")
-
-    # --- 4. LEER CSV ---
-    if not os.path.exists(csv_output_path):
-        raise FileNotFoundError("No se generó el archivo CSV.")
-
     try:
         # utf-8-sig para evitar problemas con BOM
-        df_all = pd.read_csv(csv_output_path, encoding='utf-8-sig')
+        df_all = pd.read_csv(csv_path, encoding='utf-8-sig')
         df_all.columns = df_all.columns.str.strip()  # Limpiar espacios en headers
     except Exception as e:
         raise RuntimeError(f"Fallo al leer el CSV generado: {e}")
@@ -288,6 +220,97 @@ def read_eso_using_readvarseso(
         meta_df.sort_values(by=['Report Type', 'Area'], inplace=True)
         metadata_dict[freq] = meta_df.reset_index(drop=True)
 
+    return {'data': data_dict, 'metadata': metadata_dict}
+
+
+def read_eso_using_readvarseso(
+        eso_file_path: str = 'eplusout.eso',
+        eplus_install_dir: Optional[str] = None,
+        only_run_period: bool = True,
+        cleanup: bool = True
+) -> Dict[str, Dict[str, pd.DataFrame]]:
+    """
+    Lee el archivo .eso usando ReadVarsESO y parsea correctamente los nombres de objetos
+    que contienen dos puntos (ej: Nombres de Zonas o Equipos VRF).
+    """
+
+    # --- 1. ENCONTRAR EJECUTABLE READVARSESO ---
+    exe_name = 'ReadVarsESO'
+    if platform.system() == 'Windows':
+        exe_name += '.exe'
+
+    readvars_path = None
+
+    # A. Verificar si el usuario dio una ruta específica
+    if eplus_install_dir:
+        paths_to_check = [
+            eplus_install_dir,
+            os.path.join(eplus_install_dir, exe_name),
+            os.path.join(eplus_install_dir, 'PostProcess', exe_name)
+        ]
+        for p in paths_to_check:
+            if os.path.isfile(p) and p.endswith(exe_name):
+                readvars_path = p
+                break
+
+    # B. Búsqueda automática en rutas por defecto
+    if not readvars_path:
+        common_paths = [
+            r'C:\EnergyPlusV26-2-0', r'C:\EnergyPlusV26-1-0',
+            r'C:\EnergyPlusV25-2-0', r'C:\EnergyPlusV25-1-0', r'C:\EnergyPlusV24-2-0', r'C:\EnergyPlusV24-1-0',
+            r'C:\EnergyPlusV23-2-0', r'C:\EnergyPlusV23-1-0',
+            r'C:\EnergyPlusV22-2-0', r'C:\EnergyPlusV22-1-0',
+            r'C:\EnergyPlusV9-6-0', r'C:\EnergyPlusV9-5-0', r'C:\EnergyPlusV9-4-0',
+            '/usr/local/bin', '/Applications/EnergyPlus-23-1-0'
+        ]
+
+        for base_path in common_paths:
+            potential_paths = [
+                os.path.join(base_path, 'PostProcess', exe_name),
+                os.path.join(base_path, exe_name)
+            ]
+            for p in potential_paths:
+                if os.path.exists(p):
+                    readvars_path = p
+                    break
+            if readvars_path: break
+
+    if not readvars_path:
+        raise FileNotFoundError(
+            f"No se pudo encontrar '{exe_name}'. Por favor, especifica 'eplus_install_dir'."
+        )
+
+    # --- 2. PREPARAR ARCHIVOS ---
+    abs_eso_path = os.path.abspath(eso_file_path)
+    if not os.path.exists(abs_eso_path):
+        raise FileNotFoundError(f"No se encuentra el archivo .eso: {abs_eso_path}")
+
+    work_dir = os.path.dirname(abs_eso_path)
+    eso_filename = os.path.basename(abs_eso_path)
+
+    csv_filename = os.path.splitext(eso_filename)[0] + '.csv'
+    csv_output_path = os.path.join(work_dir, csv_filename)
+    rvi_filename = 'temp_readvars.rvi'
+    rvi_path = os.path.join(work_dir, rvi_filename)
+
+    with open(rvi_path, 'w') as f:
+        f.write(f"{eso_filename}\n")
+        f.write(f"{csv_filename}\n")
+
+    # --- 3. EJECUTAR READVARSESO ---
+    cmd = [readvars_path, rvi_filename]
+    try:
+        subprocess.run(cmd, cwd=work_dir, check=True, capture_output=True)
+    except subprocess.CalledProcessError as e:
+        err_msg = e.stderr.decode() if e.stderr else "Sin mensaje de error."
+        raise RuntimeError(f"ReadVarsESO falló.\nError: {err_msg}")
+
+    # --- 4. LEER CSV ---
+    if not os.path.exists(csv_output_path):
+        raise FileNotFoundError("No se generó el archivo CSV.")
+
+    result = read_csv_outputs(csv_output_path, only_run_period=only_run_period)
+
     # --- 7. LIMPIEZA ---
     if cleanup:
         try:
@@ -298,7 +321,7 @@ def read_eso_using_readvarseso(
         except OSError:
             pass
 
-    return {'data': data_dict, 'metadata': metadata_dict}
+    return result
 
 
 def identify_variable_key_pattern(

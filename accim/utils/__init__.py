@@ -14,7 +14,7 @@ which takes long to import):
   category and comfort mode, to read it before adding the ACCIS to a model (``print_setpoint_ems_code``), and its
   programs, to run them (``get_setpoint_ems_programs``, used by :func:`accim.sim.preview.compute_setpoints`).
 - :mod:`accim.utils.versions`: the IDD files and the transition of IDF files to newer EnergyPlus versions.
-- :mod:`accim.utils.outputs`: the outputs available in a model, and the ESO files.
+- :mod:`accim.utils.outputs`: the outputs available in a model, and the ESO files and their CSV files.
 - :mod:`accim.utils.verification`: verification of the simulations of the models of accim.
 - :mod:`accim.utils.workspace`: cleaning of the files that the simulations write.
 - :mod:`accim.utils.session`: sessions saved in a pickle file, to resume them, and in a JSON file, to read them
@@ -62,6 +62,7 @@ _SUBMODULES = {
     'update_idf_version': 'versions',
     'print_available_outputs_mod': 'outputs',
     'read_eso_using_readvarseso': 'outputs',
+    'read_csv_outputs': 'outputs',
     'identify_variable_key_pattern': 'outputs',
     'verify_accim_simulation': 'verification',
     'AccimSimulationVerifier': 'verification',

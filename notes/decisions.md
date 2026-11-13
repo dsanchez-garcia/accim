@@ -11,11 +11,72 @@ Durable architectural/process decisions for this repository and its Obsidian
 vault. Newest first. Use [[templates/decision-record.md|the decision-record
 template]] to add a new entry.
 
+## 2026-11-13 — Checks 1 and 2 of the verification: check 1 apart, an exact check 2, and one implementation
+
+- **Status**: accepted (the author, 2026-11-13: "Haz los checks 1 y 2", after the recommendation of Claude Code in the
+  question of [[questions.md]] of that day: option (b) for check 1 and option (c) for check 2, with one
+  implementation for the function and the class); the choices of the implementation (points 3 to 9) are provisional
+  (Claude Code, the model Claude Fable 5.2)
+- **Context**: with the outputs of the zones and the windows with ':' found (the entry below), check 1 of
+  `verify_accim_simulation` reported the hours in which the HVAC system of the sample model, on, does not hold its
+  setpoint (6 to 77 of the 168 hours of each zone in a week of July), and check 2 reported 213 mismatches in a week
+  in mixed mode that were not errors of the EMS: it compared the conditions of `SetWindowOperation_<window>` with the
+  outputs of the same timestep, and with constants for the ventilation setpoint and the minimum outdoor temperature.
+  `AccimSimulationVerifier` had other checks 1 and 2, with other criteria and identifiers.
+- **Decision**:
+  1. Check 1 is reported apart from the mismatches. Its timesteps (`Check1_Cooling` and `Check1_Heating`, with the
+     criterion of the function: the system of the zone on and the zone beyond its setpoint by more than `tolerance`)
+     tell of the HVAC system, so an empty result of `verify_accim_simulation` means that the EMS does what its
+     programs say.
+  2. Check 2 is written as checks 3 to 6 are: the opening factor of each window against that of its EMS programs
+     (`SetMyVOF_<window>` and `SetWindowOperation_<window>`) with the values that they read, within
+     `calculation_tolerance`, for the three HVAC modes. The function and the class run the same code.
+  3. What the programs read was measured, not assumed (EnergyPlus 25.1, the sample model, 2026-11-13). The operative
+     temperature of the zone and the coils of its VRF system (with the existing HVAC systems, the load to the
+     setpoints of its thermostat) are those of the previous timestep; the outdoor air temperature and the wind speed
+     of the zone, the occupants and the EMS variables (the cooling setpoint, the ventilation setpoint and the minimum
+     outdoor temperature) are those of the timestep itself. With them the replica is exact (the largest difference,
+     about 1e-15) in seven simulations: `hvac_mode` 2 with `ventilation_control` 0 and 2, `hvac_mode` 1 with 0 and
+     1, the first of each with a maximum wind speed that is reached, and a model with an existing HVAC system
+     (`ex_mm`). The programs themselves, run with the Erl interpreter of `accim.utils.ems_code`, give the same
+     opening factor in 14 combinations (a test).
+  4. The timesteps of check 1 are in the attribute `attrs['setpoints_not_met']` of the result (a table with its
+     columns) and in the summary; `setpoints_not_met=True` adds them to the result, for those who used them. A
+     second return value would break the calls of accim 1.1.0.
+  5. Check 2 has one identifier, `Check2_OpeningFactor`, and the description of each mismatch has the values that
+     the programs read: an exact check compares the result of the programs, not each of their conditions. The
+     identifiers `Check2_HVACmode<mode>_<condition>` of the function, and `Check2_Cond<number>_<condition>`,
+     `Check1_TooHot` and `Check1_TooCold` of the class, are gone.
+  6. Check 2 needs the outputs at timestep frequency, since the hourly ones do not have the values of the previous
+     timestep. Without them it is not done, with a line in the summary (as checks 3 and 6).
+  7. The standard outputs of accim do not change, nor their golden files. The programs read the outdoor air
+     temperature and the wind speed of the zone of each window, which the standard outputs lack:
+     `output_type='detailed'` adds them in mixed mode (and the load to the setpoints, with `ex_mm`). Without them,
+     check 2 takes those of the site and its summary says so. In the sample model the wind speed of the zones is
+     49 % of that of the site and their temperature 0.0016 K below it: in a week of spring, no false mismatch with
+     the default maximum wind speed (50 m/s), and 75 and 480 in 6042 values with 1 m/s. Whether the standard outputs
+     of mixed mode should have them is an entry of `TODO.md`. The output IDFs of the detailed outputs in mixed mode
+     change on purpose: the three configurations of the golden master that have them (`b02_vrf_mm_grid`,
+     `b13_vrf_mm_scheduled_vent` and `s02_add_modify`) are written again, and they differ from their golden files of
+     before in these Output:Variable objects only (checked: without them, their texts are the same).
+  8. `AccimSimulationVerifier` keeps its attributes (`violations`, `summary`, `summary_table_setpoint` and
+     `summary_table_window`) and calls the functions of the two checks. It has the arguments `tolerance` and
+     `calculation_tolerance`, reads the CSV file next to the ESO file if there is one, as before, and does not raise
+     a `ValueError` when an output is missing: its summary says what is not checked. Its criterion of check 1 (the
+     zone beyond its setpoint in any timestep, whatever its HVAC system does, but for the isolated timesteps) is
+     gone, with its identifiers.
+  9. `accim.utils.read_csv_outputs()` is public: it is the part of `read_eso_using_readvarseso()` that reads its
+     CSV file, which the class needs for the CSV file that EnergyPlus leaves.
+- **Consequences**: the results of `verify_accim_simulation` have no rows of check 1 unless they are asked for, and
+  those of check 2 have another identifier. The tests of accim that assert an empty result in simulations of the
+  sample model (that of the limiter of the drift and those of the long-term discomfort) assert it again of all the
+  checks. The entry of `AccimSimulationVerifier` of `TODO.md` is done; checks 3 to 6 are still in the function only,
+  as the docstring of the class says.
+
 ## 2026-11-13 — Checks 1 and 2 of the verification find the outputs whose keys have ':': the choices of the fix
 
-- **Status**: accepted (the fix of the search, which the author asked for on 2026-11-13); what the checks report now
-  is an open question of [[questions.md]], and the choices of point 4 are provisional (Claude Code, the model Claude
-  Fable 5.2)
+- **Status**: accepted (the fix of the search, which the author asked for on 2026-11-13); point 4 is superseded by
+  the decision of the author of the same day on what the checks report (the entry above)
 - **Context**: `verify_accim_simulation` and `AccimSimulationVerifier` split the names of the outputs at their first
   ':', so checks 1 and 2 did not find the outputs of the zones and the windows whose names have ':' (those of the
   models of DesignBuilder, as the sample model): the function skipped them with a warning, and the class raised a

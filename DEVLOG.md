@@ -36,6 +36,70 @@ Recommended flow: track active work in `TODO.md`, move completed outcomes to `DE
 ## Entries
 
 ### 2026-11-13
+#### [done] Checks 1 and 2 of the verification: check 1 apart, an exact check 2, and one implementation for the function and the class (branch `v1.2.0`)
+- Context: the answer of the author of 2026-11-13 ("Haz los checks 1 y 2") to the question of that day of
+  `notes/questions.md`, with the recommendation of Claude Code: option (b) for check 1, option (c) for check 2, and one
+  implementation of both for `verify_accim_simulation` and `AccimSimulationVerifier` (the entry of the class of
+  `TODO.md`). With the outputs of the zones and the windows with ':' found (the entry below), check 1 reported the
+  hours in which the system of the sample model does not hold its setpoint, and check 2, mismatches that were not
+  errors of the EMS.
+- Changes: the two checks are functions of `accim.utils.verification`, which the function and the class call.
+  `_setpoints_not_met()` (check 1) gives the timesteps in which the system of a zone cools and the zone is above its
+  cooling setpoint by more than `tolerance`, or heats and it is below its heating setpoint, at timestep frequency or
+  else hourly; the zones are those of the EMS sensors `<zone>_OpT`, and what their systems cool and heat is read in
+  the outputs of the sensors `<zone>_CoolCoil` and `<zone>_HeatCoil`, or else in the first output of a coil whose key
+  has that of the zone. `verify_accim_simulation` counts them in its summary and returns them in
+  `attrs['setpoints_not_met']` of its result, and in the result itself only with the new argument
+  `setpoints_not_met=True`: an empty result means that the EMS does what its programs say. `_window_opening()` is the
+  opening factor that the programs `SetMyVOF_<window>` and `SetWindowOperation_<window>` give from the values that
+  they read, and `_window_mismatches()` (check 2, `Check2_OpeningFactor`) compares it with that of each window (the
+  output of the surface or of the schedule that its EMS actuator sets), within `calculation_tolerance`, for the three
+  HVAC modes and for the VRF and the existing HVAC systems. What the programs read was measured with simulations of
+  the sample model (EnergyPlus 25.1): the operative temperature of the zone and its coils (or the load to the
+  setpoints of its thermostat), of the previous timestep; the outdoor air temperature and the wind speed of the zone,
+  the occupants and the EMS variables of the setpoints, of the timestep itself. Check 2 needs the outputs at
+  timestep frequency (a line in the summary says so otherwise) and does not check the first timestep of each
+  environment. The outdoor outputs that the programs read are those of the zone, which the standard outputs lack:
+  `accim.sim.outputs._add_window_program_outputs()` adds them with `output_type='detailed'` in mixed mode (and the
+  load to the setpoints, with `ex_mm`), and without them check 2 takes those of the site, with a note in its summary.
+  The standard outputs do not change; the output IDFs of the detailed outputs in mixed mode do, on purpose, so the
+  golden files of the three configurations that have them (`b02_vrf_mm_grid`, `b13_vrf_mm_scheduled_vent` and
+  `s02_add_modify`) are written again. `AccimSimulationVerifier` calls both
+  functions (it had its own checks, with other criteria and identifiers): it keeps its attributes, has the arguments
+  `tolerance` and `calculation_tolerance`, and does not raise a `ValueError` without an output. The module has 1397
+  lines instead of 1990. `accim.utils.outputs.read_csv_outputs()` (public, also in `accim.utils`) is the part of
+  `read_eso_using_readvarseso()` that reads its CSV file, which the class uses for the CSV file next to the ESO file.
+  The two test files that asserted "no mismatch but those of check 1" since the entry below assert an empty result
+  again.
+- Files: `accim/utils/verification.py`, `accim/utils/outputs.py`, `accim/utils/__init__.py`, `accim/sim/outputs.py`,
+  `tests/core/test_verification.py`, `tests/core/test_drift_limiter.py`,
+  `tests/core/test_long_term_discomfort_counters.py`, three golden files of `tests/core/golden_master/golden`,
+  `docs/source/4_detailed use.md` (4.1 and 4.6.1), `CHANGELOG.md`,
+  `CAMBIOS_CODIGO_v1.2.0.md` (§57), `TODO.md`, `notes/questions.md`, `notes/decisions.md`, `notes/work-log.md`.
+- Verification: `tests/core/test_verification.py`: 38 passed (EnergyPlus 25.1). Those of checks 1 and 2: check 1 with
+  made-up outputs (the rows apart, `setpoints_not_met=True`, another tolerance, the coils found by the EMS sensors and
+  by their names, the timestep outputs before the hourly ones); the opening factor of `_window_opening()` against the
+  programs of the windows run by the Erl interpreter (`vrf_mm` and `ex_mm`, seven cases of HVAC mode and ventilation
+  control, 1500 random timesteps each); check 2 with made-up outputs (each condition that closes a window, a window
+  wrongly open and another wrongly closed, the outputs of the site with their note, the hourly outputs not checked);
+  the detailed outputs of mixed mode; and, with simulations, check 1 of 1 and 2 July, check 2 of 29 April to 1 May
+  with the detailed and the standard outputs, HVAC modes 2 and 1 and ventilation controls 0 and 2 (no mismatch in the
+  431 timesteps of each window; a window opened on purpose is one), with `AccimSimulationVerifier`, and check 2 of 29
+  April to 5 May of the model with radiators of the golden master (`ex_mm`: no mismatch in the 1007 timesteps of each
+  window). In the week of 29 April in mixed mode in which the old check 2 reported 213 mismatches, the new one
+  reports none (6042 values). The twenty test files of `tests/core` that use the changed modules, in a snapshot of
+  the working tree: 548 passed, 1 skipped and 3 failed, the three configurations of the golden master with the
+  detailed outputs in mixed mode: their outputs are their golden files plus the new Output:Variable objects (1040,
+  48 and 4 objects, and 8 rows of the CSV file of the outputs of `b02`; without them the texts are the same), so
+  their golden files are written again on purpose (`--update-golden`; then they pass). After the last changes,
+  `test_verification.py`, `test_utils_package.py`, `test_printed_messages.py`, `test_drift_limiter.py` and
+  `test_long_term_discomfort_counters.py` in another snapshot: 169 passed. `tests/parametric_and_optimisation`: 520
+  passed. The documentation builds with the 33 warnings of before, and Python 3.9 compiles the changed modules.
+- Next step: the author decides whether the standard outputs of mixed mode get the outdoor air temperature and the
+  wind speed of the zones of the windows (a new entry of `TODO.md`). Check 1 does not find what the existing HVAC
+  systems without coils of their zones cool and heat (the radiators of the model of the golden master): its summary
+  says that those zones are not checked. Checks 3 to 6 are still in the function only.
+
 #### [done] Checks 1 and 2 of `verify_accim_simulation` and `AccimSimulationVerifier` find the zones and the windows whose names have ':' (branch `v1.2.0`)
 - Context: the P1 entry of `TODO.md` of 2026-11-09 (found with E2), the only P1 left after the session of 2026-11-12;
   the author asked for it on 2026-11-13. Checks 1 and 2 split the names of the outputs, `<key>:<variable>`, at their

@@ -2934,3 +2934,64 @@ dejarlo así, informarlo aparte de los desajustes (para que un resultado vacío 
 saltárselo. Para el check 2: dejarlo así, darle a la función el de la clase, o escribirlo como los checks 3 a 6 (la
 apertura de cada ventana contra las condiciones de su programa con los valores que lee el EMS, exacto). Mientras
 tanto queda como estaba, con la documentación (sección 4.6.1) diciendo qué informa cada uno.
+
+## 57. Los checks 1 y 2 de la verificación: el check 1 aparte, un check 2 exacto y una sola implementación
+
+Decidido por el autor el 13/11/2026 («Haz los checks 1 y 2») sobre la pregunta que dejó abierta la sección 56: la
+recomendación de Claude Code, es decir, informar el check 1 aparte de los desajustes, escribir el check 2 como los
+checks 3 a 6 y tener una sola implementación para la función y la clase.
+
+**Check 1: aparte de los desajustes.** Sus filas (`Check1_Cooling` y `Check1_Heating`: el sistema de una zona
+encendido y la zona fuera de su consigna en más de `tolerance`) hablan del sistema de climatización, no del EMS. Ya no
+están en la tabla que devuelve `verify_accim_simulation`, de modo que un resultado vacío significa que el EMS hace lo
+que dicen sus programas. Se cuentan en el resumen, están en `resultado.attrs['setpoints_not_met']` (una tabla con las
+mismas columnas) y el argumento nuevo `setpoints_not_met=True` las añade al resultado, como antes.
+
+**Check 2: exacto.** Compara el factor de apertura de cada ventana con el de sus programas del EMS
+(`SetMyVOF_<ventana>` y `SetWindowOperation_<ventana>`), con los valores que estos leen al principio de cada paso de
+tiempo. Qué leen se midió con EnergyPlus 25.1, no se supuso:
+
+- del paso anterior: la temperatura operativa de la zona y si el sistema enfrió o calentó (con los sistemas
+  existentes, la carga hasta las consignas del termostato);
+- del propio paso: la temperatura exterior y la velocidad del viento de la zona, los ocupantes, y la consigna de
+  refrigeración, la consigna de ventilación y la temperatura exterior mínima que calcula el EMS.
+
+Con esos valores la réplica es exacta (diferencia máxima del orden de 1e-15) en siete simulaciones: modo 2 con control
+de ventilación 0 y 2, modo 1 con 0 y 1, dos de ellas también con una velocidad máxima del viento que se alcanza, y un
+modelo con radiadores (`ex_mm`). Además coincide con los propios programas, ejecutados con el intérprete de Erl, en 14
+combinaciones. Es un solo identificador, `Check2_OpeningFactor`, con `calculation_tolerance`, para los tres modos; la
+descripción de cada desajuste lleva los valores leídos. En la semana de abril en modo mixto en la que el check
+anterior daba 213 desajustes falsos, ahora no da ninguno.
+
+Dos condiciones:
+
+- Necesita las salidas con frecuencia de paso de tiempo. Con las horarias no se hace, y el resumen lo dice.
+- Los programas leen la temperatura exterior y el viento *de la zona* (a la altura de su centroide), que las salidas
+  estándar no tienen. `output_type='detailed'` las añade ahora en modo mixto (y, con `ex_mm`, la carga hasta las
+  consignas). Sin ellas se usan las del sitio y el resumen lo avisa: en el modelo de ejemplo el viento de las zonas es
+  el 49 % del del sitio, lo que no da ningún desajuste falso con la velocidad máxima por defecto (50 m/s) y da 75 y 480
+  (de 6042 valores) con 1 m/s. Las salidas estándar no cambian; si deben llevarlas queda como entrada nueva de
+  `TODO.md`. Las salidas detalladas en modo mixto sí cambian, a propósito: las tres configuraciones del golden master
+  que las usan (`b02_vrf_mm_grid`, `b13_vrf_mm_scheduled_vent` y `s02_add_modify`) se han vuelto a escribir, y solo
+  difieren de las anteriores en esos objetos `Output:Variable` (comprobado: sin ellos, el texto es idéntico).
+
+**Una sola implementación.** `AccimSimulationVerifier` ejecuta el mismo código (`_setpoints_not_met()` y
+`_window_mismatches()`): `violations['setpoint']` son las filas del check 1 y `violations['window']`, los desajustes
+del check 2. Tiene los argumentos nuevos `tolerance` y `calculation_tolerance`, sigue leyendo el CSV que haya junto al
+ESO y ya no lanza `ValueError` si falta una salida: el resumen dice qué no se comprueba y por qué. Desaparecen sus
+identificadores (`Check1_TooHot`, `Check1_TooCold`, `Check2_Cond…`) y los de la función (`Check2_HVACmode…`). El
+módulo pasa de 1990 a 1397 líneas.
+
+**Otros cambios.** `accim.utils.read_csv_outputs()` (nueva, pública) lee el CSV de `ReadVarsESO` igual que
+`read_eso_using_readvarseso()` devuelve las salidas; es la parte de esta que leía el CSV. Los dos archivos de tests que
+esa mañana pasaron a exigir «ningún desajuste salvo los del check 1» vuelven a exigir un resultado vacío.
+
+**Los tests** (`tests/core/test_verification.py`, 38): el check 1 con salidas inventadas (las filas aparte, con
+`setpoints_not_met=True`, con otra tolerancia, y las baterías encontradas por los sensores del EMS o por su nombre);
+el factor de apertura que espera el check 2 contra los programas ejecutados con el intérprete de Erl (`vrf_mm` y
+`ex_mm`, siete casos de modo y control de ventilación, 1500 pasos aleatorios cada uno); el check 2 con salidas
+inventadas (cada condición que cierra la ventana, una ventana mal abierta y otra mal cerrada, las salidas del sitio con
+su aviso, las horarias sin comprobar); las salidas detalladas de modo mixto; y, con EnergyPlus 25.1, el check 1 de dos
+días de julio, el check 2 de tres días de abril y mayo en cuatro configuraciones (salidas detalladas y estándar, modos
+2 y 1, control 0 y 2), con la clase y con una ventana abierta a propósito, y el check 2 de una semana del modelo con
+radiadores.

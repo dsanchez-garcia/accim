@@ -52,6 +52,9 @@ _SIMPLIFIED_OUTPUTS = ('Zone Operative Temperature', 'Cooling Coil Total Cooling
 _DETAILED_OUTPUTS = ('AFN Surface Venting Window or Door Opening Factor',
                      'Zone Ventilation Standard Density Air Change Rate')
 _SITE_OUTPUTS = ('Site Outdoor Air Drybulb Temperature', 'Site Wind Speed', 'Site Outdoor Air Relative Humidity')
+#: The outputs of the zones of the windows and doors that their EMS programs of mixed mode read (the sensors
+#: <window>_OutT and <window>_WindSpeed) and the standard outputs lack; output type 'detailed' adds them
+_WINDOW_PROGRAM_OUTPUTS = ('Zone Outdoor Air Drybulb Temperature', 'Zone Outdoor Air Wind Speed')
 _VRF_OUTPUTS = ('VRF Heat Pump Cooling Electricity Energy', 'VRF Heat Pump Heating Electricity Energy')
 #: The outputs of the backup ideal loads air systems (``existing_hvac_ideal_loads_backup``): the loads to the
 #: setpoints that the existing HVAC systems do not meet.
@@ -150,8 +153,30 @@ def add_standard_outputs(model: AccimModel, frequencies: Iterable[str]) -> None:
             model.log(f'Added Output:Meter for {meter} ({frequency})')
 
 
+def _add_window_program_outputs(model: AccimModel, frequency: str) -> None:
+    """In mixed mode, the outputs of the zones of the windows and doors that their EMS programs read and the standard
+    outputs lack: their outdoor air temperature and wind speed and, with the existing HVAC systems ('ex_mm'), the
+    load to the setpoints that their thermostats ask for."""
+    if not model.is_mixed_mode:
+        return
+    variables = _WINDOW_PROGRAM_OUTPUTS
+    if model.script_type == 'ex_mm':
+        from accim.sim.hvac.existing import LOAD_TO_SETPOINT_OUTPUT
+
+        variables += (LOAD_TO_SETPOINT_OUTPUT,)
+    existing = {(str(output.Key_Value).upper(), output.Variable_Name)
+                for output in model.idf.idfobjects['Output:Variable'] if output.Reporting_Frequency == frequency}
+    for zone in dict.fromkeys(model.window_zones):
+        for variable in variables:
+            if (zone.upper(), variable) not in existing and ('*', variable) not in existing:
+                _new_output(model, zone, variable, frequency)
+
+
 def add_detailed_outputs(model: AccimModel, frequencies: Iterable[str]) -> None:
-    """Add the opening factors of the windows and the ventilation air changes (after the standard outputs)."""
+    """Add the opening factors of the windows and the ventilation air changes (after the standard outputs) and, in
+    mixed mode, the outputs that the EMS programs of the windows read and the standard outputs lack
+    (:data:`_WINDOW_PROGRAM_OUTPUTS`, and the load to the setpoints with the existing HVAC systems): with them, check
+    2 of :func:`accim.utils.verify_accim_simulation` is exact."""
     for frequency in frequencies:
         frequency = frequency.capitalize()
         existing = _variables_of_frequency(model, frequency)
@@ -159,6 +184,7 @@ def add_detailed_outputs(model: AccimModel, frequencies: Iterable[str]) -> None:
             if variable not in existing:
                 _new_output(model, '*', variable, frequency)
         _add_scheduled_ventilation_outputs(model, frequency)
+        _add_window_program_outputs(model, frequency)
 
 
 def select_custom_outputs(model: AccimModel, input_function=None) -> None:

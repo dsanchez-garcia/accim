@@ -15,6 +15,26 @@ This log is a lightweight, session-scoped complement to the repository's
 existing tracking files — it does not replace them (see
 [[decisions.md#2026-09-13 — `notes/work-log.md` complements, not replaces, existing tracking files|the related decision]]).
 
+## 2026-11-13 — Check 1 apart and an exact check 2 of the verification (branch `v1.2.0`, on the server)
+
+- **Objective**: what the author decided on the question of that morning ("Haz los checks 1 y 2"): check 1 of
+  `verify_accim_simulation` apart from the mismatches, check 2 written as checks 3 to 6, and one implementation for
+  the function and `AccimSimulationVerifier`.
+- **Affected files**: `accim/utils/verification.py`, `accim/utils/outputs.py`, `accim/utils/__init__.py`,
+  `accim/sim/outputs.py`, `tests/core/test_verification.py`, `tests/core/test_drift_limiter.py`,
+  `tests/core/test_long_term_discomfort_counters.py`, three golden files, sections 4.1 and 4.6.1 of the detailed use,
+  [[../CHANGELOG.md]] and the notes.
+- **Finding or decision**: what the programs of the windows read was measured with EnergyPlus 25.1: the operative
+  temperature of the zone and its HVAC system, of the previous timestep; the outdoor air temperature and the wind
+  speed of the zone (not those of the site), the occupants and the setpoints of the EMS, of the timestep itself.
+  With them check 2 is exact (`Check2_OpeningFactor`): no mismatch in the week in which the old one reported 213.
+  The standard outputs lack the outdoor outputs of the zones, so `output_type='detailed'` adds them in mixed mode and
+  check 2 takes those of the site otherwise, with a note
+  ([[decisions.md#2026-11-13 — Checks 1 and 2 of the verification: check 1 apart, an exact check 2, and one implementation|the decision and its choices]]).
+- **Validation**: in the entry of [[../DEVLOG.md]].
+- **Next step**: whether the standard outputs of mixed mode get what the programs of the windows read
+  ([[../TODO.md]]).
+
 ## 2026-11-13 — Checks 1 and 2 of the verification with the names that have ':' (branch `v1.2.0`, on the server)
 
 - **Objective**: the last P1 entry of [[../TODO.md]], which the author asked for after the session of 2026-11-12:
