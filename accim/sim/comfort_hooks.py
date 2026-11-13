@@ -71,7 +71,10 @@ those of the PMV of :func:`accim.sim.apmv.apply_pmv_setpoints` (−0.2 and 0.2, 
 1.0), which the EMS controls. With ``method='bisection'``, the metabolic rate, the clothing insulation and the air speed
 can also be those of the schedules of the People object of each zone in each timestep (``None``), and the mean radiant
 temperature that of the zone (``tr_mode='zone'``: the unknown of the bisection is then the air temperature, which the
-hook converts to the operative temperature of the thermostats of the ACCIS, (air + mean radiant temperature)/2).
+hook converts to the operative temperature of the thermostats of the ACCIS, (air + mean radiant temperature)/2). With
+``air_speed_heating``, the air speed is that of the fans that the occupants control, which they have only when they
+need it: the heating setpoint is inverted with ``air_speed_heating``, and the SET of the zones is that without the
+fans while it is not above the cooling setpoint of the SET.
 
 The causal SET model of Sun, Brager and Schiavon (2026), Energy and Buildings 370, 118097 (Fig. 7a: TSV = 0.11·SET −
 2.6, so the comfort band of TSV ±0.5 is 19.1 to 28.2 °C of SET and the neutral SET 23.6 °C), is comfort standard 24,
@@ -668,6 +671,30 @@ def standard_effective_temperature(air_temperature, mean_radiant_temperature, ai
         return result
 
 
+def _occupant_set(hook, air_temperature, mean_radiant_temperature, air_speed, relative_humidity, met, clo,
+                  position: str):
+    """The SET of the occupants of a zone (°C, a number or an array) for a hook of the SET
+    (:class:`SetSetpointHook`): that of :func:`standard_effective_temperature` with their air speed, or, with
+    ``air_speed_heating``, that of the occupants who have the air speed of their fans only when they need it: the SET
+    with the air speed of the heating setpoint (:meth:`SetSetpointHook.heating_air_speed`) while it is not above the
+    cooling setpoint of the SET of the hook, and the SET with ``air_speed``, that of the fans, when it is."""
+    if hook.air_speed_heating is None:
+        return standard_effective_temperature(air_temperature, mean_radiant_temperature, air_speed, relative_humidity,
+                                              met, clo, position)
+    import numpy as np
+
+    without_fans = np.asarray(standard_effective_temperature(
+        air_temperature, mean_radiant_temperature, hook.heating_air_speed(air_speed), relative_humidity, met, clo,
+        position), dtype=float)
+    warm = without_fans > hook.set_cooling_setpoint
+    result = without_fans
+    if warm.any():
+        with_fans = np.asarray(standard_effective_temperature(
+            air_temperature, mean_radiant_temperature, air_speed, relative_humidity, met, clo, position), dtype=float)
+        result = np.where(warm, with_fans, without_fans)
+    return float(result) if result.ndim == 0 else result
+
+
 class SetSetpointHook:
     """The hook of the backend of the Python API of EnergyPlus that sets the setpoints of the operative temperature of
     the standard effective temperature (SET) in the zones of a model with the ACCIS; :func:`apply_set_setpoints`
@@ -723,6 +750,18 @@ class SetSetpointHook:
       of the author of 2026-11-10 in ``notes/decisions.md``). With ``'equal_air'`` (the default), the mean radiant
       temperature is the air temperature and the temperatures found are the setpoints, as above.
 
+    With ``air_speed_heating`` (None by default; the question of the validation study of F3, decided on 2026-11-13 in
+    ``notes/decisions.md``), the air speed of the hook, or that of the People objects, is the one that the occupants
+    can have with the fans that they control, and they have it only when they need it: the cooling setpoint is
+    inverted with that air speed and the heating setpoint with ``air_speed_heating`` (0.1 m/s for still air; the lower
+    of both, in the timesteps in which the air speed is below it: :meth:`heating_air_speed`), and the SET of each zone
+    (the output ``SET_<zone>``, :meth:`zone_set` and :func:`set_of_results`) is that with ``air_speed_heating`` while
+    it is not above the cooling setpoint of the SET, and that with the air speed of the fans when it is (the occupants
+    turn their fans on when they are warm). Without it, one air speed converts both setpoints: with 1.1 met, 0.5 clo
+    and 50 % of relative humidity, the setpoints of 19.09 and 28.18 °C of the SET are 20.1 and 28.9 °C at 0.1 m/s and
+    23.9 and 32.5 °C at 1.2 m/s, so a schedule of fans raises the heating setpoint by almost 4 K, the heating can work
+    in their hours, and the SET of a zone at 22 °C is 16.7 °C (below the band of the causal SET model) instead of 21.1.
+
     The SET of pythermalcomfort is that of the code of ASHRAE 55: it takes the air speed as at least 0.1 m/s, and above
     0.85 met its convective heat transfer coefficient is at least 5.66·(met − 0.85)^0.39, larger than that of the air
     speed, 8.6·v^0.53, below about 0.16 m/s at 1.1 met and 0.21 m/s at 1.2 met (pythermalcomfort 4.8.1,
@@ -753,6 +792,8 @@ class SetSetpointHook:
     :param clothing_sources: The clothing insulation of each zone, with ``clo`` None: ``{zone: 'schedule'}`` (its
         clothing insulation schedule, the default), ``'dynamic'`` (the dynamic clothing model) or ``'method'`` (one of
         them, as the calculation method schedule says).
+    :param air_speed_heating: The air speed of the heating setpoint (m/s; out of 0 to 2 m/s, it warns), for the fans
+        that the occupants control (see above); None (the default) for the air speed of the cooling setpoint.
     :ivar setpoints: The last setpoints of each zone, ``{zone: (heating, cooling)}``, without the tolerance.
     :ivar keys: The key of each zone in the outputs of EnergyPlus (``{'Block1_Zone1': 'Block1:Zone1'}``), which
         :func:`apply_set_setpoints` sets and :func:`set_of_results` uses.
@@ -769,7 +810,8 @@ class SetSetpointHook:
                  met: Optional[float] = None, clo: Optional[float] = None, air_speed: Optional[float] = None,
                  position: Optional[str] = None, tolerance_k: float = 0.1, max_iterations: int = 20,
                  temperature_range: Optional[Tuple[float, float]] = None, method: str = 'table',
-                 tr_mode: str = 'equal_air', clothing_sources: Optional[Dict[str, str]] = None):
+                 tr_mode: str = 'equal_air', clothing_sources: Optional[Dict[str, str]] = None,
+                 air_speed_heating: Optional[float] = None):
         self.zones = [str(zone) for zone in zones]
         if not self.zones:
             raise ValueError('zones must name at least one zone.')
@@ -791,8 +833,11 @@ class SetSetpointHook:
         self.met = None if met is None else _check_number('met', met, 0.0)
         self.clo = None if clo is None else _check_number('clo', clo, 0.0)
         self.air_speed = None if air_speed is None else _check_number('air_speed', air_speed, 0.0)
+        self.air_speed_heating = (None if air_speed_heating is None
+                                  else _check_number('air_speed_heating', air_speed_heating, 0.0))
         for name, value, (low, high) in (('met', self.met, (1.0, 4.0)), ('clo', self.clo, (0.0, 1.5)),
-                                         ('air_speed', self.air_speed, (0.0, 2.0))):
+                                         ('air_speed', self.air_speed, (0.0, 2.0)),
+                                         ('air_speed_heating', self.air_speed_heating, (0.0, 2.0))):
             if value is not None and not low <= value <= high:
                 warnings.warn(f'{name} = {value} is out of the range of the SET of pythermalcomfort ({low} to {high}).',
                               UserWarning, stacklevel=2)
@@ -831,7 +876,7 @@ class SetSetpointHook:
         return (f'SetSetpointHook(zones={self.zones!r}, set_cooling_setpoint={self.set_cooling_setpoint}, '
                 f'set_heating_setpoint={self.set_heating_setpoint}, met={self.met}, clo={self.clo}, '
                 f'air_speed={self.air_speed}, position={self.position!r}, method={self.method!r}, '
-                f'tr_mode={self.tr_mode!r})')
+                f'tr_mode={self.tr_mode!r}, air_speed_heating={self.air_speed_heating})')
 
     def posture(self, met: float) -> str:
         """The posture of the SET with a metabolic rate (met): that of the hook, or, if it has none (with the metabolic
@@ -871,6 +916,21 @@ class SetSetpointHook:
         temperatures = np.array([24.0, 26.0])
         standard_effective_temperature(temperatures, temperatures, air_speed, 50.0, met, clo, position)
         standard_effective_temperature(temperatures, 25.0, air_speed, 50.0, met, clo, position)
+        if self.air_speed_heating is not None:
+            # The bisection with the air speed of each setpoint
+            speeds = np.array([self.heating_air_speed(air_speed), air_speed])
+            standard_effective_temperature(temperatures, temperatures, speeds, 50.0, met, clo, position)
+            standard_effective_temperature(temperatures, 25.0, speeds, 50.0, met, clo, position)
+
+    def heating_air_speed(self, air_speed):
+        """The air speed of the heating setpoint (m/s) with an air speed of the hook or of a People object (a number,
+        or an array): itself, or, with ``air_speed_heating``, the lower of both (see the class)."""
+        if self.air_speed_heating is None:
+            return air_speed
+        import numpy as np
+
+        slower = np.minimum(self.air_speed_heating, air_speed)
+        return float(slower) if np.ndim(slower) == 0 else slower
 
     def setpoints_of_humidity(self, relative_humidity: float) -> Tuple[float, float]:
         """The setpoints of a relative humidity (%): with ``method='table'``, interpolated linearly in the table of the
@@ -907,17 +967,20 @@ class SetSetpointHook:
 
         met, clo, air_speed = self._inputs(met, clo, air_speed)
         position = self.posture(met)
+        # The air speed of each setpoint: with air_speed_heating, that of the heating setpoint is not that of the fans
+        still = self.heating_air_speed(air_speed)
+        speeds = air_speed if still == air_speed else np.array([still, air_speed])
         if self.tr_mode == 'zone':
             if mean_radiant_temperature is None:
                 raise ValueError("With tr_mode='zone', the mean radiant temperature of the zone is needed.")
             radiant = float(mean_radiant_temperature)
 
             def standard(temperatures):
-                return np.asarray(standard_effective_temperature(temperatures, radiant, air_speed, relative_humidity,
+                return np.asarray(standard_effective_temperature(temperatures, radiant, speeds, relative_humidity,
                                                                  met, clo, position), dtype=float).reshape(2)
         else:
             def standard(temperatures):
-                return np.asarray(standard_effective_temperature(temperatures, temperatures, air_speed,
+                return np.asarray(standard_effective_temperature(temperatures, temperatures, speeds,
                                                                  relative_humidity, met, clo, position),
                                   dtype=float).reshape(2)
 
@@ -944,10 +1007,12 @@ class SetSetpointHook:
     def zone_set(self, air_temperature, mean_radiant_temperature, relative_humidity, met: Optional[float] = None,
                  clo: Optional[float] = None, air_speed: Optional[float] = None):
         """The SET of a zone (°C) with the metabolic rate, clothing insulation, air speed and posture of the hook, or
-        those given (:func:`standard_effective_temperature`); numbers, or arrays of the temperatures and humidity."""
+        those given (:func:`standard_effective_temperature`); numbers, or arrays of the temperatures and humidity.
+        With ``air_speed_heating``, it is that of the occupants who have the air speed of their fans only when they
+        need it (:func:`_occupant_set`, see the class)."""
         met, clo, air_speed = self._inputs(met, clo, air_speed)
-        return standard_effective_temperature(air_temperature, mean_radiant_temperature, air_speed, relative_humidity,
-                                              met, clo, self.posture(met))
+        return _occupant_set(self, air_temperature, mean_radiant_temperature, air_speed, relative_humidity, met, clo,
+                             self.posture(met))
 
     def _clothing(self, controller, zone: str) -> Optional[float]:
         """The clothing insulation of the People object of a zone in a timestep (see the class), or None if its sensor
@@ -1136,8 +1201,11 @@ class Sun2026SetpointHook(SetSetpointHook):
     :param heating_minimums: The minimum heating setpoint of each zone (°C, ``{zone: None}`` without it), which
         :func:`apply_sun2026_setpoints` reads from the model.
     :param met: ``met``, ``clo``, ``air_speed``, ``position``, ``tolerance_k`` (0.05 K by default), ``max_iterations``,
-        ``temperature_range`` and ``clothing_sources``: those of :class:`SetSetpointHook` (the metabolic rate, the
-        clothing insulation and the air speed are those of the People objects by default: decision 5 of the author).
+        ``temperature_range``, ``clothing_sources`` and ``air_speed_heating``: those of :class:`SetSetpointHook` (the
+        metabolic rate, the clothing insulation and the air speed are those of the People objects by default: decision
+        5 of the author; with ``air_speed_heating``, the air speed of the People objects is that of the fans that the
+        occupants control: the heating setpoint is that of ``air_speed_heating``, and the SET of the zone, its causal
+        TSV and its hours within the band are those of the occupants who have their fans only when they need them).
     :ivar band: The SET of the limits of the band of TSV ±tsv_limit (°C).
     :ivar low_heating_setpoints: The first heating setpoint below :data:`SET_HEATING_WARNING_TEMPERATURE` of each zone
         without a minimum heating setpoint.
@@ -1152,11 +1220,12 @@ class Sun2026SetpointHook(SetSetpointHook):
                  position: Optional[str] = None, tolerance_k: float = 0.05, max_iterations: int = 20,
                  temperature_range: Optional[Tuple[float, float]] = None,
                  heating_minimums: Optional[Dict[str, Optional[float]]] = None,
-                 clothing_sources: Optional[Dict[str, str]] = None):
+                 clothing_sources: Optional[Dict[str, str]] = None, air_speed_heating: Optional[float] = None):
         heating, cooling = sun2026_set_setpoints(comfort_mode, tsv_limit, set_offset, category)
         super().__init__(zones, cooling, heating, met=met, clo=clo, air_speed=air_speed, position=position,
                          tolerance_k=tolerance_k, max_iterations=max_iterations, temperature_range=temperature_range,
-                         method='bisection', tr_mode=tr_mode, clothing_sources=clothing_sources)
+                         method='bisection', tr_mode=tr_mode, clothing_sources=clothing_sources,
+                         air_speed_heating=air_speed_heating)
         self.comfort_mode = _sun2026_comfort_mode(comfort_mode)
         self.category = category
         self.tsv_limit = _sun2026_tsv_limit(tsv_limit, category, warn=False)
@@ -1170,7 +1239,7 @@ class Sun2026SetpointHook(SetSetpointHook):
     def __repr__(self) -> str:
         return (f'Sun2026SetpointHook(zones={self.zones!r}, comfort_mode={self.comfort_mode}, '
                 f'category={self.category!r}, tsv_limit={self.tsv_limit}, set_offset={self.set_offset}, '
-                f'tr_mode={self.tr_mode!r})')
+                f'tr_mode={self.tr_mode!r}, air_speed_heating={self.air_speed_heating})')
 
     def _given(self, controller, zone: str, heating: float, cooling: float) -> None:
         if (heating >= SET_HEATING_WARNING_TEMPERATURE or self.heating_minimums.get(zone) is not None
@@ -1423,7 +1492,7 @@ def apply_set_setpoints(building, set_cooling_setpoint: float, set_heating_setpo
                         position: Optional[str] = None, tolerance_k: float = 0.1, max_iterations: int = 20,
                         temperature_range: Optional[Tuple[float, float]] = None, method: str = 'table',
                         output_frequencies: Optional[Sequence[str]] = None,
-                        tr_mode: str = 'equal_air') -> SetSetpointHook:
+                        tr_mode: str = 'equal_air', air_speed_heating: Optional[float] = None) -> SetSetpointHook:
     """Prepare a model with the ACCIS (temperature setpoints and full air-conditioning, as :func:`apply_athb_setpoints`)
     for the setpoints of the standard effective temperature (SET), and return the hook that sets them
     (:class:`SetSetpointHook`, proposal A6, and tasks G3 and F1 of the review of accim 1.2.0).
@@ -1458,6 +1527,9 @@ def apply_set_setpoints(building, set_cooling_setpoint: float, set_heating_setpo
         ``method='bisection'``: the air temperatures whose SET is that of the setpoint with the mean radiant
         temperature of the zone, given to the thermostats of the ACCIS as operative temperatures, see
         :class:`SetSetpointHook`).
+    :param air_speed_heating: The air speed of the heating setpoint (m/s), for the fans that the occupants control:
+        None (the default) for that of the cooling setpoint (``air_speed``, or that of the People objects); see
+        :class:`SetSetpointHook`.
     :return: The hook, with the other arguments, and the keys of the zones in the outputs (``hook.keys``).
     :raises ValueError: If the model has no ACCIS of accim 1.0.0 or later, is in mixed mode, has already the objects of
         the SET or of the ATHB (both would set the same thermostats), has not the People objects whose inputs the hook
@@ -1476,7 +1548,8 @@ def apply_set_setpoints(building, set_cooling_setpoint: float, set_heating_setpo
                            set_heating_setpoint=set_heating_setpoint, met=met, clo=clo, air_speed=air_speed,
                            position=position, tolerance_k=tolerance_k, max_iterations=max_iterations,
                            temperature_range=temperature_range, method=method, tr_mode=tr_mode,
-                           clothing_sources={zone: values['clothing_source'] for zone, values in people.items()})
+                           clothing_sources={zone: values['clothing_source'] for zone, values in people.items()},
+                           air_speed_heating=air_speed_heating)
     hook.keys = dict(keys)
     hook.people = {zone: dict(values, key=keys[zone]) for zone, values in people.items()}
     if pierce:
@@ -1501,7 +1574,8 @@ def apply_sun2026_setpoints(building, comfort_mode: Any = 1, category: int = 80,
                             set_offset: Optional[float] = None, tr_mode: str = 'zone', position: Optional[str] = None,
                             tolerance_k: float = 0.05, max_iterations: int = 20,
                             temperature_range: Optional[Tuple[float, float]] = None,
-                            output_frequencies: Optional[Sequence[str]] = None) -> Sun2026SetpointHook:
+                            output_frequencies: Optional[Sequence[str]] = None,
+                            air_speed_heating: Optional[float] = None) -> Sun2026SetpointHook:
     """Prepare a model with the ACCIS (temperature setpoints and full air-conditioning, as :func:`apply_set_setpoints`)
     for comfort standard 24, INT Sun2026 SET (the causal SET model of Sun, Brager & Schiavon, 2026, Energy and
     Buildings 370, 118097; task F1 of block F, with the decisions of the author of 2026-11-10 in
@@ -1546,6 +1620,14 @@ def apply_sun2026_setpoints(building, comfort_mode: Any = 1, category: int = 80,
     :param temperature_range: The range of the temperatures of the bisection (°C), 10 to 40 °C by default.
     :param output_frequencies: The reporting frequencies of the outputs; None (the default) for those of the EMS outputs
         of the model.
+    :param air_speed_heating: The air speed of the heating setpoint (m/s), for the fans that the occupants control
+        (0.1 for still air): the air velocity schedule of the People objects is then the air speed that the occupants
+        can have with their fans, with which the hook inverts the cooling setpoint; it inverts the heating setpoint
+        with ``air_speed_heating``, and the SET of each zone (with its causal TSV and its hours within the band) is
+        that without the fans while it is not above the cooling setpoint of the SET, and that with them otherwise (see
+        :class:`SetSetpointHook`). None (the default): the air speed of the People objects in both setpoints and in
+        the SET of the zone (decision 5 of the author of 2026-11-10), with which a schedule of fans raises the heating
+        setpoint as well as the cooling one.
     :return: The hook, with the keys of the zones in the outputs (``hook.keys``).
     :raises ValueError: If the model has no ACCIS of accim 1.0.0 or later, is in mixed mode, has already the objects of
         the SET or of the ATHB, its People objects have not the schedules that the hook and the Pierce model need (or
@@ -1562,7 +1644,8 @@ def apply_sun2026_setpoints(building, comfort_mode: Any = 1, category: int = 80,
                                set_offset=set_offset, tr_mode=tr_mode, position=position, tolerance_k=tolerance_k,
                                max_iterations=max_iterations, temperature_range=temperature_range,
                                heating_minimums={zone: limits.get(zone, {}).get('AHSTmin') for zone in keys},
-                               clothing_sources={zone: values['clothing_source'] for zone, values in people.items()})
+                               clothing_sources={zone: values['clothing_source'] for zone, values in people.items()},
+                               air_speed_heating=air_speed_heating)
     hook.keys = dict(keys)
     hook.people = {zone: dict(values, key=keys[zone]) for zone, values in people.items()}
     # The Pierce model first: add_thermal_comfort_model raises its errors before changing anything
@@ -1664,6 +1747,11 @@ def set_of_results(results, hook: SetSetpointHook, keys: Optional[Dict[str, str]
     clothing insulation of the dynamic model of 0) are NaN. These inputs are those of the row, and the clothing
     insulation of the dynamic model that of the row itself, while the hook takes that of the previous timestep.
 
+    With a hook with ``air_speed_heating``, the SET of each row is that of the occupants who have the air speed of
+    their fans only when they need it, as that of the hook: the SET with the air speed of the heating setpoint while
+    it is not above the cooling setpoint of the SET of the hook, and that with the air speed of the fans when it is
+    (:class:`SetSetpointHook`).
+
     :param results: The results: a DataFrame of the CSV file of the simulation (with the names of the columns of
         EnergyPlus, ``BLOCK1:ZONE1:Zone Mean Air Temperature [C](Hourly)``), or its path.
     :param hook: The hook (:class:`SetSetpointHook`).
@@ -1720,8 +1808,8 @@ def set_of_results(results, hook: SetSetpointHook, keys: Optional[Dict[str, str]
                    else np.nan_to_num(met, nan=0.0) <= 1.2)
         for position, rows in (('sitting', valid & sitting), ('standing', valid & ~sitting)):
             if rows.any():
-                values[rows] = np.asarray(standard_effective_temperature(
-                    air[rows], radiant[rows], air_speed[rows], humidity[rows], met[rows], clo[rows], position),
+                values[rows] = np.asarray(_occupant_set(
+                    hook, air[rows], radiant[rows], air_speed[rows], humidity[rows], met[rows], clo[rows], position),
                     dtype=float)
         columns[f'SET_{zone}'] = values
     return pd.DataFrame(columns, index=results.index)

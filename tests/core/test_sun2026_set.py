@@ -232,6 +232,101 @@ def test_the_hook_of_comfort_standard_24_reads_the_people_objects():
     assert ch.MET_ACTIVITY_LEVEL == pytest.approx(104.76)
 
 
+def test_the_air_speed_of_the_heating_setpoint_with_the_fans_that_the_occupants_control():
+    # The question of the validation study of F3 (2026-11-12, decided on 2026-11-13): one air speed converts both
+    # limits of the band of the SET, so the fans raise the heating setpoint as well as the cooling one
+    pytest.importorskip('pythermalcomfort')
+    limits = (28.18, 19.09)
+    inputs = dict(met=1.1, clo=0.5, method='bisection', tolerance_k=0.01)
+    still, fans = (ch.SetSetpointHook(['Z'], *limits, air_speed=speed, **inputs) for speed in (0.1, 1.2))
+    assert [round(value, 1) for hook in (still, fans) for value in hook.operative_temperatures(50.0)] == [
+        20.1, 28.9, 23.9, 32.5]
+    assert still.air_speed_heating is None and still.heating_air_speed(0.7) == 0.7
+    # With air_speed_heating, the heating setpoint is that of still air, and the cooling setpoint that of the fans
+    both = ch.SetSetpointHook(['Z'], *limits, air_speed=1.2, air_speed_heating=0.1, **inputs)
+    assert both.operative_temperatures(50.0) == (still.operative_temperatures(50.0)[0],
+                                                 fans.operative_temperatures(50.0)[1])
+    assert both.inverted_temperatures(50.0) == both.operative_temperatures(50.0)
+    # With the mean radiant temperature of the zone, and by the table
+    zone_still, zone_fans, zone_both = (
+        ch.SetSetpointHook(['Z'], *limits, air_speed=speed, air_speed_heating=heating, tr_mode='zone', **inputs)
+        for speed, heating in ((0.1, None), (1.2, None), (1.2, 0.1)))
+    assert zone_both.operative_temperatures(50.0, 27.0) == (zone_still.operative_temperatures(50.0, 27.0)[0],
+                                                            zone_fans.operative_temperatures(50.0, 27.0)[1])
+    tables = [ch.SetSetpointHook(['Z'], *limits, met=1.1, clo=0.5, air_speed=speed, air_speed_heating=heating)
+              for speed, heating in ((0.1, None), (1.2, None), (1.2, 0.1))]
+    assert tables[2].setpoints_of_humidity(47.5) == (tables[0].setpoints_of_humidity(47.5)[0],
+                                                     tables[1].setpoints_of_humidity(47.5)[1])
+    # The air speed of the heating setpoint is not above that of the timestep (the fans do not slow the air down)
+    assert both.heating_air_speed(1.2) == 0.1 and both.heating_air_speed(0.05) == 0.05
+    np.testing.assert_array_equal(both.heating_air_speed(np.array([0.05, 0.1, 0.6])), [0.05, 0.1, 0.1])
+    people = ch.Sun2026SetpointHook(['Z'], air_speed_heating=0.1)
+    assert people.operative_temperatures(50.0, 27.0, 1.1, 0.5, 0.05) == ch.Sun2026SetpointHook(
+        ['Z']).operative_temperatures(50.0, 27.0, 1.1, 0.5, 0.05)
+    assert people.operative_temperatures(50.0, 27.0, 1.1, 0.5, 1.2)[0] == people.operative_temperatures(
+        50.0, 27.0, 1.1, 0.5, 0.1)[0]
+
+    # The SET of the zone is that of the occupants who have their fans only when they need them: that of still air
+    # while it is not above the cooling setpoint of the SET, and that of the fans when it is
+    for temperature in (18.0, 22.0, 28.0):
+        assert both.zone_set(temperature, temperature, 50.0) == still.zone_set(temperature, temperature, 50.0) <= 28.18
+    for temperature in (29.0, 33.0):
+        assert still.zone_set(temperature, temperature, 50.0) > 28.18
+        assert both.zone_set(temperature, temperature, 50.0) == fans.zone_set(temperature, temperature, 50.0)
+    # At 22 °C, the SET with the fans is below the band of the causal SET model, and that of still air within it
+    assert fans.zone_set(22.0, 22.0, 50.0) < 19.09 < still.zone_set(22.0, 22.0, 50.0)
+    temperatures = np.array([18.0, 22.0, 28.0, 29.0, 33.0])
+    np.testing.assert_array_equal(
+        both.zone_set(temperatures, temperatures, 50.0),
+        [(still if temperature < 28.5 else fans).zone_set(temperature, temperature, 50.0)
+         for temperature in temperatures])
+    assert 'air_speed_heating=0.1' in repr(both) and 'air_speed_heating=0.1' in repr(people)
+    assert 'air_speed_heating=None' in repr(still)
+    with pytest.raises(ValueError, match='air_speed_heating must be between 0.0 and None'):
+        ch.SetSetpointHook(['Z'], *limits, air_speed=1.2, air_speed_heating=-0.1, **inputs)
+    with pytest.raises(ValueError, match='air_speed_heating must be a number'):
+        ch.Sun2026SetpointHook(['Z'], air_speed_heating='still')
+    with pytest.warns(UserWarning, match='air_speed_heating = 2.5 is out of the range of the SET of pythermalcomfort'):
+        ch.SetSetpointHook(['Z'], *limits, air_speed=1.2, air_speed_heating=2.5, **inputs)
+
+
+def test_the_hook_of_comfort_standard_24_with_the_fans_that_the_occupants_control():
+    pytest.importorskip('pythermalcomfort')
+    minimums = {zone: 18.0 for zone in ZONES}
+    hook = ch.Sun2026SetpointHook(ZONES, air_speed_heating=0.1, heating_minimums=minimums)
+    plain = ch.Sun2026SetpointHook(ZONES, heating_minimums=minimums)
+    # The air velocity schedule of the People objects has the air speed of the fans, 1.2 m/s: zone 1 is at 23 °C
+    # (and 24 °C of mean radiant temperature), and zone 2 at 30 °C (and 31 °C)
+    conditions = dict(zip(ZONES, ((23.0, 24.0), (30.0, 31.0))))
+    values = {'ZoneTimeStep': 1 / 6}
+    for zone, (air, radiant) in conditions.items():
+        values.update(_zone_values(zone, air, radiant, SET_Clo=0.5, SET_Vel=1.2))
+    controller, plain_controller = _Controller(dict(values)), _Controller(dict(values))
+    hook(controller, CALLING_POINT)
+    plain(plain_controller, CALLING_POINT)
+    found = {}
+    for zone, (air, radiant) in conditions.items():
+        # The heating setpoint is that of still air, and the cooling setpoint that of the fans
+        still = plain.operative_temperatures(45.0, radiant, MET, 0.5, 0.1)
+        fans = plain.operative_temperatures(45.0, radiant, MET, 0.5, 1.2)
+        assert _given(controller, zone) == (still[0], fans[1])
+        # Without air_speed_heating, the fans raise the heating setpoint too (decision 5 of 2026-11-10)
+        assert _given(plain_controller, zone) == fans and fans[0] - still[0] > 3
+        found[zone] = [ch.standard_effective_temperature(air, radiant, speed, 45.0, MET, 0.5, 'sitting')
+                       for speed in (0.1, 1.2)]
+    # Zone 1 needs no fans: its SET is that of still air, within the band (with the fans, it would be below it); zone
+    # 2 is above the band without the fans, and within it with them
+    (cool_still, cool_fans), (warm_still, warm_fans) = found[ZONES[0]], found[ZONES[1]]
+    assert cool_fans < hook.band[0] <= cool_still <= hook.band[1]
+    assert hook.band[0] <= warm_fans <= hook.band[1] < warm_still
+    assert controller.get(f'SET_{ZONES[0]}') == cool_still and controller.get(f'SET_{ZONES[1]}') == warm_fans
+    assert controller.get(f'TSV_causal_{ZONES[0]}') == pytest.approx(0.11 * cool_still - 2.6, abs=1e-12)
+    assert [controller.get(f'HoursInCausalBand_{zone}') for zone in ZONES] == [pytest.approx(1 / 6)] * 2
+    # The hook without it reports the SET with the air speed of the People objects
+    assert plain_controller.get(f'SET_{ZONES[0]}') == cool_fans
+    assert plain_controller.get(f'HoursInCausalBand_{ZONES[0]}') == 0
+
+
 @needs_idd
 def test_apply_sun2026_setpoints_prepares_the_model(tmp_path):
     from accim.sim.accis import modify_accis
@@ -454,13 +549,15 @@ MEASURED = {
 }
 
 
-def _sun2026_model(folder, monkeypatch, begin, end):
+def _sun2026_model(folder, monkeypatch, begin, end, fans=None, air_speed_heating=None):
     """The output IDF of AddAccis of the sample model (INT EN16798, category II, comfort mode 3, full air-conditioning,
     outputs at timestep frequency) from ``begin`` to ``end`` ((month, day)), with a minimum heating setpoint of 18 °C in
     Block1:Zone1, prepared for comfort standard 24, with programs that copy the values that the sensors of the hook
-    read into reported variables; return its path and the hook."""
+    read into reported variables; return its path and the hook. With ``fans``, the air velocity schedule of its People
+    objects has that air speed (m/s) in all the hours, and the hook has ``air_speed_heating``."""
     from accim.sim.accis import AddAccis, load_idf, modify_accis
     from accim.sim.ems.programs import add_program
+    from accim.utils.people import get_people_objects
 
     folder.mkdir(parents=True)
     shutil.copy(SAMPLE_IDF, folder / 'TestModel.idf')
@@ -481,7 +578,12 @@ def _sun2026_model(folder, monkeypatch, begin, end):
     with warnings.catch_warnings():
         warnings.simplefilter('ignore')
         modify_accis(idf, zone_arguments={'Block1:Zone1': {'heating_setpoint_minimum': 18.0}})
-    hook = ch.apply_sun2026_setpoints(idf, output_frequencies=['timestep'])
+    if fans is not None:
+        idf.newidfobject('Schedule:Compact', Name='Fans', Schedule_Type_Limits_Name='', Field_1='Through: 12/31',
+                         Field_2='For: AllDays', Field_3='Until: 24:00', Field_4=fans)
+        for people in get_people_objects(idf):
+            people.Air_Velocity_Schedule_Name = 'Fans'
+    hook = ch.apply_sun2026_setpoints(idf, output_frequencies=['timestep'], air_speed_heating=air_speed_heating)
     prefixes = ('MAT', 'MRT', 'RH', 'Act', 'Clo', 'Vel')
     for zone in ZONES:
         names = [f'Copy{prefix}_{zone}' for prefix in prefixes]
@@ -569,6 +671,59 @@ def test_comfort_standard_24_in_energyplus(tmp_path, monkeypatch, season, begin,
         within = (operative <= cooling) & (operative >= heating)
         clear = np.minimum(np.abs(operative - heating), np.abs(operative - cooling)) > 1e-3
         assert occupied.any() and (comfortable[clear] == (within & occupied)[clear]).all()
+
+
+@needs_energyplus
+def test_comfort_standard_24_with_the_fans_that_the_occupants_control_in_energyplus(tmp_path, monkeypatch):
+    # The question of the validation study of F3 (decided on 2026-11-13): three days of July of the sample model with
+    # fans of 1.2 m/s in the air velocity schedule of its People objects, and the heating setpoint of still air
+    from accim.run import run_ep
+
+    pytest.importorskip('pythermalcomfort')
+    model, hook = _sun2026_model(tmp_path / 'fans', monkeypatch, (7, 15), (7, 17), fans=1.2, air_speed_heating=0.1)
+    assert hook.air_speed_heating == 0.1
+    with warnings.catch_warnings():
+        warnings.simplefilter('ignore')
+        [result] = run_ep(only_accim_idfs=False, confirm=True, processes=1, backend='api', hooks=[hook])
+    assert result.success, result.error
+    results = pd.read_csv(model.parent / 'sun[Seville.csv')
+    assert len(results) == 3 * 24 * STEPS
+    columns = list(results.columns)
+
+    def column(start):
+        return results[next(c for c in columns if c.upper().startswith(start.upper()))]
+
+    plain = ch.Sun2026SetpointHook(ZONES)
+    for zone in ZONES:
+        key = zone.replace('_', ':').upper()
+        copied = {prefix: column(f'EMS:Copy{prefix}_{zone} [').iloc[1:].to_numpy()
+                  for prefix in ('MAT', 'MRT', 'RH', 'Act', 'Clo', 'Vel')}
+        assert (copied['Vel'] == 1.2).all()
+        met = copied['Act'] / ch.MET_ACTIVITY_LEVEL
+        rows = list(range(0, len(met), 25))
+        # The cooling setpoint is that of the air speed of the fans, and the heating setpoint that of still air: with
+        # the air speed of the fans (the hook without air_speed_heating), it would be more than 3 K above
+        arguments = [(copied['RH'][t], copied['MRT'][t], met[t], copied['Clo'][t]) for t in rows]
+        still = np.array([plain.operative_temperatures(*values, 0.1) for values in arguments])
+        fans = np.array([plain.operative_temperatures(*values, 1.2) for values in arguments])
+        heating = column(f'EMS:Adaptive Heating Setpoint Temperature_No Tolerance_{zone} [').iloc[1:].to_numpy()
+        cooling = column(f'EMS:Adaptive Cooling Setpoint Temperature_No Tolerance_{zone} [').iloc[1:].to_numpy()
+        minimum = 18.0 if zone == 'Block1_Zone1' else -np.inf
+        np.testing.assert_allclose(heating[rows], np.maximum(still[:, 0], minimum), atol=1e-6)
+        np.testing.assert_allclose(cooling[rows], fans[:, 1], atol=1e-6)
+        assert (fans[:, 0] - still[:, 0]).min() > 3 and (fans[:, 1] - still[:, 1]).min() > 1
+        # The SET of the zone: that of still air while it is not above the upper limit of the band, and that of the
+        # fans when it is; both happen in these days
+        without = np.array([plain.zone_set(copied['MAT'][t], copied['MRT'][t], copied['RH'][t], met[t],
+                                           copied['Clo'][t], 0.1) for t in range(len(met))])
+        with_fans = np.array([plain.zone_set(copied['MAT'][t], copied['MRT'][t], copied['RH'][t], met[t],
+                                             copied['Clo'][t], 1.2) for t in range(len(met))])
+        reported = column(f'EMS:SET_{zone} [').iloc[1:].to_numpy()
+        warm = without > hook.band[1]
+        assert warm.any() and (~warm).any()
+        np.testing.assert_allclose(reported, np.where(warm, with_fans, without), atol=1e-6)
+        # The heating coil of the zone does not work in these days of July
+        assert (column(f'{key} VRF INDOOR UNIT DX HEATING COIL:Heating Coil Heating Rate [').to_numpy() == 0).all()
 
 
 @needs_energyplus

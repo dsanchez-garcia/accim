@@ -177,6 +177,38 @@ def test_the_set_of_the_results_with_the_inputs_of_the_people_objects(monkeypatc
                                _fake_set(AIR, RADIANT, 0.2, HUMIDITY, 1.2, 0.6, 'sitting'), rtol=0, atol=1e-12)
 
 
+def test_the_set_of_the_results_with_the_fans_that_the_occupants_control(monkeypatch):
+    # The question of the validation study of F3 (decided on 2026-11-13): with air_speed_heating, the air speed of the
+    # People objects is that of the fans, which the occupants have only when they need it. The SET of each row is that
+    # with air_speed_heating (not above the air speed of the row) while it is not above the cooling setpoint of the
+    # SET of the hook, and that with the fans when it is
+    monkeypatch.setattr(ch, 'standard_effective_temperature', _fake_set)
+    clo, speed = ROWS['CLO:Schedule Value [](Hourly)'].to_numpy(), ROWS['VEL:Schedule Value [](Hourly)'].to_numpy()
+    with_fans = _expected(MET, clo, speed, MET <= 1.2)
+    without_fans = _expected(MET, clo, np.minimum(speed, 0.1), MET <= 1.2)
+    np.testing.assert_allclose(with_fans, [21.3, 23.7, 23.3, np.nan, 21.1], rtol=0, atol=1e-12)
+    np.testing.assert_allclose(without_fans, [21.3, 23.7, 24.3, np.nan, 21.5], rtol=0, atol=1e-12)
+    hook = ch.SetSetpointHook(['Z1'], 24.0, 19.0, method='bisection', air_speed_heating=0.1)
+    found = ch.set_of_results(ROWS, hook, people=PEOPLE)['SET_Z1'].to_numpy()
+    # The third row is above 24 °C of SET without the fans (0.6 m/s): with them; the last one (0.3 m/s) is not
+    np.testing.assert_allclose(found, [21.3, 23.7, 23.3, np.nan, 21.5], rtol=0, atol=1e-12)
+    # With a cooling setpoint of the SET that no row reaches, no row has the fans; without air_speed_heating, all
+    never = ch.SetSetpointHook(['Z1'], 28.0, 19.0, method='bisection', air_speed_heating=0.1)
+    np.testing.assert_allclose(ch.set_of_results(ROWS, never, people=PEOPLE)['SET_Z1'].to_numpy(), without_fans,
+                               rtol=0, atol=1e-12)
+    always = ch.SetSetpointHook(['Z1'], 24.0, 19.0, method='bisection')
+    np.testing.assert_allclose(ch.set_of_results(ROWS, always, people=PEOPLE)['SET_Z1'].to_numpy(), with_fans,
+                               rtol=0, atol=1e-12)
+    # A hook with its own inputs: its air speed is that of the fans (0.8 m/s), and that of still air 0.2 m/s
+    own = ch.SetSetpointHook(['Z1'], 24.0, 19.0, method='bisection', met=1.2, clo=0.6, air_speed=0.8,
+                             air_speed_heating=0.2)
+    still = _fake_set(AIR, RADIANT, 0.2, HUMIDITY, 1.2, 0.6, 'sitting')
+    assert (still > 24.0).any() and (still <= 24.0).any()
+    np.testing.assert_allclose(ch.set_of_results(ROWS[list(ROWS.columns)[:3]], own, keys={'Z1': 'Z1'})['SET_Z1'],
+                               np.where(still > 24.0, _fake_set(AIR, RADIANT, 0.8, HUMIDITY, 1.2, 0.6, 'sitting'),
+                                        still), rtol=0, atol=1e-12)
+
+
 def test_the_errors_of_the_set_of_the_results_with_the_inputs_of_the_people_objects(monkeypatch):
     monkeypatch.setattr(ch, 'standard_effective_temperature', _fake_set)
     hook = ch.SetSetpointHook(['Z1'], 28.0, 19.0, method='bisection')
@@ -276,6 +308,58 @@ def test_the_indicators_with_the_inputs_of_the_people_objects(tmp_path, monkeypa
     hook = ch.SetSetpointHook(['Block1_Zone1', 'Block1_Zone2'], 28.0, 19.0, method='bisection')
     hook.people = ch.people_inputs(MODEL['building'])
     pd.testing.assert_frame_equal(ia.table_indicators(df, occupied, pythermalcomfort_set=hook), found)
+
+
+def test_the_indicators_with_the_fans_that_the_occupants_control(tmp_path, monkeypatch):
+    from .test_indoor_adaptation import BAND
+
+    table, conditions = _people_table(tmp_path, monkeypatch)
+    df, occupied = table.df, table.occupied_zone_list
+    (tmp_path / MODEL_NAME).write_text('', encoding='utf-8')
+    # The air velocity schedule has 0.1 m/s the first day and 0.6 m/s, the fans, the second one: with
+    # 'air_speed_heating', the SET of each row is that of 0.1 m/s while it is not above the upper limit of the causal
+    # band, and that of the fans when it is
+    inputs = {'met': 'people', 'clo': 'people', 'air_speed': 'people', 'air_speed_heating': 0.1}
+    row = ia.table_indicators(df, occupied, pythermalcomfort_set=inputs).iloc[0]
+    people = ia.table_indicators(df, occupied, pythermalcomfort_set='people').iloc[0]
+    differ = []
+    for zone in occupied:
+        without_fans, with_fans = _set_of_zone(conditions, zone, speed=0.1), _set_of_zone(conditions, zone)
+        controlled = np.where(without_fans > BAND[1], with_fans, without_fans)
+        for title, value in _band(controlled, OCCUPIED).items():
+            assert row[f'{zone}_{title}'] == pytest.approx(value), (zone, title)
+        # Occupied hours with the fans and without them, the second day: where the occupants do not need the fans,
+        # their SET is above that of the air speed of the People objects
+        on = (OCCUPIED > 0) & ~FIRST_DAY & (without_fans > BAND[1])
+        off = (OCCUPIED > 0) & ~FIRST_DAY & ~on
+        differ.append((bool(on.any()), bool(off.any())))
+        mean, mean_people = (found[f'{zone}_Mean SET_pythermalcomfort (°C)'] for found in (row, people))
+        assert mean > mean_people if off.any() else mean == mean_people
+    # The occupants of the first zone do not need the fans in any occupied hour of the second day, and those of the
+    # second zone need them in all
+    assert differ == [(False, True), (True, False)]
+    # A hook of the SET with it: the fans are on above its own cooling setpoint of the SET
+    hook = ch.SetSetpointHook(['Block1_Zone1', 'Block1_Zone2'], 26.0, 19.0, method='bisection', air_speed_heating=0.1)
+    hook.people = ch.people_inputs(MODEL['building'])
+    row = ia.table_indicators(df, occupied, pythermalcomfort_set=hook).iloc[0]
+    for zone in occupied:
+        without_fans, with_fans = _set_of_zone(conditions, zone, speed=0.1), _set_of_zone(conditions, zone)
+        for title, value in _band(np.where(without_fans > 26.0, with_fans, without_fans), OCCUPIED).items():
+            assert row[f'{zone}_{title}'] == pytest.approx(value), (zone, title)
+    # The upper limit of the band of tsv_limit, without its warning again
+    with warnings.catch_warnings():
+        warnings.simplefilter('error')
+        made = [ia._pythermalcomfort_hook(inputs, occupied, limit)[0] for limit in (None, 1.0)]
+    assert [(item.set_heating_setpoint, item.set_cooling_setpoint) for item in made] == [
+        pytest.approx(BAND), pytest.approx((1.6 / 0.11, 3.6 / 0.11))]
+    assert [item.air_speed_heating for item in made] == [0.1, 0.1]
+    assert ia._pythermalcomfort_hook('people', occupied)[0].air_speed_heating is None
+    for value, message in (({**inputs, 'air_speed_heating': 'people'}, 'air_speed_heating must be a number'),
+                           ({**inputs, 'air_speed_cooling': 0.6},
+                            r"takes \['met', 'clo', 'air_speed', 'position', 'air_speed_heating'\] \(and 'idf'\), not "
+                            r"\['air_speed_cooling'\]")):
+        with pytest.raises(ValueError, match=message):
+            ia.table_indicators(df, occupied, pythermalcomfort_set=value)
 
 
 def test_the_errors_of_the_indicators_with_the_inputs_of_the_people_objects(tmp_path, monkeypatch):

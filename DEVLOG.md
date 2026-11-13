@@ -36,6 +36,65 @@ Recommended flow: track active work in `TODO.md`, move completed outcomes to `DE
 ## Entries
 
 ### 2026-11-13
+#### [done] The validation study of F3: the fans that the occupants control (`air_speed_heating`), in all the hours of the cooling season (branch `v1.2.0`)
+- Context: the question of `notes/questions.md` of 2026-11-12, which the author asked to resolve on 2026-11-13. The
+  try-runs of `tools/indoor_adaptation_study.py` had shown that the fans of case (iv) raised the heating setpoint of
+  the causal SET model as well as the cooling one (one air speed, that of the People objects, converts both limits of
+  the band: decision 5 of 2026-11-10), so the heating coils worked in their hours; and that the limiter of the drift,
+  which limits every timestep, held the setpoints of the hours of the fans all day. Decided for the author
+  (`notes/decisions.md`, provisional, to be agreed with the authors of the models): the fans are those that the
+  occupants control, their air speed is that of all the hours of the cooling season, and the limiter stays as it is.
+- Changes: `accim.sim.comfort_hooks`: `SetSetpointHook`, `Sun2026SetpointHook`, `apply_set_setpoints()` and
+  `apply_sun2026_setpoints()` have `air_speed_heating` (m/s, `None` by default, with which nothing changes). With it,
+  the air speed of the hook (or of the People objects) is that of the fans, which the occupants have only when they
+  need it: `inverted_temperatures()` inverts the heating setpoint with `air_speed_heating` (the lower of both in the
+  timesteps with a lower air speed: `heating_air_speed()`) and the cooling setpoint with the air speed of the fans,
+  in one bisection (an array of two air speeds), with either method and radiant temperature; and the SET of the zones
+  (`zone_set()`, so the outputs `SET_<zone>`, `TSV_causal_<zone>` and `HoursInCausalBand_<zone>`, and
+  `set_of_results()`: `_occupant_set()`) is that without the fans while it is not above the cooling setpoint of the
+  SET, and that with them when it is. `prepare()` also calls the SET with the array of air speeds before the library
+  of the API is loaded. `accim.data.postprocessing.indoor_adaptation.table_indicators()` takes it as the key
+  `'air_speed_heating'` of `pythermalcomfort_set` (or from the hook given), with the upper limit of the causal band
+  of `tsv_limit` as the threshold (the cooling setpoint of the SET of a hook given). `tools/indoor_adaptation_study.py`:
+  the cases with fans call `apply_sun2026_setpoints(..., air_speed_heating=0.1)` and take the reference SET of their
+  indicators with it (`--air-speed-heating`, −1 for none), and their air velocity schedule has the air speed of the
+  fans in all the hours of the cooling season (`--fan-hours`, which was 7 to 19 h by default, gives the hours of the
+  weekdays). The limiter of the drift does not change; section 4.2.7 of the detailed use says what it does with
+  setpoints that change within the day, with the numbers below.
+- Files: `accim/sim/comfort_hooks.py`, `accim/data/postprocessing/indoor_adaptation.py`,
+  `tools/indoor_adaptation_study.py`, `tests/core/test_sun2026_set.py`, `tests/core/test_people_set_inputs.py`,
+  `docs/source/4_detailed use.md` (4.2.7, 4.7.6, 4.9.2 and 4.9.3), `CHANGELOG.md`, `CAMBIOS_CODIGO_v1.2.0.md` (§58),
+  `TODO.md`, `notes/questions.md`, `notes/decisions.md`, `notes/work-log.md`,
+  `notes/INFORME_SESION_v1.2.0_2026-11-12_4.md` (its addendum).
+- Verification: five new tests. Without EnergyPlus: the setpoints with `air_speed_heating` are the heating setpoint
+  of still air and the cooling setpoint of the fans, exactly (by bisection with both radiant temperatures, and by the
+  table), and the SET of a zone is that of still air up to the cooling setpoint of the SET and that of the fans above
+  it; the hook of comfort standard 24 with a fake controller (a zone at 23 °C, whose SET with fans of 1.2 m/s is
+  below the band and that of still air within it, and a zone at 30 °C, above the band without the fans and within it
+  with them); `set_of_results()` and `table_indicators()` with the inputs of the People objects. With EnergyPlus
+  25.1: three days of July of the sample model with fans of 1.2 m/s in its air velocity schedule: the setpoints of
+  the outputs are those of still air (heating) and of the fans (cooling), more than 3 K and 1 K away from those of
+  the other air speed, the SET reported is that of the rule in every timestep (with and without the fans), and the
+  heating coils do not work. The try-runs again (EnergyPlus 25.1, Seville; in brackets, those of 2026-11-12 with the
+  fans from 7 to 19 h and one air speed): in the week of 15–21 July, the heating coils give 0 kWh in the sixteen
+  cases (1.4 and 10.6 kWh with 0.9 and 1.2 m/s; 0.5 to 343.6 kWh with the limiter); the cooling coils, 1546.4, 1413.8
+  and 1341.2 kWh with 0.6, 0.9 and 1.2 m/s (2082.0, 2058.8 and 2043.7) and 2374.9 kWh without fans (the same); with
+  the limiter at 0.25, 0.5 and 1.0 K/day, +2.4, +0.2 and −1.1 % with 0.6 m/s, +5.1, +1.9 and −0.8 % with 0.9 m/s and
+  +6.7, +3.1 and −0.5 % with 1.2 m/s (−24.2, −25.0 and −23.6 % with 1.2 m/s); the cases with fans have all their
+  occupied hours within the causal band with the reference SET (59.2 % without fans). The cases without fans and the
+  week of 8–14 January (four cases) give the results of 2026-11-12.
+  In that week of July (hourly means), the cooling setpoint of the hook changes by 0.2 to 0.9
+  K within the occupied hours of each day without fans and by 2.0 to 3.5 K with 1.2 m/s, and its daily mean by 0.16
+  to 0.25 K and by 0.02 to 1.35 K between days: the limiter changes a setpoint in 81.3, 70.2 and 25.2 of the 120
+  occupied hours without fans and in 85.8, 74.8 and 56.0 with 1.2 m/s. The whole `tests/core` in a snapshot of
+  the working tree: 1647 passed and 2 skipped (EnergyPlus 26.1; the jar of the Future Weather Generator), no failure,
+  in 37 min 41 s; `tests/parametric_and_optimisation`: 520 passed. The documentation builds with the 33 warnings of
+  before, and Python 3.9 compiles the changed modules.
+- Next step: the author agrees these choices with the authors of the models (the entry of the message to Ruiji Sun
+  of `TODO.md`), and decides whether the cases of the causal SET model stay in case (v), or the limiter gets a mode
+  that keeps the profile of the setpoints within the day (a new entry of `TODO.md`); then, the simulations of the
+  study.
+
 #### [done] Checks 1 and 2 of the verification: check 1 apart, an exact check 2, and one implementation for the function and the class (branch `v1.2.0`)
 - Context: the answer of the author of 2026-11-13 ("Haz los checks 1 y 2") to the question of that day of
   `notes/questions.md`, with the recommendation of Claude Code: option (b) for check 1, option (c) for check 2, and one

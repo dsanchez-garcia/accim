@@ -15,6 +15,26 @@ This log is a lightweight, session-scoped complement to the repository's
 existing tracking files — it does not replace them (see
 [[decisions.md#2026-09-13 — `notes/work-log.md` complements, not replaces, existing tracking files|the related decision]]).
 
+## 2026-11-13 — The validation study of F3: the fans that the occupants control (branch `v1.2.0`, on the server)
+
+- **Objective**: the open question of 2026-11-12 on cases (iv) and (v) of the validation study, which the author
+  asked to resolve: the air speed of the fans in the heating setpoint of the causal SET model, and the limiter of the
+  drift with setpoints that change within the day.
+- **Affected files**: `accim/sim/comfort_hooks.py`, `accim/data/postprocessing/indoor_adaptation.py`,
+  `tools/indoor_adaptation_study.py`, `tests/core/test_sun2026_set.py`, `tests/core/test_people_set_inputs.py`,
+  sections 4.2.7, 4.7.6, 4.9.2 and 4.9.3 of the detailed use, [[../CHANGELOG.md]] and the notes.
+- **Finding or decision**: the hooks of the SET have `air_speed_heating` (off by default): the air speed of the People
+  objects is then that of fans that the occupants have only when they need them, so the heating setpoint and the SET
+  of the hours without need of them are those of still air. The study uses it, with the fans in all the hours of the
+  cooling season, and the limiter stays as it is
+  ([[decisions.md#2026-11-13 — The validation study of F3: the fans that the occupants control, and the limiter of the drift with the setpoints of a hook|the decisions, provisional]]).
+  In the week of July, the heating coils of the cases with fans give 0 kWh (up to 343.6 before), and the limiter
+  changes their cooling energy by −1.1 to +6.7 % (−24 % before). The limiter still acts mostly within the day on the
+  setpoints of the hook (2.0 to 3.5 K of change within the occupied hours with 1.2 m/s).
+- **Validation**: in the entry of [[../DEVLOG.md]].
+- **Next step**: the author agrees the choices with the authors of the models, and decides whether the cases of the
+  causal SET model stay in case (v) ([[../TODO.md]]).
+
 ## 2026-11-13 — Check 1 apart and an exact check 2 of the verification (branch `v1.2.0`, on the server)
 
 - **Objective**: what the author decided on the question of that morning ("Haz los checks 1 y 2"): check 1 of

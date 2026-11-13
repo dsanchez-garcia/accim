@@ -279,3 +279,30 @@ in which its VRF system, on, does not hold the cooling setpoint; and check 2 of 
 mismatches that are not errors of the EMS (it compares the conditions with the outputs of the same timestep and with
 constants; the class reports none in the same simulation). What the two checks should report is a second open
 question of [[questions.md]], with the options and a recommendation. `TODO.md` has 21 entries now, none of them P1.
+
+## Addendum of 2026-11-13 (2): the two open questions
+
+The author answered both open questions of [[questions.md]] on 2026-11-13 ("Haz los checks 1 y 2, y también lo del
+validation study of F3"), and they were done that day in two commits; [[questions.md]] has no open question.
+
+1. **Checks 1 and 2 of the verification** (`DEVLOG.md`, `CAMBIOS_CODIGO_v1.2.0.md` §57, [[decisions.md]]). The
+   timesteps of check 1 are reported apart from the mismatches (`attrs['setpoints_not_met']` of the result, or
+   `setpoints_not_met=True`), so an empty result means that the EMS does what its programs say. Check 2 compares the
+   opening factor of each window with that of its EMS programs, with the values that they read (measured with
+   EnergyPlus 25.1), exactly, for the three HVAC modes and the VRF and existing HVAC systems. `AccimSimulationVerifier`
+   runs the same code. `output_type='detailed'` adds, in mixed mode, the outdoor outputs of the zones that the
+   programs of the windows read, so three golden files changed on purpose (they differ in those `Output:Variable`
+   objects only). A new P2 entry of `TODO.md` replaces that of the class: whether the standard outputs of mixed mode
+   get those outputs.
+2. **The validation study of F3** (`DEVLOG.md`, `CAMBIOS_CODIGO_v1.2.0.md` §58, [[decisions.md]]: provisional
+   decisions of Claude Code for the author, to be agreed with the authors of the models). The hooks of the SET have
+   `air_speed_heating` (off by default): the air speed of the People objects is then that of fans that the occupants
+   control, so the heating setpoint, and the SET of the hours in which they do not need them, are those of still air.
+   The script of the study uses it, with the air speed of the fans in all the hours of the cooling season, and the
+   limiter of the drift stays as it is. In the week of July of the try-runs, the heating coils of the cases with fans
+   give 0 kWh (up to 343.6 kWh before), and the limiter changes their cooling energy by −1.1 to +6.7 % (by −24 %
+   before). What is left for the author: the limiter still acts mostly within the day on the setpoints of the hook,
+   so the sensitivity of the savings to the rate of the drift is clean in the adaptive setpoints only; a new P2 entry
+   of `TODO.md` has the alternative (a limiter of the setpoints of each time of the day).
+
+`TODO.md` has 22 entries, none of them P1. The checks of the end are in the entries of `DEVLOG.md` of 2026-11-13.

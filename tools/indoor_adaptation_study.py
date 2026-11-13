@@ -5,6 +5,7 @@ causal SET model before the simulations of the study)::
 
     PYTHONPATH=. python tools/indoor_adaptation_study.py OUT_DIR --epw Seville_Present.epw [--epw OTHER.epw]
         [--begin 1/1] [--end 12/31] [--cases ii_en16798,iii_seasonal] [--processes 4] [--list]
+        [--heating-minimum 18] [--air-speed-heating 0.1] [--fan-hours 7 19]
 
 It makes the model of each case in ``OUT_DIR`` (``<case>.idf``), simulates it with each weather file with the backend
 of the Python API of EnergyPlus (``<case>[<weather file>.csv``), and writes ``indicators.csv``, a row for each
@@ -21,9 +22,13 @@ SET (that of pythermalcomfort, with the inputs of the occupants of the People ob
 - ``iii_seasonal`` and ``iii_dynamic``: the causal SET model (comfort standard 24) with the clothing insulation fixed
   by season (1.0 and 0.5 clo, with the cooling season from day 121 to 274) and with the dynamic clothing model of
   ASHRAE 55 (a sensitivity), at 0.1 m/s.
-- ``iv_v06``, ``iv_v09`` and ``iv_v12``: the causal SET model with the dynamic clothing model and an air speed of 0.6,
-  0.9 or 1.2 m/s (those of EN 16798-1, Table B.4) in the hours of the fans of the cooling season (``--fan-hours``,
-  from 7 to 19 h on weekdays by default: those of the occupants of the sample model), and 0.1 m/s otherwise.
+- ``iv_v06``, ``iv_v09`` and ``iv_v12``: the causal SET model with the dynamic clothing model and fans of 0.6, 0.9 or
+  1.2 m/s (the air speeds of EN 16798-1, Table B.4, with personal control) that the occupants control, in the cooling
+  season: the air velocity schedule of the People objects has the air speed of the fans in all the hours of the
+  cooling season (0.1 m/s the rest of the year), with which the hook inverts the cooling setpoint, and it inverts the
+  heating setpoint with still air (``air_speed_heating=0.1`` of ``apply_sun2026_setpoints``; ``--air-speed-heating``),
+  since the occupants have the fans only when they need them. The reference SET of their indicators is that of such
+  occupants too: without the fans while it is not above the upper limit of the causal band, and with them above it.
 - ``v_<case>_r025``, ``_r05`` and ``_r10``: ``ii_en16798``, ``ii_ashrae55``, ``iii_dynamic`` (which is also case (iv)
   at 0.1 m/s) and the three cases (iv) with the limiter of the drift of the setpoints, ``drift_mode='rate'``, at 0.25,
   0.5 and 1.0 K/day.
@@ -33,14 +38,18 @@ not a case of this script: its models have no outputs of the ACCIS, which the in
 of a case of the causal SET model takes hours (its hook inverts the SET by bisection in each timestep): try the
 script with a week (``--begin 7/15 --end 7/21``). It needs EnergyPlus 24.2 or later and pythermalcomfort.
 
-Two things of cases (iv) and (v) are open (``notes/questions.md``, 2026-11-12; seen in a winter and a summer week of
-the sample model). The hook of the causal SET model converts both limits of its band with the air speed of the People
-objects, so the air speed of the fans raises the heating setpoint as well as the cooling one, and the heating coils
-can work in the hours of the fans. And the limiter keeps the setpoints of every timestep, the unoccupied ones too,
-within its rate of the mean of those of the occupied timesteps of the day before: with the setpoints of the hook,
-which change within the day (and more with the fans), the cases (v) of the causal SET model differ from their cases
-without the limiter mostly in the unoccupied hours. The sample model (``--idf`` by default) is a test model, for
-trying the script and not for the study: its VRF system does not hold the cooling setpoints in a summer week.
+Two choices of cases (iv) and (v) were decided on 2026-11-13 (``notes/decisions.md``; the question of 2026-11-12,
+after a winter and a summer week of the sample model). With one air speed for both limits of the causal band (the
+hook as decided on 2026-11-10: ``--air-speed-heating -1``), the fans raise the heating setpoint as well as the cooling
+one, and the heating coils work in their hours; so the heating setpoint of the cases with fans is that of still air.
+And the limiter of the drift keeps the setpoints of every timestep within its rate of the mean of those of the
+occupied timesteps of the day before, so an air speed of the fans in the occupied hours only (``--fan-hours 7 19``,
+as first decided) makes it hold the cooling setpoint of the occupied hours all day, which is not a drift between
+days; so the air speed of the fans is that of all the hours of the cooling season, and the limiter stays as it is.
+With the setpoints of a hook, which follow the mean radiant temperature, the humidity and the clothing within the
+day, the limiter still acts within the day: section 4.2.7 of the detailed use. The sample model (``--idf`` by default)
+is a test model, for trying the script and not for the study: its VRF system does not hold the cooling setpoints in a
+summer week.
 """
 import argparse
 import os
@@ -113,7 +122,13 @@ def _compact_schedule(model, name, heating_season, cooling_season, hours=None):
                        **{f'Field_{n}': value for n, value in enumerate(fields, start=1)})
 
 
-def build(case, spec, out, model_file, begin, end, heating_minimum, fan_hours):
+def fans(spec, air_speed_heating):
+    """The air speed of the heating setpoint of a case (m/s): ``air_speed_heating`` in the cases with fans, None in
+    the others (and in all of them with ``--air-speed-heating -1``)."""
+    return air_speed_heating if spec[4].get('air_speed') is not None else None
+
+
+def build(case, spec, out, model_file, begin, end, heating_minimum, fan_hours, air_speed_heating):
     """Make the model of a case in ``out`` (``<case>.idf``); return its path and its hook (None without it)."""
     from accim.sim.accis import AddAccis, load_idf, modify_accis
     from accim.sim.comfort_hooks import apply_sun2026_setpoints
@@ -155,8 +170,10 @@ def build(case, spec, out, model_file, begin, end, heating_minimum, fan_hours):
     if options.get('set'):
         if heating_minimum is not None:
             modify_accis(model, heating_setpoint_minimum=heating_minimum)
+        # The fans are those that the occupants control: the heating setpoint is that of still air
         hook = apply_sun2026_setpoints(model, comfort_mode='SET band', category=80, tr_mode='zone',
-                                       output_frequencies=['hourly'])
+                                       output_frequencies=['hourly'],
+                                       air_speed_heating=fans(spec, air_speed_heating))
     # The outputs of the indicators: the Fanger and Pierce models, the inputs of the occupants of the reference SET,
     # and the energy
     add_thermal_comfort_outputs(model, ['Fanger', 'Pierce'], output_frequencies=['hourly'], occupant_inputs=True)
@@ -166,8 +183,9 @@ def build(case, spec, out, model_file, begin, end, heating_minimum, fan_hours):
     return out / f'{case}.idf', hook
 
 
-def indicators(out, case, description, csv):
-    """The indicators of a simulation (see the module), from its CSV file in ``out``, the current folder."""
+def indicators(out, case, description, csv, air_speed_heating=None):
+    """The indicators of a simulation (see the module), from its CSV file in ``out``, the current folder; with
+    ``air_speed_heating``, the reference SET is that of the occupants who control their fans."""
     from accim.data.postprocessing import indoor_adaptation as ia
     from accim.data.postprocessing.main import Table
 
@@ -184,7 +202,9 @@ def indicators(out, case, description, csv):
     table = Table(datasets=[csv.name], source_frequency='hourly', frequency='hourly', frequency_agg_func='sum',
                   standard_outputs=True, level=['building'], level_agg_func=['sum', 'mean'], level_excluded_zones=[],
                   idf_path=f'{case}.idf', long_term_indicators=True)
-    found = ia.table_indicators(table.df, table.occupied_zone_list, pythermalcomfort_set='people').iloc[0]
+    set_inputs = 'people' if air_speed_heating is None else {
+        'met': 'people', 'clo': 'people', 'air_speed': 'people', 'air_speed_heating': air_speed_heating}
+    found = ia.table_indicators(table.df, table.occupied_zone_list, pythermalcomfort_set=set_inputs).iloc[0]
     setpoints = table.long_term_indicators.iloc[0]
     row['Occupied hours (h)'] = found['Building_Occupied Hours (h)']
     row['Hours outside its own setpoints (h)'] = (setpoints['Building_Hours Above Upper Limit (h)']
@@ -206,8 +226,10 @@ def main():
     parser.add_argument('--processes', type=int, default=4, help='the simulations that run at the same time')
     parser.add_argument('--heating-minimum', type=float, default=18.0,
                         help='the minimum heating setpoint of the cases of the causal SET model (degC; none: -1)')
-    parser.add_argument('--fan-hours', type=int, nargs=2, default=(7, 19),
-                        help='the hours of the fans of the cases (iv)')
+    parser.add_argument('--air-speed-heating', type=float, default=0.1,
+                        help='the air speed of the heating setpoint of the cases with fans (m/s; that of the fans: -1)')
+    parser.add_argument('--fan-hours', type=int, nargs=2, default=None,
+                        help='the hours of the weekdays with the air speed of the fans (all the hours by default)')
     parser.add_argument('--list', action='store_true', help='list the cases and stop')
     arguments = parser.parse_args()
     all_cases = cases()
@@ -228,12 +250,14 @@ def main():
     out.mkdir(parents=True, exist_ok=True)
     begin, end = (tuple(int(part) for part in value.split('/')) for value in (arguments.begin, arguments.end))
     minimum = None if arguments.heating_minimum < 0 else arguments.heating_minimum
+    heating_speed = None if arguments.air_speed_heating < 0 else arguments.air_speed_heating
+    fan_hours = None if arguments.fan_hours is None else tuple(arguments.fan_hours)
     jobs, names = [], []
     with warnings.catch_warnings():
         warnings.simplefilter('ignore')
         for case in chosen:
-            model, hook = build(case, all_cases[case], out, arguments.idf, begin, end, minimum,
-                                tuple(arguments.fan_hours))
+            model, hook = build(case, all_cases[case], out, arguments.idf, begin, end, minimum, fan_hours,
+                                heating_speed)
             for epw in arguments.epw:
                 prefix = f'{model.stem}[{epw.stem}'
                 options = {'output_directory': str(out), 'output_prefix': prefix}
@@ -247,7 +271,7 @@ def main():
         for prefix, error in failed:
             print(f'FAILED {prefix}: {error}')
         os.chdir(out)
-        rows = [indicators(out, case, all_cases[case][0], out / f'{prefix}.csv')
+        rows = [indicators(out, case, all_cases[case][0], out / f'{prefix}.csv', fans(all_cases[case], heating_speed))
                 for (case, prefix), result in zip(names, results) if result.success]
     frame = pd.DataFrame(rows)
     frame.to_csv(out / 'indicators.csv', index=False)

@@ -11,6 +11,78 @@ Durable architectural/process decisions for this repository and its Obsidian
 vault. Newest first. Use [[templates/decision-record.md|the decision-record
 template]] to add a new entry.
 
+## 2026-11-13 — The validation study of F3: the fans that the occupants control, and the limiter of the drift with the setpoints of a hook
+
+- **Status**: provisional (Claude Code, the model Claude Fable 5.2, for the author, who asked on 2026-11-13 for the
+  question of [[questions.md]] of 2026-11-12 to be resolved, and had delegated the open decisions of the review of
+  1.2.0). They are choices of the design of the validation study, to be agreed with the authors of the models (the
+  entry of the message to Ruiji Sun of `TODO.md`); the defaults of accim do not change
+- **Context**: the try-runs of `tools/indoor_adaptation_study.py` (2026-11-12, the weeks of 8–14 January and 15–21
+  July of the sample model in Seville) showed two things of cases (iv) and (v). (1) The hook of comfort standard 24
+  converts both limits of the causal band with the air speed of the People objects (decision 5 of the author of
+  2026-11-10), so the fans of case (iv) raised the heating setpoint too (with 1.2 m/s, from about 19 °C to
+  25.0–26.7 °C in their hours), and the heating coils worked. (2) The limiter of the drift (`drift_mode='rate'`,
+  decision 13 of session 3) limits every timestep, so with fans in the occupied hours only it held the setpoints of
+  those hours all day: with 1.2 m/s and 0.25 K/day, 343.6 instead of 10.6 kWh of the heating coils and 1549.6 instead
+  of 2043.7 kWh of the cooling coils in the week of July.
+- **Decision**:
+  1. The fans of case (iv) are fans that the occupants control, who have them only when they need them (option (b)
+     of point 1 of the question, as an option of the hooks of the SET): `air_speed_heating` of `SetSetpointHook`,
+     `Sun2026SetpointHook`, `apply_set_setpoints` and `apply_sun2026_setpoints`. With it, the air speed of the hook
+     (that of the People objects, in comfort standard 24) is the one that the occupants can have: the cooling
+     setpoint is inverted with it, and the heating setpoint with `air_speed_heating` (0.1 m/s in the study; the lower
+     of both in the timesteps in which the air speed is below it). It is `None` by default: decision 5 stands (the
+     air speed of the fans is still that of the air velocity schedule of the People objects, and the hook has no air
+     speed of the fans of its own), and nothing changes without it.
+  2. The SET of the zones follows the same occupants: with `air_speed_heating`, it is the SET without the fans while
+     it is not above the cooling setpoint of the SET, and the SET with them when it is, in the outputs of the hook
+     (`SET_<zone>`, `TSV_causal_<zone>` and `HoursInCausalBand_<zone>`), in `set_of_results` and in
+     `table_indicators(pythermalcomfort_set={..., 'air_speed_heating': 0.1})`, whose threshold is the upper limit of
+     the causal band. Otherwise a zone at 22 °C with fans of 1.2 m/s in its schedule has a SET of 16.7 °C, below the
+     band, while its occupants would have the fans off (21.1 °C; 1.1 met, 0.5 clo, 50 %). The SET of the Pierce
+     model of EnergyPlus cannot follow them: it has the air speed of the schedule in every hour, so in the cases with
+     fans its indicators are not those of such occupants (the reference SET is that of pythermalcomfort: decision
+     12 of 2026-11-12).
+  3. Option (c) of the question (fans that run above an operative temperature, with an EMS program for the air
+     velocity schedule) is not taken: alone it does not remove the heating (the question), and with the heating
+     setpoint of still air the cooling setpoint has to be that of the fans also while they are off, or the
+     thermostat would cool at the temperature at which the fans would start (reasoned, not simulated). EN 16798-1
+     (B.2.3 and Table B.4: 1.2, 1.8 and 2.2 K for 0.6, 0.9 and 1.2 m/s, in the summer comfort conditions with
+     operative temperatures above 25 °C, only if the air speed is under personal control) corrects the warm side
+     only, as this option does **[verified: UNE-EN 16798-1:2020, p. 54]**.
+  4. The limiter stays as it is (option (a) of point 2). Limiting the occupied timesteps only (b) leaves a step at
+     the beginning and at the end of the occupied hours while the limiter is active, which is worse for the
+     adaptive setpoints, the main use of the limiter; limiting the daily mean and keeping the profile of the day
+     (c) needs the mean of a day that has not ended, or the setpoints of each time of the day before (in Erl,
+     without TrendVariable objects, a variable for each time of the day and setpoint of each zone): a change of F2
+     for its authors, recorded in `TODO.md`; and the cases of the causal SET model stay in case (v) of the script
+     (d), for the author to decide with the results.
+  5. The study removes the cause that it can: the air speed of the fans is that of all the hours of the cooling
+     season (it was that of the occupied hours of the weekdays: the decision of 2026-11-12). The schedule says the
+     air speed that the occupants can have, and the setpoints of the unoccupied hours are those that the system
+     would hold for them, as in the other cases, none of which has a setback. `--fan-hours` gives the hours, as
+     before, and `--air-speed-heating -1` the hook without the option.
+  6. Measured with both (the week of 15–21 July, EnergyPlus 25.1; before, in brackets). The heating coils do not
+     work in any case with fans, with and without the limiter (without it, 1.4 and 10.6 kWh with 0.9 and 1.2 m/s;
+     with it, 0.5 to 343.6 kWh). The cooling coils give 1546.4, 1413.8 and 1341.2 kWh with 0.6, 0.9 and 1.2 m/s
+     (2082.0, 2058.8 and 2043.7: the unoccupied hours had no fans), and 2374.9 kWh without fans (the same). With
+     the limiter at 0.25, 0.5 and 1.0 K/day: 1583.6, 1549.1 and 1528.8 kWh with 0.6 m/s (+2.4, +0.2 and −1.1 %),
+     1485.4, 1441.1 and 1401.9 with 0.9 m/s (+5.1, +1.9 and −0.8 %) and 1431.2, 1382.7 and 1334.1 with 1.2 m/s
+     (+6.7, +3.1 and −0.5 %; before, −24.2, −25.0 and −23.6 %). The week of January does not change (no fans): 51.2
+     kWh of the heating coils without the limiter, and 74.9 with 0.25 K/day.
+  7. What is left, and is not decided here: the limiter still acts mostly within the day on the setpoints of the
+     hook, which follow the mean radiant temperature, the humidity and the clothing. In that week of July (hourly
+     means), the cooling setpoint changed by 0.2 to 0.9 K within the occupied hours of each day without fans and
+     by 2.0 to 3.5 K with 1.2 m/s, and its daily mean by 0.16 to 0.25 K and by 0.02 to 1.35 K (0.6 on average)
+     between days; the limiter changed a setpoint in 81.3, 70.2 and 25.2 of the 120 occupied hours without fans and
+     in 85.8, 74.8 and 56.0 with 1.2 m/s. So the sensitivity of the savings to the rate of the drift is clean in the
+     adaptive setpoints of case (ii), constant within the day, and that of the causal SET model mixes the drift
+     between days with the profile of each day.
+- **Consequences**: [[questions.md]] has no open question. The script, its docstring and sections 4.2.7, 4.7.6, 4.9.2
+  and 4.9.3 of the detailed use follow these choices; `TODO.md` has them in the entries of the study and of the
+  message to Ruiji Sun, and a new entry for a limiter of the setpoints of each time of the day. The results of the
+  try-runs of 2026-11-12 with fans are not those of the script any more.
+
 ## 2026-11-13 — Checks 1 and 2 of the verification: check 1 apart, an exact check 2, and one implementation
 
 - **Status**: accepted (the author, 2026-11-13: "Haz los checks 1 y 2", after the recommendation of Claude Code in the

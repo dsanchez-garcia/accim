@@ -131,6 +131,10 @@ PYTHERMALCOMFORT_SET_INDICATORS = {
 #: The inputs of the SET of pythermalcomfort that ``pythermalcomfort_set`` gives, those of
 #: :class:`accim.sim.comfort_hooks.SetSetpointHook`
 _SET_INPUTS = ('met', 'clo', 'air_speed', 'position')
+#: The optional input of ``pythermalcomfort_set`` for the fans that the occupants control: the air speed of the heating
+#: setpoint of the hooks of the SET, with which the SET is that without the fans while it is not above the upper limit
+#: of the causal band (the question of the validation study of F3, decided on 2026-11-13)
+_HEATING_AIR_SPEED = 'air_speed_heating'
 #: The value of ``pythermalcomfort_set``, or of its metabolic rate, clothing insulation or air speed, with which the
 #: inputs of the occupants of each row are those of the People objects of the model of each simulation (task S4 of the
 #: review of accim 1.2.0, option (ii), decided on 2026-11-12)
@@ -382,26 +386,37 @@ def _is_people(value: Any) -> bool:
     return isinstance(value, str) and value.strip().lower() == PEOPLE_INPUTS
 
 
-def _pythermalcomfort_hook(pythermalcomfort_set: Any, zones: Sequence[str]):
+def _pythermalcomfort_hook(pythermalcomfort_set: Any, zones: Sequence[str], tsv_limit: Optional[float] = None):
     """The hook of the SET with which :func:`table_indicators` calculates the SET of pythermalcomfort of the zones, with
     the inputs of ``pythermalcomfort_set`` (``method='bisection'``, so that nothing is calculated when it is made), and
     where the schedules of the People objects come from when it reads inputs of the occupants from them: ``(hook,
     people, idf)``, with ``people`` the schedules of the hook given (``hook.people``) and ``idf`` the path of the
-    model given, or None for both (the model of each simulation)."""
+    model given, or None for both (the model of each simulation). With ``air_speed_heating`` (the fans that the
+    occupants control), the SET is that with the fans above the cooling setpoint of the SET of the hook given, or
+    above the upper limit of the causal band of ``tsv_limit``."""
     from accim.sim.comfort_hooks import SetSetpointHook, sun2026_set_setpoints
 
     people, idf, given_hook = None, None, False
+    with warnings.catch_warnings():
+        # The warning of an extrapolated band is that of table_indicators
+        warnings.simplefilter('ignore')
+        heating, cooling = sun2026_set_setpoints(1, tsv_limit)
     if _is_people(pythermalcomfort_set):
         inputs = dict.fromkeys(_SET_INPUTS[:3], PEOPLE_INPUTS)
     elif isinstance(pythermalcomfort_set, Mapping):
         inputs = dict(pythermalcomfort_set)
-        unknown = [name for name in inputs if name not in (*_SET_INPUTS, _MODEL_KEY)]
+        unknown = [name for name in inputs if name not in (*_SET_INPUTS, _HEATING_AIR_SPEED, _MODEL_KEY)]
         if unknown:
-            raise ValueError(f'pythermalcomfort_set takes {list(_SET_INPUTS)} (and {_MODEL_KEY!r}), not {unknown}.')
+            raise ValueError(f'pythermalcomfort_set takes {[*_SET_INPUTS, _HEATING_AIR_SPEED]} (and {_MODEL_KEY!r}), '
+                             f'not {unknown}.')
         idf = inputs.pop(_MODEL_KEY, None)
     elif not isinstance(pythermalcomfort_set, str) and all(hasattr(pythermalcomfort_set, name)
                                                            for name in _SET_INPUTS):
         inputs = {name: getattr(pythermalcomfort_set, name) for name in _SET_INPUTS}
+        inputs[_HEATING_AIR_SPEED] = getattr(pythermalcomfort_set, _HEATING_AIR_SPEED, None)
+        if inputs[_HEATING_AIR_SPEED] is not None:
+            # The fans of the hook given are on above its own cooling setpoint of the SET
+            heating, cooling = pythermalcomfort_set.set_heating_setpoint, pythermalcomfort_set.set_cooling_setpoint
         people = dict(getattr(pythermalcomfort_set, 'people', None) or {}) or None
         given_hook = True
     else:
@@ -419,7 +434,6 @@ def _pythermalcomfort_hook(pythermalcomfort_set: Any, zones: Sequence[str]):
     inputs.update(dict.fromkeys(from_people))
     if not from_people:
         people, idf = None, None
-    heating, cooling = sun2026_set_setpoints(1)
     hook = SetSetpointHook(list(zones) or ['Building'], cooling, heating, method='bisection', **inputs)
     return hook, people, idf
 
@@ -630,7 +644,13 @@ def table_indicators(df: pd.DataFrame, zones: Sequence[str], tsv_limit: Optional
         ``'idf'``, for all the simulations; and their outputs are those that
         :func:`accim.sim.people.add_thermal_comfort_outputs` requests with ``occupant_inputs=True``. A hook that reads
         inputs from the People objects (that of :func:`accim.sim.comfort_hooks.apply_sun2026_setpoints`) gives the
-        schedules of those of its model, for all the simulations. It needs pythermalcomfort and the hour of each row.
+        schedules of those of its model, for all the simulations. With the key ``'air_speed_heating'`` (m/s; or that of
+        the hook given), for the fans that the occupants control, the air speed is that of the fans, which the
+        occupants have only when they need it: the SET of each row is that with ``air_speed_heating`` (0.1 for still
+        air) while it is not above the upper limit of the causal band (the cooling setpoint of the SET of the hook
+        given), and that with the air speed of the fans when it is, as in the hooks of the SET
+        (:class:`accim.sim.comfort_hooks.SetSetpointHook`), such as ``{'met': 'people', 'clo': 'people',
+        'air_speed': 'people', 'air_speed_heating': 0.1}``. It needs pythermalcomfort and the hour of each row.
     :return: A DataFrame with a row for each simulation: ``Source``, the columns that describe the simulations
         (``Model``, ``ComfStand``... ``EPW``, those that the table has), and ``<zone>_<indicator>`` and
         ``Building_<indicator>`` for each indicator.
@@ -661,7 +681,7 @@ def table_indicators(df: pd.DataFrame, zones: Sequence[str], tsv_limit: Optional
         sun2026_set_setpoints(1, tsv_limit)
     zones = list(zones)
     hook, people, idf = (None, None, None) if pythermalcomfort_set is None else _pythermalcomfort_hook(
-        pythermalcomfort_set, zones)
+        pythermalcomfort_set, zones, tsv_limit)
     # The schedules of the People objects of the models of the simulations, read once
     models: Dict[str, Dict[str, dict]] = {}
     if hook is not None and 'Hour' not in df.columns:

@@ -2995,3 +2995,78 @@ su aviso, las horarias sin comprobar); las salidas detalladas de modo mixto; y, 
 días de julio, el check 2 de tres días de abril y mayo en cuatro configuraciones (salidas detalladas y estándar, modos
 2 y 1, control 0 y 2), con la clase y con una ventana abierta a propósito, y el check 2 de una semana del modelo con
 radiadores.
+
+## 58. El estudio de validación de F3: ventiladores que controlan los ocupantes (`air_speed_heating`)
+
+Resuelve la pregunta que quedó abierta el 12/11/2026 (sección 54), a petición del autor el 13/11/2026. Las decisiones
+las tomó Claude Code por delegación y son **provisionales**: son elecciones del diseño del estudio, para acordar con
+los autores de los modelos (entrada del mensaje a Ruiji Sun en `TODO.md`). Los valores por defecto de accim no cambian.
+
+**El problema 1: los ventiladores subían también la consigna de calefacción.** El gancho del estándar 24 convierte los
+dos límites de la banda causal del SET con una sola velocidad del aire, la del objeto People (decisión 5 del autor del
+10/11). Con 1,1 met, 0,5 clo y 50 % de humedad, las consignas de 19,09 y 28,18 °C de SET son 20,1 y 28,9 °C a 0,1 m/s,
+y 23,9 y 32,5 °C a 1,2 m/s: los ventiladores subían casi 4 K la consigna de calefacción, y las baterías de calor
+funcionaban en sus horas. Además, el SET de una zona a 22 °C con 1,2 m/s es 16,7 °C (por debajo de la banda), cuando
+sus ocupantes tendrían el ventilador apagado (21,1 °C).
+
+**La solución: `air_speed_heating`.** Argumento nuevo de `SetSetpointHook`, `Sun2026SetpointHook`,
+`apply_set_setpoints()` y `apply_sun2026_setpoints()` (`None` por defecto: sin él no cambia nada). Con él, la velocidad
+del aire del gancho (o del objeto People) es la de unos ventiladores que controlan los ocupantes, que solo los usan
+cuando los necesitan:
+
+- la consigna de refrigeración se invierte con la velocidad de los ventiladores, y la de calefacción con
+  `air_speed_heating` (0,1 m/s, aire en calma);
+- el SET de cada zona (salidas `SET_<zona>`, `TSV_causal_<zona>` y `HoursInCausalBand_<zona>`, y `set_of_results()`)
+  es el de aire en calma mientras no supere la consigna de refrigeración del SET, y el de los ventiladores cuando la
+  supera;
+- `table_indicators(pythermalcomfort_set={..., 'air_speed_heating': 0.1})` aplica la misma regla al SET de referencia
+  de los indicadores, con el límite superior de la banda causal como umbral.
+
+Es una corrección del lado cálido, como la de EN 16798-1 para los ventiladores (B.2.3 y tabla B.4: solo en verano, por
+encima de 25 °C y con control personal; comprobado en la norma). El SET del modelo Pierce de EnergyPlus no puede seguir
+esta regla (usa la velocidad del schedule en todas las horas); el SET de referencia es el de pythermalcomfort.
+
+**El problema 2: el limitador de la deriva con consignas que cambian dentro del día.** `drift_mode='rate'` limita cada
+paso de tiempo, también los no ocupados, a ± la tasa alrededor de la media de las consignas aplicadas en las horas
+ocupadas del día anterior. Con ventiladores solo en las horas ocupadas, mantenía todo el día las consignas de esas
+horas: con 1,2 m/s y 0,25 K/día, 343,6 kWh de calefacción en vez de 10,6 y 1549,6 kWh de refrigeración en vez de
+2043,7 en la semana de julio. Eso no es una deriva entre días.
+
+**Lo decidido para el problema 2.** El limitador se queda como está (cambiarlo es rediseñar F2, y la alternativa
+correcta necesita memoria de las consignas de cada hora del día anterior). Se quita la causa en el estudio: la velocidad
+de los ventiladores es la de todas las horas de la temporada de refrigeración (antes, la de las horas ocupadas). El
+schedule dice la velocidad que los ocupantes *pueden* tener; las consignas de las horas no ocupadas son las que el
+sistema mantendría para ellos, como en los demás casos, que tampoco tienen consigna reducida.
+
+**El script** (`tools/indoor_adaptation_study.py`): los casos con ventiladores usan `air_speed_heating=0.1`
+(`--air-speed-heating`; −1 para el comportamiento anterior) y el schedule de todas las horas (`--fan-hours 7 19` para
+las horas ocupadas, como antes).
+
+**Medido con los dos cambios** (semana del 15 al 21 de julio, modelo de ejemplo, Sevilla; entre paréntesis, antes):
+
+| | 0,6 m/s | 0,9 m/s | 1,2 m/s |
+| :--- | :--- | :--- | :--- |
+| Baterías de calor, sin limitador (kWh) | 0 (0) | 0 (1,4) | 0 (10,6) |
+| Baterías de calor, con limitador a 0,25 K/día (kWh) | 0 (27,8) | 0 (193,3) | 0 (343,6) |
+| Baterías de frío, sin limitador (kWh) | 1546 (2082) | 1414 (2059) | 1341 (2044) |
+| Limitador a 0,25 / 0,5 / 1,0 K/día: frío | +2,4 / +0,2 / −1,1 % | +5,1 / +1,9 / −0,8 % | +6,7 / +3,1 / −0,5 % |
+
+Antes, el limitador cambiaba el frío de 1,2 m/s un −24 %. Los casos sin ventiladores y la semana de enero dan lo mismo
+que el 12/11.
+
+**Lo que queda, sin decidir.** El limitador sigue actuando sobre todo *dentro* del día con las consignas del gancho,
+que siguen la temperatura radiante, la humedad y la ropa. En esa semana, la consigna de refrigeración cambia de 0,2 a
+0,9 K dentro de las horas ocupadas de cada día sin ventiladores y de 2,0 a 3,5 K con 1,2 m/s, mientras que su media
+diaria cambia de 0,16 a 0,25 K y de 0,02 a 1,35 K entre días; el limitador toca alguna consigna en 81, 70 y 25 de las
+120 horas ocupadas sin ventiladores, y en 86, 75 y 56 con ellos. Por eso la sensibilidad del ahorro a la tasa de deriva
+es limpia en las consignas adaptativas del caso (ii), constantes dentro del día, y la del modelo SET causal mezcla la
+deriva entre días con el perfil de cada día. `TODO.md` tiene una entrada nueva con la alternativa (limitar la consigna
+de cada hora respecto a la de la misma hora del último día ocupado), para que el autor decida con los autores de los
+modelos si los casos del SET causal siguen en el caso (v).
+
+**Los tests** (cinco nuevos, en `tests/core/test_sun2026_set.py` y `tests/core/test_people_set_inputs.py`): las
+consignas con `air_speed_heating` son exactamente la de calefacción del aire en calma y la de refrigeración de los
+ventiladores (bisección, con las dos temperaturas radiantes, y tabla); el SET de la regla; el gancho del estándar 24
+con un controlador simulado; `set_of_results()` y `table_indicators()` con las entradas de los objetos People; y, con
+EnergyPlus, tres días de julio del modelo de ejemplo con ventiladores de 1,2 m/s (consignas, SET de cada paso y
+baterías de calor apagadas).
