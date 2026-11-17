@@ -15,6 +15,23 @@ This log is a lightweight, session-scoped complement to the repository's
 existing tracking files — it does not replace them (see
 [[decisions.md#2026-09-13 — `notes/work-log.md` complements, not replaces, existing tracking files|the related decision]]).
 
+## 2026-11-18 — The range of the setpoints of comfort standard 24 (branch `v1.2.0`, on the server)
+
+- **Objective**: the question of 2026-11-17 of [[questions.md]], which the author answered on 2026-11-18 with option
+  (c), the recommendation.
+- **Affected files**: `accim/sim/comfort_hooks.py`, `tests/core/test_comfort_hooks.py`,
+  `tests/core/test_sun2026_set.py`, sections 4.9.2 and 4.9.3 of the detailed use, [[../CHANGELOG.md]],
+  [[../TODO.md]] and the notes.
+- **Finding or decision**: [[decisions.md]] (2026-11-18): `temperature_range` is the range of the setpoints of the
+  thermostats with both values of `tr_mode`; with `'zone'`, the bisection looks for the air temperature from 2·low −
+  MRT to 2·high − MRT, and the setpoints at a limit are the limits themselves. In the weeks of the tests, no setpoint
+  is at a limit (before, all those of January and 62–64 % of those of July), and the heating setpoint of the zone
+  without a minimum goes from 17.5 to 15.0 °C on average in January; the zones stay far above it, so their
+  temperatures hardly change.
+- **Validation**: in the entry of [[../DEVLOG.md]].
+- **Next step**: the simulations of the validation study of F3 ([[../TODO.md]]), once the author has agreed its
+  choices with Ruiji Sun.
+
 ## 2026-11-17 — E1: the running mean of ASHRAE 55 with a .stat file (branch `v1.2.0`, on the server)
 
 - **Objective**: the first half of a P2 entry of [[../TODO.md]]: with a .stat file next to the weather file, EnergyPlus

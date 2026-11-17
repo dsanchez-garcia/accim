@@ -11,6 +11,65 @@ Durable architectural/process decisions for this repository and its Obsidian
 vault. Newest first. Use [[templates/decision-record.md|the decision-record
 template]] to add a new entry.
 
+## 2026-11-18 — The range of the setpoints of comfort standard 24 with the mean radiant temperature of the zones
+
+- **Status**: accepted (the author, on 2026-11-18, answering the question of 2026-11-17 of [[questions.md]] with
+  option (c), the recommendation of Claude Code: "vamos a aplicar temperature_range a la consigna del termostato (la
+  temperatura operativa)"). It changes how the range of the bisection of F1 ("Bisección en [10, 40] °C", decided on
+  2026-11-10) applies with `tr_mode='zone'`, not the range itself.
+- **Context**: with `tr_mode='zone'`, the default of comfort standard 24 (decision 4 of 2026-11-10), the unknown of
+  the bisection of the hooks of the SET is the air temperature, with the mean radiant temperature of the zone, and
+  the thermostat gets (air + MRT)/2. Until this decision, `temperature_range` (10 to 40 °C) was the range of that air
+  temperature. The outputs of task A6 (`SETsaturated_<zone>`, 2026-11-17) showed that, in the weeks of the EnergyPlus
+  tests of the sample model in Seville (8–14 January and 15–21 July, EnergyPlus 25.1; 1.06 met, 1.0 clo in winter and
+  0.5 clo in summer, 0.137 m/s), the air temperature whose SET is the heating setpoint of the SET (19.09 °C) was at its
+  lower limit in all the timesteps of January and in 62–64 % of those of July: the mean radiant temperature of the
+  zones was high (25 and 29 °C on average, 1.2 and 3.6 K above the air temperature), and the heating setpoint was
+  (10 + MRT)/2, above that of the causal SET model.
+- **Decision**:
+  1. `temperature_range` is the range of the setpoints that the hooks of the SET give to the thermostats of the ACCIS
+     (the operative temperatures), with both values of `tr_mode`. With `tr_mode='zone'`, the unknown of the bisection
+     is still the air temperature (decision 4 of 2026-11-10), from 2·low − MRT to 2·high − MRT (−5 to 55 °C with 10
+     to 40 °C and a mean radiant temperature of 25 °C), so that (air + MRT)/2 is within `temperature_range`;
+     `tolerance_k` is still the width of the interval of the air temperature. The default range stays 10 to 40 °C,
+     and nothing changes with `tr_mode='equal_air'`.
+  2. The setpoints at a limit are the limits of `temperature_range` themselves (an air temperature at a limit of its
+     range gives the limit, not its mean with the mean radiant temperature, which can be a rounding error away from
+     it), and `SETsaturated_<zone>`, `saturated_hours` and the warning of the hooks report the setpoints of the
+     thermostats at a limit with both values of `tr_mode`: `SetSetpointHook.saturated()` takes the setpoints of
+     `operative_temperatures()` (it took the temperatures of `inverted_temperatures()`, the air temperatures with
+     `'zone'`).
+  3. The hooks calculate the SET without the limits of the inputs of pythermalcomfort (`limit_inputs=False`, as
+     before), so the air temperatures out of 10 to 40 °C are calculated. Measured on 2026-11-18 (pythermalcomfort
+     4.8.1), the SET is finite over the whole range of the air temperatures with mean radiant temperatures of −10 to
+     60 °C (9000 combinations of 0 to 100 % of relative humidity, 0.05 to 2 m/s, 1 to 2 met, 0 to 1.5 clo and both
+     postures), and it grows with the air temperature but for local dips of up to 0.014 K over 0.1 K of air at 1.0 and
+     1.06 met (20 within 10 to 40 °C, which the bisection met before, and 33 out of it), much smaller than the
+     tolerance of the bisection.
+  4. Measured with EnergyPlus 25.1 in the two weeks of the tests (before → after): no setpoint at a limit of the
+     range (before, 168 of the 168 hours of January and 104.5 and 108.3 of those of July); the air temperature of the
+     heating setpoint is below 10 °C in all the timesteps of January (5.1 and 5.2 °C on average, −1.7 °C at least) and
+     in 62–64 % of those of July. The heating setpoints (without the tolerance, after the minimum of 18 °C of
+     Block1:Zone1) go from 17.49 to 15.04 °C on average in January in Block1:Zone2 (from 18.29 to 14.77 °C in its
+     occupied hours) and from 18.31 to 18.00 °C in Block1:Zone1, on its minimum; and in July from 19.80 to 18.81 °C
+     in both zones (from 20.32 and 20.18 to 18.55 and 18.61 °C in the occupied hours). The cooling setpoints change by
+     0.01 K at most on average. The zones stay far above the heating setpoints in those weeks (their operative
+     temperature does not go below 22.6 °C in January), so their temperatures hardly change (0.02 K at most on
+     average): the SET of the hook against that of the Pierce model changes only in the maximums of January (0.187
+     and 0.204 K → 0.190 and 0.205 K), the occupied hours within the causal band are 60 and 56.0 in January (60 and
+     58.2 before; Block1:Zone2 is above the band, near its upper limit, in the rest) and the same in July (27.8 and
+     34.3), and the cooling coils give 912.7 and 1019.5 kWh in January (912.4 and 1022.6 before) and 1044.7 and
+     1179.1 kWh in July (1044.6 and 1179.6). The heating coils of the VRF system of the sample model, which work a
+     few hours at night and in the morning with the zones above 22 °C (not investigated), give 14.5 kWh in January
+     instead of 5.0, all of them in Block1:Zone1, and none in July.
+- **Consequences**: the setpoints of comfort standard 24 with `tr_mode='zone'` are those of the causal SET model
+  wherever they are within 10 to 40 °C; its heating setpoints are lower where the zones are warm, which the minimum
+  heating setpoint of B5 bounds (18 °C in the validation study of F3) and the hook warns of (below 18 °C, in the zones
+  without a minimum). The try-runs of the validation study of F3 of 2026-11-12 and 2026-11-13, and the measurements
+  of the limiter of 2026-11-13, were made with the range of before; the simulations of the study are made with this
+  one (`TODO.md`). The tests (`tests/core/test_comfort_hooks.py`, `tests/core/test_sun2026_set.py`), sections 4.9.2
+  and 4.9.3 of the detailed use and `CHANGELOG.md` follow it. [[questions.md]] has no open question.
+
 ## 2026-11-17 — E4 with the jar of the Future Weather Generator: the Java engine of `morph_epws`, the Java of the tool and the How-to notebook
 
 - **Status**: provisional (Claude Code, the models Claude Fable 5.2 and Claude Opus 5.5, for the author, who

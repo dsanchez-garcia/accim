@@ -177,14 +177,17 @@ def test_the_set_hook_reports_the_setpoints_at_the_limits_of_their_range():
         values.update({f'SET_RH_{zone}': 40.0, f'SET_MAT_{zone}': 20.0, f'SET_MRT_{zone}': 22.0})
     for method, tr_mode in (('table', 'equal_air'), ('bisection', 'equal_air'), ('bisection', 'zone')):
         hook = ch.SetSetpointHook(ZONES, 28.0, 19.0, method=method, tr_mode=tr_mode, **inputs)
-        assert hook.saturated(*hook.inverted_temperatures(40.0, 22.0))
+        assert hook.saturated(*hook.operative_temperatures(40.0, 22.0))
         controller = _Controller(dict(values))
         for _ in range(3):
             hook(controller, CALLING_POINT)
-        # The heating setpoint at the limit: with tr_mode='zone', the air temperature, whose mean with the mean radiant
-        # temperature of the zone (22 °C) is the setpoint of the thermostat
+        # The heating setpoint at the limit, also with tr_mode='zone', in which temperature_range is the range of the
+        # setpoints of the thermostats (the decision of the author of 2026-11-18): the air temperature found is at the
+        # lower limit of its range, 2·16 − 22 = 10 °C, with the mean radiant temperature of the zone (22 °C)
         heating, cooling = _given(controller, ZONES[0])
-        assert heating == (16.0 if tr_mode == 'equal_air' else (16.0 + 22.0) / 2) and cooling < 40, (method, tr_mode)
+        assert heating == 16.0 and cooling < 40, (method, tr_mode)
+        if tr_mode == 'zone':
+            assert hook.inverted_temperatures(40.0, 22.0)[0] == 10.0
         # The output of each timestep, and the hours out of the warm-up days
         assert all(controller.get(f'SETsaturated_{zone}') == pytest.approx(1 / STEPS) for zone in ZONES)
         assert hook.saturated_hours == {zone: pytest.approx(3 / STEPS) for zone in ZONES}

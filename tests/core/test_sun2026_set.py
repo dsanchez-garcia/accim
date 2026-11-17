@@ -7,7 +7,8 @@ and, by default, their mean radiant temperature (:mod:`accim.sim.comfort_hooks`)
 
 The unit tests use a fake controller and the Erl interpreter of accim; the last tests simulate the sample model with
 EnergyPlus 25.1, through its Python API, and compare the SET of the hook with that of the Pierce model of EnergyPlus
-hour by hour (the differences measured are in ``notes/decisions.md``, F1, 2026-11-10; the test reproduces them).
+hour by hour (the differences measured are in ``notes/decisions.md``: F1, 2026-11-10, and the range of the setpoints,
+2026-11-18; the test reproduces them).
 """
 import re
 import shutil
@@ -185,6 +186,31 @@ def test_the_heating_setpoint_below_18_and_the_minimum():
     assert free['AHST_Act_Zone1'] == pytest.approx(heating + 0.1, abs=1e-4) and free['AHST_Act_Zone1'] < 18
 
 
+def test_the_heating_setpoint_of_comfort_standard_24_with_a_warm_mean_radiant_temperature():
+    # The question of 2026-11-17 in notes/questions.md, decided by the author on 2026-11-18: with the inputs of the
+    # People objects of the sample model in January (1.06 met, 1.0 clo, 0.137 m/s), 45 % of relative humidity and a
+    # mean radiant temperature of 25 °C, the air temperature whose SET is the heating setpoint of the SET (19.09 °C) is
+    # 4.9 °C, within the range of the bisection of the air temperature, −5 to 55 °C (that of the setpoints of the
+    # thermostats, 10 to 40 °C), and the heating setpoint 15.0 °C. With the range of before, 10 to 40 °C for the air
+    # temperature, it was at the limit, and the heating setpoint (10 + 25)/2 = 17.5 °C
+    pythermalcomfort_models()
+    hook = ch.Sun2026SetpointHook(['Z'])
+    inputs = (45.0, 25.0, MET, 1.0, 0.137)
+    air = hook.inverted_temperatures(*inputs)
+    heating, cooling = hook.operative_temperatures(*inputs)
+    assert hook._bisection_range(25.0) == (-5.0, 55.0) and -5.0 < air[0] < 10.0
+    assert (heating, cooling) == ((air[0] + 25.0) / 2, (air[1] + 25.0) / 2) and round(heating, 1) == 15.0
+    assert not hook.saturated(heating, cooling)
+    # The SET of the air temperatures found is that of the setpoints of the SET, within the tolerance of the bisection
+    for value, target in zip(air, hook.band):
+        assert ch.standard_effective_temperature(value, 25.0, 0.137, 45.0, MET, 1.0, 'sitting') == pytest.approx(
+            target, abs=0.02)
+    # With the range from 18 °C, the heating setpoint is 18 °C, at the limit: the air temperature 2·18 − 25 = 11 °C
+    narrow = ch.Sun2026SetpointHook(['Z'], temperature_range=(18.0, 40.0))
+    assert narrow.inverted_temperatures(*inputs)[0] == 11.0 and narrow.operative_temperatures(*inputs)[0] == 18.0
+    assert narrow.saturated(*narrow.operative_temperatures(*inputs))
+
+
 def test_the_hook_of_comfort_standard_24_reads_the_people_objects():
     pythermalcomfort_models()
     hook = ch.Sun2026SetpointHook(ZONES, clothing_sources={ZONES[0]: 'schedule', ZONES[1]: 'method'})
@@ -192,14 +218,17 @@ def test_the_hook_of_comfort_standard_24_reads_the_people_objects():
     assert (hook.comfort_mode, hook.category, hook.tsv_limit, hook.method) == (1, 80, 0.5, 'bisection')
     assert hook.band == ch.sun2026_set_setpoints()
     # Zone 1: its clothing insulation schedule; zone 2: the calculation method schedule (2) chooses the clothing
-    # insulation of the dynamic model; warm enough not to warn
+    # insulation of the dynamic model. Zone 1 is warm enough not to warn; zone 2 warns once: with 0.8 clo and 31 °C of
+    # mean radiant temperature, its heating setpoint is 15.7 °C (until the decision of 2026-11-18 on the range of the
+    # setpoints, its air temperature was at the lower limit of 10 °C, and the setpoint (10 + 31)/2 = 20.5 °C)
     values = {'ZoneTimeStep': 1 / 6,
               **_zone_values(ZONES[0], 23.0, 24.0, SET_Clo=0.5),
               **_zone_values(ZONES[1], 30.0, 31.0, SET_Clo=0.5, SET_CloValue=0.8, SET_CloMethod=2.0)}
     controller = _Controller(values)
-    with warnings.catch_warnings():
-        warnings.simplefilter('error')
+    with pytest.warns(UserWarning) as record:
         hook(controller, CALLING_POINT)
+    messages = [str(item.message) for item in record]
+    assert len(messages) == 1 and f'of the zone {ZONES[1]} is 15.73 °C, below 18.0 °C' in messages[0], messages
     expected = {}
     for zone, (air, radiant, clo) in zip(ZONES, ((23.0, 24.0, 0.5), (30.0, 31.0, 0.8))):
         found = hook.inverted_temperatures(45.0, radiant, MET, clo, 0.137)
@@ -464,6 +493,35 @@ def test_a_timestep_without_the_set_of_a_zone_has_no_hours_in_the_band(monkeypat
     assert _given(controller, ZONES[0]) is not None and controller.get(f'HoursInCausalBand_{ZONES[0]}') == 0.0
 
 
+def test_the_setpoints_of_the_thermostats_are_within_temperature_range_with_the_mean_radiant_temperature(monkeypatch):
+    # The decision of the author of 2026-11-18 (the question of 2026-11-17 in notes/questions.md): with tr_mode='zone',
+    # temperature_range is the range of the setpoints given to the thermostats, (air + mean radiant temperature)/2, as
+    # with 'equal_air', so the bisection looks for the air temperatures from 2·low − MRT to 2·high − MRT. With the SET
+    # of the mean of the air and mean radiant temperatures, the SET of a setpoint is the setpoint itself
+    monkeypatch.setattr(ch, 'standard_effective_temperature', _mean_set)
+    inputs = dict(met=1.1, clo=0.5, air_speed=0.1, method='bisection')
+    hook = ch.SetSetpointHook(['Z'], 28.0, 15.0, tr_mode='zone', temperature_range=(16.0, 40.0), tolerance_k=0.001,
+                              **inputs)
+    for radiant in (25.0, 5.0, -9.91):
+        assert hook._bisection_range(radiant) == (2 * 16.0 - radiant, 2 * 40.0 - radiant)
+        # The heating setpoint of the SET (15 °C) is below the range: the air temperature is at the lower limit of its
+        # range, and the heating setpoint of the thermostat is the limit of temperature_range itself
+        air = hook.inverted_temperatures(50.0, radiant)
+        heating, cooling = hook.operative_temperatures(50.0, radiant)
+        assert air[0] == 2 * 16.0 - radiant and heating == 16.0 and hook.saturated(heating, cooling)
+        assert cooling == (air[1] + radiant) / 2 and cooling == pytest.approx(28.0, abs=1e-3)
+    # With −9.91 °C, the mean of the air temperature at the limit and the mean radiant temperature is not 16 °C in
+    # floating point, and saturated() compares the setpoints with the limits exactly
+    assert (2 * 16.0 + 9.91 - 9.91) / 2 != 16.0
+    # The cooling setpoint of the SET (28 °C) above the range: the air temperature at the upper limit of its range
+    warm = ch.SetSetpointHook(['Z'], 28.0, 15.0, tr_mode='zone', temperature_range=(10.0, 26.0), **inputs)
+    assert warm.inverted_temperatures(50.0, 30.0)[1] == 22.0 and warm.operative_temperatures(50.0, 30.0)[1] == 26.0
+    # With 'equal_air', the range of the bisection is temperature_range itself
+    equal = ch.SetSetpointHook(['Z'], 28.0, 15.0, temperature_range=(16.0, 40.0), **inputs)
+    assert equal._bisection_range(None) == equal._bisection_range(25.0) == (16.0, 40.0)
+    assert equal.operative_temperatures(50.0)[0] == 16.0
+
+
 def _comfort_models(people):
     return [str(getattr(people, f'Thermal_Comfort_Model_{n}_Type')).strip() for n in range(1, 8)]
 
@@ -545,9 +603,11 @@ def test_the_model_of_the_hook_of_the_set_with_the_dynamic_clothing_model_runs(t
 #: value), in 8-14 January and 15-21 July (``notes/decisions.md``, F1). Those of winter were measured again on
 #: 2026-11-12: since finding A19 of the self-audit of 2026-11-11, the thermostat of Block1:Zone1 on its minimum of 18 °C
 #: heats to 18.1 °C (the minimum plus the tolerance), which changed them from (-0.080, 0.081, 0.191) and (-0.082,
-#: 0.083, 0.204)
+#: 0.083, 0.204); and again on 2026-11-18, with the range of the setpoints of the thermostats (the decision of the
+#: author of that day: the heating setpoints are lower, though the zones stay far above them), which changed the
+#: maximums from 0.187 and 0.204
 MEASURED = {
-    ('winter', 'Block1_Zone1'): (-0.080, 0.081, 0.187), ('winter', 'Block1_Zone2'): (-0.082, 0.082, 0.204),
+    ('winter', 'Block1_Zone1'): (-0.080, 0.081, 0.190), ('winter', 'Block1_Zone2'): (-0.082, 0.082, 0.205),
     ('summer', 'Block1_Zone1'): (-0.156, 0.156, 0.262), ('summer', 'Block1_Zone2'): (-0.154, 0.154, 0.291),
 }
 
@@ -653,15 +713,20 @@ def test_comfort_standard_24_in_energyplus(tmp_path, monkeypatch, season, begin,
                                               for t in range(len(met))], atol=1e-6)
         tsv = column(f'EMS:TSV_causal_{zone} [').iloc[1:].to_numpy()
         np.testing.assert_allclose(tsv, 0.11 * reported - 2.6, atol=1e-6)
-        # The hours at a limit of the range of the bisection, 10 to 40 °C (task A6): with the mean radiant temperature
-        # of the zone, the air temperature whose SET is the heating setpoint of the SET is below 10 °C in all the
-        # timesteps of the week of January and in most of those of July (an open question of notes/questions.md,
-        # 2026-11-17)
-        expected = np.array([hook.saturated(*hook.inverted_temperatures(
-            copied['RH'][t], copied['MRT'][t], met[t], copied['Clo'][t], copied['Vel'][t])) for t in range(len(met))])
+        # The hours at a limit of temperature_range, 10 to 40 °C (task A6): none in these weeks. With the mean radiant
+        # temperature of the zone, the air temperature whose SET is the heating setpoint of the SET is below 10 °C in
+        # all the timesteps of the week of January and in most of those of July, within the range of the bisection of
+        # the air temperature, 2·10 − MRT to 2·40 − MRT, whose setpoints of the thermostats are within 10 to 40 °C (the
+        # decision of the author of 2026-11-18; until then, that range was 10 to 40 °C, and the heating setpoints were
+        # at its limit in those timesteps)
+        inverted = [hook.inverted_temperatures(copied['RH'][t], copied['MRT'][t], met[t], copied['Clo'][t],
+                                               copied['Vel'][t]) for t in range(len(met))]
+        expected = np.array([hook.saturated(*hook._operative(temperatures, copied['MRT'][t]))
+                             for t, temperatures in enumerate(inverted)])
         np.testing.assert_allclose(column(f'EMS:SETsaturated_{zone} [').iloc[1:].to_numpy(),
                                    np.where(expected, 1 / STEPS, 0.0), atol=1e-9)
-        assert expected.mean() == 1.0 if season == 'winter' else 0.5 < expected.mean() < 1.0
+        below = np.mean([temperatures[0] < 10 for temperatures in inverted])
+        assert not expected.any() and (below == 1.0 if season == 'winter' else 0.5 < below < 1.0), below
         occupied = column(f'EMS:Occupied Hours_{zone} [').iloc[1:].to_numpy() > 0
         hours = column(f'EMS:HoursInCausalBand_{zone} [').iloc[1:].to_numpy()
         inside = (reported >= hook.band[0]) & (reported <= hook.band[1])
@@ -740,8 +805,8 @@ def test_comfort_standard_24_with_the_fans_that_the_occupants_control_in_energyp
 
 @needs_energyplus
 def test_the_setpoints_of_comfort_standard_24_at_the_limits_of_their_range_in_energyplus(tmp_path, monkeypatch):
-    # Task A6 of the review of 1.2.0: two days of January of the sample model (1.0 clo), whose inverted heating air
-    # temperature falls below 18 °C, with the range of the bisection from 18 °C
+    # Task A6 of the review of 1.2.0: two days of January of the sample model (1.0 clo), whose inverted heating setpoint
+    # falls below 18 °C, with the range of the setpoints from 18 °C
     from accim.run import run_ep
 
     pythermalcomfort_models()
@@ -761,19 +826,18 @@ def test_the_setpoints_of_comfort_standard_24_at_the_limits_of_their_range_in_en
         copied = {prefix: column(f'EMS:Copy{prefix}_{zone} [').iloc[1:].to_numpy()
                   for prefix in ('RH', 'MRT', 'Act', 'Clo', 'Vel')}
         met = copied['Act'] / ch.MET_ACTIVITY_LEVEL
-        # The timesteps whose air temperatures of the bisection, with the values that the sensors read, are at a limit
-        # of the range: the output is the length of the timestep in them, and 0 in the others
-        expected = np.array([hook.saturated(*hook.inverted_temperatures(
+        # The timesteps whose setpoints of the bisection, with the values that the sensors read, are at a limit of the
+        # range: the output is the length of the timestep in them, and 0 in the others
+        expected = np.array([hook.saturated(*hook.operative_temperatures(
             copied['RH'][t], copied['MRT'][t], met[t], copied['Clo'][t], copied['Vel'][t])) for t in range(len(met))])
         saturated = column(f'EMS:SETsaturated_{zone} [').iloc[1:].to_numpy()
         np.testing.assert_allclose(saturated, np.where(expected, 1 / STEPS, 0.0), atol=1e-9)
         assert expected.any()
-        # Where it is, the heating setpoint of the hook is that of 18 °C of air temperature and the mean radiant
-        # temperature of the zone (or the minimum heating setpoint of 18 °C of Block1:Zone1, which bounds it after)
+        # Where it is, the heating setpoint of the hook is the limit, 18 °C (with the mean radiant temperature of the
+        # zone, the air temperature of the bisection is at the limit of its range, 2·18 − MRT; the decision of the
+        # author of 2026-11-18)
         heating = column(f'EMS:Adaptive Heating Setpoint Temperature_No Tolerance_{zone} [').iloc[1:].to_numpy()
-        minimum = 18.0 if zone == 'Block1_Zone1' else -np.inf
-        np.testing.assert_allclose(heating[expected], np.maximum((18.0 + copied['MRT'][expected]) / 2, minimum),
-                                   atol=1e-6)
+        np.testing.assert_allclose(heating[expected], 18.0, atol=1e-6)
 
 
 @needs_energyplus

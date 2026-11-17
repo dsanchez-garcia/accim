@@ -73,7 +73,8 @@ those of the PMV of :func:`accim.sim.apmv.apply_pmv_setpoints` (−0.2 and 0.2, 
 1.0), which the EMS controls. With ``method='bisection'``, the metabolic rate, the clothing insulation and the air speed
 can also be those of the schedules of the People object of each zone in each timestep (``None``), and the mean radiant
 temperature that of the zone (``tr_mode='zone'``: the unknown of the bisection is then the air temperature, which the
-hook converts to the operative temperature of the thermostats of the ACCIS, (air + mean radiant temperature)/2). With
+hook converts to the operative temperature of the thermostats of the ACCIS, (air + mean radiant temperature)/2; the
+range of the bisection, ``temperature_range``, is that of those setpoints, with both values of ``tr_mode``). With
 ``air_speed_heating``, the air speed is that of the fans that the occupants control, which they have only when they
 need it: the heating setpoint is inverted with ``air_speed_heating``, and the SET of the zones is that without the
 fans while it is not above the cooling setpoint of the SET.
@@ -152,7 +153,10 @@ ATHB_SATURATED = 'ATHB_saturated'
 _SUMMED_OUTPUTS = {ATHB_SATURATED: 'H'}
 #: The range of the operative temperature (°C) within which the hook of the SET looks for its setpoints: the air and
 #: mean radiant temperatures of 10 to 40 °C, the limits of the inputs of the SET of pythermalcomfort
-#: (``pythermalcomfort.models.set_tmp``, 4.8.1); the setpoints out of it are its limits.
+#: (``pythermalcomfort.models.set_tmp``, 4.8.1); the setpoints out of it are its limits. With ``tr_mode='zone'``, it is
+#: the range of the setpoints of the thermostats too, (air + mean radiant temperature)/2 (the decision of the author of
+#: 2026-11-18 in ``notes/decisions.md``), and the air temperatures of the bisection can be out of 10 to 40 °C: the SET
+#: is calculated without the limits of the inputs of pythermalcomfort.
 SET_TEMPERATURE_RANGE = (10.0, 40.0)
 #: The methods of the setpoints of the SET (:class:`SetSetpointHook`): 'table' (the setpoints of each relative humidity,
 #: calculated when the hook is made and interpolated) and 'bisection' (calculated in each timestep, with the output of
@@ -757,7 +761,11 @@ class SetSetpointHook:
       timestep itself), and the unknown of the bisection is the air temperature (:meth:`inverted_temperatures`); the
       hook gives the ACCIS, whose thermostats control the operative temperature, the operative temperatures (air
       temperature + mean radiant temperature)/2 of the air temperatures found (:meth:`operative_temperatures`; decision
-      of the author of 2026-11-10 in ``notes/decisions.md``). With ``'equal_air'`` (the default), the mean radiant
+      of the author of 2026-11-10 in ``notes/decisions.md``). ``temperature_range`` is the range of those setpoints, as
+      with ``'equal_air'``: the bisection looks for the air temperatures from 2·low − MRT to 2·high − MRT (the decision
+      of the author of 2026-11-18; until then, from low to high, so that where the mean radiant temperature of a zone
+      was high, the air temperature whose SET is the heating setpoint of the SET could be below 10 °C and the heating
+      setpoint was then (10 + MRT)/2, above that of the SET). With ``'equal_air'`` (the default), the mean radiant
       temperature is the air temperature and the temperatures found are the setpoints, as above.
 
     With ``air_speed_heating`` (None by default; the question of the validation study of F3, decided on 2026-11-13 in
@@ -773,9 +781,9 @@ class SetSetpointHook:
     in their hours, and the SET of a zone at 22 °C is 16.7 °C (below the band of the causal SET model) instead of 21.1.
 
     The setpoints out of ``temperature_range`` are its limits (the bisection gives them when the SET of a setpoint is
-    out of the range; with ``tr_mode='zone'``, the air temperatures at the limits): with either method, the hook
-    reports in each timestep whether a setpoint of a zone is at a limit (``SETsaturated_<zone>``, the length of the
-    timestep in hours or 0, summed: :data:`SET_SATURATED`), adds the hours of the run periods to
+    out of the range; with ``tr_mode='zone'``, when the air temperature is at a limit of its range): with either
+    method, the hook reports in each timestep whether a setpoint of a zone is at a limit (``SETsaturated_<zone>``, the
+    length of the timestep in hours or 0, summed: :data:`SET_SATURATED`), adds the hours of the run periods to
     :attr:`saturated_hours` and warns of them at the end of the simulation (:meth:`finish`), as the hook of the ATHB
     (task A6 of the review of accim 1.2.0, finding A4-1 of v04). With 1.0 clo, 1.1 met and 0.1 m/s, for instance, the
     heating setpoint of the SET of 19 °C is 15.8 °C (40 % of relative humidity), and a range from 16 °C gives 16 °C.
@@ -803,8 +811,9 @@ class SetSetpointHook:
         'sitting' with a metabolic rate of 1.2 met or less (sedentary occupants), and 'standing' above it.
     :param tolerance_k: The largest width of the interval of the bisection (K).
     :param max_iterations: The largest number of iterations of the bisection.
-    :param temperature_range: The range of the temperatures of the bisection (°C, :data:`SET_TEMPERATURE_RANGE`); the
-        temperatures out of it are its limits.
+    :param temperature_range: The range of the setpoints of the operative temperature (°C,
+        :data:`SET_TEMPERATURE_RANGE`), within which the bisection looks for them (with ``tr_mode='zone'``, for their
+        air temperatures, from 2·low − MRT to 2·high − MRT); the setpoints out of it are its limits.
     :param method: 'table' (the default) or 'bisection' (:data:`SET_METHODS`).
     :param tr_mode: 'equal_air' (the default) or 'zone' (:data:`TR_MODES`; 'zone' with ``method='bisection'`` only).
     :param clothing_sources: The clothing insulation of each zone, with ``clo`` None: ``{zone: 'schedule'}`` (its
@@ -975,9 +984,11 @@ class SetSetpointHook:
                               met: Optional[float] = None, clo: Optional[float] = None,
                               air_speed: Optional[float] = None) -> Tuple[float, float]:
         """The temperatures (°C) whose SET is the heating and the cooling setpoints of the SET, found by bisection (both
-        at once) within the range of the temperatures (its limits, if the SET of the setpoint is out of it): with
-        ``tr_mode='equal_air'``, the operative temperatures (the air and mean radiant temperatures equal to them); with
-        ``'zone'``, the air temperatures with the mean radiant temperature given.
+        at once) within a range (its limits, if the SET of the setpoint is out of it): with ``tr_mode='equal_air'``,
+        the operative temperatures (the air and mean radiant temperatures equal to them), within ``temperature_range``;
+        with ``'zone'``, the air temperatures with the mean radiant temperature given, within those whose operative
+        temperatures, (air + mean radiant temperature)/2, are within ``temperature_range``: from 2·low − MRT to
+        2·high − MRT (the decision of the author of 2026-11-18 in ``notes/decisions.md``; before, from low to high).
 
         :param relative_humidity: The relative humidity of the zone (%).
         :param mean_radiant_temperature: The mean radiant temperature of the zone (°C), with ``tr_mode='zone'``.
@@ -1008,17 +1019,28 @@ class SetSetpointHook:
                                                                  relative_humidity, met, clo, position),
                                   dtype=float).reshape(2)
 
-        return _bisect(standard, (self.set_heating_setpoint, self.set_cooling_setpoint), self.temperature_range,
-                       self.tolerance_k, self.max_iterations)
+        return _bisect(standard, (self.set_heating_setpoint, self.set_cooling_setpoint),
+                       self._bisection_range(mean_radiant_temperature), self.tolerance_k, self.max_iterations)
+
+    def _bisection_range(self, mean_radiant_temperature: Optional[float]) -> Tuple[float, float]:
+        """The range of the temperatures of the bisection of :meth:`inverted_temperatures` (°C): ``temperature_range``,
+        or, with ``tr_mode='zone'``, that of the air temperatures whose operative temperatures with the mean radiant
+        temperature of the zone are within it, 2·low − MRT to 2·high − MRT."""
+        low, high = self.temperature_range
+        if self.tr_mode != 'zone':
+            return low, high
+        radiant = float(mean_radiant_temperature)
+        return 2 * low - radiant, 2 * high - radiant
 
     def operative_temperatures(self, relative_humidity: float, mean_radiant_temperature: Optional[float] = None,
                                met: Optional[float] = None, clo: Optional[float] = None,
                                air_speed: Optional[float] = None) -> Tuple[float, float]:
-        """The setpoints of the operative temperature (°C) that the hook gives to the ACCIS: the temperatures of
-        :meth:`inverted_temperatures`, with ``tr_mode='equal_air'``, or, with ``'zone'``, the operative temperatures of
-        its air temperatures with the mean radiant temperature of the zone, (air + mean radiant temperature)/2 (the
-        operative temperature of the thermostats of the ACCIS, the output Zone Operative Temperature of EnergyPlus).
-        The arguments are those of :meth:`inverted_temperatures`.
+        """The setpoints of the operative temperature (°C) that the hook gives to the ACCIS, within
+        ``temperature_range``: the temperatures of :meth:`inverted_temperatures`, with ``tr_mode='equal_air'``, or,
+        with ``'zone'``, the operative temperatures of its air temperatures with the mean radiant temperature of the
+        zone, (air + mean radiant temperature)/2 (the operative temperature of the thermostats of the ACCIS, the output
+        Zone Operative Temperature of EnergyPlus), which are the limits of ``temperature_range`` themselves when the
+        air temperatures are at the limits of their range. The arguments are those of :meth:`inverted_temperatures`.
 
         :return: (heating, cooling).
         """
@@ -1030,16 +1052,20 @@ class SetSetpointHook:
         """The setpoints of the operative temperature of the temperatures of :meth:`inverted_temperatures` (see
         :meth:`operative_temperatures`)."""
         heating, cooling = temperatures
-        if self.tr_mode == 'zone':
-            radiant = float(mean_radiant_temperature)
-            return (heating + radiant) / 2, (cooling + radiant) / 2
-        return heating, cooling
+        if self.tr_mode != 'zone':
+            return heating, cooling
+        radiant = float(mean_radiant_temperature)
+        # The air temperatures at a limit of the range of the bisection give the limit of temperature_range itself:
+        # (2·low − MRT + MRT)/2 can be a rounding error away from it, and saturated() compares them exactly
+        limits = dict(zip(self._bisection_range(radiant), self.temperature_range))
+        return tuple(limits.get(value, (value + radiant) / 2) for value in (heating, cooling))
 
     def saturated(self, heating: float, cooling: float) -> bool:
-        """True if a temperature found by the bisection (:meth:`inverted_temperatures`; with ``method='table'``, a
-        setpoint of the table) is at a limit of ``temperature_range``: the bisection gives the limit itself when the
-        SET of the setpoint is out of the range. With ``tr_mode='zone'``, those are the air temperatures, and the
-        setpoints of the thermostats are (air + mean radiant temperature)/2."""
+        """True if a setpoint of the operative temperature that the hook gives to the ACCIS
+        (:meth:`operative_temperatures`; with ``method='table'``, a setpoint of the table) is at a limit of
+        ``temperature_range``: the bisection gives the limit itself when the SET of the setpoint is out of the range
+        (with ``tr_mode='zone'``, when the air temperature is at a limit of its range, whose setpoint is the limit of
+        ``temperature_range``)."""
         return heating in self.temperature_range or cooling in self.temperature_range
 
     def finish(self) -> None:
@@ -1140,14 +1166,11 @@ class SetSetpointHook:
             radiant, met, clo, air_speed = inputs
             if self.table is not None:
                 heating, cooling = self.setpoints_of_humidity(humidity)
-                saturated = self.saturated(heating, cooling)
             else:
-                temperatures = self.inverted_temperatures(humidity, radiant, met, clo, air_speed)
-                saturated = self.saturated(*temperatures)
-                heating, cooling = self._operative(temperatures, radiant)
+                heating, cooling = self.operative_temperatures(humidity, radiant, met, clo, air_speed)
             self.setpoints[zone] = (heating, cooling)
             _give_setpoints(controller, zone, heating, cooling)
-            self._saturation(controller, zone, saturated)
+            self._saturation(controller, zone, self.saturated(heating, cooling))
             self._given(controller, zone, heating, cooling)
             if self.method == 'bisection':
                 air = controller.get(f'SET_MAT_{zone}')
@@ -1657,12 +1680,12 @@ def apply_sun2026_setpoints(building, comfort_mode: Any = 1, category: int = 80,
 
     The setpoints of the SET of its comfort mode (:func:`sun2026_set_setpoints`: the band of TSV ±tsv_limit, 19.1 and
     28.2 °C with 0.5, or the neutral SET of 23.6 °C ± ``set_offset``) are inverted by bisection in each timestep (to
-    0.05 K by default, within 10 to 40 °C) with the relative humidity of each zone, by default its mean radiant
-    temperature (``tr_mode='zone'``: the air temperatures found are given to the thermostats of the ACCIS as the
-    operative temperatures (air + mean radiant temperature)/2), and the metabolic rate, clothing insulation and air
-    speed of the schedules of its People object (with its Clothing Insulation Calculation Method, which
-    :func:`accim.sim.people.set_clothing_method` sets: a schedule or the dynamic clothing model of ASHRAE 55; the fans
-    are those of the air velocity schedule). Its zones get the objects of :func:`apply_set_setpoints` with
+    0.05 K by default, with the setpoints of the thermostats within 10 to 40 °C) with the relative humidity of each
+    zone, by default its mean radiant temperature (``tr_mode='zone'``: the air temperatures found are given to the
+    thermostats of the ACCIS as the operative temperatures (air + mean radiant temperature)/2), and the metabolic rate,
+    clothing insulation and air speed of the schedules of its People object (with its Clothing Insulation Calculation
+    Method, which :func:`accim.sim.people.set_clothing_method` sets: a schedule or the dynamic clothing model of ASHRAE
+    55; the fans are those of the air velocity schedule). Its zones get the objects of :func:`apply_set_setpoints` with
     ``method='bisection'`` and the inputs of the People objects (with ``SETsaturated_<zone>``), the outputs
     ``TSV_causal_<zone>`` (averaged) and ``HoursInCausalBand_<zone>`` (summed, hours) of the hook
     (:func:`sun2026_zone_outputs`), and the People objects get
@@ -1691,7 +1714,9 @@ def apply_sun2026_setpoints(building, comfort_mode: Any = 1, category: int = 80,
         above that of the occupants sitting.
     :param tolerance_k: The largest width of the interval of the bisection (K), 0.05 by default.
     :param max_iterations: The largest number of iterations of the bisection.
-    :param temperature_range: The range of the temperatures of the bisection (°C), 10 to 40 °C by default.
+    :param temperature_range: The range of the setpoints of the operative temperature (°C), 10 to 40 °C by default,
+        within which the bisection looks for them (with ``tr_mode='zone'``, for their air temperatures, from 2·low − MRT
+        to 2·high − MRT; see :class:`SetSetpointHook`).
     :param output_frequencies: The reporting frequencies of the outputs; None (the default) for those of the EMS outputs
         of the model.
     :param air_speed_heating: The air speed of the heating setpoint (m/s), for the fans that the occupants control

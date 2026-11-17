@@ -35,6 +35,56 @@ Recommended flow: track active work in `TODO.md`, move completed outcomes to `DE
 
 ## Entries
 
+### 2026-11-18
+#### [done] The range of the setpoints of comfort standard 24 with the mean radiant temperature (branch `v1.2.0`)
+- Context: the question of 2026-11-17 of `notes/questions.md`, raised by the outputs of task A6: with
+  `tr_mode='zone'`, the default of comfort standard 24, `temperature_range` (10 to 40 °C) was the range of the air
+  temperature of the bisection, so where the mean radiant temperature of a zone was high, the heating air temperature
+  stopped at 10 °C and the heating setpoint was (10 + MRT)/2, above that of the causal SET model (in the weeks of the
+  tests of the sample model in Seville, in all the timesteps of January and in 62–64 % of those of July). The author
+  chose option (c), the recommendation, on 2026-11-18 (`notes/decisions.md`).
+- Changes: `accim/sim/comfort_hooks.py`: with `tr_mode='zone'`, `SetSetpointHook.inverted_temperatures()` looks for
+  the air temperatures from 2·low − MRT to 2·high − MRT (`_bisection_range()`), so that the setpoints of the
+  thermostats, (air + MRT)/2, are within `temperature_range`, as with `'equal_air'`; an air temperature at a limit of
+  its range gives the limit of `temperature_range` itself (`_operative()`), and `saturated()` takes the setpoints of
+  the thermostats (those of `operative_temperatures()`, also in the callback), so `SETsaturated_<zone>`,
+  `saturated_hours` and the warning report the setpoints at a limit with both values of `tr_mode`. The unknown is
+  still the air temperature, `tolerance_k` the width of its interval, and the default range 10 to 40 °C. Docstrings
+  of the module, `SET_TEMPERATURE_RANGE`, `SetSetpointHook` and `apply_sun2026_setpoints`; sections 4.9.2 and 4.9.3
+  of the detailed use; the entries of comfort standard 24 and of A6 of `CHANGELOG.md`; the decision in
+  `notes/decisions.md`, the question answered in `notes/questions.md`, and the entries of the validation study of F3
+  and of the limiter of the drift of `TODO.md` (their try-runs were made with the range of before).
+- Measurement: the SET of pythermalcomfort (4.8.1, without the limits of its inputs) is finite over the ranges of the
+  air temperature of mean radiant temperatures of −10 to 60 °C (9000 combinations of humidity, air speed, metabolic
+  rate, clothing and posture), and grows with the air temperature but for local dips of up to 0.014 K over 0.1 K of
+  air at 1.0 and 1.06 met (20 of them within 10 to 40 °C). With EnergyPlus 25.1, in the two weeks of the tests (the
+  code of the commit before and of this one): no setpoint at a limit (168 h of 168 in January and 104.5 and 108.3 h in
+  July before); the heating setpoint of Block1:Zone2 (no minimum) from 17.49 to 15.04 °C on average in January
+  (18.29 to 14.77 °C in the occupied hours), that of Block1:Zone1 on its minimum of 18 °C (18.31 before), and both
+  from 19.80 to 18.81 °C in July; the zones stay far above them (the operative temperature does not go below 22.6 °C in
+  January), so their temperatures change by 0.02 K at most on average, the cooling coils by −0.3 to +0.04 %, the
+  occupied hours within the causal band from 58.2 to 56.0 in Block1:Zone2 in January (above the band, near its upper
+  limit) and not elsewhere, and the maximums of the hourly differences of the SET of the hook with that of the Pierce
+  model in January from 0.187 and 0.204 K to 0.190 and 0.205 K; the heating coils of the VRF system of the sample
+  model, which work a few hours with the zones above 22 °C (not investigated), give 14.5 kWh in January instead of
+  5.0.
+- Files: `accim/sim/comfort_hooks.py`, `tests/core/test_comfort_hooks.py`, `tests/core/test_sun2026_set.py`,
+  `docs/source/4_detailed use.md`, `CHANGELOG.md`, `TODO.md`, `CAMBIOS_CODIGO_v1.2.0.md` (§65), `notes/decisions.md`,
+  `notes/questions.md`, `notes/work-log.md`.
+- Verification: new unit tests: the range of the bisection and the setpoints at its limits, exactly (with a SET that
+  is the mean of the temperatures, and a mean radiant temperature of −9.91 °C, with which the mean of the air
+  temperature at the limit and the mean radiant temperature is 15.999999999999998, not 16), and the heating setpoint
+  of comfort standard 24 with the inputs of January and 25 °C of mean radiant temperature (15.0 °C; 17.5 before).
+  Changed: the unit test of A6 (with `tr_mode='zone'`, the setpoint at the limit is 16 °C, the air temperature 10 °C),
+  that of the People objects (its zone 2, with 0.8 clo and 31 °C of mean radiant temperature, warns now: 15.73 °C
+  instead of 20.5), and those of comfort standard 24 with EnergyPlus (no setpoint at a limit in the two weeks, the
+  heating air temperature below 10 °C in all the timesteps of January and in most of those of July, the maximums of
+  January measured again, and with the range from 18 °C, the heating setpoint 18 °C at the limit). In a snapshot of
+  the working tree, the ten test files that use the hooks of the SET, with the golden master (unchanged): 217 passed
+  (15 min). Python 3.9 compiles the changed files; the documentation builds with the warnings of the baseline (33).
+- Next step: the simulations of the validation study of F3 (`TODO.md`), once the author has agreed its choices with
+  Ruiji Sun.
+
 ### 2026-11-17
 #### [done] E1: the running mean of ASHRAE 55 of EnergyPlus with a .stat file next to the weather file (branch `v1.2.0`)
 - Context: the first half of the P2 entry of E1 of `TODO.md`: with a .stat file next to the weather file

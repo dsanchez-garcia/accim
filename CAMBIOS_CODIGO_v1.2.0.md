@@ -3208,7 +3208,8 @@ de calefacción fue entonces (10 + TRM)/2: de media, 2,4 K más alta en enero (3
 julio que con un rango de −20 a 40 °C, con el que ninguna consigna llega a un límite. El test del estándar 24 con
 EnergyPlus comprueba ahora la salida en esas dos semanas. No he cambiado el rango por defecto, que decidió el autor
 con F1; la pregunta recomienda aplicar `temperature_range` a la consigna del termostato (la temperatura operativa) en
-vez de a la temperatura del aire, de modo que el rango signifique lo mismo con los dos valores de `tr_mode`.
+vez de a la temperatura del aire, de modo que el rango signifique lo mismo con los dos valores de `tr_mode`. El autor
+lo decidió así el 2026-11-18 (§65).
 
 ## 63. Los tests de `tests/core` se saltan sin besos, en vez de fallar
 
@@ -3263,3 +3264,45 @@ medirlo con EnergyPlus antes de reproducirlo, así que la entrada de `TODO.md` q
 medias y los setpoints con y sin `.stat`, el check 4, y una simulación con EnergyPlus 25.1 del 20 de enero al 10 de
 febrero con un `.stat` junto al EPW: PMOT es la media de enero y luego la de febrero del `.stat`, y los setpoints de
 INT ASHRAE 55 son los de `compute_setpoints` (sin el `.stat`, no lo son).
+
+## 65. El rango de las consignas del estándar 24 con la temperatura radiante media de las zonas
+
+Era la pregunta abierta del 2026-11-17 (§62): con `tr_mode='zone'`, el valor por defecto del estándar 24,
+`temperature_range` (de 10 a 40 °C) era el rango de la temperatura del aire que busca la bisección, no el de la
+consigna que recibe el termostato. Donde la temperatura radiante media de una zona era alta, la temperatura del aire
+de la consigna de calefacción se quedaba en 10 °C y la consigna era (10 + TRM)/2, más alta que la del modelo. El autor
+eligió el 2026-11-18 la opción (c), la recomendada: aplicar `temperature_range` a la consigna del termostato (la
+temperatura operativa).
+
+**El cambio** (`accim/sim/comfort_hooks.py`): con `tr_mode='zone'`, la bisección busca la temperatura del aire entre
+2·10 − TRM y 2·40 − TRM (de −5 a 55 °C con 25 °C de radiante media), de modo que la consigna (aire + TRM)/2 queda
+entre 10 y 40 °C, como con `'equal_air'`. La incógnita sigue siendo la temperatura del aire, `tolerance_k` sigue siendo
+la anchura del intervalo de esa temperatura y el rango por defecto no cambia. Una consigna en un límite es exactamente
+el límite (la media de la temperatura del aire en el límite y la radiante podría diferir de él en un error de
+redondeo), y `saturated()`, `SETsaturated_<zona>` y el aviso hablan ya de las consignas del termostato con los dos
+valores de `tr_mode`. El SET de pythermalcomfort se calcula sin los límites de sus entradas, así que se puede evaluar
+fuera de 10–40 °C: lo he comprobado con temperaturas radiantes de −10 a 60 °C (9000 combinaciones de humedad,
+velocidad del aire, actividad, ropa y postura). Es finito en todo el rango y crece con la temperatura del aire, salvo
+pequeños descensos locales (0,014 K como mucho) que ya existían dentro de 10–40 °C.
+
+**Lo que cambia en las dos semanas de los tests** (el modelo de ejemplo en Sevilla, EnergyPlus 25.1): ninguna consigna
+llega a un límite (antes, todas las horas de enero y el 62–64 % de las de julio). La consigna de calefacción de la zona
+sin consigna mínima baja de 17,5 a 15,0 °C de media en enero (de 18,3 a 14,8 °C en las horas ocupadas), y en julio de
+19,8 a 18,8 °C en las dos zonas; la otra zona sigue en su mínimo de 18 °C en enero. Las zonas están muy por encima de
+esas consignas en esas semanas (la temperatura operativa no baja de 22,6 °C en enero), así que sus temperaturas apenas
+cambian: la refrigeración cambia un 0,3 % como mucho, y las horas ocupadas dentro de la banda causal son 60 y 56 en
+enero (60 y 58,2 antes; la zona 2 sale por arriba, cerca del límite superior) y las mismas en julio. La calefacción del
+VRF del modelo de ejemplo, que funciona unas pocas horas con las zonas por encima de 22 °C (no lo he investigado), pasa
+de 5,0 a 14,5 kWh en enero.
+
+**Los tests**: nuevos, el rango de la bisección y las consignas en sus límites, exactas (con un SET que es la media de
+las temperaturas, y con una radiante de −9,91 °C, con la que la media da 15,999999999999998 en vez de 16), y la
+consigna de calefacción del estándar 24 con las entradas de enero y 25 °C de radiante (15,0 °C; antes, 17,5). Cambian
+el test de A6 (con `tr_mode='zone'`, la consigna en el límite es 16 °C), el de los objetos People (su zona 2, con 0,8
+clo y 31 °C de radiante, avisa ahora de que su consigna es 15,73 °C; antes era 20,5) y los del estándar 24 con
+EnergyPlus: ninguna consigna en un límite en las dos semanas, la temperatura del aire de calefacción por debajo de 10
+°C en todos los pasos de enero y en la mayoría de los de julio, los máximos de enero de las diferencias con el SET de
+Pierce medidos de nuevo (0,190 y 0,205 K), y con el rango desde 18 °C, la consigna en el límite es 18 °C.
+
+**Lo que queda**: las simulaciones del estudio de validación de F3 (entrada de `TODO.md`), con este rango; las pruebas
+del 12 y el 13 de noviembre se hicieron con el anterior.
