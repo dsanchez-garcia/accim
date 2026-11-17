@@ -36,6 +36,41 @@ Recommended flow: track active work in `TODO.md`, move completed outcomes to `DE
 ## Entries
 
 ### 2026-11-17
+#### [done] `read_eso_using_readvarseso` and `read_csv_outputs` keep the whole run period (branch `v1.2.0`)
+- Context: the P2 entry of `TODO.md` of 2026-11-09 (found with B1): with `only_run_period=True` (the default),
+  `read_csv_outputs` (the part of `read_eso_using_readvarseso` that reads its CSV file) told the sizing periods apart
+  by a jump back of the month of their dates (`month*100 + day` falling by more than 100), and cut a file without
+  such a jump and with more than 8800 rows to its last 8760. Measured with EnergyPlus 25.1 (the sample model, its
+  sizing periods in the outputs, the outdoor air temperature at each frequency): the outputs of a run period of 74
+  days at timestep frequency without sizing periods were cut to 8760 rows, from 14 January at 04:10; and with the
+  four sizing periods of the sample model (15 July, August and September, and 15 January, in that order) and a run
+  period from 1 January, the jump back was that of 15 September to 15 January, so the winter design day was taken as
+  the first day of the run period (and the daily, monthly and run period outputs had a row of it).
+- Changes: `accim/utils/outputs.py`: `_csv_environment_starts()` gives the rows that begin an environment, those
+  whose date and time do not follow the row before (a later or the same time of the day, or, after 24:00, the first
+  hour of the next day, with 29 February or without it, and 31 December followed by 1 January; ReadVarsESO writes
+  the outputs of the days, months and run periods in the row of their last timestep, so all the rows have a date and
+  time); `_eso_run_period_start()` reads from the ESO file the date and time of the first time record of its last
+  environment, as ReadVarsESO writes it, with which `_run_period_start()` tells apart a sizing period that ends the day
+  before the run period begins (the dates alone do not); `read_csv_outputs` has the argument `run_period_start`, which
+  `read_eso_using_readvarseso` and `AccimSimulationVerifier` (with the CSV file next to the ESO file) give. The
+  heuristic of the 8760 rows is gone, and numpy is no longer imported by the module.
+- Files: `accim/utils/outputs.py`, `accim/utils/verification.py`, `tests/core/test_utils_outputs.py` (new),
+  `CHANGELOG.md`, `CAMBIOS_CODIGO_v1.2.0.md` (§60), `TODO.md`, `notes/work-log.md`.
+- Verification: `tests/core/test_utils_outputs.py`, 4 passed (12 s): the environments of synthetic rows (the sizing
+  periods of the sample model and a run period, timesteps of 10 minutes, the end of the year, February with and
+  without 29 February, a missing day, an environment that begins on the day on which the previous one ends, rows
+  without a date and time); `read_csv_outputs` with 74 days at timestep frequency (10 656 rows; the code before gives
+  8760 from 14 January at 04:10, run with the module of the last commit) and with the sizing periods before them (the
+  code before gives the winter design day first); the first date and time of a synthetic ESO file; and, with
+  EnergyPlus 25.1, the sample model with its sizing periods and a run period from 16 January to 31 March: 10 800
+  rows at timestep frequency, 1800 hourly, 75 daily, 3 monthly and 1 of the run period, with the values of the last
+  rows of the CSV file, while the dates alone take the winter design day of 15 January for the first day. The seventeen
+  test files of `tests/core` that use the reader or the verification, in a snapshot of the working tree: 520
+  passed and 1 skipped (19 min); `tests/parametric_and_optimisation`: 520 passed; Python 3.9 compiles the changed
+  modules.
+- Next step: none.
+
 #### [done] E4 with the jar of the Future Weather Generator: the Java engine of `morph_epws`, the Java of the tool, the test with the tool and the How-to notebook (branch `v1.2.0`)
 - Context: the two entries of E4 of `TODO.md` that waited for the jar of the tool (the How-to notebook and the test
   with the tool, blocked; and the command line of `engine='java'`). The author downloaded the jar of FWG CMIP6 Global

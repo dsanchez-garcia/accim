@@ -15,7 +15,7 @@ import numpy as np
 import pandas as pd
 
 from accim.utils.accim_args import get_accim_args_flattened
-from accim.utils.outputs import read_csv_outputs, read_eso_using_readvarseso
+from accim.utils.outputs import _eso_run_period_start, read_csv_outputs, read_eso_using_readvarseso
 
 __all__ = [
     'AccimSimulationVerifier',
@@ -1489,7 +1489,9 @@ class AccimSimulationVerifier:
         csv_path = os.path.splitext(self.eso_file_path)[0] + '.csv'
         if os.path.exists(csv_path):
             print(f"Reading CSV file directly: {csv_path}")
-            data = read_csv_outputs(csv_path, only_run_period=True)['data']
+            # The first date and time of the run period, from the ESO file, if it is there
+            start = _eso_run_period_start(self.eso_file_path) if os.path.exists(self.eso_file_path) else None
+            data = read_csv_outputs(csv_path, only_run_period=True, run_period_start=start)['data']
         else:
             print(f"Reading ESO file: {self.eso_file_path}")
             data = read_eso_using_readvarseso(

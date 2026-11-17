@@ -3127,3 +3127,32 @@ se saltan sin el jar (`ACCIM_FWG_JAR`) o sin el Java que necesita: los dos motor
 
 **Queda** comprobar las versiones 3 y 4 con sus jars, e instalar un Java 17 o posterior en el PATH del servidor (cosa
 del autor) para no tener que ajustar el PATH en cada sesión.
+
+## 60. `read_eso_using_readvarseso` conserva todo el periodo de simulación
+
+Era una entrada P2 de `TODO.md` del 9/11/2026 (encontrada con B1). Con `only_run_period=True` (el valor por defecto,
+el que usan `verify_accim_simulation`, `AccimSimulationVerifier` y el módulo paramétrico), el lector separaba los
+periodos de dimensionado del periodo de simulación por un salto atrás del mes en las fechas, y recortaba a sus últimas
+8760 filas los archivos sin ese salto y con más de 8800 filas.
+
+**Los dos fallos**, medidos con EnergyPlus 25.1 y el modelo de ejemplo:
+
+- Una simulación de 74 días con salidas cada paso de tiempo y sin periodos de dimensionado (10 656 filas) quedaba en
+  8760 filas, empezando el 14 de enero a las 04:10.
+- Con los periodos de dimensionado del modelo en las salidas (15 de julio, agosto y septiembre, y 15 de enero, en ese
+  orden) y la simulación desde el 1 de enero, el único salto atrás era el de septiembre a enero: el día de diseño de
+  invierno se tomaba como primer día del periodo de simulación.
+
+**La corrección** (`accim/utils/outputs.py`): los entornos se separan por la continuidad de las fechas y horas de las
+filas. Dentro de un entorno, cada fila es una hora posterior del mismo día o, tras las 24:00, la primera del día
+siguiente (con o sin 29 de febrero, y del 31 de diciembre al 1 de enero). ReadVarsESO escribe las salidas diarias,
+mensuales y del periodo en la fila del último paso de tiempo, así que todas las filas tienen fecha y hora. Además,
+`read_eso_using_readvarseso` lee en el archivo ESO la fecha y hora del primer registro del último entorno, lo que
+distingue también un periodo de dimensionado que acaba el día antes de que empiece la simulación (las fechas solas no
+pueden). `read_csv_outputs` tiene el argumento nuevo `run_period_start`, que dan `read_eso_using_readvarseso` y
+`AccimSimulationVerifier` (con el CSV junto al ESO).
+
+**Los tests** (`tests/core/test_utils_outputs.py`, nuevo): los entornos de filas inventadas (con los casos del año
+bisiesto, el fin de año, un día que falta...), los dos fallos con CSV inventados (el código anterior da 8760 filas
+desde el 14 de enero y el día de diseño de invierno), la fecha del ESO, y una simulación con EnergyPlus de los días
+de diseño y del 16 de enero al 31 de marzo, con las salidas en todas las frecuencias.

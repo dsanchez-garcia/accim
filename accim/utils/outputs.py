@@ -11,9 +11,8 @@ import shutil
 import subprocess
 import tempfile
 import warnings
-from typing import Dict, Optional, Tuple
+from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
 
-import numpy as np
 import pandas as pd
 
 from accim._besos_compat import patch_besos_read_eso
@@ -97,7 +96,96 @@ class print_available_outputs_mod:
                 pass
 
 
-def read_csv_outputs(csv_path: str, only_run_period: bool = True) -> Dict[str, Dict[str, pd.DataFrame]]:
+#: The date and time of a row of the CSV files of ReadVarsESO, ' 07/15  00:10:00': the end of each timestep or hour
+#: (the outputs of the days, months and run periods are in the row of the last timestep of the period)
+_CSV_STAMP = re.compile(r'^\s*(\d{1,2})/(\d{1,2})\s+(\d{1,2}):(\d{2}):\d{2}\s*$')
+#: The first day of each month (0 for 1 January) in a leap year, so that 29 February has a day of its own
+_LEAP_MONTH_STARTS = (0, 31, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335)
+_FEBRUARY_28, _MARCH_1 = 58, 60
+_MINUTES_PER_DAY = 24 * 60
+
+
+def _follows(previous: Tuple[int, int], current: Tuple[int, int]) -> bool:
+    """Whether a row of the outputs (its day of the year, in a leap year, and its minutes since midnight) follows the
+    row before it in the same environment: a later time of the same day (or the same one, as in the CSV files with
+    several frequencies), or the first hour of the next day after the end of its day (24:00); 28 February is
+    followed by 29 February or 1 March, and 31 December by 1 January."""
+    (day, minutes), (next_day, next_minutes) = previous, current
+    if next_day == day:
+        return next_minutes >= minutes
+    following = (next_day - day) % 366 == 1 or (day == _FEBRUARY_28 and next_day == _MARCH_1)
+    return following and minutes == _MINUTES_PER_DAY and next_minutes <= 60
+
+
+def _csv_environment_starts(stamps: Iterable[Any]) -> List[int]:
+    """The positions of the rows of the outputs of EnergyPlus that begin an environment (a sizing period, or a run
+    period) from their dates and times (' 07/15  00:10:00', as in the CSV files of ReadVarsESO): those whose date and
+    time do not follow those of the row with a date and time before it, as the timesteps or hours of a period follow
+    each other (see :func:`_follows`); the first row with a date and time is one. The rows without them are skipped.
+
+    A sizing period whose last day is the day before the first day of the next environment is not told apart from
+    it by the dates: :func:`read_eso_using_readvarseso` takes the first date and time of the run period from the ESO
+    file.
+
+    :param stamps: The dates and times of the rows, in their order.
+    :return: The positions of the first rows of the environments, in their order.
+    """
+    starts: List[int] = []
+    previous: Optional[Tuple[int, int]] = None
+    for position, stamp in enumerate(stamps):
+        match = _CSV_STAMP.match(str(stamp))
+        if not match or not 1 <= int(match.group(1)) <= 12:
+            continue
+        month, day, hour, minute = (int(match.group(number)) for number in (1, 2, 3, 4))
+        current = (_LEAP_MONTH_STARTS[month - 1] + day - 1, hour * 60 + minute)
+        if previous is None or not _follows(previous, current):
+            starts.append(position)
+        previous = current
+    return starts
+
+
+def _run_period_start(stamps: Sequence[Any], first_stamp: Optional[str] = None) -> int:
+    """The position of the first row of the run period (the last environment) of the rows of the outputs: the
+    first row of the last environment of :func:`_csv_environment_starts`, or, with ``first_stamp`` (the date and time of
+    the first row of the run period, from the ESO file), the first row from it on with that date and time (if it is
+    another one, the environment before the run period ends the day before it begins)."""
+    starts = _csv_environment_starts(stamps)
+    start = starts[-1] if starts else 0
+    if first_stamp is not None:
+        wanted = first_stamp.strip()
+        for position in range(start, len(stamps)):
+            if str(stamps[position]).strip() == wanted:
+                return position
+    return start
+
+
+def _eso_run_period_start(eso_path: str) -> Optional[str]:
+    """The date and time of the first timestep (or hour) of the last environment of an ESO file (the run period, after
+    the sizing periods), as ReadVarsESO writes it in its CSV file (' 01/01  00:10:00'), or None without it: from the
+    first time record (2) after its last environment record (1), ``2,<day of simulation>,<month>,<day of month>,<DST
+    indicator>,<hour>,<start minute>,<end minute>,<day type>`` (the hour that ends at the end minute, so the end
+    minute 60 is the hour itself)."""
+    found, waiting, in_data = None, False, False
+    with open(eso_path, 'r', encoding='latin-1') as eso:
+        for line in eso:
+            if not in_data:
+                in_data = line.startswith('End of Data Dictionary')
+            elif line.startswith('1,'):
+                waiting = True
+            elif waiting and line.startswith('2,'):
+                fields = line.split(',')
+                try:
+                    month, day, hour = int(fields[2]), int(fields[3]), int(fields[5])
+                    end = int(round(float(fields[7])))
+                except (IndexError, ValueError):
+                    return None
+                hour, end = (hour, 0) if end == 60 else (hour - 1, end)
+                found, waiting = f' {month:02d}/{day:02d}  {hour:02d}:{end:02d}:00', False
+    return found
+
+
+def read_csv_outputs(csv_path: str, only_run_period: bool = True,
+                     run_period_start: Optional[str] = None) -> Dict[str, Dict[str, pd.DataFrame]]:
     """The outputs of a CSV file of ReadVarsESO (as that which EnergyPlus leaves next to its ESO file), as
     :func:`read_eso_using_readvarseso` returns them, which reads its CSV file with this function.
 
@@ -105,11 +193,24 @@ def read_csv_outputs(csv_path: str, only_run_period: bool = True) -> Dict[str, D
     ':' of each name, so the keys with ':' are whole (the zones ``Block1:Zone1``); its index is the date and time of
     each row.
 
+    The run period is the last environment of the file, whose rows begin where their dates and times stop following
+    each other (:func:`_csv_environment_starts`): the sizing periods are before it, when the model simulates them
+    (``Run Simulation for Sizing Periods`` of its ``SimulationControl``). Until accim 1.2.0, a jump back of the
+    month told them apart, so the rows of a sizing period of the same month as the first day of the run period were
+    taken as part of it, and, without such a jump, the rows of an output file of more than 8800 rows were cut to the
+    last 8760 (those of an hourly year), so the outputs at timestep frequency of a run period of more than about 61
+    days lost their first days.
+
     :param csv_path: The CSV file.
     :type csv_path: str
     :param only_run_period: True to keep the rows of the last environment only (the run period, without the
         sizing periods before it).
     :type only_run_period: bool
+    :param run_period_start: The date and time of the first row of the run period, as the CSV file writes it
+        (``' 01/01  00:10:00'``), if it is known (:func:`read_eso_using_readvarseso` takes it from the ESO file): the
+        first row of the run period is then the first one with it from the last environment of the dates on, which
+        tells apart a sizing period whose last day is the day before the run period begins.
+    :type run_period_start: str, optional
     :return: ``{'data': {frequency: DataFrame}, 'metadata': {frequency: DataFrame}}``, with the frequencies of the
         file ('Timestep', 'Hourly', 'Daily', 'Monthly', 'Runperiod'...).
     :rtype: dict
@@ -124,26 +225,9 @@ def read_csv_outputs(csv_path: str, only_run_period: bool = True) -> Dict[str, D
     # --- 5. FILTRAR DÍAS DE DISEÑO ---
     date_col = 'Date/Time'
     if only_run_period and date_col in df_all.columns:
-        def parse_date_value(date_str):
-            try:
-                s = str(date_str).strip()
-                match = re.search(r'(\d{1,2})/(\d{1,2})', s)
-                if match:
-                    m, d = int(match.group(1)), int(match.group(2))
-                    return m * 100 + d
-                return 0
-            except:
-                return 0
-
-        time_values = df_all[date_col].apply(parse_date_value).values
-        diffs = np.diff(time_values)
-        reset_indices = np.where(diffs < -100)[0]
-
-        if len(reset_indices) > 0:
-            start_idx = reset_indices[-1] + 1
+        start_idx = _run_period_start(df_all[date_col].tolist(), run_period_start)
+        if start_idx:
             df_all = df_all.iloc[start_idx:].reset_index(drop=True)
-        elif len(df_all) > 8800:
-            df_all = df_all.tail(8760).reset_index(drop=True)
 
     # --- 6. SEPARAR POR FRECUENCIA Y CREAR METADATA ---
     data_dict = {}
@@ -232,6 +316,10 @@ def read_eso_using_readvarseso(
     """
     Lee el archivo .eso usando ReadVarsESO y parsea correctamente los nombres de objetos
     que contienen dos puntos (ej: Nombres de Zonas o Equipos VRF).
+
+    With ``only_run_period`` (the default), the outputs are those of the run period, the last environment of the
+    ESO file, without the sizing periods before it: see :func:`read_csv_outputs`, which takes the first date and
+    time of the run period from the ESO file.
     """
 
     # --- 1. ENCONTRAR EJECUTABLE READVARSESO ---
@@ -309,7 +397,9 @@ def read_eso_using_readvarseso(
     if not os.path.exists(csv_output_path):
         raise FileNotFoundError("No se generó el archivo CSV.")
 
-    result = read_csv_outputs(csv_output_path, only_run_period=only_run_period)
+    # The first date and time of the run period, from the ESO file (see read_csv_outputs)
+    run_period_start = _eso_run_period_start(abs_eso_path) if only_run_period else None
+    result = read_csv_outputs(csv_output_path, only_run_period=only_run_period, run_period_start=run_period_start)
 
     # --- 7. LIMPIEZA ---
     if cleanup:

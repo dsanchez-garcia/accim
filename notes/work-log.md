@@ -15,6 +15,18 @@ This log is a lightweight, session-scoped complement to the repository's
 existing tracking files — it does not replace them (see
 [[decisions.md#2026-09-13 — `notes/work-log.md` complements, not replaces, existing tracking files|the related decision]]).
 
+## 2026-11-17 — The run period of `read_eso_using_readvarseso` (branch `v1.2.0`, on the server)
+
+- **Objective**: the P2 entry of [[../TODO.md]] of 2026-11-09: the reader of the outputs cut long outputs at timestep
+  frequency to 8760 rows.
+- **Affected files**: `accim/utils/outputs.py`, `accim/utils/verification.py`, `tests/core/test_utils_outputs.py`,
+  [[../CHANGELOG.md]] and the notes.
+- **Finding or decision**: it also took a sizing period for the first day of the run period (the winter design day
+  of the sample model, 15 January, before a run period from 1 January). The environments are now told apart by the
+  continuity of the dates and times of the rows, and by the first date and time of the run period in the ESO file.
+- **Validation**: in the entry of [[../DEVLOG.md]].
+- **Next step**: none.
+
 ## 2026-11-17 — E4 with the jar of the Future Weather Generator (branch `v1.2.0`, on the server)
 
 - **Objective**: the entries of E4 of [[../TODO.md]] that waited for the jar of the tool, which the author downloaded
