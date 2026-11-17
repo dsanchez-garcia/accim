@@ -26,6 +26,7 @@ def test_every_name_can_be_imported_from_accim_utils(name):
 
 
 def test_functions_of_besos_that_accim_0x_imported():
+    pytest.importorskip('besos')
     from accim.utils import get_building
 
     assert get_building.__module__ == 'besos.eppy_funcs'

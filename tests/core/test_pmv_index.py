@@ -168,6 +168,8 @@ def test_the_setpoints_of_two_indices_are_not_applied_to_a_model(tmp_path):
 
 
 def test_the_parametric_modifiers_find_the_lines_by_the_names_of_their_variables(tmp_path):
+    # The parametric module (it needs besos)
+    pytest.importorskip('besos')
     from accim.parametric_and_optimisation.funcs_for_besos import param_apmv
 
     building = _model(tmp_path)

@@ -36,6 +36,50 @@ Recommended flow: track active work in `TODO.md`, move completed outcomes to `DE
 ## Entries
 
 ### 2026-11-17
+#### [done] The tests of `tests/core` are skipped without besos, not failed (branch `v1.2.0`)
+- Context: the P2 entry of `TODO.md`: task G5 (2026-11-10) gave `pytest.importorskip('besos')` to the four tests of
+  the finding of v04 §3.4, but other tests of `tests/core` needed besos too and failed without it, while rule 1 of the
+  instructions asks to skip them: `test_modifyaccis_setast.py` imported the parametric module at module level (an
+  error of collection), twelve test files and the golden master read the models with `besos.eppy_funcs.get_building`,
+  and other tests imported the parametric module.
+- Changes: `tests/core/_optional.py` has `read_model(path)`, with which the twelve files read the models: with
+  `accim.sim.accis.load_idf` (eppy) if eppy has no IDD yet in the session, and otherwise with the IDD that eppy
+  already uses, as `get_building` of besos did (with a warning). `load_idf` itself cannot replace it: the tests read
+  models of EnergyPlus 25.1 and 25.2 in one session, and it raises a `ValueError` for a model of another version than
+  that of the IDD of the session. The scripts that `test_energyplus_versions.py` runs in new processes (models of
+  EnergyPlus 26.2 only) use `load_idf`. The tests of the parametric module (`test_modifyaccis_setast.py`, which no
+  longer imports it at module level, `test_comfort_standard_code.py`, `test_epmv.py`, `test_pmv_index.py`, three of
+  `test_gui.py`) and the test of the functions of besos that `accim.utils` gives (`test_utils_package.py`) call
+  `pytest.importorskip('besos')` first. `tests/core/golden_master/runner.py` reads the models of the in-memory
+  functions with `load_idf`, and with besos only with `--legacy` (accim 0.x has no `load_idf`).
+- Golden master: `get_building` returns an IDF of geomeppy (`besos.IDF_class.IDF`), which writes the numbers of the
+  input models as they are, while eppy writes some of them in another way (`2.0` as `2`, `0.00000001` as `1e-08`,
+  `0.9550` as `0.955`, `-0` as `0`), as with `AddAccis` in accim 1.1.0. The outputs of the nine configurations of
+  the in-memory functions (`s01` to `s09`) differed from their golden files only in such lines (7 to 18 in each, the
+  same values, checked line by line), and their golden files were written again; its README says so.
+- Files: `tests/core/_optional.py`, `tests/core/golden_master/runner.py`, `tests/core/golden_master/README.md`, the
+  golden files `s01` to `s09`, and in `tests/core`: `test_apmv_calling_managers.py`, `test_apmv_defaults.py`,
+  `test_comfort_standard_code.py`, `test_energyplus_versions.py`, `test_epmv.py`, `test_existing_hvac.py`,
+  `test_existing_hvac_mixed_mode.py`, `test_gui.py`, `test_mixed_mode_windows.py`, `test_modifyaccis_setast.py`,
+  `test_pmv_index.py`, `test_sizing.py`, `test_utils_accim_args.py`, `test_utils_editing.py`,
+  `test_utils_idf_hierarchy.py`, `test_utils_package.py`, `test_vrf_ideal_loads.py`, `test_zone_arguments.py`;
+  `TODO.md`, `CAMBIOS_CODIGO_v1.2.0.md` (§63), `notes/work-log.md`.
+- Verification: with a plugin of the scratch folder that makes besos unavailable in every process (a finder of the
+  import system that raises `ModuleNotFoundError`, loaded by `sitecustomize.py` in `PYTHONPATH`, so also in the
+  processes that the tests start; not `sys.modules['besos'] = None`, which the tests that check that accim does not
+  import besos would take for an import). Before the change (HEAD), eleven of the files, without besos: the collection
+  of `test_modifyaccis_setast.py` failed, which stops `py -m pytest tests/core` before any test runs, and the others
+  gave 6 failures and 20 errors of their fixtures (126 passed). After it, `tests/core` in a snapshot of the working
+  tree without besos: 1649 passed and 19 skipped (38 min), 15 of them for besos (`test_gui.py`,
+  `test_jpn_aqilah2025.py` and `test_modifyaccis_setast.py` 3 each, `test_setpoint_limits.py` 2,
+  `test_comfort_standard_code.py`, `test_epmv.py`, `test_pmv_index.py` and `test_utils_package.py` 1 each) and 4 for
+  EnergyPlus 26.1 and the jar of the Future Weather Generator (not set); with besos, 1664 passed and the same 4
+  skipped (38 min), with the nine new golden files. The outputs of the nine configurations, written with `runner.py`
+  before the update of their golden files, differed from those of HEAD only in lines with the same number written in
+  another way (7 to 18 in each, checked line by line), and the new golden files are those outputs. Python 3.9
+  compiles the changed files.
+- Next step: none.
+
 #### [done] A6: the hooks of the SET report the hours of their setpoints at the limits of their range (branch `v1.2.0`)
 - Context: the P2 entry A6 of `TODO.md`: finding A4-1 of v04 mentions that the setpoints of the SET saturate
   silently too, at the limits of `temperature_range` (10 and 40 °C by default), while task H4 (2026-11-10) reported

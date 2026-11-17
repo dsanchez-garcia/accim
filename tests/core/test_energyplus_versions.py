@@ -465,7 +465,7 @@ os.chdir(sys.argv[1])
 from pathlib import Path
 from accim.sim import accis
 from accim.utils import reduce_runtime
-from besos.eppy_funcs import get_building
+from accim.sim.accis import load_idf
 accis.AddAccis(
     script_type='vrf_ac', supply_air_temp_input_method='temperature difference', output_type='simplified',
     output_frequencies=['hourly'], keep_existing_outputs=False, energyplus_version='auto', setpoint_type='temperature',
@@ -475,7 +475,7 @@ accis.AddAccis(
     confirm=True, verbose=False,
 )
 output_idf = [p for p in Path('.').glob('TestModel[[]*.idf')][0]
-building = get_building(str(output_idf))
+building = load_idf(str(output_idf))
 reduce_runtime(idf_object=building)
 building.idfobjects['SimulationControl'][0].Run_Simulation_for_Sizing_Periods = 'No'
 building.saveas('custom_model_1_day.idf')
@@ -527,10 +527,10 @@ def test_custom_model_simulates_with_26_1(tmp_path):
 _PEOPLE_AND_INSTANCES_SCRIPT = """
 import os, subprocess, sys
 from pathlib import Path
-from besos.eppy_funcs import get_building
+from accim.sim.accis import load_idf
 from accim.utils import reduce_runtime
 root = Path(sys.argv[1]).resolve()
-building = get_building(str(root / 'instances' / 'TestModel.idf'))
+building = load_idf(str(root / 'instances' / 'TestModel.idf'))
 for people in list(building.idfobjects['PEOPLE']):
     definition = building.newidfobject('PEOPLE:DEFINITION', Name=people.Name + ' Definition')
     instance = building.newidfobject('PEOPLE:INSTANCE', Name=people.Name, People_Definition_Name=definition.Name)
@@ -561,14 +561,14 @@ for folder in ['people', 'instances']:
         comfort_standard=[1], category=[3], comfort_mode=[3], hvac_mode=[2], ventilation_control=[0], confirm=True, verbose=False,
     )
     output_idf = [p for p in Path('.').glob('TestModel[[]*.idf')][0]
-    simulate_1_summer_day(get_building(str(output_idf)))
+    simulate_1_summer_day(load_idf(str(output_idf)))
 """
 
 _APMV_PEOPLE_AND_INSTANCES_SCRIPT = _PEOPLE_AND_INSTANCES_SCRIPT + """
 from accim.sim.apmv import add_vrf_system, apply_apmv_setpoints, set_pmv_input_parameters
 for folder in ['people', 'instances']:
     os.chdir(root / folder)
-    building = get_building('TestModel.idf')
+    building = load_idf('TestModel.idf')
     add_vrf_system(building, verbose=False)
     apply_apmv_setpoints(
         building, output_frequencies=['hourly'], adaptive_coefficient_cooling=0.293, adaptive_coefficient_heating=-0.293,
@@ -657,7 +657,7 @@ _CLOTHING_PEOPLE_AND_INSTANCES_SCRIPT = _PEOPLE_AND_INSTANCES_SCRIPT + """
 from accim.sim.apmv import set_pmv_input_parameters
 for folder in ['people', 'instances']:
     os.chdir(root / folder)
-    building = get_building('TestModel.idf')
+    building = load_idf('TestModel.idf')
     set_pmv_input_parameters(
         building, activity_level={'heating_season': 120, 'cooling_season': 100},
         clothing_insulation={'Block1:Zone1': 'dynamic_ashrae55',
@@ -701,7 +701,7 @@ def test_people_instances_with_the_clothing_by_season_and_the_dynamic_clothing_m
 _SPACE_MODELS_SCRIPT = """
 import os, subprocess, sys
 from pathlib import Path
-from besos.eppy_funcs import get_building
+from accim.sim.accis import load_idf
 from accim.utils import reduce_runtime
 root = Path(sys.argv[1]).resolve()
 os.chdir(root / 'models')
@@ -743,13 +743,13 @@ def simulate_1_day(model, name):
                     f'{name}_1_day.idf'], capture_output=True)
 
 
-building = get_building('TestModel.idf')
+building = load_idf('TestModel.idf')
 add_space(building, 'Space 1', 'Block1:Zone1', surfaces(building, 'Block1:Zone1'))
 add_space(building, 'Space 2', 'Block1:Zone2', surfaces(building, 'Block1:Zone2'))
 people(building, 'Block1:Zone1').Zone_or_ZoneList_or_Space_or_SpaceList_Name = 'Space 1'
 building.saveas('SpaceAndZoneOfOneSpace.idf')
 
-building = get_building('TestModel.idf')
+building = load_idf('TestModel.idf')
 half = split_floor_of_zone_1(building)
 add_space(building, 'Space 1a', 'Block1:Zone1', [s for s in surfaces(building, 'Block1:Zone1') if s.Name != half.Name])
 add_space(building, 'Space 1b', 'Block1:Zone1', [half])
@@ -769,10 +769,10 @@ accis.AddAccis(
     comfort_standard=[1], category=[3], comfort_mode=[3], hvac_mode=[0], confirm=True, verbose=False,
 )
 for output_idf in sorted(Path('.').glob('*[[]*.idf')):
-    simulate_1_day(get_building(str(output_idf)), output_idf.name.split('[')[0])
+    simulate_1_day(load_idf(str(output_idf)), output_idf.name.split('[')[0])
 
 from accim.sim.apmv import add_vrf_system, apply_apmv_setpoints
-building = get_building('ZoneOfTwoSpaces.idf')
+building = load_idf('ZoneOfTwoSpaces.idf')
 add_vrf_system(building, verbose=False)
 apply_apmv_setpoints(building, output_frequencies=['hourly'], verbose=False)
 simulate_1_day(building, 'aPMV_ZoneOfTwoSpaces')

@@ -256,10 +256,10 @@ def test_a_zone_without_setpoints_stops_the_simulation():
 
 @pytest.fixture
 def building(tmp_path):
-    from besos.eppy_funcs import get_building
+    from ._optional import read_model
 
     shutil.copy(SAMPLE_IDF, tmp_path / 'model.idf')
-    return get_building(str(tmp_path / 'model.idf'))
+    return read_model(str(tmp_path / 'model.idf'))
 
 
 def _inputs(building):
@@ -379,12 +379,12 @@ def test_add_accis_checks_the_arguments_of_the_zones(tmp_path, monkeypatch, kwar
 @needs_energyplus
 @pytest.mark.skipif(LEGACY_IDF is None, reason='needs the output IDF of accim 0.x of the repository')
 def test_modify_accis_keeps_working_with_the_models_of_earlier_versions(tmp_path):
-    from besos.eppy_funcs import get_building
+    from ._optional import read_model
 
     from accim.sim.accis import modify_accis
 
     shutil.copy(LEGACY_IDF, tmp_path / 'legacy.idf')
-    building = get_building(str(tmp_path / 'legacy.idf'))
+    building = read_model(str(tmp_path / 'legacy.idf'))
 
     modify_accis(building, hvac_mode=2, ventilation_control=0, custom_slope=0.3, **EN16798_II)
 

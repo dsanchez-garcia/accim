@@ -114,11 +114,11 @@ def test_on_the_design_days_the_zones_are_air_conditioned_with_the_windows_close
 
 @pytest.fixture
 def radiators(tmp_path):
-    from besos.eppy_funcs import get_building
+    from ._optional import read_model
 
     path = tmp_path / 'radiators.idf'
     path.write_bytes(lzma.decompress(RADIATORS.read_bytes()))
-    return get_building(str(path))
+    return read_model(str(path))
 
 
 @needs_energyplus

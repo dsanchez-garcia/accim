@@ -35,19 +35,19 @@ pytestmark = pytest.mark.skipif(not (EXAMPLES.exists() and INPUTS.exists()),
 
 
 def _example(tmp_path, name):
-    from besos.eppy_funcs import get_building
+    from ._optional import read_model
 
     path = tmp_path / name
     path.write_bytes((EXAMPLES / name).read_bytes())
-    return get_building(str(path))
+    return read_model(str(path))
 
 
 def _input_model(tmp_path, name):
-    from besos.eppy_funcs import get_building
+    from ._optional import read_model
 
     path = tmp_path / f'{name}.idf'
     path.write_bytes(lzma.decompress((INPUTS / f'{name}.idf.xz').read_bytes()))
-    return get_building(str(path))
+    return read_model(str(path))
 
 
 def _add(idf, script_type='ex_mm'):

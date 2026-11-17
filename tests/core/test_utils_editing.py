@@ -34,10 +34,10 @@ needs_energyplus_25_1 = pytest.mark.skipif(not (IDD_25_1.exists() and SAMPLE_IDF
 
 @pytest.fixture
 def building(tmp_path):
-    from besos.eppy_funcs import get_building
+    from ._optional import read_model
 
     shutil.copy(SAMPLE_IDF, tmp_path / 'model.idf')
-    return get_building(str(tmp_path / 'model.idf'))
+    return read_model(str(tmp_path / 'model.idf'))
 
 
 @pytest.mark.parametrize('ddmm, day', [('01/01', 1), ('15/02', 46), ('1/3', 60), ('31/12', 365)])

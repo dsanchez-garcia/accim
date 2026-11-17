@@ -80,10 +80,13 @@ def _run_batch(name, work, legacy):
 
 
 def _run_single(name, work, legacy):
-    from besos.eppy_funcs import get_building
+    if legacy:  # accim 0.x has no load_idf, and needs besos
+        from besos.eppy_funcs import get_building as read_model
+    else:
+        from accim.sim.accis import load_idf as read_model
 
     cfg = configs.SINGLE[name]
-    building = get_building(str(copy_input_model(cfg['model'], work)))
+    building = read_model(str(copy_input_model(cfg['model'], work)))
     outputs = {}
     for call, kwargs in cfg['calls']:
         apmv_call = call in ('apmv_vrf', 'apmv')

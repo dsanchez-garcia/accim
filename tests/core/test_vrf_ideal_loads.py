@@ -26,10 +26,10 @@ pytestmark = pytest.mark.skipif(not (IDD_25_1.exists() and SAMPLE_IDF.exists()),
 
 @pytest.fixture
 def building(tmp_path):
-    from besos.eppy_funcs import get_building
+    from ._optional import read_model
 
     shutil.copy(SAMPLE_IDF, tmp_path / 'model.idf')
-    building = get_building(str(tmp_path / 'model.idf'))
+    building = read_model(str(tmp_path / 'model.idf'))
     # The sample model has one ideal loads system in each of its two zones
     assert len(building.idfobjects[IDEAL_LOADS]) == 2
     return building

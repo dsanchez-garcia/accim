@@ -46,11 +46,11 @@ pytestmark = pytest.mark.skipif(not (IDD_25_1.exists() and INPUTS.exists()),
 def _model(tmp_path, name):
     """An input model of the golden master (EnergyPlus 25.1): 'exptac' (PTACs), 'exrad' (electric radiators),
     'exbeams' (cooled beams and convectors) or 'osmofficeex' (the OSM small office, with packaged heat pumps)."""
-    from besos.eppy_funcs import get_building
+    from ._optional import read_model
 
     path = tmp_path / f'{name}.idf'
     path.write_bytes(lzma.decompress((INPUTS / f'{name}.idf.xz').read_bytes()))
-    return get_building(str(path))
+    return read_model(str(path))
 
 
 def _add(idf, script_type='ex_ac', **kwargs):
@@ -522,11 +522,11 @@ COOLING_HIGH_LOW = ['Cooling_High_Control_Temperature_Schedule_Name', 'Cooling_L
 
 def _example(tmp_path, name):
     """An example file of EnergyPlus 25.1."""
-    from besos.eppy_funcs import get_building
+    from ._optional import read_model
 
     path = tmp_path / name
     path.write_bytes((EXAMPLES / name).read_bytes())
-    return get_building(str(path))
+    return read_model(str(path))
 
 
 def _holders(idf, obj):

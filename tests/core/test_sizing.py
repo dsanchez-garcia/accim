@@ -28,10 +28,10 @@ needs_sample = pytest.mark.skipif(not (IDD_25_2.exists() and SAMPLE_IDF.exists()
 
 @pytest.fixture
 def building(tmp_path):
-    from besos.eppy_funcs import get_building
+    from ._optional import read_model
 
     shutil.copy(SAMPLE_IDF, tmp_path / 'model.idf')
-    building = get_building(str(tmp_path / 'model.idf'))
+    building = read_model(str(tmp_path / 'model.idf'))
     control = building.idfobjects['SimulationControl'][0]
     for flag in SIZING_FLAGS:
         setattr(control, flag, 'No')

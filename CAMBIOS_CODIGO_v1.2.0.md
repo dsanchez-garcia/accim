@@ -3209,3 +3209,31 @@ julio que con un rango de −20 a 40 °C, con el que ninguna consigna llega a un
 EnergyPlus comprueba ahora la salida en esas dos semanas. No he cambiado el rango por defecto, que decidió el autor
 con F1; la pregunta recomienda aplicar `temperature_range` a la consigna del termostato (la temperatura operativa) en
 vez de a la temperatura del aire, de modo que el rango signifique lo mismo con los dos valores de `tr_mode`.
+
+## 63. Los tests de `tests/core` se saltan sin besos, en vez de fallar
+
+Era una entrada P2 de `TODO.md`: la tarea G5 dio `pytest.importorskip('besos')` a los cuatro tests del hallazgo de
+v04 §3.4, pero otros tests de `tests/core` también necesitaban besos y fallaban sin él, cuando la regla 1 de las
+instrucciones pide saltarlos: `test_modifyaccis_setast.py` importaba el módulo paramétrico al nivel del módulo (un
+error al recoger los tests), doce ficheros y el golden master leían los modelos con `besos.eppy_funcs.get_building`, y
+otros importaban el módulo paramétrico en algunos tests.
+
+**El cambio**: los tests leen los modelos con `read_model()` de `tests/core/_optional.py`, que usa
+`accim.sim.accis.load_idf` (eppy) si eppy aún no tiene un IDD en la sesión y, si ya lo tiene, lee el modelo con ese
+IDD, como hacía besos: los tests leen modelos de EnergyPlus 25.1 y 25.2 en una misma sesión, y `load_idf` lanza un
+`ValueError` con un modelo de otra versión que la del IDD de la sesión. Los scripts que `test_energyplus_versions.py`
+ejecuta en procesos nuevos (solo con EnergyPlus 26.2) usan `load_idf`. Los tests del módulo paramétrico llaman antes a
+`pytest.importorskip('besos')`, y el runner del golden master lee los modelos con `load_idf` (con besos solo en el modo
+`--legacy`, el de accim 0.x).
+
+**El golden master**: `get_building` de besos devuelve un IDF de geomeppy, que escribe los números del modelo de
+entrada tal cual, mientras que eppy escribe algunos de otra forma (`2.0` como `2`, `0.00000001` como `1e-08`), como
+ya pasó con `AddAccis` en 1.1.0. Los ficheros dorados de las nueve configuraciones de las funciones en memoria (`s01` a
+`s09`) se escribieron de nuevo tras comprobar, línea a línea, que solo cambiaban esos números (de 7 a 18 líneas en cada
+una, con los mismos valores); el README del golden master lo cuenta.
+
+**La comprobación**: con un plugin que impide importar besos en todos los procesos (también en los que lanzan los
+tests), en HEAD la recogida de `test_modifyaccis_setast.py` fallaba, lo que detiene `py -m pytest tests/core` antes de
+ejecutar ningún test, y once ficheros daban 6 fallos y 20 errores. Tras el cambio, `tests/core` sin besos: 1649 pasan
+y 19 se saltan (15 por besos y 4 por EnergyPlus 26.1 o el jar del Future Weather Generator); con besos: 1664 pasan
+y se saltan los mismos 4.

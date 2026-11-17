@@ -306,6 +306,8 @@ def test_modify_accis_adds_the_code_of_the_comfort_standards_that_it_sets():
 
 
 def test_the_parametric_module_adds_the_code_of_the_comfort_standard_that_it_sets():
+    # The parametric module (it needs besos)
+    pytest.importorskip('besos')
     from accim.parametric_and_optimisation.funcs_for_besos import param_accis
 
     idf = _accis_model(['Zone1'])

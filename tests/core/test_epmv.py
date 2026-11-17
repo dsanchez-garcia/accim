@@ -268,6 +268,8 @@ def test_the_activity_level_is_set_before_the_metabolic_correction(tmp_path):
 
 
 def test_the_parametric_modifier_of_the_expectancy_factor(tmp_path):
+    # The parametric module (it needs besos)
+    pytest.importorskip('besos')
     from accim.parametric_and_optimisation.funcs_for_besos import param_apmv
 
     building = _model(tmp_path)

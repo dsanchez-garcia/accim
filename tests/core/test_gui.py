@@ -824,6 +824,8 @@ def test_values_of_the_parameters():
 
 
 def test_the_parameters_of_the_form_are_those_of_the_parametric_module():
+    # The parametric module (it needs besos)
+    pytest.importorskip('besos')
     from accim.parametric_and_optimisation import params_dicts
 
     assert list(forms.PREDEFINED_MODEL_PARAMETERS) == list(params_dicts.accim_predef_model_params)
@@ -1062,6 +1064,8 @@ def test_the_tasks_of_table(tmp_path, monkeypatch):
 
 
 def test_the_task_of_the_parametric_study(tmp_path, monkeypatch):
+    # The parametric module (it needs besos)
+    pytest.importorskip('besos')
     import accim.parametric_and_optimisation.main as main_module
     from accim.gui import tasks
     from accim.sim import accis
@@ -1111,6 +1115,8 @@ def test_the_task_of_the_parametric_study(tmp_path, monkeypatch):
 
 
 def test_the_parametric_simulation_accepts_the_arguments_of_the_existing_hvac_systems():
+    # The parametric module (it needs besos)
+    pytest.importorskip('besos')
     from accim.parametric_and_optimisation.main import ParametricSimulation
 
     parameters = inspect.signature(ParametricSimulation).parameters

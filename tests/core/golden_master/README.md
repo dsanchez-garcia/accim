@@ -19,7 +19,11 @@ of 21 configurations were written again after checking, line by line, that only 
 no longer names comfort standard 10: `b02`, `b03`, `b05`, `b07` to `b10`, `b12`, `b13`, `b15` to `b17` and `b22`), and
 the models with the code of all the comfort standards (`s01` to `s06` and `s09`). And these seven were written again
 once more when every zone of a model with the code of JPN Aqilah 2025 got the inputs of its static setpoints (finding
-A24 of the self-audit of 2026-11-11): two lines more in each program `SetInputData_<zone>`, and nothing else.
+A24 of the self-audit of 2026-11-11): two lines more in each program `SetInputData_<zone>`, and nothing else. Since
+2026-11-17, `runner.py` reads the models of the in-memory functions with `accim.sim.accis.load_idf` (eppy) instead of
+`besos.eppy_funcs.get_building`, so that the golden master runs without besos: as with `AddAccis` in 1.1.0, eppy writes
+some numbers of the input models in another way, and the golden files of `s01` to `s09` were written again after
+checking, line by line, that only these numbers changed (7 to 18 lines in each file, the same values).
 
 | File | What it holds |
 | --- | --- |
@@ -38,7 +42,7 @@ python -m pytest tests/core/test_golden_master.py -q -p no:cacheprovider
 ```
 
 It is part of `tests/core` and takes about a minute and a half. It needs EnergyPlus 25.1 and 26.2 (their IDD
-files): the configurations whose version is not installed are skipped. Each configuration runs in its own Python
+files), and not besos: the configurations whose version is not installed are skipped. Each configuration runs in its own Python
 process (`runner.py write`, four at a time), because eppy reads all the models of a process with the IDD of the
 first one. A failing configuration shows the difference from its first different line (4000 lines at most, so that
 the diff of the biggest outputs takes seconds) and the path of its whole output.
@@ -85,4 +89,5 @@ control of the existing HVAC systems, the configurations with the OSM office and
 `--legacy`, the arguments of the existing HVAC systems (`existing_hvac_*`), which accim 0.x does not have, are left
 out: `b21` is then the same configuration as `b11`, and its output with accim 0.x differs from its golden file only as
 that of `b11` did before the operative temperature control. Since accim 1.1.0, the outputs of `AddAccis` of
-accim 0.8.2 and 1.0.0 also differ in the numbers that eppy writes in another way (see above).
+accim 0.8.2 and 1.0.0 also differ in the numbers that eppy writes in another way (see above), and so do those of the
+in-memory functions since 2026-11-17: with `--legacy`, `runner.py` reads their models with besos, as accim 0.x needs.

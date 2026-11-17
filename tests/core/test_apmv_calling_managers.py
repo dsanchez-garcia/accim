@@ -22,10 +22,10 @@ pytestmark = pytest.mark.skipif(not (IDD_25_2.exists() and SAMPLE_IDF.exists()),
 
 
 def test_only_the_programs_of_the_apmv_setpoints_get_calling_managers(tmp_path):
-    from besos.eppy_funcs import get_building
+    from ._optional import read_model
 
     shutil.copy(SAMPLE_IDF, tmp_path / 'model.idf')
-    building = get_building(str(tmp_path / 'model.idf'))
+    building = read_model(str(tmp_path / 'model.idf'))
     # Programs of the user: one run by a calling manager of another name, and one run by that program
     building.newidfobject('EnergyManagementSystem:Program', Name='user_subroutine', Program_Line_1='set x = 1')
     building.newidfobject('EnergyManagementSystem:Program', Name='user_program', Program_Line_1='run user_subroutine')

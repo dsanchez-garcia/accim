@@ -15,6 +15,20 @@ This log is a lightweight, session-scoped complement to the repository's
 existing tracking files — it does not replace them (see
 [[decisions.md#2026-09-13 — `notes/work-log.md` complements, not replaces, existing tracking files|the related decision]]).
 
+## 2026-11-17 — The tests of tests/core without besos (branch `v1.2.0`, on the server)
+
+- **Objective**: the P2 entry of [[../TODO.md]]: the tests of `tests/core` that need besos are skipped without it,
+  not failed (rule 1 of the instructions).
+- **Affected files**: `tests/core/_optional.py` (`read_model`), 18 test files, `tests/core/golden_master/runner.py`,
+  its README and the golden files of `s01` to `s09`.
+- **Finding or decision**: `load_idf` cannot replace `get_building` of besos as it is: eppy reads all the models of a
+  session with one IDD, the tests read models of EnergyPlus 25.1 and 25.2 in one session, and `load_idf` raises a
+  ValueError for a model of another version (besos warned and read it with the IDD of the session). `read_model` does
+  what besos did. And besos returns an IDF of geomeppy, which writes the numbers of the input models as they are:
+  with eppy, nine golden files changed in how 7 to 18 numbers are written (the same values), and were written again.
+- **Validation**: in the entry of [[../DEVLOG.md]].
+- **Next step**: none.
+
 ## 2026-11-17 — A6: the setpoints of the SET at the limits of their range (branch `v1.2.0`, on the server)
 
 - **Objective**: the P2 entry of [[../TODO.md]]: the hooks of the SET did not tell when their setpoints were at the

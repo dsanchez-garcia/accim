@@ -16,7 +16,6 @@ from pathlib import Path
 
 import pytest
 
-from accim.parametric_and_optimisation.funcs_for_besos import param_accis
 from accim.sim import accis, accis_single_idf, accis_single_idf_funcs
 from accim.sim.ems.inputs import input_programs, read_inputs
 from accim.sim.ems.setast import get_setpoint_lines, subprograms
@@ -55,10 +54,10 @@ pytestmark = pytest.mark.skipif(not (IDD_25_2.exists() and SAMPLE_IDF.exists()),
 
 @pytest.fixture
 def building(tmp_path):
-    from besos.eppy_funcs import get_building
+    from ._optional import read_model
 
     shutil.copy(SAMPLE_IDF, tmp_path / 'model.idf')
-    return get_building(str(tmp_path / 'model.idf'))
+    return read_model(str(tmp_path / 'model.idf'))
 
 
 def _program_lines(building, name):
@@ -75,6 +74,14 @@ def _zone_inputs(building):
     return {zone: read_inputs(program) for zone, program in input_programs(building).items()}
 
 
+def _param_accis():
+    """The setters of the parametric module, which needs besos: the test is skipped without it."""
+    pytest.importorskip('besos')
+    from accim.parametric_and_optimisation.funcs_for_besos import param_accis
+
+    return param_accis
+
+
 def test_modify_accis_sets_m_and_n_in_the_inputs_of_each_zone(building):
     accis.add_accis_to_idf(building, **ADD_ACCIS_ARGS)
 
@@ -86,6 +93,7 @@ def test_modify_accis_sets_m_and_n_in_the_inputs_of_each_zone(building):
     assert {(i['SetpointAcc'], i['m'], i['n']) for i in inputs.values()} == {(10000, 0.3, 18)}
 
     # The parametric setters of m and n set them in all the zones
+    param_accis = _param_accis()
     param_accis.modify_CustAST_m(building, 0.25)
     param_accis.modify_CustAST_n(building, 17.5)
     assert {(i['m'], i['n']) for i in _zone_inputs(building).values()} == {(0.25, 17.5)}
@@ -117,6 +125,7 @@ def test_modify_accis_sets_the_input_data_and_none_keeps_it(building):
 
 
 def test_parametric_setters_set_the_inputs_of_all_the_zones(building):
+    param_accis = _param_accis()
     accis.add_accis_to_idf(building, **ADD_ACCIS_ARGS)
 
     param_accis.modify_ComfStand(building, 2)
@@ -138,10 +147,11 @@ def test_parametric_setters_set_the_inputs_of_all_the_zones(building):
 
 
 def test_parametric_setters_need_the_inputs_of_the_model(tmp_path):
-    from besos.eppy_funcs import get_building
+    from ._optional import read_model
 
+    param_accis = _param_accis()
     shutil.copy(SAMPLE_IDF, tmp_path / 'model.idf')
-    building = get_building(str(tmp_path / 'model.idf'))
+    building = read_model(str(tmp_path / 'model.idf'))
     accis.add_accis_to_idf(building, **dict(ADD_ACCIS_ARGS, script_type='vrf_ac'))
 
     # The models without natural ventilation have no inputs of the venting opening factor
@@ -160,10 +170,10 @@ def test_modify_accis_updates_the_subprograms_of_esp_cte_and_int_iso7730_of_earl
     # models (ComfMod 3) with ComfStand 0 or 22 stopped EnergyPlus. The model of accim 0.x of the repository is
     # older than SetAST_Master, which modify_accis adds with the subprograms of this version, so they are
     # replaced with those of accim 0.8 first.
-    from besos.eppy_funcs import get_building
+    from ._optional import read_model
 
     shutil.copy(LEGACY_IDF, tmp_path / 'legacy.idf')
-    building = get_building(str(tmp_path / 'legacy.idf'))
+    building = read_model(str(tmp_path / 'legacy.idf'))
     accis.modify_accis(building, comfort_standard=1, category=3, comfort_mode=3, hvac_mode=2, ventilation_control=0)
     programs = {p.Name: p for p in building.idfobjects['EnergyManagementSystem:Program']}
     for name, comfort_standard in [('SetAST_CS0_0', 0), ('SetAST_CS22_0', 22)]:

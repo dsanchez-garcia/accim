@@ -36,10 +36,10 @@ def test_default_setpoints_and_cooling_season():
 @pytest.mark.skipif(not (IDD_25_2.exists() and SAMPLE_IDF.exists()),
                     reason='needs EnergyPlus 25.2 and the sample IDF of the repository')
 def test_default_values_reach_the_ems_programs(tmp_path):
-    from besos.eppy_funcs import get_building
+    from ._optional import read_model
 
     shutil.copy(SAMPLE_IDF, tmp_path / 'model.idf')
-    building = get_building(str(tmp_path / 'model.idf'))
+    building = read_model(str(tmp_path / 'model.idf'))
 
     apply_apmv_setpoints(building=building, verbose=False)
 

@@ -34,10 +34,10 @@ class _ObjectClasses(dict):
 @pytest.mark.skipif(not (IDD_25_1.exists() and SAMPLE_IDF.exists()),
                     reason='needs EnergyPlus 25.1 and the sample IDF of the repository')
 def test_get_idf_hierarchy_links_the_spaces_and_lists_of_a_model(tmp_path, capsys):
-    from besos.eppy_funcs import get_building
+    from ._optional import read_model
 
     shutil.copy(SAMPLE_IDF, tmp_path / 'model.idf')
-    building = get_building(str(tmp_path / 'model.idf'))
+    building = read_model(str(tmp_path / 'model.idf'))
     # EnergyPlus does not distinguish the case of the names
     building.newidfobject('Space', Name='Office', Zone_Name='BLOCK1:ZONE1')
     building.newidfobject('Space', Name='Corridor', Zone_Name='Block1:Zone1')
