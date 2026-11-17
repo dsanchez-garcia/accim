@@ -65,6 +65,7 @@ the names follow the conventions of Python, and the old names still work.
    jupyter_notebooks/example_apmv_setpoints_paper/using_apmv_setpoints.ipynb
    jupyter_notebooks/example_epmv_setpoints/using_epmv_setpoints.ipynb
    jupyter_notebooks/comfort_standards_registry/using_comfort_standard_registry.ipynb
+   jupyter_notebooks/future_weather_files/using_morph_epws.ipynb
 
 .. toctree::
    :maxdepth: 2

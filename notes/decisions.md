@@ -11,6 +11,55 @@ Durable architectural/process decisions for this repository and its Obsidian
 vault. Newest first. Use [[templates/decision-record.md|the decision-record
 template]] to add a new entry.
 
+## 2026-11-17 — E4 with the jar of the Future Weather Generator: the Java engine of `morph_epws`, the Java of the tool and the How-to notebook
+
+- **Status**: provisional (Claude Code, the models Claude Fable 5.2 and Claude Opus 5.5, for the author, who
+  downloaded the jar of FWG CMIP6 Global 5.3.0 and said so on 2026-11-17, for the entries of E4 of `TODO.md` that
+  waited for it). Points 1 and 2 follow the decision of the author of 2026-11-10 (v04 §6.7): the command line of
+  pyfwg is the reference of that of the Java engine of accim
+- **Context**: measured on 2026-11-17 on the server. The jar is FWG CMIP6 Global 5.3.0, with the FWG Engine 1.2.0 (its
+  manifest), 23 climate models, the scenarios SSP1-2.6 to SSP5-8.5 and the years 2050 and 2080; the class file version
+  of its classes is 61, that of Java 17. The Java of the PATH of the server is 1.8.0_481, with which the tool stops
+  with an `UnsupportedClassVersionError`; a Java 17.0.4 and a Java 25 of other programs of the server run it (the PATH
+  of the process was set for the checks; nothing was installed). pyfwg 0.4.0, the latest version in PyPI and the one
+  installed, runs it: `morph_epws(engine='pyfwg')` gave the eight future EPW files of `Seville_Present.epw` in 5.8
+  minutes with the 20 models of `DEFAULT_GCMS`, without warnings or errors of the tool. With `engine='java'`, the
+  default, the tool rejected the 8 positional arguments of accim ("Unknown or malformed option", "Baseline EPW is
+  required (-epw=<path>)"): `morph_epws` could not morph an EPW file with the current tool.
+- **Decision**:
+  1. `engine='java'` runs the command line of the FWG Engine for the jars whose manifest has its version
+     (`FWG-Engine-Version`): the one that pyfwg 0.4.0 builds with the options of `morph_epws`
+     (`_build_command_engine`), with the weather files in the folder `weather` of the folder of the EPW file (the
+     layout ORGANIZED of the tool). So the default call works with the tool that is downloaded today, without an
+     optional package. A test compares both command lines with the jar, and another one the files of both engines:
+     the same, byte by byte (two climate models).
+  2. The other jars keep the 8 positional arguments of before. The command lines of the versions 3 and 4 (12
+     positional arguments, and keys and values, in pyfwg) are not built: without their jars nothing could be checked,
+     and pyfwg runs them. The documentation and the error of `morph_epws` say to use `engine='pyfwg'` for them, and
+     `TODO.md` has an entry. The version of those jars is not looked for in their file names, as pyfwg does: accim
+     would not know what to do with it.
+  3. The Java of the PATH is checked against the class file version of the main class of the jar, before any file
+     is moved, with both engines. A jar that cannot be read and a Java that does not say its version are not checked
+     (the tool tells). `morph_epws` has no argument for the path of Java: pyfwg runs `java` from the PATH, and the
+     PATH of the process can be set before the call, which the documentation shows.
+  4. `DEFAULT_GCMS` stays: the 20 models of the versions that accim used before, though the version 5.3.0 has 23
+     (also `CNRM_CM6_1`, `EC_Earth3_Veg_LR` and `GFDL_ESM4`). The default ensemble of accim does not change with the
+     version of the tool, and the documentation says which models are left out. Whether the default should be the
+     models of the tool of the jar is for the author.
+  5. With the FWG Engine, `fwg_options_interpolation_method_id` takes the identifiers of pyfwg (0, the inverse
+     distance weighting, the default of the tool, to 6) or their names. Its documentation said that 0 was the
+     bilinear interpolation, which is so in the versions that accim used before.
+  6. The How-to notebook of v03 (E4) is `using_morph_epws`, in `jupyter_notebooks/future_weather_files`: the weather
+     file of Seville, the default engine and models, a naturally ventilated model (`hvac_mode=[1]`, EN 16798-1,
+     category II), whose long-term discomfort shows the effect of each scenario, and `Table(long_term_indicators=
+     True)`. The path of the jar is that of the environment variable `ACCIM_FWG_JAR`, or a generic one, so that the
+     notebook of the documentation has no path of this computer.
+  7. The tests that run the tool are skipped unless `ACCIM_FWG_JAR` has the path of the jar and the Java of the PATH
+     is the one that it needs: on the server, they run with a later Java first in the PATH of the process.
+- **Consequences**: the two entries of E4 of `TODO.md` that waited for the jar are done, and none is blocked. The
+  future weather files of the validation study of F3 can be made. The server keeps its Java 8 in the PATH: to use
+  the tool there without setting the PATH in each session, the author installs a Java 17 or later.
+
 ## 2026-11-13 — The validation study of F3: the fans that the occupants control, and the limiter of the drift with the setpoints of a hook
 
 - **Status**: provisional (Claude Code, the model Claude Fable 5.2, for the author, who asked on 2026-11-13 for the

@@ -3070,3 +3070,60 @@ ventiladores (bisección, con las dos temperaturas radiantes, y tabla); el SET d
 con un controlador simulado; `set_of_results()` y `table_indicators()` con las entradas de los objetos People; y, con
 EnergyPlus, tres días de julio del modelo de ejemplo con ventiladores de 1,2 m/s (consignas, SET de cada paso y
 baterías de calor apagadas).
+
+## 59. Los archivos climáticos futuros con el jar del Future Weather Generator (E4)
+
+Las dos entradas de E4 de `TODO.md` esperaban el jar de la herramienta. El autor descargó FWG CMIP6 Global 5.3.0 y lo
+dijo el 17/11/2026, junto con una actualización reciente de pyfwg (0.4.0, la instalada y la última de PyPI).
+
+**Lo que se encontró con el jar.**
+
+- La versión 5.3.0 usa el *FWG Engine* (la herramienta global desde su versión 5), con otra línea de órdenes:
+  `java -jar <jar> -g -epw=... -models=... -ensemble=...`. Rechaza los 8 argumentos posicionales que `morph_epws`
+  le daba con su motor por defecto (`engine='java'`): «Unknown or malformed option... Baseline EPW is required». Es
+  decir, `morph_epws` no podía transformar ningún EPW con la herramienta actual. Con `engine='pyfwg'` sí funcionaba
+  (8 EPW futuros de Sevilla en 5,8 min con los 20 modelos).
+- Sus clases son de Java 17 (versión de archivo de clase 61). El Java del PATH del servidor es el 1.8.0_481, con el
+  que la herramienta se para con un `UnsupportedClassVersionError`. En el servidor hay un Java 17 y un Java 25 de
+  otros programas (ANSYS y PyCharm), que se pusieron delante en el PATH del proceso para las pruebas; no se instaló
+  nada.
+- Escribe los EPW futuros en la carpeta `weather` de su carpeta de salida, con el nombre de la localidad del EPW
+  (`ESP_-_SEVILLA_Ensemble_ssp585_2080.epw`), y deja además una línea base del EPW con la radiación solar revisada
+  (cambia la radiación extraterrestre, las iluminancias, la luminancia cenital y la visibilidad; no las temperaturas,
+  la humedad ni las irradiancias).
+- Tiene 23 modelos climáticos; `DEFAULT_GCMS` de accim tiene 20 (faltan `CNRM_CM6_1`, `EC_Earth3_Veg_LR` y
+  `GFDL_ESM4`).
+
+**Los cambios** (`accim/data/morphing.py`):
+
+- `fwg_jar_info(fwg_path)` lee del jar, sin ejecutarlo, la versión de la herramienta, la de su motor (del manifiesto)
+  y el Java que necesitan sus clases: `{'version': '5.3.0', 'engine': '1.2.0', 'java': 17}`.
+- `morph_epws` comprueba el Java del PATH contra el jar antes de mover ningún archivo, con los dos motores, y da un
+  `RuntimeError` que dice qué Java hace falta y cuál hay.
+- Con `engine='java'` y un jar del FWG Engine, ejecuta su línea de órdenes, la misma que construye pyfwg 0.4.0 con
+  las mismas opciones (la referencia, por la decisión del autor del 10/11/2026), y recoge los EPW de la carpeta
+  `weather`. Con los dos motores salen los mismos archivos, byte a byte (también con Java 25). Los demás jars siguen
+  con los 8 argumentos de antes; las versiones 3 y 4 de la herramienta tienen otras líneas de órdenes (en pyfwg),
+  que no se han podido comprobar sin sus jars: el error de `morph_epws` y la documentación dicen que se use
+  `engine='pyfwg'` para ellas, y `TODO.md` tiene una entrada nueva.
+- `fwg_options_interpolation_method_id` admite, con el FWG Engine, los identificadores de pyfwg (0, la ponderación
+  por distancia inversa, la de la herramienta por defecto; 1, la bilineal...) o sus nombres
+  (`ENGINE_INTERPOLATION_METHODS`). La documentación decía que 0 era la bilineal, lo que solo vale para las
+  versiones antiguas.
+
+**El notebook How-to** `using_morph_epws` (`jupyter_notebooks/future_weather_files`, con el modelo de ejemplo y el EPW
+de Sevilla): lee el jar, transforma el EPW con el motor y los modelos por defecto, compara las temperaturas de los
+nueve archivos, simula un modelo en ventilación natural con el ACCIS (EN 16798-1, categoría II) y compara su
+incomodidad a largo plazo con `Table(long_term_indicators=True)`. Ejecutado con `docs/prepare_howto_notebooks.py`
+(9 min, sin problemas) y exportado. La temperatura media anual de Sevilla pasa de 18,4 °C a entre 20,0 y 22,9 °C, y
+las horas ocupadas por encima del límite superior, del 25,4 % al 30,4–40,6 % (12 266 Kh con SSP5-8.5 en 2080, frente
+a 5314 Kh hoy).
+
+**Los tests** (`tests/core/test_morphing.py`): la información de un jar (del FWG Engine, de una versión anterior, no
+jar), la versión de Java, la línea de órdenes y los archivos del FWG Engine con sus opciones, un fallo de la
+herramienta con cada tipo de jar y la comprobación del Java con los dos motores; y tres con la herramienta real, que
+se saltan sin el jar (`ACCIM_FWG_JAR`) o sin el Java que necesita: los dos motores dan los mismos EPW, y la línea de
+órdenes de `engine='java'` es la de pyfwg.
+
+**Queda** comprobar las versiones 3 y 4 con sus jars, e instalar un Java 17 o posterior en el PATH del servidor (cosa
+del autor) para no tener que ajustar el PATH en cada sesión.

@@ -28,7 +28,9 @@ library.
 installs pyfwg, with which `accim.data.morphing.morph_epws(..., engine='pyfwg')` runs
 the Future Weather Generator, and pyweatherfiles, which generates typical
 meteorological years and EPW files (section {ref}`future-weather-files`). The
-Future Weather Generator itself (a jar file) and Java are installed apart.
+Future Weather Generator itself (a jar file) and Java are installed apart: the
+version 5.3.0 of the global tool needs Java 17 or later, which `morph_epws()`
+checks before it runs the tool.
 
 **ATHB setpoints** (optional, since accim 1.2.0): `pip install "accim[comfort]"`
 installs pythermalcomfort (4.8 or later, which needs Python 3.11 or later), with
@@ -63,6 +65,7 @@ notebook and the input files it uses (IDFs, EPWs...):
 | `example_apmv_setpoints_paper` | aPMV setpoints | {doc}`jupyter_notebooks/example_apmv_setpoints_paper/using_apmv_setpoints` |
 | `example_epmv_setpoints` | ePMV setpoints (since accim 1.2.0) | {doc}`jupyter_notebooks/example_epmv_setpoints/using_epmv_setpoints` |
 | `comfort_standards_registry` | Comfort standards defined by their data, in YAML files (since accim 1.2.0) | {doc}`jupyter_notebooks/comfort_standards_registry/using_comfort_standard_registry` |
+| `future_weather_files` | Future weather files with the Future Weather Generator, and their long-term discomfort (since accim 1.2.0; it needs the jar file of the tool and Java) | {doc}`jupyter_notebooks/future_weather_files/using_morph_epws` |
 | `research_paper_case_study_v0-7-3` | Case study of a research paper | {doc}`jupyter_notebooks/research_paper_case_study/research_paper_case_study` |
 | `parametric_and_optimisation_examples` | Parametric simulation and optimisation: tutorials `00`-`10` and complete workflows `wf1`-`wf5` | {doc}`jupyter_notebooks/parametric_and_optimisation_examples/index` |
 

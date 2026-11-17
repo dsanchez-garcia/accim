@@ -15,6 +15,23 @@ This log is a lightweight, session-scoped complement to the repository's
 existing tracking files — it does not replace them (see
 [[decisions.md#2026-09-13 — `notes/work-log.md` complements, not replaces, existing tracking files|the related decision]]).
 
+## 2026-11-17 — E4 with the jar of the Future Weather Generator (branch `v1.2.0`, on the server)
+
+- **Objective**: the entries of E4 of [[../TODO.md]] that waited for the jar of the tool, which the author downloaded
+  (FWG CMIP6 Global 5.3.0).
+- **Affected files**: `accim/data/morphing.py`, `tests/core/test_morphing.py`, the new How-to notebook
+  `using_morph_epws` (`accim/sample_files/jupyter_notebooks/future_weather_files/` and its executed copy),
+  `docs/prepare_howto_notebooks.py`, sections 2, 3 and 4.5.1 of the documentation, its index, `docs/README.md`,
+  [[../CHANGELOG.md]] and the notes.
+- **Finding or decision**: the default engine of `morph_epws` could not morph an EPW file with the current tool,
+  whose FWG Engine has another command line; it runs it now, the one of pyfwg, and both engines give the same files.
+  The tool needs Java 17 or later, and the Java of the PATH of the server is 8: `morph_epws` checks it before moving
+  any file
+  ([[decisions.md#2026-11-17 — E4 with the jar of the Future Weather Generator: the Java engine of `morph_epws`, the Java of the tool and the How-to notebook|the decisions, provisional]]).
+- **Validation**: in the entry of [[../DEVLOG.md]].
+- **Next step**: the versions 3 and 4 of the tool with their jars ([[../TODO.md]]); a Java 17 or later in the PATH of
+  the server (the author).
+
 ## 2026-11-13 — The validation study of F3: the fans that the occupants control (branch `v1.2.0`, on the server)
 
 - **Objective**: the open question of 2026-11-12 on cases (iv) and (v) of the validation study, which the author

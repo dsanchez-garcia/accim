@@ -35,6 +35,60 @@ Recommended flow: track active work in `TODO.md`, move completed outcomes to `DE
 
 ## Entries
 
+### 2026-11-17
+#### [done] E4 with the jar of the Future Weather Generator: the Java engine of `morph_epws`, the Java of the tool, the test with the tool and the How-to notebook (branch `v1.2.0`)
+- Context: the two entries of E4 of `TODO.md` that waited for the jar of the tool (the How-to notebook and the test
+  with the tool, blocked; and the command line of `engine='java'`). The author downloaded the jar of FWG CMIP6 Global
+  5.3.0 and said so on 2026-11-17, with the news of a recent update of pyfwg (0.4.0, the version installed and the
+  latest in PyPI, which runs the FWG Engine).
+- Changes: `accim/data/morphing.py`. `fwg_jar_info(fwg_path)` reads from the jar, without running it, the version of
+  the tool and that of its FWG Engine (the manifest) and the Java that its classes need (the class file version of
+  its main class minus 44). `morph_epws` checks the Java of the PATH against it (`_java_version()`, `_check_java()`)
+  before it moves any file, with both engines, and raises a `RuntimeError` that says both. With `engine='java'` and a
+  jar of the FWG Engine, it runs its command line (`_engine_command()`: `java -jar <jar> -g -epw=... -output_folder=...
+  -output_layout=ORGANIZED -models=... -ensemble=... -smooth_hours=... -multithread=... -grid_interpolation_method=...
+  -epw_dictionary_limits=... -output_type=EPW`, that of pyfwg 0.4.0 with the same options) and takes the future EPW
+  files from the folder `weather` of the folder of each EPW file; the other jars get the 8 positional arguments of
+  before, and their error says that pyfwg runs the versions 3 and 4. `ENGINE_INTERPOLATION_METHODS` has the
+  interpolation methods of the FWG Engine by the identifiers of pyfwg (`fwg_options_interpolation_method_id`, also by
+  name; a `ValueError` otherwise, before any file is moved). The docstrings say the identifiers of each version of
+  the tool (0 is the inverse distance weighting since the version 3, not the bilinear interpolation) and that the
+  version 5.3.0 has 23 climate models (`DEFAULT_GCMS` keeps its 20). The How-to notebook `using_morph_epws`
+  (`accim/sample_files/jupyter_notebooks/future_weather_files`, with copies of the sample model and of the weather
+  file of Seville): the tool of the jar, the morphing, the temperatures of the nine weather files, a naturally
+  ventilated model with the ACCIS, its nine simulations and their long-term discomfort; `NOTEBOOKS` of
+  `docs/prepare_howto_notebooks.py` has it, and the documentation lists it (the index, sections 2, 3 and 4.5.1, and
+  `docs/README.md`, whose table of the How-to notebooks lacked that of the comfort standards defined by their data).
+- Files: `accim/data/morphing.py`, `tests/core/test_morphing.py`,
+  `accim/sample_files/jupyter_notebooks/future_weather_files/` (new), `docs/prepare_howto_notebooks.py`,
+  `docs/source/jupyter_notebooks/future_weather_files/using_morph_epws.ipynb` (new, the executed copy),
+  `docs/source/index.rst`, `docs/source/2_installation.md`, `docs/source/3_quick tutorial.md`,
+  `docs/source/4_detailed use.md` (4.5.1), `docs/README.md`, `CHANGELOG.md`, `CAMBIOS_CODIGO_v1.2.0.md` (§59),
+  `TODO.md`, `notes/decisions.md`, `notes/work-log.md`.
+- Verification: with the jar (EnergyPlus 25.1; the Java 17.0.4 of another program of the server first in the PATH of
+  the process, since the Java of its PATH is 1.8.0_481). Before the change, `morph_epws(engine='java')` stopped with
+  the exit code 1 of the tool ("Unknown or malformed option" for each of its 8 arguments), and with the Java of the
+  PATH the tool stopped with an `UnsupportedClassVersionError`. After it: with the Java 8 of the PATH, both engines
+  raise the `RuntimeError` of the Java, and the EPW file is not moved; with Java 17, both engines give the eight
+  future EPW files of `Seville_Present.epw`, the same byte by byte (two climate models, about 40 s each engine; also
+  with a Java 25, 32 s), and the command line of `engine='java'` is that of pyfwg (the three tests that are skipped
+  without the jar pass with it; with the rest of `test_morphing.py`, `test_docs_notebook_pages.py` and
+  `test_printed_messages.py`, 63 passed in 6 min 46 s). `tests/core/test_morphing.py`: 30 passed and 3 skipped
+  without the jar,
+  with its new tests: the information of a jar (of the FWG Engine, of an earlier version, not a jar), the version of
+  Java (1.8.0_481 is 8; 17.0.4; 25.0.4.1), the command line and the files of the FWG Engine with its options, a
+  failure of the tool with each kind of jar, and the check of the Java with both engines. The notebook: run with
+  `docs/prepare_howto_notebooks.py run --only using_morph_epws` (549 s, 0 problems: 403 s of them the morphing with
+  the 20 climate models) and exported; in it, the annual mean dry bulb temperature of Seville goes from 18.4 °C to
+  20.0 to 22.9 °C, and the occupied hours above the upper limit of category II of EN 16798-1 of the naturally
+  ventilated model from 25.4 % (5314 Kh) to 30.4 to 40.6 % (12 266 Kh with SSP5-8.5 in 2080).
+  The documentation builds with the 33 warnings of before (with the page of the notebook), and Python 3.9 compiles
+  the changed modules; no other test file uses `accim.data.morphing`.
+- Next step: the jars of the versions 3 and 4 of the tool, to check what `engine='java'` does with them (a new entry
+  of `TODO.md`); the future weather files of the validation study of F3, once its climates and climate models are
+  agreed; and a Java 17 or later in the PATH of the server, which the author installs, to use the tool there without
+  setting the PATH of each session.
+
 ### 2026-11-13
 #### [done] The validation study of F3: the fans that the occupants control (`air_speed_heating`), in all the hours of the cooling season (branch `v1.2.0`)
 - Context: the question of `notes/questions.md` of 2026-11-12, which the author asked to resolve on 2026-11-13. The

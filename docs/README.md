@@ -207,6 +207,8 @@ How-to Guides:
 | Research paper case study | `research_paper_case_study/research_paper_case_study.ipynb` | `research_paper_case_study_v0-7-3/` | 27 min |
 | aPMV setpoints | `example_apmv_setpoints_paper/using_apmv_setpoints.ipynb` | `example_apmv_setpoints_paper/` | < 2 min |
 | ePMV setpoints | `example_epmv_setpoints/using_epmv_setpoints.ipynb` | `example_epmv_setpoints/` | < 1 min (three simulations) |
+| Comfort standards defined by their data | `comfort_standards_registry/using_comfort_standard_registry.ipynb` | `comfort_standards_registry/` | 1 min (two simulations) |
+| Future weather files | `future_weather_files/using_morph_epws.ipynb` | `future_weather_files/` | 9 min (7 min to morph the EPW with 20 climate models, and nine simulations) |
 
 Simulación paramétrica y optimización: los tutoriales `00` a `10` y los flujos completos `wf1` a
 `wf5`, con el mismo nombre en `docs/source/jupyter_notebooks/parametric_and_optimisation_examples/`
@@ -221,8 +223,8 @@ python docs/prepare_howto_notebooks.py run --run-dir D:\runs --only using_addAcc
 python docs/prepare_howto_notebooks.py export --executed-dir D:\runs --only using_addAccis full_example_IBPSA
 ```
 
-- Sin `--only`, los ocho. `--only` admite el nombre del notebook o el de su carpeta, o su
-  principio.
+- Sin `--only`, todos los de la tabla. `--only` admite el nombre del notebook o el de su carpeta, o
+  su principio.
 - `run` borra y vuelve a copiar la subcarpeta de cada notebook dentro de la carpeta de trabajo, lo
   ejecuta ahí (las muestras no cambian) y deja `<nombre>_executed.ipynb`. Al final da el tiempo y
   los problemas de cada notebook. Contesta a las preguntas de `input()` con `ANSWERS` del script y
@@ -231,6 +233,11 @@ python docs/prepare_howto_notebooks.py export --executed-dir D:\runs --only usin
   archivo de salida pasa de 260 caracteres, y los nombres de los archivos de accim son largos.
 - Necesitan EnergyPlus 25.1, la versión de sus modelos. `rename_epw_files()` necesita además
   internet (OpenStreetMap) y geopy.
+- `using_morph_epws` necesita además el jar del Future Weather Generator global, que no está en el
+  repositorio: su ruta va en la variable de entorno `ACCIM_FWG_JAR`. Con la versión 5.3.0 (con la
+  que se ejecutó) hace falta Java 17 o posterior en el PATH; si el `java` del PATH es anterior,
+  pon delante la carpeta de uno posterior solo para esa orden (en PowerShell,
+  `$env:PATH = "<carpeta de java 17>;" + $env:PATH`).
 - `export` toma la copia ejecutada más reciente y la limpia antes de escribirla en
   `docs/source/jupyter_notebooks/`: rutas relativas o genéricas, sin barras de progreso (tampoco
   las de tqdm que el notebook muestra como widgets: `export` no guarda el estado de los widgets, y
