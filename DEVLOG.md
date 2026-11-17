@@ -36,6 +36,46 @@ Recommended flow: track active work in `TODO.md`, move completed outcomes to `DE
 ## Entries
 
 ### 2026-11-17
+#### [done] E1: the running mean of ASHRAE 55 of EnergyPlus with a .stat file next to the weather file (branch `v1.2.0`)
+- Context: the first half of the P2 entry of E1 of `TODO.md`: with a .stat file next to the weather file
+  (`Seville.stat` for `Seville.epw`, as the weather files of EnergyPlus come and as the Future Weather Generator of
+  `morph_epws` writes them), EnergyPlus takes as the running mean of ASHRAE 55 (PMOT) of each day the mean of its
+  month in the .stat file, which `energyplus_running_means`, `compute_setpoints` and check 4 of
+  `verify_accim_simulation` did not reproduce (documented, and said in the summary of check 4). With the future weather
+  file of Seville of the Future Weather Generator of task E4 (ssp585, 2080) and its .stat file, PMOT with the .stat
+  file minus without it: 1.88 K on average in absolute value, 7.71 K at most (at the changes of month); the comfort
+  temperature of INT ASHRAE 55, 0.58 K and 2.39 K.
+- Changes: `accim/sim/preview.py`: `read_stat_monthly_means(stat_file)` reads the 12 means as
+  `CalcThermalComfortAdaptiveASH55` of `ThermalComfort.cc` of EnergyPlus 25.1 reads them (the 8th line after the
+  first one with 'Monthly Statistics for Dry Bulb temperatures', the line 'Daily Avg', split by tabs, its columns 3
+  to 14; read from the source code of EnergyPlus 25.1 on GitHub), with a `ValueError` if they are not there
+  (EnergyPlus would take 0 °C without an error); `stat_file_of(epw)` gives the .stat file next to a weather file.
+  `energyplus_running_means` and `compute_setpoints` have the argument `stat_file`: `'auto'` (the default) for the
+  .stat file next to the weather file, if there is one, as EnergyPlus; None for none; or the path of another one;
+  their `attrs` say which was read. RMOT does not use it. `accim/utils/verification.py`: the note of check 4 says that
+  PMOT is that of the .stat file. Section 4.3.1 of the detailed use and its description of check 4, and the entry of
+  `accim.sim.preview` of `CHANGELOG.md` (a function of 1.2.0).
+- The leap years: `ThermalComfort.cc` reads the 30 days before the run period from the weather file by lines, 24 for
+  each day from 1 January, and takes 366 days only when the run period is in a leap year; what it does with a weather
+  file of 366 days must be measured with EnergyPlus before reproducing it, so the entry of `TODO.md` stays with that.
+- Files: `accim/sim/preview.py`, `accim/utils/verification.py`, `tests/core/test_preview.py`,
+  `tests/core/test_verification.py`, `docs/source/4_detailed use.md`, `CHANGELOG.md`, `TODO.md`,
+  `CAMBIOS_CODIGO_v1.2.0.md` (§64), `notes/work-log.md`.
+- Verification: the new tests of `test_preview.py`: the means of a .stat file written as those of EnergyPlus and of
+  the Future Weather Generator, and of the .stat file of Golden (Colorado) of the weather files of EnergyPlus 25.1; its
+  errors; the running means with the .stat file next to the weather file, without it (`stat_file=None`, the same as
+  before) and with another one; the setpoints of INT ASHRAE 55; and, with EnergyPlus 25.1, the sample model from 20
+  January to 10 February (hourly) with a .stat file next to the weather file: the reported PMOT is the mean of
+  January and then that of February of the .stat file, within 1e-9, and the setpoints of INT EN16798 and INT ASHRAE
+  55 are those of `compute_setpoints` within 1e-4 (without the .stat file, PMOT is more than 1 K away and the
+  setpoints of INT ASHRAE 55 differ). Check 4 (`test_verification.py`): with a .stat file, no mismatch with the
+  outputs of its running means and the note; with the outputs of the weather file alone, the mismatches of PMOT and of
+  the setpoints of INT ASHRAE 55 (not those of INT EN16798); with a .stat file without the means, not checked, with
+  the error. In a snapshot of the working tree, the seventeen test files that use the preview and the verification:
+  506 passed (18 min). Python 3.9 compiles the changed files; the documentation builds with the warnings of the
+  baseline (33).
+- Next step: the leap years (the entry of `TODO.md`).
+
 #### [done] The tests of `tests/core` are skipped without besos, not failed (branch `v1.2.0`)
 - Context: the P2 entry of `TODO.md`: task G5 (2026-11-10) gave `pytest.importorskip('besos')` to the four tests of
   the finding of v04 §3.4, but other tests of `tests/core` needed besos too and failed without it, while rule 1 of the

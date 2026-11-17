@@ -9,7 +9,8 @@
   alpha), its approximate formula (B.2), the arithmetic mean of the n previous days (ASHRAE 55-2020, 5.4.2.1), the
   reference temperature of the Dutch ATG (van der Linden et al., 2006) and the monthly mean.
 - :func:`energyplus_running_means`: the running mean outdoor temperatures that the EMS of accim reads from EnergyPlus,
-  ``RMOT`` (CEN 15251) and ``PMOT`` (ASHRAE 55), as EnergyPlus calculates them (Engineering Reference 25.2, 19.1).
+  ``RMOT`` (CEN 15251) and ``PMOT`` (ASHRAE 55), as EnergyPlus calculates them (Engineering Reference 25.2, 19.1),
+  also with a .stat file next to the weather file (:func:`stat_file_of`, :func:`read_stat_monthly_means`).
 - :func:`compute_setpoints`: the setpoints of a comfort standard, category and comfort mode in each hour of a weather
   file, calculated by the EMS programs of the output IDFs of :class:`accim.sim.accis.AddAccis`
   (:func:`accim.utils.get_setpoint_ems_programs`, the code that :func:`accim.utils.print_setpoint_ems_code` prints)
@@ -42,6 +43,8 @@ __all__ = [
     'outdoor_metrics',
     'plot_setpoints',
     'read_epw_dry_bulb',
+    'read_stat_monthly_means',
+    'stat_file_of',
 ]
 
 PathLike = Union[str, Path]
@@ -62,6 +65,11 @@ _B2_DIVISOR = 3.8
 #: 2006), each the mean of the maximum and the minimum of the day, and their sum
 _ATG_WEIGHTS = (1.0, 0.8, 0.4, 0.2)
 _ATG_DIVISOR = 2.4
+#: The line of a .stat file before its monthly statistics of the dry-bulb temperatures, and the position of the line of
+#: their daily averages after it (the line 'Daily Avg'), as EnergyPlus reads them (CalcThermalComfortAdaptiveASH55 of
+#: ThermalComfort.cc, EnergyPlus 25.1)
+_STAT_SECTION = 'Monthly Statistics for Dry Bulb temperatures'
+_STAT_DAILY_AVERAGES = 8
 #: The year of the dates of the rows: weather files of 365 days have no 29 February
 _YEAR = 2007
 _LEAP_YEAR = 2008
@@ -93,6 +101,70 @@ def read_epw_dry_bulb(epw: PathLike) -> pd.DataFrame:
     if len(data) == 0 or len(data) % 24 or not (hours.reshape(-1, 24) == np.arange(1, 25)).all():
         raise ValueError(f'{epw} does not have whole days of hourly records (hours 1 to 24 of each day).')
     return data
+
+
+def stat_file_of(epw: PathLike) -> Optional[Path]:
+    """The .stat file of a weather file: the file with its name and the extension .stat in its folder, where EnergyPlus
+    looks for it when it simulates with the weather file; None if there is none.
+
+    :param epw: The path of the weather file (EPW).
+    :return: The path of the .stat file, or None.
+    """
+    path = Path(epw).with_suffix('.stat')
+    return path if path.is_file() else None
+
+
+def read_stat_monthly_means(stat_file: PathLike) -> np.ndarray:
+    """The monthly means of the daily dry-bulb temperatures of a .stat file (its line ``Daily Avg`` of the monthly
+    statistics of the dry-bulb temperatures), from January to December.
+
+    With a .stat file next to the weather file of a simulation (:func:`stat_file_of`), EnergyPlus takes the mean of the
+    month of each day as the running mean of ASHRAE 55 of the day (``PMOT``), instead of the mean of the daily means of
+    the 30 previous days (Engineering Reference 25.2, 19.1; :func:`energyplus_running_means`). The means are read as
+    ``CalcThermalComfortAdaptiveASH55`` of ``ThermalComfort.cc`` (EnergyPlus 25.1) reads them: the 8th line after the
+    first one that has 'Monthly Statistics for Dry Bulb temperatures', split by tabs, its columns 3 to 14, which is the
+    line ``Daily Avg`` in the .stat files of the weather files of EnergyPlus and in those of the Future Weather
+    Generator (:func:`accim.data.morphing.morph_epws`). The file is read as Latin-1 (the degree sign of its headers is
+    written in several encodings).
+
+    :param stat_file: The path of the .stat file.
+    :return: An array of the 12 monthly means (°C).
+    :raises ValueError: If the file has no such line, or the line of the daily averages has not 12 numbers in those
+        columns (EnergyPlus would take 0 °C for the months that it cannot read, without an error).
+    """
+    with open(stat_file, 'r', encoding='latin-1') as file:
+        lines = file.read().splitlines()
+    found = next((number for number, line in enumerate(lines) if _STAT_SECTION in line), None)
+    if found is None:
+        raise ValueError(f"{stat_file} has no line '{_STAT_SECTION}', whose daily averages of each month EnergyPlus "
+                         f"takes as the running mean of ASHRAE 55 when the .stat file is next to the weather file.")
+    position = found + _STAT_DAILY_AVERAGES
+    columns = lines[position].split('\t')[2:14] if position < len(lines) else []
+    try:
+        means = np.array([float(column) for column in columns])
+    except ValueError:
+        means = np.array([])
+    if len(means) != 12:
+        raise ValueError(f"{stat_file}: its line {position + 1}, {_STAT_DAILY_AVERAGES} lines after '{_STAT_SECTION}', "
+                         f"has not the daily averages of the 12 months in its columns 3 to 14 (separated by tabs), "
+                         f"where EnergyPlus reads them.")
+    return means
+
+
+def _stat_means(epw: PathLike, stat_file: Union[PathLike, None]) -> Tuple[Optional[Path], Optional[np.ndarray]]:
+    """The .stat file of the running mean of ASHRAE 55 (that of the weather file with 'auto', none with None, or the
+    one given) and its monthly means."""
+    if stat_file is None:
+        return None, None
+    if isinstance(stat_file, str) and stat_file == 'auto':
+        path = stat_file_of(epw)
+        if path is None:
+            return None, None
+    else:
+        path = Path(stat_file)
+        if not path.is_file():
+            raise FileNotFoundError(f'The .stat file {stat_file} does not exist.')
+    return path, read_stat_monthly_means(path)
 
 
 def _dates(month: np.ndarray, day: np.ndarray, number_of_days: int) -> pd.DatetimeIndex:
@@ -183,8 +255,8 @@ def outdoor_metrics(epw: PathLike, alpha: float = 0.8, days: int = 30, frequency
     return result
 
 
-def _energyplus_daily(epw: PathLike, timesteps_per_hour: int, start_date: Union[int, str]
-                      ) -> Tuple[pd.DataFrame, np.ndarray, int]:
+def _energyplus_daily(epw: PathLike, timesteps_per_hour: int, start_date: Union[int, str],
+                      stat_file: Union[PathLike, None] = 'auto') -> Tuple[pd.DataFrame, np.ndarray, int]:
     """The daily running means of EnergyPlus (see :func:`energyplus_running_means`), the hourly temperatures of the
     file as an array of days and the index of the first day of the run period."""
     from accim.sim.arguments import to_day_of_year
@@ -192,6 +264,7 @@ def _energyplus_daily(epw: PathLike, timesteps_per_hour: int, start_date: Union[
     if timesteps_per_hour not in TIMESTEPS_PER_HOUR:
         raise ValueError(f'timesteps_per_hour must be one of {list(TIMESTEPS_PER_HOUR)} (those of EnergyPlus), '
                          f'not {timesteps_per_hour!r}.')
+    stat_path, stat_means = _stat_means(epw, stat_file)
     hourly = read_epw_dry_bulb(epw)
     temperatures = hourly['dry_bulb'].to_numpy(dtype=float).reshape(-1, 24)
     number_of_days = len(temperatures)
@@ -234,15 +307,20 @@ def _energyplus_daily(epw: PathLike, timesteps_per_hour: int, start_date: Union[
     for index in range(1, len(days)):
         rmot[index] = alpha * rmot[index - 1] + (1 - alpha) * simulated[first + index - 1]
     first_hours = hourly.iloc[24 * first::24]
+    if stat_means is not None:
+        # With a .stat file, the mean of the month of each day (CalcThermalComfortAdaptiveASH55 with useStatData, at
+        # each BeginDayFlag)
+        pmot = stat_means[first_hours['month'].to_numpy() - 1]
     result = pd.DataFrame({
         'date': _dates(first_hours['month'].to_numpy(), first_hours['day'].to_numpy(), number_of_days),
         'daily_mean': file_mean[first:], 'simulated_daily_mean': simulated[first:], 'RMOT': rmot, 'PMOT': pmot,
     })
+    result.attrs['stat_file'] = None if stat_path is None else str(stat_path)
     return result, temperatures, first
 
 
-def energyplus_running_means(epw: PathLike, timesteps_per_hour: int = 6, start_date: Union[int, str] = 1
-                             ) -> pd.DataFrame:
+def energyplus_running_means(epw: PathLike, timesteps_per_hour: int = 6, start_date: Union[int, str] = 1,
+                             stat_file: Union[PathLike, None] = 'auto') -> pd.DataFrame:
     """The running mean outdoor temperatures that EnergyPlus calculates for the adaptive comfort models of the People
     objects, which the EMS of accim reads (``RMOT``, *Zone Thermal Comfort CEN 15251 Adaptive Model Running Average
     Outdoor Air Temperature*, and ``PMOT``, *Zone Thermal Comfort ASHRAE 55 Adaptive Model Running Average Outdoor Air
@@ -268,17 +346,28 @@ def energyplus_running_means(epw: PathLike, timesteps_per_hour: int = 6, start_d
     December, over that of the day before the run period, so ``PMOT`` takes the mean of 31 December in its place for 30
     days; this is reproduced too (finding E1-1 of the review of accim 1.2.0; with ``Seville_Present.epw`` from 8 January,
     ``PMOT`` is 0.14 °C lower than the mean of the 30 previous days, as EnergyPlus 25.1 reports it). ``RMOT`` has no
-    such step. EnergyPlus takes ``PMOT`` from the monthly means of a .stat file instead, if there is one with the
-    weather file (Engineering Reference 25.2, 19.1); that is not reproduced here.
+    such step.
+
+    With a .stat file next to the weather file (``Seville.stat`` for ``Seville.epw``, as the Future Weather Generator
+    writes them, :func:`accim.data.morphing.morph_epws`, and as the weather files of EnergyPlus come), EnergyPlus takes
+    as ``PMOT`` of each day the mean of its month in the .stat file (Engineering Reference 25.2, 19.1;
+    :func:`read_stat_monthly_means`), and so does this function with ``stat_file='auto'`` (the default; before accim
+    1.2.0, the .stat file was not read): checked with EnergyPlus 25.1, a .stat file next to the weather file and a run
+    period of January and February. ``RMOT`` does not use it.
 
     :param epw: The path of the weather file (EPW), of 365 days.
     :param timesteps_per_hour: The number of timesteps per hour of the model (the object Timestep, 6 by default).
     :param start_date: The first day of the run period, a date 'dd/mm' or a day of the year (1, by default).
+    :param stat_file: 'auto' (the default) for the .stat file next to the weather file, if there is one
+        (:func:`stat_file_of`), as EnergyPlus; None for the running mean of the weather file, without a .stat file; or
+        the path of a .stat file (that of the weather file of the simulation, if it is elsewhere).
     :return: A DataFrame with a row for each day: ``date``, ``daily_mean`` (of the file), ``simulated_daily_mean``,
-        ``RMOT`` and ``PMOT``.
-    :raises ValueError: If the weather file does not have 365 days, or the arguments are not valid.
+        ``RMOT`` and ``PMOT``, and the path of the .stat file read (or None) in ``attrs['stat_file']``.
+    :raises ValueError: If the weather file does not have 365 days, the .stat file has not the monthly means where
+        EnergyPlus reads them, or the arguments are not valid.
+    :raises FileNotFoundError: If the .stat file given does not exist.
     """
-    return _energyplus_daily(epw, timesteps_per_hour, start_date)[0]
+    return _energyplus_daily(epw, timesteps_per_hour, start_date, stat_file)[0]
 
 
 def _metric(comfort_standard: int, comfort_mode: Optional[Number]) -> Optional[str]:
@@ -305,7 +394,7 @@ def _metric(comfort_standard: int, comfort_mode: Optional[Number]) -> Optional[s
 def compute_setpoints(epw: PathLike, comfort_standard: int, category: Optional[Number] = None,
                       comfort_mode: Optional[Number] = None, *, timesteps_per_hour: int = 6,
                       start_date: Union[int, str] = 1, frequency: str = 'hourly', outdoor_metric_start: str = 'epw',
-                      **custom_arguments) -> pd.DataFrame:
+                      stat_file: Union[PathLike, None] = 'auto', **custom_arguments) -> pd.DataFrame:
     """The setpoints of the ACCIS for a comfort standard, category and comfort mode in each hour of a weather file,
     without EnergyPlus.
 
@@ -348,6 +437,8 @@ def compute_setpoints(epw: PathLike, comfort_standard: int, category: Optional[N
         running mean of EN 16798-1 with α = 0.8 that begins with the values of the weather file, and, with 'pmot', the
         RMOT of EnergyPlus, as the output IDFs of AddAccis with and without ``epw``. The mean of the 7 previous days of
         IND IMAC R 7DRM (9) begins with the values of the weather file ('epw') or with PMOT ('pmot').
+    :param stat_file: The .stat file whose monthly means EnergyPlus takes as PMOT: 'auto' (the default), the one next to
+        the weather file, if there is one; None, none; or its path (see :func:`energyplus_running_means`).
     :param custom_arguments: The other arguments of :func:`accim.utils.get_setpoint_ems_code` (``setpoint_tolerance``,
         ``setpoint_accuracy``, ``cooling_season_start``, ``custom_slope``, ``custom_outdoor_metric``,
         ``custom_regimes``, ``static_heating_setpoint``...), with the same defaults.
@@ -364,7 +455,8 @@ def compute_setpoints(epw: PathLike, comfort_standard: int, category: Optional[N
         limits, as the hour counters of the ACCIS count it, at the end of the hour) and ``cooling_season`` (1 in the
         cooling season); with ``custom_regimes``, also ``custom_regime`` (the number of the regime, from 1, or 0 for the
         scalar arguments; the mean of the hour, as the output ``CustomRegime_<zone>``). Values that the programs do not
-        set (such as the comfort temperature of static setpoints) are NaN.
+        set (such as the comfort temperature of static setpoints) are NaN. Its ``attrs`` have the arguments, the
+        running mean of the setpoints (``metric``) and the .stat file read (``stat_file``, or None).
     :raises ValueError: If the arguments are not valid (as in :func:`accim.utils.get_setpoint_ems_programs` and
         :func:`energyplus_running_means`), a regime of ``custom_regimes`` has the condition 'hvac_off' or 'hvac_on', or
         ``drift_mode`` is given (the limiter of the drift depends on the indoor temperature of the simulation).
@@ -391,7 +483,7 @@ def compute_setpoints(epw: PathLike, comfort_standard: int, category: Optional[N
     programs = get_setpoint_ems_programs(comfort_standard, category, comfort_mode,
                                          epw=epw if outdoor_metric_start == 'epw' else None, start_date=start_date,
                                          **custom_arguments)
-    running_means, temperatures, first = _energyplus_daily(epw, timesteps_per_hour, start_date)
+    running_means, temperatures, first = _energyplus_daily(epw, timesteps_per_hour, start_date, stat_file)
     hourly = read_epw_dry_bulb(epw)
 
     inputs = f'SetInputData_{_ZONE}'
@@ -546,7 +638,8 @@ def compute_setpoints(epw: PathLike, comfort_standard: int, category: Optional[N
     if 'custom_regime' in result:
         result['custom_regime'] = result.pop('custom_regime')
     result.attrs.update(comfort_standard=int(comfort_standard), category=category, comfort_mode=comfort_mode,
-                        timesteps_per_hour=n, start_date=start_date, metric=metric)
+                        timesteps_per_hour=n, start_date=start_date, metric=metric,
+                        stat_file=running_means.attrs['stat_file'])
     return result
 
 

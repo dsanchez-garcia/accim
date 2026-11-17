@@ -26,6 +26,8 @@ from accim.sim.preview import (
     outdoor_metrics,
     plot_setpoints,
     read_epw_dry_bulb,
+    read_stat_monthly_means,
+    stat_file_of,
 )
 from accim.utils import get_setpoint_ems_code, get_setpoint_ems_programs
 
@@ -54,6 +56,30 @@ def _temperatures(seed=1):
     hours = np.arange(DAYS * 24)
     return (15 + 8 * np.sin(2 * np.pi * (hours / 24 - 110) / DAYS) + 5 * np.sin(2 * np.pi * (hours % 24 - 9) / 24)
             + rng.normal(0, 1.5, len(hours))).round(1)
+
+
+#: The daily averages of each month of the .stat files of the tests (made up, far from those of Seville in winter)
+STAT_MEANS = [12.3, 14.6, 16.2, 18.4, 21.7, 25.9, 28.8, 28.4, 25.1, 20.6, 15.8, 12.9]
+#: The .stat file of the weather file of Golden (Colorado) of EnergyPlus 25.1, and its line 'Daily Avg'
+GOLDEN_STAT = Path('C:/EnergyPlusV25-1-0/WeatherData/USA_CO_Golden-NREL.724666_TMY3.stat')
+GOLDEN_MEANS = [1.1, -1.3, 3.2, 8.4, 13.1, 18.8, 20.8, 21.5, 17.0, 9.4, 2.6, 1.8]
+
+
+def _write_stat(path, means=STAT_MEANS):
+    """A .stat file with the monthly statistics of the dry-bulb temperatures as the weather files of EnergyPlus and the
+    Future Weather Generator have them: the line of the daily averages is the 8th after the title, with tabs."""
+    months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
+    def row(name, values):
+        return f' \t{name}\t' + '\t'.join(values) + '\t'
+
+    lines = ['Statistics for a test location', '', ' - Monthly Statistics for Dry Bulb temperatures \u00b0C',
+             row('           ', months), row('Maximum ', [' 30.0'] * 12), row(' Day:Hour', [' 1:15'] * 12), '',
+             row('Minimum ', ['  1.0'] * 12), row(' Day:Hour', [' 2:06'] * 12), '',
+             row('Daily Avg', [f'{mean:.1f}  ' for mean in means]), '',
+             ' - Monthly Statistics for Dew Point temperatures \u00b0C']
+    path.write_text('\n'.join(lines) + '\n', encoding='latin-1')
+    return path
 
 
 @pytest.fixture
@@ -222,6 +248,72 @@ def test_energyplus_running_means_need_a_year(tmp_path):
         energyplus_running_means(path)
 
 
+def test_the_monthly_means_of_a_stat_file(tmp_path):
+    # The line 'Daily Avg', 8 lines after the title of the monthly statistics of the dry-bulb temperatures, columns 3 to
+    # 14 (separated by tabs), as CalcThermalComfortAdaptiveASH55 of EnergyPlus 25.1 reads them (task E1)
+    assert read_stat_monthly_means(_write_stat(tmp_path / 'weather.stat')).tolist() == STAT_MEANS
+    if GOLDEN_STAT.exists():
+        assert read_stat_monthly_means(GOLDEN_STAT).tolist() == GOLDEN_MEANS
+    # Without the title, or without 12 numbers in that line
+    path = tmp_path / 'empty.stat'
+    path.write_text('', encoding='utf-8')
+    with pytest.raises(ValueError, match="has no line 'Monthly Statistics for Dry Bulb temperatures'"):
+        read_stat_monthly_means(path)
+    lines = (tmp_path / 'weather.stat').read_text(encoding='latin-1').splitlines()
+    for wrong in ('\t'.join(lines[10].split('\t')[:-3]), lines[10].replace('12.3', 'a')):
+        path.write_text('\n'.join(lines[:10] + [wrong] + lines[11:]) + '\n', encoding='latin-1')
+        with pytest.raises(ValueError, match='its line 11, 8 lines after .* has not the daily averages of the 12 '
+                                             'months'):
+            read_stat_monthly_means(path)
+    path.write_text('\n'.join(lines[:5]) + '\n', encoding='latin-1')
+    with pytest.raises(ValueError, match='has not the daily averages'):
+        read_stat_monthly_means(path)
+
+
+def test_energyplus_running_means_with_a_stat_file(tmp_path):
+    epw = _write_epw(tmp_path / 'weather.epw', _temperatures())
+    without = energyplus_running_means(epw)
+    assert stat_file_of(epw) is None and without.attrs['stat_file'] is None
+    # A .stat file next to the weather file: PMOT is the mean of the month of each day in it, as EnergyPlus takes it
+    stat = _write_stat(tmp_path / 'weather.stat')
+    means = energyplus_running_means(epw)
+    assert stat_file_of(epw) == stat and means.attrs['stat_file'] == str(stat)
+    np.testing.assert_array_equal(means['PMOT'], np.array(STAT_MEANS)[means['date'].dt.month - 1])
+    # RMOT and the daily means do not use it
+    pd.testing.assert_frame_equal(means.drop(columns='PMOT'), without.drop(columns='PMOT'))
+    assert not np.allclose(means['PMOT'], without['PMOT'])
+    # Without it, or with another .stat file
+    pd.testing.assert_frame_equal(energyplus_running_means(epw, stat_file=None), without)
+    (tmp_path / 'other').mkdir()
+    other = _write_stat(tmp_path / 'other' / 'other.stat', [mean + 1 for mean in STAT_MEANS])
+    from_march = energyplus_running_means(epw, start_date='15/03', stat_file=other)
+    assert from_march['PMOT'][0] == pytest.approx(STAT_MEANS[2] + 1) and from_march.attrs['stat_file'] == str(other)
+    with pytest.raises(FileNotFoundError, match='does not exist'):
+        energyplus_running_means(epw, stat_file=tmp_path / 'missing.stat')
+    # A .stat file without the monthly means
+    stat.write_text('', encoding='utf-8')
+    with pytest.raises(ValueError, match='has no line'):
+        energyplus_running_means(epw)
+
+
+def test_compute_setpoints_with_a_stat_file(tmp_path):
+    # INT ASHRAE 55 (PMOT): the comfort temperature of the mean of the month in the .stat file
+    epw = _write_epw(tmp_path / 'weather.epw', _temperatures())
+    without = compute_setpoints(epw, 2, 80, 3)
+    stat = _write_stat(tmp_path / 'weather.stat')
+    result = compute_setpoints(epw, 2, 80, 3)
+    assert result.attrs['stat_file'] == str(stat) and without.attrs['stat_file'] is None
+    # The month of the beginning of each hour (the datetime is its end), and the second hour of each day (in the first
+    # one, the first timestep reads the running mean of the previous day)
+    months = (result['datetime'] - pd.Timedelta(hours=1)).dt.month.to_numpy()
+    second_hours = (result['datetime'].dt.hour == 2).to_numpy()
+    expected = np.array(STAT_MEANS)[months - 1]
+    np.testing.assert_allclose(result['PMOT'], expected)
+    np.testing.assert_allclose(result['ComfTemp'][second_hours], (0.31 * expected + 17.8)[second_hours], atol=1e-9)
+    assert not np.allclose(result['ComfTemp'][second_hours], without['ComfTemp'][second_hours])
+    pd.testing.assert_frame_equal(compute_setpoints(epw, 2, 80, 3, stat_file=None), without)
+
+
 def test_the_setpoint_programs_are_those_of_the_code():
     programs = get_setpoint_ems_programs(1, 2, 3)
     sections = {}
@@ -345,7 +437,7 @@ def _energyplus():
     return folder if folder is not None and SAMPLE_IDF.exists() and EPW.exists() else None
 
 
-def _simulate(tmp_path, monkeypatch, begin, end, frequency, zone_arguments, **arguments):
+def _simulate(tmp_path, monkeypatch, begin, end, frequency, zone_arguments, epw=EPW, **arguments):
     """An output IDF of AddAccis of the sample model simulated with EnergyPlus 25.1 for a run period: its CSV file."""
     from accim.sim.accis import AddAccis, load_idf
 
@@ -364,7 +456,7 @@ def _simulate(tmp_path, monkeypatch, begin, end, frequency, zone_arguments, **ar
     idf.saveas(str(tmp_path / 'model.idf'))
     energyplus = _energyplus() / 'energyplus.exe'
     result = subprocess.run([str(energyplus), '-d', str(tmp_path / 'out'), '-p', 'run', '-s', 'C', '-r', '-x',
-                             '-w', str(EPW), str(tmp_path / 'model.idf')], capture_output=True, text=True)
+                             '-w', str(epw), str(tmp_path / 'model.idf')], capture_output=True, text=True)
     assert result.returncode == 0, result.stdout[-3000:]
     return pd.read_csv(tmp_path / 'out' / 'run.csv')
 
@@ -449,3 +541,31 @@ def test_compute_setpoints_as_energyplus_from_the_8th_of_january(tmp_path, monke
     np.testing.assert_allclose(en16798['PMOT'][:len(results)], ashrae_mean, atol=1e-9)
     daily = energyplus_running_means(EPW, 6, '08/01')['PMOT']
     assert ashrae_mean[0] == pytest.approx(daily[0]) and ashrae_mean[0] == pytest.approx(10.574306, abs=1e-6)
+
+
+@pytest.mark.skipif(_energyplus() is None, reason='needs EnergyPlus 25.1 and the sample files of the repository')
+def test_compute_setpoints_as_energyplus_with_a_stat_file(tmp_path, monkeypatch):
+    # Task E1 of the review of 1.2.0: with a .stat file next to the weather file, EnergyPlus takes as the running mean
+    # of ASHRAE 55 of each day the mean of its month in the .stat file. INT EN16798-1 (RMOT) in zone 1 and INT ASHRAE 55
+    # (PMOT) in zone 2, from 20 January to 10 February (22 days, hourly)
+    weather = tmp_path / 'weather'
+    weather.mkdir()
+    epw = Path(shutil.copy(EPW, weather / 'Seville.epw'))
+    stat = _write_stat(weather / 'Seville.stat')
+    results = _simulate(tmp_path, monkeypatch, (1, 20), (2, 10), 'hourly',
+                        {'Block1:Zone2': {'comfort_standard': 2, 'category': 80, 'comfort_mode': 3}},
+                        epw=epw, comfort_standard=[1], category=[2], comfort_mode=[3])
+    en16798 = compute_setpoints(epw, 1, 2, 3, start_date='20/01')
+    ashrae = compute_setpoints(epw, 2, 80, 3, start_date='20/01')
+
+    assert len(results) == 22 * 24 and ashrae.attrs['stat_file'] == str(stat)
+    cen, ashrae_mean = _running_means(results)
+    np.testing.assert_allclose(ashrae_mean, np.repeat([STAT_MEANS[0]] * 12 + [STAT_MEANS[1]] * 10, 24), atol=1e-9)
+    np.testing.assert_allclose(en16798['RMOT'][:len(results)], cen, atol=1e-9)
+    _compare(results, 'Block1_Zone1', en16798, 1e-4)
+    _compare(results, 'Block1_Zone2', ashrae, 1e-4)
+    # Those of the weather file alone (without the .stat file) are not the setpoints of the simulation
+    alone = compute_setpoints(epw, 2, 80, 3, start_date='20/01', stat_file=None)
+    assert np.abs(alone['PMOT'][:len(results)].to_numpy() - ashrae_mean).min() > 1
+    with pytest.raises(AssertionError):
+        _compare(results, 'Block1_Zone2', alone, 1e-4)

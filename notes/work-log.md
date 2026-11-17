@@ -15,6 +15,21 @@ This log is a lightweight, session-scoped complement to the repository's
 existing tracking files — it does not replace them (see
 [[decisions.md#2026-09-13 — `notes/work-log.md` complements, not replaces, existing tracking files|the related decision]]).
 
+## 2026-11-17 — E1: the running mean of ASHRAE 55 with a .stat file (branch `v1.2.0`, on the server)
+
+- **Objective**: the first half of a P2 entry of [[../TODO.md]]: with a .stat file next to the weather file, EnergyPlus
+  takes the monthly means of the .stat file as PMOT, which `accim.sim.preview` and check 4 did not reproduce.
+- **Affected files**: `accim/sim/preview.py`, `accim/utils/verification.py`, `tests/core/test_preview.py`,
+  `tests/core/test_verification.py`, section 4.3.1 and the description of check 4 of the detailed use,
+  [[../CHANGELOG.md]] and the notes.
+- **Finding or decision**: `ThermalComfort.cc` of EnergyPlus 25.1 reads the line 'Daily Avg' (8 lines after 'Monthly
+  Statistics for Dry Bulb temperatures', tabs, columns 3 to 14) and gives each day the mean of its month; the .stat
+  files of the Future Weather Generator have the same layout, so the future weather files of `morph_epws` had PMOT
+  1.9 K away on average (7.7 K at most) in the previews. `stat_file='auto'` reads it as EnergyPlus. The leap years
+  stay in the entry: they need a measurement with EnergyPlus first.
+- **Validation**: in the entry of [[../DEVLOG.md]].
+- **Next step**: the leap years (the entry of [[../TODO.md]]).
+
 ## 2026-11-17 — The tests of tests/core without besos (branch `v1.2.0`, on the server)
 
 - **Objective**: the P2 entry of [[../TODO.md]]: the tests of `tests/core` that need besos are skipped without it,

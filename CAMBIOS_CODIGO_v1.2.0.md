@@ -3237,3 +3237,29 @@ tests), en HEAD la recogida de `test_modifyaccis_setast.py` fallaba, lo que deti
 ejecutar ningún test, y once ficheros daban 6 fallos y 20 errores. Tras el cambio, `tests/core` sin besos: 1649 pasan
 y 19 se saltan (15 por besos y 4 por EnergyPlus 26.1 o el jar del Future Weather Generator); con besos: 1664 pasan
 y se saltan los mismos 4.
+
+## 64. La media de ASHRAE 55 con un fichero `.stat` junto al EPW (E1)
+
+Era la primera mitad de una entrada P2 de `TODO.md`: con un fichero `.stat` junto al fichero climático (`Seville.stat`
+para `Seville.epw`, como vienen los ficheros climáticos de EnergyPlus y como los escribe el Future Weather Generator de
+`morph_epws`), EnergyPlus no calcula la media de ASHRAE 55 (PMOT) con los 30 días anteriores, sino que toma la media
+del mes de cada día del `.stat`, y `compute_setpoints`, `energyplus_running_means` y el check 4 de
+`verify_accim_simulation` no lo reproducían (estaba documentado). Con un EPW futuro de Sevilla de FWG (ssp585, 2080) y
+su `.stat`, PMOT cambia 1,88 K de media (7,71 K como máximo, en los cambios de mes) y la temperatura de confort de INT
+ASHRAE 55, 0,58 K (2,39 K).
+
+**El cambio** (`accim/sim/preview.py`): `read_stat_monthly_means()` lee las medias como `ThermalComfort.cc` de
+EnergyPlus 25.1 (la octava línea tras «Monthly Statistics for Dry Bulb temperatures», que es la de «Daily Avg»,
+separada por tabuladores, columnas 3 a 14), y `stat_file_of()` da el `.stat` de un EPW. `energyplus_running_means()` y
+`compute_setpoints()` tienen el argumento `stat_file`: `'auto'` (por defecto) lee el `.stat` que haya junto al EPW,
+como EnergyPlus; `None` lo ignora; o la ruta de otro. Un `.stat` sin esas medias da un `ValueError` (EnergyPlus tomaría
+0 °C sin avisar). El check 4 lo usa, y su resumen lo dice.
+
+**Lo que queda**: los EPW de 366 días (años bisiestos). Según el código de EnergyPlus, lee los 30 días anteriores del
+EPW por líneas desde el 1 de enero, y solo cuenta 366 días si el periodo de simulación es de un año bisiesto; hay que
+medirlo con EnergyPlus antes de reproducirlo, así que la entrada de `TODO.md` queda solo con eso.
+
+**Los tests**: la lectura de un `.stat` sintético y de uno real de EnergyPlus (Golden, Colorado), los errores, las
+medias y los setpoints con y sin `.stat`, el check 4, y una simulación con EnergyPlus 25.1 del 20 de enero al 10 de
+febrero con un `.stat` junto al EPW: PMOT es la media de enero y luego la de febrero del `.stat`, y los setpoints de
+INT ASHRAE 55 son los de `compute_setpoints` (sin el `.stat`, no lo son).

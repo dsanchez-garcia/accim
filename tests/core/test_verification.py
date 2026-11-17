@@ -326,19 +326,22 @@ def test_the_setpoints_against_compute_setpoints(tmp_path):
     run_period.Begin_Month, run_period.Begin_Day_of_Month = 3, 10
     # The outputs that EnergyPlus would give: those of compute_setpoints, after a design day
     timestamps = _timestamps(begin='03/10', days=4, timesteps_per_hour=1, design_day='07/21')
-    previews = {'Block1_Zone1': compute_setpoints(EPW, 1, 2, 3, start_date='10/03'),
-                'Block1_Zone2': compute_setpoints(EPW, 2, 80, 3, start_date='10/03')}
-    means = energyplus_running_means(EPW, start_date='10/03')
-    columns = {}
-    for zone, preview in previews.items():
-        for output, (variable, _) in ZONE_SETPOINT_OUTPUT_VARIABLES.items():
-            column = {v: c for c, v in SETPOINT_EMS_VARIABLES.items()}[variable]
-            columns[('EMS', f'{output}_{zone}', 'C')] = np.r_[np.zeros(24), np.nan_to_num(preview[column][:96])]
-    for people in ('PEOPLE BLOCK1:ZONE1', 'PEOPLE BLOCK1:ZONE2'):
-        for column, variable in (('RMOT', 'CEN 15251'), ('PMOT', 'ASHRAE 55')):
-            columns[(people, f'Zone Thermal Comfort {variable} Adaptive Model Running Average Outdoor Air '
-                             f'Temperature', 'C')] = np.r_[np.zeros(24), np.repeat(means[column][:4], 24)]
-    data = {'Hourly': _frame(timestamps, columns)}
+    def outputs(epw):
+        previews = {'Block1_Zone1': compute_setpoints(epw, 1, 2, 3, start_date='10/03'),
+                    'Block1_Zone2': compute_setpoints(epw, 2, 80, 3, start_date='10/03')}
+        means = energyplus_running_means(epw, start_date='10/03')
+        columns = {}
+        for zone, preview in previews.items():
+            for output, (variable, _) in ZONE_SETPOINT_OUTPUT_VARIABLES.items():
+                column = {v: c for c, v in SETPOINT_EMS_VARIABLES.items()}[variable]
+                columns[('EMS', f'{output}_{zone}', 'C')] = np.r_[np.zeros(24), np.nan_to_num(preview[column][:96])]
+        for people in ('PEOPLE BLOCK1:ZONE1', 'PEOPLE BLOCK1:ZONE2'):
+            for column, variable in (('RMOT', 'CEN 15251'), ('PMOT', 'ASHRAE 55')):
+                columns[(people, f'Zone Thermal Comfort {variable} Adaptive Model Running Average Outdoor Air '
+                                 f'Temperature', 'C')] = np.r_[np.zeros(24), np.repeat(means[column][:4], 24)]
+        return {'Hourly': _frame(timestamps, columns)}
+
+    data = outputs(EPW)
 
     rows, lines = _setpoint_mismatches(building, data, str(EPW), 1e-9)
     assert rows == []
@@ -347,11 +350,25 @@ def test_the_setpoints_against_compute_setpoints(tmp_path):
     # Another weather file
     rows, _ = _setpoint_mismatches(building, data, str(OTHER_EPW), 1e-3)
     assert {row['check'] for row in rows} >= {'Check4_RMOT', 'Check4_PMOT', 'Check4_ACST', 'Check4_AHST'}
-    # A .stat file next to the weather file: EnergyPlus would take PMOT from it, and the summary says so
+    # A .stat file next to the weather file: PMOT is the mean of the month of each day in it, as EnergyPlus takes it,
+    # and the summary says so (task E1 of the review of 1.2.0; before, check 4 did not read it)
     shutil.copy(EPW, tmp_path / 'weather.epw')
-    (tmp_path / 'weather.stat').write_text('', encoding='utf-8')
+    stat = tmp_path / 'weather.stat'
+    stat.write_text(' - Monthly Statistics for Dry Bulb temperatures\n' + '\n' * 7
+                    + ' \tDaily Avg\t' + '\t'.join(['14.5'] * 12) + '\n', encoding='latin-1')
+    rows, lines = _setpoint_mismatches(building, outputs(tmp_path / 'weather.epw'), str(tmp_path / 'weather.epw'), 1e-9)
+    assert rows == [] and lines[1].startswith('  Note: weather.stat is next to the weather file: the running mean of '
+                                              'ASHRAE 55 (PMOT) is the mean of the month of each day in it')
+    assert len(lines) == 2 + 2 + 2 * 5 and all(line.endswith(' 0 mismatch(es) in 96 timesteps') for line in lines[2:])
+    # The outputs of a simulation without it differ in PMOT and in the setpoints of INT ASHRAE 55 (zone 2)
+    rows, _ = _setpoint_mismatches(building, data, str(tmp_path / 'weather.epw'), 1e-3)
+    assert {(row['check'], row['zone_or_window']) for row in rows} >= {
+        ('Check4_PMOT', 'PEOPLE BLOCK1:ZONE1'), ('Check4_ComfTemp', 'Block1_Zone2'), ('Check4_AHST', 'Block1_Zone2')}
+    assert not any(row['zone_or_window'] == 'Block1_Zone1' for row in rows)
+    # A .stat file without the monthly means: not checked
+    stat.write_text('', encoding='utf-8')
     rows, lines = _setpoint_mismatches(building, data, str(tmp_path / 'weather.epw'), 1e-9)
-    assert rows == [] and lines[1].startswith('  Note: weather.stat is next to the weather file')
+    assert rows == [] and lines[2].startswith("  Not checked: ") and "has no line 'Monthly Statistics" in lines[2]
     # Another run period
     run_period.Begin_Day_of_Month = 11
     rows, lines = _setpoint_mismatches(building, data, str(EPW), 1e-3)
