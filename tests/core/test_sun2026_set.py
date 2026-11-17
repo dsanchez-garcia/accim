@@ -20,6 +20,7 @@ import pytest
 from accim.sim import comfort_hooks as ch
 from accim.sim import standards as st
 
+from ._optional import pythermalcomfort_models
 from .test_comfort_hooks import (CALLING_POINT, EPW, SAMPLE_IDF, STEPS, ZONES, _Controller, _given, _hook_erl,
                                  _hook_timestep, _model, needs_energyplus, needs_idd)
 
@@ -114,7 +115,7 @@ def test_comfort_standard_24_has_no_ems_code():
 @pytest.mark.parametrize('air_speed', [0.1, 0.8])
 @pytest.mark.parametrize('humidity', [40.0, 70.0])
 def test_the_inversion_of_the_set(clo, air_speed, humidity):
-    set_tmp = pytest.importorskip('pythermalcomfort.models').set_tmp
+    set_tmp = pythermalcomfort_models().set_tmp
     targets = ch.sun2026_set_setpoints()
     # With the mean radiant temperature equal to the air temperature, and with that of the zone (20 °C)
     for tr_mode, radiant in (('equal_air', None), ('zone', 20.0)):
@@ -149,7 +150,7 @@ def _zone_values(zone, air, radiant, humidity=45.0, occupants=2.0, **people):
 
 
 def test_the_heating_setpoint_below_18_and_the_minimum():
-    pytest.importorskip('pythermalcomfort')
+    pythermalcomfort_models()
     # The inversion of SET 19 °C (the band of the paper, rounded) at 1.0 clo, 1.1 met, 0.1 m/s and 40 % of relative
     # humidity with the mean radiant temperature equal to the air temperature: 15.8 °C (section 2.3 of the proposal of
     # block F); with the band of TSV ±0.5 (19.09 °C), 15.9 °C sitting
@@ -185,7 +186,7 @@ def test_the_heating_setpoint_below_18_and_the_minimum():
 
 
 def test_the_hook_of_comfort_standard_24_reads_the_people_objects():
-    pytest.importorskip('pythermalcomfort')
+    pythermalcomfort_models()
     hook = ch.Sun2026SetpointHook(ZONES, clothing_sources={ZONES[0]: 'schedule', ZONES[1]: 'method'})
     assert (hook.tr_mode, hook.met, hook.clo, hook.air_speed, hook.position) == ('zone', None, None, None, None)
     assert (hook.comfort_mode, hook.category, hook.tsv_limit, hook.method) == (1, 80, 0.5, 'bisection')
@@ -235,7 +236,7 @@ def test_the_hook_of_comfort_standard_24_reads_the_people_objects():
 def test_the_air_speed_of_the_heating_setpoint_with_the_fans_that_the_occupants_control():
     # The question of the validation study of F3 (2026-11-12, decided on 2026-11-13): one air speed converts both
     # limits of the band of the SET, so the fans raise the heating setpoint as well as the cooling one
-    pytest.importorskip('pythermalcomfort')
+    pythermalcomfort_models()
     limits = (28.18, 19.09)
     inputs = dict(met=1.1, clo=0.5, method='bisection', tolerance_k=0.01)
     still, fans = (ch.SetSetpointHook(['Z'], *limits, air_speed=speed, **inputs) for speed in (0.1, 1.2))
@@ -291,7 +292,7 @@ def test_the_air_speed_of_the_heating_setpoint_with_the_fans_that_the_occupants_
 
 
 def test_the_hook_of_comfort_standard_24_with_the_fans_that_the_occupants_control():
-    pytest.importorskip('pythermalcomfort')
+    pythermalcomfort_models()
     minimums = {zone: 18.0 for zone in ZONES}
     hook = ch.Sun2026SetpointHook(ZONES, air_speed_heating=0.1, heating_minimums=minimums)
     plain = ch.Sun2026SetpointHook(ZONES, heating_minimums=minimums)
@@ -611,7 +612,7 @@ def test_comfort_standard_24_in_energyplus(tmp_path, monkeypatch, season, begin,
     from accim.run import run_ep
     from accim.sim.people import PIERCE_SET_OUTPUT
 
-    pytest.importorskip('pythermalcomfort')
+    pythermalcomfort_models()
     model, hook = _sun2026_model(tmp_path / season, monkeypatch, begin, end)
     with warnings.catch_warnings():
         warnings.simplefilter('ignore')
@@ -679,7 +680,7 @@ def test_comfort_standard_24_with_the_fans_that_the_occupants_control_in_energyp
     # fans of 1.2 m/s in the air velocity schedule of its People objects, and the heating setpoint of still air
     from accim.run import run_ep
 
-    pytest.importorskip('pythermalcomfort')
+    pythermalcomfort_models()
     model, hook = _sun2026_model(tmp_path / 'fans', monkeypatch, (7, 15), (7, 17), fans=1.2, air_speed_heating=0.1)
     assert hook.air_speed_heating == 0.1
     with warnings.catch_warnings():

@@ -19,6 +19,7 @@ import pytest
 from accim.data.postprocessing import indoor_adaptation as ia
 from accim.sim import comfort_hooks as ch
 
+from ._optional import pythermalcomfort_models
 from .test_comfort_hooks import ZONES, _model, needs_energyplus, needs_idd
 from .test_indoor_adaptation import (CSV_NAME, OCCUPIED, _add_set_conditions, _band, _fake_set, _indicator_columns,
                                      _indicator_table)
@@ -400,7 +401,7 @@ def test_the_set_of_the_results_is_that_of_the_hook_of_comfort_standard_24(tmp_p
     # outputs of the inputs of the occupants: the SET of pythermalcomfort of each row of the results, with the
     # schedules of the People objects, against the SET that the hook reports (that of the values of its sensors, those
     # of the previous timestep), and the indicators of the causal band of both
-    pytest.importorskip('pythermalcomfort.models')
+    pythermalcomfort_models()
     from accim.data.postprocessing.main import Table
     from accim.run import run_ep
     from accim.sim.accis import load_idf

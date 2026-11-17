@@ -21,6 +21,8 @@ import pytest
 from accim.energyplus import default_energyplus_folder, find_energyplus
 from accim.sim import comfort_hooks as ch
 
+from ._optional import pythermalcomfort_models
+
 REPO = Path(__file__).resolve().parents[2]
 SAMPLE_IDF = (REPO / 'accim' / 'sample_files' / 'sample IDFs' / 'input_IDFs'
               / 'TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2510.idf')
@@ -43,7 +45,7 @@ def test_the_adapted_metabolic_rate_and_clothing():
 
 
 def test_the_athb_of_pythermalcomfort():
-    pmv_athb = pytest.importorskip('pythermalcomfort.models').pmv_athb
+    pmv_athb = pythermalcomfort_models().pmv_athb
     for trm, met in ((10, 1.0), (18, 1.1), (26, 1.2)):
         athb = pmv_athb(tdb=25, tr=26, vr=0.1, rh=50, met=met, t_running_mean=trm).athb_pmv
         # The clothing of the behavioural adaptation of pythermalcomfort is that of athb_clo
@@ -55,7 +57,7 @@ def test_the_athb_of_pythermalcomfort():
 
 
 def test_the_bisection_brackets_the_setpoints():
-    pytest.importorskip('pythermalcomfort')
+    pythermalcomfort_models()
     hook = ch.AthbSetpointHook(['Z'])
     for trm in (5, 12, 18, 24, 28):
         for humidity in (30, 50, 70):
@@ -96,7 +98,7 @@ def _given(controller, zone):
 
 
 def test_the_hook_sets_the_setpoints_and_the_outputs():
-    pytest.importorskip('pythermalcomfort')
+    pythermalcomfort_models()
     hook = ch.AthbSetpointHook(ZONES, athb_cooling_setpoint=0.7, athb_heating_setpoint=-0.7, met=1.2, air_speed=0.15)
     assert hook.runs_before_programs
     controller = _Controller({'RMOT': 21.0, 'ATHB_MAT_Block1_Zone1': 26.0, 'ATHB_MRT_Block1_Zone1': 27.0,
@@ -131,7 +133,7 @@ def test_the_hook_sets_the_setpoints_and_the_outputs():
 
 
 def test_the_hook_reports_the_setpoints_at_the_limits_of_their_range():
-    pytest.importorskip('pythermalcomfort')
+    pythermalcomfort_models()
     # Up to 25 °C, the cooling setpoint of the ATHB (0.5) is out of the range in July in Seville
     hook = ch.AthbSetpointHook(ZONES, temperature_range=(10.0, 25.0))
     heating, cooling = hook.operative_temperatures(50.0, 24.0)
@@ -364,7 +366,9 @@ def test_the_hooks_give_their_setpoints_to_the_accis_right_after_setast(tmp_path
     ch.apply_athb_setpoints(before)
     (tmp_path / 'after').mkdir()
     after = _model(tmp_path / 'after')
-    ch.apply_set_setpoints(after, set_cooling_setpoint=27, set_heating_setpoint=21, met=1.1, clo=0.5, air_speed=0.1)
+    # By bisection, the hook calculates nothing when it is made (pythermalcomfort.models is not needed)
+    ch.apply_set_setpoints(after, set_cooling_setpoint=27, set_heating_setpoint=21, met=1.1, clo=0.5, air_speed=0.1,
+                           method='bisection')
     modify_accis(after, heating_setpoint_minimum=21.0, cooling_setpoint_maximum=26.0)
     for idf in (before, after):
         assert sorted(hs.hook_zones(idf)) == ZONES
@@ -526,7 +530,7 @@ def _athb_model(folder, monkeypatch, end_day=21, **arguments):
 def test_the_athb_setpoints_in_energyplus(tmp_path, monkeypatch):
     from accim.run import run_ep
 
-    pytest.importorskip('pythermalcomfort')
+    pythermalcomfort_models()
     model, hook = _athb_model(tmp_path / 'athb', monkeypatch)
     shutil.copy(EPW, model.parent / 'Seville.epw')
     with warnings.catch_warnings():
@@ -606,7 +610,7 @@ def test_the_athb_setpoints_in_energyplus(tmp_path, monkeypatch):
 def test_the_saturated_setpoints_of_the_athb_in_energyplus(tmp_path, monkeypatch):
     from accim.sim.energyplus_api import run_simulations
 
-    pytest.importorskip('pythermalcomfort')
+    pythermalcomfort_models()
     # Up to 27.5 °C, the cooling setpoints of the ATHB of these days (27.4 to 28.4 °C) are often out of the range
     model, hook = _athb_model(tmp_path / 'model', monkeypatch, end_day=16, temperature_range=(10.0, 27.5))
     [result] = run_simulations([(model, EPW, {'output_directory': tmp_path / 'api', 'output_prefix': 'run'})],
@@ -690,7 +694,7 @@ def test_without_the_hook_both_backends_give_the_same_results(tmp_path, monkeypa
 # The standard effective temperature (SET), proposal A6 -------------------------------------------------------------
 
 def test_the_standard_effective_temperature_of_pythermalcomfort():
-    set_tmp = pytest.importorskip('pythermalcomfort.models').set_tmp
+    set_tmp = pythermalcomfort_models().set_tmp
     for air, radiant, speed, humidity, met, clo in ((25, 25, 0.1, 50, 1.1, 0.5), (22, 24, 0.3, 40, 1.2, 1.0),
                                                      (28, 27, 0.8, 60, 1.0, 0.4)):
         expected = float(set_tmp(tdb=air, tr=radiant, v=speed, rh=humidity, met=met, clo=clo, limit_inputs=False,
@@ -705,7 +709,7 @@ def test_the_standard_effective_temperature_of_pythermalcomfort():
 
 
 def test_the_bisection_of_the_set_brackets_its_setpoints():
-    pytest.importorskip('pythermalcomfort')
+    pythermalcomfort_models()
     hook = ch.SetSetpointHook(['Z'], set_cooling_setpoint=27.0, set_heating_setpoint=21.0, met=1.1, clo=0.5,
                               air_speed=0.1)
     for humidity in (30, 50, 70):
@@ -723,7 +727,7 @@ def test_the_bisection_of_the_set_brackets_its_setpoints():
 
 
 def test_the_set_hook_sets_the_setpoints_of_its_table():
-    pytest.importorskip('pythermalcomfort')
+    pythermalcomfort_models()
     hook = ch.SetSetpointHook(ZONES, set_cooling_setpoint=26.5, set_heating_setpoint=20.5, met=1.2, clo=0.7,
                               air_speed=0.2, position='sitting')
     # The table: the setpoints of each relative humidity from 0 to 100 %, and their linear interpolation
@@ -760,8 +764,9 @@ def test_the_arguments_of_the_set_hook_are_checked():
             ch.SetSetpointHook(**{**values, **arguments})
     # Out of the limits of the inputs of pythermalcomfort, it warns
     for arguments in (dict(met=0.8), dict(clo=2.0), dict(air_speed=2.5)):
+        # By bisection, the hook calculates nothing when it is made (pythermalcomfort.models is not needed)
         with pytest.warns(UserWarning, match='out of the range of the SET of pythermalcomfort'):
-            ch.SetSetpointHook(**{**values, **arguments})
+            ch.SetSetpointHook(**{**values, **arguments, 'method': 'bisection'})
     # The metabolic rate, clothing insulation and air speed of the People objects (None) and the mean radiant
     # temperature of the zones need the bisection (task F1): the table depends on the relative humidity only
     for arguments in (dict(met=None), dict(clo=None), dict(air_speed=None), dict(tr_mode='zone')):
@@ -774,7 +779,7 @@ def test_the_arguments_of_the_set_hook_are_checked():
 
 
 def test_the_posture_of_the_set_hook_by_default():
-    pytest.importorskip('pythermalcomfort')
+    pythermalcomfort_models()
     values = dict(zones=['Z'], set_cooling_setpoint=27, set_heating_setpoint=21, clo=0.5, air_speed=0.1,
                   method='bisection')
     # Sitting for sedentary occupants (1.2 met or less), standing above it
@@ -784,7 +789,7 @@ def test_the_posture_of_the_set_hook_by_default():
 
 
 def test_the_set_hook_by_bisection(monkeypatch):
-    pytest.importorskip('pythermalcomfort')
+    pythermalcomfort_models()
     hook = ch.SetSetpointHook(ZONES, set_cooling_setpoint=27.0, set_heating_setpoint=21.0, met=1.1, clo=0.5,
                               air_speed=0.1, method='bisection')
     # No table: the setpoints of each humidity are those of the bisection
@@ -863,7 +868,7 @@ def test_run_simulation_prepares_the_hooks_before_it_loads_the_api(monkeypatch):
 
 
 def test_the_set_of_the_results_of_a_simulation(tmp_path):
-    pytest.importorskip('pythermalcomfort')
+    pythermalcomfort_models()
     hook = ch.SetSetpointHook(ZONES, set_cooling_setpoint=27.0, set_heating_setpoint=21.0, met=1.2, clo=0.6,
                               air_speed=0.2, method='bisection')
     hook.keys = {'Block1_Zone1': 'Block1:Zone1', 'Block1_Zone2': 'Block1:Zone2'}
@@ -899,6 +904,8 @@ def test_the_set_of_the_results_of_a_simulation(tmp_path):
 
 @needs_idd
 def test_apply_set_setpoints_prepares_the_model(tmp_path):
+    # The hook of the table calculates its setpoints when it is made
+    pythermalcomfort_models()
     idf = _model(tmp_path)
     counts = {kind: len(idf.idfobjects[kind]) for kind in ('EnergyManagementSystem:GlobalVariable',
                                                           'EnergyManagementSystem:OutputVariable')}
@@ -955,7 +962,7 @@ def test_the_set_setpoints_in_energyplus(tmp_path, monkeypatch):
     from accim.run import run_ep
     from accim.sim.accis import load_idf
 
-    pytest.importorskip('pythermalcomfort')
+    pythermalcomfort_models()
     model, athb = _athb_model(tmp_path / 'set', monkeypatch)
     # The same model with the setpoints of the SET instead of those of the ATHB
     idf = load_idf(model)
@@ -1000,7 +1007,7 @@ def test_the_set_setpoints_by_bisection_in_energyplus(tmp_path, monkeypatch):
     from accim.run import run_ep
     from accim.sim.accis import load_idf
 
-    pytest.importorskip('pythermalcomfort')
+    pythermalcomfort_models()
     model, athb = _athb_model(tmp_path / 'set', monkeypatch, end_day=16)
     idf = load_idf(model)
     for prefix in ('ATHB_MAT', 'ATHB_MRT', 'ATHB_RH'):

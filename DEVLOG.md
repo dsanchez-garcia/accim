@@ -36,6 +36,33 @@ Recommended flow: track active work in `TODO.md`, move completed outcomes to `DE
 ## Entries
 
 ### 2026-11-17
+#### [done] The tests that need `pythermalcomfort.models` are skipped where numba cannot be loaded (branch `v1.2.0`)
+- Context: the P2 entry of `TODO.md` of the session of 2026-11-12: on the server, Windows Smart App Control blocked
+  the DLLs of numba (2026-11-11 and 2026-11-12, until the author turned it off), so `import pythermalcomfort.models`
+  raised an `ImportError`, and the tests that took `pytest.importorskip('pythermalcomfort')` (the package imports
+  without numba) for the models failed, while rule 1 of the instructions asks to skip without a dependency.
+  `pytest.importorskip` skips such an `ImportError` (not a `ModuleNotFoundError`) with a warning in pytest 8.2 to 9.0
+  and not at all from pytest 9.1, and its `exc_type=ImportError` needs pytest 8.2, while `requirements-dev.txt` takes
+  pytest 8.0.
+- Changes: `tests/core/_optional.py` (new) has `pythermalcomfort_models()`, which imports `pythermalcomfort.models`
+  or skips the test with the reason; the 25 guards of `test_comfort_hooks.py`, `test_sun2026_set.py`,
+  `test_people_set_inputs.py`, `test_indoor_adaptation.py`, `test_pierce_set.py` and `test_table_optional_outputs.py`
+  call it. Three tests made a hook of the SET by the table, which calculates its setpoints when it is made, to check
+  other things (the order of the programs of the hooks, the warnings of the arguments, and the limiter of the drift
+  after a hook): they make it by bisection, which calculates nothing then, so they run without pythermalcomfort; and
+  `test_apply_set_setpoints_prepares_the_model`, which checks the hook of the table, calls the guard.
+- Files: `tests/core/_optional.py`, the six test files above, `tests/core/test_drift_limiter.py`, `TODO.md`,
+  `CAMBIOS_CODIGO_v1.2.0.md` (§61), `notes/work-log.md`.
+- Verification: with a plugin of the scratch folder that makes `import numba` raise the `ImportError` of Smart App
+  Control in every process (`sitecustomize.py` in `PYTHONPATH`, so also in the simulations that `run_ep` starts):
+  before the change, 20 tests of `test_comfort_hooks.py`, `test_sun2026_set.py`, `test_people_set_inputs.py`,
+  `test_indoor_adaptation.py`, `test_pierce_set.py`, `test_table_optional_outputs.py` and `test_missing_hook.py`
+  failed, and one of `test_drift_limiter.py` (three of them called no guard); after it, none fails in the ten
+  files that use the hooks of `accim.sim.comfort_hooks` (those, and `test_energyplus_api.py` and `test_gui.py`):
+  269 passed and 37 skipped, with the reason. Without the plugin, the same files: 306 passed and none skipped (12
+  min). Python 3.9 compiles the changed files.
+- Next step: none.
+
 #### [done] `read_eso_using_readvarseso` and `read_csv_outputs` keep the whole run period (branch `v1.2.0`)
 - Context: the P2 entry of `TODO.md` of 2026-11-09 (found with B1): with `only_run_period=True` (the default),
   `read_csv_outputs` (the part of `read_eso_using_readvarseso` that reads its CSV file) told the sizing periods apart

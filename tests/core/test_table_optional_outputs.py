@@ -25,6 +25,7 @@ import pytest
 from accim.data.postprocessing import optional_output_columns as ooc
 from accim.sim.targets import resolve_targets
 
+from ._optional import pythermalcomfort_models
 from .test_table_pmv_index import DESIGNBUILDER, RESIDENTIAL, TWO_PEOPLE, _table, _values, _write_csv
 
 REPO = Path(__file__).resolve().parents[2]
@@ -283,7 +284,7 @@ def _energyplus():
 @pytest.mark.skipif(_energyplus() is None,
                     reason='needs EnergyPlus 25.1 (with its Python API) and the sample files of the repository')
 def test_the_optional_outputs_of_a_simulation(tmp_path, monkeypatch):
-    pytest.importorskip('pythermalcomfort')
+    pythermalcomfort_models()
     from accim.data.postprocessing.main import Table
     from accim.run import run_ep
     from accim.sim import comfort_hooks

@@ -3156,3 +3156,21 @@ pueden). `read_csv_outputs` tiene el argumento nuevo `run_period_start`, que dan
 bisiesto, el fin de año, un día que falta...), los dos fallos con CSV inventados (el código anterior da 8760 filas
 desde el 14 de enero y el día de diseño de invierno), la fecha del ESO, y una simulación con EnergyPlus de los días
 de diseño y del 16 de enero al 31 de marzo, con las salidas en todas las frecuencias.
+
+## 61. Los tests que necesitan los modelos de pythermalcomfort se saltan si numba no carga
+
+Era una entrada P2 de `TODO.md` de la sesión del 12/11/2026. En el servidor, Smart App Control de Windows bloqueó las
+DLL de numba (11 y 12 de noviembre), así que `import pythermalcomfort.models` daba un `ImportError`. Los tests
+comprobaban `pytest.importorskip('pythermalcomfort')`, que importa sin numba, y luego fallaban al usar los modelos,
+cuando la regla 1 de las instrucciones pide saltar, no fallar, si falta una dependencia. `pytest.importorskip` de los
+modelos tampoco basta: salta ese `ImportError` con un aviso hasta pytest 9.0 y ya no desde la 9.1, y su
+`exc_type=ImportError` necesita pytest 8.2 (el repositorio admite la 8.0).
+
+**El cambio** (solo en los tests): `tests/core/_optional.py` tiene `pythermalcomfort_models()`, que importa
+`pythermalcomfort.models` o salta el test diciendo por qué. Lo usan los 25 guardas de seis archivos de tests. Tres
+tests creaban un gancho del SET por tabla (que calcula sus consignas al crearse) para comprobar otras cosas: ahora lo
+crean por bisección, que no calcula nada entonces, y así no necesitan pythermalcomfort.
+
+**Comprobado** con un plugin (en la carpeta de trabajo, no en el repositorio) que hace fallar `import numba` como lo
+hacía Smart App Control, en todos los procesos: antes fallaban 21 tests; ahora ninguno, y los que necesitan los
+modelos se saltan con el motivo.

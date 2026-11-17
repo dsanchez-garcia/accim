@@ -42,6 +42,8 @@ import pytest
 from accim.energyplus import default_energyplus_folder, find_energyplus
 from accim.sim.people import PIERCE_SET_OUTPUT, THERMAL_COMFORT_MODELS, add_thermal_comfort_model
 
+from ._optional import pythermalcomfort_models
+
 REPO = Path(__file__).resolve().parents[2]
 SAMPLE_IDF = (REPO / 'accim' / 'sample_files' / 'sample IDFs' / 'input_IDFs'
               / 'TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2510.idf')
@@ -239,7 +241,7 @@ def simulations(tmp_path_factory):
     run at the same time, once for all the tests."""
     if _energyplus() is None:
         pytest.skip('needs EnergyPlus 25.1 and the sample files of the repository')
-    pytest.importorskip('pythermalcomfort.models')
+    pythermalcomfort_models()
     folder = tmp_path_factory.mktemp('pierce_set')
     models = {activity: _model_with_activity(folder / f'activity_{activity:g}', activity) for activity in ACTIVITIES}
     with ThreadPoolExecutor(max_workers=len(models)) as pool:

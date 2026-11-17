@@ -15,6 +15,16 @@ This log is a lightweight, session-scoped complement to the repository's
 existing tracking files — it does not replace them (see
 [[decisions.md#2026-09-13 — `notes/work-log.md` complements, not replaces, existing tracking files|the related decision]]).
 
+## 2026-11-17 — The tests of pythermalcomfort without numba (branch `v1.2.0`, on the server)
+
+- **Objective**: the P2 entry of [[../TODO.md]]: the tests that need the models of pythermalcomfort failed instead
+  of skipping where numba cannot be loaded (Windows Smart App Control on the server, 2026-11-11 and 2026-11-12).
+- **Affected files**: `tests/core/_optional.py` (new) and seven test files.
+- **Finding or decision**: a helper that imports `pythermalcomfort.models` or skips, for every version of pytest;
+  the tests that made a hook of the SET by the table to check other things make it by bisection.
+- **Validation**: in the entry of [[../DEVLOG.md]], with numba blocked in every process by a plugin.
+- **Next step**: none.
+
 ## 2026-11-17 — The run period of `read_eso_using_readvarseso` (branch `v1.2.0`, on the server)
 
 - **Objective**: the P2 entry of [[../TODO.md]] of 2026-11-09: the reader of the outputs cut long outputs at timestep

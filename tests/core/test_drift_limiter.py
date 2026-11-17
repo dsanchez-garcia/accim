@@ -314,8 +314,9 @@ def test_addaccis_and_modify_accis_add_the_limiter(tmp_path, monkeypatch):
         for name, (prefix, (units, kind)) in zip(dl.zone_outputs(zone), dl.OUTPUTS.items()):
             assert name in declared and (name, 'Hourly') in requested
             assert (ems_outputs[name].Units, ems_outputs[name].Type_of_Data_in_Variable) == (units, kind)
-    # A hook runs before the limiter
-    apply_set_setpoints(idf, 27, 21, met=1.1, clo=0.5, air_speed=0.1)
+    # A hook runs before the limiter (by bisection, the hook calculates nothing when it is made: pythermalcomfort.models
+    # is not needed)
+    apply_set_setpoints(idf, 27, 21, met=1.1, clo=0.5, air_speed=0.1, method='bisection')
     run = [str(v).strip() for v in idf.getobject('EnergyManagementSystem:Program', 'RunACCIS_Block1_Zone1').fieldvalues[2:]]
     position = run.index('run SetAST')
     assert run[position + 1:position + 3] == ['run ApplyHookSetpoints_Block1_Zone1',

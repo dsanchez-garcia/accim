@@ -22,6 +22,7 @@ from accim.data.postprocessing import indoor_adaptation as ia
 from accim.data.postprocessing.main import Table
 from accim.sim.targets import resolve_targets
 
+from ._optional import pythermalcomfort_models
 from .test_table_pmv_index import DESIGNBUILDER, RESIDENTIAL, TWO_PEOPLE, _table, _values
 
 MODELS = pytest.mark.parametrize('model', [DESIGNBUILDER, RESIDENTIAL, TWO_PEOPLE],
@@ -551,7 +552,7 @@ def test_the_errors_of_the_set_of_pythermalcomfort(tmp_path, monkeypatch):
 
 
 def test_the_set_of_pythermalcomfort_with_pythermalcomfort(tmp_path, monkeypatch):
-    pytest.importorskip('pythermalcomfort.models')
+    pythermalcomfort_models()
     from accim.sim import comfort_hooks as ch
 
     model = DESIGNBUILDER
