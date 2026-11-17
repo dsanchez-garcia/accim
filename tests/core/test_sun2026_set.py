@@ -363,8 +363,10 @@ def test_apply_sun2026_setpoints_prepares_the_model(tmp_path):
         # The Pierce model, and the output of its SET
         assert 'Pierce' in [getattr(occupants, f'Thermal_Comfort_Model_{n}_Type') for n in range(1, 8)]
         assert (str(occupants.Name), PIERCE_SET_OUTPUT, 'Timestep') in requested
-        for name, kind, units in zip(ch.sun2026_zone_outputs(zone), ('Averaged', 'Averaged', 'Summed'),
-                                     ('C', '', 'H')):
+        assert ch.sun2026_zone_outputs(zone) == [f'SET_{zone}', f'TSV_causal_{zone}', f'HoursInCausalBand_{zone}',
+                                                 f'SETsaturated_{zone}']
+        for name, kind, units in zip(ch.sun2026_zone_outputs(zone), ('Averaged', 'Averaged', 'Summed', 'Summed'),
+                                     ('C', '', 'H', 'H')):
             output = ems_outputs[name]
             assert (output.Type_of_Data_in_Variable, output.Update_Frequency, output.Units) == (kind, 'ZoneTimestep',
                                                                                                 units)
@@ -550,12 +552,12 @@ MEASURED = {
 }
 
 
-def _sun2026_model(folder, monkeypatch, begin, end, fans=None, air_speed_heating=None):
+def _sun2026_model(folder, monkeypatch, begin, end, fans=None, **hook_arguments):
     """The output IDF of AddAccis of the sample model (INT EN16798, category II, comfort mode 3, full air-conditioning,
     outputs at timestep frequency) from ``begin`` to ``end`` ((month, day)), with a minimum heating setpoint of 18 °C in
-    Block1:Zone1, prepared for comfort standard 24, with programs that copy the values that the sensors of the hook
-    read into reported variables; return its path and the hook. With ``fans``, the air velocity schedule of its People
-    objects has that air speed (m/s) in all the hours, and the hook has ``air_speed_heating``."""
+    Block1:Zone1, prepared for comfort standard 24 (with the other arguments of ``apply_sun2026_setpoints`` given), with
+    programs that copy the values that the sensors of the hook read into reported variables; return its path and the
+    hook. With ``fans``, the air velocity schedule of its People objects has that air speed (m/s) in all the hours."""
     from accim.sim.accis import AddAccis, load_idf, modify_accis
     from accim.sim.ems.programs import add_program
     from accim.utils.people import get_people_objects
@@ -584,7 +586,7 @@ def _sun2026_model(folder, monkeypatch, begin, end, fans=None, air_speed_heating
                          Field_2='For: AllDays', Field_3='Until: 24:00', Field_4=fans)
         for people in get_people_objects(idf):
             people.Air_Velocity_Schedule_Name = 'Fans'
-    hook = ch.apply_sun2026_setpoints(idf, output_frequencies=['timestep'], air_speed_heating=air_speed_heating)
+    hook = ch.apply_sun2026_setpoints(idf, output_frequencies=['timestep'], **hook_arguments)
     prefixes = ('MAT', 'MRT', 'RH', 'Act', 'Clo', 'Vel')
     for zone in ZONES:
         names = [f'Copy{prefix}_{zone}' for prefix in prefixes]
@@ -651,6 +653,15 @@ def test_comfort_standard_24_in_energyplus(tmp_path, monkeypatch, season, begin,
                                               for t in range(len(met))], atol=1e-6)
         tsv = column(f'EMS:TSV_causal_{zone} [').iloc[1:].to_numpy()
         np.testing.assert_allclose(tsv, 0.11 * reported - 2.6, atol=1e-6)
+        # The hours at a limit of the range of the bisection, 10 to 40 °C (task A6): with the mean radiant temperature
+        # of the zone, the air temperature whose SET is the heating setpoint of the SET is below 10 °C in all the
+        # timesteps of the week of January and in most of those of July (an open question of notes/questions.md,
+        # 2026-11-17)
+        expected = np.array([hook.saturated(*hook.inverted_temperatures(
+            copied['RH'][t], copied['MRT'][t], met[t], copied['Clo'][t], copied['Vel'][t])) for t in range(len(met))])
+        np.testing.assert_allclose(column(f'EMS:SETsaturated_{zone} [').iloc[1:].to_numpy(),
+                                   np.where(expected, 1 / STEPS, 0.0), atol=1e-9)
+        assert expected.mean() == 1.0 if season == 'winter' else 0.5 < expected.mean() < 1.0
         occupied = column(f'EMS:Occupied Hours_{zone} [').iloc[1:].to_numpy() > 0
         hours = column(f'EMS:HoursInCausalBand_{zone} [').iloc[1:].to_numpy()
         inside = (reported >= hook.band[0]) & (reported <= hook.band[1])
@@ -725,6 +736,44 @@ def test_comfort_standard_24_with_the_fans_that_the_occupants_control_in_energyp
         np.testing.assert_allclose(reported, np.where(warm, with_fans, without), atol=1e-6)
         # The heating coil of the zone does not work in these days of July
         assert (column(f'{key} VRF INDOOR UNIT DX HEATING COIL:Heating Coil Heating Rate [').to_numpy() == 0).all()
+
+
+@needs_energyplus
+def test_the_setpoints_of_comfort_standard_24_at_the_limits_of_their_range_in_energyplus(tmp_path, monkeypatch):
+    # Task A6 of the review of 1.2.0: two days of January of the sample model (1.0 clo), whose inverted heating air
+    # temperature falls below 18 °C, with the range of the bisection from 18 °C
+    from accim.run import run_ep
+
+    pythermalcomfort_models()
+    model, hook = _sun2026_model(tmp_path / 'range', monkeypatch, (1, 8), (1, 9), temperature_range=(18.0, 40.0))
+    assert hook.temperature_range == (18.0, 40.0)
+    with warnings.catch_warnings():
+        warnings.simplefilter('ignore')
+        [result] = run_ep(only_accim_idfs=False, confirm=True, processes=1, backend='api', hooks=[hook])
+    assert result.success, result.error
+    results = pd.read_csv(model.parent / 'sun[Seville.csv')
+    columns = list(results.columns)
+
+    def column(start):
+        return results[next(c for c in columns if c.upper().startswith(start.upper()))]
+
+    for zone in ZONES:
+        copied = {prefix: column(f'EMS:Copy{prefix}_{zone} [').iloc[1:].to_numpy()
+                  for prefix in ('RH', 'MRT', 'Act', 'Clo', 'Vel')}
+        met = copied['Act'] / ch.MET_ACTIVITY_LEVEL
+        # The timesteps whose air temperatures of the bisection, with the values that the sensors read, are at a limit
+        # of the range: the output is the length of the timestep in them, and 0 in the others
+        expected = np.array([hook.saturated(*hook.inverted_temperatures(
+            copied['RH'][t], copied['MRT'][t], met[t], copied['Clo'][t], copied['Vel'][t])) for t in range(len(met))])
+        saturated = column(f'EMS:SETsaturated_{zone} [').iloc[1:].to_numpy()
+        np.testing.assert_allclose(saturated, np.where(expected, 1 / STEPS, 0.0), atol=1e-9)
+        assert expected.any()
+        # Where it is, the heating setpoint of the hook is that of 18 °C of air temperature and the mean radiant
+        # temperature of the zone (or the minimum heating setpoint of 18 °C of Block1:Zone1, which bounds it after)
+        heating = column(f'EMS:Adaptive Heating Setpoint Temperature_No Tolerance_{zone} [').iloc[1:].to_numpy()
+        minimum = 18.0 if zone == 'Block1_Zone1' else -np.inf
+        np.testing.assert_allclose(heating[expected], np.maximum((18.0 + copied['MRT'][expected]) / 2, minimum),
+                                   atol=1e-6)
 
 
 @needs_energyplus

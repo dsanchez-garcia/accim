@@ -15,6 +15,23 @@ This log is a lightweight, session-scoped complement to the repository's
 existing tracking files — it does not replace them (see
 [[decisions.md#2026-09-13 — `notes/work-log.md` complements, not replaces, existing tracking files|the related decision]]).
 
+## 2026-11-17 — A6: the setpoints of the SET at the limits of their range (branch `v1.2.0`, on the server)
+
+- **Objective**: the P2 entry of [[../TODO.md]]: the hooks of the SET did not tell when their setpoints were at the
+  limits of the range of the bisection, as that of the ATHB does since task H4.
+- **Affected files**: `accim/sim/comfort_hooks.py`, `accim/data/postprocessing/optional_output_columns.py`, three
+  test files, sections 4.7.5 and 4.9.2 of the detailed use, [[../CHANGELOG.md]] and the notes.
+- **Finding or decision**: the output is `SETsaturated_<zone>`, without '_' after SET, since Table averages the
+  columns whose names contain `EMS:SET_` (the SET of the zone): with `SET_saturated` it would have averaged these
+  hours.
+- **Finding**: with `tr_mode='zone'`, the default of comfort standard 24, the range of 10 to 40 °C is that of the
+  air temperature found, and in the weeks of the EnergyPlus tests of the sample model the air temperature of
+  the heating setpoint was below 10 °C in all the timesteps of January and in 62–64 % of those of July: heating
+  setpoints 2.4 and 1.0 K higher on average than with a range of −20 to 40 °C. An open question for the
+  author in [[questions.md]] (2026-11-17); the default is unchanged.
+- **Validation**: in the entry of [[../DEVLOG.md]].
+- **Next step**: none.
+
 ## 2026-11-17 — The tests of pythermalcomfort without numba (branch `v1.2.0`, on the server)
 
 - **Objective**: the P2 entry of [[../TODO.md]]: the tests that need the models of pythermalcomfort failed instead

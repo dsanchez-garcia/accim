@@ -59,7 +59,9 @@ The setpoints of the standard effective temperature (SET), proposal A6, work in 
 of the SET. With the metabolic rate, the clothing insulation and the air speed of the hook, they depend on the relative
 humidity of the zone only, so the hook can calculate them for each relative humidity when it is made and interpolate
 them (``method='table'``, the default, which does not calculate the SET in the callbacks of EnergyPlus), or calculate
-them by bisection in each timestep and report the SET of each zone (``method='bisection'``). ``set_tmp`` is compiled by
+them by bisection in each timestep and report the SET of each zone (``method='bisection'``); with either method, the
+hook reports the hours in which a setpoint of a zone is at a limit of the range of the bisection
+(``SETsaturated_<zone>``) and warns of them after the simulation, as that of the ATHB. ``set_tmp`` is compiled by
 numba: in the development environment of accim 1.2.0 (Python 3.14.3, numba 0.68.1, pythermalcomfort 4.8.1, EnergyPlus
 25.1), its first call in a process stopped it with an access violation when the library of the API of EnergyPlus had
 been loaded in the process before (in a callback of the API, or before the simulation), and worked when it was made
@@ -99,6 +101,7 @@ __all__ = [
     'MissingOccupantInputs',
     'SET_HEATING_WARNING_TEMPERATURE',
     'SET_METHODS',
+    'SET_SATURATED',
     'SET_TEMPERATURE_RANGE',
     'SUN2026_COMFORT_MODES',
     'SUN2026_EXTRAPOLATED_TSV_LIMITS',
@@ -164,6 +167,12 @@ _SET_SENSORS = {
 }
 #: The EMS output variables of each zone with method='bisection': prefix -> units
 _SET_OUTPUTS: Dict[str, str] = {'SET': 'C'}
+#: The summed EMS output variable of each zone of the hooks of the SET with the hours in which a setpoint is at a limit
+#: of ``temperature_range`` (the SET of the setpoint is out of the range: finding A4-1 of v04, task A6 of the review of
+#: accim 1.2.0), as ``ATHB_saturated`` of the hook of the ATHB; without '_' after SET, since Table averages the columns
+#: whose names contain that of ``SET_<zone>``, ``EMS:SET_``
+SET_SATURATED = 'SETsaturated'
+_SET_SUMMED_OUTPUTS = {SET_SATURATED: 'H'}
 #: The output variables of EnergyPlus of each zone that apply_set_setpoints requests, from which set_of_results
 #: calculates the SET of the zones after the simulation
 _SET_ZONE_VARIABLES = tuple(_SET_SENSORS.values())
@@ -633,8 +642,9 @@ def zone_outputs(zone: str) -> List[str]:
 
 
 def set_zone_outputs(zone: str) -> List[str]:
-    """The names of the outputs of the SET of a zone (with ``method='bisection'``)."""
-    return [f'{prefix}_{zone}' for prefix in _SET_OUTPUTS]
+    """The names of the outputs of the hook of the SET of a zone (:func:`apply_set_setpoints`): ``SET_<zone>`` (with
+    ``method='bisection'``) and ``SETsaturated_<zone>``."""
+    return [f'{prefix}_{zone}' for prefix in (*_SET_OUTPUTS, *_SET_SUMMED_OUTPUTS)]
 
 
 # The standard effective temperature (SET), proposal A6 -------------------------------------------------------------
@@ -762,6 +772,14 @@ class SetSetpointHook:
     23.9 and 32.5 °C at 1.2 m/s, so a schedule of fans raises the heating setpoint by almost 4 K, the heating can work
     in their hours, and the SET of a zone at 22 °C is 16.7 °C (below the band of the causal SET model) instead of 21.1.
 
+    The setpoints out of ``temperature_range`` are its limits (the bisection gives them when the SET of a setpoint is
+    out of the range; with ``tr_mode='zone'``, the air temperatures at the limits): with either method, the hook
+    reports in each timestep whether a setpoint of a zone is at a limit (``SETsaturated_<zone>``, the length of the
+    timestep in hours or 0, summed: :data:`SET_SATURATED`), adds the hours of the run periods to
+    :attr:`saturated_hours` and warns of them at the end of the simulation (:meth:`finish`), as the hook of the ATHB
+    (task A6 of the review of accim 1.2.0, finding A4-1 of v04). With 1.0 clo, 1.1 met and 0.1 m/s, for instance, the
+    heating setpoint of the SET of 19 °C is 15.8 °C (40 % of relative humidity), and a range from 16 °C gives 16 °C.
+
     The SET of pythermalcomfort is that of the code of ASHRAE 55: it takes the air speed as at least 0.1 m/s, and above
     0.85 met its convective heat transfer coefficient is at least 5.66·(met − 0.85)^0.39, larger than that of the air
     speed, 8.6·v^0.53, below about 0.16 m/s at 1.1 met and 0.21 m/s at 1.2 met (pythermalcomfort 4.8.1,
@@ -795,6 +813,9 @@ class SetSetpointHook:
     :param air_speed_heating: The air speed of the heating setpoint (m/s; out of 0 to 2 m/s, it warns), for the fans
         that the occupants control (see above); None (the default) for the air speed of the cooling setpoint.
     :ivar setpoints: The last setpoints of each zone, ``{zone: (heating, cooling)}``, without the tolerance.
+    :ivar saturated_hours: The hours of each zone in which a setpoint was at a limit of ``temperature_range``, in the
+        run periods of the weather file out of their warm-up days, since the hook was made or prepared
+        (:meth:`prepare`).
     :ivar keys: The key of each zone in the outputs of EnergyPlus (``{'Block1_Zone1': 'Block1:Zone1'}``), which
         :func:`apply_set_setpoints` sets and :func:`set_of_results` uses.
     :ivar people: With ``met``, ``clo`` or ``air_speed`` None, the schedules of the People objects of each zone
@@ -868,6 +889,7 @@ class SetSetpointHook:
         self.setpoints: Dict[str, Tuple[float, float]] = {}
         self.keys: Dict[str, str] = {}
         self.people: Dict[str, dict] = {}
+        self.saturated_hours: Dict[str, float] = {}
         # The setpoints of each relative humidity of the table, calculated now (out of the callbacks of EnergyPlus)
         self.table = ([self.operative_temperatures(humidity) for humidity in _SET_HUMIDITIES]
                       if method == 'table' else None)
@@ -902,8 +924,10 @@ class SetSetpointHook:
         the simulation before it loads the library of the API of EnergyPlus, so that the first calls of ``set_tmp``
         (and the compilation of numba) are made before it (see the class). The inputs that the hook reads from the
         People objects are 1.1 met, 0.5 clo and 0.1 m/s in these calls (numba compiles the functions for the types of
-        their arguments, not for their values). With ``method='table'``, it does nothing.
+        their arguments, not for their values). With ``method='table'``, it calculates nothing. It also resets
+        :attr:`saturated_hours`.
         """
+        self.saturated_hours = {}
         if self.method != 'bisection':
             return
         import numpy as np
@@ -998,11 +1022,52 @@ class SetSetpointHook:
 
         :return: (heating, cooling).
         """
-        heating, cooling = self.inverted_temperatures(relative_humidity, mean_radiant_temperature, met, clo, air_speed)
+        return self._operative(self.inverted_temperatures(relative_humidity, mean_radiant_temperature, met, clo,
+                                                          air_speed), mean_radiant_temperature)
+
+    def _operative(self, temperatures: Tuple[float, float],
+                   mean_radiant_temperature: Optional[float]) -> Tuple[float, float]:
+        """The setpoints of the operative temperature of the temperatures of :meth:`inverted_temperatures` (see
+        :meth:`operative_temperatures`)."""
+        heating, cooling = temperatures
         if self.tr_mode == 'zone':
             radiant = float(mean_radiant_temperature)
             return (heating + radiant) / 2, (cooling + radiant) / 2
         return heating, cooling
+
+    def saturated(self, heating: float, cooling: float) -> bool:
+        """True if a temperature found by the bisection (:meth:`inverted_temperatures`; with ``method='table'``, a
+        setpoint of the table) is at a limit of ``temperature_range``: the bisection gives the limit itself when the
+        SET of the setpoint is out of the range. With ``tr_mode='zone'``, those are the air temperatures, and the
+        setpoints of the thermostats are (air + mean radiant temperature)/2."""
+        return heating in self.temperature_range or cooling in self.temperature_range
+
+    def finish(self) -> None:
+        """Warn of the hours in which a setpoint was at a limit of ``temperature_range``, if any, after a simulation
+        (:func:`accim.sim.energyplus_api.run_simulation` calls it)."""
+        hours = {zone: value for zone, value in self.saturated_hours.items() if value > 0}
+        if hours:
+            warnings.warn(f'The setpoints of the SET were at a limit of temperature_range {self.temperature_range} °C '
+                          f'(the SET of the setpoint is out of it) in '
+                          + ', '.join(f'{zone}: {value:.2f} h' for zone, value in hours.items())
+                          + ' (the outputs SETsaturated_<zone>): widen temperature_range, or check the setpoints of '
+                            'the SET, the inputs of the occupants and the mean radiant temperature of the zones.',
+                          UserWarning, stacklevel=2)
+
+    def _saturation(self, controller, zone: str, saturated: bool) -> None:
+        """Report whether a setpoint of a zone is at a limit of ``temperature_range`` in a timestep: the output
+        ``SETsaturated_<zone>`` is the length of the timestep (``ZoneTimeStep``, h) or 0, and the hours out of the
+        warm-up days of the run periods are added to :attr:`saturated_hours`."""
+        step = controller.get('ZoneTimeStep') or 0.0
+        controller.set(f'{SET_SATURATED}_{zone}', step if saturated else 0.0)
+        if saturated and _in_run_period(controller):
+            self.saturated_hours[zone] = self.saturated_hours.get(zone, 0.0) + step
+
+    def _not_given(self, controller, zone: str) -> None:
+        """A timestep in which the hook gives no setpoints to a zone (without the values of its sensors): no hours at a
+        limit (the output is summed), and :meth:`_skipped`."""
+        controller.set(f'{SET_SATURATED}_{zone}', 0.0)
+        self._skipped(controller, zone)
 
     def zone_set(self, air_temperature, mean_radiant_temperature, relative_humidity, met: Optional[float] = None,
                  clo: Optional[float] = None, air_speed: Optional[float] = None):
@@ -1066,19 +1131,23 @@ class SetSetpointHook:
         for zone in self.zones:
             humidity = controller.get(f'SET_RH_{zone}')
             if humidity is None:
-                self._skipped(controller, zone)
+                self._not_given(controller, zone)
                 continue
             inputs = self.zone_inputs(controller, zone)
             if inputs is None:
-                self._skipped(controller, zone)
+                self._not_given(controller, zone)
                 continue
             radiant, met, clo, air_speed = inputs
             if self.table is not None:
                 heating, cooling = self.setpoints_of_humidity(humidity)
+                saturated = self.saturated(heating, cooling)
             else:
-                heating, cooling = self.operative_temperatures(humidity, radiant, met, clo, air_speed)
+                temperatures = self.inverted_temperatures(humidity, radiant, met, clo, air_speed)
+                saturated = self.saturated(*temperatures)
+                heating, cooling = self._operative(temperatures, radiant)
             self.setpoints[zone] = (heating, cooling)
             _give_setpoints(controller, zone, heating, cooling)
+            self._saturation(controller, zone, saturated)
             self._given(controller, zone, heating, cooling)
             if self.method == 'bisection':
                 air = controller.get(f'SET_MAT_{zone}')
@@ -1501,11 +1570,13 @@ def apply_set_setpoints(building, set_cooling_setpoint: float, set_heating_setpo
     radiant temperature and relative humidity), the outputs of these variables of EnergyPlus (*Zone Mean Air
     Temperature*, *Zone Mean Radiant Temperature* and *Zone Air Relative Humidity*, with which :func:`set_of_results`
     calculates the SET of the zones after the simulation), with ``method='bisection'`` the global variable and output
-    ``SET_<zone>`` (the SET of the zone, averaged), and the program ``ApplyHookSetpoints_<zone>`` with which the hook
-    gives its setpoints to the ACCIS (:mod:`accim.sim.ems.hook_setpoints`; see :func:`apply_athb_setpoints`). The
-    setpoints of the SET have no default: they are those of the study; so the metabolic rate, the clothing insulation
-    and the air speed, unless the hook reads them from the People object of each zone in each timestep (None, with
-    ``method='bisection'``: the zones then get the EMS sensors of their schedules, ``SET_Act_<zone>``,
+    ``SET_<zone>`` (the SET of the zone, averaged), with either method the global variable and output
+    ``SETsaturated_<zone>`` (the hours in which a setpoint is at a limit of ``temperature_range``, summed), and the
+    program ``ApplyHookSetpoints_<zone>`` with which the hook gives its setpoints to the ACCIS
+    (:mod:`accim.sim.ems.hook_setpoints`; see :func:`apply_athb_setpoints`). The setpoints of the SET have no
+    default: they are those of the study; so the metabolic rate, the clothing insulation and the air speed, unless
+    the hook reads them from the People object of each zone in each timestep (None, with ``method='bisection'``: the
+    zones then get the EMS sensors of their schedules, ``SET_Act_<zone>``,
     ``SET_Clo_<zone>`` or ``SET_CloValue_<zone>`` and ``SET_CloMethod_<zone>``, and ``SET_Vel_<zone>``, see
     :class:`SetSetpointHook`). With ``clo`` None and the clothing insulation of the dynamic clothing model in a zone
     (the Clothing Insulation Calculation Method DynamicClothingModelASHRAE55, or CalculationMethodSchedule), the People
@@ -1558,7 +1629,8 @@ def apply_set_setpoints(building, set_cooling_setpoint: float, set_heating_setpo
         # It raises its errors before changing anything
         add_thermal_comfort_model(building, 'Pierce')
     frequencies = _output_frequencies(building, output_frequencies)
-    _add_hook_objects(building, keys, _SET_SENSORS, _SET_OUTPUTS if method == 'bisection' else {}, frequencies)
+    _add_hook_objects(building, keys, _SET_SENSORS, _SET_OUTPUTS if method == 'bisection' else {}, frequencies,
+                      summed=_SET_SUMMED_OUTPUTS)
     _add_people_sensors(building, people, needed)
     _add_zone_output_variables(building, keys, _SET_ZONE_VARIABLES, frequencies)
     return hook
@@ -1566,8 +1638,9 @@ def apply_set_setpoints(building, set_cooling_setpoint: float, set_heating_setpo
 
 def sun2026_zone_outputs(zone: str) -> List[str]:
     """The names of the outputs of comfort standard 24 of a zone (:func:`apply_sun2026_setpoints`): its SET, its causal
-    TSV and its occupied hours within the band of TSV."""
-    return [f'{prefix}_{zone}' for prefix in (*_SET_OUTPUTS, *_SUN2026_OUTPUTS, _SUN2026_HOURS)]
+    TSV, its occupied hours within the band of TSV and its hours with a setpoint at a limit of the range of the
+    bisection."""
+    return [f'{prefix}_{zone}' for prefix in (*_SET_OUTPUTS, *_SUN2026_OUTPUTS, _SUN2026_HOURS, *_SET_SUMMED_OUTPUTS)]
 
 
 def apply_sun2026_setpoints(building, comfort_mode: Any = 1, category: int = 80, tsv_limit: Optional[float] = None,
@@ -1590,8 +1663,9 @@ def apply_sun2026_setpoints(building, comfort_mode: Any = 1, category: int = 80,
     speed of the schedules of its People object (with its Clothing Insulation Calculation Method, which
     :func:`accim.sim.people.set_clothing_method` sets: a schedule or the dynamic clothing model of ASHRAE 55; the fans
     are those of the air velocity schedule). Its zones get the objects of :func:`apply_set_setpoints` with
-    ``method='bisection'`` and the inputs of the People objects, the outputs ``TSV_causal_<zone>`` (averaged) and
-    ``HoursInCausalBand_<zone>`` (summed, hours) of the hook (:func:`sun2026_zone_outputs`), and the People objects get
+    ``method='bisection'`` and the inputs of the People objects (with ``SETsaturated_<zone>``), the outputs
+    ``TSV_causal_<zone>`` (averaged) and ``HoursInCausalBand_<zone>`` (summed, hours) of the hook
+    (:func:`sun2026_zone_outputs`), and the People objects get
     the Pierce model (:func:`accim.sim.people.add_thermal_comfort_model`) and the output of its SET,
     ``Zone Thermal Comfort Pierce Model Standard Effective Temperature``, for the comparison of the SET of EnergyPlus
     with that of accim (``notes/decisions.md``, task E-F1). The minimum and maximum of the setpoints of the zones
@@ -1652,7 +1726,7 @@ def apply_sun2026_setpoints(building, comfort_mode: Any = 1, category: int = 80,
     add_thermal_comfort_model(building, 'Pierce')
     frequencies = _output_frequencies(building, output_frequencies)
     _add_hook_objects(building, keys, _SET_SENSORS, {**_SET_OUTPUTS, **_SUN2026_OUTPUTS}, frequencies,
-                      summed={_SUN2026_HOURS: 'H'})
+                      summed={_SUN2026_HOURS: 'H', **_SET_SUMMED_OUTPUTS})
     _add_people_sensors(building, people, needed)
     _add_zone_output_variables(building, keys, _SET_ZONE_VARIABLES, frequencies)
     occupants = {zone: values['occupants'] for zone, values in people.items()}

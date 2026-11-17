@@ -3174,3 +3174,38 @@ crean por bisección, que no calcula nada entonces, y así no necesitan pytherma
 **Comprobado** con un plugin (en la carpeta de trabajo, no en el repositorio) que hace fallar `import numba` como lo
 hacía Smart App Control, en todos los procesos: antes fallaban 21 tests; ahora ninguno, y los que necesitan los
 modelos se saltan con el motivo.
+
+## 62. Los ganchos del SET informan de las horas con consignas en los límites de su rango (A6)
+
+Era una entrada P2 de `TODO.md` (hallazgo A4-1 de v04): las consignas del SET fuera del rango de la bisección
+(`temperature_range`, de 10 a 40 °C por defecto) se quedaban en sus límites sin ningún aviso. El gancho del ATHB ya lo
+decía desde la tarea H4; ahora los del SET hacen lo mismo.
+
+**El cambio** (`accim/sim/comfort_hooks.py`): con cualquiera de los dos métodos, `SetSetpointHook` y
+`Sun2026SetpointHook` dicen en cada paso de tiempo si una consigna de la zona está en un límite (la salida sumada
+`SETsaturated_<zona>`, en horas, que añaden `apply_set_setpoints()` y `apply_sun2026_setpoints()`; con
+`tr_mode='zone'`, la temperatura de aire encontrada en el límite), acumulan las horas de los periodos de simulación
+fuera de los días de calentamiento en `saturated_hours` y avisan al final de la simulación (`finish()`). Por ejemplo,
+con 1,0 clo, 1,1 met y 0,1 m/s, la consigna de calefacción de 19 °C de SET es 15,8 °C (40 % de humedad), así que con
+un rango desde 16 °C queda en 16 °C.
+
+**El nombre** no lleva «_» tras SET: `Table` promedia las columnas cuyo nombre contiene `EMS:SET_` (la del SET de la
+zona), y con `SET_saturated` habría promediado también estas horas en vez de sumarlas. `Table` la llama
+`<zona>_SETsaturated (h)`.
+
+**Los tests**: el gancho con un controlador simulado (tabla, bisección con las dos temperaturas radiantes, días de
+calentamiento, pasos sin valores de los sensores, el aviso y su ausencia dentro del rango), los objetos que añaden las
+dos funciones, los nombres y la agregación en `Table`, y una simulación con EnergyPlus de dos días de enero con el
+rango desde 18 °C, en la que la salida coincide en cada paso con la bisección de los valores que leen los sensores.
+
+**Lo que se vio con el estándar 24** (una pregunta abierta de `notes/questions.md`, 2026-11-17): con `tr_mode='zone'`
+(el valor por defecto del estándar 24), el rango es el de la temperatura del aire que busca la bisección, no el de la
+consigna que recibe el termostato, que es la media de esa temperatura y la radiante media de la zona. En las dos semanas
+de los tests con EnergyPlus del modelo de ejemplo en Sevilla (8–14 de enero y 15–21 de julio), la temperatura del aire
+cuyo SET es la consigna de calefacción del SET (19,09 °C) quedó por debajo de 10 °C en todos los pasos de enero y en el
+62–64 % de los de julio, porque la temperatura radiante media de las zonas era alta (25 y 29 °C de media). La consigna
+de calefacción fue entonces (10 + TRM)/2: de media, 2,4 K más alta en enero (3,5 K en las horas ocupadas) y 1,0 K en
+julio que con un rango de −20 a 40 °C, con el que ninguna consigna llega a un límite. El test del estándar 24 con
+EnergyPlus comprueba ahora la salida en esas dos semanas. No he cambiado el rango por defecto, que decidió el autor
+con F1; la pregunta recomienda aplicar `temperature_range` a la consigna del termostato (la temperatura operativa) en
+vez de a la temperatura del aire, de modo que el rango signifique lo mismo con los dos valores de `tr_mode`.

@@ -36,6 +36,49 @@ Recommended flow: track active work in `TODO.md`, move completed outcomes to `DE
 ## Entries
 
 ### 2026-11-17
+#### [done] A6: the hooks of the SET report the hours of their setpoints at the limits of their range (branch `v1.2.0`)
+- Context: the P2 entry A6 of `TODO.md`: finding A4-1 of v04 mentions that the setpoints of the SET saturate
+  silently too, at the limits of `temperature_range` (10 and 40 °C by default), while task H4 (2026-11-10) reported
+  only those of the hook of the ATHB (`ATHB_saturated_<zone>` and a warning at the end of the simulation).
+- Changes: `accim/sim/comfort_hooks.py`: with either method, `SetSetpointHook` and `Sun2026SetpointHook` set in each
+  timestep the EMS variable `SETsaturated_<zone>` (`SET_SATURATED`), the length of the timestep if a setpoint of the
+  zone is at a limit of the range (`saturated()`: with the table, its setpoints; with the bisection, the temperatures
+  that it finds, the air temperatures with `tr_mode='zone'`) and 0 otherwise or without the values of the sensors;
+  they add the hours of the run periods out of their warm-up days to `saturated_hours` (which `prepare()` resets), and
+  `finish()` warns of them. `apply_set_setpoints()` and `apply_sun2026_setpoints()` add its global variable, a summed
+  EMS output variable (h) and its `Output:Variable`; `set_zone_outputs()` and `sun2026_zone_outputs()` give its name.
+  `accim/data/postprocessing/optional_output_columns.py`: `Table` names it `<zone>_SETsaturated (h)` and sums it
+  (`frequency_agg_func`). The name has no `_` after `SET`, since `Table` averages the columns whose names contain
+  `EMS:SET_` (those of the SET of the zones): `SET_saturated` would have been averaged.
+- Finding (an open question of `notes/questions.md`, 2026-11-17): with `tr_mode='zone'`, the default of comfort
+  standard 24, the range of the bisection is that of the air temperature found, not that of the setpoint of the
+  thermostat, (air + MRT)/2. In the weeks of the EnergyPlus tests of the sample model in Seville (8–14 January and
+  15–21 July), the air temperature whose SET is the heating setpoint of the SET was below 10 °C in all the timesteps
+  of January and in 62–64 % of those of July (79–86 % of the occupied ones; the mean radiant temperature of the zones
+  was 25 and 29 °C on average), so the heating setpoints were (10 + MRT)/2: higher than with a range of −20 to 40 °C,
+  in which none was at a limit, by 2.4 K on average in January (3.5 K in the occupied hours, 5.9 K at most) and by
+  1.0 K in July (1.6 to 1.8 K in the occupied hours, 3.5 K at most). The cooling setpoints never reached 40 °C. The
+  default is unchanged (decided with F1 on 2026-11-10); the question recommends applying `temperature_range` to the
+  setpoints of the thermostats. Sections 4.9.2 and 4.9.3 of the detailed use and the CHANGELOG say it.
+- Files: `accim/sim/comfort_hooks.py`, `accim/data/postprocessing/optional_output_columns.py`,
+  `tests/core/test_comfort_hooks.py`, `tests/core/test_sun2026_set.py`, `tests/core/test_table_optional_outputs.py`,
+  `docs/source/4_detailed use.md` (4.7.5, 4.9.2 and 4.9.3), `CHANGELOG.md`, `TODO.md`, `CAMBIOS_CODIGO_v1.2.0.md`
+  (§62), `notes/questions.md`, `notes/work-log.md`.
+- Verification: a new test of the hook with a simulated controller (1.0 clo, 1.1 met, 0.1 m/s, 40 % of relative
+  humidity and the range from 16 °C; the table, and the bisection with both values of `tr_mode`; the warm-up days, a
+  timestep without the values of the sensors, the warning, and none within the range); the objects that
+  `apply_set_setpoints()` adds with both methods; the names and the aggregation in `Table`; with EnergyPlus 25.1, two
+  days of January of the sample model with the range from 18 °C (the output is, in each timestep, the saturation of
+  the bisection of the values that the sensors read, and the heating setpoint where it saturates is (18 + MRT)/2, or
+  the minimum of 18 °C of Block1:Zone1), and the two weeks of the test of comfort standard 24 (the same check: all the
+  timesteps of January, and between half and all those of July). Before its change, that test failed: it assumed no
+  setpoint at a limit, which showed the finding; and the test of the optional outputs of `Table` with a simulation
+  skips the outputs of the SET, which its model of the ATHB does not have. In a snapshot of the working tree, the
+  thirteen test files of the hooks, `Table`, the GUI and the verification: 380 passed (15 min; after it, two docstrings
+  of the module were only rewrapped). Python 3.9 compiles the changed files; the documentation builds with the
+  warnings of the baseline (33).
+- Next step: the answer of the author to the question of the range.
+
 #### [done] The tests that need `pythermalcomfort.models` are skipped where numba cannot be loaded (branch `v1.2.0`)
 - Context: the P2 entry of `TODO.md` of the session of 2026-11-12: on the server, Windows Smart App Control blocked
   the DLLs of numba (2026-11-11 and 2026-11-12, until the author turned it off), so `import pythermalcomfort.models`

@@ -167,6 +167,53 @@ def test_the_hook_reports_the_setpoints_at_the_limits_of_their_range():
         within.finish()
 
 
+def test_the_set_hook_reports_the_setpoints_at_the_limits_of_their_range():
+    # Task A6 of the review of 1.2.0 (finding A4-1 of v04), as task H4 for the ATHB: with 1.0 clo, 1.1 met and 0.1
+    # m/s, the heating setpoint of the SET of 19 °C is 15.8 °C (40 % of relative humidity), out of a range from 16 °C
+    pythermalcomfort_models()
+    inputs = dict(met=1.1, clo=1.0, air_speed=0.1, temperature_range=(16.0, 40.0))
+    values = {'ZoneTimeStep': 1 / STEPS, 'WarmupFlag': 0.0}
+    for zone in ZONES:
+        values.update({f'SET_RH_{zone}': 40.0, f'SET_MAT_{zone}': 20.0, f'SET_MRT_{zone}': 22.0})
+    for method, tr_mode in (('table', 'equal_air'), ('bisection', 'equal_air'), ('bisection', 'zone')):
+        hook = ch.SetSetpointHook(ZONES, 28.0, 19.0, method=method, tr_mode=tr_mode, **inputs)
+        assert hook.saturated(*hook.inverted_temperatures(40.0, 22.0))
+        controller = _Controller(dict(values))
+        for _ in range(3):
+            hook(controller, CALLING_POINT)
+        # The heating setpoint at the limit: with tr_mode='zone', the air temperature, whose mean with the mean radiant
+        # temperature of the zone (22 °C) is the setpoint of the thermostat
+        heating, cooling = _given(controller, ZONES[0])
+        assert heating == (16.0 if tr_mode == 'equal_air' else (16.0 + 22.0) / 2) and cooling < 40, (method, tr_mode)
+        # The output of each timestep, and the hours out of the warm-up days
+        assert all(controller.get(f'SETsaturated_{zone}') == pytest.approx(1 / STEPS) for zone in ZONES)
+        assert hook.saturated_hours == {zone: pytest.approx(3 / STEPS) for zone in ZONES}
+        with pytest.warns(UserWarning, match=r'The setpoints of the SET were at a limit of temperature_range '
+                                             r'\(16.0, 40.0\) °C .* in Block1_Zone1: 0.50 h, Block1_Zone2: 0.50 h '
+                                             r'\(the outputs SETsaturated_<zone>\)'):
+            hook.finish()
+        hook.prepare()
+        assert hook.saturated_hours == {}
+    # In the warm-up days, the output and not the hours; a timestep without the values of the sensors of a zone has no
+    # hours of it (the output is summed)
+    hook = ch.SetSetpointHook(ZONES, 28.0, 19.0, method='bisection', **inputs)
+    warmup = _Controller(dict(values, WarmupFlag=1.0))
+    hook(warmup, CALLING_POINT)
+    assert warmup.get(f'SETsaturated_{ZONES[0]}') == pytest.approx(1 / STEPS) and hook.saturated_hours == {}
+    warmup.set(f'SET_RH_{ZONES[0]}', None)
+    hook(warmup, CALLING_POINT)
+    assert warmup.get(f'SETsaturated_{ZONES[0]}') == 0.0
+    assert warmup.get(f'SETsaturated_{ZONES[1]}') == pytest.approx(1 / STEPS)
+    # Within the range (from 10 °C, the default), none, and no warning
+    within = ch.SetSetpointHook(ZONES, 28.0, 19.0, method='bisection', met=1.1, clo=1.0, air_speed=0.1)
+    controller = _Controller(dict(values))
+    within(controller, CALLING_POINT)
+    assert controller.get(f'SETsaturated_{ZONES[0]}') == 0.0 and within.saturated_hours == {}
+    with warnings.catch_warnings():
+        warnings.simplefilter('error')
+        within.finish()
+
+
 class _Exchange:
     """The functions of the API of EnergyPlus that tell the kind of simulation and the warm-up days."""
 
@@ -914,8 +961,10 @@ def test_apply_set_setpoints_prepares_the_model(tmp_path):
     assert isinstance(hook, ch.SetSetpointHook) and sorted(hook.zones) == ZONES and hook.method == 'table'
     assert hook.keys == {'Block1_Zone1': 'Block1:Zone1', 'Block1_Zone2': 'Block1:Zone2'}
     # The sensors and the variables of the setpoints of the hook (one global variable object for each zone,
-    # accim.sim.ems.hook_setpoints): no output of the SET with the table
-    counts['EnergyManagementSystem:GlobalVariable'] += len(ZONES)
+    # accim.sim.ems.hook_setpoints), and the hours of its setpoints at the limits of their range (task A6, another one
+    # for each zone, and its output): no output of the SET with the table
+    counts['EnergyManagementSystem:GlobalVariable'] += 2 * len(ZONES)
+    counts['EnergyManagementSystem:OutputVariable'] += len(ZONES)
     assert {kind: len(idf.idfobjects[kind]) for kind in counts} == counts
     sensors = {s.Name: s for s in idf.idfobjects['EnergyManagementSystem:Sensor']}
     ems_outputs = {o.Name for o in idf.idfobjects['EnergyManagementSystem:OutputVariable']}
@@ -930,6 +979,8 @@ def test_apply_set_setpoints_prepares_the_model(tmp_path):
                     sensor.OutputVariable_or_OutputMeter_Name) == (key, variable)
             assert (key, variable, 'Hourly') in requested
         assert f'SET_{zone}' not in ems_outputs
+        assert f'SETsaturated_{zone}' in ems_outputs and ('*', f'SETsaturated_{zone}', 'Hourly') in requested
+    assert ch.set_zone_outputs('Z') == ['SET_Z', 'SETsaturated_Z']
     # The ATHB and the SET would set the same thermostats
     with pytest.raises(ValueError, match='already has the setpoints of the ATHB or of the SET'):
         ch.apply_athb_setpoints(idf)
@@ -954,6 +1005,9 @@ def test_apply_set_setpoints_prepares_the_model(tmp_path):
         assert (output.EMS_Variable_Name, output.Type_of_Data_in_Variable, output.Units) == (f'SET_{zone}', 'Averaged',
                                                                                               'C')
         assert ('*', f'SET_{zone}', 'Timestep') in requested
+        saturated = ems_outputs[f'SETsaturated_{zone}']
+        assert (saturated.Type_of_Data_in_Variable, saturated.Units) == ('Summed', 'H')
+        assert f'SETsaturated_{zone}' in declared and ('*', f'SETsaturated_{zone}', 'Timestep') in requested
         assert (hook.keys[zone], 'Zone Mean Radiant Temperature', 'Timestep') in requested
 
 

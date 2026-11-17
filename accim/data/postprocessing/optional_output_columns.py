@@ -22,7 +22,8 @@ of the ATHB add EMS outputs to the zones (``<output>_<zone>``, with the EMS suff
   rate of each zone, ``ATHB_PMV_<zone>``, ``ATHB_clo_<zone>`` (clo) and ``ATHB_met_<zone>`` (met), averaged, and the
   hours in which a setpoint was at a limit of its range, ``ATHB_saturated_<zone>`` (h), summed (task H4);
 - :func:`accim.sim.comfort_hooks.apply_set_setpoints` with ``method='bisection'``: the standard effective temperature of
-  each zone, ``SET_<zone>`` (°C), averaged;
+  each zone, ``SET_<zone>`` (°C), averaged; and, with either method, the hours in which a setpoint was at a limit of
+  its range, ``SETsaturated_<zone>`` (h), summed (task A6);
 - :func:`accim.sim.comfort_hooks.apply_sun2026_setpoints` (comfort standard 24, task F1): also the causal TSV of each
   zone, ``TSV_causal_<zone>``, averaged, and its occupied hours with the SET within the band of TSV,
   ``HoursInCausalBand_<zone>`` (h), summed;
@@ -62,6 +63,7 @@ ZONE_OUTPUTS = {
     'ATHB_met': ('ATHB_met (met)', True, True),
     'ATHB_saturated': ('ATHB_saturated (h)', False, True),
     'SET': ('SET (°C)', True, True),
+    'SETsaturated': ('SETsaturated (h)', False, True),
     'TSV_causal': ('TSV_causal', True, True),
     'HoursInCausalBand': ('HoursInCausalBand (h)', False, True),
     'T_rm_in': ('T_rm_in (°C)', True, True),
