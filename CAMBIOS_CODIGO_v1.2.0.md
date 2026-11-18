@@ -3383,3 +3383,27 @@ actividad 0, sensores sin valor, avisos) y de los sensores que añade `apply_ath
 25.1: tres días de julio del modelo de ejemplo (110,7 W/persona, 1,057 met, y 0,137 m/s, 0,154 m/s de velocidad
 relativa), cuyas consignas son las de la bisección con esas entradas y no las de las entradas por defecto del gancho
 (1,1 met y 0,1 m/s).
+
+## 69. Los `Schedule:File` de accim con EnergyPlus 9.4 y 9.6 y horario de verano (hallazgos A22 y A26)
+
+Era una entrada P2 de `TODO.md`: los IDD de EnergyPlus 9.4 y 9.6 no tienen el campo *Adjust Schedule for Daylight
+Savings* en `Schedule:File`, así que, según su código, EnergyPlus desplaza una hora los valores de los CSV de accim (T0
+de `te_ref_nl` y la ropa en función de la temperatura exterior) mientras el horario de verano está activo. Estaba
+documentado pero no medido.
+
+**Lo medido**: EnergyPlus 9.4 y 9.6 están instalados en el servidor. Con el modelo de ejemplo de 9.6 (que tiene
+`RunPeriodControl:DaylightSavingTime` del último domingo de marzo al último de octubre), el modelo personalizado con
+`te_ref_nl` y el EPW de Sevilla, del 14 al 16 de julio, cada hora del `Schedule:File` toma el valor de la hora
+siguiente del CSV: la última hora de cada día lee el T0 del día siguiente. Del 14 al 16 de enero no hay desfase, ni
+tampoco con EnergyPlus 25.1 en ninguno de los dos meses (accim escribe el campo como `No`).
+
+**El cambio** (`accim/sim/schedule_files.py`): `write_schedule_file` avisa cuando el IDD del modelo no tiene ese campo
+y el modelo tiene horario de verano. Eso ocurre si tiene un objeto `RunPeriodControl:DaylightSavingTime` o si su
+RunPeriod usa el periodo del fichero climático y el EPW lo tiene (la nueva `daylight_saving_period`). `AddAccis`,
+`modify_accis` y `set_pmv_input_parameters` le pasan el EPW. No he desplazado el CSV en ese periodo, que era la otra
+opción del TODO: el periodo depende de las fechas de cada modelo y del año del periodo de simulación, y los CSV se
+comparten entre modelos con los mismos valores.
+
+**Los tests**: unitarios del aviso (con el objeto, con el periodo del EPW y sin ninguno) y de que `modify_accis` y
+`set_pmv_input_parameters` pasan el EPW, y con EnergyPlus 9.6 y 25.1, cada uno en un proceso nuevo con su IDD: con 9.6,
+`AddAccis` avisa una vez y los valores de julio son los de la hora siguiente; con 25.1, sin aviso y sin desfase.

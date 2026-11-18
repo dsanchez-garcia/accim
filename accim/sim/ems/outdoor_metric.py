@@ -569,7 +569,7 @@ def _set_mid_range_schedule(idf, epw: Union[str, Any]) -> None:
     from accim.sim.schedule_files import write_schedule_file
 
     values = mid_range_values(epw)
-    write_schedule_file(idf, MID_RANGE_SCHEDULE, values, mid_range_file_name(epw, values))
+    write_schedule_file(idf, MID_RANGE_SCHEDULE, values, mid_range_file_name(epw, values), epw=epw)
     if not reads_mid_range(idf):
         idf.newidfobject('EnergyManagementSystem:Sensor', Name=MID_RANGE_SENSOR,
                          OutputVariable_or_OutputMeter_Index_Key_Name=MID_RANGE_SCHEDULE,

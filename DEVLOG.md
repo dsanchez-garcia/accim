@@ -36,6 +36,42 @@ Recommended flow: track active work in `TODO.md`, move completed outcomes to `DE
 ## Entries
 
 ### 2026-11-18
+#### [done] The `Schedule:File` objects of accim with EnergyPlus 9.4 and 9.6 and daylight saving time (branch `v1.2.0`)
+- Context: the P2 entry of `TODO.md` of findings A22 and A26 of the self-audit of 2026-11-11: the IDDs of EnergyPlus
+  9.4 and 9.6 have no field Adjust Schedule for Daylight Savings in `Schedule:File`, so EnergyPlus shifts the values
+  of the CSV files of accim (T0 of 'te_ref_nl', H2; the clothing insulation of a function, H6) by one hour while the
+  daylight saving time is active (read in ScheduleManager.cc of EnergyPlus 9.6.0, documented, not measured).
+- Measurement: EnergyPlus 9.4 and 9.6 are installed on the server. With the sample model of 9.6 (its
+  `RunPeriodControl:DaylightSavingTime`, from the last Sunday of March to the last Sunday of October), the custom
+  model with 'te_ref_nl' and the weather file of Seville, 14 to 16 July: each hourly value of the `Schedule:File` is
+  that of the next hour of the CSV file (T0 of the last hour of each day is that of the next day: 27.5, 29.0 and 30.2
+  °C instead of 30.0, 27.5 and 29.0 °C); 14 to 16 January, the same hour. With EnergyPlus 25.1 (the field No), the same
+  hour in both.
+- Changes: `accim/sim/schedule_files.py`: `daylight_saving_period(idf, epw)` gives the daylight saving time of a
+  model (its `RunPeriodControl:DaylightSavingTime` object, or, with a RunPeriod that uses that of the weather file,
+  Yes by default, the start and end dates of the line 'HOLIDAYS/DAYLIGHT SAVINGS' of the weather file), and
+  `write_schedule_file(..., epw=None)` warns when the IDD of the model has not the field and the model has daylight
+  saving time; `accim/sim/ems/outdoor_metric.py` (T0 of 'te_ref_nl', with AddAccis and modify_accis) and
+  `accim/sim/apmv.py` (a function of the clothing insulation of `set_pmv_input_parameters`) give it the weather file.
+  Not the CSV file shifted by one hour in that period: the period depends on the dates of the object (or of the weather
+  file) in the year of the run period, and the CSV files are shared by the models with the same values. The module
+  docstring, sections 4.2.2 and 4.8 of the detailed use and the entry of H6 of `CHANGELOG.md`; the entry of `TODO.md`
+  removed.
+- Files: `accim/sim/schedule_files.py`, `accim/sim/ems/outdoor_metric.py`, `accim/sim/apmv.py`,
+  `tests/core/test_schedule_files.py`, `docs/source/4_detailed use.md`, `CHANGELOG.md`, `TODO.md`,
+  `CAMBIOS_CODIGO_v1.2.0.md` (§69), `notes/work-log.md`.
+- Verification: unit tests (the warning with a model without the field: its `RunPeriodControl:DaylightSavingTime`,
+  the daylight saving period of the weather file with Use Weather File Daylight Saving Period Yes and empty, and none
+  without them; `daylight_saving_period` of the sample model of 25.1; `modify_accis` and `set_pmv_input_parameters`
+  give the weather file to `write_schedule_file`) and tests with EnergyPlus 9.6 and 25.1 (accim in a new process with
+  the IDD of each version: AddAccis warns once with 9.6, whose `Schedule:File` gives each hour of 14 to 16 July the
+  value of the next hour, and does not with 25.1, whose values are those of the same hour: the test of H2 in a week of
+  daylight saving time). In a snapshot of the working tree, the seven test files of the `Schedule:File` objects, the
+  outdoor metric, the inputs of the PMV, the GUI and the versions of EnergyPlus, with the golden master (unchanged):
+  329 passed and 1 skipped, which needs EnergyPlus 26.1 (7 min). The documentation builds with the warnings of the
+  baseline (33); Python 3.9 compiles the changed files.
+- Next step: none for this entry.
+
 #### [done] A4: the metabolic rate and the air speed of the People objects in the hook of the ATHB (branch `v1.2.0`)
 - Context: the P2 entry of A4 of `TODO.md` (finding A4-2 of v04): `met` and `air_speed` of `AthbSetpointHook` were
   those of the hook, whatever the activity level and the air velocity of the People objects, which EnergyPlus uses

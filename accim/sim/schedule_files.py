@@ -23,20 +23,29 @@ active (RunPeriodControl:DaylightSavingTime, or that of the weather file: Schedu
 the indicator of the daylight saving time to the hour), so in the models of those versions with daylight saving time
 each hour of that period takes the value of the next hour of the weather file (T0 of 'te_ref_nl' in the last hour of
 each day is that of the next day, and the clothing insulation of a function that of the next hour; findings A22 and
-A26 of the self-audit of 2026-11-11).
+A26 of the self-audit of 2026-11-11; measured on 2026-11-18 with EnergyPlus 9.6 and its sample model in July, and
+not in January nor with EnergyPlus 25.1). :func:`write_schedule_file` warns of it (:func:`daylight_saving_period`).
 """
 
 import os
+import warnings
 from pathlib import Path
-from typing import Any, Optional, Sequence, Union
+from typing import Any, List, Optional, Sequence, Union
 
-__all__ = ['SCHEDULE_TYPE_LIMITS', 'model_folder', 'remove_schedule_file', 'schedule_file_path', 'write_schedule_file']
+__all__ = ['SCHEDULE_TYPE_LIMITS', 'daylight_saving_period', 'model_folder', 'remove_schedule_file',
+           'schedule_file_path', 'write_schedule_file']
 
 #: The schedule type limits of the Schedule:File objects of accim: a ScheduleTypeLimits object with only a name, which
 #: does not limit the values (the models of DesignBuilder have it; accim adds it to the others)
 SCHEDULE_TYPE_LIMITS = 'Any Number'
 #: The numbers of hours of a Schedule:File object (Energy+.idd: "should be either 8760 or 8784")
 _HOURS = (8760, 8784)
+#: The field of the Schedule:File objects with which EnergyPlus does not shift their values with the daylight saving
+#: time (not in the IDDs of EnergyPlus 9.4 and 9.6)
+_DAYLIGHT_SAVINGS_FIELD = 'Adjust_Schedule_for_Daylight_Savings'
+#: The line of the header of a weather file with its daylight saving period (its third and fourth fields, the start and
+#: end dates; 0 without one)
+_HOLIDAYS_LINE = 'HOLIDAYS/DAYLIGHT SAVINGS'
 
 
 def model_folder(idf: Any) -> Path:
@@ -47,10 +56,58 @@ def model_folder(idf: Any) -> Path:
     return Path(os.getcwd())
 
 
+def _objects(idf: Any, object_type: str) -> List[Any]:
+    """The objects of a type of a model (none if it has not the type)."""
+    try:
+        return list(idf.idfobjects[object_type])
+    except (AttributeError, KeyError, TypeError):
+        return []
+
+
+def daylight_saving_period(idf: Any, epw: Union[str, os.PathLike, None] = None) -> Optional[str]:
+    """The daylight saving time of a model, if it has one: that of its RunPeriodControl:DaylightSavingTime object, or,
+    if a RunPeriod uses the daylight saving period of the weather file (its field Use Weather File Daylight Saving
+    Period, Yes by default), that of the header of the weather file ``epw`` (the start and end dates of its line
+    'HOLIDAYS/DAYLIGHT SAVINGS', 0 without one).
+
+    :param idf: The model (eppy).
+    :param epw: The weather file of the simulations, or None.
+    :return: A description of the period, such as 'RunPeriodControl:DaylightSavingTime, from Last Sunday in March to
+        Last Sunday in October', or None without one.
+    """
+    for control in _objects(idf, 'RunPeriodControl:DaylightSavingTime'):
+        return (f'RunPeriodControl:DaylightSavingTime, from {str(getattr(control, "Start_Date", "")).strip()} to '
+                f'{str(getattr(control, "End_Date", "")).strip()}')
+    uses_weather_file = any(str(getattr(run_period, 'Use_Weather_File_Daylight_Saving_Period', '') or 'Yes').strip()
+                            .upper() != 'NO' for run_period in _objects(idf, 'RunPeriod'))
+    if epw is None or not uses_weather_file:
+        return None
+    try:
+        with open(epw, 'r', encoding='latin-1') as file:
+            header = [next(file, '') for _ in range(8)]
+        name = Path(os.fspath(epw)).name
+    except (OSError, TypeError, ValueError):
+        return None
+    for line in header:
+        if line.upper().startswith(_HOLIDAYS_LINE):
+            fields = [field.strip() for field in line.split(',')]
+            start, end = (fields + ['', '', '', ''])[2:4]
+            if start not in ('', '0') and end not in ('', '0'):
+                return f'that of the weather file {name}, from {start} to {end}'
+    return None
+
+
 def write_schedule_file(idf: Any, name: str, values: Sequence[float], file_name: str,
-                        folder: Union[str, os.PathLike, None] = None) -> Path:
+                        folder: Union[str, os.PathLike, None] = None,
+                        epw: Union[str, os.PathLike, None] = None) -> Path:
     """Write the hourly values of a schedule in a CSV file and give the model a Schedule:File object with that name
     that reads them (or update the one it has).
+
+    Without the field Adjust Schedule for Daylight Savings in the IDD of the model (EnergyPlus 9.4 and 9.6), it warns
+    if the model has daylight saving time (:func:`daylight_saving_period`): EnergyPlus then shifts the values of the
+    Schedule:File object by one hour while it is active, so each hour takes the value of the next hour of the file
+    (measured on 2026-11-18 with EnergyPlus 9.6 and the sample model of 9.6 in July; not in January, nor with EnergyPlus
+    25.1, whose Schedule:File objects accim writes with that field No).
 
     :param idf: The model (eppy), changed in place.
     :param name: The name of the Schedule:File object.
@@ -59,6 +116,8 @@ def write_schedule_file(idf: Any, name: str, values: Sequence[float], file_name:
     :param file_name: The name of the CSV file.
     :param folder: The folder of the CSV file (made if it does not exist); None for that of the model
         (:func:`model_folder`).
+    :param epw: The weather file of the simulations, whose daylight saving period the model may use, for the warning;
+        None to look only at the model.
     :return: The absolute path of the CSV file (unchanged if it already had these values).
     :raises ValueError: If the number of values is not 8760 or 8784.
     """
@@ -80,8 +139,18 @@ def write_schedule_file(idf: Any, name: str, values: Sequence[float], file_name:
     fields = dict(Schedule_Type_Limits_Name=SCHEDULE_TYPE_LIMITS, File_Name=str(path), Column_Number=1,
                   Rows_to_Skip_at_Top=1, Number_of_Hours_of_Data=len(values), Column_Separator='Comma',
                   Interpolate_to_Timestep='No', Minutes_per_Item=60)
-    if 'Adjust_Schedule_for_Daylight_Savings' in schedule.fieldnames:
-        fields['Adjust_Schedule_for_Daylight_Savings'] = 'No'
+    if _DAYLIGHT_SAVINGS_FIELD in schedule.fieldnames:
+        fields[_DAYLIGHT_SAVINGS_FIELD] = 'No'
+    else:
+        period = daylight_saving_period(idf, epw)
+        if period is not None:
+            warnings.warn(f'The Schedule:File object {name} reads its values from {path.name}, and the IDD of the '
+                          f'model has not the field Adjust Schedule for Daylight Savings (EnergyPlus 9.4 and 9.6): '
+                          f'while the daylight saving time of the model is active ({period}), EnergyPlus shifts '
+                          f'the values of the object by one hour, so each hour takes the value of the next hour of '
+                          f'the file. Remove the daylight saving time from the model, or simulate it with a version of '
+                          f'EnergyPlus whose Schedule:File objects have that field (such as 25.1), which accim writes '
+                          f'as No.', UserWarning, stacklevel=2)
     for field, value in fields.items():
         setattr(schedule, field, value)
     return path

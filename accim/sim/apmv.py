@@ -777,7 +777,8 @@ def _write_clothing_schedule(building: IDF, name: str, values: pd.Series, epw: U
     if existing is not None:
         building.removeidfobject(existing)
     digest = hashlib.sha1(','.join(repr(float(value)) for value in values).encode('utf-8')).hexdigest()[:8]
-    return write_schedule_file(building, name, values.to_numpy(), f'{name}_{Path(os.fspath(epw)).stem}_{digest}.csv')
+    return write_schedule_file(building, name, values.to_numpy(), f'{name}_{Path(os.fspath(epw)).stem}_{digest}.csv',
+                               epw=epw)
 
 
 @_accepts_legacy_arguments

@@ -15,6 +15,20 @@ This log is a lightweight, session-scoped complement to the repository's
 existing tracking files — it does not replace them (see
 [[decisions.md#2026-09-13 — `notes/work-log.md` complements, not replaces, existing tracking files|the related decision]]).
 
+## 2026-11-18 — `Schedule:File` with EnergyPlus 9.4 and 9.6 and daylight saving time (branch `v1.2.0`, on the server)
+
+- **Objective**: the entry of findings A22 and A26 of [[../TODO.md]]: EnergyPlus 9.4 and 9.6 shift the values of the
+  `Schedule:File` objects of accim by one hour with daylight saving time.
+- **Affected files**: `accim/sim/schedule_files.py`, `accim/sim/ems/outdoor_metric.py`, `accim/sim/apmv.py`,
+  `tests/core/test_schedule_files.py`, sections 4.2.2 and 4.8 of the detailed use, [[../CHANGELOG.md]],
+  [[../TODO.md]] and the notes.
+- **Finding or decision**: measured with EnergyPlus 9.6 (installed on the server): in July, each hour of the
+  `Schedule:File` takes the value of the next hour of the CSV file; not in January, nor with EnergyPlus 25.1. accim
+  warns (`write_schedule_file`, with `daylight_saving_period`), instead of shifting the CSV file, whose period would
+  depend on the dates of each model and year.
+- **Validation**: in the entry of [[../DEVLOG.md]].
+- **Next step**: the next entry of [[../TODO.md]] that does not need the author.
+
 ## 2026-11-18 — A4: the People objects in the hook of the ATHB (branch `v1.2.0`, on the server)
 
 - **Objective**: the entry of A4 of [[../TODO.md]] (finding A4-2 of v04): the metabolic rate and the air speed of the
