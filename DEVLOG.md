@@ -36,6 +36,44 @@ Recommended flow: track active work in `TODO.md`, move completed outcomes to `DE
 ## Entries
 
 ### 2026-11-18
+#### [done] E1: the running means of EnergyPlus with the weather files of 366 days (branch `v1.2.0`)
+- Context: the entry of E1 of `TODO.md` left on 2026-11-17: `accim.sim.preview` needed a weather file of 365 days,
+  and the code of EnergyPlus 25.1 (`ThermalComfort.cc`) reads the days before the run period from the weather file
+  by lines, counting 366 days only when the year of the run period is a leap year.
+- Measurement (EnergyPlus 25.1, the sample model with INT EN16798 and INT ASHRAE 55, and the weather file of Seville
+  with 29 February made from 28 February plus 10 K): (1) with LeapYear Observed `Yes` in the header of the weather
+  file, whatever its number of days (366 or 365) and the year of the run period (2023, 2024 or none), EnergyPlus stops
+  before the simulation with the severe error "GetNextEnvironment: AdaptiveComfort Reporting does not work correctly
+  with leap years in weather files" (with 366 days and a run period in 2024, also "... with weather files that do not
+  contain 365 days"): a model with the adaptive comfort models of the People objects, which the ACCIS reads, cannot
+  be simulated with such a file. (2) With 366 days and `No`, it simulates a year of 365 days in 2023 and in 2024 (no
+  row of 29 February, and the outdoor temperatures of the file of 365 days), and reads the days before the run period
+  by their position in the file, counting 365 days: from 5 March, PMOT 11.9769 and RMOT 9.4264 °C on the first day
+  (those of the positions), not 11.5818 and 8.7730 °C (those of the dates); from 5 January, the last days of the file
+  before its 366th, and the 365th (30 December) over the day before the run period. (3) T0 of 'te_ref_nl', from the
+  `Schedule:File` object of 8784 hours that AddAccis writes with such a file, by the dates of the simulated days. (4)
+  With a file of 365 days and a run period in 2024, a year of 365 days without 29 February, with the running means of
+  the preview to 1e-15.
+- Changes: `accim/sim/preview.py`: `_energyplus_days()` raises a `ValueError` for the weather files whose header says
+  that they observe leap years, and gives the records of the simulated year (29 February left out of a file of 366
+  days) and the daily means of the days of the file by their position; `_energyplus_daily()` takes the days before
+  the run period by their position (the same days as by their dates in a file of 365 days) and returns the records,
+  which `compute_setpoints()` uses for its rows; T0 of 'te_ref_nl' without 29 February. The docstrings, section 4.3.1
+  of the detailed use and the entry of `accim.sim.preview` of `CHANGELOG.md`; the entry of `TODO.md` removed.
+- Files: `accim/sim/preview.py`, `tests/core/test_preview.py`, `docs/source/4_detailed use.md`, `CHANGELOG.md`,
+  `TODO.md`, `CAMBIOS_CODIGO_v1.2.0.md` (§66), `notes/work-log.md`.
+- Verification: unit tests (a file of 366 days whose hourly temperatures are the positions of its days: the simulated
+  days by their dates, PMOT and RMOT of the first day by position from 5 March and from 5 January, the rows of
+  `compute_setpoints`, and a file of 366 days without 29 February; the header with `Yes`, with 365 and 366 days) and
+  tests with EnergyPlus 25.1 (the file of Seville with 29 February and `No`: from 5 March in 2002 and in 2024, and from
+  5 January to 10 March, the running means within 1e-9 and the setpoints within 1e-4; 'te_ref_nl' from 25 February;
+  with `Yes`, EnergyPlus stops before the simulation with 366 and 365 days, and `compute_setpoints` raises). `_model`
+  of the tests sets the run period in the input IDF before AddAccis now, so that the outdoor metric of the custom
+  model begins with its first day. In a snapshot of the working tree, the thirteen test files that use the preview,
+  with the golden master (unchanged): 418 passed (16 min). The documentation builds with the warnings of the baseline
+  (33); Python 3.9 compiles the changed files.
+- Next step: none for E1.
+
 #### [done] The range of the setpoints of comfort standard 24 with the mean radiant temperature (branch `v1.2.0`)
 - Context: the question of 2026-11-17 of `notes/questions.md`, raised by the outputs of task A6: with
   `tr_mode='zone'`, the default of comfort standard 24, `temperature_range` (10 to 40 °C) was the range of the air

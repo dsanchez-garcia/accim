@@ -50,6 +50,20 @@ def _write_epw(path, temperatures):
     return path
 
 
+def _write_leap_epw(path, observed=None):
+    """A weather file of the 366 days of a leap year, with 29 February, whose hourly temperature is the position of its
+    day in the file (0 to 365; 29 February, 59), with the line 'HOLIDAYS/DAYLIGHT SAVINGS' of LeapYear Observed
+    ``observed`` ('Yes' or 'No') in its header, if given."""
+    dates = pd.date_range('2008-01-01', periods=366, freq='D')
+    lines = [f'HEADER {n}' for n in range(8)]
+    if observed is not None:
+        lines[4] = f'HOLIDAYS/DAYLIGHT SAVINGS,{observed},0,0,0'
+    for day, date in enumerate(dates):
+        lines.extend(f'2008,{date.month},{date.day},{hour},60,flags,{float(day)!r},8.8,86' for hour in range(1, 25))
+    path.write_text('\n'.join(lines) + '\n', encoding='utf-8')
+    return path
+
+
 def _temperatures(seed=1):
     """Hourly temperatures with a yearly and a daily cycle and noise."""
     rng = np.random.default_rng(seed)
@@ -248,6 +262,63 @@ def test_energyplus_running_means_need_a_year(tmp_path):
         energyplus_running_means(path)
 
 
+def test_energyplus_running_means_with_29_february(tmp_path):
+    # Task E1 of the review of 1.2.0, measured with EnergyPlus 25.1: with a weather file of 366 days whose header does
+    # not say that it observes leap years, EnergyPlus simulates a year of 365 days with the records of the dates of the
+    # simulated days (29 February left out, whatever the year of the run period), and reads the days before the run
+    # period by their position in the file, counting a year of 365 days. The temperature of each hour is the position
+    # of its day in the file
+    alpha = ENERGYPLUS_CEN15251_ALPHA
+    for observed in (None, 'No'):
+        path = _write_leap_epw(tmp_path / f'leap_{observed}.epw', observed=observed)
+        means = energyplus_running_means(path, timesteps_per_hour=1, start_date='05/03')
+        assert len(means) == 365 - 63 and means['date'][0] == pd.Timestamp('2007-03-05')
+        # The simulated days by their dates: 5 March is the 65th day of the file (64)
+        assert means['daily_mean'].tolist() == list(range(64, 366)) and means['simulated_daily_mean'][0] == 64
+        # The 30 days before the run period by their position: from the 34th to the 63rd day of the file (33 to 62),
+        # with 29 February (59) and without 4 March (63); then those of the simulation
+        assert means['PMOT'][0] == pytest.approx(np.mean(np.arange(33, 63)))
+        assert means['PMOT'][1] == pytest.approx((np.sum(np.arange(34, 63)) + 64) / 30)
+        assert means['RMOT'][0] == pytest.approx((1 - alpha) * sum(alpha ** (k - 1) * (63 - k) for k in range(1, 8)))
+    # From 5 January: the days of January before it and the last ones of the file before its 366th day (30 December,
+    # 364, in the place of 31 December, 365), which EnergyPlus also writes over the day before the run period
+    # (finding E1-1 of the review of 1.2.0)
+    january = energyplus_running_means(path, timesteps_per_hour=1, start_date='05/01')
+    assert january['PMOT'][0] == pytest.approx((sum(range(339, 365)) + 0 + 1 + 2 + 364) / 30)
+    read = (3, 2, 1, 0, 364, 363, 362)
+    assert january['RMOT'][0] == pytest.approx((1 - alpha) * sum(alpha ** k * value for k, value in enumerate(read)))
+    # The rows of compute_setpoints are those of the simulated days: 1 March after 28 February
+    setpoints = compute_setpoints(path, 1, 2, 3, timesteps_per_hour=1, start_date='28/02')
+    assert len(setpoints) == (365 - 58) * 24
+    assert setpoints['Tout'][:48].tolist() == [58.0] * 24 + [60.0] * 24
+    assert setpoints['datetime'][24] == pd.Timestamp('2007-03-01 01:00')
+    # A file of 366 days without 29 February
+    lines = path.read_text().splitlines()
+    path.write_text('\n'.join(line.replace('2008,2,29,', '2008,2,28,') for line in lines) + '\n')
+    with pytest.raises(ValueError, match='has 366 days: .* or of 366 days with 29 February'):
+        energyplus_running_means(path)
+
+
+@pytest.mark.parametrize('days', [365, 366])
+def test_the_running_means_of_energyplus_with_a_weather_file_of_leap_years(tmp_path, days):
+    # EnergyPlus 25.1 does not simulate the adaptive comfort models of the People objects (whose running means the
+    # ACCIS reads) with a weather file whose header says that it observes leap years, whatever its number of days:
+    # measured on 2026-11-18, the severe error 'AdaptiveComfort Reporting does not work correctly with leap years in
+    # weather files' stops it before the simulation
+    if days == 366:
+        path = _write_leap_epw(tmp_path / 'leap.epw', observed='Yes')
+    else:
+        path = _write_epw(tmp_path / 'weather.epw', _temperatures())
+        lines = path.read_text().splitlines()
+        lines[4] = 'HOLIDAYS/DAYLIGHT SAVINGS, yes,0,0,0'
+        path.write_text('\n'.join(lines) + '\n')
+    message = r'says that it observes leap years .*EnergyPlus 25\.1 does not simulate the adaptive comfort models'
+    with pytest.raises(ValueError, match=message):
+        energyplus_running_means(path)
+    with pytest.raises(ValueError, match=message):
+        compute_setpoints(path, 1, 2, 3)
+
+
 def test_the_monthly_means_of_a_stat_file(tmp_path):
     # The line 'Daily Avg', 8 lines after the title of the monthly statistics of the dry-bulb temperatures, columns 3 to
     # 14 (separated by tabs), as CalcThermalComfortAdaptiveASH55 of EnergyPlus 25.1 reads them (task E1)
@@ -437,28 +508,66 @@ def _energyplus():
     return folder if folder is not None and SAMPLE_IDF.exists() and EPW.exists() else None
 
 
-def _simulate(tmp_path, monkeypatch, begin, end, frequency, zone_arguments, epw=EPW, **arguments):
-    """An output IDF of AddAccis of the sample model simulated with EnergyPlus 25.1 for a run period: its CSV file."""
+def _model(tmp_path, monkeypatch, begin, end, frequency, zone_arguments, year=None, accis_epw=None, **arguments):
+    """An output IDF of AddAccis of the sample model whose input IDF has a run period (``year``: its Begin Year and End
+    Year, 2002 by default, those of the sample model), with whose first day the programs of the outdoor metric of the
+    custom model begin (``accis_epw``: the argument ``epw`` of AddAccis)."""
     from accim.sim.accis import AddAccis, load_idf
 
     shutil.copy(SAMPLE_IDF, tmp_path / 'TestModel.idf')
+    model = load_idf(tmp_path / 'TestModel.idf')
+    run_period = model.idfobjects['RunPeriod'][0]
+    run_period.Begin_Month, run_period.Begin_Day_of_Month = begin
+    run_period.End_Month, run_period.End_Day_of_Month = end
+    if year is not None:
+        run_period.Begin_Year = run_period.End_Year = year
+    model.save()
     monkeypatch.chdir(tmp_path)
+    if accis_epw is not None:
+        arguments['epw'] = str(accis_epw)
     with warnings.catch_warnings():
         warnings.simplefilter('ignore')
         AddAccis(script_type='vrf_ac', supply_air_temp_input_method='temperature difference', output_type='standard',
                  output_frequencies=[frequency], keep_existing_outputs=False, energyplus_version='auto',
                  setpoint_type='temperature', confirm=True, verbose=False, zone_arguments=zone_arguments, **arguments)
     output_idf = sorted(tmp_path.glob('TestModel[[]*.idf'))[0]
-    idf = load_idf(output_idf)
-    run_period = idf.idfobjects['RunPeriod'][0]
-    run_period.Begin_Month, run_period.Begin_Day_of_Month = begin
-    run_period.End_Month, run_period.End_Day_of_Month = end
-    idf.saveas(str(tmp_path / 'model.idf'))
+    shutil.copy(output_idf, tmp_path / 'model.idf')
+    return tmp_path / 'model.idf'
+
+
+def _run(model, epw):
+    """Simulate a model with EnergyPlus 25.1 in the folder 'out' next to it."""
     energyplus = _energyplus() / 'energyplus.exe'
-    result = subprocess.run([str(energyplus), '-d', str(tmp_path / 'out'), '-p', 'run', '-s', 'C', '-r', '-x',
-                             '-w', str(epw), str(tmp_path / 'model.idf')], capture_output=True, text=True)
+    return subprocess.run([str(energyplus), '-d', str(model.parent / 'out'), '-p', 'run', '-s', 'C', '-r', '-x', '-w',
+                           str(epw), str(model)], capture_output=True, text=True)
+
+
+def _simulate(tmp_path, monkeypatch, begin, end, frequency, zone_arguments, epw=EPW, **arguments):
+    """An output IDF of AddAccis of the sample model simulated with EnergyPlus 25.1 for a run period: its CSV file (the
+    other arguments are those of :func:`_model`)."""
+    result = _run(_model(tmp_path, monkeypatch, begin, end, frequency, zone_arguments, **arguments), epw)
     assert result.returncode == 0, result.stdout[-3000:]
     return pd.read_csv(tmp_path / 'out' / 'run.csv')
+
+
+def _leap_epw(path, observed='No'):
+    """The weather file of the EnergyPlus tests with 29 February (366 days): the hours of 28 February 10 K warmer, so
+    that the days that EnergyPlus reads by their position in the file are not those of their dates; LeapYear Observed
+    of its header is ``observed``."""
+    lines = EPW.read_text(encoding='latin-1').splitlines()
+    header, records = lines[:8], lines[8:]
+    assert header[4].startswith('HOLIDAYS/DAYLIGHT SAVINGS')
+    header[4] = f'HOLIDAYS/DAYLIGHT SAVINGS,{observed},0,0,0'
+    february = [index for index, line in enumerate(records) if line.split(',')[1:3] == ['2', '28']]
+    leap_day = []
+    for index in february:
+        fields = records[index].split(',')
+        fields[2], fields[6] = '29', f'{float(fields[6]) + 10:.1f}'
+        leap_day.append(','.join(fields))
+    end = february[-1] + 1
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text('\n'.join(header + records[:end] + leap_day + records[end:]) + '\n', encoding='latin-1')
+    return path
 
 
 def _compare(results, zone, preview, tolerance):
@@ -569,3 +678,75 @@ def test_compute_setpoints_as_energyplus_with_a_stat_file(tmp_path, monkeypatch)
     assert np.abs(alone['PMOT'][:len(results)].to_numpy() - ashrae_mean).min() > 1
     with pytest.raises(AssertionError):
         _compare(results, 'Block1_Zone2', alone, 1e-4)
+
+
+@pytest.mark.skipif(_energyplus() is None, reason='needs EnergyPlus 25.1 and the sample files of the repository')
+@pytest.mark.parametrize('begin, end, year', [((3, 5), (3, 15), None), ((3, 5), (3, 15), 2024),
+                                              ((1, 5), (3, 10), None)])
+def test_compute_setpoints_as_energyplus_with_29_february(tmp_path, monkeypatch, begin, end, year):
+    # Task E1 of the review of 1.2.0: a weather file of 366 days (that of Seville with 29 February) whose header does
+    # not say that it observes leap years. EnergyPlus 25.1 simulates the days by their dates without 29 February, in
+    # 2002 (the year of the run period of the sample model) and in 2024, a leap year; from 5 March, the days before the
+    # run period are those of the 30 (and 7) positions before the 64th of the file, with 29 February and without 4
+    # March; from 5 January, those of January and those of the end of the file before its 366th day
+    leap = _leap_epw(tmp_path / 'weather' / 'SevilleLeap.epw')
+    results = _simulate(tmp_path, monkeypatch, begin, end, 'hourly',
+                        {'Block1:Zone2': {'comfort_standard': 2, 'category': 80, 'comfort_mode': 3}}, epw=leap,
+                        year=year, comfort_standard=[1], category=[2], comfort_mode=[3])
+    start = f'{begin[1]:02d}/{begin[0]:02d}'
+    en16798 = compute_setpoints(leap, 1, 2, 3, start_date=start)
+    ashrae = compute_setpoints(leap, 2, 80, 3, start_date=start)
+
+    days = (pd.Timestamp(f'2007-{end[0]:02d}-{end[1]:02d}') - pd.Timestamp(f'2007-{begin[0]:02d}-{begin[1]:02d}')).days
+    assert len(results) == (days + 1) * 24 and not results['Date/Time'].str.strip().str.startswith('02/29').any()
+    _compare(results, 'Block1_Zone1', en16798, 1e-4)
+    _compare(results, 'Block1_Zone2', ashrae, 1e-4)
+    cen, ashrae_mean = _running_means(results)
+    np.testing.assert_allclose(en16798['RMOT'][:len(results)], cen, atol=1e-9)
+    np.testing.assert_allclose(en16798['PMOT'][:len(results)], ashrae_mean, atol=1e-9)
+    if begin == (3, 5):
+        # The days of 29 February (10 K warmer than 28 February) and 4 March: PMOT is not that of the dates
+        by_date = energyplus_running_means(EPW, 6, start)['PMOT'][0]
+        assert abs(ashrae_mean[0] - by_date) > 0.1
+
+
+@pytest.mark.skipif(_energyplus() is None, reason='needs EnergyPlus 25.1 and the sample files of the repository')
+def test_te_ref_nl_as_energyplus_with_29_february(tmp_path, monkeypatch):
+    # The custom model with te_ref_nl and the weather file of 366 days of the previous test, from 25 February to 10
+    # March in timesteps: EnergyPlus 25.1 reads T0 from the Schedule:File object of 8784 hours by the dates of the
+    # simulated days, without 29 February
+    leap = _leap_epw(tmp_path / 'weather' / 'SevilleLeap.epw')
+    custom = dict(custom_slope=0.33, custom_intercept=18.8, custom_cooling_offset=2, custom_heating_offset=-3,
+                  custom_cooling_upper_limit=30, custom_cooling_lower_limit=10, custom_heating_upper_limit=30,
+                  custom_heating_lower_limit=10, custom_outdoor_metric='te_ref_nl')
+    results = _simulate(tmp_path, monkeypatch, (2, 25), (3, 10), 'timestep', None, epw=leap, accis_epw=leap,
+                        comfort_standard=[99], category=[1], comfort_mode=[3], **custom)
+    preview = compute_setpoints(leap, 99, None, 3, start_date='25/02', frequency='timestep', **custom)
+
+    assert len(results) == 14 * 24 * 6
+    _compare(results, 'Block1_Zone1', preview, 1e-4)
+    [column] = [c for c in results.columns if c.startswith('EMS:Tout_metric_Block1_Zone1 [')]
+    np.testing.assert_allclose(preview['Tout_metric'][:len(results)], results[column], atol=1e-9)
+
+
+@pytest.mark.skipif(_energyplus() is None, reason='needs EnergyPlus 25.1 and the sample files of the repository')
+def test_energyplus_does_not_simulate_the_accis_with_a_weather_file_of_leap_years(tmp_path, monkeypatch):
+    # With LeapYear Observed 'Yes' in the header of the weather file, EnergyPlus 25.1 stops before the simulation of a
+    # model with the adaptive comfort models of the People objects, which the ACCIS reads; and so it does with a file
+    # of 365 days with that header. compute_setpoints raises a ValueError with them
+    model = _model(tmp_path, monkeypatch, (3, 5), (3, 15), 'hourly', None, comfort_standard=[1], category=[2],
+                   comfort_mode=[3])
+    weather = tmp_path / 'weather'
+    leap = _leap_epw(weather / 'SevilleLeap.epw', observed='Yes')
+    lines = EPW.read_text(encoding='latin-1').splitlines()
+    lines[4] = 'HOLIDAYS/DAYLIGHT SAVINGS,Yes,0,0,0'
+    year = weather / 'SevilleYes.epw'
+    year.write_text('\n'.join(lines) + '\n', encoding='latin-1')
+    for epw in (leap, year):
+        result = _run(model, epw)
+        assert result.returncode != 0
+        errors = (tmp_path / 'out' / 'run.err').read_text(errors='replace')
+        assert 'AdaptiveComfort Reporting does not work correctly with leap years in weather files' in errors
+        assert 'Program exited before simulations began' in errors
+        with pytest.raises(ValueError, match='says that it observes leap years'):
+            compute_setpoints(epw, 1, 2, 3, start_date='05/03')

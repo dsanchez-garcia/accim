@@ -73,6 +73,9 @@ _STAT_DAILY_AVERAGES = 8
 #: The year of the dates of the rows: weather files of 365 days have no 29 February
 _YEAR = 2007
 _LEAP_YEAR = 2008
+#: The line of the header of a weather file whose second field, LeapYear Observed, says whether the file observes leap
+#: years ('Yes' or 'No')
+_LEAP_YEAR_LINE = 'HOLIDAYS/DAYLIGHT SAVINGS'
 #: The columns of :func:`compute_setpoints` that the EMS of each zone of an output IDF reports, and their EMS variables:
 #: the outputs ``<output>_<zone>`` of :data:`accim.sim.ems.objects.ZONE_SETPOINT_OUTPUT_VARIABLES` ('Adaptive Cooling
 #: Setpoint Temperature' is roundedACST, and 'Adaptive Cooling Setpoint Temperature_No Tolerance' is ACSTnoTol)
@@ -167,6 +170,46 @@ def _stat_means(epw: PathLike, stat_file: Union[PathLike, None]) -> Tuple[Option
     return path, read_stat_monthly_means(path)
 
 
+def _observes_leap_years(epw: PathLike) -> bool:
+    """True if the header of a weather file says that it observes leap years: the second field of its line
+    'HOLIDAYS/DAYLIGHT SAVINGS', LeapYear Observed, begins with 'Y'."""
+    with open(epw, 'r', encoding='latin-1') as file:
+        for number, line in enumerate(file):
+            if number >= 8:
+                break
+            if line.upper().startswith(_LEAP_YEAR_LINE):
+                fields = line.split(',')
+                return len(fields) > 1 and fields[1].strip().upper().startswith('Y')
+    return False
+
+
+def _energyplus_days(epw: PathLike) -> Tuple[pd.DataFrame, np.ndarray]:
+    """The hourly records of a weather file as EnergyPlus 25.1 simulates them with the adaptive comfort models of the
+    People objects, and the daily means of the days of the file by their position, as it reads the days before the
+    run period (see :func:`energyplus_running_means`).
+
+    :return: The records of the simulated year of 365 days (those of 29 February left out), as
+        :func:`read_epw_dry_bulb` gives them, and the daily means of all the days of the file, in their order.
+    :raises ValueError: If the header of the file says that it observes leap years, with which EnergyPlus does not
+        simulate the adaptive comfort models, or the file has not 365 days, or 366 with 29 February.
+    """
+    if _observes_leap_years(epw):
+        raise ValueError(f'The header of {epw} says that it observes leap years ({_LEAP_YEAR_LINE}, LeapYear Observed: '
+                         f'Yes): EnergyPlus 25.1 does not simulate the adaptive comfort models of the People objects, '
+                         f'whose running means the ACCIS reads, with such a weather file (the severe error '
+                         f'"AdaptiveComfort Reporting does not work correctly with leap years in weather files", '
+                         f'before the simulation).')
+    hourly = read_epw_dry_bulb(epw)
+    by_position = hourly['dry_bulb'].to_numpy(dtype=float).reshape(-1, 24).mean(axis=1)
+    leap_day = ((hourly['month'] == 2) & (hourly['day'] == 29)).to_numpy()
+    if len(by_position) == 366 and leap_day.sum() == 24:
+        hourly = hourly[~leap_day].reset_index(drop=True)
+    if len(hourly) != 365 * 24:
+        raise ValueError(f'{epw} has {len(by_position)} days: the running means of EnergyPlus need a weather file of a '
+                         f'whole year of 365 days (8760 hours), or of 366 days with 29 February.')
+    return hourly, by_position
+
+
 def _dates(month: np.ndarray, day: np.ndarray, number_of_days: int) -> pd.DatetimeIndex:
     year = _LEAP_YEAR if number_of_days == 366 else _YEAR
     return pd.to_datetime(pd.DataFrame({'year': year, 'month': month, 'day': day}))
@@ -256,21 +299,18 @@ def outdoor_metrics(epw: PathLike, alpha: float = 0.8, days: int = 30, frequency
 
 
 def _energyplus_daily(epw: PathLike, timesteps_per_hour: int, start_date: Union[int, str],
-                      stat_file: Union[PathLike, None] = 'auto') -> Tuple[pd.DataFrame, np.ndarray, int]:
-    """The daily running means of EnergyPlus (see :func:`energyplus_running_means`), the hourly temperatures of the
-    file as an array of days and the index of the first day of the run period."""
+                      stat_file: Union[PathLike, None] = 'auto') -> Tuple[pd.DataFrame, pd.DataFrame, int]:
+    """The daily running means of EnergyPlus (see :func:`energyplus_running_means`), the hourly records of the
+    simulated year (:func:`_energyplus_days`) and the index of the first day of the run period."""
     from accim.sim.arguments import to_day_of_year
 
     if timesteps_per_hour not in TIMESTEPS_PER_HOUR:
         raise ValueError(f'timesteps_per_hour must be one of {list(TIMESTEPS_PER_HOUR)} (those of EnergyPlus), '
                          f'not {timesteps_per_hour!r}.')
     stat_path, stat_means = _stat_means(epw, stat_file)
-    hourly = read_epw_dry_bulb(epw)
+    hourly, by_position = _energyplus_days(epw)
     temperatures = hourly['dry_bulb'].to_numpy(dtype=float).reshape(-1, 24)
     number_of_days = len(temperatures)
-    if number_of_days != 365:
-        raise ValueError(f'{epw} has {number_of_days} days: the running means of EnergyPlus need a weather file of a '
-                         f'whole year of 365 days (8760 hours).')
     first = to_day_of_year(start_date, 'start_date') - 1
     if first >= number_of_days:
         raise ValueError(f'start_date {start_date!r} is not a day of the weather file.')
@@ -285,15 +325,17 @@ def _energyplus_daily(epw: PathLike, timesteps_per_hour: int, start_date: Union[
     simulated = file_mean + (n - 1) / n * (previous_last - temperatures[:, 23]) / 24
 
     def daily_mean(day: int) -> float:
-        # The days before the run period are those of the weather file (the last ones for the first days of the year)
+        # The days before the run period are those of the weather file (the last ones for the first days of the year),
+        # by their position in it, in a year of 365 days (the same days as by their dates in a file of 365 days)
         if day >= first:
             return simulated[day]
         if day == first - 1 and 1 <= first <= length - 1:
             # A run period that begins on the 2nd to the 30th of January: ThermalComfort.cc reads the days of January
-            # before it and then the last days of December, and at the first BeginDayFlag writes the last day read (31
-            # December) over the day before the run period, which stays in the 30 days of PMOT for 30 days
-            return file_mean[number_of_days - 1]
-        return file_mean[day % number_of_days]
+            # before it and then the last days of December, and at the first BeginDayFlag writes the last day read (the
+            # 365th of the file, 31 December in a file of 365 days) over the day before the run period, which stays in
+            # the 30 days of PMOT for 30 days
+            return by_position[number_of_days - 1]
+        return by_position[day % number_of_days]
 
     alpha = ENERGYPLUS_CEN15251_ALPHA
     length = ENERGYPLUS_ASHRAE55_DAYS
@@ -301,9 +343,10 @@ def _energyplus_daily(epw: PathLike, timesteps_per_hour: int, start_date: Union[
     # ASHRAE 55: the simple mean of the 30 previous daily means (equation 19.70)
     pmot = np.array([np.mean([daily_mean(day - k) for k in range(1, length + 1)]) for day in days])
     # CEN 15251: at the beginning, the weighted sum of the 7 previous days of equation (19.82), which is not divided by
-    # 1 - alpha^7; then, each day, equation (19.83) with the daily mean of the previous day
+    # 1 - alpha^7 (also by their position in the file); then, each day, equation (19.83) with the daily mean of the
+    # previous day
     rmot = np.empty(len(days))
-    rmot[0] = (1 - alpha) * sum(alpha ** (k - 1) * file_mean[(first - k) % number_of_days] for k in range(1, 8))
+    rmot[0] = (1 - alpha) * sum(alpha ** (k - 1) * by_position[(first - k) % number_of_days] for k in range(1, 8))
     for index in range(1, len(days)):
         rmot[index] = alpha * rmot[index - 1] + (1 - alpha) * simulated[first + index - 1]
     first_hours = hourly.iloc[24 * first::24]
@@ -316,7 +359,7 @@ def _energyplus_daily(epw: PathLike, timesteps_per_hour: int, start_date: Union[
         'daily_mean': file_mean[first:], 'simulated_daily_mean': simulated[first:], 'RMOT': rmot, 'PMOT': pmot,
     })
     result.attrs['stat_file'] = None if stat_path is None else str(stat_path)
-    return result, temperatures, first
+    return result, hourly, first
 
 
 def energyplus_running_means(epw: PathLike, timesteps_per_hour: int = 6, start_date: Union[int, str] = 1,
@@ -355,7 +398,21 @@ def energyplus_running_means(epw: PathLike, timesteps_per_hour: int = 6, start_d
     1.2.0, the .stat file was not read): checked with EnergyPlus 25.1, a .stat file next to the weather file and a run
     period of January and February. ``RMOT`` does not use it.
 
-    :param epw: The path of the weather file (EPW), of 365 days.
+    With a weather file of 366 days, with 29 February, measured with EnergyPlus 25.1 (task E1 of the review of accim
+    1.2.0): if its header says that it observes leap years (the field LeapYear Observed of its line 'HOLIDAYS/DAYLIGHT
+    SAVINGS' is Yes, whatever its number of days), EnergyPlus does not simulate the adaptive comfort models of the
+    People objects, which the ACCIS reads (the severe error "AdaptiveComfort Reporting does not work correctly with
+    leap years in weather files" stops it before the simulation), and this function raises a ``ValueError``. If it
+    says No, EnergyPlus simulates a year of 365 days, whatever the year of the run period, with the records of the
+    dates of the simulated days (those of 29 February left out), but it reads the days before the run period by their
+    position in the file, counting a year of 365 days: after 28 February, the 30 days of ``PMOT`` and the 7 of ``RMOT``
+    of the first day of the run period are one day earlier than their dates (29 February in, the day before the run
+    period out), and for the first days of January, the last days of the file before its 366th (30 December in the
+    place of 31 December). This function does the same (checked with EnergyPlus 25.1 and run periods from January,
+    March and December, in a leap year and in another one).
+
+    :param epw: The path of the weather file (EPW), of 365 days, or of 366 with 29 February and without leap years in
+        its header.
     :param timesteps_per_hour: The number of timesteps per hour of the model (the object Timestep, 6 by default).
     :param start_date: The first day of the run period, a date 'dd/mm' or a day of the year (1, by default).
     :param stat_file: 'auto' (the default) for the .stat file next to the weather file, if there is one
@@ -363,8 +420,9 @@ def energyplus_running_means(epw: PathLike, timesteps_per_hour: int = 6, start_d
         the path of a .stat file (that of the weather file of the simulation, if it is elsewhere).
     :return: A DataFrame with a row for each day: ``date``, ``daily_mean`` (of the file), ``simulated_daily_mean``,
         ``RMOT`` and ``PMOT``, and the path of the .stat file read (or None) in ``attrs['stat_file']``.
-    :raises ValueError: If the weather file does not have 365 days, the .stat file has not the monthly means where
-        EnergyPlus reads them, or the arguments are not valid.
+    :raises ValueError: If the weather file does not have 365 days or 366 with 29 February, its header says that it
+        observes leap years, the .stat file has not the monthly means where EnergyPlus reads them, or the arguments are
+        not valid.
     :raises FileNotFoundError: If the .stat file given does not exist.
     """
     return _energyplus_daily(epw, timesteps_per_hour, start_date, stat_file)[0]
@@ -423,7 +481,13 @@ def compute_setpoints(epw: PathLike, comfort_standard: int, category: Optional[N
     the regimes (:mod:`accim.sim.ems.custom_regimes`) runs before SetAppLimits; their conditions 'hvac_off' and
     'hvac_on' depend on the HVAC system of the simulation, so they cannot be calculated without EnergyPlus.
 
-    :param epw: The path of the weather file (EPW), of a whole year of 365 days.
+    :param epw: The path of the weather file (EPW), of a whole year of 365 days, or of 366 with 29 February and without
+        leap years in its header, whose rows are those of the dates of the simulated year of 365 days, without 29
+        February, as in EnergyPlus (see :func:`energyplus_running_means`; T0 of 'te_ref_nl' too, which EnergyPlus reads
+        from the Schedule:File object of 8784 hours by the dates of the simulated days). The initial values of the
+        outdoor metrics that the EMS calculates from the weather file (``outdoor_metric_start`` 'epw') are those of the
+        days before the run period by their position in the file (:func:`accim.sim.ems.outdoor_metric.initial_values`),
+        as the output IDFs of AddAccis with the weather file have them.
     :param comfort_standard: The comfort standard (see :func:`accim.utils.get_setpoint_ems_code`).
     :param category: The category, which the comfort standards with categories need.
     :param comfort_mode: The comfort mode, which the comfort standards whose setpoints depend on it need.
@@ -483,8 +547,9 @@ def compute_setpoints(epw: PathLike, comfort_standard: int, category: Optional[N
     programs = get_setpoint_ems_programs(comfort_standard, category, comfort_mode,
                                          epw=epw if outdoor_metric_start == 'epw' else None, start_date=start_date,
                                          **custom_arguments)
-    running_means, temperatures, first = _energyplus_daily(epw, timesteps_per_hour, start_date, stat_file)
-    hourly = read_epw_dry_bulb(epw)
+    # The records of the simulated year: those of 29 February are left out, as EnergyPlus does
+    running_means, hourly, first = _energyplus_daily(epw, timesteps_per_hour, start_date, stat_file)
+    temperatures = hourly['dry_bulb'].to_numpy(dtype=float).reshape(-1, 24)
 
     inputs = f'SetInputData_{_ZONE}'
     # The programs of the zone (SetInputData_<zone>, and the outdoor metric of the custom model)
@@ -499,6 +564,10 @@ def compute_setpoints(epw: PathLike, comfort_standard: int, category: Optional[N
     mid_ranges = None
     if any(om.MID_RANGE_SENSOR in line for line in programs.get(zone_metric, [])):
         mid_ranges = om.mid_range_values(epw)[::24]
+        if len(mid_ranges) == 366:
+            # A weather file with 29 February: the Schedule:File object has 8784 hours, of which EnergyPlus reads
+            # those of the dates of the simulated year, without 29 February
+            mid_ranges = mid_ranges[:59] + mid_ranges[60:]
     # The hour counters of the zone tell whether the running mean is within the applicability limits
     counter = f'CountHours_{_ZONE}'
     programs[counter] = weather_file_lines(counter, pl.format_lines(pl.count_hours_lines(outdoor_metric), zone=_ZONE),

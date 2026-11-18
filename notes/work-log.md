@@ -15,6 +15,20 @@ This log is a lightweight, session-scoped complement to the repository's
 existing tracking files — it does not replace them (see
 [[decisions.md#2026-09-13 — `notes/work-log.md` complements, not replaces, existing tracking files|the related decision]]).
 
+## 2026-11-18 — E1: the running means of EnergyPlus with the weather files of 366 days (branch `v1.2.0`, on the server)
+
+- **Objective**: the entry of E1 of [[../TODO.md]] left on 2026-11-17: what EnergyPlus does with a weather file of 366
+  days, and the preview doing the same.
+- **Affected files**: `accim/sim/preview.py`, `tests/core/test_preview.py`, section 4.3.1 of the detailed use,
+  [[../CHANGELOG.md]], [[../TODO.md]] and the notes.
+- **Finding or decision**: measured with EnergyPlus 25.1: with LeapYear Observed `Yes` in the header of the weather
+  file, it does not simulate the adaptive comfort models of the People objects (a severe error before the
+  simulation), so the preview raises a `ValueError`; with 366 days and `No`, it simulates a year of 365 days with the
+  records of the dates of the simulated days, but reads the days before the run period by their position in the file
+  (from March, one day earlier than their dates), and the preview does the same.
+- **Validation**: in the entry of [[../DEVLOG.md]].
+- **Next step**: the next entry of [[../TODO.md]] that does not need the author.
+
 ## 2026-11-18 — The range of the setpoints of comfort standard 24 (branch `v1.2.0`, on the server)
 
 - **Objective**: the question of 2026-11-17 of [[questions.md]], which the author answered on 2026-11-18 with option

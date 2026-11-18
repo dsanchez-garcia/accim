@@ -3306,3 +3306,29 @@ Pierce medidos de nuevo (0,190 y 0,205 K), y con el rango desde 18 °C, la consi
 
 **Lo que queda**: las simulaciones del estudio de validación de F3 (entrada de `TODO.md`), con este rango; las pruebas
 del 12 y el 13 de noviembre se hicieron con el anterior.
+
+## 66. Las medias de EnergyPlus con ficheros climáticos de 366 días (E1)
+
+Era lo que quedaba de E1 (§64): `accim.sim.preview` exigía un EPW de 365 días, y según el código de EnergyPlus (lee
+los días anteriores al periodo de simulación por posición de línea en el EPW) los años bisiestos podían desplazar un
+día esas medias. Lo he medido con EnergyPlus 25.1, con el modelo de ejemplo y un EPW de Sevilla con el 29 de febrero
+añadido (el 28 de febrero más 10 K, para que se note qué días lee):
+
+- **Si la cabecera del EPW dice que observa años bisiestos** (*LeapYear Observed* `Yes`, en la línea
+  `HOLIDAYS/DAYLIGHT SAVINGS`), EnergyPlus no simula los modelos adaptativos de los objetos People, que el ACCIS
+  necesita: se para antes de la simulación con el error grave «AdaptiveComfort Reporting does not work correctly with
+  leap years in weather files». Pasa con 366 días y también con 365, sea cual sea el año del periodo de simulación.
+  Ahora `energyplus_running_means` y `compute_setpoints` dan un `ValueError` que lo explica.
+- **Con 366 días y `No` en la cabecera**, EnergyPlus simula un año de 365 días, en 2023 y en 2024, con los datos de
+  las fechas de los días simulados (sin el 29 de febrero). Pero lee los días anteriores al periodo por su posición en
+  el fichero, contando 365 días: desde marzo, los 30 días de PMOT y los 7 de RMOT del primer día son un día anteriores
+  a sus fechas (entra el 29 de febrero y sale el día anterior al periodo), y en los primeros días de enero lee el
+  final del fichero sin su día 366 (el 30 de diciembre en lugar del 31). T0 de `te_ref_nl` lo lee del `Schedule:File`
+  de 8784 horas por fechas. El preview hace ahora lo mismo; antes daba un `ValueError` con cualquier EPW de 366 días.
+- **Con 365 días y un periodo en un año bisiesto** (2024), EnergyPlus simula 365 días sin el 29 de febrero, y las
+  medias coinciden con las del preview (1e-15).
+
+**Los tests**: unitarios con un EPW de 366 días cuya temperatura es la posición de cada día (qué días entran en cada
+media) y con la cabecera `Yes`, y con EnergyPlus 25.1: el EPW de Sevilla con el 29 de febrero desde el 5 de marzo
+(en 2002 y en 2024) y desde el 5 de enero hasta el 10 de marzo (medias a 1e-9 y consignas a 1e-4), `te_ref_nl` desde
+el 25 de febrero, y con `Yes`, EnergyPlus parado antes de simular (con 366 y con 365 días).
