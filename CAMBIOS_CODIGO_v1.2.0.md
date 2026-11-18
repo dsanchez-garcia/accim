@@ -3332,3 +3332,33 @@ añadido (el 28 de febrero más 10 K, para que se note qué días lee):
 media) y con la cabecera `Yes`, y con EnergyPlus 25.1: el EPW de Sevilla con el 29 de febrero desde el 5 de marzo
 (en 2002 y en 2024) y desde el 5 de enero hasta el 10 de marzo (medias a 1e-9 y consignas a 1e-4), `te_ref_nl` desde
 el 25 de febrero, y con `Yes`, EnergyPlus parado antes de simular (con 366 y con 365 días).
+
+## 67. El check 4 con las condiciones `'hvac_off'` y `'hvac_on'` de los regímenes (B2)
+
+Era una entrada P2 de `TODO.md`: `compute_setpoints` no podía evaluar las condiciones `'hvac_off'` y `'hvac_on'` de
+los regímenes del modelo personalizado, porque dependen del sistema de climatización en el paso de tiempo anterior,
+así que el check 4 de `verify_accim_simulation` no comprobaba las zonas que las tenían.
+
+**El cambio**: `compute_setpoints` tiene el argumento `hvac_off`, si el sistema de la zona estaba apagado en el paso
+anterior a cada paso de tiempo (lo que el EMS calcula como NoH_NoC_reqs). Con él, el intérprete de Erl evalúa la cadena
+de regímenes como el EMS. El check 4 lo saca de la simulación, solo con salidas a paso de tiempo (con salidas horarias
+no comprueba esas zonas, porque el régimen puede cambiar de un paso al siguiente):
+- donde las salidas de las baterías del VRF de la zona (o la carga de su termostato) del paso anterior son 0, el
+  sistema estaba apagado;
+- donde no lo son, en el primer paso y si el modelo no da esas salidas, toma el estado del régimen que reporta el EMS.
+  Así comprueba las consignas de ese régimen y el régimen frente al resto de condiciones (el resumen dice qué ha
+  hecho).
+
+**Lo que se vio**: la primera versión tomaba el sistema como encendido donde esas salidas no eran 0, y daba 2
+discrepancias por zona en el modelo de ejemplo en modo mixto (3 de junio a las 06:30 y 07:10). La batería de
+calefacción había dado 119 W de media en el paso anterior, pero el EMS eligió el régimen del sistema apagado. Los
+sensores del EMS leen el valor del último paso de tiempo del sistema, que EnergyPlus acorta cuando el sistema lo
+necesita, así que la media del paso solo dice con seguridad que estaba apagado cuando es 0. El check 2 (las ventanas)
+usa esas salidas como exactas, y podría dar falsas discrepancias por lo mismo (no ha salido ninguna); queda una entrada
+nueva en `TODO.md`.
+
+**Los tests**: unitarios de `compute_setpoints` con `hvac_off` (el régimen de cada paso con `'hvac_off'` y `'hvac_on'`,
+las consignas de cada régimen, las medias horarias y los errores) y del estado deducido del régimen, y con EnergyPlus
+25.1: modo mixto del 3 al 5 de junio con tres regímenes, con las salidas de las baterías, sin ellas y con salidas
+horarias. Con las salidas, el check 4 no da ninguna discrepancia en los 432 pasos; si después de simular se cambia
+`'hvac_off'` por `'hvac_on'` en el modelo, da más de 100 discrepancias del régimen en cada zona.

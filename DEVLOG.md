@@ -36,6 +36,42 @@ Recommended flow: track active work in `TODO.md`, move completed outcomes to `DE
 ## Entries
 
 ### 2026-11-18
+#### [done] B2: check 4 of `verify_accim_simulation` with the conditions 'hvac_off' and 'hvac_on' (branch `v1.2.0`)
+- Context: the P2 entry of B2 of `TODO.md`: `compute_setpoints` could not evaluate the conditions 'hvac_off' and
+  'hvac_on' of the regimes of the custom model (they depend on the HVAC system of the simulation in the previous
+  timestep), so check 4 did not check the zones whose regimes had them.
+- Changes: `accim/sim/preview.py`: `compute_setpoints(..., hvac_off=...)`, whether the HVAC system of the zone was
+  off in the timestep before each timestep of the run period (NoH_NoC_reqs; the timesteps after the last value take
+  it as on); the Erl interpreter sets the sensors of the coils and of the load from it, and the program of the regimes
+  evaluates the conditions as the EMS (`script_type` 'vrf_mm' by default; a `ValueError` without `hvac_off` with
+  those conditions, with `hvac_off` without them, and with more values than timesteps). `accim/utils/verification.py`:
+  check 4 checks those zones with the outputs at timestep frequency (with hourly outputs, not checked, since their
+  regime can change from one timestep to the next): the HVAC system off where the outputs that the EMS sensors of the
+  program of the regimes read (`<zone>_CoolCoil` and `<zone>_HeatCoil`, or `<zone>_LoadToSetpoint`) are 0 in the
+  previous timestep, and elsewhere, in the first timestep and without those outputs, as the regime reported
+  (`_states_of_regimes`: the first condition of the HVAC system that the chain evaluates); the summary says which.
+  Docstrings, sections 4.2.4, 4.3.1 and 4.6.1 of the detailed use, the entry of the regimes of `CHANGELOG.md`; the
+  entry of `TODO.md` replaced by one for check 2.
+- Finding: the first version took the HVAC system as on wherever the outputs of the coils of the previous timestep
+  were not 0, and found 2 mismatches in each zone of the sample model in mixed mode (3 June at 06:30 and 07:10): the
+  heating coil had given 119 W on average in the timestep before, and the EMS chose the regime of the HVAC system off.
+  The sensors read the values of the last system timestep, which EnergyPlus makes shorter than the timestep of the
+  zone when the HVAC system needs it, so the outputs of a timestep only tell that the HVAC system was off when they are
+  0. Check 2 (the windows) takes them as exact: a false mismatch is possible there (none found), a new entry of
+  `TODO.md`.
+- Files: `accim/sim/preview.py`, `accim/utils/verification.py`, `tests/core/test_custom_regimes.py`,
+  `docs/source/4_detailed use.md`, `CHANGELOG.md`, `TODO.md`, `CAMBIOS_CODIGO_v1.2.0.md` (§67), `notes/work-log.md`.
+- Verification: unit tests (`compute_setpoints` with `hvac_off`: the regime of each timestep with 'hvac_off' and
+  'hvac_on', with 'vrf_mm', 'ex_mm' and by default, the setpoints of each regime, the hourly means and the errors; the
+  state of the HVAC system from the regimes reported) and tests with EnergyPlus 25.1 (mixed mode, 3 to 5 June, the
+  regimes 'hvac_off', PMOT above 19.9 °C and the others: with the outputs of the coils, without them, and hourly; all
+  the regimes and setpoints of check 4 without mismatches in the 432 timesteps, and with 'hvac_on' in the place of
+  'hvac_off' in the model after the simulation, more than 100 mismatches of the regime in each zone). In a snapshot
+  of the working tree, the fifteen test files that use the preview or the verification, with the golden master
+  (unchanged): 506 passed (20 min). The documentation builds with the warnings of the baseline (33); Python 3.9
+  compiles the changed files.
+- Next step: the entry of check 2 of `TODO.md`.
+
 #### [done] E1: the running means of EnergyPlus with the weather files of 366 days (branch `v1.2.0`)
 - Context: the entry of E1 of `TODO.md` left on 2026-11-17: `accim.sim.preview` needed a weather file of 365 days,
   and the code of EnergyPlus 25.1 (`ThermalComfort.cc`) reads the days before the run period from the weather file

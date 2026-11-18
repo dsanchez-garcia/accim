@@ -182,8 +182,14 @@ def verify_accim_simulation(
     Aqilah 2025 are those of the inputs StaticAHST and StaticACST of each zone. With the regimes of the
     custom model (:mod:`accim.sim.ems.custom_regimes`), ``compute_setpoints`` gets those of the program
     ``SelectCustomRegime_<zone>`` of each zone, and the number of the regime that the EMS reports
-    (``CustomRegime_<zone>``) is that of ``compute_setpoints`` (``Check4_custom_regime``); the zones whose regimes have
-    the conditions 'hvac_off' or 'hvac_on', which depend on the HVAC system, are not checked. They are checked with the
+    (``CustomRegime_<zone>``) is that of ``compute_setpoints`` (``Check4_custom_regime``). The conditions 'hvac_off'
+    and 'hvac_on' depend on the HVAC system of the simulation in the previous timestep (task B2 of the review of accim
+    1.2.0): with the outputs at timestep frequency, ``compute_setpoints`` gets it (``hvac_off``) from the outputs that
+    the EMS sensors of the program of the regimes read (the coils of the VRF system of the zone, or the load to the
+    setpoints of its thermostat), of the previous timestep, so the regimes and the setpoints are checked; without those
+    outputs, and in the first timestep, from the regime reported, so the setpoints are those of the regime reported and
+    the regime is checked against the other conditions (the summary says which); with hourly outputs, these zones are
+    not checked, since their regime can change from one timestep to the next. They are checked with the
     outputs at timestep frequency, or else hourly, of the last environment of the outputs (the run period). The zones
     whose setpoints a hook of the API backend sets (the setpoints of the ATHB and of the SET of
     :mod:`accim.sim.comfort_hooks`, with the program ``ApplyHookSetpoints_<zone>``) are not checked. In the zones with
@@ -727,6 +733,64 @@ def _compute_setpoints_arguments(values: Mapping[str, Any]) -> Dict[str, Any]:
     return arguments
 
 
+def _states_of_regimes(reported: np.ndarray, regimes: Sequence[Any]) -> np.ndarray:
+    """A state of the HVAC system in the previous timestep (off: True) with which the conditions of some regimes of the
+    custom model give the regime reported in each timestep (``CustomRegime_<zone>``, from 1, or 0): that of the first
+    condition 'hvac_off' or 'hvac_on' that the program of the regimes evaluates (true for the regime reported, false for
+    those before it); False where it gives that regime whatever the state."""
+    states = np.zeros(len(reported), dtype=bool)
+    rounded = np.where(np.isfinite(reported), np.round(reported), -1).astype(int)
+    for number in np.unique(rounded):
+        if number < 0:
+            continue
+        reached = regimes if number == 0 else regimes[:number]
+        for index, regime in enumerate(reached, start=1):
+            if regime.condition in ('hvac_off', 'hvac_on'):
+                holds = index == number
+                states[rounded == number] = holds if regime.condition == 'hvac_off' else not holds
+                break
+    return states
+
+
+def _hvac_off_states(building, outputs: '_Outputs', rows: np.ndarray, zone: str,
+                     regimes: Sequence[Any]) -> Tuple[Optional[np.ndarray], str]:
+    """Whether the HVAC system of a zone was off in the timestep before each row of the run period, for the conditions
+    'hvac_off' and 'hvac_on' of its regimes (task B2 of the review of accim 1.2.0): off where the outputs that the EMS
+    sensors of its program of the regimes read (the coils of its VRF system, ``<zone>_CoolCoil`` and
+    ``<zone>_HeatCoil``, or the load to the setpoints of its thermostat, ``<zone>_LoadToSetpoint``: NoH_NoC_reqs) are 0
+    in the previous row, the means of the timestep; where they are not, in the first row and without those outputs,
+    from the regime that the EMS reports (:func:`_states_of_regimes`). The sensors read the values of the last system
+    timestep, which EnergyPlus makes shorter than the timestep of the zone when the HVAC system needs it, so a coil that
+    worked in a part of the previous timestep can be 0 for them (measured on 2026-11-18 with the sample model in mixed
+    mode: 119 W on average in a timestep, and the regime of the HVAC system off in the next one).
+
+    :return: The states (None if the outputs of the regimes are not there), and the line of the summary (or the reason
+        why the zone is not checked).
+    """
+    from accim.sim.ems.custom_regimes import OUTPUT_PREFIX
+
+    reported = outputs.get('EMS', f'{OUTPUT_PREFIX}{zone}')
+    if reported is None:
+        return None, (f"its regimes have the conditions 'hvac_off' or 'hvac_on', which need the output "
+                      f"{OUTPUT_PREFIX}{zone}")
+    states = _states_of_regimes(reported[rows], regimes)
+    sensors = _ems_sensors(building)
+    groups = ((f'{zone}_CoolCoil', f'{zone}_HeatCoil'), (f'{zone}_LoadToSetpoint',))
+    names = next((group for group in groups if all(name.upper() in sensors for name in group)), groups[0])
+    values = [outputs.get(*sensors[name.upper()]) if name.upper() in sensors else None for name in names]
+    if any(value is None for value in values):
+        missing = [f"'{sensors[name.upper()][1]}' of '{sensors[name.upper()][0]}'" if name.upper() in sensors
+                   else f'the EMS sensor {name}' for name, value in zip(names, values) if value is None]
+        return states, (f"the conditions 'hvac_off' and 'hvac_on' of its regimes: the state of its HVAC system in each "
+                        f"previous timestep is that of the regime reported ({OUTPUT_PREFIX}{zone}), without "
+                        f"{' and '.join(missing)} at timestep frequency, so the setpoints are those of the regime "
+                        f"reported and Check4_custom_regime checks the other conditions.")
+    off = np.all([outputs.previous(value)[rows] == 0 for value in values], axis=0)
+    return off | states, (f"the conditions 'hvac_off' and 'hvac_on' of its regimes with its HVAC system in each "
+                          f"previous timestep: off where the outputs of {' and '.join(names)} are 0; where they are "
+                          f"not, as the regime reported (the EMS reads the values of the last system timestep).")
+
+
 def _setpoint_mismatches(building, data: Mapping[str, pd.DataFrame], epw: str,
                          tolerance: float) -> Tuple[List[dict], List[str]]:
     """Check 4 of :func:`verify_accim_simulation`: the setpoints of each zone of an output IDF of AddAccis against
@@ -739,7 +803,8 @@ def _setpoint_mismatches(building, data: Mapping[str, pd.DataFrame], epw: str,
     :param tolerance: The largest difference allowed.
     :return: The mismatches, and the lines of the summary.
     """
-    from accim.sim.ems.custom_regimes import OUTPUT_PREFIX as REGIME_OUTPUT_PREFIX, PROGRAM_PREFIX, parse_regime_program
+    from accim.sim.ems.custom_regimes import (OUTPUT_PREFIX as REGIME_OUTPUT_PREFIX, PROGRAM_PREFIX,
+                                              parse_regime_program, uses_hvac_conditions)
     from accim.sim.ems.hook_setpoints import PROGRAM_PREFIX as HOOK_PROGRAM_PREFIX, hook_zones
     from accim.sim.ems.inputs import input_programs, read_inputs
     from accim.sim.ems.objects import ZONE_SETPOINT_OUTPUT_VARIABLES
@@ -829,15 +894,32 @@ def _setpoint_mismatches(building, data: Mapping[str, pd.DataFrame], epw: str,
             regime_program = building.getobject('EnergyManagementSystem:Program', f'{PROGRAM_PREFIX}{zone}')
             if regime_program is not None and arguments.get('comfort_standard') == 99:
                 arguments['custom_regimes'] = parse_regime_program(regime_program.fieldvalues[2:], zone)
-            key = tuple(sorted(arguments.items()))
-            if key not in previews:
-                previews[key] = compute_setpoints(epw, timesteps_per_hour=timesteps_per_hour, start_date=start_date,
-                                                  frequency='timestep' if frequency == 'Timestep' else 'hourly',
-                                                  outdoor_metric_start=metric_start, **arguments).set_index('datetime')
+            settings = dict(timesteps_per_hour=timesteps_per_hour, start_date=start_date,
+                            frequency='timestep' if frequency == 'Timestep' else 'hourly',
+                            outdoor_metric_start=metric_start)
+            if uses_hvac_conditions(arguments.get('custom_regimes') or ()):
+                # The conditions 'hvac_off' and 'hvac_on' with the HVAC system of the simulation in each previous
+                # timestep (task B2 of the review of accim 1.2.0): at timestep frequency only, since the regimes can
+                # change from one timestep to the next
+                if frequency != 'Timestep':
+                    lines.append(f"  '{zone}': not checked (its regimes have the conditions 'hvac_off' or 'hvac_on', "
+                                 f"which need the outputs at timestep frequency).")
+                    continue
+                states, note = _hvac_off_states(building, outputs, rows, zone, arguments['custom_regimes'])
+                if states is None:
+                    lines.append(f"  '{zone}': not checked ({note}).")
+                    continue
+                lines.append(f"  '{zone}': {note}")
+                frame = compute_setpoints(epw, hvac_off=states, **settings, **arguments).set_index('datetime')
+            else:
+                key = tuple(sorted(arguments.items()))
+                if key not in previews:
+                    previews[key] = compute_setpoints(epw, **settings, **arguments).set_index('datetime')
+                frame = previews[key]
         except (ValueError, TypeError) as error:
             lines.append(f"  '{zone}': not checked ({error}).")
             continue
-        preview = previews[key].reindex(datetimes)
+        preview = frame.reindex(datetimes)
         inside = preview['Tout'].notna().to_numpy()
         if drift:
             lines.append(f"  '{zone}': the limiter of the drift of the setpoints: its targets are checked, not the "

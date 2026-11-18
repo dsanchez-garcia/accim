@@ -452,7 +452,8 @@ def _metric(comfort_standard: int, comfort_mode: Optional[Number]) -> Optional[s
 def compute_setpoints(epw: PathLike, comfort_standard: int, category: Optional[Number] = None,
                       comfort_mode: Optional[Number] = None, *, timesteps_per_hour: int = 6,
                       start_date: Union[int, str] = 1, frequency: str = 'hourly', outdoor_metric_start: str = 'epw',
-                      stat_file: Union[PathLike, None] = 'auto', **custom_arguments) -> pd.DataFrame:
+                      stat_file: Union[PathLike, None] = 'auto', hvac_off: Optional[Sequence] = None,
+                      **custom_arguments) -> pd.DataFrame:
     """The setpoints of the ACCIS for a comfort standard, category and comfort mode in each hour of a weather file,
     without EnergyPlus.
 
@@ -479,7 +480,10 @@ def compute_setpoints(epw: PathLike, comfort_standard: int, category: Optional[N
     always the arithmetic mean of the 7 previous days that the EMS calculates
     (:data:`accim.sim.ems.standard_lines.BUILT_IN_METRICS`). With its regimes (``custom_regimes``), the program of
     the regimes (:mod:`accim.sim.ems.custom_regimes`) runs before SetAppLimits; their conditions 'hvac_off' and
-    'hvac_on' depend on the HVAC system of the simulation, so they cannot be calculated without EnergyPlus.
+    'hvac_on' depend on the HVAC system of the simulation in the previous timestep (in mixed mode, whether the coils of
+    the VRF system of the zone, or the load to the setpoints of its thermostat, were 0), which ``hvac_off`` gives (task
+    B2 of the review of accim 1.2.0; :func:`accim.utils.verification.verify_accim_simulation` takes it from the
+    outputs of a simulation).
 
     :param epw: The path of the weather file (EPW), of a whole year of 365 days, or of 366 with 29 February and without
         leap years in its header, whose rows are those of the dates of the simulated year of 365 days, without 29
@@ -503,6 +507,11 @@ def compute_setpoints(epw: PathLike, comfort_standard: int, category: Optional[N
         IND IMAC R 7DRM (9) begins with the values of the weather file ('epw') or with PMOT ('pmot').
     :param stat_file: The .stat file whose monthly means EnergyPlus takes as PMOT: 'auto' (the default), the one next to
         the weather file, if there is one; None, none; or its path (see :func:`energyplus_running_means`).
+    :param hvac_off: With the conditions 'hvac_off' and 'hvac_on' of ``custom_regimes`` (and only with them): whether
+        the HVAC system of the zone was off, neither cooling nor heating, in the timestep before each timestep from the
+        first one of the run period (true or false, as NoH_NoC_reqs, which the EMS reads at the beginning of each
+        timestep); the timesteps after the last value take the HVAC system as on. ``script_type`` ('vrf_mm' or
+        'ex_mm', whose EMS reads the coils or the load) is 'vrf_mm' if it is not given: both give the same regimes.
     :param custom_arguments: The other arguments of :func:`accim.utils.get_setpoint_ems_code` (``setpoint_tolerance``,
         ``setpoint_accuracy``, ``cooling_season_start``, ``custom_slope``, ``custom_outdoor_metric``,
         ``custom_regimes``, ``static_heating_setpoint``...), with the same defaults.
@@ -522,7 +531,8 @@ def compute_setpoints(epw: PathLike, comfort_standard: int, category: Optional[N
         set (such as the comfort temperature of static setpoints) are NaN. Its ``attrs`` have the arguments, the
         running mean of the setpoints (``metric``) and the .stat file read (``stat_file``, or None).
     :raises ValueError: If the arguments are not valid (as in :func:`accim.utils.get_setpoint_ems_programs` and
-        :func:`energyplus_running_means`), a regime of ``custom_regimes`` has the condition 'hvac_off' or 'hvac_on', or
+        :func:`energyplus_running_means`), a regime of ``custom_regimes`` has the condition 'hvac_off' or 'hvac_on'
+        without ``hvac_off`` (or ``hvac_off`` is given without them, or has more values than the timesteps), or
         ``drift_mode`` is given (the limiter of the drift depends on the indoor temperature of the simulation).
     """
     from accim.sim.arguments import check_custom_regimes
@@ -538,9 +548,14 @@ def compute_setpoints(epw: PathLike, comfort_standard: int, category: Optional[N
         raise ValueError(f"frequency must be 'hourly' or 'timestep', not {frequency!r}.")
     if outdoor_metric_start not in ('epw', 'pmot'):
         raise ValueError(f"outdoor_metric_start must be 'epw' or 'pmot', not {outdoor_metric_start!r}.")
-    if cr.uses_hvac_conditions(check_custom_regimes(custom_arguments.get('custom_regimes'))):
-        raise ValueError("compute_setpoints cannot evaluate the conditions 'hvac_off' and 'hvac_on' of custom_regimes: "
-                         "they depend on the HVAC system of the simulation in the previous timestep.")
+    uses_hvac = cr.uses_hvac_conditions(check_custom_regimes(custom_arguments.get('custom_regimes')))
+    if uses_hvac and hvac_off is None:
+        raise ValueError("compute_setpoints evaluates the conditions 'hvac_off' and 'hvac_on' of custom_regimes with "
+                         "hvac_off: they depend on the HVAC system of the simulation in the previous timestep.")
+    if hvac_off is not None and not uses_hvac:
+        raise ValueError("hvac_off is only used with the conditions 'hvac_off' and 'hvac_on' of custom_regimes.")
+    if uses_hvac:
+        custom_arguments.setdefault('script_type', 'vrf_mm')
     if custom_arguments.get('drift_mode') is not None:
         raise ValueError('compute_setpoints cannot calculate the limiter of the drift of the setpoints (drift_mode): '
                          'it depends on the operative temperature and the occupants of the zone in the simulation.')
@@ -610,6 +625,16 @@ def compute_setpoints(epw: PathLike, comfort_standard: int, category: Optional[N
 
     rmot_day = running_means['RMOT'].to_numpy()
     pmot_day = running_means['PMOT'].to_numpy()
+    # Whether the HVAC system was off in the timestep before each timestep (the conditions 'hvac_off' and 'hvac_on')
+    states = None
+    if uses_hvac:
+        total = len(running_means) * 24 * n
+        given = np.asarray(hvac_off, dtype=bool).ravel()
+        if len(given) > total:
+            raise ValueError(f'hvac_off has {len(given)} values, more than the {total} timesteps from start_date to '
+                             f'the end of the year.')
+        states = np.zeros(total, dtype=bool)
+        states[:len(given)] = given
     records: List[Tuple] = []
     previous_inputs = None
     previous_record: Tuple = ()
@@ -640,13 +665,20 @@ def compute_setpoints(epw: PathLike, comfort_standard: int, category: Optional[N
                     for program in every_timestep:
                         erl.run(program)
                     tout_metric = erl.get(pl.OUTDOOR_METRIC_VARIABLE)
-                timestep_inputs = (rmot, pmot, tout_metric, day, current_time if uses_time else None)
+                off = None if states is None else bool(states[(24 * index + hour - 1) * n + step - 1])
+                timestep_inputs = (rmot, pmot, tout_metric, day, current_time if uses_time else None, off)
                 if timestep_inputs != previous_inputs:
                     # The programs give the same values with the same inputs
                     erl.set('RMOT', rmot)
                     erl.set('PMOT', pmot)
                     erl.set('DayOfYear', day + 1)
                     erl.set('CurrentTime', current_time)
+                    if off is not None:
+                        # The sensors from which the program of the regimes sets NoH_NoC_reqs: the coils of the VRF
+                        # system of the zone ('vrf_mm') or the load to the setpoints of its thermostat ('ex_mm')
+                        erl.set(f'{_ZONE}_CoolCoil', 0 if off else 1)
+                        erl.set(f'{_ZONE}_HeatCoil', 0)
+                        erl.set(f'{_ZONE}_LoadToSetpoint', 0 if off else 1)
                     for program in order:
                         erl.run(program)
                     values = [erl.get(variable) for _, variable in reported]

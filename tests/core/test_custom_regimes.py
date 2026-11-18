@@ -246,10 +246,44 @@ def test_the_scalar_arguments_are_a_single_regime_always():
     assert list(compute_setpoints(EPW, 99, 80, 3, custom_regimes=[], **arguments).columns) == list(scalar.columns)
 
 
-def test_compute_setpoints_cannot_evaluate_the_hvac_conditions():
-    with pytest.raises(ValueError, match="compute_setpoints cannot evaluate the conditions 'hvac_off' and 'hvac_on'"):
-        compute_setpoints(EPW, 99, 80, 3, custom_regimes=[CustomRegime(0.2, 20, 2, -2, 5, 35, 5, 35, 'hvac_on')],
-                          **SCALAR)
+def test_compute_setpoints_with_the_hvac_conditions():
+    # Task B2 of the review of 1.2.0: the conditions 'hvac_off' and 'hvac_on' depend on the HVAC system of the
+    # simulation in the previous timestep, which hvac_off gives (NoH_NoC_reqs of each timestep)
+    off = CustomRegime(0.2, 20, 2.5, -2.5, 5, 35, 5, 35, 'hvac_off')
+    on = CustomRegime(0.2, 20, 2.5, -2.5, 5, 35, 5, 35, 'hvac_on')
+    arguments = dict(frequency='timestep', start_date='01/06', **SCALAR)
+    with pytest.raises(ValueError, match="evaluates the conditions 'hvac_off' and 'hvac_on' of custom_regimes with "
+                                         "hvac_off"):
+        compute_setpoints(EPW, 99, 80, 3, custom_regimes=[on], **SCALAR)
+    with pytest.raises(ValueError, match="hvac_off is only used with the conditions 'hvac_off' and 'hvac_on'"):
+        compute_setpoints(EPW, 99, 80, 3, hvac_off=[True], custom_regimes=[WARM], **SCALAR)
+    with pytest.raises(ValueError, match="need script_type 'vrf_mm' or 'ex_mm'"):
+        compute_setpoints(EPW, 99, 80, 3, hvac_off=[True], custom_regimes=[off, WARM], script_type='vrf_ac', **SCALAR)
+    # From 1 June to the end of the year: 214 days of 144 timesteps
+    with pytest.raises(ValueError, match=r'hvac_off has 30817 values, more than the 30816 timesteps'):
+        compute_setpoints(EPW, 99, 80, 3, hvac_off=[False] * 30817, custom_regimes=[off, WARM], **arguments)
+    # The HVAC system off in the first hours of each day (until 8 h), on afterwards; the timesteps after the values
+    # given take it as on
+    days = 3
+    states = np.tile(np.arange(24 * STEPS) < 8 * STEPS, days)
+    first = compute_setpoints(EPW, 99, 80, 3, **dict(arguments, **_arguments(off)))
+    second = compute_setpoints(EPW, 99, 80, 3, **dict(arguments, **_arguments(WARM)))
+    for script_type in ('vrf_mm', 'ex_mm', None):
+        given = {} if script_type is None else {'script_type': script_type}
+        result = compute_setpoints(EPW, 99, 80, 3, hvac_off=states, custom_regimes=[off, WARM], **arguments, **given)
+        regime = result['custom_regime'].to_numpy()
+        np.testing.assert_array_equal(regime[:len(states)], np.where(states, 1, 2))
+        assert (regime[len(states):] == 2).all()
+        for column in SETPOINTS:
+            np.testing.assert_allclose(result[column], np.where(regime == 1, first[column], second[column]),
+                                       rtol=0, atol=1e-12, err_msg=column)
+    # 'hvac_on': the regime of the timesteps with the HVAC system on
+    result = compute_setpoints(EPW, 99, 80, 3, hvac_off=states, custom_regimes=[on, WARM], **arguments)
+    np.testing.assert_array_equal(result['custom_regime'].to_numpy()[:len(states)], np.where(states, 2, 1))
+    # Hourly: the means of the timesteps, as the outputs of EnergyPlus
+    hourly = compute_setpoints(EPW, 99, 80, 3, hvac_off=states, custom_regimes=[off, WARM],
+                               **dict(arguments, frequency='hourly'))
+    np.testing.assert_allclose(hourly['custom_regime'][:24], [1.0] * 8 + [2.0] * 16)
 
 
 def test_table_averages_the_regimes_over_time():
@@ -614,6 +648,86 @@ def test_the_condition_hvac_off_in_energyplus(tmp_path, monkeypatch):
             expected = np.where(regime == 1, first[column].to_numpy()[:len(found)],
                                 second[column].to_numpy()[:len(found)])
             np.testing.assert_allclose(found, expected, rtol=0, atol=1e-9)
+
+
+def test_the_state_of_the_hvac_system_from_the_regimes():
+    # Check 4 takes the state of the HVAC system in the previous timestep from the regime that the EMS reports where
+    # the outputs of the HVAC system do not tell it: that of the first condition 'hvac_off' or 'hvac_on' that the
+    # program of the regimes evaluates (true for the regime reported, false for those before it), and off (False)
+    # where it gives that regime whatever the state
+    from accim.utils.verification import _states_of_regimes
+
+    off = CustomRegime(0.2, 20, 2.5, -2.5, 5, 35, 5, 35, 'hvac_off')
+    on = CustomRegime(0.2, 20, 2.5, -2.5, 5, 35, 5, 35, 'hvac_on')
+    reported = np.array([1, 2, 3, 0, np.nan, 2.0])
+    assert _states_of_regimes(reported, [COLD, off, SEASON]).tolist() == [False, True, False, False, False, True]
+    assert _states_of_regimes(reported, [COLD, on, SEASON]).tolist() == [False, False, True, True, False, False]
+    # Regime 2 after regime 1 ('hvac_off') false: on
+    assert _states_of_regimes(reported, [off, on, WARM]).tolist() == [True, False, False, False, False, False]
+
+
+@needs_energyplus
+@pytest.mark.parametrize('outputs', ['coils', 'regimes', 'hourly'])
+def test_check_4_with_the_hvac_conditions(tmp_path, monkeypatch, capsys, outputs):
+    # Task B2 of the review of 1.2.0: check 4 of verify_accim_simulation checks the zones whose regimes have the
+    # conditions 'hvac_off' and 'hvac_on'. Mixed mode, 3 to 5 June (weekdays of 2002, the year of the run period of the
+    # sample model, whose VRF systems cool in the occupied hours): the regime 'hvac_off', then PMOT above 19.9 °C
+    # (19.88, 19.99 and 20.16 °C in those days), then the others. With the outputs of the coils of the VRF systems at
+    # timestep frequency, the regime of each timestep against them, and the setpoints; without them, the setpoints of
+    # the regime reported, and the regime against the other conditions; with hourly outputs, not checked
+    from accim.sim.accis import load_idf
+    from accim.utils.verification import verify_accim_simulation
+
+    off = CustomRegime(0.2, 20, 2.5, -2.5, 5, 35, 5, 35, 'hvac_off')
+    warm = CustomRegime(0.25, 19, 3, -2, 5, 35, 5, 35, ('metric_above', 19.9))
+    frequency = 'hourly' if outputs == 'hourly' else 'timestep'
+    model = _output_idf(tmp_path / 'june', monkeypatch, (6, 3), (6, 5), frequency, script_type='vrf_mm',
+                        custom_regimes=[off, warm, WARM])
+    coils = ('COOLING COIL TOTAL COOLING RATE', 'HEATING COIL HEATING RATE')
+    if outputs == 'regimes':
+        # Without the outputs of the coils, which the standard outputs of mixed mode have
+        idf = load_idf(model)
+        for output in [o for o in idf.idfobjects['Output:Variable'] if str(o.Variable_Name).upper() in coils]:
+            idf.removeidfobject(output)
+        idf.save()
+    results = _run_energyplus(model, tmp_path / 'june' / 'out')
+    assert any(any(name in column.upper() for name in coils) for column in results.columns) == (outputs != 'regimes')
+    mismatches = verify_accim_simulation(str(tmp_path / 'june' / 'out' / 'run.eso'), str(model), epw=str(EPW))
+    output = capsys.readouterr().out
+    assert len(mismatches) == 0 or not mismatches['check'].str.match('Check4').any()
+    for zone in ZONES:
+        if outputs == 'hourly':
+            assert (f"'{zone}': not checked (its regimes have the conditions 'hvac_off' or 'hvac_on', which need the "
+                    f"outputs at timestep frequency).") in output
+            continue
+        # The three regimes apply in these days
+        assert set(results[f'EMS:CustomRegime_{zone} [](TimeStep)']) == {1, 2, 3}
+        for check in ('Check4_custom_regime', 'Check4_ComfTemp', 'Check4_ACST', 'Check4_AHST', 'Check4_ACSTnoTol',
+                      'Check4_AHSTnoTol'):
+            assert re.search(rf"'{zone}' {check} \(.*\): 0 mismatch\(es\) in 432 timesteps", output), (zone, check)
+        if outputs == 'coils':
+            assert (f"'{zone}': the conditions 'hvac_off' and 'hvac_on' of its regimes with its HVAC system in each "
+                    f"previous timestep: off where the outputs of {zone}_CoolCoil and {zone}_HeatCoil are 0") in output
+        else:
+            assert (f"'{zone}': the conditions 'hvac_off' and 'hvac_on' of its regimes: the state of its HVAC system "
+                    f"in each previous timestep is that of the regime reported (CustomRegime_{zone}), "
+                    f"without") in output
+    if outputs != 'coils':
+        return
+    # The check finds a wrong regime: with 'hvac_on' in the place of 'hvac_off' in the model (after the simulation),
+    # the regime of the timesteps after the coils were off is not that of the conditions
+    idf = load_idf(model)
+    for zone in ZONES:
+        program = idf.getobject('EnergyManagementSystem:Program', f'SelectCustomRegime_{zone}')
+        for name in program.fieldnames[2:]:
+            program[name] = str(program[name]).replace('NoH_NoC_reqs == 1', 'NoH_NoC_reqs == 0')
+    idf.saveas(str(tmp_path / 'june' / 'changed.idf'))
+    changed = verify_accim_simulation(str(tmp_path / 'june' / 'out' / 'run.eso'),
+                                      str(tmp_path / 'june' / 'changed.idf'), epw=str(EPW))
+    capsys.readouterr()
+    for zone in ZONES:
+        found = changed[(changed['check'] == 'Check4_custom_regime') & (changed['zone_or_window'] == zone)]
+        assert len(found) > 100, zone
 
 
 @needs_energyplus

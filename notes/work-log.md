@@ -15,6 +15,20 @@ This log is a lightweight, session-scoped complement to the repository's
 existing tracking files — it does not replace them (see
 [[decisions.md#2026-09-13 — `notes/work-log.md` complements, not replaces, existing tracking files|the related decision]]).
 
+## 2026-11-18 — B2: check 4 with the conditions 'hvac_off' and 'hvac_on' (branch `v1.2.0`, on the server)
+
+- **Objective**: the entry of B2 of [[../TODO.md]]: check 4 of `verify_accim_simulation` did not check the zones
+  whose regimes have the conditions of the HVAC system.
+- **Affected files**: `accim/sim/preview.py`, `accim/utils/verification.py`, `tests/core/test_custom_regimes.py`,
+  sections 4.2.4, 4.3.1 and 4.6.1 of the detailed use, [[../CHANGELOG.md]], [[../TODO.md]] and the notes.
+- **Finding or decision**: `compute_setpoints(hvac_off=...)` evaluates those conditions given the state of the HVAC
+  system in each previous timestep, and check 4 takes it from the outputs of the coils (or of the load) where they are
+  0, and elsewhere from the regime reported: the EMS sensors read the values of the last system timestep, which
+  EnergyPlus makes shorter than the timestep of the zone when the HVAC system needs it (found with a coil of 119 W on
+  average in a timestep that was 0 for the EMS). Check 2 takes those outputs as exact: a new entry of the TODO.
+- **Validation**: in the entry of [[../DEVLOG.md]].
+- **Next step**: the entry of check 2 of [[../TODO.md]].
+
 ## 2026-11-18 — E1: the running means of EnergyPlus with the weather files of 366 days (branch `v1.2.0`, on the server)
 
 - **Objective**: the entry of E1 of [[../TODO.md]] left on 2026-11-17: what EnergyPlus does with a weather file of 366
