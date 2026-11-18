@@ -3407,3 +3407,41 @@ comparten entre modelos con los mismos valores.
 **Los tests**: unitarios del aviso (con el objeto, con el periodo del EPW y sin ninguno) y de que `modify_accis` y
 `set_pmv_input_parameters` pasan el EPW, y con EnergyPlus 9.6 y 25.1, cada uno en un proceso nuevo con su IDD: con 9.6,
 `AddAccis` avisa una vez y los valores de julio son los de la hora siguiente; con 25.1, sin aviso y sin desfase.
+
+## 70. Rutas relativas para los `Schedule:File` de accim (decisión 7 de la revisión)
+
+Era una entrada P2 de `TODO.md`: accim escribe la ruta absoluta de los CSV de los `Schedule:File` (T0 de `te_ref_nl`,
+tarea H2, y la ropa en función de la temperatura exterior, tarea H6), así que un modelo movido a otra carpeta u otro
+ordenador no los encuentra. El autor aceptó el diseño que propuse al terminar la tarea anterior ("Sí, sigue"): una
+función que convierte las rutas a relativas, que no se aplica por defecto ni toca `AddAccis`, y que los ejecutores de
+accim vuelvan absolutas las rutas de las copias que simulan.
+
+**Lo medido** con EnergyPlus 25.1, antes de cambiar nada, con un modelo de dos días cuyo `Schedule:File` tenía una
+ruta relativa y que moví junto con su CSV:
+- EnergyPlus, lanzado desde otra carpeta, encuentra el CSV junto al IDF.
+- Si la carpeta actual tiene un fichero con la misma ruta, EnergyPlus lee ese: busca primero en la carpeta actual y
+  luego en la del IDF.
+- `run_ep` fallaba con los dos backends (`Schedule:File="PROBE", File Name: "probe.csv" not found`), aunque se
+  ejecutara en la carpeta del modelo y del CSV: eppy simula la copia `multi_runs/idf_<n>/in.idf` desde una carpeta
+  temporal, y el backend de la API simula la copia `in.idf` de otra carpeta temporal.
+- El módulo paramétrico también fallaba: besos simula en una carpeta propia (`~/.besos_*`) y da un
+  `CalledProcessError`.
+
+**El cambio**:
+- `accim/sim/schedule_files.py`: `relative_schedule_files(idf, folder=None)` da a los `Schedule:File` cuyos ficheros
+  están en la carpeta del modelo o en sus subcarpetas la ruta relativa a ella, con `/`; los demás conservan la ruta
+  absoluta, con un aviso. `absolute_schedule_files(idf, folders=None)` hace lo contrario: busca cada ruta relativa en
+  la carpeta actual y luego en la del modelo (el orden de EnergyPlus), o en las carpetas que se le den, y deja igual
+  las que no encuentra. Las dos aceptan un modelo de eppy o la ruta de un IDF, que leen con `load_idf` y vuelven a
+  guardar solo si cambia alguna ruta.
+- `run_ep` (los dos backends), `run_simulation` del backend de la API, `SimulationBase.__init__` del módulo paramétrico
+  e `identify_variable_key_pattern` dan las rutas absolutas a los modelos que simulan. Los IDF conservan sus rutas
+  relativas.
+- accim sigue escribiendo rutas absolutas, así que los IDF de salida no cambian. La sección 4.6.2 (nueva) de la
+  documentación lo explica, y las 4.2.2 y 4.8 la enlazan.
+
+**Los tests**: unitarios de las dos funciones, y con EnergyPlus 25.1 un modelo movido con sus CSV (uno en la carpeta y
+otro en una subcarpeta, con `/`): EnergyPlus directo desde otra carpeta (también con un fichero del mismo nombre en la
+carpeta actual), `run_ep` con los dos backends, el módulo paramétrico (con `te_ref_nl` y su CSV) e
+`identify_variable_key_pattern`. Cada test con `run_ep`, con el paramétrico o con `identify_variable_key_pattern` repite
+la simulación con la conversión desactivada y comprueba el error de antes.

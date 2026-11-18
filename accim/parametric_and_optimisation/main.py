@@ -3076,7 +3076,11 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
     ):
         """Initialize the simulation base instance.
         
-        :param buildings: the besos.IDF_class returned from method get_building(idfpath)
+        :param buildings: the besos.IDF_class returned from method get_building(idfpath). The Schedule:File objects
+            whose files have relative paths (:func:`accim.sim.schedule_files.relative_schedule_files`) get the absolute
+            paths of those files, in the current folder or in that of the model, where EnergyPlus looks for them, since
+            the simulations run copies of the models in other folders (since accim 1.2.0; before, EnergyPlus stopped
+            with the severe error ``Schedule:File="...", File Name: "..." not found``).
         :param epws: a list of .epw filenames
         :param parameters_type: to specify the type of parameters that should be used
         :param output_type: to specify the outputs that are going to be requested
@@ -3138,6 +3142,12 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
 
         self.building = buildings[0] if isinstance(buildings, list) and len(buildings) > 0 else buildings
         self.buildings = buildings if isinstance(buildings, list) else ([buildings] if buildings is not None else [])
+        # The simulations run copies of the models in other folders, where EnergyPlus would not find the files of the
+        # relative paths of their Schedule:File objects
+        from accim.sim.schedule_files import absolute_schedule_files
+        for b in self.buildings:
+            if hasattr(b, 'idfobjects'):
+                absolute_schedule_files(b)
         self.epws = epws if isinstance(epws, list) else ([epws] if epws is not None else [])
         # Copy to avoid sharing (and mutating) the default list across instances.
         self.output_frequencies = list(output_frequencies) if isinstance(output_frequencies, (list, tuple)) else output_frequencies

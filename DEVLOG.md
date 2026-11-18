@@ -36,6 +36,44 @@ Recommended flow: track active work in `TODO.md`, move completed outcomes to `DE
 ## Entries
 
 ### 2026-11-18
+#### [done] The paths of the `Schedule:File` objects relative to the folder of the model (branch `v1.2.0`)
+- Context: the P2 entry of `TODO.md` of decision 7 of the review of accim 1.2.0 (task S5 of 2026-11-11): accim gives
+  the `Schedule:File` objects of T0 of `'te_ref_nl'` (H2) and of the functions of the clothing insulation (H6) the
+  absolute paths of their CSV files, so a model moved to another folder or computer does not find them. The author
+  accepted on 2026-11-18 the design proposed at the end of the previous task (`notes/decisions.md`, 2026-11-18).
+- Changes:
+  - Measured with EnergyPlus 25.1 before the changes, with a model of two days whose `Schedule:File` object had a
+    relative path, moved with its CSV file: EnergyPlus run from another current folder found the file next to the
+    IDF file, and read instead a file with the same path in the current folder; `run_ep` stopped with
+    `Schedule:File="PROBE", File Name: "probe.csv" not found` with both backends, even in the folder of the model
+    (eppy simulates the copy `multi_runs/idf_<n>/in.idf` from a temporary current folder; the API backend the copy
+    `in.idf` of a temporary folder), and so did the parametric module (besos in `~/.besos_*`, a
+    `CalledProcessError`).
+  - `accim.sim.schedule_files.relative_schedule_files(idf, folder=None)` and `absolute_schedule_files(idf,
+    folders=None)`, for a model of eppy or the path of an IDF file (read with `load_idf`, saved again if a path
+    changes): the paths relative to the folder of the model, with `/`, of the files in it or in its subfolders (a
+    warning for the others); the absolute paths of the relative ones, looked for in the current folder and then in
+    that of the model, or in the folders given (those not found do not change).
+  - `run_ep` (each model before eppy copies it), `run_simulation` of the API backend (the current folder and that of
+    the IDF), `SimulationBase.__init__` of the parametric module (the models it gets) and
+    `identify_variable_key_pattern` give the absolute paths; the IDF files keep the relative ones.
+  - Section 4.6.2 (new) of the detailed use; sections 4.2.2 and 4.8 point to it. `CHANGELOG.md` (Added; Fixed; and the
+    entry of H2 of Changed, which called the relative path a pending option).
+- Files: `accim/sim/schedule_files.py`, `accim/run/run.py`, `accim/sim/energyplus_api/runner.py`,
+  `accim/parametric_and_optimisation/main.py`, `accim/utils/outputs.py`, `tests/core/test_schedule_files.py`,
+  `tests/parametric_and_optimisation/test_schedule_file_paths.py`, `docs/source/4_detailed use.md`, `CHANGELOG.md`,
+  `TODO.md`, `notes/decisions.md`, `notes/work-log.md`, `CAMBIOS_CODIGO_v1.2.0.md` (section 70).
+- Verification: before the changes, the measurements above, with a script and EnergyPlus 25.1. After them:
+  `tests/core/test_schedule_files.py` (the new tests of the two functions, of EnergyPlus run directly from another
+  current folder, with a file in a subfolder of the model and with one of the same path in the current folder, and of
+  `run_ep` with both backends) and `tests/parametric_and_optimisation/test_schedule_file_paths.py` (the parametric
+  module with `'te_ref_nl'` and its CSV file, and `identify_variable_key_pattern`), each test of a runner also with the
+  conversion disabled, which gives the error of before: 16 passed. All the test files of `tests/core` and
+  `tests/parametric_and_optimisation` (129 files, in a copy of the working tree made before the test of
+  `identify_variable_key_pattern` was added): 2216 passed, 4 skipped, in 42 min, with the golden master unchanged.
+  The documentation builds with the 33 warnings of before.
+- Next step: the next entry of `TODO.md` that does not need the author.
+
 #### [done] The `Schedule:File` objects of accim with EnergyPlus 9.4 and 9.6 and daylight saving time (branch `v1.2.0`)
 - Context: the P2 entry of `TODO.md` of findings A22 and A26 of the self-audit of 2026-11-11: the IDDs of EnergyPlus
   9.4 and 9.6 have no field Adjust Schedule for Daylight Savings in `Schedule:File`, so EnergyPlus shifts the values

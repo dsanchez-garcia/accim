@@ -15,6 +15,23 @@ This log is a lightweight, session-scoped complement to the repository's
 existing tracking files — it does not replace them (see
 [[decisions.md#2026-09-13 — `notes/work-log.md` complements, not replaces, existing tracking files|the related decision]]).
 
+## 2026-11-18 — The paths of the `Schedule:File` objects relative to the folder of the model (branch `v1.2.0`, on the server)
+
+- **Objective**: the P2 entry of [[../TODO.md]] of decision 7 of the review of accim 1.2.0, with the design that the
+  author accepted ("Sí, sigue"): a function that gives the `Schedule:File` objects relative paths, off by default,
+  and the runners of accim give the copies of the models the absolute paths.
+- **Affected files**: `accim/sim/schedule_files.py`, `accim/run/run.py`, `accim/sim/energyplus_api/runner.py`,
+  `accim/parametric_and_optimisation/main.py`, `accim/utils/outputs.py`, `tests/core/test_schedule_files.py`,
+  `tests/parametric_and_optimisation/test_schedule_file_paths.py`, sections 4.2.2, 4.6.2 (new) and 4.8 of the
+  detailed use, [[../CHANGELOG.md]], [[../TODO.md]], [[decisions.md]] and the notes.
+- **Finding or decision**: measured with EnergyPlus 25.1 before the changes: EnergyPlus looks for the file of a
+  relative path in the current folder and then in the folder of the IDF file, but `run_ep` (both backends) and the
+  parametric module simulate copies of the models in temporary folders, where it did not find the files, even with
+  them in the working folder (the severe error `File Name: "..." not found`). The decision is in [[decisions.md]]
+  (2026-11-18).
+- **Validation**: in the entry of [[../DEVLOG.md]].
+- **Next step**: the next entry of [[../TODO.md]] that does not need the author.
+
 ## 2026-11-18 — `Schedule:File` with EnergyPlus 9.4 and 9.6 and daylight saving time (branch `v1.2.0`, on the server)
 
 - **Objective**: the entry of findings A22 and A26 of [[../TODO.md]]: EnergyPlus 9.4 and 9.6 shift the values of the

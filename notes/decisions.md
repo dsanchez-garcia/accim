@@ -11,6 +11,50 @@ Durable architectural/process decisions for this repository and its Obsidian
 vault. Newest first. Use [[templates/decision-record.md|the decision-record
 template]] to add a new entry.
 
+## 2026-11-18 — The paths of the `Schedule:File` objects relative to the folder of the model
+
+- **Status**: accepted (the author, on 2026-11-18, answering "Sí, sigue" to the design that Claude Code proposed at the
+  end of the previous task: "Mi idea es una función que convierta las rutas a relativas (desactivada por defecto, sin
+  tocar `AddAccis`), y que el módulo paramétrico las vuelva absolutas al cargar los modelos"). It implements the
+  pending option of decision 7 of the review of accim 1.2.0 (the verdicts of 2026-11-11, "an optional relative mode in
+  the future"), the P2 entry of `TODO.md`.
+- **Context**: accim gives the `Schedule:File` objects of T0 of `'te_ref_nl'` (H2) and of the functions of the
+  clothing insulation (H6) the absolute paths of their CSV files (option (i) of the entry of 2026-11-10 "H2: where the
+  CSV file of T0 of te_ref_nl is written"), so a model moved to another folder or computer does not find them.
+  Measured with EnergyPlus 25.1 on 2026-11-18, with a model of two days whose `Schedule:File` object had a relative
+  path, moved with its CSV file: EnergyPlus, run from another current folder, found the file next to the IDF file, and
+  a file with the same path in the current folder was read instead (the current folder first, then that of the IDF
+  file); `run_ep` stopped with the severe error `Schedule:File="PROBE", File Name: "probe.csv" not found` with both
+  backends, even in the folder of the model and its file, since eppy simulates the copy `multi_runs/idf_<n>/in.idf`
+  from a temporary current folder and the API backend the copy `in.idf` of a temporary folder; and the parametric
+  module too (besos simulates in a folder of its own, `~/.besos_*`: a `CalledProcessError`).
+- **Decision**:
+  1. accim keeps writing the absolute paths, so the output IDFs do not change. On request,
+     `accim.sim.schedule_files.relative_schedule_files(idf, folder=None)` gives the objects whose files are in the
+     folder of the model or in its subfolders the paths relative to it, with `/` between the folders (EnergyPlus 25.1
+     read them on Windows); the others keep their absolute paths, with a warning. It takes a model of eppy (changed
+     in place) or the path of an IDF file (read with `load_idf` and saved again if a path changes). `AddAccis` and
+     `modify_accis` get no argument for it.
+  2. `absolute_schedule_files(idf, folders=None)` gives the objects with relative paths the absolute paths of their
+     files, looked for in the current folder and then in that of the model, as EnergyPlus does, or in the folders
+     given; the paths of files not found do not change (EnergyPlus reports them). `run_ep`, with both backends, and
+     `accim.sim.energyplus_api.run_simulation` call it on the copies that they simulate (the IDF files keep their
+     relative paths; the API backend looks in the current folder and in that of the IDF), the parametric module on
+     the models that it gets (`SimulationBase.__init__`), and `identify_variable_key_pattern` on the model that it
+     loads and simulates.
+- **Consequences**: the models whose `Schedule:File` objects have relative paths, those of `relative_schedule_files`
+  and any other, run with `run_ep` and the parametric module. Other tools that simulate a copy of the model in another
+  folder (besos' `EvaluatorEP` and `run_building`, and `print_available_outputs_mod` of accim, which runs
+  `run_building` with the model it gets and is left as it was, so as not to change that model) need
+  `absolute_schedule_files` first: section 4.6.2 of the detailed use. The models that the parametric module gets are
+  changed (as they are when it adds the ACCIS to them), so a model saved from it has the absolute paths.
+  `modify_accis(..., epw=...)` writes the absolute path of the file of T0 again.
+- **Alternatives considered**: (a) an argument of `AddAccis` and `modify_accis`: one more argument in their long
+  signatures (and in the GUI) for a step that is only needed to move the models, which the function also does for the
+  models of `set_pmv_input_parameters` and any other; (b) relative paths by default: the output IDFs would change,
+  and the tools that simulate copies in other folders (besos) would stop finding the files; (c) the runners keep the
+  relative paths: EnergyPlus does not find the files from the folders of the copies.
+
 ## 2026-11-18 — The range of the setpoints of comfort standard 24 with the mean radiant temperature of the zones
 
 - **Status**: accepted (the author, on 2026-11-18, answering the question of 2026-11-17 of [[questions.md]] with

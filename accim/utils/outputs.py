@@ -444,8 +444,13 @@ def identify_variable_key_pattern(
     # Load the building model using BESOS/Eppy
     from besos.eplus_funcs import run_building
     from besos.eppy_funcs import get_building
+
+    from accim.sim.schedule_files import absolute_schedule_files
     patch_besos_read_eso()
     building = get_building(idf_path)
+    # besos simulates a copy of the model in another folder, where EnergyPlus would not find the files of the relative
+    # paths of its Schedule:File objects
+    absolute_schedule_files(building)
 
     # Check if the requested Output:Variable exists in the IDF.
     # We check for Key_Value='*' to ensure we capture all instances.

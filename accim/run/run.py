@@ -170,6 +170,11 @@ def run_ep(
         a hook that gets no hook with ``runs_before_programs`` is simulated like that, with a warning
         (:class:`accim.sim.ems.hook_setpoints.MissingHookWarning`).
 
+    Both backends simulate a copy of each IDF in another folder, so the Schedule:File objects whose files have relative
+    paths (:func:`accim.sim.schedule_files.relative_schedule_files`) get in the copy the absolute paths of those files,
+    in the working folder (since accim 1.2.0; before, EnergyPlus stopped with the severe error ``Schedule:File="...",
+    File Name: "..." not found``).
+
     :func:`accim.run.estimate_results_size` estimates the size of the results before running them.
     """
     if backend not in BACKENDS:
@@ -219,9 +224,14 @@ def run_ep(
             print('IDD was already set.')
     if not _confirm(confirm, len(pairs)):
         return None
+    from accim.sim.schedule_files import absolute_schedule_files
+
     runs = []
     for idf, epw in pairs:
         model = IDF(idf, epw)
+        # eppy simulates a copy of the model in other folders, where EnergyPlus would not find the files of the
+        # relative paths of its Schedule:File objects
+        absolute_schedule_files(model)
         runs.append((model, make_eplaunch_options(model, epw)))
     if processes == 0:
         _run_idfs_in_this_process(runs)

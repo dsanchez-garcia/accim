@@ -1,22 +1,32 @@
 """Tests for the Schedule:File objects of hourly values that accim writes (:mod:`accim.sim.schedule_files`, tasks H2
 and H6 of the review of accim 1.2.0): the CSV file (a header row and one column, the values as repr writes them), in the
-folder of the model, and the fields of the Schedule:File object (Input Output Reference 25.2, 1.8.13)."""
+folder of the model, the fields of the Schedule:File object (Input Output Reference 25.2, 1.8.13), and the paths
+relative to the folder of the model, with which a model can be moved with its files (run_ep, with both backends, gives
+the copies of the models it simulates the absolute paths)."""
+import os
+import platform
+import re
 import shutil
+import subprocess
 import warnings
 from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
 
-from accim.energyplus import default_energyplus_folder
+from accim.energyplus import default_energyplus_folder, find_energyplus
 from accim.sim import schedule_files as sf
 
 REPO = Path(__file__).resolve().parents[2]
 SAMPLE_IDF = (REPO / 'accim' / 'sample_files' / 'sample IDFs' / 'input_IDFs'
               / 'TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2510.idf')
+EPW = REPO / 'Seville_Present.epw'
 IDD_25_1 = default_energyplus_folder('25.1') / 'Energy+.idd'
 needs_idd = pytest.mark.skipif(not (IDD_25_1.exists() and SAMPLE_IDF.exists()),
                                reason='needs EnergyPlus 25.1 and the sample IDF of the repository')
+needs_energyplus = pytest.mark.skipif(
+    find_energyplus('25.1', required=False) is None or not (SAMPLE_IDF.exists() and EPW.exists()),
+    reason='needs EnergyPlus 25.1 and the sample files of the repository')
 
 
 def _model(folder):
@@ -79,6 +89,180 @@ def test_the_folder_of_a_model(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     assert sf.model_folder(SimpleNamespace(idfname=None)) == tmp_path
     assert sf.model_folder(SimpleNamespace()) == tmp_path
+
+
+def _same_file(path, other):
+    return os.path.samefile(path, other)
+
+
+@needs_idd
+def test_the_relative_and_absolute_paths_of_the_schedule_files(tmp_path, monkeypatch):
+    # Since accim 1.2.0 (the pending option of decision 7 of the review of accim 1.2.0): the paths relative to the
+    # folder of the model of the files in that folder or in its subfolders, with '/'; the others keep their paths
+    (tmp_path / 'm').mkdir()
+    idf = _model(tmp_path / 'm')
+    values = [1.0] * 8760
+    inside = sf.write_schedule_file(idf, 'Inside', values, 'inside.csv')
+    below = sf.write_schedule_file(idf, 'Below', values, 'below.csv', folder=tmp_path / 'm' / 'schedules')
+    elsewhere = sf.write_schedule_file(idf, 'Elsewhere', values, 'elsewhere.csv', folder=tmp_path / 'other')
+    idf.newidfobject('Schedule:File', Name='Given', File_Name='given.csv')
+    with pytest.warns(UserWarning, match=r'The files of the Schedule:File objects Elsewhere \(.*elsewhere\.csv\) are '
+                                         r'not in the folder of the model \(.*\) or in its subfolders: the objects '
+                                         r'keep their absolute paths'):
+        changed = sf.relative_schedule_files(idf)
+    assert changed == {'Inside': 'inside.csv', 'Below': 'schedules/below.csv'}
+    paths = {str(s.Name): str(s.File_Name) for s in idf.idfobjects['Schedule:File']}
+    assert paths == {'Inside': 'inside.csv', 'Below': 'schedules/below.csv', 'Elsewhere': str(elsewhere),
+                     'Given': 'given.csv'}
+    assert sf.schedule_file_path(idf, 'Below') == 'schedules/below.csv'
+    # Relative to another folder: that of the model is a subfolder of it
+    with pytest.warns(UserWarning, match='Elsewhere'):
+        assert sf.relative_schedule_files(idf) == {}
+    # Back: the current folder has not the files, the folder of the model has them; the others do not change
+    monkeypatch.chdir(tmp_path)
+    changed = sf.absolute_schedule_files(idf)
+    assert sorted(changed) == ['Below', 'Inside']
+    assert _same_file(changed['Inside'], inside) and _same_file(changed['Below'], below)
+    assert os.path.isabs(changed['Inside']) and os.path.isabs(changed['Below'])
+    assert idf.getobject('Schedule:File', 'Given').File_Name == 'given.csv'
+    assert idf.getobject('Schedule:File', 'Elsewhere').File_Name == str(elsewhere)
+    assert sf.absolute_schedule_files(idf) == {}
+    # The current folder first, as EnergyPlus: a file with the same path there is taken instead
+    with pytest.warns(UserWarning, match='Elsewhere'):
+        sf.relative_schedule_files(idf)
+    (tmp_path / 'cwd').mkdir()
+    shutil.copy(inside, tmp_path / 'cwd' / 'inside.csv')
+    monkeypatch.chdir(tmp_path / 'cwd')
+    changed = sf.absolute_schedule_files(idf)
+    assert _same_file(changed['Inside'], tmp_path / 'cwd' / 'inside.csv') and _same_file(changed['Below'], below)
+    # That file is not in the folder of the model: its path stays absolute
+    with pytest.warns(UserWarning, match=r'Schedule:File objects Inside \(.*cwd.inside\.csv\), Elsewhere'):
+        assert sf.relative_schedule_files(idf) == {'Below': 'schedules/below.csv'}
+    # The folders given, in their order
+    idf.getobject('Schedule:File', 'Inside').File_Name = 'inside.csv'
+    changed = sf.absolute_schedule_files(idf, folders=[tmp_path / 'm', tmp_path / 'cwd'])
+    assert _same_file(changed['Inside'], inside) and _same_file(changed['Below'], below)
+    # A path written on Windows, with '\' between its folders
+    idf.getobject('Schedule:File', 'Below').File_Name = 'schedules\\below.csv'
+    assert _same_file(sf.absolute_schedule_files(idf, folders=[tmp_path / 'm'])['Below'], below)
+
+
+@needs_idd
+def test_the_paths_of_the_schedule_files_of_an_idf_file(tmp_path):
+    # The path of an IDF file: it is read, and saved again only if a path changes
+    (tmp_path / 'm').mkdir()
+    idf = _model(tmp_path / 'm')
+    path = sf.write_schedule_file(idf, 'Inside', [1.0] * 8760, 'inside.csv')
+    idf.save()
+    model = tmp_path / 'm' / 'model.idf'
+    assert sf.relative_schedule_files(model) == {'Inside': 'inside.csv'}
+    assert 'inside.csv,' in model.read_text(encoding='latin-1') and str(path) not in model.read_text(encoding='latin-1')
+    stamp = model.stat().st_mtime_ns
+    assert sf.relative_schedule_files(str(model)) == {}
+    assert model.stat().st_mtime_ns == stamp
+    changed = sf.absolute_schedule_files(model)
+    assert _same_file(changed['Inside'], path) and changed['Inside'] in model.read_text(encoding='latin-1')
+
+
+@pytest.mark.skipif(os.name != 'nt', reason='drives are those of Windows')
+def test_a_file_on_another_drive_is_not_in_the_folder(tmp_path):
+    drive = 'Q:' if not str(tmp_path).upper().startswith('Q:') else 'R:'
+    assert sf._relative_path(f'{drive}\\schedules\\a.csv', tmp_path) is None
+    assert sf._relative_path(str(tmp_path / 'a.csv'), tmp_path) == 'a.csv'
+    assert sf._relative_path(str(tmp_path), tmp_path) is None
+    assert sf._relative_path(str(tmp_path.parent / 'a.csv'), tmp_path) is None
+
+
+def _probe_model(folder):
+    """The sample model in ``folder``, simulated on 1 and 2 January, with the Schedule:File objects Probe (its file in
+    the folder) and Probe 2 (in the subfolder schedules) of the hour of the year (0 to 8759, and plus 0.5), their
+    hourly outputs Schedule Value, and their paths relative to the folder."""
+    idf = _model(folder)
+    run_period = idf.idfobjects['RunPeriod'][0]
+    run_period.Begin_Month, run_period.Begin_Day_of_Month = 1, 1
+    run_period.End_Month, run_period.End_Day_of_Month = 1, 2
+    values = [float(hour) for hour in range(8760)]
+    sf.write_schedule_file(idf, 'Probe', values, 'probe.csv')
+    sf.write_schedule_file(idf, 'Probe 2', [value + 0.5 for value in values], 'probe.csv', folder=folder / 'schedules')
+    for name in ('Probe', 'Probe 2'):
+        idf.newidfobject('Output:Variable', Key_Value=name, Variable_Name='Schedule Value',
+                         Reporting_Frequency='Hourly')
+    assert sf.relative_schedule_files(idf) == {'Probe': 'probe.csv', 'Probe 2': 'schedules/probe.csv'}
+    idf.save()
+
+
+def _moved_probe_model(tmp_path):
+    """The folder of the probe model, moved with its files to another folder."""
+    (tmp_path / 'A').mkdir()
+    _probe_model(tmp_path / 'A')
+    shutil.copytree(tmp_path / 'A', tmp_path / 'B')
+    shutil.rmtree(tmp_path / 'A')
+    return tmp_path / 'B'
+
+
+def _probe_outputs(csv):
+    """The hourly values of Probe and Probe 2 in a CSV file of the outputs of EnergyPlus."""
+    import pandas as pd
+
+    results = pd.read_csv(csv)
+    return [results[[c for c in results.columns if c.upper().startswith(f'{name}:SCHEDULE VALUE')][0]].tolist()
+            for name in ('PROBE', 'PROBE 2')]
+
+
+#: The values of Probe and Probe 2 on 1 and 2 January
+_HOURS = [[float(hour) for hour in range(48)], [hour + 0.5 for hour in range(48)]]
+
+
+@needs_energyplus
+def test_energyplus_finds_the_files_of_relative_paths_next_to_the_idf_file(tmp_path):
+    # Measured on 2026-11-18 with EnergyPlus 25.1: a model moved with its files finds them from another current folder
+    # (the folder of the IDF file), also those of '/' between folders on Windows, and a file with the same path in the
+    # current folder is read instead (the current folder first)
+    folder = _moved_probe_model(tmp_path)
+    program = find_energyplus('25.1') / ('energyplus.exe' if platform.system() == 'Windows' else 'energyplus')
+    (tmp_path / 'cwd').mkdir()
+    for run, values in (('first', _HOURS), ('second', [[value + 1000 for value in _HOURS[0]], _HOURS[1]])):
+        result = subprocess.run([str(program), '-d', str(tmp_path / run), '-r', '-w', str(EPW),
+                                 str(folder / 'model.idf')], cwd=tmp_path / 'cwd', capture_output=True, text=True)
+        assert result.returncode == 0, result.stdout[-2000:]
+        assert _probe_outputs(tmp_path / run / 'eplusout.csv') == values
+        (tmp_path / 'cwd' / 'probe.csv').write_text(
+            'Probe\n' + '\n'.join(repr(float(hour) + 1000) for hour in range(8760)) + '\n', encoding='utf-8')
+
+
+@needs_energyplus
+@pytest.mark.parametrize('backend', ['ems', 'api'])
+def test_run_ep_simulates_a_model_moved_with_its_schedule_files(tmp_path, monkeypatch, backend):
+    # Both backends simulate a copy of the model in other folders (eppy in a temporary folder, with the model in
+    # multi_runs; the API in a temporary folder): the copy gets the absolute paths of the files (since accim 1.2.0)
+    from eppy.runner.run_functions import EnergyPlusRunError
+
+    from accim.run import run_ep
+
+    folder = _moved_probe_model(tmp_path)
+    shutil.copy(EPW, folder / EPW.name)
+    monkeypatch.chdir(folder)
+    text = (folder / 'model.idf').read_text(encoding='latin-1')
+    run_ep(only_accim_idfs=False, confirm=True, energyplus_version='auto', backend=backend, processes=0)
+    outputs = folder / 'model[Seville_Present.csv'
+    assert _probe_outputs(outputs) == _HOURS
+    # The IDF file keeps its relative paths
+    assert (folder / 'model.idf').read_text(encoding='latin-1') == text
+    # Without the absolute paths in the copy (as before accim 1.2.0), EnergyPlus does not find the files, even in the
+    # folder of the model
+    outputs.unlink()
+    monkeypatch.setattr(sf, 'absolute_schedule_files', lambda idf, folders=None: {})
+    not_found = r'Schedule:File="PROBE", File Name: "probe\.csv" not found'
+    if backend == 'ems':
+        with pytest.raises(EnergyPlusRunError, match=not_found):
+            run_ep(only_accim_idfs=False, confirm=True, energyplus_version='auto', backend=backend, processes=0)
+    else:
+        with pytest.warns(RuntimeWarning, match='1 of 1 simulations failed: model.idf'):
+            [result] = run_ep(only_accim_idfs=False, confirm=True, energyplus_version='auto', backend=backend,
+                              processes=0)
+        assert not result.success
+        assert re.search(not_found, Path(result.err_file).read_text(errors='replace'))
+    assert not outputs.exists()
 
 
 def _weather_file(path, daylight_saving):

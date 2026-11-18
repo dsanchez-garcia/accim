@@ -14,6 +14,13 @@ model (that of its file, or the current folder for a model in memory, such as th
 path of the file, as the Input Output Reference recommends ("The field should include a full path with file name, for
 best results"; it also says that the field must have 100 characters or fewer, but EnergyPlus 25.1 read a path of 139
 characters in the tests of accim), so the model can be saved in another folder while the CSV file stays where it is.
+To move a model with its files, to another folder or computer, :func:`relative_schedule_files` gives the objects the
+paths of their files relative to the folder of the model (since accim 1.2.0): EnergyPlus looks for the file of a
+relative path in the current folder and then in the folder of the IDF file (measured with EnergyPlus 25.1 on
+2026-11-18: a model moved with its file found it from another current folder, and a file with the same path in the
+current folder was read instead of the one next to the IDF file). The runners of accim simulate copies of the models
+in other folders (``run_ep``, with both backends, and the parametric module), where EnergyPlus does not find those
+files, so they give the copies the absolute paths of the files (:func:`absolute_schedule_files`).
 The schedules have no interpolation (Interpolate to Timestep No, 60 minutes per item), the schedule type limits
 :data:`SCHEDULE_TYPE_LIMITS` (without it, EnergyPlus warns that the schedule is not validated) and, in the IDDs that
 have the field (not those of EnergyPlus 9.4 and 9.6), Adjust Schedule for Daylight Savings No, so that their values
@@ -30,10 +37,10 @@ not in January nor with EnergyPlus 25.1). :func:`write_schedule_file` warns of i
 import os
 import warnings
 from pathlib import Path
-from typing import Any, List, Optional, Sequence, Union
+from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
 
-__all__ = ['SCHEDULE_TYPE_LIMITS', 'daylight_saving_period', 'model_folder', 'remove_schedule_file',
-           'schedule_file_path', 'write_schedule_file']
+__all__ = ['SCHEDULE_TYPE_LIMITS', 'absolute_schedule_files', 'daylight_saving_period', 'model_folder',
+           'relative_schedule_files', 'remove_schedule_file', 'schedule_file_path', 'write_schedule_file']
 
 #: The schedule type limits of the Schedule:File objects of accim: a ScheduleTypeLimits object with only a name, which
 #: does not limit the values (the models of DesignBuilder have it; accim adds it to the others)
@@ -157,7 +164,8 @@ def write_schedule_file(idf: Any, name: str, values: Sequence[float], file_name:
 
 
 def schedule_file_path(idf: Any, name: str) -> Optional[str]:
-    """The path of the file of a Schedule:File object of a model, or None if the model has not the object."""
+    """The path of the file of a Schedule:File object of a model, as the object has it (relative to the folder of the
+    model after :func:`relative_schedule_files`), or None if the model has not the object."""
     schedule = idf.getobject('Schedule:File', name)
     return None if schedule is None else str(schedule.File_Name)
 
@@ -167,3 +175,108 @@ def remove_schedule_file(idf: Any, name: str) -> None:
     schedule = idf.getobject('Schedule:File', name)
     if schedule is not None:
         idf.removeidfobject(schedule)
+
+
+def _model(idf: Any) -> Tuple[Any, bool]:
+    """The model (eppy) of ``idf``, and whether it was read from a file: a path is that of an IDF file, read with the
+    IDD of its EnergyPlus version (:func:`accim.sim.accis.load_idf`)."""
+    if isinstance(idf, (str, os.PathLike)):
+        from accim.sim.accis import load_idf
+
+        return load_idf(idf), True
+    return idf, False
+
+
+def _relative_path(path: str, folder: Path) -> Optional[str]:
+    """The path of a file relative to a folder, with '/' between its folders, or None if the file is not in that
+    folder or in its subfolders."""
+    try:
+        relative = os.path.relpath(os.path.abspath(path), folder)
+    except ValueError:  # On another drive (Windows)
+        return None
+    if relative in (os.curdir, os.pardir) or relative.startswith(os.pardir + os.sep):
+        return None
+    return Path(relative).as_posix()
+
+
+def relative_schedule_files(idf: Any, folder: Union[str, os.PathLike, None] = None) -> Dict[str, str]:
+    """Give the Schedule:File objects of a model the paths of their files relative to the folder of the model, so
+    that the model can be moved with its files, to another folder or computer (since accim 1.2.0): those whose files
+    are in that folder or in its subfolders, with '/' between the folders (the separator of Linux and macOS, which
+    EnergyPlus 25.1 also read on Windows in the tests of accim). The objects whose files are elsewhere keep their
+    absolute paths, with a warning; those with relative paths keep them. accim writes the absolute paths
+    (:func:`write_schedule_file`), so this is done once the model is complete: the output IDFs of
+    :class:`accim.sim.accis.AddAccis`, whose files of T0 of the outdoor metric 'te_ref_nl' are in their folder, or a
+    model with a function of the clothing insulation (:func:`accim.sim.apmv.set_pmv_input_parameters`), whose files are
+    in the folder of the model (``modify_accis`` with ``epw`` writes the absolute path of the file of T0 again).
+
+    EnergyPlus looks for the file of a relative path in the current folder and then in the folder of the IDF file
+    (measured with EnergyPlus 25.1 on 2026-11-18), so it finds the files of the model from any current folder that has
+    no file with the same path. The runners of accim (``run_ep``, with both backends, and the parametric module)
+    simulate copies of the models in other folders, so they give the copies the absolute paths of the files
+    (:func:`absolute_schedule_files`); other tools that do so, such as the evaluators of besos and its function
+    ``run_building``, need the absolute paths first.
+
+    :param idf: The model (eppy), changed in place (to be saved afterwards), or the path of an IDF file, which is read
+        (:func:`accim.sim.accis.load_idf`) and saved again with eppy if a path changes.
+    :param folder: The folder of the IDF file of the model: None for that of the model (:func:`model_folder`).
+    :return: The new paths, by the name of the Schedule:File object.
+    """
+    model, from_file = _model(idf)
+    base = Path(os.path.abspath(folder if folder is not None else model_folder(model)))
+    changed: Dict[str, str] = {}
+    elsewhere = []
+    for schedule in _objects(model, 'Schedule:File'):
+        path = str(schedule.File_Name).strip()
+        if not path or not os.path.isabs(path):
+            continue
+        relative = _relative_path(path, base)
+        if relative is None:
+            elsewhere.append(f'{schedule.Name} ({path})')
+            continue
+        schedule.File_Name = relative
+        changed[str(schedule.Name)] = relative
+    if elsewhere:
+        warnings.warn(f'The files of the Schedule:File objects {", ".join(elsewhere)} are not in the folder of the '
+                      f'model ({base}) or in its subfolders: the objects keep their absolute paths, so the model finds '
+                      f'those files only where they are now.', UserWarning, stacklevel=2)
+    if changed and from_file:
+        model.save()
+    return changed
+
+
+def absolute_schedule_files(idf: Any, folders: Optional[Sequence[Union[str, os.PathLike]]] = None) -> Dict[str, str]:
+    """Give the Schedule:File objects of a model whose files have relative paths the absolute paths of those files,
+    looked for in the folders given, in their order: by default, the current folder and the folder of the model, where
+    EnergyPlus looks for them (measured with EnergyPlus 25.1 on 2026-11-18). The paths of files that are not found
+    there do not change.
+
+    The runners of accim do it in the copies of the models that they simulate in other folders (``run_ep``, with both
+    backends, and the parametric module, with the models that it gets), where EnergyPlus would not find the files:
+    until accim 1.2.0, it stopped there before the simulation with the severe error ``Schedule:File="...", File Name:
+    "..." not found`` with any model whose Schedule:File objects had relative paths.
+
+    :param idf: The model (eppy), changed in place, or the path of an IDF file, which is read
+        (:func:`accim.sim.accis.load_idf`) and saved again with eppy if a path changes.
+    :param folders: The folders where the files are looked for: None for the current folder and that of the model
+        (:func:`model_folder`).
+    :return: The new paths, by the name of the Schedule:File object.
+    """
+    model, from_file = _model(idf)
+    if folders is None:
+        folders = (os.getcwd(), model_folder(model))
+    changed: Dict[str, str] = {}
+    for schedule in _objects(model, 'Schedule:File'):
+        path = str(schedule.File_Name).strip()
+        if not path or os.path.isabs(path):
+            continue
+        for folder in folders:
+            # A path written on Windows may have '\' between its folders, which is no separator on Linux and macOS
+            candidate = Path(os.path.abspath(os.path.join(os.fspath(folder), path.replace('\\', '/'))))
+            if candidate.is_file():
+                schedule.File_Name = str(candidate)
+                changed[str(schedule.Name)] = str(candidate)
+                break
+    if changed and from_file:
+        model.save()
+    return changed
