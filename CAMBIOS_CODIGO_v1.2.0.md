@@ -3565,3 +3565,43 @@ consignas del hook):
 modelo). Con EnergyPlus: `run_ep` con el backend EMS sin avisos; el backend de la API sin el hook da exactamente sus
 resultados; con el hook, el modelo con el respaldo da exactamente los del modelo sin él; y las consignas y la
 temperatura operativa quedan cerca de las del hook.
+
+## 74. C2: las desviaciones de la tabla E.1 de la peor semana, mes o año como restricción
+
+La entrada C2 de `TODO.md`. `deviation_constraint_bound` solo daba la cota del criterio anual. Los criterios semanal y
+mensual comparan las horas fuera de rango de cada semana o mes con sus propias horas ocupadas, dos salidas que un
+reductor de besos no recibe juntas, así que se comprobaban después de las simulaciones.
+
+**El cambio**:
+- `WorstPeriodDeviation` (en `accim.parametric_and_optimisation.objectives`) es un lector de besos para las
+  restricciones de `set_problem`, con la cota `'<=0'`. besos pasa a cada restricción todos los resultados de la
+  evaluación, así que el lector lee de la propia evaluación las horas fuera de rango (`Hours Above Upper Limit_<zona>`
+  o `Hours Below Lower Limit_<zona>`) y las horas ocupadas (`Occupied Hours_<zona>`; para el edificio, la suma de las
+  zonas). No hace falta una primera simulación.
+- Devuelve el mayor exceso, en horas, sobre la desviación de la tabla E.1 de cada semana natural (de lunes a domingo,
+  con el tipo de día de EnergyPlus, *Site Day Type Index*), cada mes natural o el periodo de simulación.
+- Su `setup` añade al modelo del evaluador las salidas que lee (diarias, mensuales o del periodo) y lee los periodos
+  de dimensionado y el `RunPeriod` del modelo. Las filas del periodo son las que siguen a las de los periodos de
+  dimensionado, que EnergyPlus simula antes, con o sin los 29 de febrero de un año bisiesto (EnergyPlus se los salta
+  si el fichero climático no los tiene). Con otras filas, un `ValueError`.
+- Cada evaluador de `run_optimisation` recibe su propia copia del lector y la prepara con su modelo, también como
+  `add_output` (besos no prepara los `add_outputs`). `run_parametric_simulation` no puede leerlo (un `ValueError`).
+- Cada periodo se mide con sus propias horas ocupadas, también las semanas y meses que el periodo no cubre enteros.
+- `period_deviations` y `calendar_weeks` (en `accim.data.postprocessing.long_term_discomfort`) dan las mismas
+  desviaciones después de las simulaciones.
+
+**Lo medido antes de escribirlo** (EnergyPlus 25.1, modelo de ejemplo, del 20 de junio al 10 de agosto): 52 filas
+diarias, 3 mensuales y 1 del periodo, más 4 de cada antes con los 4 días de diseño simulados. *Site Day Type Index*
+vale 1 el domingo y 7 el sábado (5 el jueves 20 de junio de 2002), y 9 y 10 en los días de diseño de verano e invierno.
+
+**Los tests**: las semanas naturales frente a `datetime.isocalendar`; `period_deviations` frente a `deviation_check`,
+periodo a periodo; el lector con resultados de besos (días de diseño, semanas, meses, periodo, niveles, errores y una
+copia por pickle); su `setup` con el modelo de ejemplo; una evaluación de besos con EnergyPlus y nueve restricciones,
+cada una igual al mayor exceso calculado con las salidas horarias y las fechas; un periodo de 2004 que pasa por el 29
+de febrero; y dos de ellas como restricciones de `run_optimisation` y una como `add_output`, con su estado de Pareto.
+
+**La revisión antes del commit** (un workflow de cuatro revisores y un escéptico por hallazgo) encontró cinco fallos,
+todos corregidos con tests: el lector semanal contaba el 29 de febrero que EnergyPlus se salta (un error, o un día de
+diseño tomado como primer día del periodo); un `add_output` nunca se preparaba; el paramétrico lo reconstruía como un
+lector normal (la suma de los valores diarios); un mismo lector guardaba el estado del último modelo de una
+optimización de varios; y `period_deviations` descartaba las filas sin periodo.

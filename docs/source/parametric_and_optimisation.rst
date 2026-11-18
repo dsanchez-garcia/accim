@@ -383,9 +383,10 @@ the output is one of them:
 Since these outputs follow the comfort model of accim, a study that changes it (the custom model, for
 instance) measures each evaluation against its own range; the comfort status of EnergyPlus above does
 not depend on it. Method C (the PPD-weighted hours) needs the PMV, which these models do not calculate.
-The weekly and monthly deviations of Annex E, and the percentages of Method A, are calculated after the
-simulations (:func:`~accim.data.postprocessing.long_term_discomfort.deviation_check`, and
-``Table(long_term_indicators=True)``).
+The percentages of Method A are calculated after the simulations (``Table(long_term_indicators=True)``),
+and so can the deviations of Annex E of each week, month or year
+(:func:`~accim.data.postprocessing.long_term_discomfort.period_deviations`); in an optimisation, the
+deviation of the worst week, month or year can be a constraint (step 5).
 
 :doc:`jupyter_notebooks/parametric_and_optimisation_examples/04_outputs_preflight_and_output_control`
 shows the other methods for output objects, for example to find and remove duplicates.
@@ -526,6 +527,37 @@ same model and weather file (the sum of ``Occupied Hours_<zone>`` of the zones i
                                 name='Hours Above Upper Limit_Building')
     optim.set_problem(minimize_outputs=[True], constraints=[warm_hours],
                       constraint_bounds=[deviation_constraint_bound(occupied_hours, 'yearly', '6%')])  # '<=126.0'
+
+The weekly and monthly deviations compare the hours outside the range of each week or month with its
+own occupied hours. :class:`~accim.parametric_and_optimisation.objectives.WorstPeriodDeviation` (since
+accim 1.2.0) is a reader of besos for them: in each evaluation, it reads the daily (or monthly) hours
+outside the range of a zone or of the building and its occupied hours (``Occupied Hours_<zone>``, so
+no first simulation is needed), and returns the largest excess over the deviation of Table E.1 of the
+calendar weeks, from Monday to Sunday (with the day type of EnergyPlus of each day, the output *Site
+Day Type Index*), of the calendar months, or of the run period (``'yearly'``), in hours: 0 or negative
+when every period is within the deviation, so its bound is ``'<=0'``, and the violation of an
+evaluation is the hours beyond the deviation in its worst period. The evaluators of ``run_optimisation``
+set it up with their models, also as an ``add_output`` (to report it without constraining it), each one
+with its own copy: its setup adds the outputs that it reads to the model, and it takes the rows of the
+run period after those of the sizing periods, which EnergyPlus simulates first (the model must have one
+``RunPeriod``; the days 29 February that EnergyPlus skips, with the weather files without them, are not
+counted). The weeks and months that the run period does not cover whole, at its beginning and its end,
+are measured against their occupied hours in it, and ``run_parametric_simulation`` cannot read it (a
+``ValueError``). For instance:
+
+.. code-block:: python
+
+    from accim.parametric_and_optimisation.objectives import WorstPeriodDeviation
+
+    worst_week = WorstPeriodDeviation(zone='Building', output='Hours Above Upper Limit', period='weekly',
+                                      level='6%')     # 50 % of the occupied hours of each week
+    worst_month = WorstPeriodDeviation(zone='Building', period='monthly')    # 25 % of each month
+    optim.set_problem(minimize_outputs=[True], constraints=[worst_week, worst_month],
+                      constraint_bounds=['<=0', '<=0'])
+
+After the simulations, :func:`~accim.data.postprocessing.long_term_discomfort.period_deviations` gives the
+deviations of each period of some rows (the daily sums of the outputs, with the weeks of
+:func:`~accim.data.postprocessing.long_term_discomfort.calendar_weeks`, for instance).
 
 6. Run the simulations
 ----------------------

@@ -23,6 +23,7 @@ EnergyPlus, the estimates of the results of more than 5 MB were within 10 % of t
 with a simulation (``simulate=True``).
 """
 
+import calendar
 import datetime
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Tuple
@@ -243,7 +244,8 @@ def _date(year: int, month: int, day: int) -> datetime.date:
         return datetime.date(year, month, 28)
 
 
-def _period(obj, with_years: bool) -> _Period:
+def _dates(obj, with_years: bool) -> Tuple[datetime.date, datetime.date]:
+    """The first and the last day of a run period or a sizing period."""
     begin_year = _integer(_field(obj, 'Begin_Year'), 0) if with_years else 0
     end_year = _integer(_field(obj, 'End_Year'), 0) if with_years else 0
     # Without years, a year that is not a leap year, as EnergyPlus
@@ -252,7 +254,20 @@ def _period(obj, with_years: bool) -> _Period:
     end = _date(end_year or year, _integer(_field(obj, 'End_Month'), 12), _integer(_field(obj, 'End_Day_of_Month'), 31))
     if end < begin:
         end = _date(end.year + 1, end.month, end.day)
+    return begin, end
+
+
+def _period(obj, with_years: bool) -> _Period:
+    begin, end = _dates(obj, with_years)
     return _Period((end - begin).days + 1, (end.year - begin.year) * 12 + end.month - begin.month + 1)
+
+
+def _leap_days(obj) -> int:
+    """The days 29 February within a run period with years, which EnergyPlus skips when its weather file has not
+    them and the weather is not treated as actual (the field Treat Weather as Actual of the RunPeriod)."""
+    begin, end = _dates(obj, with_years=True)
+    return sum(1 for year in range(begin.year, end.year + 1)
+               if calendar.isleap(year) and begin <= datetime.date(year, 2, 29) <= end)
 
 
 def _environments(idf) -> Tuple[List[_Period], List[_Period]]:

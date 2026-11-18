@@ -36,6 +36,62 @@ Recommended flow: track active work in `TODO.md`, move completed outcomes to `DE
 ## Entries
 
 ### 2026-11-18
+#### [done] C2: the deviations of Table E.1 of the worst week, month or year as a constraint (branch `v1.2.0`)
+- Context: the P2 entry C2 of `TODO.md` (proposal C2 of v03): `deviation_constraint_bound` gave the bound of the
+  yearly criterion only; the weekly and monthly criteria compare the hours outside the range of each week or month
+  with its occupied hours, which a reducer of besos does not get together, so they were checked after the
+  simulations. Done in the autonomous session of 2026-11-18, with the provisional decision of the same day
+  (`notes/decisions.md`).
+- Changes:
+  - `accim.parametric_and_optimisation.objectives.WorstPeriodDeviation(zone, output, period, level, name)`, a
+    `VariableReader` of besos for the constraints of `set_problem`: besos calls each constraint with all the results of
+    the evaluation, so it reads the hours outside the range (`Hours Above Upper Limit_<zone>` or `Hours Below Lower
+    Limit_<zone>`, `report_long_term_discomfort=True`) and the occupied hours (`Occupied Hours_<zone>`, those of the
+    zones of the long-term discomfort added up for the building) of the evaluation itself, at daily (weekly), monthly
+    or run period frequency, and returns the largest excess over the deviation of the occupied hours of each calendar
+    week (from Monday to Sunday, with *Site Day Type Index*), calendar month or run period; bound `'<=0'`. `setup`
+    adds those outputs to the model of the evaluator and reads its sizing periods and its run period (one
+    `RunPeriod`; `ValueError` otherwise): the rows of the run period are those after the rows of the sizing periods
+    (EnergyPlus simulates them first), with or without the days 29 February of a leap year (`_leap_days` and `_dates`
+    of `accim.sim.results_size`), and other rows raise a `ValueError`. Measured before writing it (EnergyPlus 25.1,
+    the sample model, 20 June to 10 August): 52 daily rows, 3 monthly and 1 of the run period, with 4 more of each
+    before them with the 4 design days simulated; *Site Day Type Index* is 1 for Sunday to 7 for Saturday (5 on
+    Thursday 20 June 2002), and 9 and 10 on the summer and winter design days.
+  - `set_evaluator` of the parametric module (`_problem_for_evaluator`, `_readers_with_model_state`): each evaluator
+    gets a copy of the problem with its own copies of these readers, which it sets up with its model (also those of
+    the `add_outputs`, which besos does not set up); `_serialize_output_readers` (`run_parametric_simulation`) raises
+    a `ValueError` with them, since its workers rebuild the readers as plain ones.
+  - The review of 2026-11-18 (a workflow of four reviewers and a skeptic for each finding) found, before the commit:
+    the weekly reader took the last rows of the outputs as those of the run period, counting 29 February of a leap
+    year, which EnergyPlus skips with the weather files without it (a `ValueError`, or a design day taken as the first
+    day of the run period, reproduced with EnergyPlus); an `add_output` was never set up; the parametric worker
+    rebuilt the reader as a plain one (the sum of the daily values); one reader kept the state of the last model of
+    an optimisation of several; and `period_deviations` dropped the rows without a period. All fixed, with tests.
+  - `accim.data.postprocessing.long_term_discomfort.period_deviations(hours_outside, occupied_hours, periods, period,
+    level)` (the deviation of each period of some rows, with `deviation_limit` and `deviation_check`) and
+    `calendar_weeks(day_types)` (the calendar weeks of some consecutive days from their day types; the holidays and
+    special days take the place of their day of the week).
+- Files: `accim/parametric_and_optimisation/objectives.py`, `accim/parametric_and_optimisation/main.py`
+  (`set_evaluator`, `_serialize_output_readers`), `accim/sim/results_size.py`,
+  `accim/data/postprocessing/long_term_discomfort.py`, `tests/parametric_and_optimisation/test_objectives.py`,
+  `tests/core/test_long_term_discomfort.py`, `docs/source/parametric_and_optimisation.rst` (step 5),
+  `docs/source/4_detailed use.md` (4.7.4), `CHANGELOG.md`, `TODO.md`, `notes/decisions.md`.
+- Verification: the tests of the calendar weeks (against `datetime.isocalendar`) and of `period_deviations` (against
+  `deviation_check`, period by period); the reader with results of besos (the design days left out, the weeks, the
+  months, the run period, the levels, its arguments, the results without its outputs or with fewer rows or NaN, and a
+  copy by pickle, for the processes of an optimisation in parallel), its `setup` with the sample model (without the
+  long-term discomfort, an unknown zone, the zone in another case, two run periods or none); and an evaluation of
+  besos with EnergyPlus 25.1 (`EvaluatorEP` with nine of them as constraints, 20 June to 10 August with the four
+  design days): each constraint is the largest excess of the weeks (ISO weeks 25 to 32 of the dates), months or run
+  period of the hourly outputs of the evaluation, and is 0 or less exactly when `deviation_check` holds in all of
+  them; a run period of 2004 over 29 February with the design days (23 February to 7 March: EnergyPlus simulates 13
+  days, and the weeks and months of the reader are those of the hourly outputs of the days simulated); two of them as
+  the constraints of `OptimisationSimulation.run_optimisation` and one as an `add_output` (NSGAII, two evaluations of
+  two weeks of July: finite values in their columns, the `add_output` equal to the constraint of the same week, the
+  copies of the evaluator set up and those of the problem not), and the copies of `_problem_for_evaluator`. The full
+  suite of `tests/core` and `tests/parametric_and_optimisation`.
+- Next step: none (the author may confirm the provisional decision).
+
 #### [done] Comfort standard 24 with the EMS backend: the fallback of the EMS (branch `v1.2.0`)
 - Context: the P2 entry of `TODO.md` of task F1 (way (a) of proposal A6 of v03): comfort standard 24 is a hook of the
   backend of the Python API, and without it the model had the setpoints of the comfort standard of its zones, so

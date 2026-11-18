@@ -11,6 +11,45 @@ Durable architectural/process decisions for this repository and its Obsidian
 vault. Newest first. Use [[templates/decision-record.md|the decision-record
 template]] to add a new entry.
 
+## 2026-11-18 — C2: the worst week, month or year of Table E.1 as a constraint, with a reader of besos
+
+- **Status**: provisional (Claude Code, in the autonomous session of 2026-11-18: "continua con todas las tareas que
+  puedas; trabaja de forma autónoma"; the P2 entry C2 of `TODO.md`). To be confirmed by the author.
+- **Context**: `deviation_constraint_bound` gives the bound of the yearly criterion of CEN/TR 16798-2:2019, Annex E,
+  Table E.1, with the occupied hours of a first simulation. The weekly and monthly criteria compare the hours outside
+  the range of each week or month with its own occupied hours, two outputs that a reducer of besos (one output) does
+  not get together. The entry proposed an EMS counter of the hours outside minus the deviation, or a reducer with the
+  occupied hours of each period as data.
+- **Decision**:
+  1. A reader of besos, `WorstPeriodDeviation` (a `VariableReader`), for the constraints of `set_problem`: besos calls
+     each constraint with all the results of the evaluation, so the reader reads the hours outside the range and the
+     occupied hours of the evaluation itself and returns the largest excess over the periods, in hours (bound
+     `'<=0'`; the violation is the hours beyond the deviation in the worst period). Neither EMS code (the output IDFs
+     and the level of the deviation would be in the model) nor a first simulation is needed.
+  2. The weeks are the calendar weeks, from Monday to Sunday (as ISO 8601), from the day type of EnergyPlus of each
+     day (*Site Day Type Index*, at daily frequency, which the reader adds); the months, the calendar months (the
+     monthly outputs of EnergyPlus); 'yearly', the run period.
+  3. Each period is measured against its own occupied hours, also the weeks and months that the run period does not
+     cover whole, at its beginning or its end (a percentage of fewer hours); they are not left out.
+  4. The rows of the run period are those after the rows of the sizing periods (EnergyPlus simulates them first: a day
+     for each `SizingPeriod:DesignDay`, as `accim.sim.results_size` counts them), as many as the days or months of the
+     one `RunPeriod` of the model (a `ValueError` with none or several), with a year that is not a leap year if it has
+     none, and with or without its days 29 February (EnergyPlus skips them with the weather files without them, and
+     goes on with the days of the week); other rows raise a `ValueError` rather than give a wrong value. (The first
+     version took the last rows of the outputs, counting 29 February: the review of 2026-11-18 found it.)
+  5. The building is the sum of the zones of the long-term discomfort (their hours outside, the output
+     `..._Building`, and their occupied hours), as for the yearly bound.
+  6. `period_deviations` and `calendar_weeks` (`accim.data.postprocessing.long_term_discomfort`) give the same
+     deviations after the simulations.
+  7. The reader keeps the state of the model with which it is set up, so each evaluator of the parametric module gets
+     its own copy of it (`set_evaluator`), and sets up those of the `add_outputs` too, which besos does not;
+     `run_parametric_simulation`, whose workers rebuild the readers from their specs, raises a `ValueError` with it.
+- **Consequences**: no output IDF changes; the reader adds Output:Variable objects to the model of the evaluator (as
+  every reader of besos). Tested against `deviation_check` with the hourly outputs of evaluations of besos (EnergyPlus
+  25.1, the sample model from Thursday 20 June to Saturday 10 August with its four design days: weeks 25 to 32,
+  three months, the run period; and from 23 February to 7 March 2004 over the day skipped), and in
+  `run_optimisation`, also as an `add_output`.
+
 ## 2026-11-18 — The fallback of the EMS of comfort standard 24: a relaxed estimate of the setpoints, in `apply_sun2026_setpoints`
 
 - **Status**: provisional (Claude Code, in the autonomous session of 2026-11-18: "continua con todas las tareas que

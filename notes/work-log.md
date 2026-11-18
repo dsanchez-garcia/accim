@@ -15,6 +15,21 @@ This log is a lightweight, session-scoped complement to the repository's
 existing tracking files — it does not replace them (see
 [[decisions.md#2026-09-13 — `notes/work-log.md` complements, not replaces, existing tracking files|the related decision]]).
 
+## 2026-11-18 — C2: the worst week, month or year of Table E.1 as a constraint (branch `v1.2.0`, on the server)
+
+- **Objective**: the P2 entry C2 of [[../TODO.md]], in the autonomous session of the afternoon: the weekly and
+  monthly deviations of CEN/TR 16798-2, Table E.1, as constraints of the optimisation.
+- **Affected files**: `accim/parametric_and_optimisation/objectives.py` (`WorstPeriodDeviation`),
+  `accim/data/postprocessing/long_term_discomfort.py` (`period_deviations`, `calendar_weeks`), their tests, the page of
+  the parametric module (step 5), section 4.7.4 of the detailed use, [[../CHANGELOG.md]], [[../TODO.md]],
+  [[decisions.md]].
+- **Finding or decision**: besos gives each constraint all the results of the evaluation, so a reader can take the
+  hours outside and the occupied hours of each period of the evaluation itself; the calendar weeks come from the day
+  type of EnergyPlus (*Site Day Type Index*: 1 Sunday to 7 Saturday, 9 and 10 on the design days), and the rows of the
+  sizing periods come first in the outputs (provisional decision of [[decisions.md]]).
+- **Validation**: in the entry of [[../DEVLOG.md]].
+- **Next step**: check 2 with the HVAC system on in a part of the previous timestep ([[../TODO.md]]).
+
 ## 2026-11-18 — Comfort standard 24 with the EMS backend: the fallback of the EMS (branch `v1.2.0`, on the server)
 
 - **Objective**: the P2 entry of [[../TODO.md]] of task F1 (way (a) of v03 A6), in the autonomous session of the

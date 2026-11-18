@@ -113,6 +113,66 @@ def test_the_acceptable_deviations_of_table_e1():
         ltd.deviation_limit(100, period='daily')
 
 
+def test_the_calendar_weeks_of_the_day_types_of_energyplus():
+    # Site Day Type Index: 1 for Sunday, 2 for Monday... 7 for Saturday, 8 for the holidays, 9 to 12 for the special
+    # days. 20 June 2002 was a Thursday (5): the weeks begin on the Mondays, 24 June and 1 July
+    import datetime
+
+    days = [datetime.date(2002, 6, 20) + datetime.timedelta(days=n) for n in range(15)]
+    day_types = [day.isoweekday() % 7 + 1 for day in days]
+    assert day_types[:5] == [5, 6, 7, 1, 2]
+    expected = [day.isocalendar()[1] - days[0].isocalendar()[1] for day in days]
+    np.testing.assert_array_equal(ltd.calendar_weeks(day_types), expected)
+    assert list(ltd.calendar_weeks(day_types)) == [0] * 4 + [1] * 7 + [2] * 4
+    # A holiday, or a special day, takes the place of its day of the week
+    for special in (8, 11):
+        np.testing.assert_array_equal(ltd.calendar_weeks(day_types[:4] + [special] + day_types[5:]), expected)
+    np.testing.assert_array_equal(ltd.calendar_weeks([8, 8, 2, 3]), [0, 0, 1, 1])
+    assert len(ltd.calendar_weeks([])) == 0
+    with pytest.raises(ValueError, match='no day of the week'):
+        ltd.calendar_weeks([9, 10])
+    with pytest.raises(ValueError, match='the days are not consecutive'):
+        ltd.calendar_weeks([5, 6, 1, 2])
+
+
+def test_the_acceptable_deviations_of_each_week_month_or_year():
+    # Two weeks of 40 occupied hours (8 h from Monday to Friday) and a partial one of 16 h
+    occupied = [8.0] * 5 + [0.0] * 2 + [8.0] * 5 + [0.0] * 2 + [8.0] * 2
+    outside = [4.0] * 5 + [0.0] * 2 + [5.0] * 4 + [0.0] * 3 + [8.0, 1.0]
+    weeks = [0] * 7 + [1] * 7 + [2] * 2
+    table = ltd.period_deviations(outside, occupied, weeks)
+    assert list(table.index) == [0, 1, 2]
+    assert table['occupied_h'].tolist() == [40.0, 40.0, 16.0]
+    assert table['outside_h'].tolist() == [20.0, 20.0, 9.0]
+    # 50 % of the occupied hours of each week on the 6 % level, 20 % on the 3 % level
+    assert table['limit_h'].tolist() == [20.0, 20.0, 8.0]
+    assert table['excess_h'].tolist() == [0.0, 0.0, 1.0]
+    assert table['within'].tolist() == [True, True, False]
+    table_3 = ltd.period_deviations(outside, occupied, weeks, level='3%')
+    assert table_3['limit_h'].tolist() == pytest.approx([8.0, 8.0, 3.2])
+    # Each period, as deviation_check measures it
+    for name, level in (('6%', '6%'), ('3%', '3%')):
+        result = ltd.period_deviations(outside, occupied, weeks, level=level)
+        for label, row in result.iterrows():
+            assert row['within'] == ltd.deviation_check(row['outside_h'], row['occupied_h'], 'weekly', level)
+            assert row['within'] == (row['excess_h'] <= 0), (name, label)
+    # A row for each period (the monthly sums), and the labels in the order of their first rows
+    months = ltd.period_deviations([44.0, 43.75], [175.0, 175.0], period='monthly')
+    assert months['excess_h'].tolist() == [0.25, 0.0] and months['within'].tolist() == [False, True]
+    assert list(ltd.period_deviations([1, 2, 3], [4, 4, 4], ['b', 'a', 'b']).index) == ['b', 'a']
+    assert ltd.period_deviations([130.0], [2100.0], period='yearly')['excess_h'].tolist() == [4.0]
+    with pytest.raises(ValueError, match='period must be one of'):
+        ltd.period_deviations([1.0], [2.0], period='daily')
+    with pytest.raises(ValueError, match='the same length'):
+        ltd.period_deviations([1.0, 2.0], [2.0], [0, 0])
+    with pytest.raises(ValueError, match='finite numbers'):
+        ltd.period_deviations([np.nan], [2.0])
+    # A row without a period was left out of every period (found by the review of 2026-11-18)
+    for missing in (np.nan, None):
+        with pytest.raises(ValueError, match='not a missing value'):
+            ltd.period_deviations([30.0, 30.0], [40.0, 40.0], [missing, 1])
+
+
 def test_the_hours_below_some_temperatures():
     assert ltd.hours_below(TEMPERATURES, (22, 21)) == {22: 2.0, 21: 1.0}
     assert ltd.hours_below(TEMPERATURES, [25.5], occupied=pd.Series([1] * 3 + [0] * 7), timestep_h=0.5) == {25.5: 1.5}

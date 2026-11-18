@@ -314,6 +314,34 @@ def _resolve_output_func(func_spec: Any):
     return resolved
 
 
+def _readers_with_model_state(readers: Any) -> list:
+    """The readers of a list (of a besos problem) that keep the state of the model with which they are set up
+    (:class:`accim.parametric_and_optimisation.objectives.WorstPeriodDeviation`)."""
+    from accim.parametric_and_optimisation.objectives import WorstPeriodDeviation
+
+    return [reader for reader in (readers if isinstance(readers, list) else [])
+            if isinstance(reader, WorstPeriodDeviation)]
+
+
+def _problem_for_evaluator(problem: Any) -> Any:
+    """The problem of a besos evaluator: the problem itself, or, if it has readers that keep the state of the model with
+    which they are set up (``_readers_with_model_state``), a shallow copy of it with copies of those readers, so that
+    the evaluators of the models of a simulation do not share their state (each one sets them up with its model)."""
+    import copy
+
+    attributes = ('outputs', 'constraints', 'add_outputs')
+    if not any(_readers_with_model_state(getattr(problem, name, None)) for name in attributes):
+        return problem
+    copied = copy.copy(problem)
+    for name in attributes:
+        readers = getattr(problem, name, None)
+        stateful = _readers_with_model_state(readers)
+        if stateful:
+            setattr(copied, name, [copy.copy(reader) if any(reader is other for other in stateful) else reader
+                                   for reader in readers])
+    return copied
+
+
 def _run_single_evaluation_worker(
     idf_path: str,
     epw: str,
@@ -8089,7 +8117,12 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         b = building if building is not None else self.building
         # The copies that BESOS simulates keep all the digits of the numbers of the model (since accim 1.2.0)
         _ensure_run_building_writes_all_digits()
-        evaluator = EvaluatorEP(problem=self.problem, building=b, epw=epw, out_dir=out_dir)
+        problem = _problem_for_evaluator(self.problem)
+        evaluator = EvaluatorEP(problem=problem, building=b, epw=epw, out_dir=out_dir)
+        # BESOS sets up the inputs, outputs and constraints of the problem with the model of the evaluator, not its
+        # add_outputs: the readers with a setup of their own (WorstPeriodDeviation) are set up here
+        for reader in _readers_with_model_state(getattr(problem, 'add_outputs', None)):
+            reader.setup(b)
         return evaluator
 
     def _run_evaluator_df_apply(
@@ -8254,6 +8287,13 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             return specs
 
         for idx, obj in enumerate(readers):
+            if _readers_with_model_state([obj]):
+                # Its worker would rebuild it as a plain VariableReader (the sum of the daily values) without its setup
+                raise ValueError(
+                    f"{getattr(obj, 'name', obj)}: the simulations of run_parametric_simulation cannot read a "
+                    f"WorstPeriodDeviation, a reader that the evaluators of run_optimisation set up with their models "
+                    f"(as a constraint or an add_output); after the simulations, period_deviations of "
+                    f"accim.data.postprocessing.long_term_discomfort gives the deviations of each period.")
             output_name = output_names[idx] if idx < len(output_names) else getattr(obj, 'name', None)
             # BESOS EPReader stores the reducer in `_process` (not `func`).
             # Keep fallbacks for compatibility with any custom reader wrappers.

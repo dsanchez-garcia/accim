@@ -20,7 +20,10 @@ from measured or simulated data, and the acceptable deviations of its Annex E:
 - Annex E, Table E.1 (:func:`deviation_check`, :func:`deviation_limit`): the acceptable deviations, as percentages of
   the occupied hours of a week (20 % or 50 %), a month (12 % or 25 %) or a year (3 % or 6 %); "it is allowed on the
   6 % level to have temperatures above the criteria for 126 h during a year but not more than 20 h during a working
-  week and 44 h during a working month".
+  week and 44 h during a working month". :func:`period_deviations` checks each week, month or year of some rows (the
+  calendar weeks of :func:`calendar_weeks`, from Monday to Sunday), and
+  :class:`accim.parametric_and_optimisation.objectives.WorstPeriodDeviation` makes the worst of them a constraint of
+  an optimisation.
 
 ISO 7730:2025 has left out its sections on the long-term evaluation, so the reference of these indicators is
 CEN/TR 16798-2. :func:`hours_below` gives the occupied hours below some temperatures, as the outputs
@@ -47,11 +50,13 @@ import pandas as pd
 
 __all__ = [
     'DEVIATION_LIMITS',
+    'calendar_weeks',
     'degree_hours',
     'deviation_check',
     'deviation_limit',
     'hours_below',
     'hours_outside_range',
+    'period_deviations',
     'ppd_from_pmv',
     'ppd_weighted_hours',
     'range_limits',
@@ -257,6 +262,84 @@ def deviation_check(hours_outside: float, occupied_hours: float, period: str = '
     :raises ValueError: If the period or the level is not one of Table E.1.
     """
     return float(hours_outside) <= deviation_limit(occupied_hours, period, level)
+
+
+#: The day types of EnergyPlus of the days of the week (the output *Site Day Type Index*): 1 for Sunday, 2 for Monday...
+#: 7 for Saturday; the holidays are 8, and the special days 9 to 12 (SummerDesignDay, WinterDesignDay, CustomDay1 and
+#: CustomDay2)
+_SUNDAY, _SATURDAY = 1, 7
+
+
+def calendar_weeks(day_types: Values) -> np.ndarray:
+    """The calendar week, from Monday to Sunday (as ISO 8601 numbers them), of each of some consecutive days, from their
+    day types of EnergyPlus (the output *Site Day Type Index* at daily frequency: 1 for Sunday, 2 for Monday... 7 for
+    Saturday; the holidays, 8, and the special days, 9 to 12, take the place of their day of the week): 0 for the week
+    of the first day, 1 for the next one, and so on.
+
+    :param day_types: The day type of each day, in order, without gaps.
+    :return: An array of integers, the week of each day.
+    :raises ValueError: If no day is a day of the week (day types 1 to 7), so that the weeks are unknown, or the days of
+        the week do not follow each other (the days are not consecutive).
+    """
+    types = np.asarray(day_types, dtype=float).reshape(-1)
+    if not len(types):
+        return np.zeros(0, dtype=int)
+    positions = np.flatnonzero((types >= _SUNDAY) & (types <= _SATURDAY) & (types == np.round(types)))
+    if not len(positions):
+        raise ValueError('The days have no day of the week (the day types 1 to 7, Sunday to Saturday), so their '
+                         'calendar weeks are unknown.')
+    # The day of the week of the first day (from Monday, 0, to Sunday, 6), from each day of the week
+    day_of_week = (types[positions].astype(int) - 2) % 7
+    first = (day_of_week - positions) % 7
+    if (first != first[0]).any():
+        raise ValueError('The days of the week of the day types do not follow each other: the days are not '
+                         'consecutive.')
+    return (np.arange(len(types)) + int(first[0])) // 7
+
+
+def period_deviations(hours_outside: Values, occupied_hours: Values, periods: Optional[Values] = None,
+                      period: str = 'weekly', level: str = '6%') -> pd.DataFrame:
+    """The acceptable deviations of CEN/TR 16798-2:2019, Annex E, Table E.1, of each week, month or year of some rows,
+    such as the daily sums of the outputs of the ACCIS: the occupied hours and the occupied hours outside the range of
+    the rows of each period, the largest hours outside within the deviation (:func:`deviation_limit`), the excess
+    over them (0 or negative within the deviation) and whether they are within it (:func:`deviation_check`).
+
+    Each period is measured against its own occupied hours, so a week or a month that the rows do not cover whole (at
+    the beginning or the end of a run period) has the deviation of its occupied hours in the rows.
+
+    :param hours_outside: The occupied hours outside the range of each row (for instance, the daily sums of the output
+        ``Hours Above Upper Limit_<zone>`` of the ACCIS, with ``report_long_term_discomfort=True``).
+    :param occupied_hours: The occupied hours of each row (the output ``Occupied Hours_<zone>``; for the building, the
+        sums of those of its zones).
+    :param periods: The period of each row, a label (such as the week of :func:`calendar_weeks`, or the month), or None
+        for one period in each row (such as the monthly sums of the outputs).
+    :param period: The period of Table E.1 of the labels: 'weekly', 'monthly' or 'yearly'.
+    :param level: The level of Table E.1, named after its yearly percentage: '3%' (20 %, 12 % and 3 %) or '6%'
+        (50 %, 25 % and 6 %).
+    :return: A DataFrame with a row for each period, indexed by its label (``period``), in the order of their first
+        rows: ``occupied_h``, ``outside_h``, ``limit_h``, ``excess_h`` (``outside_h`` − ``limit_h``, in hours) and
+        ``within`` (True if ``outside_h`` is not more than ``limit_h``).
+    :raises ValueError: If the period or the level is not one of Table E.1, the hours are not finite numbers, a period
+        is missing (NaN or None), or the hours and the periods have different lengths.
+    """
+    deviation_limit(0.0, period, level)
+    outside = np.asarray(hours_outside, dtype=float).reshape(-1)
+    occupied = np.asarray(occupied_hours, dtype=float).reshape(-1)
+    labels = np.arange(len(outside)) if periods is None else np.asarray(periods).reshape(-1)
+    if not len(outside) == len(occupied) == len(labels):
+        raise ValueError(f'hours_outside, occupied_hours and periods must have the same length, not {len(outside)}, '
+                         f'{len(occupied)} and {len(labels)}.')
+    if not (np.isfinite(outside).all() and np.isfinite(occupied).all()):
+        raise ValueError('The hours outside the range and the occupied hours must be finite numbers.')
+    if pd.isna(pd.Series(labels, dtype=object)).any():
+        raise ValueError('The period of each row must be a label, not a missing value (NaN or None).')
+    rows = pd.DataFrame({'period': labels, 'occupied_h': occupied, 'outside_h': outside})
+    table = rows.groupby('period', sort=False)[['occupied_h', 'outside_h']].sum()
+    table['limit_h'] = [deviation_limit(hours, period, level) for hours in table['occupied_h']]
+    table['excess_h'] = table['outside_h'] - table['limit_h']
+    table['within'] = [deviation_check(hours_out, hours, period, level)
+                       for hours_out, hours in zip(table['outside_h'], table['occupied_h'])]
+    return table
 
 
 def hours_below(temp: Values, thresholds: Iterable[float] = (18, 17, 16), occupied: Any = None,
