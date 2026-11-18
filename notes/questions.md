@@ -24,105 +24,23 @@ it here as answered).
 
 ## Open
 
-## 2026-11-18 — The windows of the model on the design days in full air-conditioning ('vrf_ac')
-- Context: the VRF heating with warm zones noted on 2026-11-18, investigated the same day (`DEVLOG.md`). In 'vrf_ac' the
-  AirflowNetwork windows of the model keep its own control (section 4.1 of the detailed use), and those of the sample
-  model open on its winter design day: its venting setpoint schedule (`20001`) is 0 °C on the winter design days and
-  24 °C on the other days. So the sizing of the winter design day has the windows open at −4 °C: design heating loads of
-  303 and 357 kW, VRF indoor units of 62 and 73 m³/s, coils and outdoor units of 1.0 and 1.2 MW and constant fans of
-  8.9 and 10.5 kW, whose heat keeps the zones at 22.6 to 26.6 °C in a week of January with the cooling coils on in 1007
-  of its 1008 timesteps (1401 and 1666 kWh, and 1495 and 1763 kWh of the fans); the heating with warm zones is that of
-  the timesteps in which the windows open (24 °C of air). With the schedule at 24 °C on the winter design days: 1.5 and
-  1.7 kW, 0.61 and 0.79 m³/s, fans of 87 and 113 W, and in that week 45 and 69 kWh of cooling, 15 and 19 kWh of the
-  fans and 6.8 and 7.4 kWh of heating. In mixed mode ('vrf_mm') the EMS closes the windows on the design days, and the
-  sizing is that of the setpoints (1.5 and 1.7 kW, 0.63 and 0.81 m³/s, a year of 2026-11-18).
-- Why it matters: every simulation of the sample model with 'vrf_ac' (tests, docs, the measurements of comfort
-  standard 24 and of its fallback, the try-runs of the validation study of F3, whose VRF system "does not hold 26 °C")
-  has VRF systems about 100 times larger than its loads, with fans whose heat dominates the energy and the
-  temperatures; the comparisons between cases of the same model hold, their absolute values do not. Any input model
-  whose natural ventilation opens its windows on a design day gets the same sizing with 'vrf_ac' (and its autosized
-  systems with 'ex_ac').
-- Options considered: (a) 'vrf_ac' (and 'ex_ac') close the windows of the AirflowNetwork on the design days, as mixed
-  mode does, and keep the natural ventilation of the model on the other days (the output IDFs of 'vrf_ac' with an
-  AirflowNetwork change: golden master); (b) 'vrf_ac' closes them always, a full air-conditioning without natural
-  ventilation (the documented behaviour changes); (c) a warning of AddAccis when the windows of the model can open on
-  the design days, and the sample model fixed (its schedule `20001` at 24 °C on the winter design days: a sample file,
-  and the results of the tests and docs that use it, change); (d) the sample model fixed only.
-  Recommendation of Claude Code: (a), the sizing for the setpoints with the windows closed, as in mixed mode, with a
-  note in section 4.1; then the measurements with 'vrf_ac' and the sample model whose absolute values matter (the
-  validation study) are taken again.
-- Owner: the author.
-- Status: open.
-
-## 2026-11-18 — Check 2 with the HVAC system on in a part of the previous timestep: keep it exact, or accept both states?
-- Context: the entry of `TODO.md` (found with B2): the EMS sensors of the coils read their last system timestep, and
-  check 2 takes the HVAC system of the previous timestep as on where the outputs of that timestep (its means) are not
-  0, so a window that the EMS opened after a timestep in which a coil worked in a part of it would be a false
-  mismatch. The definition of done of the entry accepts both states there, with an EnergyPlus case. Searched again on
-  2026-11-18: a year of the sample model in mixed mode ('vrf_mm', HVACmode 2, VentCtrl 0) gives no mismatch of check
-  2, and no window opens in a timestep after one with the coils of its zone on (12902 and 11643 such timesteps in the
-  two zones; the windows opened 1841 and 2138 times), as in four weeks before.
-- Why it matters: accepting both states wherever the coils of the previous timestep worked would make check 2 accept
-  a window open after a timestep with the coils on all of it, which it reports now (the decision of 2026-11-13 of an
-  exact check 2; the timestep 41 of `test_check_2_compares_the_opening_factor_of_each_window_with_that_of_its_programs`
-  would change); keeping it, the false mismatch would be reported if it ever happens.
-- Options considered: (a) keep check 2 as it is and close the entry, with a note in the docs of check 2 (possible, not
-  seen in a year of the sample model); (b) accept both states there (the definition of done); (c) report those
-  timesteps apart, as possible false mismatches (as check 1 does); (d) read the outputs at the frequency of the system
-  timesteps when the model reports them (they tell the state exactly; ReadVarsESO and the reader of its CSV file do
-  not take them yet). Recommendation of Claude Code: (a).
-- Owner: the author.
-- Status: open.
-
-## 2026-11-18 — IND IMAC: the band of 85 % of the static setpoints, and the running means below 15 °C
-- Context: checked on 2026-11-18 (`notes/decisions.md`): the line 0.078·Tout + 23.25 of the static setpoints of
-  comfort standards 7 to 10 (and of comfort mode 1 of 11, IND Dhaka, out of its applicability limits), with the
-  30-day outdoor running mean and ±1.5 K for 90 % of acceptability, is that of the air-conditioned buildings of the
-  National Building Code of India 2016 (Volume 2, Part 8, Section 3, 6.2 c)); it is equation 3 of Dhaka & Mathur
-  (2017), whose text gives 1.47 K (90 %) and 2.72 K (80 %) as half-widths, although its Table 7 gives bands of those
-  widths (±0.73 and ±1.36 K): the paper contradicts itself, and the code and accim follow its text. The ±2.11 K of
-  category 85 (comfort standards 7 and 8) is the mean of 1.5 and 2.72 K, which neither source gives. The code says
-  that its equations are not applicable with outdoor running means below 15 °C (Dhaka & Mathur fitted it with
-  outdoor temperatures of 25 to 44 °C); accim applies the line with any running mean (comfort mode 0, and comfort
-  mode 1 out of the applicability limits of the adaptive models, also below them, and so in comfort standard 11).
-- Options considered: (a) keep the setpoints, documented (done on 2026-11-18); (b) category 85 of comfort modes 0
-  and 1 documented as an interpolation (done) or removed; (c) the line limited to running means of 15 °C or more
-  (below, its value at 15 °C), in comfort standards 7 to 11, which changes the setpoints below 15 °C; (d) the bands of
-  Table 7 of the paper (±0.73 and ±1.36 K) for categories 90 and 80, which would leave the code. Recommendation of
-  Claude Code: (a).
-- Owner: the author.
-- Status: open.
-
-## 2026-11-18 — Should `AddAccis` write comfort standard 24, with the fallback of the EMS?
-- Context: since 2026-11-18 (the provisional decision of that day in [[decisions.md]]), `apply_sun2026_setpoints(model,
-  ems_fallback=True)` gives a model of comfort standard 24 a feedback of its setpoints on the SET of the Pierce model
-  of EnergyPlus, with which it runs with the EMS backend (`run_ep()`); the model is generated with another comfort
-  standard, whose comfort temperature and applicability limits its zones keep, and `AddAccis` raises a `ValueError`
-  with comfort standard 24 (its message points to `ems_fallback`). The entry of `TODO.md` of the fallback (v03 A6a)
-  had "the `ValueError` of `AddAccis` replaced by it" in its definition of done.
-- Why it matters: with comfort standard 24 in `AddAccis`, its output IDFs (`CS_INT Sun2026 SET`) would run with the
-  EMS backend like the others, also in the parametric module; but it changes the arguments and the output IDFs of
-  `AddAccis`, and the zones need a comfort temperature and applicability limits of their own (comfort standard 24 has
-  none: its setpoints are those of the SET).
-- Options considered: (a) leave it as it is: `AddAccis` with another comfort standard, then `apply_sun2026_setpoints(...,
-  ems_fallback=True)` (two steps, documented in section 4.9.3); (b) `AddAccis` with comfort standard 24 writes the
-  ACCIS of another comfort standard for the comfort temperature and the limits (an argument, or a default such as that
-  of ASHRAE 55), and then the objects of the hook and the fallback (with the arguments `tsv_limit`, `set_offset`,
-  `ems_relaxation` and `ems_slope`, and People objects with the schedules of the Pierce model), the output IDFs being
-  run with the EMS backend or with the hook; (c) as (b), with the comfort temperature and the limits of the causal SET
-  model itself (the neutral SET and the band, converted to operative temperatures by the fallback), a new design.
-  Recommendation of Claude Code: (a) until the validation study of F3 needs comfort standard 24 in parametric studies,
-  then (b).
-- Owner: the author.
-- Status: open.
-
-The other questions are answered: the question of 2026-11-18 on the digits of the curves of the VRF systems in the
-output IDFs of AddAccis and the question of 2026-11-17 on the range of the bisection of comfort standard 24 were
-answered on 2026-11-18, the question of 2026-11-12 on the validation study of F3 and that of 2026-11-13 on checks 1
-and 2 of the verification were decided on 2026-11-13, and the six questions that were open after session 3 of the
-review of 1.2.0, on 2026-11-12 (see "Answered" below).
+None. The four questions of 2026-11-18 (the windows of the model on the design days in full air-conditioning, check 2
+with the HVAC system on in a part of the previous timestep, the static setpoints of IND IMAC, and `AddAccis` with
+comfort standard 24) were decided on 2026-11-19 by Claude Code, to which the author delegated them; the question of
+2026-11-18 on the digits of the curves of the VRF systems in the output IDFs of AddAccis and the question of 2026-11-17
+on the range of the bisection of comfort standard 24 were answered on 2026-11-18, the question of 2026-11-12 on the
+validation study of F3 and that of 2026-11-13 on checks 1 and 2 of the verification were decided on 2026-11-13, and the
+six questions that were open after session 3 of the review of 1.2.0, on 2026-11-12 (see "Answered" below).
 
 ## Answered
+
+The four questions of 2026-11-18 (the windows of the model on the design days in full air-conditioning, `vrf_ac`, with
+which the VRF systems of the sample model were sized with its windows open at -4 °C; check 2 with the HVAC system on in
+a part of the previous timestep; the range of 85 % and the running means below 15 °C of the static setpoints of IND
+IMAC; and whether `AddAccis` writes comfort standard 24 with the fallback of the EMS) were decided by Claude Code on
+2026-11-19, to which the author delegated them ("Toma las decisiones que consideres mejores y continua trabajando"):
+option (a) of each one, its recommendation, which keep their context: see
+[[decisions.md#2026-11-19 — The four questions of 2026-11-18, decided by delegation of the author|the decisions of 2026-11-19]].
 
 The question of 2026-11-18 on whether the output IDFs of `AddAccis` keep all the digits of the curves of the VRF
 systems (eppy wrote four coefficients of the curves of the indoor units with 7 significant digits in them, and the

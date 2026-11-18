@@ -3656,3 +3656,16 @@ tres fallos:
 
 **Los tests**: los programas del respaldo y de `ApplyHookSetpoints` en el intérprete de Erl (indicador 0, −1 y actividad
 nula) y el −1 del gancho; los tests de los ganchos y del estándar 24 (92, con EnergyPlus) y la suite completa (2237).
+
+## 77. Las cuatro preguntas del 18 de noviembre, decididas por delegación del autor
+
+El autor delegó las decisiones ("Toma las decisiones que consideres mejores y continua trabajando"). En las cuatro he
+tomado la opción (a), la que recomendaba; están en `notes/decisions.md` (19 de noviembre) con su contexto:
+- **Las ventanas en los días de diseño con climatización completa** (`vrf_ac` y `ex_ac`): se cierran en los días de
+  diseño, como en el modo mixto, y el resto de días conservan la ventilación natural del modelo. Es lo que sigue, con el
+  golden master reescrito a propósito y las medidas del modelo de ejemplo repetidas.
+- **El check 2** se queda exacto, con una nota en su documentación; se cierra la entrada del TODO.
+- **Las consignas estáticas de IND IMAC** no cambian.
+- **`AddAccis` con el estándar 24**: en dos pasos hasta que el estudio de F3 lo necesite en estudios paramétricos.
+
+Además, las decisiones provisionales del 18 (el respaldo del estándar 24 y C2) quedan aceptadas.

@@ -35,6 +35,21 @@ Recommended flow: track active work in `TODO.md`, move completed outcomes to `DE
 
 ## Entries
 
+### 2026-11-19
+#### [done] The four questions of 2026-11-18, decided by delegation of the author (branch `v1.2.0`)
+- Context: the author delegated the decisions on the open questions to Claude Code ("Toma las decisiones que consideres
+  mejores y continua trabajando").
+- Changes: option (a) of each question (`notes/decisions.md`, 2026-11-19, with their context; `notes/questions.md`
+  has no open question): the windows of full air-conditioning closed on the design days (the P1 entry of `TODO.md`,
+  now in progress); check 2 kept exact, with a note in section 4.6 of the detailed use, and its entry of `TODO.md`
+  closed; the static setpoints of IND IMAC unchanged; `AddAccis` without comfort standard 24 until the validation
+  study of F3 needs it. The provisional decisions of 2026-11-18 (the fallback of the EMS of comfort standard 24 and
+  C2) accepted.
+- Files: `notes/decisions.md`, `notes/questions.md`, `TODO.md`, `docs/source/4_detailed use.md`.
+- Verification: the docs build with the warnings of the baseline.
+- Next step: the resume of `run_optimisation` with the problem in its signature, and the windows of full
+  air-conditioning on the design days.
+
 ### 2026-11-18
 #### [done] The fallback of the EMS of comfort standard 24 after its review (branch `v1.2.0`)
 - Context: a review of the commit of the fallback (02a4b41) by a workflow of four reviewers, with a skeptic for each

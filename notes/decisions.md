@@ -11,6 +11,42 @@ Durable architectural/process decisions for this repository and its Obsidian
 vault. Newest first. Use [[templates/decision-record.md|the decision-record
 template]] to add a new entry.
 
+## 2026-11-19 — The four questions of 2026-11-18, decided by delegation of the author
+
+- **Status**: accepted (Claude Code, on 2026-11-19, to which the author delegated the decisions: "Toma las decisiones
+  que consideres mejores y continua trabajando"). Each one is option (a) of its question, the recommendation of Claude
+  Code; the context of the questions is kept below. The provisional decisions of 2026-11-18 (the fallback of the EMS
+  of comfort standard 24 and C2, below) are accepted by the same delegation.
+- **1. The windows of the model on the design days in full air-conditioning** (`vrf_ac`; the P1 entry of `TODO.md`).
+  Context: in `vrf_ac` the AirflowNetwork windows of the model keep its own control (section 4.1 of the detailed use),
+  and those of the sample model open on its winter design day (its venting setpoint schedule `20001` is 0 °C on the
+  winter design days and 24 °C on the other days), so its VRF systems were sized with the windows open at −4 °C: design
+  heating loads of 303 and 357 kW, indoor units of 62 and 73 m³/s, coils of 1.0 and 1.2 MW and constant fans of 8.9 and
+  10.5 kW, whose heat kept the zones at 22.6 to 26.6 °C in January (with the schedule at 24 °C on those days: 1.5 and
+  1.7 kW, 0.61 and 0.79 m³/s, fans of 87 and 113 W). Mixed mode closes the windows on the design days with the EMS.
+  Decision: in full air-conditioning (`vrf_ac` and `ex_ac`), the windows and doors of the occupied zones that the EMS
+  of mixed mode would control are closed on the design days, as in mixed mode, and keep the natural ventilation of the
+  model on the other days (options not taken: closing them always, a warning only, or fixing the sample model only).
+  The output IDFs of full air-conditioning with such windows change (the golden master written again on purpose), and
+  the measurements of the tests and the docs made with the sample model in `vrf_ac` are taken again.
+- **2. Check 2 with the HVAC system on in a part of the previous timestep.** Context: the EMS sensors of the coils read
+  their last system timestep, and check 2 takes the HVAC system as on where the outputs of the previous timestep are
+  not 0, so a window opened after a timestep in which a coil worked in a part of it would be a false mismatch; none in a
+  year of the sample model in mixed mode (2026-11-18). Decision: check 2 stays as it is (exact, the decision of
+  2026-11-13), with a note in its docs; accepting both states wherever the coils worked would hide a window opened with
+  the HVAC system on. The entry of `TODO.md` is closed.
+- **3. The static setpoints of IND IMAC.** Context: the line 0.078·T + 23.25 with ±1.5 K (90 %) is that of the
+  National Building Code of India 2016; ±2.72 K (80 %) is that of the text of Dhaka & Mathur (2017), whose Table 7
+  contradicts it, and ±2.11 K (85 %) the mean of both; the code does not apply its equations below running means of
+  15 °C. Decision: the setpoints do not change (documented in section 4.2 since 2026-11-18): the bands are those that
+  accim has always had, and limiting the line at 15 °C would change the results of comfort standards 7 to 11 without
+  a source that says what to do below it.
+- **4. `AddAccis` with comfort standard 24.** Context: `apply_sun2026_setpoints(..., ems_fallback=True)` gives a model
+  of comfort standard 24 the fallback of the EMS; `AddAccis` still raises a `ValueError` with comfort standard 24, and
+  writing it would change its arguments and output IDFs, and need a comfort temperature and applicability limits for
+  the zones. Decision: two steps (another comfort standard with `AddAccis`, then `apply_sun2026_setpoints`), until the
+  validation study of F3 needs comfort standard 24 in parametric studies; the entry of `TODO.md` stays for then.
+
 ## 2026-11-18 — The static setpoints of IND IMAC checked in the National Building Code of India 2016
 
 - **Status**: done (Claude Code, in the autonomous session of 2026-11-18; the P2 entry of `TODO.md`): a check, with no
@@ -44,8 +80,9 @@ template]] to add a new entry.
 
 ## 2026-11-18 — C2: the worst week, month or year of Table E.1 as a constraint, with a reader of besos
 
-- **Status**: provisional (Claude Code, in the autonomous session of 2026-11-18: "continua con todas las tareas que
-  puedas; trabaja de forma autónoma"; the P2 entry C2 of `TODO.md`). To be confirmed by the author.
+- **Status**: accepted on 2026-11-19 by the delegation of the author (the entry of that day, above); taken by Claude
+  Code in the autonomous session of 2026-11-18 ("continua con todas las tareas que puedas; trabaja de forma autónoma";
+  the P2 entry C2 of `TODO.md`).
 - **Context**: `deviation_constraint_bound` gives the bound of the yearly criterion of CEN/TR 16798-2:2019, Annex E,
   Table E.1, with the occupied hours of a first simulation. The weekly and monthly criteria compare the hours outside
   the range of each week or month with its own occupied hours, two outputs that a reducer of besos (one output) does
@@ -83,10 +120,10 @@ template]] to add a new entry.
 
 ## 2026-11-18 — The fallback of the EMS of comfort standard 24: a relaxed estimate of the setpoints, in `apply_sun2026_setpoints`
 
-- **Status**: provisional (Claude Code, in the autonomous session of 2026-11-18: "continua con todas las tareas que
-  puedas; trabaja de forma autónoma"; the P2 entry of `TODO.md` of task F1, way (a) of proposal A6 of v03). To be
-  confirmed by the author; whether `AddAccis` writes comfort standard 24 with it is the question of the same day of
-  [[questions.md]].
+- **Status**: accepted on 2026-11-19 by the delegation of the author (the entry of that day, above, which also decided
+  that `AddAccis` does not write comfort standard 24 yet); taken by Claude Code in the autonomous session of
+  2026-11-18 ("continua con todas las tareas que puedas; trabaja de forma autónoma"; the P2 entry of `TODO.md` of task
+  F1, way (a) of proposal A6 of v03).
 - **Context**: comfort standard 24 (task F1) is a hook of the backend of the Python API; without it (the EMS backend),
   the model had the setpoints of the comfort standard of its zones, so `run_ep` refused it (finding A4 of the
   self-audit of 2026-11-11). v03 A6a proposes an Erl loop on the SET of the previous timestep that EnergyPlus

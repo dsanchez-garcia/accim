@@ -15,6 +15,18 @@ This log is a lightweight, session-scoped complement to the repository's
 existing tracking files — it does not replace them (see
 [[decisions.md#2026-09-13 — `notes/work-log.md` complements, not replaces, existing tracking files|the related decision]]).
 
+## 2026-11-19 — The decisions delegated by the author (branch `v1.2.0`, on the server)
+
+- **Objective**: the author delegated the decisions on the four open questions of 2026-11-18 ("Toma las decisiones
+  que consideres mejores y continua trabajando") and asked to keep working.
+- **Affected files**: [[decisions.md]], [[questions.md]], [[../TODO.md]], [[../DEVLOG.md]], section 4.6 of the
+  detailed use.
+- **Finding or decision**: option (a) of each question, the recommendations of Claude Code; the provisional decisions
+  of 2026-11-18 accepted. The windows of full air-conditioning on the design days is the next work, with the resume
+  of `run_optimisation`.
+- **Validation**: the docs build.
+- **Next step**: the two implementations, each with its tests, a review and the full suite.
+
 ## 2026-11-18 — The review of the work of the autonomous session (branch `v1.2.0`, on the server)
 
 - **Objective**: an adversarial review, with the ultracode mode on, of C2 (before its commit), of the fallback of the
