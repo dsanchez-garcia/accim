@@ -11,6 +11,27 @@ Durable architectural/process decisions for this repository and its Obsidian
 vault. Newest first. Use [[templates/decision-record.md|the decision-record
 template]] to add a new entry.
 
+## 2026-11-19 — The standard outputs of mixed mode keep those of the site for check 2
+
+- **Status**: accepted (Claude Code, on 2026-11-19, by the delegation of the author of the same day: "Toma las
+  decisiones que consideres mejores y continua trabajando"). It closes the P2 entry of `TODO.md` that left it to the
+  author.
+- **Context**: the programs `SetWindowOperation_<window>` of mixed mode read the outdoor air temperature and the wind
+  speed of the zone of each window (*Zone Outdoor Air Drybulb Temperature* and *Zone Outdoor Air Wind Speed*, at the
+  height of its centroid) and, with `ex_mm`, the load to the setpoints of its thermostat. The standard outputs have
+  those of the site only, so with them check 2 of `verify_accim_simulation` takes those of the site and says so in its
+  summary, and with `ex_mm` and `hvac_mode=[2]` it does not check the windows (and says so). `output_type='detailed'`
+  adds them in mixed mode, and with them check 2 is exact (2026-11-13). In the sample model, the outputs of the site
+  gave no false mismatch in a week of spring with the default maximum wind speed (50 m/s), and 75 and 480 in 6042
+  values (`hvac_mode` 2 and 1) with a maximum of 1 m/s.
+- **Decision**: the standard outputs of mixed mode do not change. Two outputs more for each zone with windows (three
+  with `ex_mm`) would change the output IDFs of mixed mode and the size of their results for a check that is exact with
+  `output_type='detailed'` and differs with the standard outputs only near the maximum wind speed; the note of section
+  4.6 of the detailed use, which says so and points to `output_type='detailed'`, stays. Option not taken: adding them
+  to the standard outputs, with the golden master of mixed mode written again.
+- **Consequences**: no change of code or docs; the windows of mixed mode are checked exactly with
+  `output_type='detailed'`.
+
 ## 2026-11-19 — The four questions of 2026-11-18, decided by delegation of the author
 
 - **Status**: accepted (Claude Code, on 2026-11-19, to which the author delegated the decisions: "Toma las decisiones

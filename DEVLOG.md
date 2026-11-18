@@ -36,6 +36,14 @@ Recommended flow: track active work in `TODO.md`, move completed outcomes to `DE
 ## Entries
 
 ### 2026-11-19
+#### [done] The standard outputs of mixed mode, decided by delegation of the author (branch `v1.2.0`)
+- Context: the P2 entry of `TODO.md` left to the author whether the standard outputs of mixed mode get the outdoor air
+  temperature and the wind speed of the zones (and, with `ex_mm`, the load to the setpoints) that the EMS programs of
+  the windows read, with which check 2 of `verify_accim_simulation` is exact.
+- Changes: they do not (`notes/decisions.md`, 2026-11-19): `output_type='detailed'` adds them, and the note of section
+  4.6 of the detailed use says so; the entry of `TODO.md` is closed. No change of code.
+- Files: `notes/decisions.md`, `TODO.md`, `notes/work-log.md`.
+
 #### [done] The resume of `run_optimisation` checks the problem (branch `v1.2.0`)
 - Context: the P2 entry of `TODO.md`, found by the review of C2 on 2026-11-18 (its root cause predates C2): the
   signature of the checkpoints of `run_optimisation` had not the problem, so a resume with other objectives,

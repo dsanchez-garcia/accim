@@ -23,9 +23,11 @@ existing tracking files — it does not replace them (see
   detailed use.
 - **Finding or decision**: option (a) of each question, the recommendations of Claude Code; the provisional decisions
   of 2026-11-18 accepted. The windows of full air-conditioning on the design days is the next work, with the resume
-  of `run_optimisation`.
-- **Validation**: the docs build.
-- **Next step**: the two implementations, each with its tests, a review and the full suite.
+  of `run_optimisation`. Done since: the resume of `run_optimisation` checks the problem (6298c5b), and, by the same
+  delegation, the standard outputs of mixed mode keep those of the site for check 2 (`output_type='detailed'` adds
+  those of the zones).
+- **Validation**: the docs build; `tests/parametric_and_optimisation` (533 passed) for the resume.
+- **Next step**: the windows of full air-conditioning on the design days, with its tests, a review and the full suite.
 
 ## 2026-11-18 — The review of the work of the autonomous session (branch `v1.2.0`, on the server)
 

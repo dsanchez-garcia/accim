@@ -3685,3 +3685,13 @@ empieza de cero con el aviso de la firma; los checkpoints anteriores a este camb
 
 **Los tests**: el mismo problema reanuda y otra cota empieza de cero; la firma de un problema de besos es la misma dos
 veces y cambia con otro nivel, otra cota u otro rango.
+
+## 79. Las salidas estándar del modo mixto no cambian
+
+La entrada P2 del TODO dejaba al autor decidir si las salidas estándar del modo mixto incluyen la temperatura del aire
+exterior y la velocidad del viento de cada zona (y, con `ex_mm`, la carga a las consignas), que leen los programas de
+las ventanas y que el check 2 necesita para ser exacto. Por la misma delegación, decido que no: `output_type='detailed'`
+las añade, y con las salidas estándar el check 2 toma las del emplazamiento y lo dice en su resumen (en el modelo de
+ejemplo, sin falsos desajustes con la velocidad máxima del viento por defecto). Añadirlas cambiaría los IDF de salida
+del modo mixto y el tamaño de sus resultados. No hay cambio de código; la nota de la sección 4.6 se queda y la entrada
+del TODO se cierra (`notes/decisions.md`, 19 de noviembre).
