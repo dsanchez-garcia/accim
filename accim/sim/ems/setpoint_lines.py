@@ -484,6 +484,13 @@ set AHST = AHSTaul*0.31+17.14+AHSTtol
 endif
 endif
 """),
+    # The static setpoints of the IND IMAC comfort standards (7 to 10: comfort mode 0, and comfort mode 1 out of the
+    # applicability limits; also comfort mode 1 of 11, IND Dhaka): the neutral operative temperature of the
+    # air-conditioned buildings of the National Building Code of India 2016 (Volume 2, Part 8, Section 3, 6.2 c), the
+    # approach of the air temperature), 0.078·T + 23.25 with the 30-day outdoor running mean (PMOT) and ±1.5 K for
+    # 90 % of acceptability; the line is equation 3 of Dhaka & Mathur (2017), Building and Environment 112, 296-307,
+    # whose text gives 2.72 K as the half-width of 80 % (its Table 7, as the full width); that of 85 % (7 and 8 only),
+    # 2.11 K, is the mean of 1.5 and 2.72 K (checked on 2026-11-18, section 4.2 of the detailed use)
     (7, 0): _lines("""
 if CAT==80
 set ACST = PMOT*0.078+23.25+2.72+ACSTtol

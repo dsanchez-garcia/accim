@@ -36,6 +36,72 @@ Recommended flow: track active work in `TODO.md`, move completed outcomes to `DE
 ## Entries
 
 ### 2026-11-18
+#### [done] The VRF heating of the sample model with warm zones: its windows open on the winter design day (branch `v1.2.0`)
+- Context: noted on 2026-11-18 with the range of the setpoints of comfort standard 24 (the heating coils of the sample
+  model worked in a few timesteps with the zones above 22 °C in January), investigated in the autonomous session of
+  the same day. It happens without the hook too.
+- Findings (EnergyPlus 25.1, the output IDF of `AddAccis` of the sample model with `vrf_ac`, INT EN16798 category II,
+  comfort mode 3, Seville, 8 to 14 January): the AirflowNetwork windows of the model keep its own venting control in
+  `vrf_ac` (Temperature, the schedule `20001`: 24 °C on weekdays, weekends and summer design days, 0 °C on the winter
+  design days), so they are open in the sizing of the winter design day (−4 °C): design heating loads of 302.5 and
+  356.9 kW (cooling 3.2 and 4.2 kW), VRF indoor units of 62.3 and 73.5 m³/s, coils and outdoor units of 1.03 and 1.22
+  MW, and constant fans (`On 24/7`) of 8.9 and 10.5 kW. Their heat keeps the zones at 22.6 to 26.6 °C in that week
+  (24.1 °C on average), with the cooling coils on in 1007 of its 1008 timesteps (VRF heat pumps in cooling mode in
+  January nights; 1401 and 1666 kWh) and 1495 and 1763 kWh of the fans; the heating (1.4 and 7.1 kWh, in 1 and 5
+  timesteps) is that of the timesteps in which the windows open (zone air at 24 °C; an opening factor of 0.26 to 0.41
+  after 0), whose predicted loads jump (+43 to +87 kW to the cooling setpoint). With the schedule at 24 °C on the winter
+  design days too: 1.5 and 1.7 kW, 0.61 and 0.79 m³/s, fans of 87 and 113 W, and in that week the zones at 17.3 to
+  25.1 °C, 45 and 69 kWh of cooling, 15 and 19 kWh of the fans and 6.8 and 7.4 kWh of heating (still with some
+  timesteps above 22 °C, those in which the windows open). In mixed mode (`vrf_mm`, a year) the EMS closes the windows
+  on the design days, and the sizing is that of the setpoints (1.5 and 1.7 kW, 0.63 and 0.81 m³/s, 90 and 116 W).
+- Changes: none in the code: a P1 entry of `TODO.md` and a question for the author in `notes/questions.md` (what
+  `vrf_ac` does with the windows of the model on the design days), since the comparisons between cases of the sample
+  model hold but their absolute values do not (the measurements of comfort standard 24 and the try-runs of F3).
+- Verification: the scripts of the session (`vrf_heating.py` and the analyses of its outputs, with the EIO file of
+  each run), the model as it is and with the schedule `20001` changed.
+
+#### [done] Check 2 with the HVAC system on in a part of the previous timestep: a year without the case (branch `v1.2.0`)
+- Context: the P2 entry of `TODO.md` (found with task B2): a window that the EMS opens after a timestep in which a coil
+  worked in a part of it would be a false mismatch of check 2; no EnergyPlus case had been found in four weeks.
+- Findings (EnergyPlus 25.1, a year of the sample model in mixed mode, `vrf_mm`, HVACmode 2, VentCtrl 0, INT EN16798
+  category II, comfort mode 3, Seville, the detailed outputs at timestep frequency): no mismatch of check 2 (1146
+  timesteps of check 1, which are not mismatches); the windows of the two zones were open in 2401 and 3193 timesteps
+  and opened 1841 and 2138 times, never in a timestep after one with the coils of their zone on (12902 and 11643 such
+  timesteps).
+- Changes: none in the code. The definition of done of the entry (both states accepted where the coils worked) would
+  make check 2 accept a window open after a timestep with the coils on all of it, which it reports now and one of its
+  tests checks, so the entry is blocked on the question of 2026-11-18 for the author (`notes/questions.md`;
+  recommendation: keep check 2 as it is and close the entry).
+- Verification: the script of the session (`check2_year.py` and its analysis).
+
+#### [done] The static setpoints of IND IMAC checked in the National Building Code of India 2016 (branch `v1.2.0`)
+- Context: the P2 entry of `TODO.md` (the line 0.078·T + 23.25 of comfort modes 0 and 1 of comfort standards 7 to 10,
+  not verified in the codes on 2026-11-12, `notes/decisions.md`). The code is in the library of the author since
+  2026-11-09 (`Bureau of Indian Standards_2016_National Building Code of India Volume 2.pdf`), which the search of
+  2026-11-12 did not find.
+- Findings: Part 8, Section 3 (Air Conditioning, Heating and Mechanical Ventilation), 6.2 (Design of Indoor
+  Conditions as per Adaptive Thermal Comfort Model), c) the air-conditioned buildings, 1) the approach of the air
+  temperature: the neutral operative temperature 0.078·Tout + 23.25, with Tout the 30-day outdoor running mean air
+  temperature, and ±1.5 °C for 90 % of acceptability; the code gives no range of 85 % or 80 %, says that its equations
+  are not applicable with outdoor running means below 15 °C, and also has an approach of the SET (0.014·Tout + 24.53,
+  ±1.0 °C). The line is equation 3 of Dhaka & Mathur (2017), Building and Environment 112, 296-307,
+  doi:10.1016/j.buildenv.2016.11.035 (air-conditioned buildings of the composite climate of India; outdoor
+  temperatures of 25 to 44 °C, R² = 0.03), whose text gives 1.47 and 2.72 K as the half-widths of the 90 % and 80 %
+  acceptability limits, although its Table 7 gives bands of those widths (±0.73 and ±1.36 K; the review of
+  2026-11-18 found the contradiction). So the ±1.5 K of category 90 is that of the code, the ±2.72 K of category 80
+  that of the text of the paper, and the ±2.11 K of category 85 (comfort standards 7 and 8) the mean of both
+  (inferred: neither gives 85 %); comfort mode 1 of comfort standard 11 (IND Dhaka) takes the line too out of its
+  applicability limits; accim reads PMOT, the 30-day running mean of EnergyPlus, as the code says. The setpoints of
+  accim do not change.
+- Changes: section 4.2 of the detailed use (the static setpoints of IND IMAC, with both references, and the paragraph
+  of IND IMAC R, which called the line unchecked, pointing to them), a comment in `accim/sim/ems/setpoint_lines.py`,
+  the entry of `CHANGELOG.md` of comfort standards 9 and 10 (Fixed); the entry of `TODO.md` removed;
+  `notes/decisions.md`, and a question in `notes/questions.md` (the range of 85 % and the running means below 15 °C).
+  The review of 2026-11-18 (a workflow, before the commit) found the paragraph and the entry that still called the
+  line unchecked, the contradiction of the paper and the scope (category 85 of 7 and 8 only; comfort standard 11).
+- Verification: the text of the code and of the paper, read on 2026-11-18 (pages 333 and 334 of the PDF of the code,
+  9 and 10 of the paper). The docs build with the warnings of the baseline.
+
 #### [done] C2: the deviations of Table E.1 of the worst week, month or year as a constraint (branch `v1.2.0`)
 - Context: the P2 entry C2 of `TODO.md` (proposal C2 of v03): `deviation_constraint_bound` gave the bound of the
   yearly criterion only; the weekly and monthly criteria compare the hours outside the range of each week or month

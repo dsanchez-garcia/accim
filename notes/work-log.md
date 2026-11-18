@@ -15,6 +15,22 @@ This log is a lightweight, session-scoped complement to the repository's
 existing tracking files — it does not replace them (see
 [[decisions.md#2026-09-13 — `notes/work-log.md` complements, not replaces, existing tracking files|the related decision]]).
 
+## 2026-11-18 — Check 2, the VRF heating of the sample model and IND IMAC: what needed no code (branch `v1.2.0`, on the server)
+
+- **Objective**: the last tasks of the autonomous session: check 2 with the HVAC system on in a part of the previous
+  timestep, the heating of the VRF systems of the sample model with warm zones, and the static setpoints of IND IMAC.
+- **Affected files**: section 4.2 of the detailed use, a comment of `accim/sim/ems/setpoint_lines.py`,
+  [[../TODO.md]], [[../DEVLOG.md]], [[decisions.md]], [[questions.md]].
+- **Finding or decision**: (1) a year of the sample model in mixed mode has no false mismatch of check 2, and no window
+  opens after a timestep with the coils on: the entry waits for the author, since its way would loosen check 2. (2) In
+  `vrf_ac` the windows of the sample model are open in the sizing of its winter design day (its own venting schedule,
+  0 °C on those days): VRF units about 100 times too large, whose fans heat the zones; a P1 entry and a question for
+  the author. (3) The line 0.078·T + 23.25 and ±1.5 K (90 %) of IND IMAC are those of the National Building Code of
+  India 2016 (in the library since 2026-11-09), from Dhaka & Mathur (2017), whose text gives the ±2.72 K of 80 % of
+  accim (its Table 7, ±1.36 K); the ±2.11 K of 85 % is their mean.
+- **Validation**: in the entries of [[../DEVLOG.md]].
+- **Next step**: the answers of the author to the four questions of 2026-11-18 ([[questions.md]]).
+
 ## 2026-11-18 — C2: the worst week, month or year of Table E.1 as a constraint (branch `v1.2.0`, on the server)
 
 - **Objective**: the P2 entry C2 of [[../TODO.md]], in the autonomous session of the afternoon: the weekly and

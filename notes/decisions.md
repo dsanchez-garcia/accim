@@ -11,6 +11,37 @@ Durable architectural/process decisions for this repository and its Obsidian
 vault. Newest first. Use [[templates/decision-record.md|the decision-record
 template]] to add a new entry.
 
+## 2026-11-18 — The static setpoints of IND IMAC checked in the National Building Code of India 2016
+
+- **Status**: done (Claude Code, in the autonomous session of 2026-11-18; the P2 entry of `TODO.md`): a check, with no
+  change of the setpoints. What it leaves for the author is the question of the same day of [[questions.md]].
+- **Context**: comfort modes 0 and 1 of comfort standards 7 to 10 (and comfort mode 1 of 11, IND Dhaka, out of its
+  applicability limits) take as static setpoints the line 0.078·T + 23.25, ±1.5 K (category 90), ±2.11 K (85: comfort
+  standards 7 and 8 only, the others have categories 80 and 90) and ±2.72 K (80), with `PMOT`; on 2026-11-12 the line
+  was **[not verified in the codes]** (the "What was checked" of the entry of 2026-11-12, below). The National Building Code of India 2016 is in
+  the library of the author since 2026-11-09 (`Bureau of Indian Standards_2016_National Building Code of India Volume
+  2.pdf`).
+- **What was checked** (**[verified]** in the source, **[inferred]**):
+  - The code **[verified]**: Volume 2, Part 8 (Building Services), Section 3 (Air Conditioning, Heating and Mechanical
+    Ventilation), 6.2 (Design of Indoor Conditions as per Adaptive Thermal Comfort Model), c) the air-conditioned
+    buildings, 1) the approach of the air temperature: the neutral operative temperature is 0.078·Tout + 23.25, with
+    Tout the 30-day outdoor running mean air temperature, and the 90 % acceptability range is ±1.5 °C (pages 333 and
+    334 of the PDF). It gives no range of 85 % or 80 %; it says that its equations are not applicable with outdoor
+    running means below 15 °C; and it has an approach of the SET (0.014·Tout + 24.53, ±1.0 °C for 90 %) and the models
+    of the naturally ventilated (0.54·Tout + 12.83, ±2.38 °C) and mixed-mode buildings (0.28·Tout + 17.87, ±3.46 °C).
+  - The paper **[verified]**: the line is equation 3 of Dhaka & Mathur (2017), Building and Environment 112, 296-307,
+    doi:10.1016/j.buildenv.2016.11.035 (air-conditioned buildings of the composite climate of India, outdoor
+    temperatures of 25 to 44 °C, R² = 0.03). Its text gives 1.47 and 2.72 °C as the mean half-widths (range/2) of the
+    90 % and 80 % acceptability limits (the text before its Table 7, page 10 of the PDF), but its Table 7 and the
+    bandwidths of its text give bands 1.46 and 2.72 °C wide (upper minus lower limit), that is ±0.73 and ±1.36 °C: the
+    paper contradicts itself (found by the review of 2026-11-18). The code took ±1.5 °C, the reading of the text.
+  - accim **[inferred]**: ±1.5 K is the range of the code, ±2.72 K that of 80 % of the text of the paper, and ±2.11 K
+    the mean of 1.5 and 2.72 (neither source gives 85 %); `PMOT`, the 30-day running mean of EnergyPlus, is the outdoor
+    mean of the code.
+- **Consequences**: section 4.2 of the detailed use cites the code and the paper, and so does a comment of
+  `accim/sim/ems/setpoint_lines.py`; the setpoints do not change. Open for the author: the range of 85 %, and the
+  running means below 15 °C, with which accim applies the line ([[questions.md]]).
+
 ## 2026-11-18 — C2: the worst week, month or year of Table E.1 as a constraint, with a reader of besos
 
 - **Status**: provisional (Claude Code, in the autonomous session of 2026-11-18: "continua con todas las tareas que

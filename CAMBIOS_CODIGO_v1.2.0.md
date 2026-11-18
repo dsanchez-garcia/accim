@@ -3605,3 +3605,33 @@ todos corregidos con tests: el lector semanal contaba el 29 de febrero que Energ
 diseño tomado como primer día del periodo); un `add_output` nunca se preparaba; el paramétrico lo reconstruía como un
 lector normal (la suma de los valores diarios); un mismo lector guardaba el estado del último modelo de una
 optimización de varios; y `period_deviations` descartaba las filas sin periodo.
+
+## 75. Tres tareas que no necesitaron código: el check 2, la calefacción del VRF e IND IMAC
+
+**El check 2 con el HVAC encendido en parte del paso anterior.** Un año del modelo de ejemplo en modo mixto
+(`vrf_mm`, HVACmode 2, VentCtrl 0) no da ninguna discrepancia del check 2, y ninguna ventana se abre tras un paso con
+las baterías de su zona encendidas (12 902 y 11 643 pasos así). La solución de la entrada del TODO (aceptar los dos
+estados donde las baterías funcionaron) haría que el check 2 aceptase una ventana abierta tras un paso entero de
+baterías encendidas, que hoy detecta y un test comprueba. Queda como pregunta para el autor; recomiendo dejar el check
+como está y cerrar la entrada.
+
+**La calefacción del VRF con las zonas calientes.** En `vrf_ac`, las ventanas del AirflowNetwork conservan el control
+del modelo de entrada, y las del modelo de ejemplo se abren en su día de diseño de invierno: su horario de ventilación
+(`20001`) vale 0 °C en esos días y 24 °C en el resto. El dimensionado se hace con las ventanas abiertas a −4 °C:
+- cargas de diseño de calefacción de 303 y 357 kW;
+- unidades interiores de 62 y 73 m³/s, baterías y unidades exteriores de 1,0 y 1,2 MW;
+- ventiladores continuos de 8,9 y 10,5 kW.
+
+Su calor mantiene las zonas entre 22,6 y 26,6 °C en una semana de enero, con la refrigeración encendida en 1007 de sus
+1008 pasos. La calefacción con zonas calientes es la de los pasos en que se abren las ventanas. Con el horario a 24 °C
+también en esos días, el dimensionado es de 1,5 y 1,7 kW, 0,61 y 0,79 m³/s y ventiladores de 87 y 113 W. El modo mixto
+cierra las ventanas en los días de diseño y dimensiona bien. No he cambiado nada: es una entrada P1 del TODO y una
+pregunta para el autor, porque afecta a todas las simulaciones del modelo de ejemplo con `vrf_ac`.
+
+**Las consignas estáticas de IND IMAC.** El NBC de la India 2016 está en la biblioteca desde el 9 de noviembre (parte
+8, sección 3, apartado 6.2 c): la recta 0,078·T + 23,25 con la media móvil de 30 días y ±1,5 K para el 90 %. La recta
+es la ecuación 3 de Dhaka y Mathur (2017), cuyo texto da el ±2,72 K del 80 % de accim (aunque su tabla 7 da bandas de
+esa anchura total, ±1,36 K: el artículo se contradice); el ±2,11 K del 85 % (solo en los estándares 7 y 8) es la media
+de ambos. El estándar 11 (IND Dhaka) también usa la recta fuera de sus límites. El código dice que sus ecuaciones no se
+aplican con medias por debajo de 15 °C, y accim aplica la recta con cualquier media. Lo he documentado (sección 4.2 y
+un comentario del código) sin cambiar las consignas; el 85 % y los 15 °C quedan como pregunta.
