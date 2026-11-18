@@ -10,10 +10,13 @@ The hooks run at the beginning of each timestep before the EMS programs (``befor
 :func:`accim.sim.energyplus_api.run_simulation`, as :func:`accim.run.run_ep` passes them), with the values of the
 sensors of the timestep, and set for each zone the EMS global variables ``HookAHST_<zone>`` and ``HookACST_<zone>``
 (their heating and cooling setpoints, the limits of their comfort band: setpoints without the tolerance) and
-``HookSetpoints_<zone>`` (1). The program ``ApplyHookSetpoints_<zone>``, which ``RunACCIS_<zone>`` runs right after
-SetAST, then sets the setpoints of the ACCIS to them as the subprograms of SetAST set the adaptive ones: ``AHST =
-HookAHST_<zone> + AHSTtol`` and ``ACST = HookACST_<zone> + ACSTtol`` (with the tolerance of the setpoints of the zone),
-rounded with SetpointAcc (:data:`accim.sim.ems.setpoint_lines.ROUNDING`), and sets ``HookSetpoints_<zone>`` back to 0.
+``HookSetpoints_<zone>`` (1; the hooks of the SET set it to -1 in the timesteps in which they give the zone no
+setpoints, without the values of their sensors, so that the fallback of the EMS of comfort standard 24 does nothing in
+them, :mod:`accim.sim.ems.set_feedback`). The program ``ApplyHookSetpoints_<zone>``, which ``RunACCIS_<zone>`` runs
+right after SetAST, then sets the setpoints of the ACCIS to them as the subprograms of SetAST set the adaptive ones:
+``AHST = HookAHST_<zone> + AHSTtol`` and ``ACST = HookACST_<zone> + ACSTtol`` (with the tolerance of the setpoints of
+the zone), rounded with SetpointAcc (:data:`accim.sim.ems.setpoint_lines.ROUNDING`), and sets ``HookSetpoints_<zone>``
+back to 0.
 So everything that the ACCIS does after SetAST follows the setpoints of the hook: the minimum and maximum of the
 setpoints (:mod:`accim.sim.ems.setpoint_limits`, whose program runs after this one), the setpoints without the tolerance
 (SetASTnoTol: those of the hook), the hour counters (CountHours_<zone>, CountHoursNoApp_<zone>, and those of
@@ -22,7 +25,11 @@ setpoints (:mod:`accim.sim.ems.setpoint_limits`, whose program runs after this o
 (``Comfort Temperature_<zone>``) and the applicability limits with which CountHours_<zone> splits its hours stay those of
 the comfort standard of the zone. Without the hook (the EMS backend, or the backend of the API without it),
 ``HookSetpoints_<zone>`` is 0 (the program ``InitHookSetpoints`` sets it at the beginning of each environment), and the
-setpoints are those of the ACCIS.
+setpoints are those of the ACCIS, but in the zones with the fallback of the EMS of comfort standard 24
+(``apply_sun2026_setpoints(..., ems_fallback=True)``), whose program ``SetSETFeedback_<zone>`` gives them, as a hook,
+right before ``ApplyHookSetpoints_<zone>``: those zones need no hook (``zones_needing_a_hook`` of
+:mod:`accim.sim.ems.set_feedback`, with which :func:`accim.run.run_ep` and the backend of the API leave them out of
+their error and their warning).
 """
 
 import os
@@ -125,12 +132,15 @@ def missing_hook_message(models: Sequence[str], backend: str) -> str:
     effect = ('the setpoints of the comfort standard of their zones (those of the names of the output IDFs) and the '
               'outputs of the hook at 0')
     how = ("run_ep(backend='api', hooks=[hook]), with the hook that the function that prepared each model returned")
+    # The models of comfort standard 24 can have a fallback in their EMS, with which they need no hook
+    fallback = ("Those of comfort standard 24 can also be prepared with apply_sun2026_setpoints(..., "
+                "ems_fallback=True), whose fallback of the EMS gives the setpoints without the hook.")
     if backend == 'ems':
         return (f'These models are {prepared}, which the EMS backend cannot run: {names}. They would be simulated '
-                f'with {effect}. Simulate them with {how}.')
+                f'with {effect}. Simulate them with {how}. {fallback}')
     return (f'These models are {prepared}, and no hook runs before their EMS programs: {names}. They are simulated '
             f'with {effect}. Simulate them with {how} (the argument before_programs of run_simulation and '
-            f'run_simulations).')
+            f'run_simulations). {fallback}')
 
 
 def set_hook_setpoints_code(idf, zones: Sequence[str]) -> None:

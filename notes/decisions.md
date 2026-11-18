@@ -96,9 +96,12 @@ template]] to add a new entry.
      still generated with another comfort standard (its zones keep the comfort temperature and the applicability limits
      of that comfort standard), and `AddAccis` still raises a `ValueError` with comfort standard 24, whose message now
      points to `ems_fallback`.
-  2. The feedback runs only where no hook has given the setpoints of the timestep (`HookSetpoints_<zone>` is 0), right
-     before `ApplyHookSetpoints_<zone>`: with the hook, the results are those of the model without the fallback,
-     exactly. `run_ep` and the backend of the API take the zones with the feedback as zones that do not need a hook.
+  2. The feedback runs only where no hook ran in the timestep (`HookSetpoints_<zone>` is 0), right before
+     `ApplyHookSetpoints_<zone>`: with the hook, the results are those of the model without the fallback, exactly. The
+     hooks of the SET set the flag to −1 in the timesteps in which they give a zone no setpoints, and the feedback
+     skips the timesteps with an activity level of 0 or less too, as the hook (both since the review of 2026-11-18,
+     which found the feedback running in those timesteps). `run_ep` and the backend of the API take the zones with the
+     feedback as zones that do not need a hook.
   3. Each setpoint moves a fraction `Relaxation` (0.5) of the way to an estimate, the operative temperature whose SET
      would be the setpoint of the SET if the SET grew by `Slope` (1.0) K per K of operative temperature, from the SET
      and the operative temperature of the zone of the previous timestep, instead of a gain on the setpoint of the
@@ -115,12 +118,14 @@ template]] to add a new entry.
      otherwise, before the model changes.
 - **Consequences**: the setpoints of the fallback follow those of the hook with a delay of one timestep, with the SET
   of the Pierce model of EnergyPlus (about 0.05 to 0.13 K above that of pythermalcomfort near 1 met, more at higher
-  activity levels), and the setpoint far from the zone is an extrapolation. Measured with EnergyPlus 25.1 (the sample
-  model in Seville, a week of July and one of January, against the setpoints of the hook without the tolerance): the
-  cooling setpoints +0.01 to +0.02 K on average in July and −0.88 K in January, the heating setpoints +0.40 to +0.42 K
-  and +2.2 K, the operative temperatures of the zones 0.21 to 0.22 K and 0.01 to 0.02 K below those of the hook, and
-  the occupied hours within the band 33.5 and 35.3 h against 28.5 and 34.3 h in July, and 60 and 52 h against 60 and
-  57.5 h in January (`DEVLOG.md`, section 4.9.3 of the detailed use).
+  activity levels), and the setpoint far from the zone is an extrapolation. Measured with EnergyPlus 25.1 (the model
+  of the measurement of section 4.9.3: the sample model in Seville with a minimum heating setpoint of 18 °C in
+  Block1:Zone1, a week of July and one of January, against the setpoints of the hook without the tolerance): the
+  cooling setpoints +0.00 and +0.02 K on average in July and −0.88 and −0.87 K in January, the heating setpoints +0.41
+  and +0.42 K in July and +2.2 K in January in the zone without the minimum, the operative temperatures of the zones
+  0.29 and 0.23 K and 0.05 and 0.07 K below those of the hook, and the occupied hours within the band 33.5 and 35.5 h
+  against 27.8 and 34.3 h in July, and 60 and 53.5 h against 60 and 56.0 h in January (`DEVLOG.md`, section 4.9.3 of
+  the detailed use; measured again after the review of 2026-11-18, the first measurement having used another model).
 
 ## 2026-11-18 — accim keeps all the digits of the numbers of the models that it writes
 

@@ -3635,3 +3635,24 @@ esa anchura total, ±1,36 K: el artículo se contradice); el ±2,11 K del 85 % (
 de ambos. El estándar 11 (IND Dhaka) también usa la recta fuera de sus límites. El código dice que sus ecuaciones no se
 aplican con medias por debajo de 15 °C, y accim aplica la recta con cualquier media. Lo he documentado (sección 4.2 y
 un comentario del código) sin cambiar las consignas; el 85 % y los 15 °C quedan como pregunta.
+
+## 76. El respaldo del EMS del estándar 24, tras su revisión
+
+Una revisión del commit del respaldo (§73), con un workflow de cuatro revisores y un escéptico por hallazgo, encontró
+tres fallos:
+- **Los pasos sin consignas del gancho.** Cuando el gancho no daba consignas a una zona en un paso (sin valores de sus
+  sensores, o con actividad nula), el indicador `HookSetpoints_<zona>` seguía en 0 y el respaldo ponía las consignas, así
+  que el modelo con respaldo y gancho no daba exactamente los resultados del modelo sin respaldo. Ahora el gancho pone
+  el indicador a −1 en esos pasos (`ApplyHookSetpoints_<zona>` solo aplica con 1 y lo devuelve a 0, y el respaldo solo
+  actúa con 0), y el respaldo tampoco actúa con actividad nula, como el gancho (hallazgo A5), también con el backend EMS.
+- **Docstrings desfasados.** `run_ep`, el backend de la API, `hook_setpoints` y la sección del ATHB seguían diciendo que
+  todo modelo con `ApplyHookSetpoints_<zona>` necesita el gancho. El mensaje del gancho ausente apunta también a
+  `ems_fallback=True`.
+- **La medición.** La hice con un modelo de categoría III y sin el mínimo de 18 °C de la zona 1, y la comparé con las
+  cifras del gancho de la sección 4.9.3, que son de otro modelo. Repetida con el mismo modelo: en julio, refrigeración
+  +0,00 y +0,02 K y calefacción +0,41 y +0,42 K; en enero, refrigeración −0,88 y −0,87 K y calefacción +2,2 K en la zona 2
+  (la 1, en su mínimo); horas en la banda 33,5 y 35,5 frente a 27,8 y 34,3 en julio, y 60 y 53,5 frente a 60 y 56,0 en
+  enero (las del gancho, ahora iguales a las de la sección).
+
+**Los tests**: los programas del respaldo y de `ApplyHookSetpoints` en el intérprete de Erl (indicador 0, −1 y actividad
+nula) y el −1 del gancho; los tests de los ganchos y del estándar 24 (92, con EnergyPlus) y la suite completa (2237).

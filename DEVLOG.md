@@ -36,6 +36,38 @@ Recommended flow: track active work in `TODO.md`, move completed outcomes to `DE
 ## Entries
 
 ### 2026-11-18
+#### [done] The fallback of the EMS of comfort standard 24 after its review (branch `v1.2.0`)
+- Context: a review of the commit of the fallback (02a4b41) by a workflow of four reviewers, with a skeptic for each
+  finding, in the autonomous session of 2026-11-18, found three defects.
+- Changes:
+  - In the timesteps in which a hook of the SET gives a zone no setpoints (without the values of its sensors, or with
+    an activity level of 0), the flag `HookSetpoints_<zone>` stayed 0, and the feedback gave the setpoints and its
+    outputs, so the model with the fallback and the hook did not give the results of the model without the fallback
+    in them. `SetSetpointHook._not_given` now sets the flag to −1 (`ApplyHookSetpoints_<zone>` applies the setpoints
+    only with 1 and sets it back to 0, and the feedback runs only with 0), and the feedback also skips the timesteps
+    with an activity level of 0 or less itself (`SET_Act_<zone>`, as the hook; finding A5), with the EMS backend.
+  - The docstrings of `run_ep`, `_check_setpoint_hooks`, `run_simulation` (`before_programs`),
+    `warn_without_setpoint_hook` and of `accim.sim.ems.hook_setpoints`, and the section of the ATHB of the detailed use,
+    still said that every model with `ApplyHookSetpoints_<zone>` needs the hook; the message of the missing hook now
+    points to `ems_fallback=True` too.
+  - The measurement of the fallback was made with a model of category III without the minimum heating setpoint of
+    Block1:Zone1, not that of the measurement of the hook of section 4.9.3, whose figures it compared: measured again
+    with that model (EnergyPlus 25.1, a week of July and one of January): cooling setpoints +0.00 and +0.02 K on
+    average in July (0.26 and 0.27 K in absolute value, 0.61 K at the 95th percentile), heating setpoints +0.41 and
+    +0.42 K; −0.88 and −0.87 K and, in Block1:Zone2, +2.2 K in January (Block1:Zone1 at its minimum); operative
+    temperatures 0.29 and 0.23 K below those of the hook in July (3.5 and 3.6 K at most in the first timesteps, 0.49
+    and 0.55 K after the first day) and 0.05 and 0.07 K below in January; the occupied hours within the band 33.5 and
+    35.5 h against 27.8 and 34.3 h in July, and 60 and 53.5 h against 60 and 56.0 h in January (the figures of the hook
+    of section 4.9.3).
+- Files: `accim/sim/comfort_hooks.py`, `accim/sim/ems/set_feedback.py`, `accim/sim/ems/hook_setpoints.py`,
+  `accim/run/run.py`, `accim/sim/energyplus_api/runner.py`, `tests/core/test_sun2026_set.py`,
+  `docs/source/4_detailed use.md` (4.9.3 and the ATHB), `CHANGELOG.md`, `notes/decisions.md`.
+- Verification: `test_the_fallback_of_the_ems_does_nothing_where_a_hook_ran` (the programs SetSETFeedback_<zone> and
+  ApplyHookSetpoints_<zone> in the Erl interpreter: the flag 0 with the SET, −1, and an activity level of 0) and
+  `test_the_hooks_of_the_set_mark_the_zones_without_setpoints`; the tests of the hooks, of comfort standard 24 and of
+  the missing hook (92 passed, with EnergyPlus); the full suite of `tests/core` and `tests/parametric_and_optimisation`
+  (2237 passed, 4 skipped).
+
 #### [done] The VRF heating of the sample model with warm zones: its windows open on the winter design day (branch `v1.2.0`)
 - Context: noted on 2026-11-18 with the range of the setpoints of comfort standard 24 (the heating coils of the sample
   model worked in a few timesteps with the zones above 22 °C in January), investigated in the autonomous session of
@@ -186,7 +218,9 @@ Recommended flow: track active work in `TODO.md`, move completed outcomes to `DE
     proposal (a gain of about 0.8 on the setpoint) does not converge above s = 2.5 and drifts while the zone floats,
     and a first version (a gain of 0.5 on the estimate itself) put the setpoint far from the zone at half its distance
     (4.2 K above the heating setpoints of the hook in a week of July). With EnergyPlus 25.1, the sample model in
-    Seville (the defaults, every timestep of a week, against the setpoints of the hook without the tolerance): in
+    Seville (the defaults, every timestep of a week, against the setpoints of the hook without the tolerance; a model
+    with category III and without the minimum heating setpoint of Block1:Zone1, not that of section 4.9.3: measured
+    again with it in the entry "The fallback of the EMS of comfort standard 24 after its review"): in
     July, cooling setpoints +0.01 to +0.02 K on average (0.26 K in absolute value, 0.62 K at the 95th percentile) and
     heating setpoints +0.40 to +0.42 K; in January, with the zones far from both setpoints, −0.88 and +2.2 K; the
     operative temperatures of the zones 0.21 to 0.22 K below those of the hook in July (2.6 K at most, in the first

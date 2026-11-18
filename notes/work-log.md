@@ -15,6 +15,23 @@ This log is a lightweight, session-scoped complement to the repository's
 existing tracking files — it does not replace them (see
 [[decisions.md#2026-09-13 — `notes/work-log.md` complements, not replaces, existing tracking files|the related decision]]).
 
+## 2026-11-18 — The review of the work of the autonomous session (branch `v1.2.0`, on the server)
+
+- **Objective**: an adversarial review, with the ultracode mode on, of C2 (before its commit), of the fallback of the
+  EMS of comfort standard 24 (already pushed, 02a4b41) and of the notes of IND IMAC: a workflow of four reviewers, one
+  dimension each, and a skeptic that tried to refute each finding (17 agents).
+- **Affected files**: C2 (`objectives.py`, `main.py`, `results_size.py`, `long_term_discomfort.py`, its tests), the
+  fallback (`comfort_hooks.py`, `set_feedback.py`, `hook_setpoints.py`, `run.py`, `runner.py`, its tests), the docs and
+  the notes.
+- **Finding or decision**: 12 findings confirmed, 1 refuted: in C2, 29 February of a leap year, an add_output not set
+  up, the parametric worker, one reader for several models and rows without a period; in the fallback, the timesteps
+  without the setpoints of the hook, stale docstrings and a measurement with another model; in IND IMAC, a stale
+  paragraph and entry, the contradiction of the paper and the scope. All fixed before the commits of C2 and of the
+  notes, and in a commit of the fallback; a finding of the review that predates C2 (the resume of `run_optimisation`)
+  is a P2 entry of [[../TODO.md]].
+- **Validation**: the full suite (2237 passed, 4 skipped) and the docs (33 warnings), [[../DEVLOG.md]].
+- **Next step**: the answers of the author to the questions of 2026-11-18 ([[questions.md]]).
+
 ## 2026-11-18 — Check 2, the VRF heating of the sample model and IND IMAC: what needed no code (branch `v1.2.0`, on the server)
 
 - **Objective**: the last tasks of the autonomous session: check 2 with the HVAC system on in a part of the previous

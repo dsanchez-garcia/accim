@@ -168,7 +168,10 @@ def run_ep(
         without the hook, with the setpoints of the comfort standard of its zones and the outputs of the hook at 0
         (since accim 1.2.0; finding A4 of the self-audit of 2026-11-11). With ``backend='api'``, a model prepared for
         a hook that gets no hook with ``runs_before_programs`` is simulated like that, with a warning
-        (:class:`accim.sim.ems.hook_setpoints.MissingHookWarning`).
+        (:class:`accim.sim.ems.hook_setpoints.MissingHookWarning`). The zones with the fallback of the EMS of comfort
+        standard 24 (``apply_sun2026_setpoints(..., ems_fallback=True)``, :mod:`accim.sim.ems.set_feedback`) need no
+        hook: neither the error nor the warning names their models, which both backends simulate with the setpoints
+        of the fallback.
 
     Both backends simulate a copy of each IDF in another folder, so the Schedule:File objects whose files have relative
     paths (:func:`accim.sim.schedule_files.relative_schedule_files`) get in the copy the absolute paths of those files,
@@ -254,7 +257,8 @@ def _check_setpoint_hooks(idfnames: Sequence[str], backend: str, hooks: Optional
     run them without the hook, with the setpoints of the comfort standard of their zones and the outputs of the hook at
     0 (finding A4 of the self-audit of 2026-11-11, decided on 2026-11-12): a ValueError names them. With the backend
     of the API, :func:`accim.sim.energyplus_api.run_simulations` warns of those that get no hook before their EMS
-    programs (``hooks`` with ``runs_before_programs``).
+    programs (``hooks`` with ``runs_before_programs``). The zones with the fallback of the EMS of comfort standard 24
+    (``SetSETFeedback_<zone>``, :mod:`accim.sim.ems.set_feedback`) need no hook, so their models are not named.
 
     :raises ValueError: With ``backend='ems'``, if a model of the folder is prepared for a hook.
     """

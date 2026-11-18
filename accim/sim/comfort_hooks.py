@@ -1190,8 +1190,14 @@ class SetSetpointHook:
 
     def _not_given(self, controller, zone: str) -> None:
         """A timestep in which the hook gives no setpoints to a zone (without the values of its sensors): no hours at a
-        limit (the output is summed), and :meth:`_skipped`."""
+        limit (the output is summed), the flag of the zone at -1, and :meth:`_skipped`. The flag tells the EMS that a
+        hook ran and gave no setpoints: the program ApplyHookSetpoints_<zone> keeps those of the ACCIS (and sets the
+        flag back to 0), and the fallback of the EMS of comfort standard 24 does nothing, so that the model with it
+        gives the results of the model without it (:mod:`accim.sim.ems.set_feedback`; the review of 2026-11-18)."""
+        from accim.sim.ems.hook_setpoints import zone_variables
+
         controller.set(f'{SET_SATURATED}_{zone}', 0.0)
+        controller.set(zone_variables(zone)[0], -1.0)
         self._skipped(controller, zone)
 
     def zone_set(self, air_temperature, mean_radiant_temperature, relative_humidity, met: Optional[float] = None,
@@ -1897,9 +1903,10 @@ def apply_sun2026_setpoints(building, comfort_mode: Any = 1, category: int = 80,
     occupants = {zone: values['occupants'] for zone, values in people.items()}
     _add_zone_output_variables(building, occupants, [PIERCE_SET_OUTPUT], frequencies)
     if ems_fallback:
+        # The feedback skips the timesteps with an activity level of 0 or less, as the hook (finding A5)
         set_set_feedback_code(building, occupants, hook.set_heating_setpoint, hook.set_cooling_setpoint, hook.band,
                               ems_relaxation, ems_slope, hook.temperature_range, SUN2026_TSV_SLOPE,
-                              SUN2026_TSV_INTERCEPT)
+                              SUN2026_TSV_INTERCEPT, activity_prefix=_PEOPLE_SENSORS['activity'])
     return hook
 
 

@@ -864,7 +864,8 @@ def test_the_fallback_of_the_ems_of_comfort_standard_24(tmp_path):
         assert lines[position + 1:position + 3] == [f'run SetSETFeedback_{zone}', f'run ApplyHookSetpoints_{zone}']
         program = [str(line).strip() for line in
                    building.getobject('EnergyManagementSystem:Program', f'SetSETFeedback_{zone}').fieldvalues[2:]]
-        assert program[:4] == [f'if HookSetpoints_{zone} == 0', f'if SET_Pierce_{zone} > 0',
+        # Without the SET of EnergyPlus, or with an activity level of 0 (as the hook), it does nothing
+        assert program[:4] == [f'if HookSetpoints_{zone} == 0', f'if SET_Pierce_{zone} > 0 && SET_Act_{zone} > 0',
                                f'set EstimateAHST = {zone}_OpT+({hook.set_heating_setpoint!r}-SET_Pierce_{zone})/1.0',
                                f'set EstimateACST = {zone}_OpT+({hook.set_cooling_setpoint!r}-SET_Pierce_{zone})/1.0']
         assert f'set HookAHST_{zone} = HookAHST_{zone}+0.5*(EstimateAHST-HookAHST_{zone})' in program
@@ -887,6 +888,65 @@ def test_the_fallback_of_the_ems_of_comfort_standard_24(tmp_path):
     with pytest.raises(ValueError, match='give them with ems_fallback=True'):
         ch.apply_sun2026_setpoints(building, ems_slope=1.2)
     assert len(building.idfobjects['EnergyManagementSystem:Sensor']) == objects
+
+
+def test_the_fallback_of_the_ems_does_nothing_where_a_hook_ran():
+    # The review of 2026-11-18: in a timestep in which the hook gave a zone no setpoints (without the values of its
+    # sensors, or with an activity level of 0), the flag stayed 0 and the feedback gave the setpoints, so the model with
+    # the fallback did not give the results of the model without it. The hook of the SET now sets the flag to -1, and
+    # the feedback also skips the timesteps with an activity level of 0 itself (finding A5, as the hook)
+    from accim.sim.ems import hook_setpoints as hs
+    from accim.sim.ems import set_feedback as sf
+    from accim.sim.ems.erl import ErlProgramSet, variables_in_programs
+
+    programs = {'SetSETFeedback_Z': sf.program_lines('Z', 19.09, 28.18, (19.09, 28.18), 0.5, 1.0, (10.0, 40.0), 0.11,
+                                                     -2.6, activity='SET_Act_Z'),
+                'ApplyHookSetpoints_Z': hs.program_lines('Z')}
+    erl = ErlProgramSet(programs, global_variables=set().union(*variables_in_programs(programs).values()))
+    erl.strict = True
+
+    def timestep(flag, activity, pierce=24.0, operative=25.0):
+        for name, value in dict(HookSetpoints_Z=flag, HookAHST_Z=20.0, HookACST_Z=27.0, SET_Pierce_Z=pierce,
+                                SET_Act_Z=activity, Z_OpT=operative, Occ_count_Z=1.0, ZoneTimeStep=0.25,
+                                SETsaturated_Z=0.25, HoursInCausalBand_Z=0.25, SET_Z=23.0, TSV_causal_Z=0.0,
+                                AHST=18.0, ACST=26.0, AHSTtol=0.0, ACSTtol=0.0, SetpointAcc=10.0).items():
+            erl.set(name, value)
+        erl.run('SetSETFeedback_Z')
+        flag = erl.get('HookSetpoints_Z')
+        given = (erl.get('HookAHST_Z'), erl.get('HookACST_Z'))
+        erl.run('ApplyHookSetpoints_Z')
+        return flag, given, (erl.get('AHST'), erl.get('ACST')), erl.get('HookSetpoints_Z')
+
+    # No hook (the EMS backend): the feedback moves the setpoints half the way to its estimates, as a hook
+    flag, given, applied, reset = timestep(0.0, 110.7)
+    assert flag == 1 and given == pytest.approx((20.0 + 0.5 * (25.0 + 19.09 - 24.0 - 20.0),
+                                                 27.0 + 0.5 * (25.0 + 28.18 - 24.0 - 27.0)))
+    assert applied == pytest.approx(given, abs=0.051) and reset == 0
+    assert erl.get('SET_Z') == 24.0 and erl.get('HoursInCausalBand_Z') == 0.25
+    # A hook that gave no setpoints (-1): the feedback does nothing, and the setpoints and outputs are those of the
+    # ACCIS and of the hook; ApplyHookSetpoints_<zone> sets the flag back to 0
+    flag, given, applied, reset = timestep(-1.0, 110.7)
+    assert (flag, given, applied, reset) == (-1, (20.0, 27.0), (18.0, 26.0), 0)
+    assert (erl.get('SET_Z'), erl.get('SETsaturated_Z'), erl.get('HoursInCausalBand_Z')) == (23.0, 0.25, 0.25)
+    # An activity level of 0, without a hook: no setpoints of the feedback, no hours (summed), the SET kept (A5)
+    flag, given, applied, reset = timestep(0.0, 0.0)
+    assert (flag, given, applied, reset) == (0, (20.0, 27.0), (18.0, 26.0), 0)
+    assert (erl.get('SET_Z'), erl.get('SETsaturated_Z'), erl.get('HoursInCausalBand_Z')) == (23.0, 0.0, 0.0)
+
+
+def test_the_hooks_of_the_set_mark_the_zones_without_setpoints(monkeypatch):
+    # The flag -1 of the review of 2026-11-18, for the fallback of the EMS (above)
+    monkeypatch.setattr(ch, 'standard_effective_temperature', _mean_set)
+    hook = ch.Sun2026SetpointHook(ZONES, clothing_sources={zone: 'schedule' for zone in ZONES})
+    controller = _Controller({'ZoneTimeStep': 1 / 6, **_zone_values(ZONES[0], 23.0, 24.0, SET_Clo=0.5),
+                              **_zone_values(ZONES[1], 25.0, 26.0, SET_Clo=0.5)})
+    hook(controller, CALLING_POINT)
+    assert [controller.get(f'HookSetpoints_{zone}') for zone in ZONES] == [1.0, 1.0]
+    controller.set(f'SET_Act_{ZONES[0]}', 0.0)
+    controller.set(f'SET_RH_{ZONES[1]}', None)
+    hook(controller, CALLING_POINT)
+    assert [controller.get(f'HookSetpoints_{zone}') for zone in ZONES] == [-1.0, -1.0]
+    assert [_given(controller, zone) for zone in ZONES] == [None, None]
 
 
 @needs_energyplus

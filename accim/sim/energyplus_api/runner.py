@@ -126,7 +126,8 @@ def run_simulation(
         gives access to the variables of the programs. A model prepared for the setpoints of a hook (those of
         :mod:`accim.sim.comfort_hooks`, with the programs ``ApplyHookSetpoints_<zone>``) that gets none here is
         simulated with the setpoints of the comfort standard of its zones, with a warning
-        (:func:`warn_without_setpoint_hook`).
+        (:func:`warn_without_setpoint_hook`), but for its zones with the fallback of the EMS of comfort standard 24
+        (:mod:`accim.sim.ems.set_feedback`), whose setpoints are those of the fallback.
     :param after_programs: Functions called at each calling point after the EMS programs, before the
         actuators are set. The hooks (before or after the programs) with a method ``prepare()`` get it called once, in
         the process of the simulation, before the library of the API of EnergyPlus is loaded (:func:`prepare_hooks`:
@@ -214,7 +215,9 @@ def warn_without_setpoint_hook(idfs: Iterable[PathLike], before_programs: Sequen
     hook (those of :func:`accim.sim.comfort_hooks.apply_athb_setpoints`, ``apply_set_setpoints`` and
     ``apply_sun2026_setpoints``, with the programs ``ApplyHookSetpoints_<zone>``) that are simulated without a hook
     before their EMS programs: they run with the setpoints of the comfort standard of their zones, and the outputs of
-    the hook are 0 (finding A4 of the self-audit of 2026-11-11, decided on 2026-11-12).
+    the hook are 0 (finding A4 of the self-audit of 2026-11-11, decided on 2026-11-12). The zones with the fallback of
+    the EMS of comfort standard 24 (:mod:`accim.sim.ems.set_feedback`) need no hook: a model all of whose prepared zones
+    have it is not named.
 
     :param idfs: The paths of the IDF files.
     :param before_programs: The hooks that run before the EMS programs of their simulations.
