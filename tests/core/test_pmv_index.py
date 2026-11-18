@@ -226,13 +226,14 @@ def test_the_pmv_setpoints_give_the_same_results_with_both_backends(tmp_path):
 
     ems_results = pd.read_csv(tmp_path / 'ems' / 'run.csv')
     api_results = pd.read_csv(tmp_path / 'api' / 'run.csv')
-    # The setpoints and hours of the EMS programs are the same. With the thermal comfort thermostats, the results of
-    # EnergyPlus differ by rounding (about 1e-10 C in the zone temperatures), as with accim 1.1.0 and the aPMV
+    # The same results, exactly. Until 2026-11-18 they differed by about 1e-10 C in the zone temperatures (as with
+    # accim 1.1.0 and the aPMV), which was put down to the thermal comfort thermostats: the copy of the model that the
+    # API simulates was written by eppy, which wrote the coefficients of the curves of the VRF system with 7 significant
+    # digits; now it has the text of the numbers of the file (accim.sim.accis.numbers_as_text)
     exact = [c for c in ems_results.columns
              if (c.startswith('EMS:') and not c.startswith('EMS:PMV_')) or 'Schedule Value' in c]
     assert len(exact) == 2 * 9 + 4
-    pd.testing.assert_frame_equal(api_results[exact], ems_results[exact], check_exact=True)
-    pd.testing.assert_frame_equal(api_results, ems_results, check_exact=False, rtol=1e-6, atol=1e-6)
+    pd.testing.assert_frame_equal(api_results, ems_results, check_exact=True)
     for zone, people in (('Block1_Zone1', 'BLOCK1:ZONE1'), ('Block1_Zone2', 'BLOCK1:ZONE2')):
         # The PMV of each zone, which the EMS reads at the beginning of each timestep, is that of the previous one
         reported = _column(ems_results, f'EMS:PMV_{zone} [')

@@ -262,7 +262,9 @@ def test_the_adaptive_coefficient_by_the_sign_of_the_pmv_with_both_backends(tmp_
     assert results[0].success, results[0].error
     ems_results = pd.read_csv(tmp_path / 'ems' / 'run.csv')
     api_results = pd.read_csv(tmp_path / 'api' / 'run.csv')
-    pd.testing.assert_frame_equal(api_results, ems_results, check_exact=False, rtol=1e-6, atol=1e-6)
+    # The same results, exactly (with the text of the numbers of the file in the copy that the API simulates, as in
+    # test_pmv_index.py)
+    pd.testing.assert_frame_equal(api_results, ems_results, check_exact=True)
     # Both coefficients are used, by the sign of the PMV
     coefficient = ems_results[[c for c in ems_results.columns if 'Adaptive Coefficient_Block1_Zone1' in c][0]]
     assert set(np.round(coefficient.dropna(), 6)) == {0.24, -0.5}

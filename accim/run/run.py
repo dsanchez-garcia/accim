@@ -173,7 +173,11 @@ def run_ep(
     Both backends simulate a copy of each IDF in another folder, so the Schedule:File objects whose files have relative
     paths (:func:`accim.sim.schedule_files.relative_schedule_files`) get in the copy the absolute paths of those files,
     in the working folder (since accim 1.2.0; before, EnergyPlus stopped with the severe error ``Schedule:File="...",
-    File Name: "..." not found``).
+    File Name: "..." not found``). The copy has the text of the numbers of the IDF
+    (:func:`accim.sim.accis.numbers_as_text`, since accim 1.2.0), so the results are those of EnergyPlus with the IDF
+    itself; before, eppy wrote the numbers wider than 18 characters with 7 significant digits, such as the
+    coefficients of the curves of the VRF systems of the models of ``add_accis_to_idf``, whose results then differed
+    in their last digits.
 
     :func:`accim.run.estimate_results_size` estimates the size of the results before running them.
     """
@@ -224,11 +228,14 @@ def run_ep(
             print('IDD was already set.')
     if not _confirm(confirm, len(pairs)):
         return None
+    from accim.sim.accis import numbers_as_text
     from accim.sim.schedule_files import absolute_schedule_files
 
     runs = []
     for idf, epw in pairs:
-        model = IDF(idf, epw)
+        # The copy that eppy simulates has the text of the numbers of the file
+        with numbers_as_text():
+            model = IDF(idf, epw)
         # eppy simulates a copy of the model in other folders, where EnergyPlus would not find the files of the
         # relative paths of its Schedule:File objects
         absolute_schedule_files(model)

@@ -326,9 +326,10 @@ def test_the_epmv_setpoints_with_both_backends(tmp_path):
 
     ems_results = pd.read_csv(tmp_path / 'ems' / 'run.csv')
     api_results = pd.read_csv(tmp_path / 'api' / 'run.csv')
-    # The setpoints, the ePMV and the corrected activity levels are those of the PMV of the same previous timestep;
-    # the results of EnergyPlus differ by rounding, as with the other indices (see test_pmv_index.py)
-    pd.testing.assert_frame_equal(api_results, ems_results, check_exact=False, rtol=1e-6, atol=1e-6)
+    # The same results, exactly (with the text of the numbers of the file in the copy that the API simulates, as in
+    # test_pmv_index.py): the setpoints, the ePMV and the corrected activity levels are those of the PMV of the same
+    # previous timestep
+    pd.testing.assert_frame_equal(api_results, ems_results, check_exact=True)
     # The run period (ReadVarsESO also writes the design days)
     days = ems_results[ems_results['Date/Time'].str.strip().str.startswith('07/0')]
     for zone, people in (('Block1_Zone1', 'BLOCK1:ZONE1'), ('Block1_Zone2', 'BLOCK1:ZONE2')):

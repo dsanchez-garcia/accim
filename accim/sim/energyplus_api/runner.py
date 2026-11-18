@@ -103,7 +103,9 @@ def run_simulation(
     its Schedule:File objects: the copy of the model that EnergyPlus simulates, in a temporary folder, gets the
     absolute paths of those files, in the current folder or in that of the IDF, where EnergyPlus looks for them
     (:func:`accim.sim.schedule_files.absolute_schedule_files`; since accim 1.2.0: EnergyPlus did not find them from the
-    temporary folder). The EnergyPlus version is that
+    temporary folder). The copy has the text of the numbers of the IDF (:func:`accim.sim.accis.numbers_as_text`, since
+    accim 1.2.0), so its results are those of the EMS of EnergyPlus with the IDF itself, digit by digit. The EnergyPlus
+    version is that
     of the model, which must be 24.2 or later (:data:`~accim.sim.energyplus_api.runtime.MINIMUM_API_VERSION`).
     eppy reads the model with the IDD of its version (see :func:`accim.sim.accis.load_idf`), so in a Python session
     this function can only run the models of one EnergyPlus version (:func:`run_simulations` runs each simulation in
@@ -135,7 +137,7 @@ def run_simulation(
         error; False to return it in the result.
     :raises RuntimeError: If the simulation fails and ``raise_errors`` is True.
     """
-    from accim.sim.accis import load_idf
+    from accim.sim.accis import load_idf, numbers_as_text
     from accim.sim.schedule_files import absolute_schedule_files
 
     idf = Path(idf).resolve()
@@ -144,7 +146,9 @@ def run_simulation(
     # Before the library of the API of EnergyPlus is loaded in the process (see prepare_hooks)
     prepare_hooks([*before_programs, *after_programs])
     api = load_energyplus_api(version)
-    model = load_idf(idf, version)
+    # The copy that EnergyPlus simulates has the text of the numbers of the file
+    with numbers_as_text():
+        model = load_idf(idf, version)
     # The model runs in a temporary folder, where EnergyPlus would not find the files of the relative paths of its
     # Schedule:File objects: they are looked for where EnergyPlus looks for them for the IDF file
     absolute_schedule_files(model, (os.getcwd(), idf.parent))

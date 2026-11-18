@@ -36,6 +36,62 @@ Recommended flow: track active work in `TODO.md`, move completed outcomes to `DE
 ## Entries
 
 ### 2026-11-18
+#### [done] The difference between the EMS and API backends: eppy's copies of the models (branch `v1.2.0`)
+- Context: the P2 entry of `TODO.md` of 2026-11-12: with the models of `add_accis_to_idf`, the outputs that are not
+  those of the EMS differed in their last digits between EnergyPlus with the IDF (the EMS) and the backend of the API
+  (up to 5e-10 K and 5e-3 J in two days of July), unlike with the output IDFs of `AddAccis`; three hypotheses on the
+  first runs of the programs had been discarded on 2026-11-12. The author asked to take it on 2026-11-18.
+- Changes:
+  - Measured with EnergyPlus 25.1 and the model of the test of A24 (`Output:SQLite`, all the digits, with the design
+    days and the warm-up days reported): the EMS outputs and the values of the actuators were identical at every
+    reported timestep, and the sizes of the components too; the first difference was in the cooling coil of the indoor
+    unit of Block1:Zone2 at the first timestep of the warm-up of the first design day (an operative temperature of the
+    zone of 23.11511456644945 and 23.11511456644859 °C). Each backend gave the same results twice, and the EMS gave the same with
+    `energyplus.exe` and with the library of the API in a Python process. The trace of the EMS (EDD, `Verbose`) and the
+    calls of the controller matched at every call, but for the 15 calls of the kick-off of the simulation (three per
+    environment), in which EnergyPlus runs the Erl programs and not the callbacks; setting the actuators of the API to
+    the values of the EMS before the kick-off, or releasing them, did not change any digit of the results of the API.
+  - The cause: both backends simulate a copy that eppy writes (`runIDFs` and `model.saveas`), and eppy, which converts
+    the numbers to floats when it reads a model, writes those wider than 18 characters with 7 significant digits
+    (`'%e'` in `EpBunch.__repr__`): four coefficients of the curves of the indoor units of the VRF systems,
+    `VRFTUCoolCapFT` and `VRFTUHeatCapFT` (`-0.000010819418650677` became `-1.081942e-05`). An eppy copy simulated
+    with the EMS gave the results of the API, all the 513 216 values, and so did `run_ep(backend='ems')`. The output
+    IDFs of `AddAccis` were not affected: `AddAccis` writes them from the text of each model read again by eppy, so they
+    already have the coefficients with 7 digits.
+  - EnergyPlus 9.4, 9.6, 25.1 and 25.2 read the numbers wider than 18 characters (against the comment of eppy), but not
+    always as the nearest float: 11 of 31 numbers as Python writes them were one bit away, and
+    `1.7976931348623157e+308` infinite. So `accim.sim.accis.numbers_as_text()` keeps the text of the numbers of the
+    file (eppy's `convertallfields` does nothing in it), instead of writing them back with all their digits; `run_ep`
+    (EMS backend) and `run_simulation` (API) read the models of their copies in it. With it, the results of both
+    backends and of EnergyPlus with the IDF are identical, digit by digit, also in the warm-up days.
+  - The tests of both backends that compared within 1e-6 because of this (the model of A24, and those of the
+    setpoints of the PMV, aPMV and ePMV and of Method C, whose differences were put down to the thermal comfort
+    thermostats) compare all their outputs exactly. New `tests/core/test_numbers_as_text.py`: the copy has the fields of
+    the file; `run_ep` with both backends gives the results of EnergyPlus with the IDF, and without the context they
+    differ (within 1e-6).
+  - The tests of `run_ep` with the backend of the API (the new one, and that of the `Schedule:File` objects of the
+    previous commit) run it in a process of their own: `processes=1`, and a script in a new process for their controls
+    (the function of accim replaced there). With `processes=0`, the library of the API stayed in the process of pytest,
+    and the first call of numba of pythermalcomfort in a later test (`test_people_set_inputs.py`) stopped that process
+    with an access violation: the first full run of the tests of this task crashed after 24 min (the known conflict of
+    `accim.sim.energyplus_api.prepare_hooks`; the other tests of the API already ran it out of the process of pytest).
+  - Section 4.9 of the detailed use (the paragraph on the identical results, and on the rounding errors that were not)
+    and 4.6; `CHANGELOG.md` (Fixed, and two entries that spoke of the rounding); `TODO.md` (the entry closed, and a P3
+    entry for the output IDFs of `AddAccis` and the copies of the parametric module); `notes/decisions.md`;
+    `notes/questions.md` (whether `AddAccis` keeps all the digits).
+- Files: `accim/sim/accis.py`, `accim/run/run.py`, `accim/sim/energyplus_api/runner.py`,
+  `tests/core/test_numbers_as_text.py`, `tests/core/test_jpn_aqilah2025.py`, `tests/core/test_pmv_index.py`,
+  `tests/core/test_apmv_coefficients.py`, `tests/core/test_epmv.py`, `tests/core/test_ppd_weighted_hours.py`,
+  `docs/source/4_detailed use.md`, `CHANGELOG.md`, `TODO.md`, `notes/decisions.md`, `notes/questions.md`,
+  `notes/work-log.md`, `CAMBIOS_CODIGO_v1.2.0.md` (section 71).
+- Verification: the measurements above, with scripts and EnergyPlus 25.1 (and 9.4, 9.6 and 25.2 for the reading of
+  the wide numbers). `tests/core/test_numbers_as_text.py` (3 tests) and the tightened tests of both backends of
+  `test_jpn_aqilah2025.py`, `test_pmv_index.py`, `test_apmv_coefficients.py`, `test_epmv.py` and
+  `test_ppd_weighted_hours.py` pass, comparing exactly. All the test files of `tests/core` and
+  `tests/parametric_and_optimisation` (130 files, in a copy of the working tree): 2220 passed, 4 skipped, in 42 min,
+  with the golden master unchanged. The documentation builds with the 33 warnings of before.
+- Next step: the answer of the author to the question of 2026-11-18 (`notes/questions.md`).
+
 #### [done] The paths of the `Schedule:File` objects relative to the folder of the model (branch `v1.2.0`)
 - Context: the P2 entry of `TODO.md` of decision 7 of the review of accim 1.2.0 (task S5 of 2026-11-11): accim gives
   the `Schedule:File` objects of T0 of `'te_ref_nl'` (H2) and of the functions of the clothing insulation (H6) the

@@ -11,6 +11,50 @@ Durable architectural/process decisions for this repository and its Obsidian
 vault. Newest first. Use [[templates/decision-record.md|the decision-record
 template]] to add a new entry.
 
+## 2026-11-18 — The copies of the models that the runners simulate keep the text of the numbers of the IDF
+
+- **Status**: provisional (Claude Code, for the author, in the P2 entry of `TODO.md` of 2026-11-12 on the difference
+  between the EMS and API backends with the models of `add_accis_to_idf`, which the author asked to take on 2026-11-18:
+  "Continua con eso").
+- **Context**: measured on 2026-11-18 with EnergyPlus 25.1, the model of the test of A24 (two days of July, the design
+  days and the warm-up days reported, all the outputs in an SQLite file, with all their digits). The EMS outputs, the
+  values of the four actuators at every reported timestep and the sizes of the components were identical, and the
+  values that the controller gave the actuators were those of the trace of the EMS (EDD, `Verbose`) at every call; the
+  EMS made 15 more calls, those of the kick-off of the simulation, in which EnergyPlus does not call the callbacks of
+  the API, but the results of the API did not change when its actuators were set to the values of the EMS before
+  that kick-off, nor when they were released. The first difference was in the cooling coil of the indoor unit of
+  one zone at the first timestep of the warm-up of the first design day, and each backend gave the same results twice,
+  as did the EMS run by `energyplus.exe` and by the library of the API. The cause was the copy: both backends simulate
+  a copy that eppy writes of the model that it has read, and eppy writes the numbers wider than 18 characters with 7
+  significant digits (`'%e'`, in `eppy.bunch_subclass.EpBunch.__repr__`, since "E+ cannot read wide numbers"), four
+  coefficients of the curves of the indoor units of the VRF systems of accim (`-0.000010819418650677` became
+  `-1.081942e-05`). The copy simulated with the EMS gave the results of the API (all the 513 216 values), and
+  `run_ep(backend='ems')` gave them too: the tests compared EnergyPlus with the IDF and the backend of the API, so the
+  difference looked like one between the backends (and, in the models of the setpoints based on the PMV, which have
+  the same curves, like rounding errors of the thermal comfort thermostats, `docs` 4.9 until now).
+- **Decision**:
+  1. The runners read the models whose copies they simulate in `accim.sim.accis.numbers_as_text()`, a context in which
+     eppy does not convert the numbers of the fields (its `convertallfields` does nothing), so the copies have the text
+     of the numbers of the IDF: `run_ep` with the EMS backend (`IDF(idf, epw)`, before `runIDFs`) and
+     `accim.sim.energyplus_api.run_simulation` (`load_idf`, before `prepare_for_api`). Measured: the results of both
+     backends and of EnergyPlus with the IDF are identical, digit by digit, also in the warm-up days, and the tests of
+     both backends with the models of `add_accis_to_idf`, of the setpoints of the PMV, aPMV and ePMV and of Method C
+     compare all their outputs exactly instead of within 1e-6.
+  2. Not chosen: making eppy write the numbers with all their digits (its `scientificnotation` doing nothing), which
+     gave identical results with this model, since EnergyPlus does not read every number as the nearest float
+     (measured with EnergyPlus 9.4, 9.6, 25.1 and 25.2: 11 of 31 numbers wider than 18 characters, as Python writes
+     them, one bit away, and `1.7976931348623157e+308` infinite), so a number written in another text than that of the
+     IDF (the shortest of Python) can be another number for EnergyPlus.
+  3. The controller of the API does not change: it gave the actuators the values of the EMS.
+  4. `AddAccis`, whose output IDFs have those coefficients with 7 digits, and the parametric module, whose copies
+     would too, do not change: a question for the author ([[questions.md]], 2026-11-18) and a P3 entry of `TODO.md`.
+- **Consequences**: the results of `run_ep` (both backends) with the models that have numbers wider than 18
+  characters change in their last digits: they are those of EnergyPlus with the IDF itself. Those of the output IDFs of
+  `AddAccis`, which eppy has already written, do not change, nor does the golden master. The models of the copies
+  have their numbers as text, which the runners do not need as numbers (they change only their EMS objects and the
+  paths of the `Schedule:File` objects). With a version of eppy without `convertallfields`, the context does nothing,
+  and the exact tests of the backends would fail.
+
 ## 2026-11-18 — The paths of the `Schedule:File` objects relative to the folder of the model
 
 - **Status**: accepted (the author, on 2026-11-18, answering "Sí, sigue" to the design that Claude Code proposed at the

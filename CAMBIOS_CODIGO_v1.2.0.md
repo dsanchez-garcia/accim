@@ -3445,3 +3445,53 @@ otro en una subcarpeta, con `/`): EnergyPlus directo desde otra carpeta (tambié
 carpeta actual), `run_ep` con los dos backends, el módulo paramétrico (con `te_ref_nl` y su CSV) e
 `identify_variable_key_pattern`. Cada test con `run_ep`, con el paramétrico o con `identify_variable_key_pattern` repite
 la simulación con la conversión desactivada y comprueba el error de antes.
+
+## 71. La diferencia entre los backends EMS y API: las copias de eppy
+
+Era una entrada P2 de `TODO.md` del 2026-11-12: con los modelos de `add_accis_to_idf`, las salidas que no eran del EMS
+diferían en los últimos dígitos entre EnergyPlus con el IDF (el EMS) y el backend de la API (hasta 5e-10 K y 5e-3 J en
+dos días de julio). Con los IDF de salida de `AddAccis` no pasaba. El 2026-11-12 se habían descartado tres hipótesis
+sobre las primeras ejecuciones de los programas.
+
+**Lo medido** con EnergyPlus 25.1 y el modelo del test de A24, con todas las salidas en un SQLite (todos sus dígitos) y
+los días de diseño y de calentamiento informados:
+- Las salidas del EMS, los valores de los cuatro actuadores en cada paso informado y los tamaños de los componentes
+  eran idénticos.
+- La primera diferencia estaba en el refrigerador de la unidad interior de una zona, en el primer paso del
+  calentamiento del primer día de diseño.
+- Cada backend daba lo mismo dos veces, y el EMS daba lo mismo con `energyplus.exe` que con la librería de la API en un
+  proceso de Python.
+- La traza del EMS (EDD, `Verbose`) y las llamadas del controlador coincidían en todas, salvo 15 del arranque de la
+  simulación, en las que EnergyPlus ejecuta los programas Erl pero no los callbacks. Fijar o soltar los actuadores de
+  la API antes de ese arranque no cambió ningún dígito.
+
+**La causa**: los dos backends simulan una copia que escribe eppy, y eppy convierte los números en floats al leer y
+escribe los de más de 18 caracteres con 7 cifras significativas (`'%e'` en `EpBunch.__repr__`). Eso recorta cuatro
+coeficientes de las curvas de las unidades interiores del VRF de accim (`-0.000010819418650677` pasa a
+`-1.081942e-05`). La copia de eppy simulada con el EMS da exactamente los resultados de la API, y `run_ep` con el
+backend EMS también. Los tests comparaban EnergyPlus con el IDF frente a la API, por eso parecía una diferencia entre
+backends. Los IDF de salida de `AddAccis` ya se escriben desde el texto releído por eppy, así que ya tienen los
+coeficientes con 7 cifras y no se veía la diferencia.
+
+**El cambio**:
+- `accim.sim.accis.numbers_as_text()`: un contexto en el que eppy no convierte los números (su `convertallfields` no
+  hace nada), así que la copia conserva el texto de los números del fichero. No escribo los números con todos sus
+  dígitos porque EnergyPlus no lee todos los números como el float más cercano: medido con 9.4, 9.6, 25.1 y 25.2, 11
+  de 31 números largos (como los escribe Python) quedan a un bit, y `1.7976931348623157e+308` da infinito.
+- `run_ep` (backend EMS) y `run_simulation` (API) leen en ese contexto los modelos cuyas copias simulan. Ahora los dos
+  backends y EnergyPlus con el IDF dan lo mismo, dígito a dígito, también en el calentamiento.
+- La misma causa explicaba los «errores de redondeo» de los termostatos de confort de las consignas basadas en el PMV.
+  Los tests de los dos backends de A24, PMV, aPMV, ePMV y Método C comparan ahora todas las salidas exactamente, en
+  vez de con 1e-6. La sección 4.9 de la documentación lo explica.
+- `AddAccis` y el módulo paramétrico no cambian: si los IDF de salida deben conservar todos los dígitos de las curvas
+  es una pregunta para el autor (`notes/questions.md`), con una entrada P3 en `TODO.md`.
+
+**Los tests**: el nuevo `tests/core/test_numbers_as_text.py` comprueba que la copia tiene los campos del fichero, y que
+`run_ep` con los dos backends da exactamente lo de EnergyPlus con el IDF; sin el contexto, los resultados difieren
+(dentro de 1e-6).
+
+Los tests de `run_ep` con el backend de la API (el nuevo y el de los `Schedule:File` de la sección 70) ahora la
+ejecutan en un proceso propio: `processes=1`, y sus controles en un script en otro proceso. Con `processes=0`, la
+librería de la API se quedaba cargada en el proceso de pytest, y la primera llamada de numba (pythermalcomfort) de un
+test posterior (`test_people_set_inputs.py`) lo tumbaba con una violación de acceso. La primera batería completa de
+esta tarea se cayó así a los 24 minutos; es el conflicto ya conocido de `prepare_hooks`.

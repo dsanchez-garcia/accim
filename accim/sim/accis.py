@@ -16,6 +16,7 @@ import os
 import re
 import tempfile
 import warnings
+from contextlib import contextmanager
 from io import StringIO
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple, Union
@@ -132,7 +133,8 @@ from accim.sim.results_size import SIZE_COLUMNS, SimulationSize, estimate_simula
 from accim.sim.standards import definition_of
 from accim.sim.targets import resolve_targets
 
-__all__ = ['AddAccis', 'add_accis_to_idf', 'addAccis', 'gen_outputs_df', 'load_idf', 'modify_accis']
+__all__ = ['AddAccis', 'add_accis_to_idf', 'addAccis', 'gen_outputs_df', 'load_idf', 'modify_accis',
+           'numbers_as_text']
 
 Number = Union[int, float]
 
@@ -233,6 +235,42 @@ def load_idf(path: Union[str, os.PathLike], energyplus_version: str = 'auto'):
             f'Python session for the models of other EnergyPlus versions.'
         )
     return IDF(str(path))
+
+
+@contextmanager
+def numbers_as_text():
+    """A context in which eppy reads the numbers of the fields of the models as the text of their files (strings,
+    without its ``convertallfields``), so that it writes them back as they are (since accim 1.2.0).
+
+    eppy converts the numbers of the fields to floats when it reads a model, and writes those whose text is wider than
+    18 characters with 7 significant digits (in the format '%e', as ``eppy.bunch_subclass.EpBunch.__repr__`` does,
+    since "E+ cannot read wide numbers"; EnergyPlus 9.4 to 25.2 read them): a copy that eppy writes of a model that it
+    has read is then another model. Such are the coefficients of the curves of the indoor units of the VRF systems of
+    accim (``-0.000010819418650677`` becomes ``-1.081942e-05``), which the models of ``add_accis_to_idf`` and of the
+    setpoints based on the PMV have with all their digits. Nor does EnergyPlus read every number as the nearest float
+    (measured on 2026-11-18 with EnergyPlus 9.4, 9.6, 25.1 and 25.2: ``1.01359395177008e-05`` is one bit above it), so
+    even a number written back with all its digits in another text can be another number for EnergyPlus. The runners of
+    accim read in this context the models whose copies they simulate (``run_ep``, with both backends, and
+    :func:`accim.sim.energyplus_api.run_simulation`), so the copies have the text of the numbers of the files, and
+    EnergyPlus simulates the same numbers as with the files themselves: before, the copies of those models gave
+    results that differed in their last digits from those of the files (up to 5e-10 K in the zone temperatures and
+    5e-3 J in the hourly energies, in two days of July of the sample model).
+    """
+    import eppy.idfreader as idfreader
+
+    convert = getattr(idfreader, 'convertallfields', None)
+    if convert is None:  # Another version of eppy: its own reading
+        yield
+        return
+    idfreader.convertallfields = _keep_text
+    try:
+        yield
+    finally:
+        idfreader.convertallfields = convert
+
+
+def _keep_text(*args, **kwargs) -> None:
+    """``convertallfields`` of eppy that converts nothing, so the fields keep the text of the file."""
 
 
 def _idf_version(idf) -> str:

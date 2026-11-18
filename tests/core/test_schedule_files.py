@@ -8,6 +8,7 @@ import platform
 import re
 import shutil
 import subprocess
+import sys
 import warnings
 from pathlib import Path
 from types import SimpleNamespace
@@ -230,11 +231,28 @@ def test_energyplus_finds_the_files_of_relative_paths_next_to_the_idf_file(tmp_p
             'Probe\n' + '\n'.join(repr(float(hour) + 1000) for hour in range(8760)) + '\n', encoding='utf-8')
 
 
+#: run_ep with the backend of the API, in a new process, without absolute_schedule_files. The library of the API of
+#: EnergyPlus must stay out of the process of the tests: after it, the first call of numba of pythermalcomfort in
+#: another test stopped that process with an access violation (see accim.sim.energyplus_api.prepare_hooks)
+_API_WITHOUT_ABSOLUTE_PATHS = """
+import warnings
+import accim.sim.schedule_files as sf
+from accim.run import run_ep
+sf.absolute_schedule_files = lambda idf, folders=None: {}
+with warnings.catch_warnings(record=True) as caught:
+    warnings.simplefilter('always')
+    [result] = run_ep(only_accim_idfs=False, confirm=True, energyplus_version='auto', backend='api', processes=0)
+failed = [str(w.message) for w in caught if 'simulations failed' in str(w.message)]
+print('SUCCESS' if result.success else 'FAILED', len(failed), result.err_file)
+"""
+
+
 @needs_energyplus
 @pytest.mark.parametrize('backend', ['ems', 'api'])
 def test_run_ep_simulates_a_model_moved_with_its_schedule_files(tmp_path, monkeypatch, backend):
     # Both backends simulate a copy of the model in other folders (eppy in a temporary folder, with the model in
-    # multi_runs; the API in a temporary folder): the copy gets the absolute paths of the files (since accim 1.2.0)
+    # multi_runs; the API in a temporary folder): the copy gets the absolute paths of the files (since accim 1.2.0). The
+    # backend of the API runs in a process of its own (processes=1, and a script for its control)
     from eppy.runner.run_functions import EnergyPlusRunError
 
     from accim.run import run_ep
@@ -243,7 +261,8 @@ def test_run_ep_simulates_a_model_moved_with_its_schedule_files(tmp_path, monkey
     shutil.copy(EPW, folder / EPW.name)
     monkeypatch.chdir(folder)
     text = (folder / 'model.idf').read_text(encoding='latin-1')
-    run_ep(only_accim_idfs=False, confirm=True, energyplus_version='auto', backend=backend, processes=0)
+    run_ep(only_accim_idfs=False, confirm=True, energyplus_version='auto', backend=backend,
+           processes=0 if backend == 'ems' else 1)
     outputs = folder / 'model[Seville_Present.csv'
     assert _probe_outputs(outputs) == _HOURS
     # The IDF file keeps its relative paths
@@ -251,17 +270,19 @@ def test_run_ep_simulates_a_model_moved_with_its_schedule_files(tmp_path, monkey
     # Without the absolute paths in the copy (as before accim 1.2.0), EnergyPlus does not find the files, even in the
     # folder of the model
     outputs.unlink()
-    monkeypatch.setattr(sf, 'absolute_schedule_files', lambda idf, folders=None: {})
     not_found = r'Schedule:File="PROBE", File Name: "probe\.csv" not found'
     if backend == 'ems':
+        monkeypatch.setattr(sf, 'absolute_schedule_files', lambda idf, folders=None: {})
         with pytest.raises(EnergyPlusRunError, match=not_found):
             run_ep(only_accim_idfs=False, confirm=True, energyplus_version='auto', backend=backend, processes=0)
     else:
-        with pytest.warns(RuntimeWarning, match='1 of 1 simulations failed: model.idf'):
-            [result] = run_ep(only_accim_idfs=False, confirm=True, energyplus_version='auto', backend=backend,
-                              processes=0)
-        assert not result.success
-        assert re.search(not_found, Path(result.err_file).read_text(errors='replace'))
+        pythonpath = [str(REPO)] + ([os.environ['PYTHONPATH']] if os.environ.get('PYTHONPATH') else [])
+        result = subprocess.run([sys.executable, '-c', _API_WITHOUT_ABSOLUTE_PATHS], cwd=folder, capture_output=True,
+                                text=True, timeout=900, env=dict(os.environ, PYTHONPATH=os.pathsep.join(pythonpath)))
+        assert result.returncode == 0, result.stdout[-3000:] + result.stderr[-3000:]
+        status, warned, err_file = result.stdout.strip().splitlines()[-1].split(' ', 2)
+        assert status == 'FAILED' and warned == '1'
+        assert re.search(not_found, Path(err_file).read_text(errors='replace'))
     assert not outputs.exists()
 
 

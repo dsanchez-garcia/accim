@@ -15,6 +15,26 @@ This log is a lightweight, session-scoped complement to the repository's
 existing tracking files — it does not replace them (see
 [[decisions.md#2026-09-13 — `notes/work-log.md` complements, not replaces, existing tracking files|the related decision]]).
 
+## 2026-11-18 — The difference between the backends: eppy's copies of the models (branch `v1.2.0`, on the server)
+
+- **Objective**: the P2 entry of [[../TODO.md]] of 2026-11-12: the EMS and API backends differed in their last digits
+  with the models of `add_accis_to_idf`.
+- **Affected files**: `accim/sim/accis.py` (`numbers_as_text`), `accim/run/run.py`,
+  `accim/sim/energyplus_api/runner.py`, `tests/core/test_numbers_as_text.py`, the tests of both backends of
+  `test_jpn_aqilah2025.py`, `test_pmv_index.py`, `test_apmv_coefficients.py`, `test_epmv.py` and
+  `test_ppd_weighted_hours.py`, section 4.9 (and 4.6) of the detailed use, [[../CHANGELOG.md]], [[../TODO.md]],
+  [[decisions.md]], [[questions.md]] and the notes.
+- **Finding or decision**: not a difference between the backends. Both simulate a copy that eppy writes, and eppy
+  writes the numbers wider than 18 characters with 7 significant digits (four coefficients of the curves of the indoor
+  units of the VRF systems); the tests compared EnergyPlus with the IDF itself and the API. Found by comparing all the
+  outputs with all their digits (SQLite), the trace of the EMS against the calls of the controller, and an eppy copy
+  simulated with the EMS, which gave the results of the API. The runners now read the models in `numbers_as_text()`,
+  so the copies keep the text of the numbers; the results are identical. The same cause explained the "rounding
+  errors" of the thermal comfort thermostats of the setpoints based on the PMV. Whether `AddAccis` keeps all the digits
+  in its output IDFs is a question for the author ([[questions.md]]).
+- **Validation**: in the entry of [[../DEVLOG.md]].
+- **Next step**: the answer of the author; the next entry of [[../TODO.md]] that does not need the author.
+
 ## 2026-11-18 — The paths of the `Schedule:File` objects relative to the folder of the model (branch `v1.2.0`, on the server)
 
 - **Objective**: the P2 entry of [[../TODO.md]] of decision 7 of the review of accim 1.2.0, with the design that the

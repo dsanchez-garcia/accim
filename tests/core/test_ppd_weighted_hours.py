@@ -244,16 +244,14 @@ def test_method_c_in_energyplus_with_both_backends(tmp_path, capsys, key, begin,
     assert api[0].success, api[0].error
     results = pd.read_csv(tmp_path / 'ems' / 'run.csv')
     api_results = pd.read_csv(tmp_path / 'api' / 'run.csv')
-    # The EMS outputs are the same with both backends, but those calculated from the PMV, which differ by rounding
-    # (about 1e-12 of the PMV: the thermal comfort thermostats differ by rounding, about 1e-10 C, as in
-    # test_pmv_index)
+    # The same results with both backends, exactly, also the outputs calculated from the PMV (until 2026-11-18 they
+    # differed by about 1e-12 of the PMV, which was put down to the thermal comfort thermostats: the copy that the API
+    # simulates had the curves of the VRF system with 7 significant digits, as in test_pmv_index)
     name = PMV_INDICES[key].name
     from_pmv = [c for c in results.columns if c.startswith((f'EMS:{name}_', 'EMS:PPD Weighted Hours_'))]
     exact = [c for c in results.columns if c.startswith('EMS:') and c not in from_pmv]
     assert len(from_pmv) == 4 and len(exact) > 10
-    pd.testing.assert_frame_equal(api_results[exact], results[exact], check_exact=True)
-    pd.testing.assert_frame_equal(api_results[from_pmv], results[from_pmv], check_exact=False, rtol=1e-9, atol=1e-9)
-    pd.testing.assert_frame_equal(api_results, results, check_exact=False, rtol=1e-6, atol=1e-6)
+    pd.testing.assert_frame_equal(api_results, results, check_exact=True)
 
     # Check 3 of verify_accim_simulation
     with warnings.catch_warnings():
