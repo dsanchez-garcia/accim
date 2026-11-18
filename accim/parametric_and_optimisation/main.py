@@ -51,9 +51,9 @@ import accim.parametric_and_optimisation.funcs_for_besos.param_apmv as bf_apmv
 import accim.parametric_and_optimisation.parameters as params
 from accim.parametric_and_optimisation.analysis import AnalysisMixin
 from accim.parametric_and_optimisation.plotting import PlottingMixin
-from accim.parametric_and_optimisation.patches import (GlobalAllCapsDict, _ensure_run_energyplus_copies_in_idf,
-                                                       _patched_eval_func, _patched_to_platypus,
-                                                       _register_comfort_standards)
+from accim.parametric_and_optimisation.patches import (GlobalAllCapsDict, _ensure_run_building_writes_all_digits,
+                                                       _ensure_run_energyplus_copies_in_idf, _patched_eval_func,
+                                                       _patched_to_platypus, _register_comfort_standards)
 from accim.parametric_and_optimisation.mn_filter import MNFilter, MNFilterMapping
 from accim.parametric_and_optimisation.file_cleanup import normalize_sim_file_cleanup_options, sim_file_policy_will_remove_extension, prune_simulation_output_files
 from accim.parametric_and_optimisation._pareto import non_dominated_mask
@@ -398,11 +398,16 @@ def _run_single_evaluation_worker(
     from besos.objectives import MeterReader, VariableReader
 
     _ensure_run_energyplus_copies_in_idf()
+    _ensure_run_building_writes_all_digits()
 
     print(f"[WORKER] Loading IDF: {idf_path}")
+    from accim.sim.accis import numbers_as_text
     from accim.utils import get_building
     try:
-        b = get_building(idf_path)
+        # The numbers that eppy would write with fewer digits in the copy that besos simulates keep their text, such
+        # as the coefficients of the curves of the VRF systems of accim (since accim 1.2.0)
+        with numbers_as_text(only_wide=True):
+            b = get_building(idf_path)
     except Exception as e:
         print(f"[WORKER] Crash while loading {idf_path}: {e}")
         import traceback
@@ -3533,6 +3538,8 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                 "or 'optim_results') so the backup lands there instead of "
                 "creating a separate 'accim_idf_backups' folder."
             )
+        from accim.sim.accis import numbers_with_all_digits
+
         backup_dir = out_dir
         os.makedirs(backup_dir, exist_ok=True)
         suffix = f'_{label}' if label else ''
@@ -3541,7 +3548,9 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             idf_basename = _strip_idf_extension(os.path.basename(b.idfname)) if hasattr(b, 'idfname') and b.idfname else f'unknown_idf_{i}'
             filename = f'accim_idf_backup_{idf_basename}{suffix}_{timestamp}.idf'
             backup_path = os.path.join(backup_dir, filename)
-            b.savecopy(backup_path)
+            # The workers simulate the backups: eppy writes the numbers with all their digits (since accim 1.2.0)
+            with numbers_with_all_digits():
+                b.savecopy(backup_path)
             self.idf_backup_path.append(os.path.abspath(backup_path))
         if len(self.idf_backup_path) == 1:
             self.idf_backup_path = self.idf_backup_path[0]
@@ -5240,11 +5249,16 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         if reduce_sim_time or force_temp_copy:
             from besos.eppy_funcs import get_building
 
+            from accim.sim.accis import numbers_as_text, numbers_with_all_digits
+
             idf_id = self._get_idf_identifier(selected_building, selected_idx)
             safe_idf_id = re.sub(r'[^A-Za-z0-9_.-]+', '_', idf_id)
             temp_path = f'{temp_prefix}_{selected_idx}_{safe_idf_id}.idf'
-            selected_building.savecopy(temp_path)
-            building_for_testsim = get_building(temp_path)
+            # The copy keeps all the digits of the numbers of the model (since accim 1.2.0)
+            with numbers_with_all_digits():
+                selected_building.savecopy(temp_path)
+            with numbers_as_text(only_wide=True):
+                building_for_testsim = get_building(temp_path)
 
         if reduce_sim_time:
             reduce_runtime(
@@ -8073,6 +8087,8 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         result = self.set_evaluator(epw=..., out_dir=..., building=...)
         """
         b = building if building is not None else self.building
+        # The copies that BESOS simulates keep all the digits of the numbers of the model (since accim 1.2.0)
+        _ensure_run_building_writes_all_digits()
         evaluator = EvaluatorEP(problem=self.problem, building=b, epw=epw, out_dir=out_dir)
         return evaluator
 

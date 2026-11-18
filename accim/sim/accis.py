@@ -12,6 +12,8 @@ The ACCIS is an EnergyManagementSystem script that applies adaptive setpoint tem
   arguments of that model.
 """
 
+import functools
+import math
 import os
 import re
 import tempfile
@@ -134,7 +136,7 @@ from accim.sim.standards import definition_of
 from accim.sim.targets import resolve_targets
 
 __all__ = ['AddAccis', 'add_accis_to_idf', 'addAccis', 'gen_outputs_df', 'load_idf', 'modify_accis',
-           'numbers_as_text']
+           'numbers_as_text', 'numbers_with_all_digits']
 
 Number = Union[int, float]
 
@@ -238,7 +240,7 @@ def load_idf(path: Union[str, os.PathLike], energyplus_version: str = 'auto'):
 
 
 @contextmanager
-def numbers_as_text():
+def numbers_as_text(only_wide: bool = False):
     """A context in which eppy reads the numbers of the fields of the models as the text of their files (strings,
     without its ``convertallfields``), so that it writes them back as they are (since accim 1.2.0).
 
@@ -254,7 +256,13 @@ def numbers_as_text():
     :func:`accim.sim.energyplus_api.run_simulation`), so the copies have the text of the numbers of the files, and
     EnergyPlus simulates the same numbers as with the files themselves: before, the copies of those models gave
     results that differed in their last digits from those of the files (up to 5e-10 K in the zone temperatures and
-    5e-3 J in the hourly energies, in two days of July of the sample model).
+    5e-3 J in the hourly energies, in two days of July of the sample model). ``AddAccis``, which writes each output IDF
+    from the text of its model read again, and the workers of the parametric module, which read the copies of the
+    models (decided by the author on 2026-11-18), read them with ``only_wide``.
+
+    :param only_wide: True to keep as text only the numbers that eppy would write with fewer digits (those that it
+        would write in the format '%e', and that are then other numbers), and to convert the others, as eppy does, so
+        that the code that reads the fields of the model as numbers works as with eppy's own reading.
     """
     import eppy.idfreader as idfreader
 
@@ -262,7 +270,7 @@ def numbers_as_text():
     if convert is None:  # Another version of eppy: its own reading
         yield
         return
-    idfreader.convertallfields = _keep_text
+    idfreader.convertallfields = functools.partial(_convert_but_wide, convert) if only_wide else _keep_text
     try:
         yield
     finally:
@@ -271,6 +279,77 @@ def numbers_as_text():
 
 def _keep_text(*args, **kwargs) -> None:
     """``convertallfields`` of eppy that converts nothing, so the fields keep the text of the file."""
+
+
+@contextmanager
+def numbers_with_all_digits():
+    """A context in which eppy writes the numbers of the models with all their digits (as Python writes them), instead
+    of writing those wider than 18 characters in the format '%e', with 7 significant digits (since accim 1.2.0).
+
+    The models that eppy has read from a file have their numbers as floats, so this is what keeps them when the text of
+    the file is no longer at hand. accim writes in it the files of the models that it has read and changed (decided by
+    the author on 2026-11-18): the output IDFs of ``AddAccis`` (whose models are read again with ``numbers_as_text``
+    and ``only_wide``), the copies of the parametric module (their backups, and those that besos simulates), the IDFs
+    of the setpoints based on the PMV of the graphical user interface, and those of the functions of
+    ``accim.utils.editing`` and ``accim.sim.chile_funcs`` that save the models. A model saved with eppy outside this
+    context has those numbers with 7 significant digits. EnergyPlus may read another text of a number as another float
+    (see :func:`numbers_as_text`), so the copies that the runners simulate keep the text of the files instead.
+    """
+    import eppy.bunch_subclass as bunch_subclass
+
+    write = getattr(bunch_subclass, 'scientificnotation', None)
+    if write is None:  # Another version of eppy: its own writing
+        yield
+        return
+    bunch_subclass.scientificnotation = _all_digits
+    try:
+        yield
+    finally:
+        bunch_subclass.scientificnotation = write
+
+
+def _all_digits(value, width=None):
+    """``scientificnotation`` of eppy that writes the numbers as they are."""
+    return value
+
+
+#: The width of the text of a number above which eppy writes it in the format '%e', with 7 significant digits
+#: (``eppy.bunch_subclass.EpBunch.__repr__``)
+_EPPY_NUMBER_WIDTH = 18
+
+
+def _eppy_text(number: float) -> str:
+    """The text in which eppy writes a number that it has read (``EpBunch.__repr__``: the integers without decimals,
+    and the numbers wider than 18 characters in the format '%e')."""
+    value: Union[int, float] = number
+    try:
+        if int(number) == number:
+            value = int(number)
+    except (OverflowError, ValueError):
+        pass
+    text = f'{value}'
+    return f'{value:e}' if len(text) > _EPPY_NUMBER_WIDTH else text
+
+
+def _is_wide(text: str) -> bool:
+    """True if ``text`` is a number that eppy would write, once read, as another number (with fewer digits)."""
+    try:
+        number = float(text)
+    except ValueError:
+        return False
+    if not math.isfinite(number):
+        return False
+    return float(_eppy_text(number)) != number
+
+
+def _convert_but_wide(convert, data, commdct, block=None) -> None:
+    """``convertallfields`` of eppy (``convert``), but for the numbers that it would write with fewer digits, which
+    keep the text of the file."""
+    wide = [(key, index, position, value) for key, objects in data.dt.items() for index, fields in enumerate(objects)
+            for position, value in enumerate(fields) if isinstance(value, str) and _is_wide(value)]
+    convert(data, commdct, block)
+    for key, index, position, value in wide:
+        data.dt[key][index][position] = value
 
 
 def _idf_version(idf) -> str:
@@ -1144,7 +1223,10 @@ class AddAccis:
             enable_sizing_calculations(model)
             sizes[stem] = _estimate_results_size(idf, stem)
             # The text of the model (as eppy writes it) is kept instead of the model, which needs much more memory
-            models.append((stem, idf.idfstr()))
+            # With all the digits of the numbers of the model (since accim 1.2.0; eppy wrote those wider than 18
+            # characters with 7 significant digits)
+            with numbers_with_all_digits():
+                models.append((stem, idf.idfstr()))
             self._log('Ending with file:', stem, _END_MODEL)
 
         missing_zones = [key for key in checked_zone_arguments if key not in found_zones]
@@ -1271,7 +1353,10 @@ class AddAccis:
             return paths
         self._log('Generating the following output IDF files:')
         for stem, text in models:
-            idf = IDF(StringIO(text))
+            # The numbers that eppy would write with fewer digits keep their text, such as the coefficients of the
+            # curves of the VRF systems of accim (since accim 1.2.0; numbers_as_text)
+            with numbers_as_text(only_wide=True):
+                idf = IDF(StringIO(text))
             # eppy has removed the indentation of the program lines when it has read them
             indent_programs(idf)
             for combination in combos:
@@ -1284,7 +1369,8 @@ class AddAccis:
                 set_comfort_standard_code(idf, zone_comfort_standards(idf), epw)
                 if has_setpoint_limits(idf):
                     warn_crossed_setpoint_limits(idf, epw)
-                idf.savecopy(path)
+                with numbers_with_all_digits():
+                    idf.savecopy(path)
                 paths[os.path.basename(path)] = os.path.abspath(path)
         return paths
 

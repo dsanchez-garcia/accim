@@ -44,7 +44,7 @@ def apply_heating_activation_time_sch(idf_path: str, apply_to_occupancy: bool = 
     :param apply_to_occupancy: True to apply the same schedule to the occupancy (the People objects, and the
         People:Instance objects of EnergyPlus 26.2).
     """
-    from accim.sim.accis import load_idf
+    from accim.sim.accis import load_idf, numbers_with_all_digits
     from accim.utils.people import get_people_objects
 
     building = load_idf(idf_path)
@@ -58,4 +58,6 @@ def apply_heating_activation_time_sch(idf_path: str, apply_to_occupancy: bool = 
         for people in get_people_objects(building):
             people.Number_of_People_Schedule_Name = HEATING_ACTIVATION_SCHEDULE
         print(f'{HEATING_ACTIVATION_SCHEDULE} has been used in all occupancy schedules in the model.')
-    building.savecopy(idf_path.split('.idf')[0] + '_heat_act_time_added.idf')
+    # With all the digits of the numbers of the model (eppy writes those wider than 18 characters with 7)
+    with numbers_with_all_digits():
+        building.savecopy(idf_path.split('.idf')[0] + '_heat_act_time_added.idf')

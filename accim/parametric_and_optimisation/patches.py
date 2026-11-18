@@ -137,6 +137,50 @@ def _ensure_run_energyplus_copies_in_idf():
     eplus_funcs.run_energyplus = _patched_run_energyplus
     eplus_funcs._accim_copy_in_idf_patched = True
 
+
+def _ensure_run_building_writes_all_digits():
+    """Patch BESOS so that the copies of the models that it simulates keep all the digits of their numbers.
+
+    BESOS writes each model with eppy before simulating it (``run_building``), and eppy writes the numbers wider than
+    18 characters with 7 significant digits, such as the coefficients of the curves of the VRF systems of accim:
+    the patched ``run_building`` writes them with all their digits (``accim.sim.accis.numbers_with_all_digits``; since
+    accim 1.2.0, decided by the author on 2026-11-18).
+
+    Parameters
+    ----------
+    None
+
+    Returns
+    -------
+    None
+        The patch is applied in-place to ``besos.eplus_funcs.run_building``.
+
+    Usage
+    -----
+    Call it in each process before BESOS simulates a model (the workers of ``run_parametric_simulation``,
+    ``_patched_eval_func`` and ``set_evaluator``).
+
+    Examples
+    --------
+    _ensure_run_building_writes_all_digits()
+    """
+    import besos.eplus_funcs as eplus_funcs
+
+    if getattr(eplus_funcs, '_accim_all_digits_patched', False):
+        return
+
+    original_run_building = eplus_funcs.run_building
+
+    @functools.wraps(original_run_building)
+    def _patched_run_building(*args, **kwargs):
+        from accim.sim import accis
+
+        with accis.numbers_with_all_digits():
+            return original_run_building(*args, **kwargs)
+
+    eplus_funcs.run_building = _patched_run_building
+    eplus_funcs._accim_all_digits_patched = True
+
 def _register_comfort_standards(definitions) -> None:
     """Register in this process the comfort standards defined by their data (:mod:`accim.sim.standards`) of the main
     process, which the processes of the parallel simulations do not have (each Python process has its own registry).
@@ -192,6 +236,7 @@ def _patched_eval_func(evaluator, all_outputs):
     # The comfort standards defined by their data of the main process (in the processes of platypus)
     _register_comfort_standards(getattr(evaluator, '_accim_comfort_standards', None))
     _ensure_run_energyplus_copies_in_idf()
+    _ensure_run_building_writes_all_digits()
     if getattr(evaluator, 'out_dir', None) is not None:
         if not hasattr(evaluator, '_out_dir_patched'):
             evaluator.out_dir = f'{evaluator.out_dir}_{os.getpid()}'

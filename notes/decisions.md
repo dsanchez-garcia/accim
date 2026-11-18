@@ -11,6 +11,46 @@ Durable architectural/process decisions for this repository and its Obsidian
 vault. Newest first. Use [[templates/decision-record.md|the decision-record
 template]] to add a new entry.
 
+## 2026-11-18 — accim keeps all the digits of the numbers of the models that it writes
+
+- **Status**: accepted (the author, on 2026-11-18, answering the question of [[questions.md]] of the same day with
+  option (b), the recommendation of Claude Code: "Sí, hazlo"; "que `AddAccis` y el módulo paramétrico conserven todos
+  los dígitos").
+- **Context**: eppy converts the numbers of the fields to floats when it reads a model and writes those wider than 18
+  characters with 7 significant digits. After the entry below, the copies that the runners simulate kept the text of
+  the files, but `AddAccis` wrote its output IDFs from the text of each model read again by eppy, so four coefficients
+  of the curves of the indoor units of the VRF systems of accim had 7 significant digits there, and all of them in the
+  models of `add_accis_to_idf`: the results differed in their last digits by the function that made the model. While
+  doing it, the input models turned out to have such numbers too: the sample model (`2.23467901234568E-07` and
+  `1.85773456790123E-07`) and the office models of OpenStudio (`0.00299999999999999`, `0.00319999999999998` and
+  `4.03777256956784e-06`, which the output IDFs had as `0.003`, `0.0032` and `4.037773e-06`).
+- **Decision**:
+  1. `AddAccis` writes the text of each model and its output IDFs in `accim.sim.accis.numbers_with_all_digits()` (eppy
+     writes the floats as Python writes them, `scientificnotation` doing nothing), and reads the text of each model
+     again in `numbers_as_text(only_wide=True)`: the numbers that eppy would write with fewer digits keep their text
+     (those of accim, such as the coefficients of the curves, as accim writes them, and those of the input model as
+     Python writes them), and the others are converted, as before, so the code that changes the model for each output
+     IDF reads its fields as before.
+  2. The parametric module writes its backups in `numbers_with_all_digits()`, its workers read them in
+     `numbers_as_text(only_wide=True)`, and besos writes the copies that it simulates in `numbers_with_all_digits()`
+     (`run_building` patched, as `run_energyplus` was: `_ensure_run_building_writes_all_digits` in the workers,
+     `_patched_eval_func` and `set_evaluator`); so do its test simulations of the outputs.
+  3. The same for the other files of models that accim writes, the numbers of the model in
+     `numbers_with_all_digits()`: the IDFs of the setpoints based on the PMV of the graphical user interface, and those
+     of `accim.utils.editing` (`modify_timesteps_path`, `set_occupancy_to_always_path` and the operative temperature
+     of the thermostats with a path) and `accim.sim.chile_funcs`. The functions of `accim.sim.schedule_files` with the
+     path of an IDF file read it in `numbers_as_text()`, since they change only the paths.
+  4. A model saved by the user with eppy (`idf.save()`, after `add_accis_to_idf` or `modify_accis`) has those numbers
+     with 7 digits, as eppy writes them: the user can save it in `numbers_with_all_digits()` (section 4.9 of the
+     detailed use).
+- **Consequences**: the output IDFs of `AddAccis` give the results of the models of `add_accis_to_idf` with the same
+  arguments, digit by digit (measured with EnergyPlus 25.1 on 2026-11-18, a test). The golden master was written again
+  on purpose: 18 of its files change, and only in those numbers, which keep their digits (the four coefficients of the
+  curves, 407 times each, and the numbers of the input models above, from 7 to 388 times each); the number of lines
+  does not change. The results of the output IDFs change in their last digits. The text of the numbers of the input
+  models that were wider than 18 characters becomes that of Python (`2.23467901234568e-07` for `2.23467901234568E-07`),
+  the same number.
+
 ## 2026-11-18 — The copies of the models that the runners simulate keep the text of the numbers of the IDF
 
 - **Status**: provisional (Claude Code, for the author, in the P2 entry of `TODO.md` of 2026-11-12 on the difference
@@ -47,7 +87,8 @@ template]] to add a new entry.
      IDF (the shortest of Python) can be another number for EnergyPlus.
   3. The controller of the API does not change: it gave the actuators the values of the EMS.
   4. `AddAccis`, whose output IDFs have those coefficients with 7 digits, and the parametric module, whose copies
-     would too, do not change: a question for the author ([[questions.md]], 2026-11-18) and a P3 entry of `TODO.md`.
+     would too, do not change: a question for the author ([[questions.md]], 2026-11-18), answered the same day (the
+     entry above: they keep all the digits).
 - **Consequences**: the results of `run_ep` (both backends) with the models that have numbers wider than 18
   characters change in their last digits: they are those of EnergyPlus with the IDF itself. Those of the output IDFs of
   `AddAccis`, which eppy has already written, do not change, nor does the golden master. The models of the copies

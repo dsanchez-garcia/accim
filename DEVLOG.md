@@ -36,6 +36,53 @@ Recommended flow: track active work in `TODO.md`, move completed outcomes to `DE
 ## Entries
 
 ### 2026-11-18
+#### [done] accim keeps all the digits of the numbers of the models that it writes (branch `v1.2.0`)
+- Context: the question of 2026-11-18 (`notes/questions.md`), answered by the author the same day with option (b):
+  `AddAccis` and the parametric module keep all the digits. After the previous entry, the copies of the runners kept the
+  text of the IDF, but eppy wrote the output IDFs of `AddAccis` (from the text of each model read again) and the copies
+  of the parametric module with the numbers wider than 18 characters with 7 significant digits.
+- Changes:
+  - `accim.sim.accis.numbers_with_all_digits()`: a context in which eppy writes the numbers with all their digits (its
+    `scientificnotation` does nothing); `numbers_as_text(only_wide=True)`: only the numbers that eppy would write as
+    other numbers keep their text, and the others are converted, so the code that reads the fields as numbers works as
+    before (`_eppy_text`, `_is_wide`, `_convert_but_wide`).
+  - `AddAccis`: the text of each model (`idfstr`) and its output IDFs in `numbers_with_all_digits()`, and the model
+    read again in `numbers_as_text(only_wide=True)` (the code of each combination reads the run period and the
+    timesteps with `int`, and otherwise the EMS programs).
+  - The parametric module: its backups in `numbers_with_all_digits()`, its workers read them in
+    `numbers_as_text(only_wide=True)`, and besos writes the copies that it simulates in `numbers_with_all_digits()`
+    (`besos.eplus_funcs.run_building` patched by `_ensure_run_building_writes_all_digits`, in the workers,
+    `_patched_eval_func` and `set_evaluator`); also the test simulations of the outputs.
+  - The other files of models that accim writes: the IDFs of the setpoints based on the PMV of the GUI, the functions of
+    `accim.utils.editing` with a path and `accim.sim.chile_funcs`, in `numbers_with_all_digits()`; the functions of
+    `accim.sim.schedule_files` with a path read the model in `numbers_as_text()` (they change only paths).
+  - The input models have such numbers too: the sample model (`2.23467901234568E-07`, `1.85773456790123E-07`) and the
+    office models of OpenStudio (`0.00299999999999999`, `0.00319999999999998`, `4.03777256956784e-06`), which the output
+    IDFs had as `2.234679e-07`, `1.857735e-07`, `0.003`, `0.0032` and `4.037773e-06`.
+  - The golden master written again on purpose: 18 files (the 14 with the curves of the VRF systems and 4 of the office
+    models with their HVAC systems), the same number of lines, and only those numbers changed: the four coefficients
+    (407 times each) and those of the input models (7 to 388 times each), checked line by line.
+  - Tests: `numbers_as_text(only_wide=True)`; the output IDF of `AddAccis` gives the results of the model of
+    `add_accis_to_idf` with the same arguments, exactly, and without the two contexts it does not (the coefficients with
+    7 digits); the copy that besos simulates in the parametric module keeps the digits, and without the contexts it
+    does not. The tests of the parametric module whose controls make besos fail send the files of the failed
+    simulations to their temporary folders (fixture `besos_errors`): besos copies them to `BESOS_Errors` in the folder
+    where it was imported, which was the repository when pytest ran there (a folder left by the previous commit's tests,
+    removed).
+  - Section 4.9 of the detailed use; `CHANGELOG.md` (Changed); `notes/decisions.md`; `notes/questions.md` (answered);
+    `TODO.md` (the P3 entry closed).
+- Files: `accim/sim/accis.py`, `accim/parametric_and_optimisation/main.py`, `accim/parametric_and_optimisation/patches.py`,
+  `accim/gui/tasks.py`, `accim/utils/editing.py`, `accim/sim/chile_funcs.py`, `accim/sim/schedule_files.py`,
+  `tests/core/test_numbers_as_text.py`, `tests/parametric_and_optimisation/test_schedule_file_paths.py`,
+  `tests/core/golden_master/golden/*.txt.xz` (18), `docs/source/4_detailed use.md`, `CHANGELOG.md`, `TODO.md`,
+  `notes/decisions.md`, `notes/questions.md`, `notes/work-log.md`, `CAMBIOS_CODIGO_v1.2.0.md` (section 72).
+- Verification: the golden master written again with `--update-golden` and compared line by line with that of the
+  previous commit (only those numbers change). The affected test files (`test_numbers_as_text.py`,
+  `test_golden_master.py`, `test_schedule_files.py`, `test_gui.py`, `test_schedule_file_paths.py`): 190 passed. All the
+  test files of `tests/core` and `tests/parametric_and_optimisation` (130 files, in a copy of the working tree): 2223
+  passed, 4 skipped, in 45 min. The documentation builds with the 33 warnings of before.
+- Next step: the next entry of `TODO.md` that does not need the author.
+
 #### [done] The difference between the EMS and API backends: eppy's copies of the models (branch `v1.2.0`)
 - Context: the P2 entry of `TODO.md` of 2026-11-12: with the models of `add_accis_to_idf`, the outputs that are not
   those of the EMS differed in their last digits between EnergyPlus with the IDF (the EMS) and the backend of the API

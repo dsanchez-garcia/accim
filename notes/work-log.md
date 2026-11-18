@@ -15,6 +15,22 @@ This log is a lightweight, session-scoped complement to the repository's
 existing tracking files — it does not replace them (see
 [[decisions.md#2026-09-13 — `notes/work-log.md` complements, not replaces, existing tracking files|the related decision]]).
 
+## 2026-11-18 — accim keeps all the digits of the numbers of the models that it writes (branch `v1.2.0`, on the server)
+
+- **Objective**: the answer of the author to the question of the same day ([[questions.md]]): `AddAccis` and the
+  parametric module keep all the digits of the numbers that eppy wrote with 7 significant digits.
+- **Affected files**: `accim/sim/accis.py`, `accim/parametric_and_optimisation/main.py` and `patches.py`,
+  `accim/gui/tasks.py`, `accim/utils/editing.py`, `accim/sim/chile_funcs.py`, `accim/sim/schedule_files.py`, the tests,
+  18 files of the golden master, section 4.9 of the detailed use, [[../CHANGELOG.md]], [[../TODO.md]],
+  [[decisions.md]], [[questions.md]] and the notes.
+- **Finding or decision**: two contexts, `numbers_with_all_digits()` (eppy writes all the digits) and
+  `numbers_as_text(only_wide=True)` (only the numbers that eppy would cut keep their text), in `AddAccis`, the parametric
+  module and the other files of models that accim writes. The input models had such numbers too (the sample model and
+  the office models of OpenStudio), which now keep their digits; the golden master changes in 18 files, only in those
+  numbers. The output IDFs of `AddAccis` give the results of the models of `add_accis_to_idf`, digit by digit.
+- **Validation**: in the entry of [[../DEVLOG.md]].
+- **Next step**: the next entry of [[../TODO.md]] that does not need the author.
+
 ## 2026-11-18 — The difference between the backends: eppy's copies of the models (branch `v1.2.0`, on the server)
 
 - **Objective**: the P2 entry of [[../TODO.md]] of 2026-11-12: the EMS and API backends differed in their last digits

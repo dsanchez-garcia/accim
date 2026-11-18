@@ -179,11 +179,13 @@ def remove_schedule_file(idf: Any, name: str) -> None:
 
 def _model(idf: Any) -> Tuple[Any, bool]:
     """The model (eppy) of ``idf``, and whether it was read from a file: a path is that of an IDF file, read with the
-    IDD of its EnergyPlus version (:func:`accim.sim.accis.load_idf`)."""
+    IDD of its EnergyPlus version (:func:`accim.sim.accis.load_idf`), with the text of its numbers
+    (:func:`accim.sim.accis.numbers_as_text`), so that the file saved again changes only in the paths."""
     if isinstance(idf, (str, os.PathLike)):
-        from accim.sim.accis import load_idf
+        from accim.sim.accis import load_idf, numbers_as_text
 
-        return load_idf(idf), True
+        with numbers_as_text():
+            return load_idf(idf), True
     return idf, False
 
 

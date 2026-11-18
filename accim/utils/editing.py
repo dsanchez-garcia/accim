@@ -63,10 +63,12 @@ def modify_timesteps_path(idfpath: str, timesteps: int):
         Allowable values include 1, 2, 3, 4, 5, 6, 10, 12, 15, 20, 30, and 60
     :type timesteps: int
     """
-    from accim.sim.accis import load_idf
+    from accim.sim.accis import load_idf, numbers_with_all_digits
     building = load_idf(idfpath)
     modify_timesteps(idf_object=building, timesteps=timesteps)
-    building.save()
+    # With all the digits of the numbers of the model (eppy writes those wider than 18 characters with 7)
+    with numbers_with_all_digits():
+        building.save()
 
 
 def set_occupancy_to_always(idf_object: IDF) -> IDF:
@@ -103,10 +105,12 @@ def set_occupancy_to_always_path(idfpath: str):
     :param idfpath: the path to the idf
     :type idfpath: str
     """
-    from accim.sim.accis import load_idf
+    from accim.sim.accis import load_idf, numbers_with_all_digits
     building = load_idf(idfpath)
     set_occupancy_to_always(idf_object=building)
-    building.save()
+    # With all the digits of the numbers of the model (eppy writes those wider than 18 characters with 7)
+    with numbers_with_all_digits():
+        building.save()
 
 
 def reduce_runtime(
@@ -533,7 +537,11 @@ def set_operative_temp_control(idf_path: str = None, idf_object=None):
             print(f"ZoneControl:Thermostat:OperativeTemperature already exists for {t_name}")
 
     if idf_path is not None:
-        building.save()
+        from accim.sim.accis import numbers_with_all_digits
+
+        # With all the digits of the numbers of the model (eppy writes those wider than 18 characters with 7)
+        with numbers_with_all_digits():
+            building.save()
         return None
     else:
         return building

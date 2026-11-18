@@ -24,34 +24,21 @@ it here as answered).
 
 ## Open
 
-## 2026-11-18 — Do the output IDFs of AddAccis keep all the digits of the curves of the VRF systems?
-- Context: eppy writes the numbers wider than 18 characters with 7 significant digits when it writes a model that it
-  has read. Since 2026-11-18, `run_ep` (both backends) and `run_simulation` keep the text of the numbers of the IDF in
-  their copies (`accim.sim.accis.numbers_as_text`), which was the cause of the difference between the backends of
-  2026-11-12 ([[decisions.md]], 2026-11-18). `AddAccis` writes each output IDF from the text of its model read again by
-  eppy, so four coefficients of the curves of the indoor units of the VRF systems of accim (`VRFTUCoolCapFT` and
-  `VRFTUHeatCapFT`) have 7 significant digits in its output IDFs (`-0.000010819418650677` is `-1.081942e-05`), and all
-  their digits in the models of `add_accis_to_idf` and of the setpoints based on the PMV; the copies of the parametric
-  module would have 7 too (not measured).
-- Why it matters: the same VRF system of accim gives results that differ in their last digits by the function that
-  made the model (up to 5e-10 K in the zone temperatures and 5e-3 J in the hourly energies, in two days of July of the
-  sample model). Changing `AddAccis` changes its output IDFs (14 of the 21 compressed files of the golden master with
-  those curves).
-- Options considered: (a) leave it (the output IDFs and the golden master do not change; the difference is documented);
-  (b) `AddAccis` reads the text of each model in `numbers_as_text()`, so its output IDFs have the curves with all
-  their digits (the golden master written again on purpose), and the parametric module keeps them in its copies;
-  (c) only one of the two.
-- Owner: the author. Recommendation of Claude Code: (b), so that every model of accim has the curves of its VRF
-  systems as accim defines them, and the results do not depend on the function that made the model. The P3 entry of
-  [[../TODO.md]] waits for the answer.
-- Status: open.
-
-The question of 2026-11-17 on the range of the bisection of comfort standard 24 was answered on 2026-11-18, the
-question of 2026-11-12 on the validation study of F3 and that of 2026-11-13 on checks 1 and 2 of the verification were
-decided on 2026-11-13, and the six questions that were open after session 3 of the review of 1.2.0, on 2026-11-12 (see
+None. The question of 2026-11-18 on the digits of the curves of the VRF systems in the output IDFs of AddAccis and the
+question of 2026-11-17 on the range of the bisection of comfort standard 24 were answered on 2026-11-18, the question
+of 2026-11-12 on the validation study of F3 and that of 2026-11-13 on checks 1 and 2 of the verification were decided
+on 2026-11-13, and the six questions that were open after session 3 of the review of 1.2.0, on 2026-11-12 (see
 "Answered" below).
 
 ## Answered
+
+The question of 2026-11-18 on whether the output IDFs of `AddAccis` keep all the digits of the curves of the VRF
+systems (eppy wrote four coefficients of the curves of the indoor units with 7 significant digits in them, and the
+models of `add_accis_to_idf` had all of them, so the results differed in their last digits by the function that made
+the model) was answered by the author on 2026-11-18 ("Sí, hazlo"): option (b), the recommendation of Claude Code,
+`AddAccis` and the parametric module keep all the digits; extended to the numbers of the input models and to the other
+files of models that accim writes: see
+[[decisions.md#2026-11-18 — accim keeps all the digits of the numbers of the models that it writes|the decision of 2026-11-18]].
 
 The question of 2026-11-17 on the range of the bisection of comfort standard 24 with the mean radiant temperature of
 the zones (with `tr_mode='zone'`, the hooks of the SET looked for the air temperature within `temperature_range`, 10

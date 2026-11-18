@@ -139,7 +139,7 @@ def apply_apmv(arguments: Mapping[str, Any]) -> str:
     """
     from accim.gui.forms import PMV_INDEX_FUNCTIONS, PMV_INDEX_NAMES
     from accim.sim import apmv
-    from accim.sim.accis import load_idf
+    from accim.sim.accis import load_idf, numbers_with_all_digits
 
     index = arguments.get('index', 'apmv')
     building = load_idf(arguments['idf'], arguments['energyplus_version'])
@@ -154,7 +154,9 @@ def apply_apmv(arguments: Mapping[str, Any]) -> str:
     if by_zone:
         setpoints.update(apmv_target_keys(building, by_zone, arguments['idf']))
     getattr(apmv, PMV_INDEX_FUNCTIONS[index])(building, **setpoints)
-    building.saveas(arguments['output_idf'])
+    # With all the digits of the numbers of the model (eppy writes those wider than 18 characters with 7)
+    with numbers_with_all_digits():
+        building.saveas(arguments['output_idf'])
     print(f'\nThe IDF with the {PMV_INDEX_NAMES[index]} setpoints has been saved as {arguments["output_idf"]}')
     return arguments['output_idf']
 

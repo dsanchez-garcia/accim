@@ -3495,3 +3495,33 @@ ejecutan en un proceso propio: `processes=1`, y sus controles en un script en ot
 librería de la API se quedaba cargada en el proceso de pytest, y la primera llamada de numba (pythermalcomfort) de un
 test posterior (`test_people_set_inputs.py`) lo tumbaba con una violación de acceso. La primera batería completa de
 esta tarea se cayó así a los 24 minutos; es el conflicto ya conocido de `prepare_hooks`.
+
+## 72. accim conserva todas las cifras de los números de los modelos que escribe
+
+Respuesta del autor a la pregunta de la sección 71 ("Sí, hazlo", opción b): `AddAccis` y el módulo paramétrico
+conservan todas las cifras. Antes, eppy escribía los IDF de salida de `AddAccis` (desde el texto releído de cada
+modelo) y las copias del paramétrico con 7 cifras significativas en los números de más de 18 caracteres.
+
+**El cambio** (`accim/sim/accis.py` y los sitios que escriben modelos):
+- `numbers_with_all_digits()`: un contexto en el que eppy escribe los números con todas sus cifras (su
+  `scientificnotation` no hace nada).
+- `numbers_as_text(only_wide=True)`: solo conservan su texto los números que eppy reescribiría como otros números; los
+  demás se convierten como siempre, así que el código que lee los campos como números funciona igual.
+- `AddAccis` escribe el texto de cada modelo y sus IDF de salida con todas las cifras, y relee el modelo con
+  `only_wide`.
+- El módulo paramétrico hace lo mismo con sus copias de seguridad, las copias que leen sus procesos de trabajo y las
+  que simula besos (con `besos.eplus_funcs.run_building` parcheado), y también con las simulaciones de prueba.
+- También escriben todas las cifras la GUI (consignas PMV), las funciones de `accim.utils.editing` con ruta y
+  `accim.sim.chile_funcs`. Las de `accim.sim.schedule_files` con ruta leen el modelo como texto, porque solo cambian
+  rutas.
+
+**Lo medido**: los IDF de entrada también tenían números así: el modelo de ejemplo (`2.23467901234568E-07`) y los de
+oficina de OpenStudio (`0.00299999999999999`), que los IDF de salida tenían como `2.234679e-07` y `0.003`. Ahora el IDF
+de salida de `AddAccis` da exactamente los resultados del modelo de `add_accis_to_idf` con los mismos argumentos.
+
+**El golden master** se ha reescrito a propósito: cambian 18 ficheros, los 14 con las curvas del VRF y 4 de los modelos
+de oficina con su HVAC. Tienen el mismo número de líneas, y solo cambian esos números, comprobado línea a línea: los
+cuatro coeficientes (407 veces cada uno) y los de los IDF de entrada.
+
+**Los tests**: el modo `only_wide`; `AddAccis` frente a `add_accis_to_idf` (idénticos, y sin los dos contextos no lo
+son); y la copia que simula besos en el paramétrico conserva las cifras (y sin los contextos no).
