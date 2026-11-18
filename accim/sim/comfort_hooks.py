@@ -1777,7 +1777,9 @@ def apply_sun2026_setpoints(building, comfort_mode: Any = 1, category: int = 80,
                             tolerance_k: float = 0.05, max_iterations: int = 20,
                             temperature_range: Optional[Tuple[float, float]] = None,
                             output_frequencies: Optional[Sequence[str]] = None,
-                            air_speed_heating: Optional[float] = None) -> Sun2026SetpointHook:
+                            air_speed_heating: Optional[float] = None, ems_fallback: bool = False,
+                            ems_relaxation: Optional[float] = None,
+                            ems_slope: Optional[float] = None) -> Sun2026SetpointHook:
     """Prepare a model with the ACCIS (temperature setpoints and full air-conditioning, as :func:`apply_set_setpoints`)
     for comfort standard 24, INT Sun2026 SET (the causal SET model of Sun, Brager & Schiavon, 2026, Energy and
     Buildings 370, 118097; task F1 of block F, with the decisions of the author of 2026-11-10 in
@@ -1800,10 +1802,14 @@ def apply_sun2026_setpoints(building, comfort_mode: Any = 1, category: int = 80,
     with that of accim (``notes/decisions.md``, task E-F1). The minimum and maximum of the setpoints of the zones
     (``heating_setpoint_minimum`` and ``cooling_setpoint_maximum`` of B5) bound its setpoints after the inversion: give
     them before this function, which reads the minimums for the warning of the hook (see
-    :class:`Sun2026SetpointHook`). Comfort standard 24 has no EMS code: :class:`accim.sim.accis.AddAccis` cannot write
-    it, and the EMS backend cannot run the hook (the fallback of an Erl loop on the SET of the previous timestep, v03
-    A6a, is an entry of ``TODO.md``); the comfort temperature and the applicability limits of the zones stay those of
-    their comfort standard.
+    :class:`Sun2026SetpointHook`). Comfort standard 24 has no EMS code of its own: :class:`accim.sim.accis.AddAccis`
+    cannot write it, and the EMS backend cannot run the hook; with ``ems_fallback`` (since accim 1.2.0, way (a) of v03
+    A6), the model also gets a feedback in the EMS on the SET of the previous timestep that EnergyPlus calculates
+    (:mod:`accim.sim.ems.set_feedback`), which gives the setpoints when the hook does not: the model then runs with the
+    EMS backend (and with the backend of the API without the hook), with setpoints that follow those of the hook with a
+    delay of one timestep and the difference between the SET of the Pierce model of EnergyPlus and that of
+    pythermalcomfort. The comfort temperature and the applicability limits of the zones stay those of their comfort
+    standard.
 
     :param building: The model (eppy), changed in place.
     :param comfort_mode: 1 or 'SET band' (the default), or 2 or 'SET neutral +/- offset'.
@@ -1833,14 +1839,42 @@ def apply_sun2026_setpoints(building, comfort_mode: Any = 1, category: int = 80,
         :class:`SetSetpointHook`). None (the default): the air speed of the People objects in both setpoints and in
         the SET of the zone (decision 5 of the author of 2026-11-10), with which a schedule of fans raises the heating
         setpoint as well as the cooling one.
+    :param ems_fallback: True to add the feedback of the EMS (see above and :mod:`accim.sim.ems.set_feedback`), with
+        which the model runs with the EMS backend too; it takes the conditions of the zones, as ``tr_mode='zone'``, and
+        the air velocity schedule of the People objects, so it needs ``tr_mode='zone'`` and no ``air_speed_heating``.
+    :param ems_relaxation: With ``ems_fallback``, the fraction of the way to its estimate that each setpoint goes in
+        each timestep: None for :data:`accim.sim.ems.set_feedback.DEFAULT_RELAXATION` (0.5, with which the feedback
+        converges where the SET grows by less than 4 K per K of operative temperature).
+    :param ems_slope: With ``ems_fallback``, the growth of the SET per K of operative temperature with which the
+        setpoints are estimated (K/K): None for :data:`accim.sim.ems.set_feedback.DEFAULT_SLOPE` (1.0, about that with
+        still air).
     :return: The hook, with the keys of the zones in the outputs (``hook.keys``).
     :raises ValueError: If the model has no ACCIS of accim 1.0.0 or later, is in mixed mode, has already the objects of
         the SET or of the ATHB, its People objects have not the schedules that the hook and the Pierce model need (or
         no empty field for the Pierce model), or an argument is not valid.
     """
+    from accim.sim.ems.set_feedback import DEFAULT_RELAXATION, DEFAULT_SLOPE, set_set_feedback_code
     from accim.sim.ems.setpoint_limits import zone_limits
     from accim.sim.people import PIERCE_SET_OUTPUT, add_thermal_comfort_model
 
+    if ems_fallback:
+        if tr_mode != 'zone':
+            raise ValueError("The fallback of the EMS (ems_fallback) takes the SET of the Pierce model of EnergyPlus, "
+                             "with the mean radiant temperature of each zone: it needs tr_mode='zone'.")
+        if air_speed_heating is not None:
+            raise ValueError('The fallback of the EMS (ems_fallback) takes the SET of the Pierce model of EnergyPlus, '
+                             'with the air velocity schedule of the People objects in both setpoints: it cannot take '
+                             'air_speed_heating.')
+        ems_relaxation = (DEFAULT_RELAXATION if ems_relaxation is None
+                          else _check_number('ems_relaxation', ems_relaxation))
+        ems_slope = DEFAULT_SLOPE if ems_slope is None else _check_number('ems_slope', ems_slope)
+        if not 0 < ems_relaxation <= 1:
+            raise ValueError(f'ems_relaxation must be greater than 0 and not greater than 1, not {ems_relaxation!r}.')
+        if ems_slope <= 0:
+            raise ValueError(f'ems_slope must be greater than 0, not {ems_slope!r}.')
+    elif ems_relaxation is not None or ems_slope is not None:
+        raise ValueError('ems_relaxation and ems_slope are those of the fallback of the EMS: give them with '
+                         'ems_fallback=True.')
     keys = _model_zones(building, 'comfort standard 24 (INT Sun2026 SET)', _HOOK_SENSOR_PREFIXES, running_mean=False)
     needed = ['met', 'clo', 'air_speed']
     people = _people_inputs(building, list(keys), needed, pierce=True)
@@ -1862,6 +1896,10 @@ def apply_sun2026_setpoints(building, comfort_mode: Any = 1, category: int = 80,
     _add_zone_output_variables(building, keys, _SET_ZONE_VARIABLES, frequencies)
     occupants = {zone: values['occupants'] for zone, values in people.items()}
     _add_zone_output_variables(building, occupants, [PIERCE_SET_OUTPUT], frequencies)
+    if ems_fallback:
+        set_set_feedback_code(building, occupants, hook.set_heating_setpoint, hook.set_cooling_setpoint, hook.band,
+                              ems_relaxation, ems_slope, hook.temperature_range, SUN2026_TSV_SLOPE,
+                              SUN2026_TSV_INTERCEPT)
     return hook
 
 

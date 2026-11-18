@@ -261,8 +261,11 @@ def _check_setpoint_hooks(idfnames: Sequence[str], backend: str, hooks: Optional
     if backend != 'ems':
         return
     from accim.sim.ems.hook_setpoints import hook_zones_of_file, missing_hook_message
+    from accim.sim.ems.set_feedback import feedback_zones_of_file, zones_needing_a_hook
 
-    prepared = [name for name in idfnames if hook_zones_of_file(name)]
+    # The zones with the fallback of the EMS of comfort standard 24 do not need the hook (accim.sim.ems.set_feedback)
+    prepared = [name for name in idfnames
+                if zones_needing_a_hook(hook_zones_of_file(name), feedback_zones_of_file(name))]
     if prepared:
         raise ValueError(missing_hook_message(prepared, 'ems'))
 

@@ -15,6 +15,25 @@ This log is a lightweight, session-scoped complement to the repository's
 existing tracking files — it does not replace them (see
 [[decisions.md#2026-09-13 — `notes/work-log.md` complements, not replaces, existing tracking files|the related decision]]).
 
+## 2026-11-18 — Comfort standard 24 with the EMS backend: the fallback of the EMS (branch `v1.2.0`, on the server)
+
+- **Objective**: the P2 entry of [[../TODO.md]] of task F1 (way (a) of v03 A6), in the autonomous session of the
+  afternoon ("continua con todas las tareas que puedas; trabaja de forma autónoma"): a model of comfort standard 24
+  that runs with the EMS backend, without the hook.
+- **Affected files**: `accim/sim/ems/set_feedback.py` (new), `accim/sim/comfort_hooks.py`
+  (`apply_sun2026_setpoints`), `accim/run/run.py`, `accim/sim/energyplus_api/runner.py`, `accim/sim/standards.py`,
+  `tests/core/test_sun2026_set.py`, section 4.9.3 of the detailed use, [[../CHANGELOG.md]], [[../TODO.md]],
+  [[decisions.md]], [[questions.md]] and the notes.
+- **Finding or decision**: the loop of the proposal (a gain on the setpoint of the previous timestep) does not converge
+  where the SET grows by more than 2.5 K per K of operative temperature (up to 4.0 with pythermalcomfort) and drifts
+  while the zone floats; the fallback moves each setpoint half the way to an estimate from the SET of EnergyPlus and the
+  operative temperature, with a slope of 1 K/K (provisional decision of [[decisions.md]]). Measured with EnergyPlus
+  25.1, the setpoints follow those of the hook (in July, +0.01 to +0.02 K the cooling ones and +0.4 K the heating
+  ones), and the setpoint far from the zone is an extrapolation (+2.2 K the heating ones in January). `AddAccis` with
+  comfort standard 24 is the open question of [[questions.md]].
+- **Validation**: in the entry of [[../DEVLOG.md]].
+- **Next step**: C2 of [[../TODO.md]], the weekly and monthly deviations of Table E.1 as constraints.
+
 ## 2026-11-18 — accim keeps all the digits of the numbers of the models that it writes (branch `v1.2.0`, on the server)
 
 - **Objective**: the answer of the author to the question of the same day ([[questions.md]]): `AddAccis` and the

@@ -24,11 +24,34 @@ it here as answered).
 
 ## Open
 
-None. The question of 2026-11-18 on the digits of the curves of the VRF systems in the output IDFs of AddAccis and the
-question of 2026-11-17 on the range of the bisection of comfort standard 24 were answered on 2026-11-18, the question
-of 2026-11-12 on the validation study of F3 and that of 2026-11-13 on checks 1 and 2 of the verification were decided
-on 2026-11-13, and the six questions that were open after session 3 of the review of 1.2.0, on 2026-11-12 (see
-"Answered" below).
+## 2026-11-18 — Should `AddAccis` write comfort standard 24, with the fallback of the EMS?
+- Context: since 2026-11-18 (the provisional decision of that day in [[decisions.md]]), `apply_sun2026_setpoints(model,
+  ems_fallback=True)` gives a model of comfort standard 24 a feedback of its setpoints on the SET of the Pierce model
+  of EnergyPlus, with which it runs with the EMS backend (`run_ep()`); the model is generated with another comfort
+  standard, whose comfort temperature and applicability limits its zones keep, and `AddAccis` raises a `ValueError`
+  with comfort standard 24 (its message points to `ems_fallback`). The entry of `TODO.md` of the fallback (v03 A6a)
+  had "the `ValueError` of `AddAccis` replaced by it" in its definition of done.
+- Why it matters: with comfort standard 24 in `AddAccis`, its output IDFs (`CS_INT Sun2026 SET`) would run with the
+  EMS backend like the others, also in the parametric module; but it changes the arguments and the output IDFs of
+  `AddAccis`, and the zones need a comfort temperature and applicability limits of their own (comfort standard 24 has
+  none: its setpoints are those of the SET).
+- Options considered: (a) leave it as it is: `AddAccis` with another comfort standard, then `apply_sun2026_setpoints(...,
+  ems_fallback=True)` (two steps, documented in section 4.9.3); (b) `AddAccis` with comfort standard 24 writes the
+  ACCIS of another comfort standard for the comfort temperature and the limits (an argument, or a default such as that
+  of ASHRAE 55), and then the objects of the hook and the fallback (with the arguments `tsv_limit`, `set_offset`,
+  `ems_relaxation` and `ems_slope`, and People objects with the schedules of the Pierce model), the output IDFs being
+  run with the EMS backend or with the hook; (c) as (b), with the comfort temperature and the limits of the causal SET
+  model itself (the neutral SET and the band, converted to operative temperatures by the fallback), a new design.
+  Recommendation of Claude Code: (a) until the validation study of F3 needs comfort standard 24 in parametric studies,
+  then (b).
+- Owner: the author.
+- Status: open.
+
+The other questions are answered: the question of 2026-11-18 on the digits of the curves of the VRF systems in the
+output IDFs of AddAccis and the question of 2026-11-17 on the range of the bisection of comfort standard 24 were
+answered on 2026-11-18, the question of 2026-11-12 on the validation study of F3 and that of 2026-11-13 on checks 1
+and 2 of the verification were decided on 2026-11-13, and the six questions that were open after session 3 of the
+review of 1.2.0, on 2026-11-12 (see "Answered" below).
 
 ## Answered
 

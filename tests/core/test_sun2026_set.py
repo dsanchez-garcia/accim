@@ -840,6 +840,106 @@ def test_the_setpoints_of_comfort_standard_24_at_the_limits_of_their_range_in_en
         np.testing.assert_allclose(heating[expected], 18.0, atol=1e-6)
 
 
+@needs_idd
+def test_the_fallback_of_the_ems_of_comfort_standard_24(tmp_path):
+    # Way (a) of proposal A6 of v03 (the entry of TODO.md of task F1, done on 2026-11-18): with ems_fallback, the model
+    # also gets a feedback of the setpoints on the SET of the Pierce model of EnergyPlus (accim.sim.ems.set_feedback)
+    from accim.sim.ems import hook_setpoints as hs
+    from accim.sim.ems import set_feedback as sf
+    from accim.sim.ems.inputs import RUN_PROGRAM_PREFIX
+
+    (tmp_path / 'a').mkdir()
+    building = _model(tmp_path / 'a')
+    hook = ch.apply_sun2026_setpoints(building, ems_fallback=True)
+    people = {str(p.Zone_or_ZoneList_or_Space_or_SpaceList_Name).replace(':', '_'): str(p.Name)
+              for p in building.idfobjects['People']}
+    for zone in ZONES:
+        sensor = building.getobject('EnergyManagementSystem:Sensor', f'SET_Pierce_{zone}')
+        assert sensor.OutputVariable_or_OutputMeter_Name == ('Zone Thermal Comfort Pierce Model Standard Effective '
+                                                             'Temperature')
+        assert sensor.OutputVariable_or_OutputMeter_Index_Key_Name == people[zone]
+        lines = [str(line).strip() for line in
+                 building.getobject('EnergyManagementSystem:Program', f'{RUN_PROGRAM_PREFIX}{zone}').fieldvalues[2:]]
+        position = lines.index('run SetAST')
+        assert lines[position + 1:position + 3] == [f'run SetSETFeedback_{zone}', f'run ApplyHookSetpoints_{zone}']
+        program = [str(line).strip() for line in
+                   building.getobject('EnergyManagementSystem:Program', f'SetSETFeedback_{zone}').fieldvalues[2:]]
+        assert program[:4] == [f'if HookSetpoints_{zone} == 0', f'if SET_Pierce_{zone} > 0',
+                               f'set EstimateAHST = {zone}_OpT+({hook.set_heating_setpoint!r}-SET_Pierce_{zone})/1.0',
+                               f'set EstimateACST = {zone}_OpT+({hook.set_cooling_setpoint!r}-SET_Pierce_{zone})/1.0']
+        assert f'set HookAHST_{zone} = HookAHST_{zone}+0.5*(EstimateAHST-HookAHST_{zone})' in program
+    assert sorted(sf.feedback_zones(building)) == sorted(hs.hook_zones(building)) == ZONES
+    building.saveas(str(tmp_path / 'fallback.idf'))
+    assert sf.feedback_zones_of_file(tmp_path / 'fallback.idf') == hs.hook_zones_of_file(tmp_path / 'fallback.idf')
+    assert sf.zones_needing_a_hook(ZONES, ZONES) == [] and sf.zones_needing_a_hook(ZONES, ZONES[:1]) == ZONES[1:]
+    # Its arguments, checked before the model changes
+    (tmp_path / 'b').mkdir()
+    building = _model(tmp_path / 'b')
+    objects = len(building.idfobjects['EnergyManagementSystem:Sensor'])
+    with pytest.raises(ValueError, match="it needs tr_mode='zone'"):
+        ch.apply_sun2026_setpoints(building, ems_fallback=True, tr_mode='equal_air')
+    with pytest.raises(ValueError, match='it cannot take air_speed_heating'):
+        ch.apply_sun2026_setpoints(building, ems_fallback=True, air_speed_heating=0.1)
+    with pytest.raises(ValueError, match='ems_relaxation must be greater than 0 and not greater than 1'):
+        ch.apply_sun2026_setpoints(building, ems_fallback=True, ems_relaxation=1.5)
+    with pytest.raises(ValueError, match='ems_slope must be greater than 0'):
+        ch.apply_sun2026_setpoints(building, ems_fallback=True, ems_slope=0)
+    with pytest.raises(ValueError, match='give them with ems_fallback=True'):
+        ch.apply_sun2026_setpoints(building, ems_slope=1.2)
+    assert len(building.idfobjects['EnergyManagementSystem:Sensor']) == objects
+
+
+@needs_energyplus
+def test_the_fallback_of_the_ems_of_comfort_standard_24_in_energyplus(tmp_path, monkeypatch):
+    # Measured on 2026-11-18 (EnergyPlus 25.1, the sample model in Seville, 15 to 17 July): the model with the fallback
+    # runs with the EMS backend, which gives the results of the backend of the API without the hook, exactly; with the
+    # hook, the backend of the API gives those of the model without the fallback, exactly (the hook gives the setpoints
+    # first, and the feedback does nothing); and the setpoints of the feedback follow those of the hook
+    from accim.run import run_ep
+    from accim.sim.ems.hook_setpoints import MissingHookWarning
+    from accim.sim.energyplus_api import run_simulations
+
+    pythermalcomfort_models()
+    hooked, hook = _sun2026_model(tmp_path / 'hook', monkeypatch, (7, 15), (7, 17))
+    model, hook_of_model = _sun2026_model(tmp_path / 'fallback', monkeypatch, (7, 15), (7, 17), ems_fallback=True)
+    # The EMS backend runs it (the folder of the model is the working folder)
+    with warnings.catch_warnings():
+        warnings.simplefilter('error', category=UserWarning)
+        run_ep(only_accim_idfs=False, confirm=True, energyplus_version='auto', processes=0)
+    ems = pd.read_csv(model.parent / 'sun[Seville.csv')
+    with warnings.catch_warnings():
+        warnings.simplefilter('error', category=MissingHookWarning)
+        [api] = run_simulations([(model, EPW, {'output_directory': tmp_path / 'api', 'output_prefix': 'run'})],
+                                processes=1)
+    assert api.success, api.error
+    pd.testing.assert_frame_equal(pd.read_csv(tmp_path / 'api' / 'run.csv'), ems, check_exact=True)
+    results = {}
+    for name, path, hook_ in (('hook', hooked, hook), ('both', model, hook_of_model)):
+        [result] = run_simulations([(path, EPW, {'output_directory': tmp_path / name, 'output_prefix': 'run',
+                                                 'before_programs': [hook_]})], processes=1)
+        assert result.success, result.error
+        results[name] = pd.read_csv(tmp_path / name / 'run.csv')
+    pd.testing.assert_frame_equal(results['both'], results['hook'], check_exact=True)
+    # The run period after its first day (the setpoints of the feedback begin with those of the comfort standard of the
+    # zones, without the SET of a previous timestep)
+    rows = ems['Date/Time'].str.strip().str.startswith(('07/16', '07/17'))
+    for zone in ZONES:
+        for kind, (low, high) in (('Cooling', (-0.2, 0.2)), ('Heating', (0.0, 0.8))):
+            name = next(c for c in ems.columns
+                        if c.startswith(f'EMS:Adaptive {kind} Setpoint Temperature_No Tolerance_{zone} ['))
+            difference = ems.loc[rows, name] - results['hook'].loc[rows, name]
+            assert low < difference.mean() < high, (zone, kind, difference.mean())
+            assert difference.abs().mean() < 0.6, (zone, kind, difference.abs().mean())
+        operative = next(c for c in ems.columns if c.startswith(f'{zone.replace("_", ":").upper()}:Zone Operative '))
+        assert (ems.loc[rows, operative] - results['hook'].loc[rows, operative]).abs().max() < 0.6
+        # The outputs of the hook, from the SET of EnergyPlus
+        pierce = next(c for c in ems.columns if 'Pierce Model Standard Effective Temperature' in c
+                      and zone.replace('_', ':').upper() in c)
+        reported = next(c for c in ems.columns if c.startswith(f'EMS:SET_{zone} ['))
+        np.testing.assert_allclose(ems[reported].iloc[1:].to_numpy(), ems[pierce].shift(1).iloc[1:].to_numpy(),
+                                   atol=1e-6)
+
+
 @needs_energyplus
 def test_without_the_hook_both_backends_give_the_same_results_with_comfort_standard_24(tmp_path, monkeypatch):
     # Finding A4 of the self-audit of 2026-11-11 (decided on 2026-11-12): a model prepared for comfort standard 24 and

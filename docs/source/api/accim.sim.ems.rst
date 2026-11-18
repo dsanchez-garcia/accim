@@ -84,6 +84,14 @@ accim.sim.ems.programs module
    :show-inheritance:
    :undoc-members:
 
+accim.sim.ems.set\_feedback module
+----------------------------------
+
+.. automodule:: accim.sim.ems.set_feedback
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
 accim.sim.ems.setast module
 ---------------------------
 

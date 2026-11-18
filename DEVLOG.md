@@ -36,6 +36,53 @@ Recommended flow: track active work in `TODO.md`, move completed outcomes to `DE
 ## Entries
 
 ### 2026-11-18
+#### [done] Comfort standard 24 with the EMS backend: the fallback of the EMS (branch `v1.2.0`)
+- Context: the P2 entry of `TODO.md` of task F1 (way (a) of proposal A6 of v03): comfort standard 24 is a hook of the
+  backend of the Python API, and without it the model had the setpoints of the comfort standard of its zones, so
+  `run_ep` refused it with the EMS backend. Done in the autonomous session of 2026-11-18, with the provisional
+  decision of the same day (`notes/decisions.md`).
+- Changes:
+  - `accim.sim.ems.set_feedback` (new): the program `SetSETFeedback_<zone>` and the sensor `SET_Pierce_<zone>` of the
+    SET of the Pierce model of the People object of each zone; `RunACCIS_<zone>` runs it right after `SetAST`, before
+    `ApplyHookSetpoints_<zone>`. Where no hook has given the setpoints of the timestep (`HookSetpoints_<zone>` is 0),
+    it estimates each setpoint as the operative temperature whose SET would be the setpoint of the SET if the SET grew
+    by `Slope` K per K of operative temperature (1.0), from the SET and the operative temperature of the previous
+    timestep, moves the setpoint a fraction `Relaxation` (0.5) of the way to its estimate, within `temperature_range`,
+    and sets the outputs of the hook (`SET_<zone>`, `TSV_causal_<zone>`, `HoursInCausalBand_<zone>`,
+    `SETsaturated_<zone>`) from the SET of EnergyPlus. `feedback_zones`, `feedback_zones_of_file` and
+    `zones_needing_a_hook`.
+  - `apply_sun2026_setpoints(..., ems_fallback=False, ems_relaxation=None, ems_slope=None)`: the feedback, with
+    `tr_mode='zone'` and without `air_speed_heating` (`ValueError` otherwise, and with `ems_relaxation` or
+    `ems_slope` without `ems_fallback`), checked before the model changes.
+  - `run_ep` (`_check_setpoint_hooks`) and the backend of the API (`warn_without_setpoint_hook`) take the zones with
+    the feedback as zones that do not need the hook: no `ValueError` and no `MissingHookWarning` for them.
+  - The message of `hook_comfort_standard_error` (`AddAccis`, `modify_accis`, the EMS code and `compute_setpoints`
+    with comfort standard 24) points to `ems_fallback=True`.
+  - Measured on 2026-11-18 before choosing the design: with pythermalcomfort, the growth s of the SET per K of
+    operative temperature (30 to 90 % of relative humidity, 0.1 to 1.2 m/s, 1.0 to 1.2 met, 0.5 to 1.0 clo, 16 to
+    32 °C and mean radiant temperatures 0 to 4 K above) is 0.66 to 4.0 K/K, 1.27 in the median: the loop of the
+    proposal (a gain of about 0.8 on the setpoint) does not converge above s = 2.5 and drifts while the zone floats,
+    and a first version (a gain of 0.5 on the estimate itself) put the setpoint far from the zone at half its distance
+    (4.2 K above the heating setpoints of the hook in a week of July). With EnergyPlus 25.1, the sample model in
+    Seville (the defaults, every timestep of a week, against the setpoints of the hook without the tolerance): in
+    July, cooling setpoints +0.01 to +0.02 K on average (0.26 K in absolute value, 0.62 K at the 95th percentile) and
+    heating setpoints +0.40 to +0.42 K; in January, with the zones far from both setpoints, −0.88 and +2.2 K; the
+    operative temperatures of the zones 0.21 to 0.22 K below those of the hook in July (2.6 K at most, in the first
+    timesteps of the week, and 0.45 and 0.51 K after its first day) and 0.01 to 0.02 K below in January; the occupied
+    hours within the band 33.5 and 35.3 h against 28.5 and 34.3 h in July, and 60 and 52 h against 60 and 57.5 h in
+    January.
+- Files: `accim/sim/ems/set_feedback.py`, `accim/sim/comfort_hooks.py`, `accim/run/run.py`,
+  `accim/sim/energyplus_api/runner.py`, `accim/sim/standards.py`, `tests/core/test_sun2026_set.py`,
+  `docs/source/4_detailed use.md` (4.9.3), `CHANGELOG.md`, `TODO.md`, `notes/decisions.md`, `notes/questions.md`.
+- Verification: `test_the_fallback_of_the_ems_of_comfort_standard_24` (the objects, the order of the programs, the
+  lines, the arguments, checked before the model changes) and `test_the_fallback_of_the_ems_of_comfort_standard_24_in_energyplus`
+  (EnergyPlus 25.1, 15 to 17 July: `run_ep` with the EMS backend without warnings; the backend of the API without the
+  hook gives its results exactly, without the `MissingHookWarning`; with the hook, those of the model without the
+  fallback, exactly; the setpoints and the operative temperatures of the last two days near those of the hook; the
+  outputs of the hook from the SET of EnergyPlus); the full suite of `tests/core` and `tests/parametric_and_optimisation`.
+- Next step: whether `AddAccis` writes comfort standard 24 with the fallback (a question for the author in
+  `notes/questions.md`, and an entry of `TODO.md`).
+
 #### [done] accim keeps all the digits of the numbers of the models that it writes (branch `v1.2.0`)
 - Context: the question of 2026-11-18 (`notes/questions.md`), answered by the author the same day with option (b):
   `AddAccis` and the parametric module keep all the digits. After the previous entry, the copies of the runners kept the

@@ -3525,3 +3525,43 @@ cuatro coeficientes (407 veces cada uno) y los de los IDF de entrada.
 
 **Los tests**: el modo `only_wide`; `AddAccis` frente a `add_accis_to_idf` (idénticos, y sin los dos contextos no lo
 son); y la copia que simula besos en el paramétrico conserva las cifras (y sin los contextos no).
+
+## 73. El estándar de confort 24 con el backend EMS: el respaldo del EMS
+
+La entrada P2 de `TODO.md` de la tarea F1 (la vía (a) de la propuesta A6 de v03), hecha en la sesión autónoma de la
+tarde. El estándar 24 es un hook del backend de la API de Python; sin él, el modelo tenía las consignas del estándar de
+confort de sus zonas, así que `run_ep` lo rechazaba con el backend EMS.
+
+**El cambio**:
+- `apply_sun2026_setpoints(..., ems_fallback=False, ems_relaxation=None, ems_slope=None)`: con `ems_fallback=True`,
+  cada zona recibe una realimentación de sus consignas sobre la SET del modelo de Pierce de EnergyPlus del paso
+  anterior (el módulo nuevo `accim.sim.ems.set_feedback`: el sensor `SET_Pierce_<zona>` y el programa
+  `SetSETFeedback_<zona>`, que `RunACCIS_<zona>` ejecuta justo antes de `ApplyHookSetpoints_<zona>`). Necesita
+  `tr_mode='zone'` y que no haya `air_speed_heating`.
+- El programa solo actúa si ningún hook ha dado las consignas del paso. Estima cada consigna como la temperatura
+  operativa cuya SET sería la consigna de SET si la SET creciera 1 K por K de temperatura operativa (`ems_slope`), y
+  mueve la consigna la mitad del camino hacia esa estimación (`ems_relaxation`, 0,5). También da las salidas del hook
+  (`SET_`, `TSV_causal_`, `HoursInCausalBand_` y `SETsaturated_`) con la SET de EnergyPlus.
+- `run_ep` y el backend de la API ya no rechazan ni avisan por las zonas con la realimentación.
+- El mensaje del error de `AddAccis` con el estándar 24 apunta a `ems_fallback=True`. `AddAccis` sigue sin escribir el
+  estándar 24: es la pregunta abierta del 18 de noviembre en `notes/questions.md`.
+
+**Por qué no el lazo de la propuesta**: con pythermalcomfort, la SET crece entre 0,66 y 4,0 K por K de temperatura
+operativa (1,27 de mediana). El lazo de la propuesta (una ganancia de 0,8 sobre la consigna anterior) no converge por
+encima de 2,5 K/K y, al integrar el error, deriva mientras la zona flota entre las consignas. La estimación no depende
+de la consigna anterior, así que no deriva, y converge hasta 4 K/K con los valores por defecto. Una primera versión
+(ganancia 0,5 sobre la propia estimación) dejaba la consigna lejana a mitad de camino: 4,2 K por encima del hook.
+
+**Lo medido** (EnergyPlus 25.1, modelo de ejemplo en Sevilla, una semana de julio y otra de enero, frente a las
+consignas del hook):
+- En julio, las consignas de refrigeración quedan de media entre +0,01 y +0,02 K (0,26 K en valor absoluto) y las de
+  calefacción, entre +0,40 y +0,42 K.
+- En enero, con las zonas lejos de ambas consignas, quedan a −0,88 K y +2,2 K: la consigna lejana es una extrapolación.
+- La temperatura operativa queda entre 0,21 y 0,22 K por debajo en julio y entre 0,01 y 0,02 K en enero.
+- Las horas ocupadas dentro de la banda: 33,5 y 35,3 h frente a 28,5 y 34,3 h en julio; 60 y 52 h frente a 60 y 57,5 h
+  en enero.
+
+**Los tests**: los objetos, el orden de los programas, las líneas y los argumentos (comprobados antes de cambiar el
+modelo). Con EnergyPlus: `run_ep` con el backend EMS sin avisos; el backend de la API sin el hook da exactamente sus
+resultados; con el hook, el modelo con el respaldo da exactamente los del modelo sin él; y las consignas y la
+temperatura operativa quedan cerca de las del hook.

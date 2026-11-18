@@ -209,6 +209,10 @@ COMFORT_STANDARDS: Dict[int, ComfortStandard] = {s.number: s for s in [
 #: (``print_setpoint_ems_code``...) and ``compute_setpoints`` do not take them (:func:`hook_comfort_standard_error`).
 HOOK_COMFORT_STANDARDS = {24: 'accim.sim.comfort_hooks.apply_sun2026_setpoints'}
 
+#: The argument of the function of :data:`HOOK_COMFORT_STANDARDS` that also gives the model an EMS code whose setpoints
+#: follow those of the hook, so that the EMS backend can run it (:mod:`accim.sim.ems.set_feedback`, since accim 1.2.0)
+_EMS_FALLBACKS = {24: 'ems_fallback=True'}
+
 
 def hook_comfort_standard_error(number: Any) -> Optional[str]:
     """The reason why a comfort standard has no EMS code (one of :data:`HOOK_COMFORT_STANDARDS`), for the messages of
@@ -220,9 +224,13 @@ def hook_comfort_standard_error(number: Any) -> Optional[str]:
     if function is None:
         return None
     standard = COMFORT_STANDARDS.get(number)
+    fallback = _EMS_FALLBACKS.get(number)
+    # With the fallback of the EMS, the model also runs with the EMS backend
+    also = (f' (or, with {fallback}, those of a feedback of the EMS that follows them, with which the EMS backend runs '
+            f'the model)' if fallback else '')
     return (f'comfort standard {number} ({standard.title if standard else number}) has no EMS code: its setpoints are '
-            f'those of a hook of the backend of the Python API of EnergyPlus. Generate the model with another comfort '
-            f'standard and prepare it with {function}')
+            f'those of a hook of the backend of the Python API of EnergyPlus{also}. Generate the model with another '
+            f'comfort standard and prepare it with {function}')
 
 
 def get_comfort_standard(number: int) -> ComfortStandard:

@@ -11,6 +11,47 @@ Durable architectural/process decisions for this repository and its Obsidian
 vault. Newest first. Use [[templates/decision-record.md|the decision-record
 template]] to add a new entry.
 
+## 2026-11-18 — The fallback of the EMS of comfort standard 24: a relaxed estimate of the setpoints, in `apply_sun2026_setpoints`
+
+- **Status**: provisional (Claude Code, in the autonomous session of 2026-11-18: "continua con todas las tareas que
+  puedas; trabaja de forma autónoma"; the P2 entry of `TODO.md` of task F1, way (a) of proposal A6 of v03). To be
+  confirmed by the author; whether `AddAccis` writes comfort standard 24 with it is the question of the same day of
+  [[questions.md]].
+- **Context**: comfort standard 24 (task F1) is a hook of the backend of the Python API; without it (the EMS backend),
+  the model had the setpoints of the comfort standard of its zones, so `run_ep` refused it (finding A4 of the
+  self-audit of 2026-11-11). v03 A6a proposes an Erl loop on the SET of the previous timestep that EnergyPlus
+  calculates (the Pierce model): `T_sp = T_sp_prev + k·(SET_target − SET_prev)`, saturated, `k ≈ 0.8`.
+- **Decision**:
+  1. An option of `apply_sun2026_setpoints`, `ems_fallback` (False by default), not EMS code of `AddAccis`: the model is
+     still generated with another comfort standard (its zones keep the comfort temperature and the applicability limits
+     of that comfort standard), and `AddAccis` still raises a `ValueError` with comfort standard 24, whose message now
+     points to `ems_fallback`.
+  2. The feedback runs only where no hook has given the setpoints of the timestep (`HookSetpoints_<zone>` is 0), right
+     before `ApplyHookSetpoints_<zone>`: with the hook, the results are those of the model without the fallback,
+     exactly. `run_ep` and the backend of the API take the zones with the feedback as zones that do not need a hook.
+  3. Each setpoint moves a fraction `Relaxation` (0.5) of the way to an estimate, the operative temperature whose SET
+     would be the setpoint of the SET if the SET grew by `Slope` (1.0) K per K of operative temperature, from the SET
+     and the operative temperature of the zone of the previous timestep, instead of a gain on the setpoint of the
+     previous timestep. Measured with pythermalcomfort, the growth s of the SET per K of operative temperature is 0.66
+     to 4.0 K/K (1.27 in the median): the loop of the proposal does not converge where k·s > 2 (above s = 2.5 with
+     k = 0.8) and, an integrator of the error of the SET, it drifts while the zone floats between the setpoints; the
+     estimates do not depend on the setpoints, so they do not drift, and the error of the setpoint at which the
+     thermostat holds the zone is multiplied by 1 − Relaxation·s/Slope in each timestep (it converges where s < 4 with
+     the defaults, without overshoot where s < 2). A first version, a gain of 0.5 on the estimate itself, put the
+     setpoint far from the zone at half its distance (4.2 K above the heating setpoints of the hook in a week of July).
+     `ems_relaxation` (greater than 0, at most 1) and `ems_slope` (greater than 0) change them.
+  4. It needs `tr_mode='zone'` (the SET of EnergyPlus is that of the conditions of the zone) and no `air_speed_heating`
+     (the Pierce model takes the air velocity schedule of the People objects for both setpoints): `ValueError`
+     otherwise, before the model changes.
+- **Consequences**: the setpoints of the fallback follow those of the hook with a delay of one timestep, with the SET
+  of the Pierce model of EnergyPlus (about 0.05 to 0.13 K above that of pythermalcomfort near 1 met, more at higher
+  activity levels), and the setpoint far from the zone is an extrapolation. Measured with EnergyPlus 25.1 (the sample
+  model in Seville, a week of July and one of January, against the setpoints of the hook without the tolerance): the
+  cooling setpoints +0.01 to +0.02 K on average in July and −0.88 K in January, the heating setpoints +0.40 to +0.42 K
+  and +2.2 K, the operative temperatures of the zones 0.21 to 0.22 K and 0.01 to 0.02 K below those of the hook, and
+  the occupied hours within the band 33.5 and 35.3 h against 28.5 and 34.3 h in July, and 60 and 52 h against 60 and
+  57.5 h in January (`DEVLOG.md`, section 4.9.3 of the detailed use).
+
 ## 2026-11-18 — accim keeps all the digits of the numbers of the models that it writes
 
 - **Status**: accepted (the author, on 2026-11-18, answering the question of [[questions.md]] of the same day with

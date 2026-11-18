@@ -223,8 +223,11 @@ def warn_without_setpoint_hook(idfs: Iterable[PathLike], before_programs: Sequen
     if before_programs:
         return
     from accim.sim.ems.hook_setpoints import MissingHookWarning, hook_zones_of_file, missing_hook_message
+    from accim.sim.ems.set_feedback import feedback_zones_of_file, zones_needing_a_hook
 
-    prepared = [Path(idf).name for idf in idfs if hook_zones_of_file(idf)]
+    # The zones with the fallback of the EMS of comfort standard 24 do not need the hook (accim.sim.ems.set_feedback)
+    prepared = [Path(idf).name for idf in idfs
+                if zones_needing_a_hook(hook_zones_of_file(idf), feedback_zones_of_file(idf))]
     if prepared:
         warnings.warn(missing_hook_message(prepared, 'api'), MissingHookWarning, stacklevel=stacklevel + 1)
 
