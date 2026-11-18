@@ -36,6 +36,24 @@ Recommended flow: track active work in `TODO.md`, move completed outcomes to `DE
 ## Entries
 
 ### 2026-11-19
+#### [done] The resume of `run_optimisation` checks the problem (branch `v1.2.0`)
+- Context: the P2 entry of `TODO.md`, found by the review of C2 on 2026-11-18 (its root cause predates C2): the
+  signature of the checkpoints of `run_optimisation` had not the problem, so a resume with other objectives,
+  constraints, bounds, parameters or add_outputs reused the cases computed with the old ones.
+- Changes: `_problem_signature` and `_reader_signature` (`accim/parametric_and_optimisation/main.py`): the payload of
+  the signature gets `problem`, with the names of the inputs and the name, minimum, maximum and options of the
+  descriptors of the parameters, what each reader of the objectives, constraints and add_outputs reads (its name, key,
+  variable and frequency, and the zone, output, period and level of `WorstPeriodDeviation`) and the module and name of
+  its reducer, the directions and the bounds; only plain values, so that a problem gives the same signature in every
+  run. A resume with another problem starts from scratch with the warning of the signature.
+- Files: `accim/parametric_and_optimisation/main.py`,
+  `tests/parametric_and_optimisation/test_optimisation_checkpoint_resume.py`, `CHANGELOG.md` (Fixed), `TODO.md`.
+- Verification: `test_optimisation_resume_starts_from_scratch_with_another_problem` (the same problem resumes, another
+  bound of a constraint starts from scratch with the warning) and `test_the_signature_of_a_problem_of_besos` (a problem
+  of besos with a parameter, a meter and a `WorstPeriodDeviation`: the same signature twice, another one with another
+  level, bound or range); `_build_resume_signature` of the tests follows the new payload; the tests of
+  `tests/parametric_and_optimisation`.
+
 #### [done] The four questions of 2026-11-18, decided by delegation of the author (branch `v1.2.0`)
 - Context: the author delegated the decisions on the open questions to Claude Code ("Toma las decisiones que consideres
   mejores y continua trabajando").

@@ -3669,3 +3669,19 @@ tomado la opción (a), la que recomendaba; están en `notes/decisions.md` (19 de
 - **`AddAccis` con el estándar 24**: en dos pasos hasta que el estudio de F3 lo necesite en estudios paramétricos.
 
 Además, las decisiones provisionales del 18 (el respaldo del estándar 24 y C2) quedan aceptadas.
+
+## 78. Reanudar una optimización solo con el mismo problema
+
+La revisión de C2 encontró un fallo anterior: la firma de los checkpoints de `run_optimisation` no incluía el problema.
+Al reanudar con otros objetivos, restricciones, cotas, parámetros o `add_outputs`, se reutilizaban los casos calculados
+con los antiguos: con los mismos nombres, sus valores viejos sin aviso; con otros nombres, columnas vacías, ningún caso
+reutilizado quedaba en el frente de Pareto y `keep_sim_files='non-dominated'` borraba sus carpetas.
+
+**El cambio**: la firma incluye ahora el problema (`_problem_signature` y `_reader_signature` en `main.py`): los
+nombres y rangos u opciones de los parámetros, lo que lee cada lector de objetivos, restricciones y `add_outputs` (y el
+módulo y nombre de su reductor, y la zona, salida, periodo y nivel de `WorstPeriodDeviation`), las direcciones y las
+cotas. Solo valores simples, para que el mismo problema dé siempre la misma firma. Con otro problema, la optimización
+empieza de cero con el aviso de la firma; los checkpoints anteriores a este cambio también.
+
+**Los tests**: el mismo problema reanuda y otra cota empieza de cero; la firma de un problema de besos es la misma dos
+veces y cambia con otro nivel, otra cota u otro rango.

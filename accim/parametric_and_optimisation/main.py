@@ -342,6 +342,64 @@ def _problem_for_evaluator(problem: Any) -> Any:
     return copied
 
 
+#: The attributes of a reader of besos (and of WorstPeriodDeviation) in the signature of a checkpoint of an optimisation
+_READER_SIGNATURE_FIELDS = ('name', 'key_name', 'key_value', 'variable_name', 'frequency', 'zone', 'output', 'period',
+                            'level')
+
+
+def _reader_signature(reader: Any) -> Any:
+    """What tells a reader of besos apart in the signature of a checkpoint of an optimisation: its name, what it reads,
+    its reducer (module and name) and, for WorstPeriodDeviation, its zone, output, period and level; a text for the
+    objects that are not readers. Only plain values, so that the signature is the same in every run."""
+    if not hasattr(reader, 'name'):
+        return str(reader)
+    signature = {field: str(getattr(reader, field)) for field in _READER_SIGNATURE_FIELDS
+                 if getattr(reader, field, None) is not None}
+    process = getattr(reader, '_process', None)
+    if process is not None:
+        signature['func'] = (f"{getattr(process, '__module__', '')}:"
+                             f"{getattr(process, '__qualname__', type(process).__name__)}")
+    return signature
+
+
+def _problem_signature(problem: Any) -> dict:
+    """The problem of an optimisation in the signature of its checkpoints (``run_optimisation``), so that a resume with
+    another problem (other parameters, objectives, directions, constraints, bounds or add_outputs) starts from scratch
+    instead of reusing the cases computed with the old one (found by the review of 2026-11-18). Read defensively: the
+    names of the parts of the problem (``problem.names``), and its readers and parameters where it has them."""
+    if problem is None:
+        return {}
+    names = getattr(problem, 'names', None)
+
+    def part_names(part: str) -> Optional[list]:
+        try:
+            return [str(name) for name in names(part)] if callable(names) else None
+        except Exception:  # noqa: BLE001 (a problem without that part)
+            return None
+
+    def readers(attribute: str, part: Optional[str]) -> Optional[list]:
+        values = getattr(problem, attribute, None)
+        if isinstance(values, (list, tuple)):
+            return [_reader_signature(value) for value in values]
+        return part_names(part) if part else None
+
+    parameters = []
+    for parameter in (getattr(problem, 'parameters', None) or []):
+        for descriptor in (getattr(parameter, 'value_descriptors', None) or []):
+            parameters.append({'name': str(getattr(descriptor, 'name', '')),
+                               'min': getattr(descriptor, 'min', None), 'max': getattr(descriptor, 'max', None),
+                               'options': [str(option) for option in (getattr(descriptor, 'options', None) or [])]})
+    return {'problem': {
+        'inputs': part_names('inputs'),
+        'parameters': parameters,
+        'outputs': readers('outputs', 'outputs'),
+        'minimize_outputs': [str(value) for value in (getattr(problem, 'minimize_outputs', None) or [])],
+        'constraints': readers('constraints', 'constraints'),
+        'constraint_bounds': [str(bound) for bound in (getattr(problem, 'constraint_bounds', None) or [])],
+        'add_outputs': readers('add_outputs', None) or [],
+    }}
+
+
 def _run_single_evaluation_worker(
     idf_path: str,
     epw: str,
@@ -10520,6 +10578,8 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         }
         if getattr(self, 'mn_filter', None) is not None:
             resume_signature_payload['mn_filter'] = self.mn_filter.to_dict()
+        # The problem too: a resume with other objectives, constraints or parameters starts from scratch
+        resume_signature_payload.update(_problem_signature(getattr(self, 'problem', None)))
         resume_signature = hashlib.sha1(
             json.dumps(resume_signature_payload, sort_keys=True, ensure_ascii=True, default=str).encode('utf-8')
         ).hexdigest()

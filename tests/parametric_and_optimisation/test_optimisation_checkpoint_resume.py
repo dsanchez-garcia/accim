@@ -93,7 +93,7 @@ def _make_fake_nsgaii(call_log):
     return _fake_nsgaii
 
 
-def _build_resume_signature(evaluations: int, population_size: int = 2) -> str:
+def _build_resume_signature(evaluations: int, population_size: int = 2, constraints=(), bounds=()) -> str:
     payload = {
         'algorithm': 'NSGAII',
         'evaluations': int(evaluations),
@@ -102,6 +102,9 @@ def _build_resume_signature(evaluations: int, population_size: int = 2) -> str:
         'pareto_separate_by_epw': True,
         'pareto_separate_by_idf': False,
         'keep_df': 'all',
+        # The problem of the optimisation (since the review of 2026-11-18): that of _DummyProblem
+        'problem': {'inputs': ['x'], 'parameters': [], 'outputs': ['obj'], 'minimize_outputs': ['True'],
+                    'constraints': list(constraints), 'constraint_bounds': list(bounds), 'add_outputs': []},
     }
     return hashlib.sha1(
         json.dumps(payload, sort_keys=True, ensure_ascii=True, default=str).encode('utf-8')
@@ -238,3 +241,80 @@ def test_optimisation_resume_ignores_incompatible_checkpoint_signature(tmp_path,
     assert len(second_calls) == 1
 
 
+
+
+class _ConstrainedProblem(_DummyProblem):
+    """A problem with a constraint 'g' and its bound."""
+
+    def __init__(self, bound):
+        super().__init__()
+        self.constraint_bounds = [bound]
+
+    def names(self, typ):
+        return ['g'] if typ == 'constraints' else super().names(typ)
+
+
+def test_optimisation_resume_starts_from_scratch_with_another_problem(tmp_path, monkeypatch):
+    # The review of 2026-11-18: the signature of the checkpoint had not the problem, so a resume with other constraints
+    # (or objectives, or parameters) reused the cases computed with the old ones
+    import warnings
+
+    monkeypatch.setattr(pd.DataFrame, 'to_excel', lambda self, *args, **kwargs: None, raising=False)
+    monkeypatch.setattr(OptimisationSimulation, 'set_evaluator', _fake_set_evaluator)
+    monkeypatch.setattr(OptimisationSimulation, '_build_full_optimisation_outputs_df', _fake_build_full_outputs_df)
+
+    first_calls = []
+    monkeypatch.setattr(main_module.optimizer, 'NSGAII', _make_fake_nsgaii(first_calls))
+    out_dir = tmp_path / 'optim_problem_check'
+    sim = _make_lightweight_optimisation(epws=['A.epw'])
+    sim.problem = _ConstrainedProblem('<=0')
+    with warnings.catch_warnings():
+        warnings.simplefilter('ignore')
+        sim.run_optimisation(out_dir=str(out_dir), algorithm='NSGAII', evaluations=2, population_size=2,
+                             processes=1, checkpoint_every_case=True)
+    assert len(first_calls) == 1
+    checkpoint_payload = pd.read_pickle(out_dir / 'outputs_optimisation_checkpoint_latest.pkl')
+    assert checkpoint_payload.get('resume_signature') == _build_resume_signature(
+        evaluations=2, population_size=2, constraints=['g'], bounds=['<=0'])
+
+    # The same problem resumes; another bound of the constraint starts from scratch, with the warning of the signature
+    for bound, expected_calls in (('<=0', 0), ('<=5', 1)):
+        calls = []
+        monkeypatch.setattr(main_module.optimizer, 'NSGAII', _make_fake_nsgaii(calls))
+        resumed = _make_lightweight_optimisation(epws=['A.epw'])
+        resumed.problem = _ConstrainedProblem(bound)
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter('always')
+            resumed.run_optimisation(out_dir=str(out_dir), algorithm='NSGAII', evaluations=2, population_size=2,
+                                     processes=1, resume_from_checkpoint=True)
+        assert len(calls) == expected_calls, bound
+        assert any('optimisation settings do not match this run' in str(w.message) for w in caught) == bool(
+            expected_calls), bound
+
+
+def test_the_signature_of_a_problem_of_besos():
+    # The same problem gives the same signature in every run (only plain values: names, what the readers read, the
+    # module and name of their reducers, the ranges of the parameters), and another level, bound or range another one
+    from besos.objectives import MeterReader
+    from besos.parameters import Parameter, RangeParameter
+    from besos.problem import EPProblem
+
+    from accim.parametric_and_optimisation.objectives import WorstPeriodDeviation, sum_results
+
+    def problem(level='6%', bound='<=0', maximum=0.6):
+        return EPProblem(inputs=[Parameter(value_descriptors=RangeParameter(0.1, maximum, name='custom_slope'))],
+                         outputs=[MeterReader('Electricity:HVAC', func=sum_results)],
+                         constraints=[WorstPeriodDeviation(level=level)], constraint_bounds=[bound])
+
+    def text(value):
+        return json.dumps(main_module._problem_signature(value), sort_keys=True, ensure_ascii=True, default=str)
+
+    signature = main_module._problem_signature(problem())['problem']
+    assert signature['parameters'] == [{'name': 'custom_slope', 'min': 0.1, 'max': 0.6, 'options': []}]
+    assert signature['outputs'] == [{'name': 'Electricity:HVAC', 'key_name': 'Electricity:HVAC',
+                                     'func': 'accim.parametric_and_optimisation.objectives:sum_results'}]
+    assert signature['constraints'][0]['level'] == '6%' and signature['constraint_bounds'] == ['<=0']
+    assert text(problem()) == text(problem())
+    for other in (problem(level='3%'), problem(bound='<=1'), problem(maximum=0.7)):
+        assert text(other) != text(problem())
+    assert main_module._problem_signature(None) == {}
