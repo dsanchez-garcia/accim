@@ -9,6 +9,7 @@ a fake controller; the last tests simulate an output IDF of AddAccis with Energy
 """
 import os
 import pickle
+import re
 import shutil
 import subprocess
 import warnings
@@ -239,7 +240,8 @@ def test_the_saturated_hours_are_those_of_the_run_period_out_of_the_warm_up_days
 
     monkeypatch.setattr(ch, 'athb_pmv', lambda *arguments, **keywords: 0.0)
     hook = ch.AthbSetpointHook(ZONES, temperature_range=(10.0, 25.0))
-    monkeypatch.setattr(hook, 'operative_temperatures', lambda humidity, t_running_mean: (20.0, 25.0))
+    # (the metabolic rate and the air speed of each zone too, since finding A4-2 of v04)
+    monkeypatch.setattr(hook, 'operative_temperatures', lambda humidity, t_running_mean, *inputs: (20.0, 25.0))
     values = {'RMOT': 24.0, 'ZoneTimeStep': 1 / STEPS}
     for zone in ZONES:
         values.update({f'ATHB_MAT_{zone}': 26.0, f'ATHB_MRT_{zone}': 26.5, f'ATHB_RH_{zone}': 50.0})
@@ -270,6 +272,69 @@ def test_the_hook_warns_out_of_the_ranges_of_the_pmv():
             ch.AthbSetpointHook(ZONES, met=met, air_speed=air_speed)
     # 1 met is 58.2 W/m2 times the body surface area of 1.8 m2 of EnergyPlus, about 104.8 W/person
     assert ch.MET_ACTIVITY_LEVEL == pytest.approx(104.76)
+
+
+def test_the_hook_of_the_athb_reads_the_people_objects():
+    # Finding A4-2 of v04: with met and air_speed None, the hook reads the activity level (W/person) and the air speed
+    # of the People object of each zone in each timestep: met = activity / MET_ACTIVITY_LEVEL, and the relative air
+    # speed of pythermalcomfort (v_relative, rounded to 3 decimals)
+    pythermalcomfort_models()
+    hook = ch.AthbSetpointHook(ZONES, met=None, air_speed=None)
+    assert (hook.met, hook.air_speed) == (None, None) and 'met=None, air_speed=None' in repr(hook)
+    conditions = {ZONES[0]: (26.0, 27.0, 55.0, 110.7), ZONES[1]: (22.0, 21.5, 40.0, 140.0)}
+    values = {'RMOT': 21.0, 'ZoneTimeStep': 1 / STEPS}
+    for zone, (air, radiant, humidity, activity) in conditions.items():
+        values.update({f'ATHB_MAT_{zone}': air, f'ATHB_MRT_{zone}': radiant, f'ATHB_RH_{zone}': humidity,
+                       f'ATHB_Act_{zone}': activity, f'ATHB_Vel_{zone}': 0.2})
+    controller = _Controller(values)
+    with warnings.catch_warnings():
+        warnings.simplefilter('error')
+        hook(controller, CALLING_POINT)
+    for zone, (air, radiant, humidity, activity) in conditions.items():
+        met = activity / ch.MET_ACTIVITY_LEVEL
+        speed = ch.relative_air_speed(0.2, met)
+        assert speed == round(0.2 + 0.3 * (met - 1), 3)
+        fixed = ch.AthbSetpointHook([zone], met=met, air_speed=speed)
+        assert _given(controller, zone) == fixed.operative_temperatures(humidity, 21.0)
+        assert hook.operative_temperatures(humidity, 21.0, met, speed) == _given(controller, zone)
+        assert controller.get(f'ATHB_PMV_{zone}') == ch.athb_pmv(air, radiant, speed, humidity, met, 21.0)
+        assert controller.get(f'ATHB_met_{zone}') == ch.athb_met(met, 21.0)
+        assert controller.get(f'ATHB_clo_{zone}') == ch.athb_clo(met, 21.0)
+    assert ch.relative_air_speed(0.2, 0.9) == 0.2
+    with pytest.raises(ValueError, match='The hook reads met from the People objects in each timestep'):
+        hook.operative_temperatures(50.0, 21.0)
+    # Only the metabolic rate: the relative air speed of the hook
+    only_met = ch.AthbSetpointHook(ZONES, met=None)
+    only_met(controller, CALLING_POINT)
+    met = 110.7 / ch.MET_ACTIVITY_LEVEL
+    assert _given(controller, ZONES[0]) == only_met.operative_temperatures(55.0, 21.0, met, 0.1)
+    # An activity level of 0, or a sensor without a value: no setpoints of the hook in the zone in that timestep, and
+    # no hours at a limit of the range (the output is summed)
+    controller.set(f'ATHB_Act_{ZONES[0]}', 0.0)
+    controller.set(f'ATHB_Vel_{ZONES[1]}', None)
+    for zone in ZONES:
+        controller.set(f'HookSetpoints_{zone}', 0.0)
+        controller.set(f'ATHB_saturated_{zone}', 1 / STEPS)
+    hook(controller, CALLING_POINT)
+    for zone in ZONES:
+        assert _given(controller, zone) is None and controller.get(f'ATHB_saturated_{zone}') == 0.0
+    # Out of the ranges of ISO 7730, a warning of each zone, once (in each simulation)
+    controller.set(f'ATHB_Act_{ZONES[0]}', 500.0)
+    controller.set(f'ATHB_Vel_{ZONES[1]}', 0.2)
+    with pytest.warns(UserWarning) as record:
+        hook(controller, CALLING_POINT)
+    messages = [str(item.message) for item in record]
+    assert len(messages) == 2, messages
+    assert re.match(r'met is 4\.77\d* met in the zone Block1_Zone1 \(its People object\), out of the range of 0\.8 '
+                    r'to 4\.0 met', messages[0])
+    assert re.match(r'air_speed is 1\.332 m/s in the zone Block1_Zone1 \(its People object\), above', messages[1])
+    with warnings.catch_warnings():
+        warnings.simplefilter('error')
+        hook(controller, CALLING_POINT)
+    hook.prepare()
+    with pytest.warns(UserWarning) as record:
+        hook(controller, CALLING_POINT)
+    assert [str(item.message)[:12] for item in record] == ['met is 4.772', 'air_speed is']
 
 
 def test_the_arguments_of_the_hook_are_checked():
@@ -356,6 +421,43 @@ def test_apply_athb_setpoints_prepares_the_model(tmp_path):
     with pytest.raises(ValueError, match='already has the setpoints of the ATHB'):
         ch.apply_athb_setpoints(idf)
     # The SET would set the same thermostats
+    with pytest.raises(ValueError, match='already has the setpoints of the ATHB or of the SET'):
+        ch.apply_set_setpoints(idf, set_cooling_setpoint=27, set_heating_setpoint=21, met=1.1, clo=0.5, air_speed=0.1)
+
+
+@needs_idd
+def test_apply_athb_setpoints_with_the_people_objects(tmp_path):
+    # Finding A4-2 of v04: the sensors of the activity level and air velocity schedules of the People object of each
+    # zone, ATHB_Act_<zone> and ATHB_Vel_<zone>
+    idf = _model(tmp_path)
+    hook = ch.apply_athb_setpoints(idf, met=None, air_speed=None)
+    assert (hook.met, hook.air_speed) == (None, None)
+    sensors = {s.Name: (s.OutputVariable_or_OutputMeter_Index_Key_Name, s.OutputVariable_or_OutputMeter_Name)
+               for s in idf.idfobjects['EnergyManagementSystem:Sensor']}
+    people = {p.Zone_or_ZoneList_or_Space_or_SpaceList_Name: p for p in idf.idfobjects['People']}
+    for zone in ZONES:
+        occupants = people[zone.replace('_', ':')]
+        assert sensors[f'ATHB_Act_{zone}'] == (occupants.Activity_Level_Schedule_Name, 'Schedule Value')
+        assert sensors[f'ATHB_Vel_{zone}'] == (occupants.Air_Velocity_Schedule_Name, 'Schedule Value')
+        assert hook.people[zone]['activity'] == occupants.Activity_Level_Schedule_Name
+    # Only the metabolic rate
+    (tmp_path / 'met').mkdir()
+    idf = _model(tmp_path / 'met')
+    ch.apply_athb_setpoints(idf, met=None)
+    names = {s.Name for s in idf.idfobjects['EnergyManagementSystem:Sensor']}
+    assert {f'ATHB_Act_{zone}' for zone in ZONES} <= names and not any(name.startswith('ATHB_Vel') for name in names)
+    # Without the schedule that the hook reads, before the model changes
+    (tmp_path / 'none').mkdir()
+    idf = _model(tmp_path / 'none')
+    idf.idfobjects['People'][0].Air_Velocity_Schedule_Name = ''
+    counts = len(idf.idfobjects['EnergyManagementSystem:Sensor'])
+    with pytest.raises(ValueError, match='have no Air Velocity Schedule Name, which the hook of the ATHB need'):
+        ch.apply_athb_setpoints(idf, air_speed=None)
+    assert len(idf.idfobjects['EnergyManagementSystem:Sensor']) == counts
+    # The hook of the SET would set the same thermostats
+    (tmp_path / 'set').mkdir()
+    idf = _model(tmp_path / 'set')
+    ch.apply_athb_setpoints(idf, met=None)
     with pytest.raises(ValueError, match='already has the setpoints of the ATHB or of the SET'):
         ch.apply_set_setpoints(idf, set_cooling_setpoint=27, set_heating_setpoint=21, met=1.1, clo=0.5, air_speed=0.1)
 
@@ -675,6 +777,58 @@ def test_the_saturated_setpoints_of_the_athb_in_energyplus(tmp_path, monkeypatch
         # The hours of the timesteps whose setpoints are at a limit (the first timestep, with trm = 0, too)
         assert 0 < at_limit.sum() < len(results)
         np.testing.assert_allclose(saturated.to_numpy(), np.where(at_limit, 1 / STEPS, 0.0), atol=1e-9)
+
+
+@needs_energyplus
+def test_the_athb_setpoints_with_the_people_objects_in_energyplus(tmp_path, monkeypatch):
+    # Finding A4-2 of v04: the metabolic rate and the air speed of the People objects of the sample model (an activity
+    # level of 110.7 W/person, 1.057 met, and 0.137 m/s, a relative air speed of 0.154 m/s), three days of July
+    from accim.sim.accis import load_idf
+    from accim.sim.energyplus_api import run_simulations
+
+    pythermalcomfort_models()
+    model, hook = _athb_model(tmp_path / 'model', monkeypatch, end_day=17, met=None, air_speed=None)
+    idf = load_idf(model)
+    for name in {hook.people[zone][key] for zone in ZONES for key in ('activity', 'air_speed')}:
+        idf.newidfobject('Output:Variable', Key_Value=name, Variable_Name='Schedule Value',
+                         Reporting_Frequency='Timestep')
+    idf.save()
+    [result] = run_simulations([(model, EPW, {'output_directory': tmp_path / 'api', 'output_prefix': 'run'})],
+                               processes=1, before_programs=[hook])
+    assert result.success, result.error
+    results = pd.read_csv(tmp_path / 'api' / 'run.csv')
+    assert len(results) == 3 * 24 * STEPS
+    columns = list(results.columns)
+
+    def column(start):
+        return results[next(c for c in columns if c.upper().startswith(start.upper()))]
+
+    running_mean = column('PEOPLE BLOCK1:ZONE1:Zone Thermal Comfort CEN 15251 Adaptive Model Running Average').shift(1)
+    for zone in ZONES:
+        key = zone.replace('_', ':').upper()
+        # The schedules of the timestep itself, which the sensors read (as those of the hooks of the SET)
+        met = (column(f"{hook.people[zone]['activity']}:Schedule Value") / ch.MET_ACTIVITY_LEVEL).to_numpy()
+        speed = column(f"{hook.people[zone]['air_speed']}:Schedule Value").to_numpy()
+        relative = np.asarray(ch.relative_air_speed(speed, met), dtype=float)
+        assert np.allclose(met, 110.7 / ch.MET_ACTIVITY_LEVEL) and np.allclose(relative, 0.154)
+        # The adapted metabolic rate and clothing of the zone
+        rows = range(1, len(results))
+        np.testing.assert_allclose(column(f'EMS:ATHB_met_{zone}').iloc[1:],
+                                   [ch.athb_met(met[t], running_mean[t]) for t in rows], atol=1e-5)
+        np.testing.assert_allclose(column(f'EMS:ATHB_clo_{zone}').iloc[1:],
+                                   [ch.athb_clo(met[t], running_mean[t]) for t in rows], atol=1e-5)
+        # The setpoints without the tolerance are those of the bisection with those inputs
+        humidity = column(f'{key}:Zone Air Relative Humidity').shift(1)
+        expected = np.array([hook.operative_temperatures(humidity[t], running_mean[t], met[t], relative[t])
+                             for t in rows])
+        no_tolerance = np.column_stack([
+            column(f'EMS:Adaptive Heating Setpoint Temperature_No Tolerance_{zone} [').iloc[1:].to_numpy(),
+            column(f'EMS:Adaptive Cooling Setpoint Temperature_No Tolerance_{zone} [').iloc[1:].to_numpy()])
+        assert np.abs(no_tolerance - expected).max() <= hook.tolerance_k
+        # And not those of the default inputs of the hook (1.1 met, 0.1 m/s)
+        default = np.array([ch.AthbSetpointHook([zone]).operative_temperatures(humidity[t], running_mean[t])
+                            for t in rows])
+        assert np.abs(default - expected).mean() > 0.1
 
 
 class _RunPeriodProbe:

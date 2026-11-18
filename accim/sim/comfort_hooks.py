@@ -41,12 +41,13 @@ The
 setpoints out of ``temperature_range`` are its limits: the hook reports the hours in which a setpoint of a zone is at
 one of them (``ATHB_saturated_<zone>``, summed) and warns at the end of the simulation (task H4 of the review of accim
 1.2.0, finding A4-1). The metabolic rate and the air speed of the hook are not those of the People objects, which
-EnergyPlus uses for the internal gains and its own thermal comfort outputs: their activity level is in W/person, and
-1 met is 58.2 W/m² (ISO 7730:2025) times the body surface area of 1.8 m² of the Input Output Reference of EnergyPlus
-(the field Activity Level Schedule Name of People; that of its Fanger and KSU models, while the code of its Pierce model
-takes 1.8258 m²), about 104.8 W/person (:data:`MET_ACTIVITY_LEVEL`); and ``air_speed`` is
-the relative air speed of pythermalcomfort, which for met > 1 is the air speed of the zone plus 0.3·(met − 1)
-(``pythermalcomfort.utilities.v_relative``, as ASHRAE 55 and ISO 7730). The hook warns with a metabolic rate out of
+EnergyPlus uses for the internal gains and its own thermal comfort outputs, unless they are None, with which the hook
+reads them from the People object of each zone in each timestep (finding A4-2 of v04): their activity level is in
+W/person, and 1 met is 58.2 W/m² (ISO 7730:2025) times the body surface area of 1.8 m² of the Input Output Reference
+of EnergyPlus (the field Activity Level Schedule Name of People; that of its Fanger and KSU models, while the code of
+its Pierce model takes 1.8258 m²), about 104.8 W/person (:data:`MET_ACTIVITY_LEVEL`); and ``air_speed`` is the relative
+air speed of pythermalcomfort, which for met > 1 is the air speed of the zone plus 0.3·(met − 1)
+(:func:`relative_air_speed`, as ASHRAE 55 and ISO 7730). The hook warns with a metabolic rate out of
 0.8 to 4 met or an air speed above 1 m/s, the ranges within which ISO 7730:2025 (section 4) uses the PMV
 (:data:`accim.constants.PMV_MET_RANGE`, :data:`accim.constants.PMV_INPUT_RANGES`; finding A4-3).
 pythermalcomfort is optional (``pip install accim[comfort]``, Python 3.11 or later); the EMS backend cannot run the hook
@@ -122,6 +123,7 @@ __all__ = [
     'athb_pmv',
     'causal_tsv',
     'people_inputs',
+    'relative_air_speed',
     'set_of_results',
     'set_zone_outputs',
     'standard_effective_temperature',
@@ -205,6 +207,10 @@ _PEOPLE_SENSORS = {
     'clothing_method': 'SET_CloMethod',
     'air_speed': 'SET_Vel',
 }
+#: The EMS sensors of the inputs of the People object of each zone that the hook of the ATHB reads with ``met`` or
+#: ``air_speed`` None (Schedule Value of its activity level and air velocity schedules; finding A4-2 of v04): input ->
+#: prefix
+_ATHB_PEOPLE_SENSORS = {'activity': 'ATHB_Act', 'air_speed': 'ATHB_Vel'}
 #: The clothing insulation of the zones: from the clothing insulation schedule ('schedule'), from the output of the
 #: dynamic clothing model of ASHRAE 55 of EnergyPlus ('dynamic'), or from one of them as the calculation method
 #: schedule of the People object says (1 or 2, 'method'); by the Clothing Insulation Calculation Method of the People
@@ -301,6 +307,33 @@ def athb_pmv(air_temperature, mean_radiant_temperature, air_speed, relative_humi
         return result
 
 
+def relative_air_speed(air_speed, met):
+    """The relative air speed of the occupants (m/s) of pythermalcomfort (``v_relative`` of
+    ``pythermalcomfort.environment``, 4.8.1, before in ``pythermalcomfort.utilities``; as ASHRAE 55 and ISO 7730):
+    above 1 met, the air speed plus 0.3·(met − 1), rounded to 3 decimals; the air speed otherwise. The hook of the ATHB
+    gives it to the ATHB_PMV with the air velocity schedule of the People objects (``air_speed=None``).
+
+    :param air_speed: The air speed of the zone (m/s), a number or an array.
+    :param met: The metabolic rate (met).
+    :return: The relative air speed (a number, or an array for arrays).
+    :raises ImportError: If pythermalcomfort is not installed.
+    """
+    try:
+        from pythermalcomfort.environment import v_relative
+    except ImportError:
+        try:
+            from pythermalcomfort.utilities import v_relative
+        except ImportError as error:
+            raise ImportError('The setpoints of the ATHB need pythermalcomfort (4.8 or later, Python 3.11 or '
+                              'later): install it with pip install accim[comfort] (or pip install '
+                              'pythermalcomfort).') from error
+    result = v_relative(air_speed, met)
+    try:
+        return float(result)
+    except TypeError:
+        return result
+
+
 def _check_number(name: str, value: Any, low: Optional[float] = None, high: Optional[float] = None) -> float:
     if isinstance(value, bool) or not isinstance(value, numbers.Real) or not math.isfinite(value):
         raise ValueError(f'{name} must be a number, not {value!r}.')
@@ -309,18 +342,23 @@ def _check_number(name: str, value: Any, low: Optional[float] = None, high: Opti
     return float(value)
 
 
-def _warn_pmv_ranges(met: float, air_speed: float) -> None:
+def _warn_pmv_ranges(met: Optional[float], air_speed: Optional[float], where: str = '') -> bool:
     """Warn if the metabolic rate (met) or the air speed (m/s) of a hook are out of the ranges within which ISO
     7730:2025 (section 4) uses the PMV: 0.8 to 4 met (:data:`accim.constants.PMV_MET_RANGE`) and 0 to 1 m/s of
-    relative air speed (:data:`accim.constants.PMV_INPUT_RANGES`)."""
+    relative air speed (:data:`accim.constants.PMV_INPUT_RANGES`). None is not checked; ``where`` (such as ' in the
+    zone Block1_Zone1') goes into the messages. Return True if it warned."""
+    warned = False
     low, high = PMV_MET_RANGE
-    if not low <= met <= high:
-        warnings.warn(f'met is {met} met, out of the range of {low} to {high} met within which ISO 7730:2025 '
+    if met is not None and not low <= met <= high:
+        warnings.warn(f'met is {met} met{where}, out of the range of {low} to {high} met within which ISO 7730:2025 '
                       f'(section 4) uses the PMV.', UserWarning, stacklevel=3)
+        warned = True
     highest = PMV_INPUT_RANGES['air_velocity'][1]
-    if air_speed > highest:
-        warnings.warn(f'air_speed is {air_speed} m/s, above the relative air speed of {highest} m/s up to which ISO '
-                      f'7730:2025 (section 4) uses the PMV.', UserWarning, stacklevel=3)
+    if air_speed is not None and air_speed > highest:
+        warnings.warn(f'air_speed is {air_speed} m/s{where}, above the relative air speed of {highest} m/s up to which '
+                      f'ISO 7730:2025 (section 4) uses the PMV.', UserWarning, stacklevel=3)
+        warned = True
+    return warned
 
 
 def _in_run_period(controller) -> bool:
@@ -410,9 +448,16 @@ class AthbSetpointHook:
     :param athb_heating_setpoint: The heating setpoint of the ATHB_PMV, lower than the cooling one.
     :param met: The metabolic rate of the occupants (met), without the adaptation, greater than 0; it warns out of
         0.8 to 4 met (ISO 7730:2025, section 4). It is not the activity level of the People objects (W/person, about
-        104.8 W/person per met, :data:`MET_ACTIVITY_LEVEL`).
+        104.8 W/person per met, :data:`MET_ACTIVITY_LEVEL`). None for that of the People object of each zone in each
+        timestep: the value of its activity level schedule (the EMS sensor ``ATHB_Act_<zone>``, which
+        :func:`apply_athb_setpoints` adds) divided by :data:`MET_ACTIVITY_LEVEL`, as the hooks of the SET read it
+        (finding A4-2 of v04); the hook gives no setpoints to a zone in a timestep with an activity level of 0.
     :param air_speed: The relative air speed (m/s): for met > 1, the air speed of the zone plus 0.3·(met − 1)
-        (``pythermalcomfort.utilities.v_relative``); it warns above 1 m/s (ISO 7730:2025, section 4).
+        (:func:`relative_air_speed`); it warns above 1 m/s (ISO 7730:2025, section 4). None for the
+        relative air speed of the air velocity schedule of the People object of each zone in each timestep (the EMS
+        sensor ``ATHB_Vel_<zone>``), with the metabolic rate of the zone (``v_relative``, which rounds it to 3
+        decimals). With the inputs of the People objects, the hook warns once of each zone whose metabolic rate or
+        relative air speed is out of those ranges.
     :param clo: 'adaptive' (the default) for the clothing insulation of the behavioural adaptation, or the clothing
         insulation (clo), without it.
     :param tolerance_k: The largest width of the interval of the bisection (K): the setpoint is its middle.
@@ -430,8 +475,9 @@ class AthbSetpointHook:
     runs_before_programs = True
 
     def __init__(self, zones: Sequence[str], athb_cooling_setpoint: float = 0.5, athb_heating_setpoint: float = -0.5,
-                 met: float = 1.1, air_speed: float = 0.1, clo: Any = 'adaptive', tolerance_k: float = 0.1,
-                 max_iterations: int = 20, temperature_range: Tuple[float, float] = ATHB_TEMPERATURE_RANGE):
+                 met: Optional[float] = 1.1, air_speed: Optional[float] = 0.1, clo: Any = 'adaptive',
+                 tolerance_k: float = 0.1, max_iterations: int = 20,
+                 temperature_range: Tuple[float, float] = ATHB_TEMPERATURE_RANGE):
         self.zones = [str(zone) for zone in zones]
         if not self.zones:
             raise ValueError('zones must name at least one zone.')
@@ -440,10 +486,10 @@ class AthbSetpointHook:
         if not self.athb_heating_setpoint < self.athb_cooling_setpoint:
             raise ValueError(f'athb_heating_setpoint ({athb_heating_setpoint}) must be lower than '
                              f'athb_cooling_setpoint ({athb_cooling_setpoint}).')
-        self.met = _check_number('met', met, 0.0)
-        if self.met <= 0:
+        self.met = None if met is None else _check_number('met', met, 0.0)
+        if self.met is not None and self.met <= 0:
             raise ValueError(f'met must be greater than 0, not {met!r}.')
-        self.air_speed = _check_number('air_speed', air_speed, 0.0)
+        self.air_speed = None if air_speed is None else _check_number('air_speed', air_speed, 0.0)
         _warn_pmv_ranges(self.met, self.air_speed)
         if clo != 'adaptive':
             clo = _check_number('clo', clo, 0.0)
@@ -460,29 +506,69 @@ class AthbSetpointHook:
         self.temperature_range = (low, high)
         self.setpoints: Dict[str, Tuple[float, float]] = {}
         self.saturated_hours: Dict[str, float] = {}
+        #: With ``met`` or ``air_speed`` None, the schedules of the People objects of each zone (:func:`people_inputs`),
+        #: which :func:`apply_athb_setpoints` sets
+        self.people: Dict[str, dict] = {}
+        # The zones whose inputs of the People objects are out of the ranges of ISO 7730, which the hook warns of once
+        self._warned: set = set()
 
     def __repr__(self) -> str:
         return (f'AthbSetpointHook(zones={self.zones!r}, athb_cooling_setpoint={self.athb_cooling_setpoint}, '
                 f'athb_heating_setpoint={self.athb_heating_setpoint}, met={self.met}, air_speed={self.air_speed}, '
                 f'clo={self.clo!r})')
 
-    def operative_temperatures(self, relative_humidity: float, t_running_mean: float) -> Tuple[float, float]:
+    def _inputs(self, met: Optional[float], air_speed: Optional[float]) -> Tuple[float, float]:
+        """The metabolic rate and the relative air speed given, or those of the hook."""
+        met = self.met if met is None else float(met)
+        air_speed = self.air_speed if air_speed is None else float(air_speed)
+        for name, value in (('met', met), ('air_speed', air_speed)):
+            if value is None:
+                raise ValueError(f'The hook reads {name} from the People objects in each timestep: give it.')
+        return met, air_speed
+
+    def operative_temperatures(self, relative_humidity: float, t_running_mean: float, met: Optional[float] = None,
+                               air_speed: Optional[float] = None) -> Tuple[float, float]:
         """The operative temperatures (°C) whose ATHB_PMV is the heating and the cooling setpoints of the ATHB, found by
         bisection (both at once), within the range of the temperatures (its limits, if the ATHB_PMV of the setpoint is
         out of it).
 
         :param relative_humidity: The relative humidity of the zone (%).
         :param t_running_mean: The running mean outdoor temperature (°C).
+        :param met: The metabolic rate (met), instead of that of the hook (which it needs if the hook has none); and so
+            ``air_speed``, the relative air speed (m/s).
         :return: (heating, cooling).
         """
         import numpy as np
 
+        met, air_speed = self._inputs(met, air_speed)
+
         def athb(temperatures):
-            return np.asarray(athb_pmv(temperatures, temperatures, self.air_speed, relative_humidity, self.met,
-                                       t_running_mean, self.clo), dtype=float).reshape(2)
+            return np.asarray(athb_pmv(temperatures, temperatures, air_speed, relative_humidity, met, t_running_mean,
+                                       self.clo), dtype=float).reshape(2)
 
         return _bisect(athb, (self.athb_heating_setpoint, self.athb_cooling_setpoint), self.temperature_range,
                        self.tolerance_k, self.max_iterations)
+
+    def zone_inputs(self, controller, zone: str) -> Optional[Tuple[float, float]]:
+        """The metabolic rate (met) and the relative air speed (m/s) of a zone in a timestep: those of the hook, or
+        those of the People object of the zone (see the class); None if a sensor has no value, or the activity level is
+        0."""
+        met, air_speed = self.met, self.air_speed
+        if met is None:
+            activity = controller.get(f"{_ATHB_PEOPLE_SENSORS['activity']}_{zone}")
+            if activity is None or activity <= 0:
+                return None
+            met = activity / MET_ACTIVITY_LEVEL
+        if air_speed is None:
+            speed = controller.get(f"{_ATHB_PEOPLE_SENSORS['air_speed']}_{zone}")
+            if speed is None or speed < 0:
+                return None
+            air_speed = relative_air_speed(speed, met)
+        if (self.met is None or self.air_speed is None) and zone not in self._warned:
+            if _warn_pmv_ranges(met if self.met is None else None, air_speed if self.air_speed is None else None,
+                                f' in the zone {zone} (its People object)'):
+                self._warned.add(zone)
+        return met, air_speed
 
     def saturated(self, heating: float, cooling: float) -> bool:
         """True if a setpoint is at a limit of ``temperature_range`` (the bisection gives them exactly when the setpoint
@@ -491,8 +577,9 @@ class AthbSetpointHook:
 
     def prepare(self) -> None:
         """Reset :attr:`saturated_hours` before a simulation (:func:`accim.sim.energyplus_api.run_simulation` calls it
-        in the process of the simulation)."""
+        in the process of the simulation), and the zones warned of."""
         self.saturated_hours = {}
+        self._warned = set()
 
     def finish(self) -> None:
         """Warn of the hours in which the setpoints were at a limit of ``temperature_range``, if any, after a simulation
@@ -512,13 +599,17 @@ class AthbSetpointHook:
         t_running_mean = controller.get('RMOT')
         if t_running_mean is None:
             return
-        met_adapted = athb_met(self.met, t_running_mean)
-        clo_adapted = athb_clo(self.met, t_running_mean) if self.clo == 'adaptive' else self.clo
         for zone in self.zones:
             air, radiant, humidity = (controller.get(f'{prefix}_{zone}') for prefix in _SENSORS)
             if air is None or radiant is None or humidity is None:
                 continue
-            heating, cooling = self.operative_temperatures(humidity, t_running_mean)
+            inputs = self.zone_inputs(controller, zone)
+            if inputs is None:
+                # No setpoints of the hook (those of the ACCIS apply), and no hours at a limit (the output is summed)
+                controller.set(f'{ATHB_SATURATED}_{zone}', 0.0)
+                continue
+            met, air_speed = inputs
+            heating, cooling = self.operative_temperatures(humidity, t_running_mean, met, air_speed)
             self.setpoints[zone] = (heating, cooling)
             _give_setpoints(controller, zone, heating, cooling)
             step = controller.get('ZoneTimeStep') or 0.0
@@ -526,10 +617,10 @@ class AthbSetpointHook:
             controller.set(f'{ATHB_SATURATED}_{zone}', step if saturated else 0.0)
             if saturated and _in_run_period(controller):
                 self.saturated_hours[zone] = self.saturated_hours.get(zone, 0.0) + step
-            controller.set(f'ATHB_PMV_{zone}', athb_pmv(air, radiant, self.air_speed, humidity, self.met,
-                                                        t_running_mean, self.clo))
-            controller.set(f'ATHB_clo_{zone}', clo_adapted)
-            controller.set(f'ATHB_met_{zone}', met_adapted)
+            controller.set(f'ATHB_PMV_{zone}', athb_pmv(air, radiant, air_speed, humidity, met, t_running_mean,
+                                                        self.clo))
+            controller.set(f'ATHB_clo_{zone}', athb_clo(met, t_running_mean) if self.clo == 'adaptive' else self.clo)
+            controller.set(f'ATHB_met_{zone}', athb_met(met, t_running_mean))
 
 
 def _model_zones(building, what: str, prefixes: Sequence[str], running_mean: bool) -> Dict[str, str]:
@@ -598,7 +689,7 @@ def _add_hook_objects(building, keys: Dict[str, str], sensors: Dict[str, str], o
 
 
 def apply_athb_setpoints(building, athb_cooling_setpoint: float = 0.5, athb_heating_setpoint: float = -0.5,
-                         met: float = 1.1, air_speed: float = 0.1, clo: Any = 'adaptive',
+                         met: Optional[float] = 1.1, air_speed: Optional[float] = 0.1, clo: Any = 'adaptive',
                          output_frequencies: Optional[Sequence[str]] = None, tolerance_k: float = 0.1,
                          max_iterations: int = 20,
                          temperature_range: Tuple[float, float] = ATHB_TEMPERATURE_RANGE) -> AthbSetpointHook:
@@ -616,27 +707,35 @@ def apply_athb_setpoints(building, athb_cooling_setpoint: float = 0.5, athb_heat
     the adaptive setpoints, and the minimum and maximum of the setpoints, the hour counters (also those of the long-term
     discomfort) and the outputs of the setpoints of the zone (``Adaptive Cooling Setpoint Temperature_<zone>``, with and
     without the tolerance...) are those of the ATHB; the comfort temperature and the applicability limits stay those of
-    the comfort standard of the zone. The model must be simulated with the backend of the Python API and the hook
-    (``run_ep(backend='api', hooks=[hook])``): without the hook (with the EMS backend, for instance), its setpoints are
-    those of the ACCIS and the outputs of the ATHB are 0.
+    the comfort standard of the zone. With ``met`` or ``air_speed`` None, the hook reads them from the People object of
+    each zone in each timestep (see :class:`AthbSetpointHook`), and the zones get the EMS sensors of its activity level
+    schedule (``ATHB_Act_<zone>``) or of its air velocity schedule (``ATHB_Vel_<zone>``). The model must be simulated
+    with the backend of the Python API and the hook (``run_ep(backend='api', hooks=[hook])``): without the hook (with
+    the EMS backend, for instance), its setpoints are those of the ACCIS and the outputs of the ATHB are 0.
 
     :param building: The model (eppy), changed in place.
+    :param met: The metabolic rate (met), or None for that of the People objects; and so ``air_speed``, the relative air
+        speed (m/s), or None for that of the air velocity schedules of the People objects (finding A4-2 of v04).
     :param output_frequencies: The reporting frequencies of the outputs of the ATHB ('timestep', 'hourly'...); None
         (the default since task H4 of the review of accim 1.2.0, finding A4-3; ``('hourly',)`` before) for those of the
         EMS outputs of the model (those of the ACCIS), so that ``Table`` reads them with the other outputs.
     :return: The hook (:class:`AthbSetpointHook`), with the other arguments (see it: ``met`` greater than 0, warnings
         out of the ranges of ISO 7730:2025 of the metabolic rate and the air speed).
     :raises ValueError: If the model has no ACCIS of accim 1.0.0 or later, is in mixed mode (whose windows follow the
-        setpoints of the ACCIS), has already the objects of the ATHB or of the SET (:func:`apply_set_setpoints`), or
-        an argument is not valid.
+        setpoints of the ACCIS), has already the objects of the ATHB or of the SET (:func:`apply_set_setpoints`), has
+        not the People objects whose schedules the hook reads, or an argument is not valid.
     """
     keys = _model_zones(building, 'the ATHB', _HOOK_SENSOR_PREFIXES, running_mean=True)
+    needed = [name for name, value in (('met', met), ('air_speed', air_speed)) if value is None]
+    people = _people_inputs(building, list(keys), needed, hook='the hook of the ATHB') if needed else {}
     hook = AthbSetpointHook(list(keys), athb_cooling_setpoint=athb_cooling_setpoint,
                             athb_heating_setpoint=athb_heating_setpoint, met=met, air_speed=air_speed, clo=clo,
                             tolerance_k=tolerance_k, max_iterations=max_iterations,
                             temperature_range=temperature_range)
+    hook.people = {zone: dict(values, key=keys[zone]) for zone, values in people.items()}
     _add_hook_objects(building, keys, _SENSORS, _OUTPUTS, _output_frequencies(building, output_frequencies),
                       summed=_SUMMED_OUTPUTS)
+    _add_people_sensors(building, people, needed, prefixes=_ATHB_PEOPLE_SENSORS)
     return hook
 
 
@@ -1390,7 +1489,8 @@ def _add_zone_output_variables(building, keys: Dict[str, str], variables: Sequen
 
 
 #: The prefixes of the EMS sensors of the zones of the hooks of the ATHB and of the SET, which a model cannot have twice
-_HOOK_SENSOR_PREFIXES = tuple(_SENSORS) + tuple(_SET_SENSORS) + tuple(_PEOPLE_SENSORS.values())
+_HOOK_SENSOR_PREFIXES = (tuple(_SENSORS) + tuple(_SET_SENSORS) + tuple(_PEOPLE_SENSORS.values())
+                         + tuple(_ATHB_PEOPLE_SENSORS.values()))
 #: The fields of the People objects that the hooks of the SET read, by input
 _PEOPLE_FIELDS = {
     'activity': 'Activity_Level_Schedule_Name',
@@ -1402,14 +1502,17 @@ _PEOPLE_FIELDS = {
 }
 
 
-def _people_inputs(building, zones: Sequence[str], needed: Sequence[str], pierce: bool = False) -> Dict[str, dict]:
-    """The schedules of the People objects of each zone that a hook of the SET reads (task F1): ``{zone: {'activity':
-    name, 'clothing': name, 'clothing_method_schedule': name, 'air_speed': name, 'clothing_source': 'schedule',
-    'dynamic' or 'method', 'occupants': the key of the outputs of its first occupant instance}}``.
+def _people_inputs(building, zones: Sequence[str], needed: Sequence[str], pierce: bool = False,
+                   hook: str = 'the hook of the SET') -> Dict[str, dict]:
+    """The schedules of the People objects of each zone that a hook of the SET reads (task F1), or the hook of the ATHB
+    (finding A4-2 of v04): ``{zone: {'activity': name, 'clothing': name, 'clothing_method_schedule': name, 'air_speed':
+    name, 'clothing_source': 'schedule', 'dynamic' or 'method', 'occupants': the key of the outputs of its first
+    occupant instance}}``.
 
     :param needed: The inputs that the hook reads from the People objects: 'met', 'clo' and 'air_speed'.
     :param pierce: True if the People objects get the Pierce model, which needs the work efficiency, clothing insulation
         and air velocity schedules (Input Output Reference 25.2, 1.14.2.1.20).
+    :param hook: The hook, for the messages.
     :raises ValueError: If a zone has no People object, its People objects have different schedules, or a schedule
         that the hook or the Pierce model needs is missing.
     """
@@ -1424,19 +1527,19 @@ def _people_inputs(building, zones: Sequence[str], needed: Sequence[str], pierce
         people = [] if target is None else [objects[name.upper()] for name in target.people_names
                                             if name.upper() in objects]
         if not people:
-            raise ValueError(f'The zone {zone} has no People object, whose schedules the hook of the SET reads.')
+            raise ValueError(f'The zone {zone} has no People object, whose schedules {hook} reads.')
         values = {}
         for name, field in _PEOPLE_FIELDS.items():
             found = list(dict.fromkeys(str(getattr(item, field, '') or '').strip() for item in people))
             if len({value.upper() for value in found}) > 1:
                 raise ValueError(f'The People objects of the zone {zone} ({", ".join(str(p.Name) for p in people)}) '
-                                 f'have different values of {field.replace("_", " ")} ({found}): the hook of the SET '
-                                 f'reads one of each zone.')
+                                 f'have different values of {field.replace("_", " ")} ({found}): {hook} reads one '
+                                 f'of each zone.')
             values[name] = found[0]
         source = _CLOTHING_SOURCES.get((values['clothing_method'] or 'ClothingInsulationSchedule').upper())
-        if source is None:
+        if source is None and 'clo' in needed:
             raise ValueError(f"The People objects of the zone {zone} have the clothing insulation calculation method "
-                             f"{values['clothing_method']!r}, which the hook of the SET does not read.")
+                             f"{values['clothing_method']!r}, which {hook} does not read.")
         required = ['activity'] if 'met' in needed else []
         if 'clo' in needed or pierce:
             required += ['clothing'] if source == 'schedule' else []
@@ -1446,15 +1549,18 @@ def _people_inputs(building, zones: Sequence[str], needed: Sequence[str], pierce
         missing = [_PEOPLE_FIELDS[name].replace('_', ' ') for name in dict.fromkeys(required) if not values[name]]
         if missing:
             raise ValueError(f'The People objects of the zone {zone} have no {", ".join(missing)}, which '
-                             f'{"the Pierce model and " if pierce else ""}the hook of the SET need.')
+                             f'{"the Pierce model and " if pierce else ""}{hook} need.')
         inputs[zone] = dict(values, clothing_source=source, occupants=target.sensor_key)
     return inputs
 
 
-def _add_people_sensors(building, inputs: Dict[str, dict], needed: Sequence[str]) -> None:
+def _add_people_sensors(building, inputs: Dict[str, dict], needed: Sequence[str],
+                        prefixes: Optional[Dict[str, str]] = None) -> None:
     """Add the EMS sensors of the inputs of the People objects of each zone that a hook of the SET reads (see
-    :class:`SetSetpointHook`): Schedule Value of their schedules, and Zone Thermal Comfort Clothing Value of their
-    first occupant instance with the dynamic clothing model."""
+    :class:`SetSetpointHook`), or the hook of the ATHB (``prefixes``, :data:`_ATHB_PEOPLE_SENSORS`): Schedule Value of
+    their schedules, and Zone Thermal Comfort Clothing Value of their first occupant instance with the dynamic clothing
+    model."""
+    prefixes = _PEOPLE_SENSORS if prefixes is None else prefixes
     for zone, values in inputs.items():
         sensors = []
         if 'met' in needed:
@@ -1470,7 +1576,7 @@ def _add_people_sensors(building, inputs: Dict[str, dict], needed: Sequence[str]
         if 'air_speed' in needed:
             sensors.append(('air_speed', values['air_speed'], 'Schedule Value'))
         for name, key, variable in sensors:
-            building.newidfobject('EnergyManagementSystem:Sensor', Name=f'{_PEOPLE_SENSORS[name]}_{zone}',
+            building.newidfobject('EnergyManagementSystem:Sensor', Name=f'{prefixes[name]}_{zone}',
                                   OutputVariable_or_OutputMeter_Index_Key_Name=key,
                                   OutputVariable_or_OutputMeter_Name=variable)
 

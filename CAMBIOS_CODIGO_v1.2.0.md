@@ -3362,3 +3362,24 @@ las consignas de cada régimen, las medias horarias y los errores) y del estado 
 25.1: modo mixto del 3 al 5 de junio con tres regímenes, con las salidas de las baterías, sin ellas y con salidas
 horarias. Con las salidas, el check 4 no da ninguna discrepancia en los 432 pasos; si después de simular se cambia
 `'hvac_off'` por `'hvac_on'` en el modelo, da más de 100 discrepancias del régimen en cada zona.
+
+## 68. El gancho del ATHB con la actividad y la velocidad del aire de los objetos People (A4)
+
+Era una entrada P2 de `TODO.md` (hallazgo A4-2 de v04): `met` y `air_speed` del gancho del ATHB eran siempre los del
+gancho, aunque los objetos People del modelo tuvieran otra actividad o velocidad del aire (las que EnergyPlus usa para
+las ganancias internas). Los ganchos del SET ya los leían desde F1.
+
+**El cambio** (`accim/sim/comfort_hooks.py`): con `met=None`, el gancho lee en cada paso de tiempo el nivel de
+actividad del objeto People de cada zona (su horario, en W/persona, entre `MET_ACTIVITY_LEVEL`, 104,76 W/met), con el
+sensor `ATHB_Act_<zona>`. Con `air_speed=None`, lee su horario de velocidad del aire (`ATHB_Vel_<zona>`) y lo convierte
+en velocidad relativa con la actividad de la zona, como pythermalcomfort (la nueva `relative_air_speed()`, que usa su
+`v_relative`; en pythermalcomfort 4.8.1 la de `pythermalcomfort.utilities` está obsoleta y hay que tomarla de
+`pythermalcomfort.environment`). El metabolismo y la ropa adaptados de las salidas son los de cada zona. En un paso con
+actividad 0 el gancho no da consignas a esa zona, y avisa una vez por zona si la actividad o la velocidad relativa
+quedan fuera de los rangos de ISO 7730.
+
+**Los tests**: unitarios con un controlador simulado (consignas, ATHB_PMV, metabolismo y ropa adaptados de cada zona,
+actividad 0, sensores sin valor, avisos) y de los sensores que añade `apply_athb_setpoints`, y uno con EnergyPlus
+25.1: tres días de julio del modelo de ejemplo (110,7 W/persona, 1,057 met, y 0,137 m/s, 0,154 m/s de velocidad
+relativa), cuyas consignas son las de la bisección con esas entradas y no las de las entradas por defecto del gancho
+(1,1 met y 0,1 m/s).

@@ -48,11 +48,6 @@ Active short-term tasks.
   - Definition of done: an option of the EMS code for comfort standard 24 with that loop (a sensor of the Pierce SET of the People object of each zone), documented with its delay; tests of its convergence against the hook with EnergyPlus 25.1 (both backends), and the `ValueError` of `AddAccis` replaced by it.
   - References: `notes/PROPUESTAS_MEJORAS_post_1.1.0_v03.md` (A6, way (a)), `notes/PROPUESTA_ADAPTACION_INTERIOR_v03.md` (§3, §4 F1), `notes/PROMPTS_COPILOT_bloque_F_v02.md` (F1, scope 5).
 
-- [ ] [P2][todo] A4: the metabolic rate of the People objects in the hook of the ATHB (`met='people'`)
-  - Context: finding A4-2 of v04 (task H4, 2026-11-10): `met` and `air_speed` of `AthbSetpointHook` are independent of the activity level (W/person) and the air velocity of the People objects, which EnergyPlus uses for the internal gains and its own comfort outputs; H4 documented the relation (1 met ≈ 104.8 W/person) and the relative air speed, and v04 leaves `met='people'` as a future option. The hook of the SET with `method='bisection'` already reads the inputs of the People objects (`met=None`...).
-  - Definition of done: `AthbSetpointHook(met=None)` (or `'people'`) reads the activity level of the People object of each zone in each timestep (W/person divided by `MET_ACTIVITY_LEVEL`), and, if wanted, the air velocity converted to the relative air speed, with tests with EnergyPlus.
-  - References: `notes/PROPUESTAS_MEJORAS_post_1.1.0_v04.md` (§3.3 A4-2), `accim/sim/comfort_hooks.py` (`SetSetpointHook.zone_inputs`).
-
 - [ ] [P2][todo] A4: the setpoints of the ATHB in mixed mode
   - Context: verdict #34 (`notes/decisions.md`, 2026-11-10): the ATHB setpoints are for full air-conditioning only (a `ValueError` in mixed mode, whose windows follow the setpoints of the ACCIS); mixed mode stays a P2 task.
   - Definition of done: a design for the windows and the HVAC system with the ATHB setpoints (a question for the author first), with tests.

@@ -36,6 +36,38 @@ Recommended flow: track active work in `TODO.md`, move completed outcomes to `DE
 ## Entries
 
 ### 2026-11-18
+#### [done] A4: the metabolic rate and the air speed of the People objects in the hook of the ATHB (branch `v1.2.0`)
+- Context: the P2 entry of A4 of `TODO.md` (finding A4-2 of v04): `met` and `air_speed` of `AthbSetpointHook` were
+  those of the hook, whatever the activity level and the air velocity of the People objects, which EnergyPlus uses
+  for the internal gains and its own comfort outputs; the hooks of the SET read them since F1 (`met=None`...).
+- Changes: `accim/sim/comfort_hooks.py`: `AthbSetpointHook` and `apply_athb_setpoints` take `met=None` (the activity
+  level schedule of the People object of each zone in each timestep, divided by `MET_ACTIVITY_LEVEL`: the EMS sensor
+  `ATHB_Act_<zone>`) and `air_speed=None` (the relative air speed of its air velocity schedule, `ATHB_Vel_<zone>`, with
+  the metabolic rate of the zone: the new `relative_air_speed()`, the `v_relative` of `pythermalcomfort.environment`,
+  which rounds it to 3 decimals; in pythermalcomfort 4.8.1 that of `pythermalcomfort.utilities` is deprecated);
+  `operative_temperatures()` takes `met` and `air_speed`, and `zone_inputs()` gives those of a zone in a timestep; the
+  outputs `ATHB_met_<zone>` and `ATHB_clo_<zone>` are those of each zone; in a timestep with an activity level of 0,
+  or a sensor of the People object without a value, the hook gives no setpoints to the zone and
+  `ATHB_saturated_<zone>` is 0 (the output is summed); it warns once of each zone whose metabolic rate or relative air
+  speed is out of the ranges of ISO 7730 (in each simulation). `_people_inputs()` and `_add_people_sensors()` serve
+  both hooks (the clothing insulation calculation method is only checked when the hook reads the clothing
+  insulation). The module docstring, section 4.9.1 of the detailed use and the entry of the ATHB of `CHANGELOG.md`;
+  the entry of `TODO.md` removed.
+- Files: `accim/sim/comfort_hooks.py`, `tests/core/test_comfort_hooks.py`, `docs/source/4_detailed use.md`,
+  `CHANGELOG.md`, `TODO.md`, `CAMBIOS_CODIGO_v1.2.0.md` (§68), `notes/work-log.md`.
+- Verification: unit tests (the inputs of the People objects with a fake controller: the setpoints, the ATHB_PMV and
+  the adapted metabolic rate and clothing of each zone; only the metabolic rate; an activity level of 0 and a sensor
+  without a value; the warnings, once for each zone and simulation; the sensors of `apply_athb_setpoints` and its
+  errors) and a test with EnergyPlus 25.1 (three days of July of the sample model: 110.7 W/person, 1.057 met, and
+  0.137 m/s, a relative air speed of 0.154 m/s: the adapted metabolic rate and clothing of the outputs, and the
+  setpoints of the bisection with those inputs, 0.1 K or more on average away from those of the default inputs of the
+  hook). In a snapshot of the working tree, the nine test files that use the hooks, with the golden master
+  (unchanged): 181 passed and 1 failed, a test that replaced `operative_temperatures` by a function of two arguments
+  (the hook gives it the metabolic rate and the air speed of each zone now), whose stub takes them now; then
+  `tests/core/test_comfort_hooks.py`, 38 passed (3 min). The documentation builds with the warnings of the baseline
+  (33); Python 3.9 compiles the changed files.
+- Next step: none for A4-2 (the setpoints of the ATHB in mixed mode and in the model stay in `TODO.md`).
+
 #### [done] B2: check 4 of `verify_accim_simulation` with the conditions 'hvac_off' and 'hvac_on' (branch `v1.2.0`)
 - Context: the P2 entry of B2 of `TODO.md`: `compute_setpoints` could not evaluate the conditions 'hvac_off' and
   'hvac_on' of the regimes of the custom model (they depend on the HVAC system of the simulation in the previous

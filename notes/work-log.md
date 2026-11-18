@@ -15,6 +15,19 @@ This log is a lightweight, session-scoped complement to the repository's
 existing tracking files — it does not replace them (see
 [[decisions.md#2026-09-13 — `notes/work-log.md` complements, not replaces, existing tracking files|the related decision]]).
 
+## 2026-11-18 — A4: the People objects in the hook of the ATHB (branch `v1.2.0`, on the server)
+
+- **Objective**: the entry of A4 of [[../TODO.md]] (finding A4-2 of v04): the metabolic rate and the air speed of the
+  People objects in the hook of the ATHB, as in the hooks of the SET.
+- **Affected files**: `accim/sim/comfort_hooks.py`, `tests/core/test_comfort_hooks.py`, section 4.9.1 of the detailed
+  use, [[../CHANGELOG.md]], [[../TODO.md]] and the notes.
+- **Finding or decision**: `met=None` and `air_speed=None` read the activity level and air velocity schedules of the
+  People object of each zone in each timestep (`ATHB_Act_<zone>`, `ATHB_Vel_<zone>`); the relative air speed is the
+  `v_relative` of pythermalcomfort, which 4.8.1 moved to `pythermalcomfort.environment` (that of
+  `pythermalcomfort.utilities` warns that it is deprecated).
+- **Validation**: in the entry of [[../DEVLOG.md]].
+- **Next step**: the next entry of [[../TODO.md]] that does not need the author.
+
 ## 2026-11-18 — B2: check 4 with the conditions 'hvac_off' and 'hvac_on' (branch `v1.2.0`, on the server)
 
 - **Objective**: the entry of B2 of [[../TODO.md]]: check 4 of `verify_accim_simulation` did not check the zones
