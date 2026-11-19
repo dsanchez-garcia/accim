@@ -60,10 +60,11 @@ setpoints to T_rm_in ± delta takes the setpoint that the comfort standard leave
 the band between the setpoints is ``delta_heat`` + ``delta_cool`` at most (2 K by default), and the heating or the
 cooling run to keep the zone within about 1 K of its own recent mean, also where the comfort standard would let it
 float. In April of the sample model in Seville (INT EN16798, category II, comfort mode 3, full air-conditioning,
-EnergyPlus 25.1; measured again on 2026-11-12), the energy of the heating coils went from 125.9 kWh without the
-limiter to 32 488 kWh with the window in all the zones (that of the cooling coils, from 9520 to 4678 kWh), and the mean
-band between the setpoints in the occupied hours from 7.00 to 1.97 K; with the rate (0.5 K/day), which changed the
-setpoints on two days, they were 152.9 and 9499 kWh (``tests/core/test_drift_limiter.py``; January and July are in
+EnergyPlus 25.1; measured again on 2026-11-19, with the windows of the sample model closed on its design days,
+:mod:`accim.sim.ems.design_days`), the energy of the heating coils went from 60.1 kWh without the limiter to 2894 kWh
+with the window in all the zones (that of the cooling coils, from 382.9 to 942.4 kWh), and the mean band between the
+setpoints in the occupied hours from 7.00 to 2.23 K; with the rate (0.5 K/day), which changed the setpoints on two days,
+they were 60.4 and 388.5 kWh (``tests/core/test_drift_limiter.py``; January and July are in
 section 4.2.7 of the detailed use). While the zone is held within the window, its exposure can drift by about (1 −
 ``alpha_indoor``)·delta per day only (0.2 K/day by default), a much stricter control than that of the rate. The source
 of the limiter supports the rate (the changes of the setpoints spread over a couple of weeks: Parkinson et al., 2020,

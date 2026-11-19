@@ -33,9 +33,11 @@ comfort band, so that the thermostats get them with the tolerance of the setpoin
 maximum of the setpoints, the hour counters and the outputs of the setpoints of the zone follow them); it also reports
 the ATHB_PMV of each zone (``ATHB_PMV_<zone>``, from its mean air and mean radiant temperatures and relative humidity)
 and the adapted clothing and metabolic rate (``ATHB_clo_<zone>`` and ``ATHB_met_<zone>``). As the other sensors of the
-EMS at the beginning of the timestep, those of the air temperature and the relative humidity of the zone are those of
-the previous timestep (that of its mean radiant temperature is the one that EnergyPlus has calculated for the timestep
-itself: measured on 2026-11-12 with the sensors of the hook of the SET, which read the same outputs), and trm is the
+EMS at the beginning of the timestep, that of the air temperature of the zone reads its mean in the previous timestep
+and that of its relative humidity its value in the last system timestep of the previous timestep (the output of that
+timestep is the mean of its system timesteps, which differs where EnergyPlus shortens them); that of its mean radiant
+temperature reads the one that EnergyPlus has calculated for the timestep itself (measured on 2026-11-12 and
+2026-11-19 with the sensors of the hook of the SET, which read the same outputs), and trm is the
 running mean outdoor temperature of CEN 15251 of EnergyPlus (the sensor ``RMOT`` of the ACCIS, α = 0.8, as EN 16798-1).
 The
 setpoints out of ``temperature_range`` are its limits: the hook reports the hours in which a setpoint of a zone is at
@@ -195,7 +197,7 @@ TR_MODES = ('equal_air', 'zone')
 #: hc = 5.66·(M/58.2 − 0.85)^0.39) times the body surface area with which EnergyPlus gives the activity levels per
 #: person, 1.8 m² (Input Output Reference 25.2, 1.14.2.1.10; :data:`accim.constants.PMV_BODY_SURFACE_AREA`). The code
 #: of the Pierce model of EnergyPlus divides the activity level by 1.8258 m² instead, so it reads 1.4 % less met from
-#: the same schedule, which changes the SET by 0.01 to 0.02 K on average; the hooks keep 1.8 m² (task E-F1 measured
+#: the same schedule, which changes the SET by 0.01 to 0.03 K on average; the hooks keep 1.8 m² (task E-F1 measured
 #: again, and decision 1 of 2026-11-12, ``notes/decisions.md``)
 MET_ACTIVITY_LEVEL = 58.2 * PMV_BODY_SURFACE_AREA
 #: The EMS sensors of the inputs of the People object of each zone (output variable Schedule Value of its schedules,
@@ -819,7 +821,8 @@ class SetSetpointHook:
     (:meth:`operative_temperatures`); with the metabolic rate, the clothing insulation, the air speed and the posture of
     the hook, they depend on the relative humidity of the zone only. At the beginning of each timestep before the EMS
     programs (as :class:`AthbSetpointHook`, :attr:`runs_before_programs`), the hook gives them, for the relative humidity
-    of each zone of the previous timestep (the sensor ``SET_RH_<zone>``), to the ACCIS as the limits of the comfort band
+    of each zone in the last system timestep of the previous timestep (the sensor ``SET_RH_<zone>``), to the ACCIS as
+    the limits of the comfort band
     (:mod:`accim.sim.ems.hook_setpoints`: the thermostats get them with the tolerance of the setpoints of the zone, and
     the minimum and maximum of the setpoints, the hour counters and the outputs of the setpoints of the zone follow
     them).
@@ -830,9 +833,10 @@ class SetSetpointHook:
       does not run in the callbacks of EnergyPlus (about 1.5 s to make the hook).
     - ``'bisection'``: the setpoints are calculated by bisection in each timestep (about ten SET for each zone), and the
       SET of each zone, from the values of its sensors ``SET_MAT_<zone>``, ``SET_MRT_<zone>`` and ``SET_RH_<zone>``
-      (its mean air temperature and relative humidity of the previous timestep, and the mean radiant temperature that
-      EnergyPlus has calculated for the timestep itself: measured on 2026-11-12,
-      ``tests/core/test_people_set_inputs.py``), is the global variable ``SET_<zone>``, which EnergyPlus reports.
+      (its mean air temperature of the previous timestep, its relative humidity of the last system timestep of the
+      previous timestep, and the mean radiant temperature that EnergyPlus has calculated for the timestep itself:
+      measured on 2026-11-12 and 2026-11-19, ``tests/core/test_people_set_inputs.py``), is the global variable
+      ``SET_<zone>``, which EnergyPlus reports.
       ``set_tmp`` of pythermalcomfort is compiled by numba: in the development
       environment of accim 1.2.0 (Python 3.14.3, numba 0.68.1, pythermalcomfort 4.8.1, EnergyPlus 25.1), its first
       call in a process stopped it with an access violation (exit code -1073741819) when the library of the API of
@@ -1981,10 +1985,11 @@ def set_of_results(results, hook: SetSetpointHook, keys: Optional[Dict[str, str]
     Temperature* and *Zone Air Relative Humidity* of each zone (those that :func:`apply_set_setpoints` requests), with
     the metabolic rate, clothing insulation, air speed and posture of the hook. The outputs of each row are those of the
     timestep or hour (means), so this SET is that of the row, while the output ``SET_<zone>`` of the hook with
-    ``method='bisection'`` is that of the values that its sensors read: the air temperature and the relative humidity
-    of the previous timestep, and the mean radiant temperature of the timestep itself (with them, this function gives
-    the output of the hook; with those of each row, 0.013 K away on average and 0.14 K at most in a week of July of
-    the sample model with comfort standard 24: ``tests/core/test_people_set_inputs.py``).
+    ``method='bisection'`` is that of the values that its sensors read: the mean air temperature of the previous
+    timestep, the relative humidity of its last system timestep, and the mean radiant temperature of the timestep
+    itself (with them, this function gives the output of the hook; with those of each row, 0.105 and 0.113 K away on
+    average and 0.95 and 1.33 K at most in a week of July of the sample model with comfort standard 24, measured on
+    2026-11-19 with its windows closed on its design days: ``tests/core/test_people_set_inputs.py``).
 
     With a hook that reads inputs of the occupants from the People objects (``met``, ``clo`` or ``air_speed`` None),
     those of each row are the values of the schedules of the People objects of each zone in the results (task S4 of the

@@ -736,11 +736,17 @@ def test_the_rate_with_the_setpoints_of_a_hook_that_change_within_the_day(tmp_pa
 #: EN16798, category II, comfort mode 3, full air-conditioning, EnergyPlus 25.1) without the limiter, with the window
 #: and with the rate, with their defaults in all the zones: the energy of the heating and of the cooling coils (kWh),
 #: and, in the occupied hours of Block1:Zone1, the mean band between the setpoints without the tolerance (K), the mean
-#: heating setpoint without the tolerance (°C) and the hours in which the limiter changed a setpoint
+#: heating setpoint without the tolerance (°C) and the hours in which the limiter changed a setpoint. Measured again on
+#: 2026-11-19, with the windows of the sample model closed on its design days (accim.sim.ems.design_days): its VRF
+#: systems, sized before with those windows open, were about 100 times too big, and the energy of the coils was
+#: (125.881, 9520.358) without the limiter, (32487.905, 4677.723) with the window and (152.945, 9498.941) with the rate;
+#: the window had a mean band of 1.967 K and a mean heating setpoint of 24.921 °C, since the zone was warmer (T_rm_in
+#: 25.6 to 26.5 °C, now 24.3 to 24.9 °C) and the cooling setpoint of the comfort standard was within the window in 192
+#: of its 252 limited hours (now both setpoints are clipped to the window in all of them, a band of 2 K)
 A8_MEASURED = {
-    None: (125.881, 9520.358, 7.0, 20.003, None),
-    'window': (32487.905, 4677.723, 1.967, 24.921, 252.0),
-    'rate': (152.945, 9498.941, 7.0, 20.003, 24.0),
+    None: (60.102, 382.85, 7.0, 20.003, None),
+    'window': (2894.474, 942.399, 2.227, 23.45, 252.0),
+    'rate': (60.434, 388.513, 7.0, 20.003, 24.0),
 }
 
 
@@ -790,8 +796,9 @@ def _simulate(model):
 @needs_energyplus
 def test_the_window_keeps_the_zone_near_its_own_recent_temperature_in_energyplus(tmp_path):
     # Finding A8 of the self-audit of 2026-11-11: the window takes the heating setpoint to 1 K below the recent
-    # temperature of the zone, about 5 K above that of the comfort standard in April, so the heating coils use 258
+    # temperature of the zone, about 3.5 K above that of the comfort standard in April, so the heating coils use 48
     # times the energy of the model without the limiter, while the rate changes its setpoints on two Mondays only
+    # (measured again on 2026-11-19: about 5 K and 258 times before, with the oversized VRF systems; see A8_MEASURED)
     from concurrent.futures import ThreadPoolExecutor
 
     models = {mode: _april(tmp_path / str(mode), mode) for mode in A8_MEASURED}
@@ -819,7 +826,7 @@ def test_the_window_keeps_the_zone_near_its_own_recent_temperature_in_energyplus
             else:
                 assert value == pytest.approx(reference, abs=tolerance), (mode, measured[mode])
     # The window: all the occupied hours but those of the first occupied day, and a band of 2 K at most from then on
-    assert measured['window'][0] > 250 * measured[None][0]
+    assert measured['window'][0] > 48 * measured[None][0]
     frame = results['window']
     heating = frame[next(c for c in frame.columns if c.startswith(
         'EMS:Adaptive Heating Setpoint Temperature_No Tolerance_Block1_Zone1 ['))].to_numpy(dtype=float)

@@ -223,9 +223,10 @@ the setpoints (section 4.1.1 of :doc:`4_detailed use`). Mixed-mode operation nee
 (AirflowNetwork), or given by ``ZoneVentilation:WindandStackOpenArea`` or
 ``ZoneVentilation:DesignFlowRate`` objects, whose opening accim controls; see :doc:`4_detailed use`.
 With ``'vrf_ac'`` and ``'ex_ac'``, accim does not change the natural ventilation of the model, so
-the windows that are open in it stay open: to simulate such a model fully air-conditioned with its
-windows closed, use ``'vrf_mm'`` and ``hvac_mode`` 0 (as WF1 and WF4 do), or close them in the model
-(as the aPMV examples do).
+the windows that are open in it stay open, except on the design days, when they are closed so that
+EnergyPlus sizes the HVAC systems with them closed (section 4.1.3 of :doc:`4_detailed use`): to
+simulate such a model fully air-conditioned with its windows closed on all the days, use ``'vrf_mm'``
+and ``hvac_mode`` 0 (as WF1 and WF4 do), or close them in the model (as the aPMV examples do).
 
 Several models can be simulated in the same study (``buildings=[building_a, building_b]``): each one
 is identified by its file name, and the plan gets an ``idf`` column.

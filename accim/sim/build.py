@@ -12,6 +12,7 @@ import pandas as pd
 
 from accim.sim import outputs
 from accim.sim.ems import objects as ems_objects
+from accim.sim.ems.design_days import close_windows_on_design_days
 from accim.sim.ems.programs import add_program_calling_managers, add_programs
 from accim.sim.hvac import existing, vrf
 from accim.sim.model import AccimModel
@@ -34,7 +35,9 @@ def add_accis_objects(
     existing_hvac_ideal_loads_backup: bool = False,
     existing_hvac_radiant_setpoints: bool = True,
 ) -> None:
-    """Add the HVAC systems (VRF) or adapt the existing ones, and add the EMS objects of the ACCIS.
+    """Add the HVAC systems (VRF) or adapt the existing ones, and add the EMS objects of the ACCIS. In full
+    air-conditioning, the windows and doors of the model keep its control, but are closed on the design days
+    (:func:`accim.sim.ems.design_days.close_windows_on_design_days`).
 
     :param model: The model, already scanned.
     :param supply_air_temp_input_method: 'supply air temperature' or 'temperature difference' (VRF only).
@@ -107,6 +110,9 @@ def add_accis_objects(
     if model.is_mixed_mode:
         ems_objects.add_design_day_sensor(model)
     add_program_calling_managers(model)
+    if not model.is_mixed_mode:
+        # In full air-conditioning, the windows of the model keep its control, but are closed on the design days
+        close_windows_on_design_days(model)
     if add_building_averages:
         ems_objects.add_building_averages(model)
 

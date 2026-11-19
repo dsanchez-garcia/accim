@@ -3695,3 +3695,43 @@ las añade, y con las salidas estándar el check 2 toma las del emplazamiento y 
 ejemplo, sin falsos desajustes con la velocidad máxima del viento por defecto). Añadirlas cambiaría los IDF de salida
 del modo mixto y el tamaño de sus resultados. No hay cambio de código; la nota de la sección 4.6 se queda y la entrada
 del TODO se cierra (`notes/decisions.md`, 19 de noviembre).
+
+## 80. La climatización completa cierra las ventanas en los días de diseño
+
+Con `vrf_ac`, las ventanas del modelo conservaban su control también en los días de diseño, y las del modelo de ejemplo
+se abren en su día de diseño de invierno (su horario de consigna de venteo `20001` vale 0 °C esos días). EnergyPlus
+dimensionaba así los VRF para el aire exterior a −4 °C entrando por ellas: unas 100 veces demasiado grandes (cargas de
+calefacción de diseño de 303 y 357 kW, unidades interiores de 62 y 73 m³/s, ventiladores de 8,9 y 10,5 kW cuyo calor
+mantenía las zonas templadas). Por la delegación del autor (opción (a)), la climatización completa (`vrf_ac`, `ex_ac` y
+los VRF de `add_vrf_system`) cierra ahora en los días de diseño las ventanas que controlaría el modo mixto, y el resto
+de días las deja con el control del modelo.
+
+**El código**: el módulo nuevo `accim/sim/ems/design_days.py`. `close_windows_on_design_days()` añade el sensor
+`DesignDay` (con su horario), un actuador por ventana (el factor de apertura de las ventanas de la AirflowNetwork,
+`<ventana>_DesignDayVOF`, o el caudal de cada instancia de los objetos de ventilación natural,
+`<instancia>_DesignDayFlow`), el programa `CloseWindowsOnDesignDays` (0 en los días de diseño, Null el resto) y su
+calling manager. Deja fuera, con un aviso, las ventanas con un control de ventilación de los ocupantes (que se impone a
+la EMS) y las que actúa la EMS del propio modelo (el actuador de accim las liberaría los demás días). En `windows.py`,
+`ventilation_instances()` da los nombres que EnergyPlus pone a las instancias (`<espacio> <nombre>` para listas y zonas
+de varios espacios), comprobados contra el EDD de EnergyPlus 25.1 y 9.6.
+
+**El resultado**: en el modelo de ejemplo, 1,5 y 1,7 kW de carga de calefacción de diseño, unidades de 0,63 y 0,81 m³/s
+y ventiladores de 90 y 116 W, lo mismo con los dos backends. El golden master se reescribe a propósito en 10
+configuraciones (solo se añaden estos objetos).
+
+**Las medidas**: todo lo medido con el modelo de ejemplo en climatización completa cambia. Se han vuelto a medir los
+valores de 16 tests (sin aflojar ninguno: los valores medidos se sustituyen con la misma tolerancia y, donde una premisa
+ya no se cumplía, se cambia el escenario) y 51 afirmaciones de la documentación, los docstrings, el CHANGELOG, el TODO y
+el borrador del issue del SET de Pierce. Dos hallazgos para el autor: las ventanas del modelo de ejemplo, que conservan
+su venteo por encima de 24 °C, están abiertas en casi todas las horas en que su VRF calienta; y los ganchos leen la
+humedad relativa del último paso de sistema (una entrada P3 del TODO).
+
+**La revisión**: dos revisores independientes. El del código encontró cinco defectos, todos comprobados con EnergyPlus y
+corregidos con su test: los complementos de Python del modelo perdían el control de sus ventanas los días normales
+(ahora un modelo con complementos o con actuadores de interfaces externas no recibe el programa, con un aviso); los
+nombres que empiezan por cifra paraban EnergyPlus (ahora llevan `Win_` o `Vent_` delante); una variable o un sensor del
+modelo llamado `DesignDay` chocaba o se tomaba por el de los días de diseño (ahora `DesignDay_2`...); una ZoneList con
+el nombre de una zona se tomaba por ella; y con `ex_ac` las zonas con termostato sin ocupantes seguían dimensionándose
+con las ventanas abiertas (ahora se cierran también). El de las cifras encontró tres entradas del CHANGELOG y algunos
+textos con valores antiguos, y el test del respaldo del estándar 24 a 0,004 K de su cota (ahora fija además sus medias
+medidas); todo corregido.

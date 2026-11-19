@@ -11,6 +11,60 @@ Durable architectural/process decisions for this repository and its Obsidian
 vault. Newest first. Use [[templates/decision-record.md|the decision-record
 template]] to add a new entry.
 
+## 2026-11-19 — How full air-conditioning closes the windows on the design days
+
+- **Status**: done (Claude Code, on 2026-11-19, implementing decision 1 of the entry "The four questions of
+  2026-11-18", below, by the delegation of the author; the P1 entry of `TODO.md`). The choices of the implementation
+  are recorded here, so that the author can change them.
+- **Context**: a workflow mapped the code of mixed mode, the code path of full air-conditioning and the semantics of
+  EnergyPlus 25.1 (about 40 short runs and the source of v25.1.0): the EMS programs at
+  `BeginTimestepBeforePredictor` run in every timestep of the zone sizing; an AirflowNetwork window actuated by the
+  EMS ignores its venting control and availability schedule, but not an occupant ventilation control
+  (`AirflowNetwork:OccupantVentilationControl`), which overrides the EMS; the actuator of a `ZoneVentilation` object
+  ('Zone Ventilation', 'Air Exchange Flow Rate') overrides its schedule and limits; Null releases an actuator in the
+  same timestep, and EnergyPlus does not release the actuators between the sizing periods while it sizes the zones
+  (BeginNewEnvironment does not run there).
+- **Choices**:
+  1. A program of its own, `CloseWindowsOnDesignDays`, with its own calling manager at
+     `BeginTimestepBeforePredictor` (both backends run every calling manager): `if DesignDay == 1`, each actuator 0;
+     `else`, each actuator Null, explicitly. It does not read the variables of mixed mode, and its name has none of
+     the prefixes that other code reads (`SetVST`, `SetWindowOperation_`, `RunACCIS_`...).
+  2. The windows of mixed mode, found without changing the model (`afn_openings`, and `ventilation_instances` for the
+     `ZoneVentilation` objects): the occupant ventilation controls, the hybrid ventilation managers and the
+     `ZoneVentilation` objects of the model do not change, since they control the windows on the other days.
+  3. The `ZoneVentilation` objects are closed through the actuators of their instances, with the names that
+     EnergyPlus gives them (`<space> <name>` for those of ZoneLists, SpaceLists and zones of several spaces; `<zone>
+     <name>` for those of ZoneLists in the IDDs without spaces), checked against the actuators that EnergyPlus 25.1
+     and 9.6 made available (their EDD files); a wrong name stops EnergyPlus ('Actuator ... not found'). Mixed mode
+     changes their schedules instead, which would change the other days.
+  4. The windows with an occupant ventilation control, and those that the EMS of the model actuates, are left out
+     with a warning: the EMS cannot close the former, and an actuator of accim on the latter (Null on the other days)
+     would release them, since EnergyPlus applies the actuators of a window one after the other.
+  5. `add_vrf_system()` (the PMV-based setpoints) closes them too: its VRF systems are those of `vrf_ac`, with the
+     same oversizing (design heating loads of 289 and 245 kW of the sample model with the aPMV setpoints, about 1 kW
+     with the windows closed, measured by the workflow).
+  6. The models without windows that open get nothing (no sensor `DesignDay` nor its schedule), so their output IDFs
+     do not change.
+  7. After the review of the same day: with `ex_ac`, also the windows of the zones with thermostats without occupants,
+     whose systems EnergyPlus also sizes; a model with Python plugins or actuators of external interfaces gets no
+     program, with a warning (EnergyPlus applies the EMS actuators after them, and accim cannot see what they
+     actuate); the names that would not begin with a letter begin with `Win_` or `Vent_`; the sensor is
+     `DesignDay_2`... if the model has another EMS variable named `DesignDay`; and a ZoneList named like a zone is not
+     taken for it, as in EnergyPlus (the order of mixed mode, `windows._members()`, is kept: a rare case).
+- **Consequences**: `accim.sim.ems.design_days`; the golden files of 10 configurations written again (only these
+  objects added); the measurements of the tests and the docs made with the sample model in full air-conditioning
+  taken again (`DEVLOG.md`, 2026-11-19). The values of the dated entries below that were measured with the oversized
+  systems are kept as records of their day; those measured again on 2026-11-19 replace them in the docs and the tests:
+  E-F1 (2026-11-12), the SET of pythermalcomfort below that of the Pierce model of EnergyPlus by 0.031 K standing and
+  0.095 K sitting at 1.06 met (0.045 and 0.116 K before), 0.31 to 0.38 K at 1.1 met and 0.94 to 1.01 K at 1.2 met, the
+  body surface area 0.01 to 0.03 K, and 0.04 to 0.05 K without the term of the activity; the hook of comfort standard
+  24 (F1, 2026-11-10 and 2026-11-12), its hourly SET 0.02 to 0.03 K (winter) and 0.14 K (summer) below that of the
+  Pierce model (0.08 and 0.155 K before), at most 0.72 K in the hours in which the windows of the model open, and the
+  zones within the band in 60 and 60 (January) and 53.5 and 46.0 (July) of their 60 occupied hours. Measuring them
+  showed that the windows of the sample model, which keep its venting control (above 24 °C) in full
+  air-conditioning, are open in most of the hours in which its right-sized VRF systems heat, and that the hooks read
+  the relative humidity of the last system timestep (a P3 entry of `TODO.md` for the author).
+
 ## 2026-11-19 — The standard outputs of mixed mode keep those of the site for check 2
 
 - **Status**: accepted (Claude Code, on 2026-11-19, by the delegation of the author of the same day: "Toma las

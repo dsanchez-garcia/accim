@@ -25,9 +25,18 @@ existing tracking files — it does not replace them (see
   of 2026-11-18 accepted. The windows of full air-conditioning on the design days is the next work, with the resume
   of `run_optimisation`. Done since: the resume of `run_optimisation` checks the problem (6298c5b), and, by the same
   delegation, the standard outputs of mixed mode keep those of the site for check 2 (`output_type='detailed'` adds
-  those of the zones).
-- **Validation**: the docs build; `tests/parametric_and_optimisation` (533 passed) for the resume.
-- **Next step**: the windows of full air-conditioning on the design days, with its tests, a review and the full suite.
+  those of the zones). Then full air-conditioning closes the windows on the design days (`accim.sim.ems.design_days`,
+  the choices of the implementation in [[decisions.md]]): the VRF systems of the sample model went from 303 and 357
+  kW of design heating load to 1.5 and 1.7 kW, so every measurement made with it in full air-conditioning was taken
+  again by two workflows (16 tests, and 51 statements of the docs found by an inventory of 84 candidates, each with a
+  skeptic); one test check that the skeptic found dropped was pinned again. No defect of accim was found: the
+  failures of the hooks came from the relative humidity of the last system timestep that their sensors read (a P3
+  entry of [[../TODO.md]]), and a warm-up that does not converge, from the windows of the sample model chattering
+  against its right-sized systems.
+- **Validation**: the docs build; `tests/parametric_and_optimisation` (533 passed) for the resume; for the windows,
+  the sizing with both backends, the names of the instances against the EDD of EnergyPlus 25.1 and 9.6, the golden
+  master checked line by line, and the full suite.
+- **Next step**: the adversarial review of the windows of the design days, the full suite, and the commit.
 
 ## 2026-11-18 — The review of the work of the autonomous session (branch `v1.2.0`, on the server)
 

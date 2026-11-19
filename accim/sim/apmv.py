@@ -566,6 +566,9 @@ def add_vrf_system(
     thermal comfort (Fanger) thermostats, on which apply_apmv_setpoints can then act. The VRF systems are
     autosized, so the zone, system and plant sizing calculations of the model are enabled, as AddAccis does.
     They replace the zone equipment of the model, so its ZoneHVAC:IdealLoadsAirSystem objects are removed.
+    The zones are fully air-conditioned, as with the ScriptType 'vrf_ac' of AddAccis: the windows and doors of the
+    model keep its control, but are closed on the design days, so that EnergyPlus sizes the VRF systems with them
+    closed (see :mod:`accim.sim.ems.design_days`).
 
     :param building: The BESOS/eppy IDF object.
     :param supply_air_temp_input_method: Method for supply air temperature ('supply air temperature' or
@@ -578,6 +581,7 @@ def add_vrf_system(
     The arguments had other names before accim 1.0.0 (SupplyAirTempInputMethod, eer, cop, VRFschedule,
     verbose_mode), which keep working with a DeprecationWarning.
     """
+    from accim.sim.ems.design_days import close_windows_on_design_days
     from accim.sim.hvac import vrf
     from accim.sim.model import AccimModel
     from accim.sim.outputs import enable_sizing_calculations
@@ -589,6 +593,7 @@ def add_vrf_system(
                        vrf_availability_schedule=vrf_availability_schedule)
     vrf.add_setpoint_schedules(model)
     enable_sizing_calculations(model)
+    close_windows_on_design_days(model)
 
 
 def change_adaptive_coeff(building: IDF, df_arguments: pd.DataFrame):

@@ -646,10 +646,33 @@ needs_energyplus = pytest.mark.skipif(
 STEPS = 6
 
 
-def _athb_model(folder, monkeypatch, end_day=21, **arguments):
+def _copy_sensors(idf, prefix, names=('MAT', 'MRT', 'RH')):
+    """Add to a model, for each zone, a program that copies the values that the sensors ``<prefix>_<name>_<zone>`` of a
+    hook read at the beginning of each timestep (``BeginTimestepBeforePredictor``) into the reported variables
+    ``Copy<name>_<zone>``, at timestep frequency (as test_the_set_setpoints_by_bisection_in_energyplus does). The
+    relative humidity that a sensor reads is not always the output of the previous row: see
+    test_the_athb_setpoints_in_energyplus."""
+    from accim.sim.ems.programs import add_program
+
+    for zone in ZONES:
+        copies = [f'Copy{name}_{zone}' for name in names]
+        idf.newidfobject('EnergyManagementSystem:GlobalVariable',
+                         **{f'Erl_Variable_{n}_Name': copy for n, copy in enumerate(copies, start=1)})
+        add_program(idf, f'CopySensors_{zone}', [f'set Copy{name}_{zone} = {prefix}_{name}_{zone}' for name in names])
+        idf.newidfobject('EnergyManagementSystem:ProgramCallingManager', Name=f'CopySensors_{zone}',
+                         EnergyPlus_Model_Calling_Point='BeginTimestepBeforePredictor',
+                         Program_Name_1=f'CopySensors_{zone}')
+        for copy in copies:
+            idf.newidfobject('EnergyManagementSystem:OutputVariable', Name=copy, EMS_Variable_Name=copy,
+                             Type_of_Data_in_Variable='Averaged', Update_Frequency='ZoneTimestep', Units='')
+            idf.newidfobject('Output:Variable', Key_Value='*', Variable_Name=copy, Reporting_Frequency='Timestep')
+
+
+def _athb_model(folder, monkeypatch, end_day=21, copies=False, **arguments):
     """The output IDF of AddAccis of the sample model (INT EN16798, category II, comfort mode 3, full
     air-conditioning) for 15-21 July (or until ``end_day``), with the setpoints of the ATHB and the outputs of the zones
-    at timestep frequency; return its path and the hook."""
+    at timestep frequency (and, with ``copies``, the copies of the values that the sensors of the hook read,
+    :func:`_copy_sensors`); return its path and the hook."""
     from accim.sim.accis import AddAccis, load_idf
 
     folder.mkdir(parents=True)
@@ -669,6 +692,8 @@ def _athb_model(folder, monkeypatch, end_day=21, **arguments):
     [path] = folder.glob('TestModel[[]*.idf')
     idf = load_idf(path)
     hook = ch.apply_athb_setpoints(idf, output_frequencies=['timestep'], **arguments)
+    if copies:
+        _copy_sensors(idf, 'ATHB')
     for variable in ('Zone Air Relative Humidity', 'Zone Mean Air Temperature', 'Zone Mean Radiant Temperature',
                      'Zone Thermal Comfort CEN 15251 Adaptive Model Running Average Outdoor Air Temperature'):
         idf.newidfobject('Output:Variable', Key_Value='*', Variable_Name=variable, Reporting_Frequency='Timestep')
@@ -683,7 +708,7 @@ def test_the_athb_setpoints_in_energyplus(tmp_path, monkeypatch):
     from accim.run import run_ep
 
     pythermalcomfort_models()
-    model, hook = _athb_model(tmp_path / 'athb', monkeypatch)
+    model, hook = _athb_model(tmp_path / 'athb', monkeypatch, copies=True)
     shutil.copy(EPW, model.parent / 'Seville.epw')
     with warnings.catch_warnings():
         warnings.simplefilter('ignore')
@@ -702,7 +727,15 @@ def test_the_athb_setpoints_in_energyplus(tmp_path, monkeypatch):
     running_mean = column('PEOPLE BLOCK1:ZONE1:Zone Thermal Comfort CEN 15251 Adaptive Model Running Average').shift(1)
     for zone in ZONES:
         key = zone.replace('_', ':').upper()
-        humidity = column(f'{key}:Zone Air Relative Humidity').shift(1)
+        # The relative humidity that the sensor reads at the beginning of a timestep (copied by a program): that of the
+        # last system timestep of the previous timestep. The output Zone Air Relative Humidity of EnergyPlus is a
+        # variable of the system timestep, whose value in a row is the mean of the system timesteps of its timestep, so
+        # it is not the value that the sensor reads in the next timestep when EnergyPlus shortened them (with the
+        # outputs of each system timestep, on 2026-11-19: none in this week with the oversized VRF systems of the
+        # sample model before its windows were closed on its design days; since then, 365 of its 1008 timesteps, most
+        # of them while the windows of the model open and close at night and in the morning, with a relative humidity
+        # up to 9.7 % apart from that of the previous row, and setpoints of the bisection up to 0.31 K apart)
+        humidity = column(f'EMS:CopyRH_{zone} [')
         heating = column(f'AHST_SCH_{zone}:Schedule Value')
         cooling = column(f'ACST_SCH_{zone}:Schedule Value')
         expected = np.array([hook.operative_temperatures(humidity[t], running_mean[t]) for t in range(1, len(results))])
@@ -735,11 +768,23 @@ def test_the_athb_setpoints_in_energyplus(tmp_path, monkeypatch):
         clear = np.minimum(np.abs(operative - no_tolerance[:, 0]), np.abs(operative - no_tolerance[:, 1])) > 1e-3
         assert occupied.any() and (comfortable[clear] == (within & occupied)[clear]).all()
 
-        # The ATHB_PMV of the zone is that of its mean air and radiant temperatures and relative humidity of the
-        # previous timestep: the sensors read their last values, and the outputs are the means of the system timesteps
-        # of each timestep, so they differ by up to 0.02 in this week (task H4 of the review of 1.2.0, section 3.4)
+        # The ATHB_PMV of the zone is that of the values that its sensors read (copied by a program): the mean air
+        # temperature of the previous timestep (the output of the previous row, a variable of the zone timestep), the
+        # mean radiant temperature that EnergyPlus has calculated for the timestep (that of the row itself) and the
+        # relative humidity of the last system timestep of the previous timestep (see above); pythermalcomfort rounds
+        # the ATHB_PMV to 3 decimals, which the 6 significant digits of the copies in the CSV file can move by one step
         air = column(f'{key}:Zone Mean Air Temperature').to_numpy()
         radiant = column(f'{key}:Zone Mean Radiant Temperature').to_numpy()
+        copied = {name: column(f'EMS:Copy{name}_{zone} [').to_numpy() for name in ('MAT', 'MRT', 'RH')}
+        np.testing.assert_allclose(copied['MAT'][1:], air[:-1], rtol=1e-6, atol=0)
+        np.testing.assert_allclose(copied['MRT'][1:], radiant[1:], rtol=1e-6, atol=0)
+        sensed = np.asarray(ch.athb_pmv(copied['MAT'][1:], copied['MRT'][1:], hook.air_speed, copied['RH'][1:],
+                                        hook.met, running_mean.to_numpy()[1:]), dtype=float)
+        np.testing.assert_allclose(pmv.to_numpy()[1:], sensed, rtol=0, atol=1e-3 + 1e-9)
+        # With the outputs of the mean air and radiant temperatures and relative humidity of the previous row, it
+        # differs by up to 0.03 in this week (task H4 of the review of 1.2.0, section 3.4; measured again on 2026-11-19
+        # with the windows of the sample model closed on its design days: 0.029 and 0.026, median 0.004 and 0.005; up
+        # to 0.02 before)
         humid = column(f'{key}:Zone Air Relative Humidity').to_numpy()
         previous = np.asarray(ch.athb_pmv(air[:-1], radiant[:-1], hook.air_speed, humid[:-1], hook.met,
                                           running_mean.to_numpy()[1:]), dtype=float)
@@ -747,14 +792,17 @@ def test_the_athb_setpoints_in_energyplus(tmp_path, monkeypatch):
         assert np.median(difference) <= 0.01 and difference.max() <= 0.03
         # The scientific claim, bounded: in the occupied timesteps with the cooling coil on in the previous timestep,
         # the ATHB_PMV is at most 0.25 above the cooling setpoint of the ATHB in at least 95 % of them (all, in this
-        # week: at most 0.68 with the setpoint 0.5)
+        # week: at most 0.52 with the setpoint 0.5, in 251 and 224 timesteps, measured again on 2026-11-19 with the
+        # windows of the sample model closed on its design days; at most 0.68, in 310, before)
         cooling_on = column(f'{key} VRF INDOOR UNIT DX COOLING COIL:Cooling Coil Total Cooling Rate').to_numpy() > 0
         occupied_hours = column(f'EMS:Occupied Hours_{zone} [').to_numpy() > 0
         selected = np.zeros(len(results), dtype=bool)
         selected[2:] = occupied_hours[1:-1] & cooling_on[1:-1]
         assert selected.sum() > 100
         assert np.mean(pmv.to_numpy()[selected] <= hook.athb_cooling_setpoint + 0.25) >= 0.95
-        # No setpoint at the limits of temperature_range (10 to 30 °C): the cooling setpoints were 27.4 to 28.4 °C
+        # No setpoint at the limits of temperature_range (10 to 30 °C): the cooling setpoints were 27.2 to 28.8 °C
+        # (measured again on 2026-11-19 with the windows of the sample model closed on its design days; 27.4 to
+        # 28.4 °C before)
         assert (column(f'EMS:ATHB_saturated_{zone}') == 0).all()
 
 
@@ -763,7 +811,9 @@ def test_the_saturated_setpoints_of_the_athb_in_energyplus(tmp_path, monkeypatch
     from accim.sim.energyplus_api import run_simulations
 
     pythermalcomfort_models()
-    # Up to 27.5 °C, the cooling setpoints of the ATHB of these days (27.4 to 28.4 °C) are often out of the range
+    # Up to 27.5 °C, the cooling setpoints of the ATHB of these days (27.2 to 28.1 °C, measured again on 2026-11-19 with
+    # the windows of the sample model closed on its design days; 27.4 to 28.4 °C in the week before) are often out of
+    # the range
     model, hook = _athb_model(tmp_path / 'model', monkeypatch, end_day=16, temperature_range=(10.0, 27.5))
     [result] = run_simulations([(model, EPW, {'output_directory': tmp_path / 'api', 'output_prefix': 'run'})],
                                processes=1, before_programs=[hook])
@@ -787,7 +837,7 @@ def test_the_athb_setpoints_with_the_people_objects_in_energyplus(tmp_path, monk
     from accim.sim.energyplus_api import run_simulations
 
     pythermalcomfort_models()
-    model, hook = _athb_model(tmp_path / 'model', monkeypatch, end_day=17, met=None, air_speed=None)
+    model, hook = _athb_model(tmp_path / 'model', monkeypatch, end_day=17, copies=True, met=None, air_speed=None)
     idf = load_idf(model)
     for name in {hook.people[zone][key] for zone in ZONES for key in ('activity', 'air_speed')}:
         idf.newidfobject('Output:Variable', Key_Value=name, Variable_Name='Schedule Value',
@@ -817,8 +867,11 @@ def test_the_athb_setpoints_with_the_people_objects_in_energyplus(tmp_path, monk
                                    [ch.athb_met(met[t], running_mean[t]) for t in rows], atol=1e-5)
         np.testing.assert_allclose(column(f'EMS:ATHB_clo_{zone}').iloc[1:],
                                    [ch.athb_clo(met[t], running_mean[t]) for t in rows], atol=1e-5)
-        # The setpoints without the tolerance are those of the bisection with those inputs
-        humidity = column(f'{key}:Zone Air Relative Humidity').shift(1)
+        # The setpoints without the tolerance are those of the bisection with those inputs, and the relative humidity
+        # that the sensor reads (copied by a program: that of the last system timestep of the previous timestep, which
+        # is not the output of the previous row after the timesteps whose system timesteps EnergyPlus shortened, see
+        # test_the_athb_setpoints_in_energyplus)
+        humidity = column(f'EMS:CopyRH_{zone} [')
         expected = np.array([hook.operative_temperatures(humidity[t], running_mean[t], met[t], relative[t])
                              for t in rows])
         no_tolerance = np.column_stack([
@@ -1182,6 +1235,8 @@ def test_the_set_setpoints_in_energyplus(tmp_path, monkeypatch):
             idf.removeidfobject(idf.getobject('EnergyManagementSystem:Sensor', f'{prefix}_{zone}'))
     hook = ch.apply_set_setpoints(idf, set_cooling_setpoint=27, set_heating_setpoint=21, met=1.1, clo=0.5,
                                   air_speed=0.1)
+    # The relative humidity that the sensor of the hook reads, copied by a program
+    _copy_sensors(idf, 'SET', ('RH',))
     idf.save()
     shutil.copy(EPW, model.parent / 'Seville.epw')
     with warnings.catch_warnings():
@@ -1195,13 +1250,15 @@ def test_the_set_setpoints_in_energyplus(tmp_path, monkeypatch):
         return results[next(c for c in columns if c.upper().startswith(start.upper()))]
 
     for zone in ZONES:
-        humidity = column(f'{zone.replace("_", ":").upper()}:Zone Air Relative Humidity').shift(1)
+        humidity = column(f'EMS:CopyRH_{zone} [')
         interpolated = np.array([hook.setpoints_of_humidity(humidity[t]) for t in range(1, len(results))])
         exact = np.array([hook.operative_temperatures(humidity[t]) for t in range(1, len(results), 50)])
         heating = column(f'EMS:Adaptive Heating Setpoint Temperature_No Tolerance_{zone} [').iloc[1:].to_numpy()
         cooling = column(f'EMS:Adaptive Cooling Setpoint Temperature_No Tolerance_{zone} [').iloc[1:].to_numpy()
-        # The setpoints of the table of the hook, interpolated with the humidity of the previous timestep (that which
-        # the sensor reads), within the tolerance of the bisection of the exact setpoints
+        # The setpoints of the table of the hook, interpolated with the relative humidity that the sensor reads (that of
+        # the last system timestep of the previous timestep, which is not the output of the previous row after the
+        # timesteps whose system timesteps EnergyPlus shortened, see test_the_athb_setpoints_in_energyplus), within the
+        # tolerance of the bisection of the exact setpoints
         assert np.abs(heating - interpolated[:, 0]).max() <= 1e-3
         assert np.abs(cooling - interpolated[:, 1]).max() <= 1e-3
         assert np.abs(heating[::50] - exact[:, 0]).max() <= hook.tolerance_k + 1e-3

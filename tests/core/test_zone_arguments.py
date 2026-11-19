@@ -315,10 +315,12 @@ def test_add_accis_to_idf_adds_the_programs_of_each_zone(building, script_type):
         assert all(line.startswith(f'run SetWindowOperation_{zone}_') for line in windows)
     assert 'SetInputData' not in programs and 'SetVOFinputData' not in programs
     assert list(programs['SetAST'].obj[2:]) == ['run SetAST_Master']
-    # Only SetGeoVar<zone>, RunACCIS_<zone> and InitASTvariables have calling managers
+    # Only SetGeoVar<zone>, RunACCIS_<zone> and InitASTvariables have calling managers; in full air-conditioning, also
+    # CloseWindowsOnDesignDays, which closes the windows of the sample model on the design days (since 2026-11-19)
     managers = [m.Name for m in building.idfobjects['EnergyManagementSystem:ProgramCallingManager']]
+    design_days = [] if mixed_mode else ['CloseWindowsOnDesignDays']
     assert managers == ['SetGeoVarBlock1_Zone2', 'SetGeoVarBlock1_Zone1', 'RunACCIS_Block1_Zone2',
-                        'RunACCIS_Block1_Zone1', 'InitASTvariables']
+                        'RunACCIS_Block1_Zone1', 'InitASTvariables'] + design_days
     outputs = {o.Name for o in building.idfobjects['EnergyManagementSystem:OutputVariable']}
     assert {'Adaptive Cooling Setpoint Temperature', 'Adaptive Cooling Setpoint Temperature_Block1_Zone1',
             'Comfort Temperature_Block1_Zone2'} <= outputs

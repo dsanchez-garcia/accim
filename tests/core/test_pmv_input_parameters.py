@@ -266,6 +266,21 @@ def _simulate(tmp_path, building, periods, variables):
                     reason='needs EnergyPlus 25.1 and the sample files of the repository')
 def test_energyplus_changes_the_values_by_season_on_the_days_of_the_cooling_season_of_the_setpoints(tmp_path):
     building = _model(tmp_path)
+    # The windows of the sample model are closed (NoVent; since 2026-11-19): the values by season do not depend on
+    # them, and EnergyPlus did not converge with them. Their own venting control (that of their AirflowNetwork
+    # surfaces) opens them above 24 °C. With the VRF systems sized with them closed on the design days
+    # (accim.sim.ems.design_days) and the PMV-based setpoints of 30 April (about 19 and 25 °C), the zones float up to
+    # 24 °C in the mornings, the windows open to the outdoor air at 16 °C for some minutes of a timestep, and then the
+    # VRF systems heat or not, as the state of the zones at the beginning of the day differs by hundredths of a kelvin:
+    # the daily peak of the heating rate alternated between two values on the warmup days of 30 April (0.75 and 3.0 kW
+    # in Block1:Zone1, 1.0 and 3.4 kW in Block1:Zone2), and EnergyPlus 25.1 did not converge after 25 warmup days, nor
+    # after 100 (a severe error). With the windows closed, both run periods converge in 6 warmup days. (The VRF
+    # systems sized before 2026-11-19 with the windows open on the winter design day, for design heating loads of 245
+    # and 289 kW instead of 0.85 and 0.96 kW, also heated in these mornings, but with the same peaks on their last
+    # warmup days, 3.1 and 3.3 kW.)
+    for surface in building.idfobjects['AirflowNetwork:MultiZone:Surface']:
+        if surface.Ventilation_Control_Mode:
+            surface.Ventilation_Control_Mode = 'NoVent'
     apmv.set_pmv_input_parameters(building, clothing_insulation=CLOTHING, activity_level=ACTIVITY, verbose=False)
     apmv.add_vrf_system(building, verbose=False)
     apmv.apply_epmv_setpoints(building, expectancy_factor=0.7, output_frequencies=['timestep'], verbose=False)

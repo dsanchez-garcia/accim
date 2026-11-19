@@ -23,7 +23,14 @@ A24 of the self-audit of 2026-11-11): two lines more in each program `SetInputDa
 2026-11-17, `runner.py` reads the models of the in-memory functions with `accim.sim.accis.load_idf` (eppy) instead of
 `besos.eppy_funcs.get_building`, so that the golden master runs without besos: as with `AddAccis` in 1.1.0, eppy writes
 some numbers of the input models in another way, and the golden files of `s01` to `s09` were written again after
-checking, line by line, that only these numbers changed (7 to 18 lines in each file, the same values).
+checking, line by line, that only these numbers changed (7 to 18 lines in each file, the same values). Since 2026-11-19
+(the decision of that day in `notes/decisions.md`), full air-conditioning closes the windows of the model on the design
+days (`accim.sim.ems.design_days`): the golden files of the 10 configurations of `vrf_ac`, `ex_ac` and `add_vrf_system`
+whose models have windows that open (`b01`, `b04`, `b06`, `b18` to `b20`, `s03`, `s05`, `s07` and `s08`) were written
+again after checking that no line of them changed and that each output IDF only got the schedule `ACCIS Design Days`,
+the sensor `DesignDay`, the actuators of its windows (6 of the AirflowNetwork, or 2 of the `ZoneVentilation` objects in
+`s08`), and the program `CloseWindowsOnDesignDays` and its calling manager (75 or 43 lines; the CSV file of `s05` did
+not change); the other 21 did not change (mixed mode, and the models without windows that open).
 
 | File | What it holds |
 | --- | --- |

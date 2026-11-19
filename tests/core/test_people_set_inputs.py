@@ -399,8 +399,8 @@ def test_the_errors_of_the_indicators_with_the_inputs_of_the_people_objects(tmp_
 def test_the_set_of_the_results_is_that_of_the_hook_of_comfort_standard_24(tmp_path, monkeypatch):
     # A summer week of the sample model with comfort standard 24 (the backend of the API and its hook), with the
     # outputs of the inputs of the occupants: the SET of pythermalcomfort of each row of the results, with the
-    # schedules of the People objects, against the SET that the hook reports (that of the values of its sensors, those
-    # of the previous timestep), and the indicators of the causal band of both
+    # schedules of the People objects, against the SET that the hook reports (that of the values that its sensors read
+    # at the beginning of each timestep), and the indicators of the causal band of both
     pythermalcomfort_models()
     from accim.data.postprocessing.main import Table
     from accim.run import run_ep
@@ -435,50 +435,93 @@ def test_the_set_of_the_results_is_that_of_the_hook_of_comfort_standard_24(tmp_p
     # The schedules of the hook (apply_sun2026_setpoints gives them to it), or those of the model
     found = ch.set_of_results(results, hook)
     pd.testing.assert_frame_equal(ch.set_of_results(results, hook, people=ch.people_inputs(load_idf(model))), found)
-    # At the beginning of each timestep, the sensors of the hook read the mean air temperature and the relative
-    # humidity of the previous timestep (those of the previous row) and the mean radiant temperature that EnergyPlus
-    # has calculated for the timestep (that of the row itself); the schedules are those of the timestep. With them,
-    # the SET of the results is that of the hook (the CSV file has 6 significant digits)
-    shifted = results.copy()
+    # At the beginning of each timestep, the sensors of the hook read the mean air temperature of the previous timestep
+    # (that of the previous row), the mean radiant temperature that EnergyPlus has calculated for the timestep (that of
+    # the row itself) and the relative humidity of the last system timestep of the previous timestep; the schedules are
+    # those of the timestep. The output Zone Air Relative Humidity is a variable of the system timestep, whose value in
+    # a row is the mean of the system timesteps of its timestep (the mean air temperature, a variable of the zone
+    # timestep, is that mean itself), so it is not the value that the sensor reads in the next timestep when EnergyPlus
+    # shortened them: in 392 of the 1007 timesteps of this week, by up to 10.6 %, mostly while the windows of the model
+    # open and close (measured on 2026-11-19 with the windows of the sample model closed on its design days; in none
+    # before, when its oversized VRF systems kept the zones steady). The programs of _sun2026_model copy the values that
+    # the sensors read into reported variables: with them, the SET of the results is that of the hook (the CSV file
+    # has 6 significant digits)
+    sensed = results.copy()
     for zone in ZONES:
-        for name in ('Zone Mean Air Temperature', 'Zone Air Relative Humidity'):
+        for prefix, name in (('MAT', 'Zone Mean Air Temperature'), ('MRT', 'Zone Mean Radiant Temperature'),
+                             ('RH', 'Zone Air Relative Humidity')):
             key = f"{zone.replace('_', ':')}:{name} [".upper()
             [name_of_column] = [c for c in results.columns if c.upper().startswith(key)]
-            shifted[name_of_column] = results[name_of_column].shift(1)
-    as_the_hook = ch.set_of_results(shifted, hook)
+            copied = column(f'EMS:Copy{prefix}_{zone} [')
+            if prefix != 'RH':
+                outputs = results[name_of_column].to_numpy(dtype=float)
+                np.testing.assert_allclose(copied[1:], outputs[:-1] if prefix == 'MAT' else outputs[1:], rtol=1e-6,
+                                           atol=0)
+            sensed[name_of_column] = copied
+    as_the_hook = ch.set_of_results(sensed, hook)
     for zone in ZONES:
         reported = column(f'EMS:SET_{zone} [')
         np.testing.assert_allclose(as_the_hook[f'SET_{zone}'].to_numpy()[1:], reported[1:], rtol=0, atol=1e-3)
-        # With the conditions of each row (the means of its timestep), as set_of_results and the indicators take
-        # them, it is within 0.02 K of that of the hook on average (measured: 0.012 and 0.013 K, at most 0.14 K)
+        # With the conditions of each row (the means of its timestep), as set_of_results and the indicators of the
+        # results of any simulation take them, it is 0.105 and 0.113 K away from that of the hook on average, and
+        # 0.951 and 1.325 K at most (measured again on 2026-11-19 with the windows of the sample model closed on its
+        # design days: the zones change from one timestep to the next while the windows of the model open and close
+        # and the VRF systems follow the setpoints, and the hook takes the conditions of the beginning of each
+        # timestep; before, when the oversized VRF systems kept the zones steady, within 0.02 K: 0.012 and 0.013 K,
+        # and 0.14 K at most. Closing the windows of the model does not bring that back: 0.025 to 0.032 K on average
+        # in weeks of May to September)
         computed = found[f'SET_{zone}'].to_numpy()
         assert not np.isnan(computed).any()
         difference = np.abs(reported - computed)[1:]
-        assert difference.mean() < 0.02 and difference.max() < 0.2, (zone, difference.mean(), difference.max())
+        measured = (round(float(difference.mean()), 3), round(float(difference.max()), 3))
+        assert measured == pytest.approx({'Block1_Zone1': (0.105, 0.951), 'Block1_Zone2': (0.113, 1.325)}[zone],
+                                         abs=1e-3), (zone, measured)
     # The indicators of the causal band with the inputs of the People objects, in the folder of the simulation (the
-    # model of 'sun[Seville.csv' is 'sun.idf'), against the outputs of the hook
+    # model of 'sun[Seville.csv' is 'sun.idf'), against the outputs of the hook: those of the conditions that the
+    # sensors of the hook read, in a copy of the CSV file of the simulation with the values of the programs that copy
+    # them ('sensors[Seville.csv', whose model is a copy of 'sun.idf'), and those of the SET of the Pierce model, of
+    # the rows of the simulation
     monkeypatch.chdir(model.parent)
+    sensed.to_csv('sensors[Seville.csv', index=False)
+    shutil.copy('sun.idf', 'sensors.idf')
+    rows = {}
     with warnings.catch_warnings():
         warnings.simplefilter('ignore')
-        table = Table(datasets=['sun[Seville.csv'], source_frequency='timestep', frequency='timestep',
-                      frequency_agg_func='sum', standard_outputs=True, level=['building'],
-                      level_agg_func=['sum', 'mean'], level_excluded_zones=[], idf_path='sun.idf')
-        row = ia.table_indicators(table.df, table.occupied_zone_list, pythermalcomfort_set='people').iloc[0]
-    assert sorted(name.upper() for name in table.occupied_zone_list) == [zone.replace('_', ':').upper()
-                                                                         for zone in ZONES]
+        for prefix in ('sun', 'sensors'):
+            table = Table(datasets=[f'{prefix}[Seville.csv'], source_frequency='timestep', frequency='timestep',
+                          frequency_agg_func='sum', standard_outputs=True, level=['building'],
+                          level_agg_func=['sum', 'mean'], level_excluded_zones=[], idf_path=f'{prefix}.idf')
+            rows[prefix] = ia.table_indicators(table.df, table.occupied_zone_list,
+                                               pythermalcomfort_set='people').iloc[0]
+            assert sorted(name.upper() for name in table.occupied_zone_list) == [zone.replace('_', ':').upper()
+                                                                                 for zone in ZONES]
     for zone in ZONES:
         [name] = [name for name in table.occupied_zone_list if name.upper() == zone.replace('_', ':').upper()]
         hours = column(f'EMS:Occupied Hours_{zone} [')
         reported = column(f'EMS:SET_{zone} [')
         in_band = column(f'EMS:HoursInCausalBand_{zone} [').sum()
-        # With the rows of each timestep, the hours within the band are those of the hook (measured: 27.8 and 34.3 of
-        # the 60 occupied hours of each zone; one timestep of margin), and the mean SET differs by 0.001 K
-        assert row[f'{name}_Mean SET_pythermalcomfort (°C)'] == pytest.approx(
-            (reported * hours).sum() / hours.sum(), abs=0.005)
+        # With the conditions that the sensors read, the hours within the band are those of the hook (53.5 and 46.0 of
+        # the 60 occupied hours of each zone; one timestep of margin), and the mean SET is that of the hook. With the
+        # rows of the simulation (the means of each timestep, as the indicators of any simulation take them), they are
+        # 55.7 and 51.0, and the mean SET is 0.0125 and 0.0058 K above that of the hook (measured again on 2026-11-19
+        # with the windows of the sample model closed on its design days; 27.8 and 34.3 hours before, those of the hook,
+        # and the mean SET within 0.005 K of it, when the oversized VRF systems kept the zones steady)
+        mean_of_the_hook = (reported * hours).sum() / hours.sum()
+        row = rows['sensors']
+        assert row[f'{name}_Mean SET_pythermalcomfort (°C)'] == pytest.approx(mean_of_the_hook, abs=0.005)
         assert row[f'{name}_Hours In Causal Band_pythermalcomfort (h)'] == pytest.approx(in_band, abs=1 / STEPS + 1e-6)
         assert 0 < in_band < hours.sum()
+        assert rows['sun'][f'{name}_Hours In Causal Band_pythermalcomfort (h)'] == pytest.approx(
+            {'Block1_Zone1': 55 + 4 / STEPS, 'Block1_Zone2': 51.0}[zone], abs=1 / STEPS + 1e-6)
+        assert rows['sun'][f'{name}_Mean SET_pythermalcomfort (°C)'] - mean_of_the_hook == pytest.approx(
+            {'Block1_Zone1': 0.0125, 'Block1_Zone2': 0.0058}[zone], abs=1e-3)
         # The SET of the Pierce model of EnergyPlus, which the indicators without pythermalcomfort_set take, is 0.2 K
-        # higher in this week (1.06 met, 0.5 clo), and has 3.2 hours less within the band
+        # higher than that of the rows in this week (1.06 met, 0.5 clo; 0.19 and 0.17 K, measured again on 2026-11-19
+        # with the windows of the sample model closed on its design days, and 0.21 and 0.19 K before), and has 34.0
+        # and 22.0 hours less than the hook within the band, since the SET of the hook is at the upper limit of the
+        # band while the VRF systems hold the cooling setpoints (3.17 hours less in both zones before)
+        row = rows['sun']
         assert (row[f'{name}_Mean SET_Pierce (°C)'] - row[f'{name}_Mean SET_pythermalcomfort (°C)']
                 ) == pytest.approx(0.2, abs=0.05)
-        assert in_band - row[f'{name}_Hours In Causal Band (h)'] == pytest.approx(3.17, abs=0.5)
+        assert in_band - row[f'{name}_Hours In Causal Band (h)'] == pytest.approx(
+            {'Block1_Zone1': 34.0, 'Block1_Zone2': 22.0}[zone], abs=0.5)

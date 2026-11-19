@@ -48,8 +48,11 @@ as first decided) makes it hold the cooling setpoint of the occupied hours all d
 days; so the air speed of the fans is that of all the hours of the cooling season, and the limiter stays as it is.
 With the setpoints of a hook, which follow the mean radiant temperature, the humidity and the clothing within the
 day, the limiter still acts within the day: section 4.2.7 of the detailed use. The sample model (``--idf`` by default)
-is a test model, for trying the script and not for the study: its VRF system does not hold the cooling setpoints in a
-summer week.
+is a test model, for trying the script and not for the study: its windows keep the venting control of the model, which
+opens them above 24 °C, also in full air-conditioning (in a week of July, they are open in 74 to 105 of the 168 hours
+of each zone, and with the setpoints of EN 16798-1 the heating coils work in 14 hours of each zone, all of them with
+the windows open). Its VRF systems hold the cooling setpoints in a summer week since they are sized with the windows
+closed on the design days (2026-11-19).
 """
 import argparse
 import os

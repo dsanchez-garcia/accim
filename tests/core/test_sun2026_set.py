@@ -8,7 +8,8 @@ and, by default, their mean radiant temperature (:mod:`accim.sim.comfort_hooks`)
 The unit tests use a fake controller and the Erl interpreter of accim; the last tests simulate the sample model with
 EnergyPlus 25.1, through its Python API, and compare the SET of the hook with that of the Pierce model of EnergyPlus
 hour by hour (the differences measured are in ``notes/decisions.md``: F1, 2026-11-10, and the range of the setpoints,
-2026-11-18; the test reproduces them).
+2026-11-18; measured again on 2026-11-19, with the windows of the sample model closed on its design days, see
+``MEASURED``; the test reproduces them).
 """
 import re
 import shutil
@@ -605,10 +606,26 @@ def test_the_model_of_the_hook_of_the_set_with_the_dynamic_clothing_model_runs(t
 #: heats to 18.1 °C (the minimum plus the tolerance), which changed them from (-0.080, 0.081, 0.191) and (-0.082,
 #: 0.083, 0.204); and again on 2026-11-18, with the range of the setpoints of the thermostats (the decision of the
 #: author of that day: the heating setpoints are lower, though the zones stay far above them), which changed the
-#: maximums from 0.187 and 0.204
+#: maximums from 0.187 and 0.204. All of them were measured again on 2026-11-19, with the windows of the sample model
+#: closed on its design days (:mod:`accim.sim.ems.design_days`; until then, EnergyPlus sized its VRF systems with them
+#: open, about 100 times too big, and the heat of their fans kept the zones warm), which changed them from (-0.080,
+#: 0.081, 0.190) and (-0.082, 0.082, 0.205) in winter, and from (-0.156, 0.156, 0.262) and (-0.154, 0.154, 0.291) in
+#: summer. The maximums are larger now: in the hours in which the windows of the model open (above 24 °C), the air
+#: temperature of a zone changes fast (in January, it falls by up to 13.6 K in a timestep), and the SET of the hook,
+#: with the air temperature of the previous timestep that its sensor reads, follows that of the Pierce model a
+#: timestep later
 MEASURED = {
-    ('winter', 'Block1_Zone1'): (-0.080, 0.081, 0.190), ('winter', 'Block1_Zone2'): (-0.082, 0.082, 0.205),
-    ('summer', 'Block1_Zone1'): (-0.156, 0.156, 0.262), ('summer', 'Block1_Zone2'): (-0.154, 0.154, 0.291),
+    ('winter', 'Block1_Zone1'): (-0.016, 0.086, 0.631), ('winter', 'Block1_Zone2'): (-0.028, 0.087, 0.723),
+    ('summer', 'Block1_Zone1'): (-0.140, 0.153, 0.417), ('summer', 'Block1_Zone2'): (-0.138, 0.148, 0.350),
+}
+#: The share of the timesteps of each week (after the first one) in which the air temperature whose SET is the heating
+#: setpoint of the SET, with the mean radiant temperature of the zone, is below 10 °C, measured on 2026-11-19 with the
+#: windows of the sample model closed on its design days. Until then (with the fans of its oversized VRF systems, the
+#: zones and their mean radiant temperature were warmer: 25 instead of 22.5 to 22.9 °C on average in January), it was
+#: below 10 °C in all the timesteps of January, and in 0.644 and 0.622 of those of July
+BELOW_10 = {
+    ('winter', 'Block1_Zone1'): 0.661, ('winter', 'Block1_Zone2'): 0.702,
+    ('summer', 'Block1_Zone1'): 0.618, ('summer', 'Block1_Zone2'): 0.567,
 }
 
 
@@ -715,8 +732,8 @@ def test_comfort_standard_24_in_energyplus(tmp_path, monkeypatch, season, begin,
         np.testing.assert_allclose(tsv, 0.11 * reported - 2.6, atol=1e-6)
         # The hours at a limit of temperature_range, 10 to 40 °C (task A6): none in these weeks. With the mean radiant
         # temperature of the zone, the air temperature whose SET is the heating setpoint of the SET is below 10 °C in
-        # all the timesteps of the week of January and in most of those of July, within the range of the bisection of
-        # the air temperature, 2·10 − MRT to 2·40 − MRT, whose setpoints of the thermostats are within 10 to 40 °C (the
+        # most of the timesteps of both weeks (BELOW_10, measured), within the range of the bisection of the air
+        # temperature, 2·10 − MRT to 2·40 − MRT, whose setpoints of the thermostats are within 10 to 40 °C (the
         # decision of the author of 2026-11-18; until then, that range was 10 to 40 °C, and the heating setpoints were
         # at its limit in those timesteps)
         inverted = [hook.inverted_temperatures(copied['RH'][t], copied['MRT'][t], met[t], copied['Clo'][t],
@@ -725,8 +742,8 @@ def test_comfort_standard_24_in_energyplus(tmp_path, monkeypatch, season, begin,
                              for t, temperatures in enumerate(inverted)])
         np.testing.assert_allclose(column(f'EMS:SETsaturated_{zone} [').iloc[1:].to_numpy(),
                                    np.where(expected, 1 / STEPS, 0.0), atol=1e-9)
-        below = np.mean([temperatures[0] < 10 for temperatures in inverted])
-        assert not expected.any() and (below == 1.0 if season == 'winter' else 0.5 < below < 1.0), below
+        below = round(float(np.mean([temperatures[0] < 10 for temperatures in inverted])), 3)
+        assert not expected.any() and below == pytest.approx(BELOW_10[season, zone], abs=1e-3), below
         occupied = column(f'EMS:Occupied Hours_{zone} [').iloc[1:].to_numpy() > 0
         hours = column(f'EMS:HoursInCausalBand_{zone} [').iloc[1:].to_numpy()
         inside = (reported >= hook.band[0]) & (reported <= hook.band[1])
@@ -954,7 +971,13 @@ def test_the_fallback_of_the_ems_of_comfort_standard_24_in_energyplus(tmp_path, 
     # Measured on 2026-11-18 (EnergyPlus 25.1, the sample model in Seville, 15 to 17 July): the model with the fallback
     # runs with the EMS backend, which gives the results of the backend of the API without the hook, exactly; with the
     # hook, the backend of the API gives those of the model without the fallback, exactly (the hook gives the setpoints
-    # first, and the feedback does nothing); and the setpoints of the feedback follow those of the hook
+    # first, and the feedback does nothing); and the setpoints of the feedback follow those of the hook. Measured again
+    # on 2026-11-19, with the windows of the sample model closed on its design days (its VRF systems were about 100
+    # times too big before, and kept the zones warm): on 16 and 17 July, the cooling setpoints of the feedback are 0.18
+    # and 0.20 K above those of the hook on average (0.40 and 0.42 K in absolute value; about 0.01 K before), the
+    # heating setpoints 0.05 K above, and the operative temperatures within 0.39 K of those of the hook
+    measured = {('Block1_Zone1', 'Cooling'): 0.183, ('Block1_Zone1', 'Heating'): 0.046,
+                ('Block1_Zone2', 'Cooling'): 0.196, ('Block1_Zone2', 'Heating'): 0.051}
     from accim.run import run_ep
     from accim.sim.ems.hook_setpoints import MissingHookWarning
     from accim.sim.energyplus_api import run_simulations
@@ -989,6 +1012,7 @@ def test_the_fallback_of_the_ems_of_comfort_standard_24_in_energyplus(tmp_path, 
                         if c.startswith(f'EMS:Adaptive {kind} Setpoint Temperature_No Tolerance_{zone} ['))
             difference = ems.loc[rows, name] - results['hook'].loc[rows, name]
             assert low < difference.mean() < high, (zone, kind, difference.mean())
+            assert difference.mean() == pytest.approx(measured[zone, kind], abs=0.01), (zone, kind, difference.mean())
             assert difference.abs().mean() < 0.6, (zone, kind, difference.abs().mean())
         operative = next(c for c in ems.columns if c.startswith(f'{zone.replace("_", ":").upper()}:Zone Operative '))
         assert (ems.loc[rows, operative] - results['hook'].loc[rows, operative]).abs().max() < 0.6

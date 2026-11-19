@@ -2,7 +2,8 @@
 effective temperature (SET) of the Pierce two-node model of EnergyPlus against that of pythermalcomfort
 (``pythermalcomfort.models.set_tmp``, which the hook of the SET of :mod:`accim.sim.comfort_hooks` uses), from the same
 outputs, measured again on 2026-11-12 by activity level (findings A1 and A2 of the self-audit of 2026-11-11, decided on
-2026-11-12, ``notes/decisions.md``).
+2026-11-12, ``notes/decisions.md``) and on 2026-11-19, with the windows of the sample model closed on its design days
+(:mod:`accim.sim.ems.design_days`).
 
 :func:`accim.sim.people.add_thermal_comfort_model` adds the model Pierce to the People objects. The tests of the SET
 simulate the sample model with the ACCIS (INT EN16798, category II, comfort mode 3, full air-conditioning) and Pierce
@@ -23,8 +24,11 @@ velocity (0.137 m/s) schedules of the People object, in each timestep:
   convective coefficient of the real environment, as the Pierce model of EnergyPlus 25.1 has it (only in that of the
   standard environment): the difference between both models then does not depend on the activity level (finding A2).
 
-The differences measured are in ``notes/decisions.md`` (E-F1, 2026-11-10 and 2026-11-12); the tests reproduce them, so
-they fail if EnergyPlus, pythermalcomfort or the model change them.
+The differences measured on 2026-11-10 and 2026-11-12 are in ``notes/decisions.md`` (E-F1): they were those of the
+VRF systems of the sample model about 100 times too big, which EnergyPlus sized with its windows open on its winter
+design day (their venting setpoint is 0 °C on that day) and whose fans kept the zones warm in winter. The tests
+reproduce those measured again on 2026-11-19, with the windows closed on the design days, so they fail if EnergyPlus,
+pythermalcomfort or the model change them.
 """
 import importlib
 import os
@@ -62,42 +66,47 @@ ACTIVITIES = (SAMPLE_ACTIVITY, 115.0, 126.0)
 #: The body surface area (m²) with which the activity level is converted to met: that of the hooks of accim (and of the
 #: Fanger and KSU models of EnergyPlus), and that of the Pierce model of EnergyPlus 25.1
 BODY_SURFACE_AREAS = {'accim': 1.8, 'pierce': 1.8258}
-#: The hourly differences measured on 2026-11-12 (SET of pythermalcomfort minus SET of EnergyPlus, K): the mean, the
-#: mean of the absolute values and the maximum absolute value, of all the hours of the year, by activity level
-#: (W/person), zone, body surface area of the metabolic rate and posture. Those of 110.7 W/person with 1.8 m² are those
-#: measured on 2026-11-10 (task E-F1)
+#: The hourly differences (SET of pythermalcomfort minus SET of EnergyPlus, K): the mean, the mean of the absolute
+#: values and the maximum absolute value, of all the hours of the year, by activity level (W/person), zone, body surface
+#: area of the metabolic rate and posture, measured again on 2026-11-19 with the windows of the sample model closed on
+#: its design days (:mod:`accim.sim.ems.design_days`). Those of 2026-11-10 (110.7 W/person with 1.8 m², task E-F1) and
+#: 2026-11-12 (``notes/decisions.md``), with its VRF systems about 100 times too big (sized with its windows open on its
+#: winter design day, their fans kept the zones warm in winter), were (-0.0454, 0.0565, 0.1805) for the first one, and
+#: means of -0.3248 and -0.9431 K for those of 115 and 126 W/person
 MEASURED = {
-    (110.7, 'Block1:Zone1', 'accim', 'standing'): (-0.0454, 0.0565, 0.1805),
-    (110.7, 'Block1:Zone1', 'accim', 'sitting'): (-0.1162, 0.1176, 0.3236),
-    (110.7, 'Block1:Zone1', 'pierce', 'standing'): (-0.0583, 0.0583, 0.1324),
-    (110.7, 'Block1:Zone1', 'pierce', 'sitting'): (-0.1278, 0.1278, 0.2733),
-    (110.7, 'Block1:Zone2', 'accim', 'standing'): (-0.0452, 0.0562, 0.1961),
-    (110.7, 'Block1:Zone2', 'accim', 'sitting'): (-0.1158, 0.1172, 0.3444),
-    (110.7, 'Block1:Zone2', 'pierce', 'standing'): (-0.0581, 0.0581, 0.1442),
-    (110.7, 'Block1:Zone2', 'pierce', 'sitting'): (-0.1275, 0.1275, 0.2900),
-    (115.0, 'Block1:Zone1', 'accim', 'standing'): (-0.3248, 0.3248, 0.5780),
-    (115.0, 'Block1:Zone1', 'accim', 'sitting'): (-0.3977, 0.3977, 0.7114),
-    (115.0, 'Block1:Zone1', 'pierce', 'standing'): (-0.3312, 0.3312, 0.5156),
-    (115.0, 'Block1:Zone1', 'pierce', 'sitting'): (-0.4033, 0.4033, 0.6489),
-    (115.0, 'Block1:Zone2', 'accim', 'standing'): (-0.3245, 0.3245, 0.6031),
-    (115.0, 'Block1:Zone2', 'accim', 'sitting'): (-0.3973, 0.3973, 0.7461),
-    (115.0, 'Block1:Zone2', 'pierce', 'standing'): (-0.3310, 0.3310, 0.5346),
-    (115.0, 'Block1:Zone2', 'pierce', 'sitting'): (-0.4030, 0.4030, 0.6774),
-    (126.0, 'Block1:Zone1', 'accim', 'standing'): (-0.9431, 0.9431, 1.4112),
-    (126.0, 'Block1:Zone1', 'accim', 'sitting'): (-1.0206, 1.0206, 1.5368),
-    (126.0, 'Block1:Zone1', 'pierce', 'standing'): (-0.9661, 0.9661, 1.3868),
-    (126.0, 'Block1:Zone1', 'pierce', 'sitting'): (-1.0429, 1.0429, 1.5124),
-    (126.0, 'Block1:Zone2', 'accim', 'standing'): (-0.9429, 0.9429, 1.4406),
-    (126.0, 'Block1:Zone2', 'accim', 'sitting'): (-1.0203, 1.0203, 1.5795),
-    (126.0, 'Block1:Zone2', 'pierce', 'standing'): (-0.9660, 0.9660, 1.4110),
-    (126.0, 'Block1:Zone2', 'pierce', 'sitting'): (-1.0427, 1.0427, 1.5462),
+    (110.7, 'Block1:Zone1', 'accim', 'standing'): (-0.0315, 0.0533, 0.1705),
+    (110.7, 'Block1:Zone1', 'accim', 'sitting'): (-0.0947, 0.1020, 0.3079),
+    (110.7, 'Block1:Zone1', 'pierce', 'standing'): (-0.0506, 0.0508, 0.1251),
+    (110.7, 'Block1:Zone1', 'pierce', 'sitting'): (-0.1126, 0.1126, 0.2612),
+    (110.7, 'Block1:Zone2', 'accim', 'standing'): (-0.0315, 0.0528, 0.1853),
+    (110.7, 'Block1:Zone2', 'accim', 'sitting'): (-0.0945, 0.1013, 0.3306),
+    (110.7, 'Block1:Zone2', 'pierce', 'standing'): (-0.0506, 0.0508, 0.1382),
+    (110.7, 'Block1:Zone2', 'pierce', 'sitting'): (-0.1124, 0.1124, 0.2799),
+    (115.0, 'Block1:Zone1', 'accim', 'standing'): (-0.3116, 0.3116, 0.5882),
+    (115.0, 'Block1:Zone1', 'accim', 'sitting'): (-0.3774, 0.3774, 0.7098),
+    (115.0, 'Block1:Zone1', 'pierce', 'standing'): (-0.3242, 0.3242, 0.5327),
+    (115.0, 'Block1:Zone1', 'pierce', 'sitting'): (-0.3890, 0.3890, 0.6524),
+    (115.0, 'Block1:Zone2', 'accim', 'standing'): (-0.3115, 0.3115, 0.6244),
+    (115.0, 'Block1:Zone2', 'accim', 'sitting'): (-0.3772, 0.3772, 0.7605),
+    (115.0, 'Block1:Zone2', 'pierce', 'standing'): (-0.3242, 0.3242, 0.5600),
+    (115.0, 'Block1:Zone2', 'pierce', 'sitting'): (-0.3889, 0.3889, 0.6962),
+    (126.0, 'Block1:Zone1', 'accim', 'standing'): (-0.9368, 0.9368, 1.4792),
+    (126.0, 'Block1:Zone1', 'accim', 'sitting'): (-1.0083, 1.0083, 1.5972),
+    (126.0, 'Block1:Zone1', 'pierce', 'standing'): (-0.9651, 0.9651, 1.4599),
+    (126.0, 'Block1:Zone1', 'pierce', 'sitting'): (-1.0357, 1.0357, 1.5779),
+    (126.0, 'Block1:Zone2', 'accim', 'standing'): (-0.9366, 0.9366, 1.5317),
+    (126.0, 'Block1:Zone2', 'accim', 'sitting'): (-1.0079, 1.0079, 1.6664),
+    (126.0, 'Block1:Zone2', 'pierce', 'standing'): (-0.9649, 0.9649, 1.5034),
+    (126.0, 'Block1:Zone2', 'pierce', 'sitting'): (-1.0354, 1.0354, 1.6382),
 }
 #: The same differences (the metabolic rate of the Pierce model, standing) without the term of the activity in the
 #: convective coefficient of the real environment of the two-node model of pythermalcomfort, by activity level and zone
+#: (measured again on 2026-11-19, as :data:`MEASURED`; the means were -0.0583, -0.0561 and -0.0514 K in Block1:Zone1
+#: until then)
 MEASURED_WITHOUT_THE_ACTIVITY_TERM = {
-    (110.7, 'Block1:Zone1'): (-0.0583, 0.0583, 0.1324), (110.7, 'Block1:Zone2'): (-0.0581, 0.0581, 0.1442),
-    (115.0, 'Block1:Zone1'): (-0.0561, 0.0562, 0.1300), (115.0, 'Block1:Zone2'): (-0.0560, 0.0561, 0.1410),
-    (126.0, 'Block1:Zone1'): (-0.0514, 0.0514, 0.1251), (126.0, 'Block1:Zone2'): (-0.0512, 0.0513, 0.1337),
+    (110.7, 'Block1:Zone1'): (-0.0506, 0.0508, 0.1251), (110.7, 'Block1:Zone2'): (-0.0506, 0.0508, 0.1382),
+    (115.0, 'Block1:Zone1'): (-0.0481, 0.0485, 0.1222), (115.0, 'Block1:Zone2'): (-0.0482, 0.0485, 0.1351),
+    (126.0, 'Block1:Zone1'): (-0.0431, 0.0440, 0.1153), (126.0, 'Block1:Zone2'): (-0.0431, 0.0440, 0.1278),
 }
 #: The condition of the term of the activity of the convective coefficients of pythermalcomfort 4.8.1
 #: (``two_nodes_gagge.py``): the first one is that of the real environment, the second one that of the standard one
@@ -278,17 +287,26 @@ def test_the_set_of_energyplus_and_of_pythermalcomfort(simulations, capsys, acti
 
 def test_the_difference_grows_with_the_activity_level():
     # Near 1 met (the 1.04 to 1.06 met of the sample model), both models agree within 0.06 K standing; at 1.1 and 1.2
-    # met, pythermalcomfort is 0.33 and 0.94 to 0.97 K lower on average (finding A2 of the self-audit of 2026-11-11)
+    # met, pythermalcomfort is 0.31 to 0.32 K and 0.94 to 0.97 K lower on average (finding A2 of the self-audit of
+    # 2026-11-11). The ranges, 0.02, 0.02 and 0.03 K wide, are those of each body surface area of the metabolic rate
+    # since the measurement of 2026-11-19 (see MEASURED), in which the conversion of the activity level changes the mean
+    # difference by up to 0.028 K: no range of those widths with limits on the 0.01 K grid of these ranges holds both
+    # (-0.031 and -0.051 K at 110.7 W/person, -0.937 and -0.965 K at 126 W/person). Until then, one range of each
+    # activity level held both: those of the metabolic rate of the Pierce model, which still hold them
+    ranges = {'accim': ((-0.04, -0.02), (-0.32, -0.30), (-0.95, -0.92)),
+              'pierce': ((-0.06, -0.04), (-0.34, -0.32), (-0.97, -0.94))}
     for zone in PEOPLE:
         for label in BODY_SURFACE_AREAS:
             means = [MEASURED[(activity, zone, label, 'standing')][0] for activity in ACTIVITIES]
-            assert -0.06 < means[0] < -0.04 and -0.34 < means[1] < -0.32 and -0.97 < means[2] < -0.94
+            for mean, (low, high) in zip(means, ranges[label]):
+                assert low < mean < high
         # The body surface area of the conversion of the activity level (1.8 m² in accim, 1.8258 m² in the Pierce model
-        # of EnergyPlus: finding A1) changes the mean difference by less than 0.025 K
+        # of EnergyPlus: finding A1) changes the mean difference by 0.01 to 0.03 K (0.012 to 0.028 K, measured again on
+        # 2026-11-19; 0.006 to 0.023 K, from 0 to 0.025 K, until then)
         for activity in ACTIVITIES:
             for position in ('standing', 'sitting'):
                 accim, pierce = (MEASURED[(activity, zone, label, position)][0] for label in BODY_SURFACE_AREAS)
-                assert 0 < accim - pierce < 0.025
+                assert 0.01 < accim - pierce < 0.03
 
 
 def _two_nodes_without_the_activity_term():
@@ -312,8 +330,10 @@ def _two_nodes_without_the_activity_term():
 
 def test_the_term_of_the_activity_of_the_convective_coefficient_is_the_difference(simulations, capsys):
     # Finding A2 of the self-audit of 2026-11-11: with the same inputs (the metabolic rate of the Pierce model,
-    # standing), the SET of pythermalcomfort without that term in the real environment is 0.05 to 0.06 K below that of
-    # EnergyPlus at the three activity levels, instead of 0.06, 0.33 and 0.97 K
+    # standing), the SET of pythermalcomfort without that term in the real environment is 0.043 to 0.051 K below that
+    # of EnergyPlus at the three activity levels, within a range of 0.01 K, instead of 0.05, 0.32 and 0.97 K (measured
+    # again on 2026-11-19, see MEASURED; 0.051 to 0.058 K, from -0.06 to -0.05 K, instead of 0.06, 0.33 and 0.97 K,
+    # until then)
     two_nodes = _two_nodes_without_the_activity_term()
     means = {}
     for activity in ACTIVITIES:
@@ -328,5 +348,5 @@ def test_the_term_of_the_activity_of_the_convective_coefficient_is_the_differenc
             np.testing.assert_allclose(measured, MEASURED_WITHOUT_THE_ACTIVITY_TERM[(activity, zone)], rtol=0,
                                        atol=0.001)
             means[(activity, zone)] = measured[0]
-    assert all(-0.06 < mean < -0.05 for mean in means.values())
+    assert all(-0.052 < mean < -0.042 for mean in means.values())
     assert 'without the term' in capsys.readouterr().out

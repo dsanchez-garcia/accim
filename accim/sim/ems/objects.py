@@ -240,9 +240,10 @@ def add_sensors(model: AccimModel) -> None:
 def add_design_day_sensor(model: AccimModel) -> None:
     """Add the EMS sensor DesignDay, the value of the schedule of the design days (1 on the days of the types
     SummerDesignDay and WinterDesignDay, see :data:`accim.sim.hvac.schedules.DESIGN_DAY_SCHEDULE`), which the programs
-    ApplyAST_<zone> and SetWindowOperation_<window> of mixed mode read (ScriptTypes 'vrf_mm' and 'ex_mm'): on the
-    design days, the zones are air-conditioned with the windows closed, so that EnergyPlus sizes the HVAC systems for
-    the setpoints, also on the design days without occupants."""
+    ApplyAST_<zone> and SetWindowOperation_<window> of mixed mode read (ScriptTypes 'vrf_mm' and 'ex_mm'), and the
+    program CloseWindowsOnDesignDays of full air-conditioning (:mod:`accim.sim.ems.design_days`): on the design days,
+    the zones are air-conditioned with the windows closed, so that EnergyPlus sizes the HVAC systems for the setpoints,
+    also on the design days without occupants."""
     add_design_day_schedule(model)
     add_sensor(model, 'DesignDay', DESIGN_DAY_SCHEDULE, 'Schedule Value')
 

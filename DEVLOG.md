@@ -36,6 +36,71 @@ Recommended flow: track active work in `TODO.md`, move completed outcomes to `DE
 ## Entries
 
 ### 2026-11-19
+#### [done] Full air-conditioning closes the windows on the design days (branch `v1.2.0`)
+- Context: the P1 entry of `TODO.md` (found on 2026-11-18): in `vrf_ac` the windows of the model kept its own control
+  on the design days, and those of the sample model open on its winter design day (its venting setpoint schedule
+  `20001` is 0 °C on the winter design days), so its VRF systems were sized for the outdoor air at −4 °C through them,
+  about 100 times too big. Decided by the delegation of the author on 2026-11-19 (option (a), `notes/decisions.md`);
+  a workflow of four agents mapped mixed mode, the code path of full air-conditioning, the tests and the golden master,
+  and the semantics of EnergyPlus 25.1 (about 40 short runs) before the implementation.
+- Changes: `accim/sim/ems/design_days.py` (new): `close_windows_on_design_days()` adds the sensor `DesignDay` (and the
+  schedule `ACCIS Design Days`), an actuator of each window of mixed mode (`<window>_DesignDayVOF`, the venting opening
+  factor of the AirflowNetwork windows; otherwise `<instance>_DesignDayFlow`, the flow rate of each instance of the
+  natural ventilation objects), the program `CloseWindowsOnDesignDays` (0 on the design days, Null otherwise) and its
+  calling manager at `BeginTimestepBeforePredictor`; `design_day_actuators()` leaves out, with a warning, the windows
+  with an occupant ventilation control and those that the EMS of the model actuates. Called by `add_accis_objects()` in
+  full air-conditioning and by `accim.sim.apmv.add_vrf_system()`. `accim/sim/windows.py`: `ventilation_instances()`
+  (the instances of the ventilation objects with the names that EnergyPlus gives them) and
+  `occupant_controlled_surfaces()`. Docs: sections 4.1 and 4.1.3 (new), 4.8, the parametric module, the notebooks WF1
+  and WF4, the API page; the golden master (10 configurations written again: `b01`, `b04`, `b06`, `b18` to `b20`,
+  `s03`, `s05`, `s07`, `s08`, after checking that no line changed and that only these objects were added).
+- The measurements made with the oversized systems, taken again (two workflows: one for the tests, one for the docs,
+  each with a skeptic; 51 statements confirmed by an inventory of 84 candidates):
+  - The tests (16 that failed in the full suite): the measured values re-measured with the same procedure and
+    tolerance (`A8_MEASURED` of the drift limiter, `MEASURED` and `MEASURED_WITHOUT_THE_ACTIVITY_TERM` of the Pierce
+    SET, `MEASURED` and the share of the inverted air temperatures below 10 °C of comfort standard 24, the rows of the
+    results against the hook); the premises that no longer held, kept with another scenario (check 1, C2 and the
+    long-term reducers: VRF outdoor units of 1.5 kW, so that they do not hold the setpoints; method C of the PPD and
+    the values by season of the PMV: the windows of the model NoVent); the comparisons of the hooks with the outputs
+    (ATHB, SET and the SET of the results), made exact again with copies of the sensors. The skeptic found one check
+    dropped instead of re-measured (the mean SET of the rows against the hook, now +0.0125 and +0.0058 K), pinned again.
+  - The root cause of the failures of the hooks, no defect: *Zone Air Relative Humidity* is a variable of the system
+    timesteps, whose sensor reads the last one of the previous timestep, while the output of the timestep is their
+    mean; with the right-sized systems, EnergyPlus shortens 365 of the 1008 timesteps of a week of July with the
+    setpoints of the ATHB (while the windows of the model open and close), and with those of comfort standard 24 the
+    two differ in 392 of 1007 timesteps, by up to 10.6 points (a P3 entry of `TODO.md`).
+  - The docs (section 4.1.1, the PTACs 99.8 to 99.9 % in a year; 4.2.6, the seasonal range; 4.2.7, the drift limiter
+    in January, April and July; 4.6.1, check 1; 4.7.6, the SET of the rows; 4.9.1 to 4.9.3, the ATHB, the table of
+    E-F1 and comfort standard 24 with its fallback), the docstrings (`drift_limiter`, `set_feedback`, `comfort_hooks`,
+    `indoor_adaptation`, the study script), `CHANGELOG.md`, `TODO.md` (blocks F and F2) and the draft of the issue of
+    the Pierce SET for EnergyPlus.
+- Verification: the sizing of the sample model (`vrf_ac`, INT EN16798 II, comfort mode 3, Seville, EnergyPlus 25.1):
+  design heating loads 302.5 and 356.9 kW → 1.51 and 1.73 kW (as with the schedule `20001` at 24 °C on the winter
+  design day), cooling 3.23 and 4.21 → 3.36 and 4.34 kW, indoor units 62.3 and 73.5 → 0.63 and 0.81 m³/s, fans 8.9 and
+  10.5 kW → 90 and 116 W; in a week of January, cooling coils 1401 and 1666 → 46 and 87 kWh, zones 22.6–26.6 → 19.3–25.1
+  °C, the windows of the model open 39 and 45 h; the backend of the API gives the same sizing, digit by digit. The
+  names of the instances of the ventilation objects checked against the EDD of EnergyPlus 25.1 (a zone of two spaces,
+  ZoneList, SpaceList, space) and 9.6 (ZoneList); a wrong name stops EnergyPlus. `tests/core/test_design_day_windows.py`
+  (16 tests, two with EnergyPlus); the full suite (2261 passed, 4 skipped); the docs build with the warnings of the baseline.
+- Review (two independent reviewers, after the measurements): the reviewer of the code found five defects, each shown
+  with EnergyPlus and fixed with a test: an actuator of accim released on the other days the windows that a Python
+  plugin of the model opens (now a model with Python plugins or actuators of external interfaces gets no program, with
+  a warning); the names of windows that begin with a digit stopped EnergyPlus (now `Win_` or `Vent_` before them); a
+  global variable or a sensor of the model named `DesignDay` stopped EnergyPlus or was taken for the sensor of the
+  design days (now `DesignDay_2`...); a ZoneList named like a zone was taken for it (EnergyPlus takes the zone; the
+  order of mixed mode, `windows._members()`, is kept: a rare case); and with `ex_ac` the zones with thermostats without
+  occupants kept their windows open while EnergyPlus sized their systems (now closed too). The reviewer of the figures
+  found three entries of `CHANGELOG.md` and some texts with the values of the oversized systems, and the fallback test
+  of comfort standard 24 within 0.004 K of its bound (its measured means pinned, within 0.01 K); all fixed. The model
+  with electric radiators, measured again for a year: no change (its windows are closed on its winter design day by
+  their availability schedule, so its sizing was right), so its 27 to 32 % of section 4.1.1 stands.
+- Findings for the author: the windows of the sample model keep its venting control (above 24 °C) in full
+  air-conditioning, so they are open in most of the hours in which its right-sized VRF systems heat, also in January;
+  the sample model stays a test model.
+- Files: `accim/sim/ems/design_days.py`, `accim/sim/windows.py`, `accim/sim/build.py`, `accim/sim/apmv.py`,
+  `accim/sim/ems/objects.py`, `accim/sim/hvac/schedules.py`, `accim/sim/accis.py`, the docstrings above, 11 test files,
+  `tests/core/golden_master/`, the docs, `CHANGELOG.md`, `TODO.md`, `notes/decisions.md`.
+
 #### [done] The standard outputs of mixed mode, decided by delegation of the author (branch `v1.2.0`)
 - Context: the P2 entry of `TODO.md` left to the author whether the standard outputs of mixed mode get the outdoor air
   temperature and the wind speed of the zones (and, with `ex_mm`, the load to the setpoints) that the EMS programs of

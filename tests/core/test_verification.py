@@ -786,6 +786,12 @@ def test_the_detailed_outputs_of_mixed_mode_have_what_the_programs_of_the_window
                     reason='needs EnergyPlus 25.1 and the sample files of the repository')
 def test_check_1_of_a_simulation_of_the_sample_model(tmp_path, capsys):
     building = _add_accis(tmp_path, 'timestep', None, comfort_standard=[1], category=[2], comfort_mode=[3])
+    # The outdoor units of the VRF systems with a given rated cooling capacity of 1.5 kW (autosized, they have more
+    # than 10 kW), too small for the zones in the afternoons of July. Since 2026-11-19 the windows of the sample model
+    # are closed on its design days, and its autosized VRF systems hold the cooling setpoint on these days, within the
+    # tolerance (before, sized with the windows open and about 100 times too big, they did not hold it)
+    for unit in building.idfobjects['AirConditioner:VariableRefrigerantFlow']:
+        unit.Gross_Rated_Total_Cooling_Capacity = 1500
     eso, model = _run_energyplus(tmp_path, building, (7, 1), (7, 2))
     with warnings.catch_warnings(record=True) as caught:
         warnings.simplefilter('always')
@@ -812,7 +818,7 @@ def test_check_1_of_a_simulation_of_the_sample_model(tmp_path, capsys):
             assert rows['timestep'].tolist() == [text.strip() for text in outputs.loc[expected, 'Date/Time']]
             assert f"  '{zone}' {check} ({state} setpoint by more than 0.1 °C): {expected.sum()} of 288 timesteps" \
                 in output
-    # The system of the sample model, cooling, does not hold the cooling setpoint in the afternoons of July
+    # The systems with outdoor units of 1.5 kW, cooling, do not hold the cooling setpoint in the afternoons of July
     assert (not_met['check'] == 'Check1_Cooling').sum() > 0 and not (not_met['check'] == 'Check1_Heating').any()
 
 

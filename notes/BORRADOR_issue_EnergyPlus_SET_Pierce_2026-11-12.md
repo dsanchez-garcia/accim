@@ -38,7 +38,7 @@ body surface area of 1.8 m². In the code of the Pierce model, the convective co
 no term of the metabolic rate (only that of the standard environment has it), and the activity level is divided by
 1.8258 m². With activity levels above about 1.05 met, the output *Zone Thermal Comfort Pierce Model Standard Effective
 Temperature* is then higher than the SET of other implementations of the two-node model that apply that term in the
-actual environment: 0.33 K at 1.08 met and 0.97 K at 1.19 met in the case below, against pythermalcomfort 4.8.1.
+actual environment: 0.32 K at 1.08 met and 0.97 K at 1.19 met in the case below, against pythermalcomfort 4.8.1.
 
 We do not know which of the two is intended, so this is a question about the code and a note on the documentation,
 rather than a bug report.
@@ -105,9 +105,9 @@ pythermalcomfort minus that of EnergyPlus, all the hours of the year, one zone (
 
 | Activity level | Metabolic rate | Mean (K) | Mean absolute (K) | Maximum absolute (K) |
 | --- | --- | --- | --- | --- |
-| 110.7 W/person | 1.04 met | −0.058 | 0.058 | 0.13 |
-| 115 W/person | 1.08 met | −0.331 | 0.331 | 0.52 |
-| 126 W/person | 1.19 met | −0.966 | 0.966 | 1.39 |
+| 110.7 W/person | 1.04 met | −0.051 | 0.051 | 0.13 |
+| 115 W/person | 1.08 met | −0.324 | 0.324 | 0.53 |
+| 126 W/person | 1.19 met | −0.965 | 0.965 | 1.46 |
 
 pythermalcomfort 4.8.1 applies `5.66*(met - 0.85)**0.39` in the convective coefficient of both environments. With that
 term taken out of its actual environment only (a copy of its source with that one condition disabled), as in the code
@@ -115,17 +115,17 @@ of EnergyPlus:
 
 | Activity level | Metabolic rate | Mean (K) | Mean absolute (K) | Maximum absolute (K) |
 | --- | --- | --- | --- | --- |
-| 110.7 W/person | 1.04 met | −0.058 | 0.058 | 0.13 |
-| 115 W/person | 1.08 met | −0.056 | 0.056 | 0.13 |
-| 126 W/person | 1.19 met | −0.051 | 0.051 | 0.13 |
+| 110.7 W/person | 1.04 met | −0.051 | 0.051 | 0.13 |
+| 115 W/person | 1.08 met | −0.048 | 0.048 | 0.12 |
+| 126 W/person | 1.19 met | −0.043 | 0.044 | 0.12 |
 
-So that term accounts for all the dependence on the activity level; the remaining 0.05 K is of the order of the other
-differences between both codes (EnergyPlus takes 0.72 as the fraction of the body surface that radiates;
+So that term accounts for all the dependence on the activity level; the remaining 0.04 to 0.05 K is of the order of the
+other differences between both codes (EnergyPlus takes 0.72 as the fraction of the body surface that radiates;
 pythermalcomfort, 0.73 standing and 0.70 sitting). The term is the larger one from about 1.05 met at 0.137 m/s.
 
 The body surface area is a smaller effect: with 110.7 W/person converted with 1.8 m² instead of 1.8258 m² (1.057 met
-instead of 1.042 met), the SET of pythermalcomfort is 0.013 K higher on average over the year (0.037 K higher with 1.0
-clo, 0.012 K lower with 0.5 clo).
+instead of 1.042 met), the SET of pythermalcomfort is 0.019 K higher on average over the year (0.045 K higher with 1.0
+clo, 0.007 K lower with 0.5 clo).
 
 ### Questions
 

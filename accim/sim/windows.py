@@ -2,7 +2,9 @@
 # Copyright (C) 2021-2026 Daniel Sánchez-García
 # Distributed under the GNU General Public License v3 or later.
 
-"""The windows and doors that accim opens and closes in mixed mode ('vrf_mm' and 'ex_mm').
+"""The windows and doors that accim opens and closes in mixed mode ('vrf_mm' and 'ex_mm'), and closes on the design
+days in full air-conditioning ('vrf_ac' and 'ex_ac'; see :mod:`accim.sim.ems.design_days`, which takes the same
+windows and doors without changing their control on the other days).
 
 With an AirflowNetwork that simulates the multizone airflows (AirflowNetwork Control MultizoneWithoutDistribution or
 MultizoneWithDistribution), they are the windows, doors and glass doors of the exterior surfaces of the occupied zones
@@ -32,6 +34,8 @@ while the fans of the distribution system are off.
 
 from typing import Callable, Dict, Iterable, List, Optional, Tuple
 
+from accim.utils.people import get_energyplus_spaces
+
 __all__ = [
     'OPENING_COMPONENTS',
     'VENTILATION_LIMITS',
@@ -40,11 +44,13 @@ __all__ = [
     'control_ventilation_objects',
     'exterior_subsurface_zones',
     'is_natural_ventilation',
+    'occupant_controlled_surfaces',
     'release_occupant_ventilation_controls',
     'remove_hybrid_ventilation_managers',
     'simulates_air_distribution_with_windows',
     'subsurface_zones',
     'uses_airflow_network',
+    'ventilation_instances',
 ]
 
 #: The components of the AirflowNetwork:MultiZone:Surface objects that open (their venting opening factor).
@@ -193,6 +199,67 @@ def is_natural_ventilation(object_type: str, vent) -> bool:
     return kind.upper() in ('', 'NATURAL')
 
 
+def ventilation_instances(idf, zones: Iterable[str]) -> List[Tuple[str, str, str]]:
+    """The instances of the natural ventilation objects of some zones (see :data:`VENTILATION_OBJECTS` and
+    :func:`is_natural_ventilation`), with the names that EnergyPlus gives them, which are the unique names of their EMS
+    actuators ('Zone Ventilation', 'Air Exchange Flow Rate'): (instance, object type, zone) of each one, in the order of
+    the objects, without changing them. The zone is given as in ``zones``.
+
+    EnergyPlus names them as its IDD says. Where the field of the zone of an object takes spaces ('Zone or ZoneList or
+    Space or SpaceList Name' and 'Zone or Space Name', as in EnergyPlus 25.1), an object assigned to a space, or to a
+    zone of one space, has one instance with its name, and one assigned to a ZoneList, a SpaceList or a zone of several
+    spaces has one instance per space, '<space> <name>' (the spaces of each zone are those of
+    :func:`accim.utils.people.get_energyplus_spaces`: a zone without Space objects has one named like the zone, and the
+    remainder space counts). Where it does not ('Zone or ZoneList Name' and 'Zone Name', as in EnergyPlus 9.6), an
+    object assigned to a ZoneList has one instance per zone, '<zone> <name>', and one assigned to a zone has its name.
+    As EnergyPlus, a name is that of a zone before that of a space or a list (a ZoneList named like a zone is not
+    used), and the lists only count where the field takes them. Only the instances in these zones are returned.
+    """
+    occupied = {zone.upper(): zone for zone in zones}
+    zone_names = {_text(z.Name).upper() for z in _objects(idf, 'Zone')}
+    spaces_of_zones = get_energyplus_spaces(idf)
+    space_zones = {_text(s.Name).upper(): _text(s.Zone_Name) for s in _objects(idf, 'Space')}
+    space_lists = {_text(s.Name).upper(): [_text(m) for m in s.fieldvalues[2:] if _text(m)]
+                   for s in _objects(idf, 'SpaceList')}
+    zone_lists = {_text(z.Name).upper(): [_text(m) for m in z.fieldvalues[2:] if _text(m)]
+                  for z in _objects(idf, 'ZoneList')}
+
+    def spaces(zone: str) -> List[str]:
+        entry = spaces_of_zones.get(zone.upper())
+        return list(entry['spaces']) if entry is not None and entry['spaces'] else [zone]
+
+    instances: List[Tuple[str, str, str]] = []
+    for object_type, _ in VENTILATION_OBJECTS:
+        for vent in _objects(idf, object_type):
+            if not is_natural_ventilation(object_type, vent):
+                continue
+            name = _text(vent.Name)
+            # The third field is the zone (see control_ventilation_objects)
+            zone_field = vent.fieldnames[2]
+            container = _text(getattr(vent, zone_field))
+            key = container.upper()
+            by_space = 'SPACE' in zone_field.upper()
+            takes_lists = 'LIST' in zone_field.upper()
+            if key in zone_names or not (key in space_zones or key in space_lists or key in zone_lists):
+                # A zone (also one that the model does not have)
+                zone_spaces = spaces(container) if by_space else [container]
+                members = ([(name, container)] if len(zone_spaces) == 1
+                           else [(f'{space} {name}', container) for space in zone_spaces])
+            elif by_space and key in space_zones:
+                members = [(name, space_zones[key])]
+            elif by_space and takes_lists and key in space_lists:
+                members = [(f'{space} {name}', space_zones.get(space.upper(), space)) for space in space_lists[key]]
+            elif takes_lists and key in zone_lists:
+                members = ([(f'{space} {name}', zone) for zone in zone_lists[key] for space in spaces(zone)] if by_space
+                           else [(f'{zone} {name}', zone) for zone in zone_lists[key]])
+            else:
+                # A space or a list where the field does not take it: EnergyPlus stops
+                members = [(name, container)]
+            instances.extend((instance, object_type, occupied[zone.upper()]) for instance, zone in members
+                             if zone.upper() in occupied)
+    return instances
+
+
 def _take_control(vent, schedule_field: str, schedule: str) -> List[str]:
     """Make a ZoneVentilation object open with a schedule, without limits of its own (see
     :data:`VENTILATION_LIMITS`); return the limits that it had."""
@@ -266,6 +333,31 @@ def control_ventilation_objects(idf, zones: Iterable[str], schedule: Callable[[s
             idf.removeidfobject(vent)
             log(f'The {object_type} {_text(vent.Name)} of {container} has been replaced with one object per zone or '
                 f'space of {container}, so that each occupied zone opens with its own schedule')
+    return controlled
+
+
+def occupant_controlled_surfaces(idf, surfaces: Iterable[str]) -> List[str]:
+    """The AirflowNetwork surfaces of some windows and doors that an occupant ventilation control
+    (AirflowNetwork:OccupantVentilationControl) opens and closes, overriding the opening factor of the EMS: that of
+    their own field 'Occupant Ventilation Control Name', or else that of the AirflowNetwork:MultiZone:Zone object of
+    their zone (see :func:`release_occupant_ventilation_controls`). Their names are given as in their
+    AirflowNetwork:MultiZone:Surface objects, in the order of these objects, without changing them."""
+    names = {surface.upper() for surface in surfaces}
+    zones_of = subsurface_zones(idf)
+    zones_with_control = {_text(zone.Zone_Name).upper() for zone in _objects(idf, 'AirflowNetwork:MultiZone:Zone')
+                          if 'Occupant_Ventilation_Control_Name' in zone.fieldnames
+                          and _text(zone.Occupant_Ventilation_Control_Name)}
+    controlled: List[str] = []
+    seen = set()
+    for surface in _objects(idf, 'AirflowNetwork:MultiZone:Surface'):
+        name = _text(surface.Surface_Name)
+        if name.upper() not in names or name.upper() in seen:
+            continue
+        seen.add(name.upper())
+        own = ('Occupant_Ventilation_Control_Name' in surface.fieldnames
+               and _text(surface.Occupant_Ventilation_Control_Name))
+        if own or zones_of.get(name.upper(), '').upper() in zones_with_control:
+            controlled.append(name)
     return controlled
 
 

@@ -39,22 +39,27 @@ m/s, 4.0 at 32 °C, 90 % and 1.2 m/s): with the defaults, Relaxation 0.5 (:data:
 (:data:`DEFAULT_SLOPE`, about that with still air), it converges in all of them. The proposal (a gain of about 0.8 on
 the setpoint of the previous timestep) did not converge above s = 2.5 and drifted while the zone floated; the first
 version of this module, a gain of 0.5 on the estimate itself, put the setpoint far from the zone at half its distance
-(4.2 K above that of the hook, the heating setpoints of a week of July of the sample model).
+(4.2 K above that of the hook, the heating setpoints of a week of July of the sample model, with its VRF systems of
+before 2026-11-19, sized with its windows open on its winter design day).
 
 The setpoint near which the zone is converges to that of the SET; the other one is an extrapolation, as good as the
-slope: measured on 2026-11-18 with the model of the measurement of section 4.9.3 of the detailed use (the output IDF of
+slope: measured on 2026-11-19 with the model of the measurement of section 4.9.3 of the detailed use (the output IDF of
 AddAccis of the sample model in Seville, INT EN16798, category II, comfort mode 3, with a minimum heating setpoint of
 18 °C in Block1:Zone1; EnergyPlus 25.1, the defaults, the People objects of the sample model, 1.06 met, 0.137 m/s, 0.5
 clo in July and 1.0 clo in January), against the setpoints of the hook (without the tolerance, every timestep of a
-week): in July, the cooling setpoints 0.00 and 0.02 K above them on average (0.26 and 0.27 K in absolute value, 0.61 K
-at the 95th percentile) and the heating setpoints 0.41 and 0.42 K above; in January, with the zones floating far from
-both setpoints (the SET grows by about 0.65 K per K with 1.0 clo), the cooling setpoints 0.88 and 0.87 K below and the
-heating setpoints of Block1:Zone2 2.2 K above (those of Block1:Zone1 at its minimum, as those of the hook); the
-operative temperatures of the zones 0.29 and 0.23 K below those of the hook in July (3.5 and 3.6 K at most, in the
-first timesteps of the week, and 0.49 and 0.55 K after its first day) and 0.05 and 0.07 K below them in January; and
-the occupied hours within the band 33.5 and 35.5 h against 27.8 and 34.3 h in July, and 60 and 53.5 h against 60 and
-56.0 h in January. (The first measurement, with category III and without the minimum, was not that of section 4.9.3:
-the review of 2026-11-18 found it.)
+week): in July, the cooling setpoints 0.17 and 0.19 K above them on average (0.40 and 0.41 K in absolute value, 1.1 K
+at the 95th percentile) and the heating setpoints 0.37 K above; in January, with the zones floating between the
+setpoints (the SET grows by about 0.65 K per K with 1.0 clo), the cooling setpoints 0.92 and 0.89 K below and the
+heating setpoints of Block1:Zone2 1.5 K above (those of Block1:Zone1 at its minimum, as those of the hook); the
+operative temperatures of the zones 0.18 and 0.17 K below those of the hook in July (1.8 K at most, in the first
+timesteps of the week, and 1.1 and 1.3 K after its first day) and 0.26 and 0.36 K above them in January (at most 6.0
+and 5.4 K, mostly in timesteps in which the windows of the model, which open above 24 °C, were open in one of the
+two simulations only); and the occupied hours within the band 52.2 and 44.2 h against 53.5 and 46.0 h in July, and
+all of them (60 h) in January, as with the hook. The measurement of 2026-11-18 (the cooling setpoints 0.00 and 0.02 K
+above those of the hook in July, the heating setpoints of Block1:Zone2 2.2 K above in January) was made with the VRF
+systems of the sample model about 100 times too big, sized with its windows open on its winter design day (before
+:mod:`accim.sim.ems.design_days`), whose fans kept the zones warm; its first measurement, with category III and without
+the minimum, was not that of section 4.9.3 (the review of 2026-11-18 found it).
 
 It also sets the outputs of the hook of comfort standard 24 from the SET of EnergyPlus: ``SET_<zone>`` (the SET of the
 previous timestep), ``TSV_causal_<zone>`` (0.11·SET − 2.6), ``HoursInCausalBand_<zone>`` (the length of the timestep if
@@ -63,8 +68,8 @@ the timestep if a setpoint is at a limit of ``temperature_range``). Without the 
 first timestep of each environment), or with an activity level of 0 or less, the setpoints are those of the comfort
 standard of the zone, as without the hook, ``SETsaturated_<zone>`` and ``HoursInCausalBand_<zone>`` are 0, and
 ``SET_<zone>`` and ``TSV_causal_<zone>`` keep their values (finding A5 of the self-audit of 2026-11-11, as the hook).
-The SET is that of the Pierce model of EnergyPlus, not that of pythermalcomfort of the hook: near 1 met, about 0.05 to
-0.13 K above it (E-F1, ``notes/decisions.md``), more at higher activity levels.
+The SET is that of the Pierce model of EnergyPlus, not that of pythermalcomfort of the hook: near 1 met, about 0.03 to
+0.11 K above it (E-F1, ``notes/decisions.md``, measured again on 2026-11-19), more at higher activity levels.
 """
 
 import os

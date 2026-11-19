@@ -230,6 +230,15 @@ def test_method_c_in_energyplus_with_both_backends(tmp_path, capsys, key, begin,
     building = _model(tmp_path)
     apmv.add_vrf_system(building, verbose=False)
     FUNCTIONS[key](building, output_frequencies=['timestep'], verbose=False, report_ppd_weighted_hours=True)
+    if key == 'apmv':
+        # July: the windows of the model closed, as in an office in full air-conditioning. They would cool the zones
+        # at night (they open when a zone is above 24 °C and the outdoor air is cooler), and the VRF systems, sized
+        # right since 2026-11-19 (with the windows closed on the design days), would then hold the PMV within the
+        # setpoints from the first occupied timestep. With them closed, the zones are warm when the occupants arrive:
+        # without occupants, the setpoints of the thermostats are a PMV of -100 and 100 (the zones float)
+        for opening in building.idfobjects['AirflowNetwork:MultiZone:Surface']:
+            if str(opening.Ventilation_Control_Mode).strip():
+                opening.Ventilation_Control_Mode = 'NoVent'
     run_period = building.idfobjects['RunPeriod'][0]
     run_period.Begin_Month, run_period.Begin_Day_of_Month = begin
     run_period.End_Month, run_period.End_Day_of_Month = end
@@ -290,5 +299,6 @@ def test_method_c_in_energyplus_with_both_backends(tmp_path, capsys, key, begin,
         outside = found.iloc[1:] > 0
         discomfortable = results[f'EMS:Discomfortable Total Hours_{zone} [H](TimeStep)'].iloc[1:] > 0
         assert not (outside & ~discomfortable & (pmv[rows] != upper[rows])).any()
-    # Something to weigh: the first occupied timesteps, before the thermostats bring the PMV within the setpoints
+    # Something to weigh: the first occupied timesteps, before the thermostats bring the PMV within the setpoints (the
+    # zones are warm in the mornings of July, with the windows closed, and cold in those of January)
     assert total > 0

@@ -12,6 +12,14 @@ accim.sim.ems.custom\_regimes module
    :show-inheritance:
    :undoc-members:
 
+accim.sim.ems.design\_days module
+---------------------------------
+
+.. automodule:: accim.sim.ems.design_days
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
 accim.sim.ems.drift\_limiter module
 -----------------------------------
 

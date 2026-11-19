@@ -743,7 +743,8 @@ class AddAccis:
     :param idfs: The IDF files. By default, those in the working folder.
     :param script_type: 'vrf_ac' (a new VRF system in each occupied zone, full air-conditioning), 'vrf_mm' (VRF
         system, mixed mode), 'ex_ac' (the existing HVAC systems, full air-conditioning) or 'ex_mm' (existing HVAC
-        systems, mixed mode).
+        systems, mixed mode). In full air-conditioning, the windows keep the control of the model, but are closed on
+        the design days (:mod:`accim.sim.ems.design_days`).
     :param supply_air_temp_input_method: 'supply air temperature' or 'temperature difference' (VRF systems only).
     :param output_type: 'standard', 'simplified', 'detailed' or 'custom' (which asks which outputs to keep).
     :param output_frequencies: The reporting frequencies of the outputs: a list of 'timestep', 'hourly', 'daily',

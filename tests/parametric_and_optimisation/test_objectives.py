@@ -413,6 +413,12 @@ def test_the_worst_period_of_table_e1_in_an_evaluation_of_besos(tmp_path):
     run_period.Begin_Month, run_period.Begin_Day_of_Month = 6, 20
     run_period.End_Month, run_period.End_Day_of_Month = 8, 10
     building.idfobjects['SimulationControl'][0].Run_Simulation_for_Sizing_Periods = 'Yes'
+    # The outdoor units of the VRF systems with a given rated cooling capacity of 1.5 kW (autosized, they have more
+    # than 10 kW), too small for the warm weeks of Seville. Since 2026-11-19 the windows of the sample model are closed
+    # on its design days, and its autosized VRF systems keep the building below the upper limit in these weeks
+    # (before, sized with the windows open and about 100 times too big, they did not hold the setpoints)
+    for unit in building.idfobjects['AirConditioner:VariableRefrigerantFlow']:
+        unit.Gross_Rated_Total_Cooling_Capacity = 1500
     readers = [WorstPeriodDeviation(zone, output, period, level)
                for zone, output, level in (('Building', 'Hours Above Upper Limit', '6%'),
                                            ('Block1_Zone2', 'Hours Above Upper Limit', '3%'),
@@ -457,7 +463,8 @@ def test_the_worst_period_of_table_e1_in_an_evaluation_of_besos(tmp_path):
                                         for o, h in zip(periods.outside, periods.occupied))
         assert reader(results) == constraint
     # The warm weeks of Seville: the building above the upper limit in more than half of the occupied hours of a week
-    # (the VRF system of the sample model does not hold the setpoints), and no hour below the lower limit
+    # (the VRF systems, with outdoor units of 1.5 kW, do not hold the setpoints), and zone 1 below the lower limit in
+    # a few hours only (the first occupied hour of some mornings, after the windows of the model cooled it at night)
     assert constraints[0] > 0 and platypus.Constraint('<=0')(constraints[0]) == pytest.approx(constraints[0])
     assert all(constraint < 0 for constraint in constraints[6:])
 
@@ -626,6 +633,11 @@ def test_the_long_term_reducers_with_the_outputs_that_energyplus_reports(tmp_pat
     run_period = building.idfobjects['RunPeriod'][0]
     run_period.Begin_Month, run_period.Begin_Day_of_Month = 7, 10
     run_period.End_Month, run_period.End_Day_of_Month = 7, 16
+    # The outdoor units of the VRF systems with a given rated cooling capacity of 1.5 kW, too small for the zones in
+    # the afternoons of July (autosized, they have more than 10 kW and keep them below the upper limit in this week
+    # since 2026-11-19, when the windows of the sample model were closed on its design days)
+    for unit in building.idfobjects['AirConditioner:VariableRefrigerantFlow']:
+        unit.Gross_Rated_Total_Cooling_Capacity = 1500
     building.saveas(str(tmp_path / 'model.idf'))
     subprocess.run([str(ENERGYPLUS_25_1), '-d', str(tmp_path / 'out'), '-w', str(SAMPLE_EPW),
                     str(tmp_path / 'model.idf')], capture_output=True, check=True)
@@ -639,7 +651,8 @@ def test_the_long_term_reducers_with_the_outputs_that_energyplus_reports(tmp_pat
         building_total = reducer(results[(f'EMS,{output}_Building', 'Hourly')])
         assert building_total == pytest.approx(sum(zones))
         assert building_total == pytest.approx(results[(f'EMS,{output}_Building', 'Hourly')].data['Value'].sum())
-    # A week of July in Seville: hours above the cooling setpoint (without the tolerance) when occupied
+    # A week of July in Seville with the outdoor units of 1.5 kW: hours above the cooling setpoint (without the
+    # tolerance) when occupied
     assert hours_outside_range(results[('EMS,Hours Above Upper Limit_Building', 'Hourly')]) > 0
     # Method A: the hours above and below are the discomfortable occupied hours of the ACCIS
     for n in (1, 2):
