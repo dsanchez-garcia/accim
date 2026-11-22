@@ -35,6 +35,28 @@ Recommended flow: track active work in `TODO.md`, move completed outcomes to `DE
 
 ## Entries
 
+### 2026-11-22
+#### [done] The validation study of F3 narrowed: the case `iii_model` and `--cases study` (branch `v1.2.0`)
+- Context: on 2026-11-19, in the session of Claude Science on the article with Ruiji Sun, the author decided to narrow
+  the study to what Sun, Brager & Schiavon (2026) specify (`notes/decisions.md`): one case of the causal SET model with
+  the inputs of the occupants of the model, no fans, no clothing by season, the limiter of the drift left aside, and no
+  minimum heating setpoint by default. Claude Science changed `tools/indoor_adaptation_study.py` (`--heating-minimum`
+  none by default) and wrote that entry, without committing them, and left the rest for the repository.
+- Changes: `tools/indoor_adaptation_study.py`: the case `iii_model` (comfort standard 24 with the clothing insulation,
+  the activity and the air speed of the People objects of the model); `STUDY_CASES` and `--cases study`, the default
+  (`i_fixed`, `ii_en16798`, `ii_ashrae55` and `iii_model`), with `--cases all` still running all the cases (the others
+  as sensitivities) and `--list` marking those of the study; its docstring. `TODO.md`: the block F narrowed (5 cases
+  for each weather file, the climates, the energy relative to the causal SET model), F2 to P3 (the study no longer needs
+  it), the message to Ruiji Sun without cases (iv) and (v) and with the climates. Section 4.7.6 of the detailed use.
+- Files: `tools/indoor_adaptation_study.py`, `tests/core/test_indoor_adaptation_study.py` (new), `TODO.md`,
+  `docs/source/4_detailed use.md`, `notes/decisions.md`, `CHANGELOG.md`.
+- Verification: the four cases of the study, two days of July of the sample model in Seville (the default `--cases`):
+  `iii_model` ran with the hook and the schedules of the model (cooling coils 117.9 kWh, between the 153.5 of the fixed
+  setpoints and the 86.2 and 91.5 of the adaptive ones; 93.8 % of the occupied hours within the causal band);
+  `tests/core/test_indoor_adaptation_study.py` (2, without simulations); the docs build.
+- Next step: the simulations of the study (a year of each case in Seville, Singapore and Shanghai or Ningbo), once
+  the author has the answers of Ruiji Sun and the weather files.
+
 ### 2026-11-19
 #### [done] Full air-conditioning closes the windows on the design days (branch `v1.2.0`)
 - Context: the P1 entry of `TODO.md` (found on 2026-11-18): in `vrf_ac` the windows of the model kept its own control

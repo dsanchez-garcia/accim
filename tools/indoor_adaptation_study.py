@@ -4,7 +4,7 @@ choices decided on 2026-11-12 (``notes/decisions.md``; the position of the autho
 causal SET model before the simulations of the study)::
 
     PYTHONPATH=. python tools/indoor_adaptation_study.py OUT_DIR --epw Seville_Present.epw [--epw OTHER.epw]
-        [--begin 1/1] [--end 12/31] [--cases ii_en16798,iii_seasonal] [--processes 4] [--list]
+        [--begin 1/1] [--end 12/31] [--cases study|all|ii_en16798,iii_model] [--processes 4] [--list]
         [--heating-minimum 18] [--air-speed-heating 0.1] [--fan-hours 7 19]
 
 It makes the model of each case in ``OUT_DIR`` (``<case>.idf``), simulates it with each weather file with the backend
@@ -19,6 +19,9 @@ SET (that of pythermalcomfort, with the inputs of the occupants of the People ob
   the static setpoints of a comfort standard defined by its data, in comfort mode 0.
 - ``ii_en16798`` and ``ii_ashrae55``: the adaptive setpoints of EN 16798-1 (category II) and of ASHRAE 55 (80 %), in
   comfort mode 3.
+- ``iii_model``: the causal SET model (comfort standard 24, the band of 19.1 to 28.2 °C of SET all the year) with the
+  clothing insulation, the activity level and the air speed of the People objects of the model, as the other cases,
+  without fans and without a minimum heating setpoint (the case of the study since 2026-11-19, below).
 - ``iii_seasonal`` and ``iii_dynamic``: the causal SET model (comfort standard 24) with the clothing insulation fixed
   by season (1.0 and 0.5 clo, with the cooling season from day 121 to 274) and with the dynamic clothing model of
   ASHRAE 55 (a sensitivity), at 0.1 m/s.
@@ -53,6 +56,15 @@ opens them above 24 °C, also in full air-conditioning (in a week of July, they 
 of each zone, and with the setpoints of EN 16798-1 the heating coils work in 14 hours of each zone, all of them with
 the windows open). Its VRF systems hold the cooling setpoints in a summer week since they are sized with the windows
 closed on the design days (2026-11-19).
+
+Since 2026-11-19 (the decisions of the author of that day, ``notes/decisions.md``), the cases of the causal SET model
+have no minimum heating setpoint by default: the causal band is applied as published (``--heating-minimum 18`` gives
+them that of 18 °C). And the validation study is narrowed to what the paper of the model specifies: it leaves aside
+the limiter of the drift (case (v)), the fans (case (iv)) and the clothing insulation that cases ``iii_seasonal`` and
+``iii_dynamic`` give the model, and has one case of the causal SET model, ``iii_model``, with the clothing, the
+activity and the air speed of the model itself. ``--cases study`` (the default) runs the cases of the study,
+``i_fixed``, ``ii_en16798``, ``ii_ashrae55`` and ``iii_model`` (:data:`STUDY_CASES`; ``--list`` marks them), and
+``--cases all`` still runs all the cases, the others as sensitivities.
 """
 import argparse
 import os
@@ -86,6 +98,10 @@ ENERGY = {'Heating Coil Heating Energy': 'Heating coils (kWh)',
           'VRF Heat Pump Cooling Electricity Energy': 'VRF cooling electricity (kWh)'}
 #: The cooling season of the clothing insulation and of the air speeds: from 1 May (day 121) to 30 September
 COOLING_SEASON = ('4/30', '9/30')
+#: The cases of the study since the decisions of the author of 2026-11-19 (``--cases study``, the default): the
+#: static reference (b), the adaptive setpoints of case (ii) and the causal SET model with the inputs of the model; the
+#: static reference (a) is not a case of this script, and the other cases stay for sensitivities (``--cases all``)
+STUDY_CASES = ('i_fixed', 'ii_en16798', 'ii_ashrae55', 'iii_model')
 
 
 def cases():
@@ -94,6 +110,8 @@ def cases():
         'i_fixed': ('fixed setpoints of 20 and 26 degC', FIXED_SETPOINTS['number'], 2, 0, {}),
         'ii_en16798': ('EN 16798-1, category II', 1, 2, 3, {}),
         'ii_ashrae55': ('ASHRAE 55, 80 %', 2, 80, 3, {}),
+        # The case of the causal SET model of the study since 2026-11-19: the inputs of the occupants of the model
+        'iii_model': ('causal SET model, the clothing, activity and air speed of the model', 1, 2, 3, {'set': True}),
         'iii_seasonal': ('causal SET model, 1.0 and 0.5 clo by season', 1, 2, 3, {'set': True, 'clothing': 'seasonal'}),
         'iii_dynamic': ('causal SET model, dynamic clothing model', 1, 2, 3, {'set': True, 'clothing': 'dynamic'}),
     }
@@ -225,10 +243,11 @@ def main():
     parser.add_argument('--idf', type=Path, default=SAMPLE_IDF, help='the model (the sample model of accim by default)')
     parser.add_argument('--begin', default='1/1', help='the first day of the run period (month/day)')
     parser.add_argument('--end', default='12/31', help='its last day (month/day)')
-    parser.add_argument('--cases', default='all', help='the cases, separated by commas (all by default)')
+    parser.add_argument('--cases', default='study',
+                        help="the cases, separated by commas, or 'study' (those of the study, the default) or 'all'")
     parser.add_argument('--processes', type=int, default=4, help='the simulations that run at the same time')
-    parser.add_argument('--heating-minimum', type=float, default=18.0,
-                        help='the minimum heating setpoint of the cases of the causal SET model (degC; none: -1)')
+    parser.add_argument('--heating-minimum', type=float, default=None,
+                        help='a minimum heating setpoint of the cases of the causal SET model (degC; none by default)')
     parser.add_argument('--air-speed-heating', type=float, default=0.1,
                         help='the air speed of the heating setpoint of the cases with fans (m/s; that of the fans: -1)')
     parser.add_argument('--fan-hours', type=int, nargs=2, default=None,
@@ -238,9 +257,10 @@ def main():
     all_cases = cases()
     if arguments.list:
         for case, (description, *_) in all_cases.items():
-            print(f'{case}: {description}')
+            print(f'{case}: {description}' + (' (study)' if case in STUDY_CASES else ''))
         return 0
-    chosen = list(all_cases) if arguments.cases == 'all' else [name.strip() for name in arguments.cases.split(',')]
+    groups = {'all': list(all_cases), 'study': list(STUDY_CASES)}
+    chosen = groups.get(arguments.cases, [name.strip() for name in arguments.cases.split(',')])
     unknown = [name for name in chosen if name not in all_cases]
     if unknown or not arguments.epw:
         parser.error(f'unknown cases {unknown}' if unknown else 'give a weather file (--epw)')
@@ -252,7 +272,9 @@ def main():
     out = arguments.out.resolve()
     out.mkdir(parents=True, exist_ok=True)
     begin, end = (tuple(int(part) for part in value.split('/')) for value in (arguments.begin, arguments.end))
-    minimum = None if arguments.heating_minimum < 0 else arguments.heating_minimum
+    # No minimum heating setpoint by default (the decision of the author of 2026-11-19); -1 is still none
+    minimum = (None if arguments.heating_minimum is None or arguments.heating_minimum < 0
+               else arguments.heating_minimum)
     heating_speed = None if arguments.air_speed_heating < 0 else arguments.air_speed_heating
     fan_hours = None if arguments.fan_hours is None else tuple(arguments.fan_hours)
     jobs, names = [], []

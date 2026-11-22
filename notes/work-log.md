@@ -15,6 +15,17 @@ This log is a lightweight, session-scoped complement to the repository's
 existing tracking files — it does not replace them (see
 [[decisions.md#2026-09-13 — `notes/work-log.md` complements, not replaces, existing tracking files|the related decision]]).
 
+## 2026-11-22 — What the session of Claude Science of 2026-11-19 left for the repository (branch `v1.2.0`)
+
+- **Objective**: the author asked what was left; the session of Claude Science on the article with Ruiji Sun had left
+  uncommitted changes (the study script, a decision record) and four tasks for the repository.
+- **Affected files**: `tools/indoor_adaptation_study.py`, [[../TODO.md]], [[decisions.md]], [[../DEVLOG.md]], section
+  4.7.6 of the detailed use, `CHANGELOG.md`, `CAMBIOS_CODIGO_v1.2.0.md`, a new test.
+- **Finding or decision**: the case `iii_model` of the causal SET model with the inputs of the model; `--cases study`
+  as the default and `--cases all` for all the cases (decided here); the entries of the study in `TODO.md` narrowed.
+- **Validation**: the four cases of the study in two days of July of the sample model; the new test; the docs build.
+- **Next step**: the simulations of the study, after the answers of Ruiji Sun and the weather files of the climates.
+
 ## 2026-11-19 — The decisions delegated by the author (branch `v1.2.0`, on the server)
 
 - **Objective**: the author delegated the decisions on the four open questions of 2026-11-18 ("Toma las decisiones

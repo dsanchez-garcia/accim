@@ -11,6 +11,51 @@ Durable architectural/process decisions for this repository and its Obsidian
 vault. Newest first. Use [[templates/decision-record.md|the decision-record
 template]] to add a new entry.
 
+## 2026-11-19 — The validation study of F3: no minimum heating setpoint by default, and one case of the causal SET model
+
+- **Status**: accepted (the author, on 2026-11-19, in the session of Claude Science on the article with Ruiji Sun).
+  Claude Science changed `tools/indoor_adaptation_study.py` and wrote this entry in the working tree; it did not
+  commit them (its sandbox cannot write the repository with git), and it changed nothing else.
+- **Context**: the choices of the study of 2026-11-12 and 2026-11-13 (below) are the position of the author, to be
+  agreed with Ruiji Sun. The script gave the cases of the causal SET model a minimum heating setpoint of 18 °C by
+  default (`--heating-minimum 18`), and case (v), the limiter of the drift of the setpoints, was a part of the study
+  and of the message to Ruiji Sun.
+- **Decisions of the author**:
+  1. The study applies the causal band as published, without a minimum heating setpoint ("no vamos a aplicar el lower
+     bound [...]; si es necesario, lo haremos en el futuro"; "por defecto, el heating-minimum debe estar desactivado").
+     `--heating-minimum` of the script is none by default; a value gives the cases that minimum, and -1 is still none.
+  2. The incremental setpoints after Parkinson, de Dear and Brager (2020), case (v) of the study, are left aside for
+     now ("por ahora [...] lo vamos a dejar de lado"): they are not in the message to Ruiji Sun nor in the design of
+     the article. The limiter of accim (`drift_mode`) and the cases `v_*` of the script do not change.
+  3. Climates: Seville, Singapore and Shanghai or Ningbo first, with all the cases of the study; the others of the
+     proposal that Ruiji Sun received (Phoenix, Sydney and Beijing) as the time of the simulations allows. The
+     message asks him which ones he finds most informative.
+  4. The energy of the other cases is reported relative to that of the causal SET model (how much more or less they
+     use than it), instead of the savings relative to one of the static references.
+  5. The study is as simple as possible and narrowed to what Sun, Brager & Schiavon (2026) specify, without
+     assumptions of its own ("limitándonos a lo especificado en el artículo de sun sin hacer suposiciones ni inventar
+     datos"): one case of the causal SET model, the band of 19 to 28 °C SET as the setpoints of the whole year, with
+     the clothing insulation, the activity and the air speed of the model of the building, the same in all the cases.
+     No fans (the paper gives no air speeds), and neither the clothing insulation by season nor the dynamic clothing
+     model given to the model. The static reference (a) stays the PMV setpoints of category II (±0.5).
+- **Consequences**: the cases of the study are `i_fixed`, `ii_en16798`, `ii_ashrae55`, the static reference (a) and
+  one case of the causal SET model that the script does not have yet (`iii_seasonal` and `iii_dynamic` change the
+  clothing insulation of the model): 5 for each weather file, one of them with the hook. Not done here, left for the
+  next session of the repository: that case of the script (by instruction of the author); the entries of `TODO.md`
+  that still have cases (iv) and (v) and their questions for Ruiji Sun ("Block F: the simulations of the validation
+  study of F3", "F2: a limiter of the drift of the setpoints of each time of the day" and "The message of the author
+  to Ruiji Sun"); whether `--cases all` should leave the cases out of the study out; and `DEVLOG.md`, `CHANGELOG.md`
+  and `CAMBIOS_CODIGO_v1.2.0.md`, which this session did not write.
+- **Follow-up (2026-11-22, Claude Code, asked by the author)**: the script has the case of the causal SET model,
+  `iii_model` (comfort standard 24 with the clothing insulation, the activity and the air speed of the People objects
+  of the model, without fans and without a minimum heating setpoint). On `--cases all`, decided by Claude Code: it
+  keeps running all the cases, as its name says and as the docstring of the script already said; a new selection,
+  `--cases study` (`STUDY_CASES`: `i_fixed`, `ii_en16798`, `ii_ashrae55` and `iii_model`), is the default, and
+  `--list` marks those cases, so that the study runs by default and the other cases stay for sensitivities. The entries
+  of `TODO.md` are updated (the block F narrowed; F2 to P3, without the study; the message to Ruiji Sun without cases
+  (iv) and (v), and with the climates), and so are section 4.7.6 of the detailed use, `DEVLOG.md`, `CHANGELOG.md` and
+  `CAMBIOS_CODIGO_v1.2.0.md` (81); `tests/core/test_indoor_adaptation_study.py` checks the cases.
+
 ## 2026-11-19 — How full air-conditioning closes the windows on the design days
 
 - **Status**: done (Claude Code, on 2026-11-19, implementing decision 1 of the entry "The four questions of

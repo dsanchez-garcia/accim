@@ -3735,3 +3735,22 @@ el nombre de una zona se tomaba por ella; y con `ex_ac` las zonas con termostato
 con las ventanas abiertas (ahora se cierran también). El de las cifras encontró tres entradas del CHANGELOG y algunos
 textos con valores antiguos, y el test del respaldo del estándar 24 a 0,004 K de su cota (ahora fija además sus medias
 medidas); todo corregido.
+
+## 81. El estudio de validación de F3, acotado: el caso `iii_model` y `--cases study`
+
+El 19 de noviembre, en la sesión de Claude Science sobre el artículo con Ruiji Sun, el autor decidió acotar el estudio a
+lo que especifican Sun, Brager y Schiavon (2026): un único caso del modelo SET causal con la ropa, la actividad y la
+velocidad del aire del propio modelo, sin ventiladores ni ropa por estaciones, sin el limitador de deriva y sin consigna
+mínima de calefacción por defecto. Claude Science cambió esto último en el script y escribió la entrada de decisiones,
+sin commit, y dejó el resto para el repositorio.
+
+**El cambio**: el script `tools/indoor_adaptation_study.py` tiene el caso `iii_model` (el estándar 24 con las entradas
+de los objetos People del modelo) y una selección nueva, `--cases study`, que es la de por defecto y ejecuta los cuatro
+casos del estudio que tiene el script (`i_fixed`, `ii_en16798`, `ii_ashrae55` e `iii_model`); `--cases all` sigue
+ejecutando todos, el resto como análisis de sensibilidad, y `--list` marca los del estudio. En el TODO, el bloque F
+queda acotado (5 casos por clima, los climas y la energía relativa al modelo SET causal), F2 pasa a P3 (el estudio ya no
+lo necesita) y el mensaje a Ruiji Sun ya no pregunta por los casos (iv) y (v), sino por los climas. La sección 4.7.6 de
+la documentación lo explica.
+
+**Los tests**: `tests/core/test_indoor_adaptation_study.py` comprueba los casos del estudio y las marcas de `--list`,
+sin simular; los cuatro casos se probaron con dos días de julio del modelo de ejemplo.
