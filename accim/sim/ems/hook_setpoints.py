@@ -30,6 +30,18 @@ setpoints are those of the ACCIS, but in the zones with the fallback of the EMS 
 right before ``ApplyHookSetpoints_<zone>``: those zones need no hook (``zones_needing_a_hook`` of
 :mod:`accim.sim.ems.set_feedback`, with which :func:`accim.run.run_ep` and the backend of the API leave them out of
 their error and their warning).
+
+In mixed mode (the models with the program SetVST, script types 'vrf_mm' and 'ex_mm'; decision of the author of
+2026-11-24, ``notes/decisions.md``), the windows follow the setpoints of the hook too. SetVST, which runs after these
+programs, already takes them for the minimum outdoor temperature (``roundedAHST - MinOToffset``) and, with the
+ventilation controls 1 and 3, for the ventilation setpoint (``roundedAHST + VSToffset``), and the programs of the
+windows compare the operative temperature with ``roundedACST``. With the ventilation controls 0 and 2, SetVST sets the
+ventilation setpoint to the comfort temperature of the comfort standard of the zone, which is not that of the hook: in
+the timesteps in which the hook has given its setpoints, ``ApplyHookSetpoints_<zone>`` sets the global variable
+``HookVST_<zone>`` to 1 (0 otherwise), and the program ``ApplyHookVST_<zone>``, which ``RunACCIS_<zone>`` runs right
+after SetVST, sets the ventilation setpoint to the midpoint of the setpoints of the zone,
+``(roundedACST + roundedAHST)/2 + VSToffset``, as SetVST does with the static setpoints of comfort standard 0 and out
+of the applicability limits. The programs of the models with full air-conditioning do not change.
 """
 
 import os
@@ -45,12 +57,15 @@ __all__ = [
     'INIT_PROGRAM',
     'MissingHookWarning',
     'PROGRAM_PREFIX',
+    'VENTILATION_FLAG_PREFIX',
+    'VENTILATION_PROGRAM_PREFIX',
     'hook_zones',
     'hook_zones_of_file',
     'init_program_lines',
     'missing_hook_message',
     'program_lines',
     'set_hook_setpoints_code',
+    'ventilation_program_lines',
     'zone_variables',
 ]
 
@@ -63,6 +78,14 @@ FLAG_PREFIX = 'HookSetpoints_'
 #: The EMS global variables of each zone with the heating and cooling setpoints of the hook (without the tolerance)
 HEATING_PREFIX = 'HookAHST_'
 COOLING_PREFIX = 'HookACST_'
+#: In mixed mode, the program of each zone that sets its ventilation setpoint with the setpoints of the hook is this
+#: prefix and the name of the zone
+VENTILATION_PROGRAM_PREFIX = 'ApplyHookVST_'
+#: In mixed mode, the EMS global variable of each zone that is 1 in the timesteps in which the hook has given its
+#: setpoints (HookSetpoints_<zone> is set back to 0 before SetVST runs)
+VENTILATION_FLAG_PREFIX = 'HookVST_'
+#: The program of mixed mode that sets the ventilation setpoint, after which ApplyHookVST_<zone> runs
+_VENTILATION_SETPOINT_PROGRAM = 'SetVST'
 _RUN_PREFIX = 'run '
 
 
@@ -71,17 +94,31 @@ def zone_variables(zone: str) -> Tuple[str, str, str]:
     return f'{FLAG_PREFIX}{zone}', f'{HEATING_PREFIX}{zone}', f'{COOLING_PREFIX}{zone}'
 
 
-def program_lines(zone: str) -> List[str]:
+def program_lines(zone: str, mixed_mode: bool = False) -> List[str]:
     """The lines of the program ApplyHookSetpoints_<zone>: the setpoints of the ACCIS are those of the hook, with the
-    tolerance of the setpoints of the zone and rounded, if the hook has given them in this timestep."""
+    tolerance of the setpoints of the zone and rounded, if the hook has given them in this timestep. With
+    ``mixed_mode``, it also tells ApplyHookVST_<zone> whether it has (``HookVST_<zone>``, 1 or 0)."""
     flag, heating, cooling = zone_variables(zone)
-    return ([f'if {flag} == 1', f'set AHST = {heating}+AHSTtol', f'set ACST = {cooling}+ACSTtol']
-            + list(ROUNDING) + ['endif', f'set {flag} = 0'])
+    lines = [f'if {flag} == 1', f'set AHST = {heating}+AHSTtol', f'set ACST = {cooling}+ACSTtol'] + list(ROUNDING)
+    if mixed_mode:
+        lines += [f'set {VENTILATION_FLAG_PREFIX}{zone} = 1', 'else', f'set {VENTILATION_FLAG_PREFIX}{zone} = 0']
+    return lines + ['endif', f'set {flag} = 0']
 
 
-def init_program_lines(zones: Sequence[str]) -> List[str]:
+def ventilation_program_lines(zone: str) -> List[str]:
+    """The lines of the program ApplyHookVST_<zone> of mixed mode: with the ventilation controls 0 and 2, the
+    ventilation setpoint is the midpoint of the setpoints of the zone (those of the hook) plus its offset, if the hook
+    has given them in this timestep (see the module)."""
+    return [f'if {VENTILATION_FLAG_PREFIX}{zone} == 1', 'if (VentCtrl == 0) || (VentCtrl == 2)',
+            'set VST = (roundedACST+roundedAHST)/2+VSToffset', 'endif', 'endif']
+
+
+def init_program_lines(zones: Sequence[str], mixed_mode: bool = False) -> List[str]:
     """The lines of the program InitHookSetpoints, run at the beginning of each environment."""
-    return [f'set {name} = 0' for zone in zones for name in zone_variables(zone)]
+    lines = [f'set {name} = 0' for zone in zones for name in zone_variables(zone)]
+    if mixed_mode:
+        lines += [f'set {VENTILATION_FLAG_PREFIX}{zone} = 0' for zone in zones]
+    return lines
 
 
 def hook_zones(idf) -> List[str]:
@@ -149,7 +186,9 @@ def set_hook_setpoints_code(idf, zones: Sequence[str]) -> None:
     that runs it in RunACCIS_<zone> right after SetAST (before the program of the minimum and maximum of the setpoints,
     if the zone has it), and the program InitHookSetpoints with its program calling manager at the beginning of each
     environment. The objects that the model has already are kept (written again), so the hooks of the ATHB and of the
-    SET share them.
+    SET share them. In mixed mode (a model with the program SetVST), also the global variable ``HookVST_<zone>`` and
+    the program ApplyHookVST_<zone> of each zone, with the line that runs it in RunACCIS_<zone> right after SetVST
+    (see the module).
 
     :param zones: The zones, by their names in the EMS objects (``Block1_Zone1``...).
     :raises ValueError: If the program RunACCIS_<zone> of a zone does not run SetAST.
@@ -159,24 +198,34 @@ def set_hook_setpoints_code(idf, zones: Sequence[str]) -> None:
 
     zones = list(zones)
     declared = _declared(idf)
+    mixed_mode = idf.getobject('EnergyManagementSystem:Program', _VENTILATION_SETPOINT_PROGRAM) is not None
     for zone in zones:
-        new = [name for name in zone_variables(zone) if name.upper() not in declared]
+        names = list(zone_variables(zone)) + ([f'{VENTILATION_FLAG_PREFIX}{zone}'] if mixed_mode else [])
+        new = [name for name in names if name.upper() not in declared]
         if new:
             idf.newidfobject('EnergyManagementSystem:GlobalVariable',
                              **{f'Erl_Variable_{n}_Name': name for n, name in enumerate(new, start=1)})
         name = f'{PROGRAM_PREFIX}{zone}'
         existing = idf.getobject('EnergyManagementSystem:Program', name)
         if existing is None:
-            add_program(idf, name, program_lines(zone))
+            add_program(idf, name, program_lines(zone, mixed_mode))
         else:
-            set_program_lines(existing, program_lines(zone))
+            set_program_lines(existing, program_lines(zone, mixed_mode))
         _insert_run_line(idf, zone, f'{_RUN_PREFIX}{name}', 'run SetAST')
+        if mixed_mode:
+            name = f'{VENTILATION_PROGRAM_PREFIX}{zone}'
+            existing = idf.getobject('EnergyManagementSystem:Program', name)
+            if existing is None:
+                add_program(idf, name, ventilation_program_lines(zone))
+            else:
+                set_program_lines(existing, ventilation_program_lines(zone))
+            _insert_run_line(idf, zone, f'{_RUN_PREFIX}{name}', f'{_RUN_PREFIX}{_VENTILATION_SETPOINT_PROGRAM}')
     all_zones = hook_zones(idf)
     init = idf.getobject('EnergyManagementSystem:Program', INIT_PROGRAM)
     if init is None:
-        add_program(idf, INIT_PROGRAM, init_program_lines(all_zones))
+        add_program(idf, INIT_PROGRAM, init_program_lines(all_zones, mixed_mode))
     else:
-        set_program_lines(init, init_program_lines(all_zones))
+        set_program_lines(init, init_program_lines(all_zones, mixed_mode))
     if idf.getobject('EnergyManagementSystem:ProgramCallingManager', INIT_PROGRAM) is None:
         idf.newidfobject('EnergyManagementSystem:ProgramCallingManager', Name=INIT_PROGRAM,
                          EnergyPlus_Model_Calling_Point='BeginNewEnvironment', Program_Name_1=INIT_PROGRAM)

@@ -448,10 +448,24 @@ def _date_parts(values: Iterable[Any]) -> np.ndarray:
     return np.array(parts, dtype=float).reshape(-1, 4)
 
 
+def _output_key(zone: Any, keys: Iterable[str]) -> Optional[str]:
+    """The key of the outputs of EnergyPlus of a zone of the table, among some keys (in upper case): the name of the
+    zone, which is its key in the tables of the models whose zones have the pattern block:zone of DesignBuilder
+    ('BLOCK1:ZONE1'); or, if it is not one of the keys, its name without its block, for the zones that Table names with
+    a block of ``block_zone_hierarchy`` ('<block>:<zone>' in upper case: 'BUILDING:CORE_ZN' is the zone Core_ZN, whose
+    outputs are those of 'CORE_ZN'); None if neither is one of them."""
+    name = str(zone).upper()
+    if name in keys:
+        return str(zone)
+    _, separator, without_block = name.partition(':')
+    return without_block if separator and without_block in keys else None
+
+
 def _people_of_simulation(source: Any, zones: Sequence[str], people: Optional[Dict[str, dict]], idf: Any,
                           models: Dict[str, Dict[str, dict]]) -> Dict[str, dict]:
     """The schedules of the People objects of the zones of a simulation (:func:`accim.sim.comfort_hooks.people_inputs`),
-    by their names in the table (the keys of their outputs): those of the hook given (``people``), or those of the
+    by their names in the table (the keys of their outputs, or those keys with the block that Table gives them with
+    ``block_zone_hierarchy``, :func:`_output_key`): those of the hook given (``people``), or those of the
     model ``idf``, or of the model of the simulation, the IDF file in the current folder whose name is that of its CSV
     file up to its weather file ('<model>[<weather file>.csv', as :func:`accim.run.run_ep` names them); the zones
     whose People objects are not found are left out.
@@ -477,7 +491,8 @@ def _people_of_simulation(source: Any, zones: Sequence[str], people: Optional[Di
             models[path] = people_inputs(accis.load_idf(path))
         people = models[path]
     by_key = {str(values.get('key', '')).upper(): values for values in people.values()}
-    return {zone: by_key[str(zone).upper()] for zone in zones if str(zone).upper() in by_key}
+    keys = {zone: _output_key(zone, by_key) for zone in zones}
+    return {zone: by_key[key.upper()] for zone, key in keys.items() if key is not None}
 
 
 def _pythermalcomfort_set_of_rows(group: pd.DataFrame, source: Any, hook, zones: Sequence[str],
@@ -485,7 +500,8 @@ def _pythermalcomfort_set_of_rows(group: pd.DataFrame, source: Any, hook, zones:
                                   models: Optional[Dict[str, Dict[str, dict]]] = None
                                   ) -> Dict[str, Optional[np.ndarray]]:
     """The SET of pythermalcomfort of each zone in each row of the table of a simulation (see :func:`table_indicators`):
-    that of each row of its CSV file (:func:`accim.sim.comfort_hooks.set_of_results`, keyed by the name of the zone),
+    that of each row of its CSV file (:func:`accim.sim.comfort_hooks.set_of_results`, keyed by the name of the zone, or
+    by its name without the block that Table gives it with ``block_zone_hierarchy``, :func:`_output_key`),
     averaged over the rows of the CSV file of each row of the table, by its month, day and hour, and its minute in the
     tables of timesteps (EnergyPlus labels each timestep and hour with its end, and Table gives each row the hour that
     it is part of: that of the label, minus 1 for the labels that end an hour, such as 01:00 and 24:00); None for the
@@ -533,12 +549,16 @@ def _pythermalcomfort_set_of_rows(group: pd.DataFrame, source: Any, hook, zones:
         minute = np.zeros(len(group))
         keys = {'month': parts[:, 0], 'day': parts[:, 1], 'hour': hour_of_row, 'minute': np.zeros(len(parts))}
     rows = pd.MultiIndex.from_arrays([month, day, hour, minute])
+    # The keys of the outputs of the zones in the CSV file: those of the columns of their mean air temperature
+    marker = f':{_SET_ZONE_VARIABLES[0]} ['.upper()
+    output_keys = {name.split(marker)[0] for name in map(str.upper, results.columns) if marker in name}
     found: Dict[str, Optional[np.ndarray]] = {}
     for zone in zones:
         single = copy.copy(hook)
         single.zones = [zone]
         try:
-            values = set_of_results(results, single, keys={zone: zone},
+            # Without its outputs, the name of the zone itself: set_of_results raises the error, and the zone has NaN
+            values = set_of_results(results, single, keys={zone: _output_key(zone, output_keys) or zone},
                                     people={zone: schedules[zone]} if from_people else None
                                     )[f'SET_{zone}'].to_numpy(dtype=float)
         except MissingOccupantInputs:
@@ -593,7 +613,10 @@ def table_indicators(df: pd.DataFrame, zones: Sequence[str], tsv_limit: Optional
       reads them), with the outputs *Zone Mean Air Temperature*, *Zone Mean Radiant Temperature* and *Zone Air
       Relative Humidity* of each zone, keyed by its name in the table (those that
       :func:`accim.sim.comfort_hooks.apply_set_setpoints` requests; the zones without them, such as those that Table
-      names after their spaces, have NaN, with a warning), and the metabolic rate, clothing insulation, air speed and
+      names after their spaces, have NaN, with a warning) or, for the zones that Table names with a block of
+      ``block_zone_hierarchy`` ('BUILDING:CORE_ZN', those whose names have not the pattern block:zone, as in the
+      prototypes of the DOE), by its name without the block ('CORE_ZN'; since 2026-11-24, before which such zones had
+      NaN, and the indicators stopped with ``'people'``), and the metabolic rate, clothing insulation, air speed and
       posture of ``pythermalcomfort_set``, averaged over the rows of the CSV file of each row of the table (the
       timesteps of each hour, as Table averages the SET of the Pierce model). These are the inputs that task E-F1
       compared. With numbers, those of the occupants are constant, so the SET of pythermalcomfort and that of the

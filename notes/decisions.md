@@ -11,6 +11,115 @@ Durable architectural/process decisions for this repository and its Obsidian
 vault. Newest first. Use [[templates/decision-record.md|the decision-record
 template]] to add a new entry.
 
+## 2026-11-24 — The validation study of F3 in mixed mode: the hooks in mixed mode, the PMV setpoints as temperature setpoints, five cases and thirteen locations
+
+- **Status**: accepted (the author, on 2026-11-23 and 2026-11-24, in the session of Claude Science on the article with
+  Ruiji Sun). Claude Science changed the files below in the working tree, by instruction of the author ("hay que
+  cambiarlo"; the files saved in the repository without a commit, which the author reviews and makes), and nothing else.
+  Its sandbox cannot run the tests that simulate with EnergyPlus (the processes of `run_simulations` need named pipes,
+  which it denies: 15 tests of `tests/core` fail there before and after these changes): **they are to be run before the
+  commit**.
+- **Context**: the study of 2026-11-19 (below) had four cases in the script (`i_fixed`, `ii_en16798`, `ii_ashrae55` and
+  `iii_model`), with full air-conditioning (`vrf_ac`), and the static reference (a), the PMV setpoints, outside it. The
+  model of the building that the author gave for the study (`ALJARAFE CENTER_onlyGeometry.idf`, which the author used in
+  an earlier article, with A. L. Pisello and J. Kim; EnergyPlus 25.1, one office zone, AirflowNetwork) is made for mixed
+  mode: its windows have the venting control Temperature with a setpoint of -0.5 °C, so with `vrf_ac`, in which the
+  windows keep the control of the model, they are open whenever the zone is warmer than the outdoor air (30 to 34 of the
+  48 hours of 15 and 16 July in Seville, 4 of them while the VRF system cooled). The hooks of `accim.sim.comfort_hooks`
+  raised a `ValueError` in mixed mode (verdict #34 of 2026-11-10, and the entry A4 of `TODO.md`: "a question for the
+  author first").
+- **Decisions of the author**:
+  1. (2026-11-23) The locations are thirteen: Seville and twelve of the ASHRAE Global Thermal Comfort Database II
+     (v2.1.0), the most sampled location of each Köppen-Geiger class with at least 500 records with SET and thermal
+     sensation vote: San Francisco, Guangzhou, Maceió, Sydney, Beijing, Athens, Kalgoorlie, Bangkok, Bandar Abbas,
+     Melbourne, Montreal and Kuala Lumpur. They replace those of decision 3 of 2026-11-19 (Seville, Singapore and
+     Shanghai or Ningbo first). The clothing insulation is the schedule of the model in the northern hemisphere (1.0 clo
+     until 1 April and from 1 October, 0.5 clo between them), the same schedule shifted six months in the southern
+     hemisphere (Sydney, Kalgoorlie and Melbourne), and 0.5 clo all the year in the tropical locations (Maceió, Bangkok
+     and Kuala Lumpur). Ruiji Sun has not been told yet ("ya se lo contaremos a Ruiji").
+  2. (2026-11-24) The study has five cases: the PMV setpoints of -0.5 and 0.5, fixed setpoints of 20 and 26 °C, EN
+     16798-1 (category II), ASHRAE 55 (80 %) and the causal SET model ("el pmv tiene que ser uno de ellos"; asked
+     whether the fixed setpoints stay, the author chose the five).
+  3. (2026-11-24) All the cases run in mixed mode: "si se usa el modo mixto, las ventanas se deben poder abrir
+     automáticamente cuando se cumplan las siguientes 2 condiciones (entre otras): se supere la consigna de
+     refrigeración y no esté activado el sistema de aire acondicionado; el resto de las condiciones son las que se dan
+     en los programas EMS". In the EMS of accim, the windows open above the ventilation setpoint and below the cooling
+     setpoint; the sentence is read as the ventilation setpoint, which the author was told before choosing the
+     ventilation control: 2 (above the comfort temperature, with the customised opening factor), with the offsets and
+     limits of `AddAccis` by default (no offset of the ventilation setpoint, `min_outdoor_temp_offset` and
+     `max_wind_speed` of 50: no limits that matter).
+  4. (2026-11-24) In the cases without a comfort temperature of their own (the fixed setpoints, the PMV setpoints and
+     the causal SET model), the ventilation setpoint is the midpoint of their two setpoints, as SetVST takes it for the
+     static setpoints of comfort standard 0 and out of the applicability limits.
+  5. (2026-11-24) The PMV setpoints are those of a new hook, which inverts the PMV to setpoints of the operative
+     temperature as the hook of the SET does, so that the model has the ACCIS and its windows as the other cases; the
+     Fanger thermostats of EnergyPlus (`accim.sim.apmv.apply_pmv_setpoints`, the reference (a) of the verdict of
+     2026-11-12) stay as the alternative plan ("procedemos con la opción 1, pero quiero que se mantenga la opción 2
+     como plan alternativo"): their models have no ACCIS, and accim does not control their windows.
+- **What was done** (Claude Science, in the working tree):
+  1. `accim/sim/ems/hook_setpoints.py`: in the models in mixed mode (those with the program SetVST), the program
+     `ApplyHookSetpoints_<zone>` also sets the global variable `HookVST_<zone>` (1 in the timesteps in which the hook
+     gave its setpoints, 0 otherwise), and the new program `ApplyHookVST_<zone>`, which `RunACCIS_<zone>` runs right
+     after SetVST, sets with the ventilation controls 0 and 2 the ventilation setpoint to
+     `(roundedACST + roundedAHST)/2 + VSToffset`. With the ventilation controls 1 and 3, SetVST already takes the heating
+     setpoint of the zone, which is that of the hook; so the minimum outdoor temperature and the comparison of the
+     operative temperature with the cooling setpoint in the programs of the windows. The programs of the models with full
+     air-conditioning do not change (their output IDFs are the same).
+  2. `accim/sim/comfort_hooks.py`: `_model_zones` no longer raises in mixed mode (`apply_athb_setpoints`,
+     `apply_set_setpoints` and `apply_sun2026_setpoints` take the models of `vrf_mm` and `ex_mm`); the new
+     `fanger_pmv`, `PmvSetpointHook` (a subclass of `SetSetpointHook` by bisection, which shares its sensors, with the
+     outputs `HookPMV_<zone>` and `HookPMVsaturated_<zone>`), `apply_pmv_hook_setpoints` and `pmv_hook_zone_outputs`;
+     `SetSetpointHook` gets the method `_index` (the SET, which the hook of the PMV overrides) and the names of its
+     outputs as attributes of the class, and `set_of_results` gives the index of the hook (the PMV of each row, with a
+     hook of the PMV).
+  3. `tools/indoor_adaptation_study.py`: the case `i_pmv`; `STUDY_CASES` of five; `--script-type` (`vrf_mm` by default),
+     `--hvac-mode` (2), `--ventilation-control` (2), `--ventilation-setpoint-offset`, `--min-outdoor-temp-offset` and
+     `--max-wind-speed`; the comfort temperature of the fixed setpoints is their midpoint, 23 °C; the occupied zones
+     without the pattern block:zone go to `Table` as those of one block (with the small office of the DOE and
+     `--script-type ex_ac` the indicators still stop after that, in `table_indicators`: `DEVLOG.md`); the new indicators
+     (the electricity of the whole HVAC system, the ventilation hours, and the PMV of the occupied hours with the
+     reference PMV and with that of the Fanger model of EnergyPlus).
+  4. The tests: `tests/core/test_comfort_hooks.py` (the models in mixed mode, the EMS of mixed mode with the Erl
+     interpreter for the four ventilation controls, the hook of the PMV and `apply_pmv_hook_setpoints`; the two tests of
+     the `ValueError` of mixed mode are removed) and `tests/core/test_indoor_adaptation_study.py`. Of the 99 tests of
+     the five files of the hooks and the study, the 84 that do not simulate pass.
+- **Measured** (2026-11-24, the model of the building in Seville, TMYx 2011–2025 of Sevilla.AP, EnergyPlus 25.1, 6
+  timesteps per hour, the five cases in mixed mode with the defaults above, in series; a week takes about 14 minutes in
+  the sandbox):
+  1. The ventilation setpoint is the midpoint in the three cases without a comfort temperature (23.0 °C with the fixed
+     setpoints; 25.9 and 23.0 °C in July and January with the PMV setpoints, whose setpoints were 24.8 and 27.1 °C, and
+     21.4 and 24.6 °C; 23.1 and 20.4 °C with the causal SET model) and the comfort temperature in the adaptive cases.
+  2. The PMV of the hook is that of pythermalcomfort with the outputs of each hour (0.000 and -0.002 away on average).
+     The PMV of the Fanger model of EnergyPlus was above that of pythermalcomfort by 0.036 (1.0 clo) and 0.051 (0.5
+     clo) with the same air speed, and by 0.068 and 0.108 with the relative air speed (the default of the hook, as that
+     of the ATHB; `relative_air_speed=False` takes the air speed itself): with the hook at its cooling setpoint, the PMV
+     of EnergyPlus is 0.54 to 0.59, above 0.5.
+  3. 15–21 July: the cooling coils give 1749 (PMV), 1836 (fixed), 486 (EN 16798-1), 653 (ASHRAE 55) and 1717 kWh (causal
+     SET model), with 0, 0, 42.0, 30.7 and 0 ventilation hours: in the three cases with the lower cooling setpoints
+     (27.1, 26.0 and 27.4 °C on average, against 29.7 and 29.9 °C) the VRF system cools in the 168 hours, so the
+     windows, which open only while it is off, never open; the adaptive cases cool in 103 and 113 hours and ventilate at
+     night and in the morning (none of their ventilation hours is between 14 and 19 h).
+  4. 15–21 January: the heating coils give 271, 59, 52, 44 and 9 kWh, with 10.3, 8.2, 11.8, 13.0 and 16.2 ventilation
+     hours, and almost all the heating is in the hours with ventilation (269, 58, 52, 44 and 9 kWh): the outdoor air of
+     those hours is at 13 to 15 °C on average, below the heating setpoints, which is what would happen if the windows
+     opened for a timestep, the zone fell below its heating setpoint, the system heated and the windows closed (the
+     hourly results do not show the order within the hour). With `--min-outdoor-temp-offset 7` (three cases), the
+     heating is 0 (PMV), 21 (EN 16798-1) and 2.5 kWh (causal SET model), but the case of the PMV, whose band with 1.0
+     clo ends at about 24 °C, cools in 92 hours (199 kWh) and never ventilates, as in July.
+- **Open, for the author** (nothing of this was decided by Claude Science):
+  1. What 3 and 4 above mean for the study: with the occupants and the lights of the model in the 24 hours, the
+     results of mixed mode depend on whether the system of each case ever stops, and on the limits of the outdoor
+     temperature for ventilation. The arguments of the script let the author choose them.
+  2. `relative_air_speed` of the hook of the PMV (True by default).
+  3. The tests with EnergyPlus of `tests/core`, and one of the hooks in mixed mode with EnergyPlus, which the sandbox
+     could not run; `DEVLOG.md` has how the changes were checked instead. Neither could it make the indicators of the
+     small office of the DOE (`--script-type ex_ac`), which stop in `table_indicators`.
+  4. Section 4.9.4 of the detailed use and the paragraphs of 4.1.2, 4.7.6, 4.9.1 and 4.9.2 are new or changed; the
+     How-to notebooks and the GUI do not have the hook of the PMV.
+- **Consequences**: the study has 5 cases for each weather file, two of them with a hook (`i_pmv` and `iii_model`, by
+  bisection in each timestep), in 13 locations; `--script-type vrf_ac` still gives the models of before. The entry A4 of
+  `TODO.md` (the setpoints of the ATHB in mixed mode) has this design, to be reviewed by the author.
+
 ## 2026-11-19 — The validation study of F3: no minimum heating setpoint by default, and one case of the causal SET model
 
 - **Status**: accepted (the author, on 2026-11-19, in the session of Claude Science on the article with Ruiji Sun).

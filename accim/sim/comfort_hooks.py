@@ -88,6 +88,18 @@ The causal SET model of Sun, Brager and Schiavon (2026), Energy and Buildings 37
 with the ACCIS and returns a :class:`Sun2026SetpointHook`, a hook of the SET by bisection whose SET setpoints are those
 of the model (:func:`sun2026_set_setpoints`), with the inputs of the People objects and, by default, the mean radiant
 temperature of each zone, and which reports the causal TSV of each zone and its occupied hours within the band.
+
+The PMV of Fanger as setpoints of the operative temperature (decision of the author of 2026-11-24,
+``notes/decisions.md``) works as the SET by bisection: :func:`apply_pmv_hook_setpoints` prepares a model with the ACCIS
+and returns a :class:`PmvSetpointHook`, which inverts the PMV of pythermalcomfort (:func:`fanger_pmv`) to the
+temperatures whose PMV is its heating and cooling setpoints (-0.5 and 0.5 by default), with the inputs of the People
+objects and the mean radiant temperature of each zone. :func:`accim.sim.apmv.apply_pmv_setpoints` controls the PMV
+with the Fanger thermostats of EnergyPlus instead, in models without the ACCIS.
+
+The models can have full air-conditioning or be in mixed mode (script types 'vrf_mm' and 'ex_mm'; decision of the
+author of 2026-11-24, before which the hooks needed full air-conditioning): in mixed mode, the windows follow the
+setpoints of the hook as the thermostats do, and with the ventilation controls 0 and 2 their ventilation setpoint is
+the midpoint of the setpoints of the hook (:mod:`accim.sim.ems.hook_setpoints`).
 """
 
 import math
@@ -103,6 +115,9 @@ __all__ = [
     'AthbSetpointHook',
     'MET_ACTIVITY_LEVEL',
     'MissingOccupantInputs',
+    'PMV_HOOK_SATURATED',
+    'PMV_HOOK_TEMPERATURE_RANGE',
+    'PmvSetpointHook',
     'SET_HEATING_WARNING_TEMPERATURE',
     'SET_METHODS',
     'SET_SATURATED',
@@ -118,13 +133,16 @@ __all__ = [
     'TR_MODES',
     'add_people_input_outputs',
     'apply_athb_setpoints',
+    'apply_pmv_hook_setpoints',
     'apply_set_setpoints',
     'apply_sun2026_setpoints',
     'athb_clo',
     'athb_met',
     'athb_pmv',
     'causal_tsv',
+    'fanger_pmv',
     'people_inputs',
+    'pmv_hook_zone_outputs',
     'relative_air_speed',
     'set_of_results',
     'set_zone_outputs',
@@ -251,6 +269,15 @@ _SUN2026_OUTPUTS: Dict[str, str] = {'TSV_causal': ''}
 #: The EMS output variable of each zone of comfort standard 24 with its occupied hours with the SET within the band
 #: of TSV ±tsv_limit, summed
 _SUN2026_HOURS = 'HoursInCausalBand'
+#: The range of the operative temperature (°C) within which the hook of the PMV looks for its setpoints: that of the
+#: hook of the ATHB (the air temperature of 10 to 30 °C within which ISO 7730:2025 uses the PMV)
+PMV_HOOK_TEMPERATURE_RANGE = ATHB_TEMPERATURE_RANGE
+#: The EMS output variable of each zone of the hook of the PMV (:class:`PmvSetpointHook`), averaged: its PMV
+_PMV_HOOK_OUTPUTS: Dict[str, str] = {'HookPMV': ''}
+#: The summed EMS output variable of each zone of the hook of the PMV with the hours in which a setpoint is at a limit
+#: of ``temperature_range``
+PMV_HOOK_SATURATED = 'HookPMVsaturated'
+_PMV_HOOK_SUMMED_OUTPUTS = {PMV_HOOK_SATURATED: 'H'}
 
 
 def athb_met(met: float, t_running_mean: float) -> float:
@@ -626,8 +653,10 @@ class AthbSetpointHook:
 
 
 def _model_zones(building, what: str, prefixes: Sequence[str], running_mean: bool) -> Dict[str, str]:
-    """The zones of a model with the ACCIS of accim 1.0.0 or later and full air-conditioning, with the key of the
-    sensor of the operative temperature of each one, checked for the setpoints of a hook.
+    """The zones of a model with the ACCIS of accim 1.0.0 or later, with full air-conditioning or in mixed mode
+    (in which the windows follow the setpoints of the hook too, :mod:`accim.sim.ems.hook_setpoints`: decision of the
+    author of 2026-11-24, before which the hooks needed full air-conditioning), with the key of the sensor of the
+    operative temperature of each one, checked for the setpoints of a hook.
 
     :param what: The setpoints, for the messages ('the ATHB'...).
     :param prefixes: The prefixes of the sensors of the zones of the hooks, which the model must not have.
@@ -640,9 +669,6 @@ def _model_zones(building, what: str, prefixes: Sequence[str], running_mean: boo
     if not zones:
         raise ValueError(f'The setpoints of {what} need the ACCIS of accim 1.0.0 or later (the programs '
                          f'SetInputData_<zone>): add it with AddAccis or add_accis_to_idf first.')
-    if building.getobject('EnergyManagementSystem:Program', 'SetVST') is not None:
-        raise ValueError(f'The setpoints of {what} need full air-conditioning (script_type vrf_ac or ex_ac): in mixed '
-                         f'mode, the windows follow the setpoints of the ACCIS.')
     sensors = {str(s.Name).upper(): s for s in building.idfobjects['EnergyManagementSystem:Sensor']}
     actuators = {str(a.Name).upper() for a in building.idfobjects['EnergyManagementSystem:Actuator']}
     if running_mean and 'RMOT' not in sensors:
@@ -696,7 +722,8 @@ def apply_athb_setpoints(building, athb_cooling_setpoint: float = 0.5, athb_heat
                          max_iterations: int = 20,
                          temperature_range: Tuple[float, float] = ATHB_TEMPERATURE_RANGE) -> AthbSetpointHook:
     """Prepare a model with the ACCIS (an output IDF of :class:`accim.sim.accis.AddAccis` or a model of
-    :func:`accim.sim.accis.add_accis_to_idf`, with ``setpoint_type='temperature'`` and full air-conditioning) for the
+    :func:`accim.sim.accis.add_accis_to_idf`, with ``setpoint_type='temperature'``, with full air-conditioning or in
+    mixed mode, in which the windows follow the setpoints of the hook: :mod:`accim.sim.ems.hook_setpoints`) for the
     setpoints of the ATHB (see the module), and return the hook that sets them.
 
     Its zones get the EMS sensors of their mean air temperature, mean radiant temperature and relative humidity
@@ -723,9 +750,9 @@ def apply_athb_setpoints(building, athb_cooling_setpoint: float = 0.5, athb_heat
         EMS outputs of the model (those of the ACCIS), so that ``Table`` reads them with the other outputs.
     :return: The hook (:class:`AthbSetpointHook`), with the other arguments (see it: ``met`` greater than 0, warnings
         out of the ranges of ISO 7730:2025 of the metabolic rate and the air speed).
-    :raises ValueError: If the model has no ACCIS of accim 1.0.0 or later, is in mixed mode (whose windows follow the
-        setpoints of the ACCIS), has already the objects of the ATHB or of the SET (:func:`apply_set_setpoints`), has
-        not the People objects whose schedules the hook reads, or an argument is not valid.
+    :raises ValueError: If the model has no ACCIS of accim 1.0.0 or later, has already the objects of the ATHB or of
+        the SET (:func:`apply_set_setpoints`), has not the People objects whose schedules the hook reads, or an
+        argument is not valid.
     """
     keys = _model_zones(building, 'the ATHB', _HOOK_SENSOR_PREFIXES, running_mean=True)
     needed = [name for name, value in (('met', met), ('air_speed', air_speed)) if value is None]
@@ -789,13 +816,14 @@ def standard_effective_temperature(air_temperature, mean_radiant_temperature, ai
 def _occupant_set(hook, air_temperature, mean_radiant_temperature, air_speed, relative_humidity, met, clo,
                   position: str):
     """The SET of the occupants of a zone (°C, a number or an array) for a hook of the SET
-    (:class:`SetSetpointHook`): that of :func:`standard_effective_temperature` with their air speed, or, with
+    (:class:`SetSetpointHook`; the index of the hook, with the hooks of other indices): that of
+    :func:`standard_effective_temperature` with their air speed, or, with
     ``air_speed_heating``, that of the occupants who have the air speed of their fans only when they need it: the SET
     with the air speed of the heating setpoint (:meth:`SetSetpointHook.heating_air_speed`) while it is not above the
     cooling setpoint of the SET of the hook, and the SET with ``air_speed``, that of the fans, when it is."""
     if hook.air_speed_heating is None:
-        return standard_effective_temperature(air_temperature, mean_radiant_temperature, air_speed, relative_humidity,
-                                              met, clo, position)
+        # The index of the hook: the SET, or that of the hooks of other indices (the PMV of PmvSetpointHook)
+        return hook._index(air_temperature, mean_radiant_temperature, air_speed, relative_humidity, met, clo, position)
     import numpy as np
 
     without_fans = np.asarray(standard_effective_temperature(
@@ -938,6 +966,11 @@ class SetSetpointHook:
 
     #: The hook runs before the EMS programs (:func:`accim.run.run_ep` passes it as ``before_programs``)
     runs_before_programs = True
+    #: The prefixes of the global variables and outputs of each zone with its index (the SET) and with its hours with a
+    #: setpoint at a limit of ``temperature_range``; those of the hooks of other indices differ
+    #: (:class:`PmvSetpointHook`)
+    _index_output = 'SET'
+    _saturated_output = SET_SATURATED
 
     def __init__(self, zones: Sequence[str], set_cooling_setpoint: float, set_heating_setpoint: float,
                  met: Optional[float] = None, clo: Optional[float] = None, air_speed: Optional[float] = None,
@@ -1011,6 +1044,13 @@ class SetSetpointHook:
                 f'set_heating_setpoint={self.set_heating_setpoint}, met={self.met}, clo={self.clo}, '
                 f'air_speed={self.air_speed}, position={self.position!r}, method={self.method!r}, '
                 f'tr_mode={self.tr_mode!r}, air_speed_heating={self.air_speed_heating})')
+
+    def _index(self, air_temperature, mean_radiant_temperature, air_speed, relative_humidity, met, clo, position):
+        """The index whose setpoints the bisection inverts, which grows with the temperature: the SET
+        (:func:`standard_effective_temperature`); the hooks of other indices override it
+        (:class:`PmvSetpointHook`)."""
+        return standard_effective_temperature(air_temperature, mean_radiant_temperature, air_speed, relative_humidity,
+                                              met, clo, position)
 
     def posture(self, met: float) -> str:
         """The posture of the SET with a metabolic rate (met): that of the hook, or, if it has none (with the metabolic
@@ -1114,13 +1154,12 @@ class SetSetpointHook:
             radiant = float(mean_radiant_temperature)
 
             def standard(temperatures):
-                return np.asarray(standard_effective_temperature(temperatures, radiant, speeds, relative_humidity,
-                                                                 met, clo, position), dtype=float).reshape(2)
+                return np.asarray(self._index(temperatures, radiant, speeds, relative_humidity, met, clo, position),
+                                  dtype=float).reshape(2)
         else:
             def standard(temperatures):
-                return np.asarray(standard_effective_temperature(temperatures, temperatures, speeds,
-                                                                 relative_humidity, met, clo, position),
-                                  dtype=float).reshape(2)
+                return np.asarray(self._index(temperatures, temperatures, speeds, relative_humidity, met, clo,
+                                              position), dtype=float).reshape(2)
 
         return _bisect(standard, (self.set_heating_setpoint, self.set_cooling_setpoint),
                        self._bisection_range(mean_radiant_temperature), self.tolerance_k, self.max_iterations)
@@ -1188,7 +1227,7 @@ class SetSetpointHook:
         ``SETsaturated_<zone>`` is the length of the timestep (``ZoneTimeStep``, h) or 0, and the hours out of the
         warm-up days of the run periods are added to :attr:`saturated_hours`."""
         step = controller.get('ZoneTimeStep') or 0.0
-        controller.set(f'{SET_SATURATED}_{zone}', step if saturated else 0.0)
+        controller.set(f'{self._saturated_output}_{zone}', step if saturated else 0.0)
         if saturated and _in_run_period(controller):
             self.saturated_hours[zone] = self.saturated_hours.get(zone, 0.0) + step
 
@@ -1200,7 +1239,7 @@ class SetSetpointHook:
         gives the results of the model without it (:mod:`accim.sim.ems.set_feedback`; the review of 2026-11-18)."""
         from accim.sim.ems.hook_setpoints import zone_variables
 
-        controller.set(f'{SET_SATURATED}_{zone}', 0.0)
+        controller.set(f'{self._saturated_output}_{zone}', 0.0)
         controller.set(zone_variables(zone)[0], -1.0)
         self._skipped(controller, zone)
 
@@ -1285,7 +1324,7 @@ class SetSetpointHook:
                 air = controller.get(f'SET_MAT_{zone}')
                 if air is not None and radiant is not None:
                     value = self.zone_set(air, radiant, humidity, met, clo, air_speed)
-                    controller.set(f'SET_{zone}', value)
+                    controller.set(f'{self._index_output}_{zone}', value)
                     self._report(controller, zone, value)
                 else:
                     self._skipped(controller, zone)
@@ -1701,7 +1740,8 @@ def apply_set_setpoints(building, set_cooling_setpoint: float, set_heating_setpo
                         temperature_range: Optional[Tuple[float, float]] = None, method: str = 'table',
                         output_frequencies: Optional[Sequence[str]] = None,
                         tr_mode: str = 'equal_air', air_speed_heating: Optional[float] = None) -> SetSetpointHook:
-    """Prepare a model with the ACCIS (temperature setpoints and full air-conditioning, as :func:`apply_athb_setpoints`)
+    """Prepare a model with the ACCIS (temperature setpoints, with full air-conditioning or in mixed mode, as
+    :func:`apply_athb_setpoints`)
     for the setpoints of the standard effective temperature (SET), and return the hook that sets them
     (:class:`SetSetpointHook`, proposal A6, and tasks G3 and F1 of the review of accim 1.2.0).
 
@@ -1741,7 +1781,7 @@ def apply_set_setpoints(building, set_cooling_setpoint: float, set_heating_setpo
         None (the default) for that of the cooling setpoint (``air_speed``, or that of the People objects); see
         :class:`SetSetpointHook`.
     :return: The hook, with the other arguments, and the keys of the zones in the outputs (``hook.keys``).
-    :raises ValueError: If the model has no ACCIS of accim 1.0.0 or later, is in mixed mode, has already the objects of
+    :raises ValueError: If the model has no ACCIS of accim 1.0.0 or later, has already the objects of
         the SET or of the ATHB (both would set the same thermostats), has not the People objects whose inputs the hook
         reads (or, when they get the Pierce model, the schedules that it needs, or an empty field for it), or an
         argument is not valid.
@@ -1790,7 +1830,8 @@ def apply_sun2026_setpoints(building, comfort_mode: Any = 1, category: int = 80,
                             air_speed_heating: Optional[float] = None, ems_fallback: bool = False,
                             ems_relaxation: Optional[float] = None,
                             ems_slope: Optional[float] = None) -> Sun2026SetpointHook:
-    """Prepare a model with the ACCIS (temperature setpoints and full air-conditioning, as :func:`apply_set_setpoints`)
+    """Prepare a model with the ACCIS (temperature setpoints, with full air-conditioning or in mixed mode, as
+    :func:`apply_set_setpoints`)
     for comfort standard 24, INT Sun2026 SET (the causal SET model of Sun, Brager & Schiavon, 2026, Energy and
     Buildings 370, 118097; task F1 of block F, with the decisions of the author of 2026-11-10 in
     ``notes/decisions.md``), and return its hook (:class:`Sun2026SetpointHook`), which the backend of the Python API
@@ -1859,7 +1900,7 @@ def apply_sun2026_setpoints(building, comfort_mode: Any = 1, category: int = 80,
         setpoints are estimated (K/K): None for :data:`accim.sim.ems.set_feedback.DEFAULT_SLOPE` (1.0, about that with
         still air).
     :return: The hook, with the keys of the zones in the outputs (``hook.keys``).
-    :raises ValueError: If the model has no ACCIS of accim 1.0.0 or later, is in mixed mode, has already the objects of
+    :raises ValueError: If the model has no ACCIS of accim 1.0.0 or later, has already the objects of
         the SET or of the ATHB, its People objects have not the schedules that the hook and the Pierce model need (or
         no empty field for the Pierce model), or an argument is not valid.
     """
@@ -1911,6 +1952,221 @@ def apply_sun2026_setpoints(building, comfort_mode: Any = 1, category: int = 80,
         set_set_feedback_code(building, occupants, hook.set_heating_setpoint, hook.set_cooling_setpoint, hook.band,
                               ems_relaxation, ems_slope, hook.temperature_range, SUN2026_TSV_SLOPE,
                               SUN2026_TSV_INTERCEPT, activity_prefix=_PEOPLE_SENSORS['activity'])
+    return hook
+
+
+# The PMV of Fanger as temperature setpoints (decision of the author of 2026-11-24) ---------------------------------
+
+def fanger_pmv(air_temperature, mean_radiant_temperature, air_speed, relative_humidity, met, clo):
+    """The predicted mean vote (PMV) of Fanger of pythermalcomfort (``pythermalcomfort.models.pmv_ppd_iso``, 4.8.1,
+    with its default model, ISO 7730:2025), without external work, without the limits of its inputs
+    (``limit_inputs=False``) and without rounding.
+
+    :param air_temperature: The air temperature (°C), a number or an array.
+    :param mean_radiant_temperature: The mean radiant temperature (°C).
+    :param air_speed: The relative air speed (m/s; :func:`relative_air_speed`).
+    :param relative_humidity: The relative humidity (%).
+    :param met: The metabolic rate (met).
+    :param clo: The clothing insulation (clo).
+    :return: The PMV (a number, or an array for arrays).
+    :raises ImportError: If pythermalcomfort is not installed.
+    """
+    try:
+        from pythermalcomfort.models import pmv_ppd_iso
+    except ImportError as error:
+        raise ImportError('The setpoints of the PMV of the hook need pythermalcomfort (4.8 or later, Python 3.11 or '
+                          'later): install it with pip install accim[comfort] (or pip install '
+                          'pythermalcomfort).') from error
+    result = pmv_ppd_iso(tdb=air_temperature, tr=mean_radiant_temperature, vr=air_speed, rh=relative_humidity,
+                         met=met, clo=clo, wme=0, limit_inputs=False, round_output=False).pmv
+    try:
+        return float(result)
+    except TypeError:
+        return result
+
+
+class PmvSetpointHook(SetSetpointHook):
+    """The hook of the backend of the Python API of EnergyPlus that sets the setpoints of the operative temperature of
+    the predicted mean vote (PMV) of Fanger in the zones of a model with the ACCIS; :func:`apply_pmv_hook_setpoints`
+    prepares the model and returns it (decision of the author of 2026-11-24, ``notes/decisions.md``: the PMV setpoints
+    of the validation study of block F in mixed mode, in which the windows follow the setpoints of the ACCIS; the
+    Fanger thermostats of :func:`accim.sim.apmv.apply_pmv_setpoints`, whose models have no ACCIS, stay as the
+    alternative).
+
+    It is a hook by bisection as that of the SET (:class:`SetSetpointHook` with ``method='bisection'``, whose sensors
+    it shares: ``SET_MAT_<zone>``, ``SET_MRT_<zone>``, ``SET_RH_<zone>`` and those of the People objects), with the PMV
+    of pythermalcomfort instead of the SET (:func:`fanger_pmv`, with the relative air speed of the air speed and the
+    metabolic rate, :func:`relative_air_speed`): at the beginning of each timestep before the EMS programs, it finds
+    the temperatures whose PMV is ``pmv_heating_setpoint`` and ``pmv_cooling_setpoint`` (-0.5 and 0.5 by default,
+    category II of EN 16798-1 and B of ISO 7730) and gives them to the ACCIS as the limits of the comfort band
+    (:mod:`accim.sim.ems.hook_setpoints`), with the metabolic rate, the clothing insulation and the air speed of the
+    People object of each zone in the timestep (None, the default) or those given, the relative humidity of the zone
+    and, with ``tr_mode='zone'`` (the default), its mean radiant temperature (the unknown of the bisection is then the
+    air temperature, and the setpoints are the operative temperatures (air + mean radiant temperature)/2, as in the
+    hook of the SET). It reports the PMV of each zone with those inputs (``HookPMV_<zone>``, averaged) and the hours in
+    which a setpoint is at a limit of ``temperature_range`` (``HookPMVsaturated_<zone>``, summed), of which it warns at
+    the end of the simulation. It has neither the table of the hook of the SET nor ``air_speed_heating``.
+
+    :param zones: The zones, by their names in the EMS objects.
+    :param pmv_cooling_setpoint: The cooling setpoint of the PMV.
+    :param pmv_heating_setpoint: The heating setpoint of the PMV, lower than the cooling one.
+    :param met: The metabolic rate (met), or None (the default) for that of the People object of each zone in each
+        timestep; and so ``clo`` (clo) and ``air_speed`` (m/s, that of the zone: the hook adds the air speed of the
+        activity). Out of the ranges within which ISO 7730:2025 uses the PMV, it warns.
+    :param tolerance_k: The largest width of the interval of the bisection (K).
+    :param max_iterations: The largest number of iterations of the bisection.
+    :param temperature_range: The range of the setpoints of the operative temperature (°C); None for
+        :data:`PMV_HOOK_TEMPERATURE_RANGE`. The setpoints out of it are its limits.
+    :param tr_mode: 'zone' (the default) or 'equal_air' (:data:`TR_MODES`).
+    :param clothing_sources: As in :class:`SetSetpointHook`.
+    :param relative_air_speed: True (the default) for the relative air speed of ISO 7730 and ASHRAE 55, the air speed
+        plus 0.3·(met − 1) above 1 met (:func:`relative_air_speed`), as the hook of the ATHB; False for the air speed
+        itself, as the Fanger model of EnergyPlus takes the air velocity schedule of the People objects. In a week of
+        January and a week of July of an office in Seville (1.06 met, 0.137 m/s, 1.0 and 0.5 clo; EnergyPlus 25.1,
+        measured on 2026-11-24, ``notes/decisions.md``), the PMV of the Fanger model of EnergyPlus was 0.04 and 0.05
+        above that of pythermalcomfort with the same air speed, and 0.07 and 0.11 above it with the relative one.
+    :raises ImportError: If pythermalcomfort is not installed (when the PMV is first calculated).
+    """
+
+    _index_output = 'HookPMV'
+    _saturated_output = 'HookPMVsaturated'
+
+    def __init__(self, zones: Sequence[str], pmv_cooling_setpoint: float = 0.5, pmv_heating_setpoint: float = -0.5,
+                 met: Optional[float] = None, clo: Optional[float] = None, air_speed: Optional[float] = None,
+                 tolerance_k: float = 0.05, max_iterations: int = 20,
+                 temperature_range: Optional[Tuple[float, float]] = None, tr_mode: str = 'zone',
+                 clothing_sources: Optional[Dict[str, str]] = None, relative_air_speed: bool = True):
+        if not isinstance(relative_air_speed, bool):
+            raise ValueError(f'relative_air_speed must be True or False, not {relative_air_speed!r}.')
+        cooling = _check_number('pmv_cooling_setpoint', pmv_cooling_setpoint)
+        heating = _check_number('pmv_heating_setpoint', pmv_heating_setpoint)
+        if not heating < cooling:
+            raise ValueError(f'pmv_heating_setpoint ({pmv_heating_setpoint}) must be lower than pmv_cooling_setpoint '
+                             f'({pmv_cooling_setpoint}).')
+        with warnings.catch_warnings():
+            # The warnings of the ranges of the inputs of the SET, which are not those of the PMV
+            warnings.simplefilter('ignore', UserWarning)
+            super().__init__(zones, cooling, heating, met=met, clo=clo, air_speed=air_speed, position='sitting',
+                             tolerance_k=tolerance_k, max_iterations=max_iterations,
+                             temperature_range=(PMV_HOOK_TEMPERATURE_RANGE if temperature_range is None
+                                                else temperature_range),
+                             method='bisection', tr_mode=tr_mode, clothing_sources=clothing_sources)
+        self.pmv_cooling_setpoint = cooling
+        self.pmv_heating_setpoint = heating
+        self.relative_air_speed = relative_air_speed
+        _warn_pmv_ranges(self.met, self.air_speed)
+
+    def __repr__(self) -> str:
+        return (f'PmvSetpointHook(zones={self.zones!r}, pmv_cooling_setpoint={self.pmv_cooling_setpoint}, '
+                f'pmv_heating_setpoint={self.pmv_heating_setpoint}, met={self.met}, clo={self.clo}, '
+                f'air_speed={self.air_speed}, tr_mode={self.tr_mode!r}, '
+                f'relative_air_speed={self.relative_air_speed})')
+
+    def _index(self, air_temperature, mean_radiant_temperature, air_speed, relative_humidity, met, clo, position):
+        """The PMV, with the relative air speed of the air speed of the zone and the metabolic rate (with the air
+        speed itself, with ``relative_air_speed=False``)."""
+        if self.relative_air_speed:
+            air_speed = relative_air_speed(air_speed, met)
+        return fanger_pmv(air_temperature, mean_radiant_temperature, air_speed, relative_humidity, met, clo)
+
+    def prepare(self) -> None:
+        """Calculate the PMV with numbers and with arrays of two values (the calls of the bisection), which
+        :func:`accim.sim.energyplus_api.run_simulation` does in the process of the simulation before it loads the
+        library of the API of EnergyPlus, as the hook of the SET (pythermalcomfort compiles the PMV with numba too);
+        the inputs that the hook reads from the People objects are 1.1 met, 0.5 clo and 0.1 m/s in these calls. It
+        also resets :attr:`saturated_hours`."""
+        import numpy as np
+
+        self.saturated_hours = {}
+        met = 1.1 if self.met is None else self.met
+        clo = 0.5 if self.clo is None else self.clo
+        air_speed = 0.1 if self.air_speed is None else self.air_speed
+        temperatures = np.array([24.0, 26.0])
+        self._index(25.0, 25.0, air_speed, 50.0, met, clo, None)
+        self._index(temperatures, temperatures, air_speed, 50.0, met, clo, None)
+        self._index(temperatures, 25.0, air_speed, 50.0, met, clo, None)
+
+    def zone_pmv(self, air_temperature, mean_radiant_temperature, relative_humidity, met: Optional[float] = None,
+                 clo: Optional[float] = None, air_speed: Optional[float] = None):
+        """The PMV of a zone with the metabolic rate, clothing insulation and air speed of the hook, or those given
+        (:func:`fanger_pmv` with the relative air speed); numbers, or arrays of the temperatures and humidity."""
+        met, clo, air_speed = self._inputs(met, clo, air_speed)
+        return self._index(air_temperature, mean_radiant_temperature, air_speed, relative_humidity, met, clo, None)
+
+    #: The index of the zone that the hook reports (the method of the hook of the SET): its PMV
+    zone_set = zone_pmv
+
+    def finish(self) -> None:
+        """Warn of the hours in which a setpoint was at a limit of ``temperature_range``, if any, after a simulation
+        (:func:`accim.sim.energyplus_api.run_simulation` calls it)."""
+        hours = {zone: value for zone, value in self.saturated_hours.items() if value > 0}
+        if hours:
+            warnings.warn(f'The setpoints of the PMV were at a limit of temperature_range {self.temperature_range} °C '
+                          f'(the PMV of the setpoint is out of it) in '
+                          + ', '.join(f'{zone}: {value:.2f} h' for zone, value in hours.items())
+                          + ' (the outputs HookPMVsaturated_<zone>): widen temperature_range, or check the setpoints '
+                            'of the PMV, the inputs of the occupants and the mean radiant temperature of the zones.',
+                          UserWarning, stacklevel=2)
+
+
+def pmv_hook_zone_outputs(zone: str) -> List[str]:
+    """The names of the outputs of the hook of the PMV of a zone (:func:`apply_pmv_hook_setpoints`): its PMV and its
+    hours with a setpoint at a limit of the range of the bisection."""
+    return [f'{prefix}_{zone}' for prefix in (*_PMV_HOOK_OUTPUTS, *_PMV_HOOK_SUMMED_OUTPUTS)]
+
+
+def apply_pmv_hook_setpoints(building, pmv_cooling_setpoint: float = 0.5, pmv_heating_setpoint: float = -0.5,
+                             met: Optional[float] = None, clo: Optional[float] = None,
+                             air_speed: Optional[float] = None, tr_mode: str = 'zone', tolerance_k: float = 0.05,
+                             max_iterations: int = 20, temperature_range: Optional[Tuple[float, float]] = None,
+                             output_frequencies: Optional[Sequence[str]] = None,
+                             relative_air_speed: bool = True) -> PmvSetpointHook:
+    """Prepare a model with the ACCIS (temperature setpoints, with full air-conditioning or in mixed mode, as
+    :func:`apply_set_setpoints`) for the setpoints of the PMV of Fanger as setpoints of the operative temperature, and
+    return the hook that sets them (:class:`PmvSetpointHook`).
+
+    Its zones get the EMS sensors of the hooks of the SET (``SET_MAT_<zone>``, ``SET_MRT_<zone>`` and
+    ``SET_RH_<zone>``, and those of the schedules of their People objects that the hook reads), the outputs of
+    EnergyPlus of those variables, the global variables and outputs ``HookPMV_<zone>`` (averaged) and
+    ``HookPMVsaturated_<zone>`` (summed), and the program ``ApplyHookSetpoints_<zone>`` with which the hook gives its
+    setpoints to the ACCIS (:mod:`accim.sim.ems.hook_setpoints`; in mixed mode, also ``ApplyHookVST_<zone>``). With
+    the clothing insulation of the dynamic clothing model in a zone, the People objects get the Fanger model unless
+    they all have the Fanger, Pierce or KSU model, as in :func:`apply_set_setpoints` with the Pierce model. The model
+    must be simulated with the backend of the Python API and the hook (``run_ep(backend='api', hooks=[hook])``):
+    without it, its setpoints are those of the ACCIS (and ``HookPMV_<zone>`` is 0). Unlike the Fanger thermostats of
+    :func:`accim.sim.apmv.apply_pmv_setpoints`, which control the PMV that EnergyPlus calculates, the setpoints are
+    temperatures: everything that the ACCIS does with its setpoints (the tolerance, the minimum and maximum, the hour
+    counters, the windows of mixed mode and the outputs) follows them.
+
+    :param building: The model (eppy), changed in place.
+    :param output_frequencies: The reporting frequencies of the outputs ('timestep', 'hourly'...); None (the default)
+        for those of the EMS outputs of the model (those of the ACCIS), or hourly if it has none.
+    :return: The hook, with the other arguments (see :class:`PmvSetpointHook`), and the keys of the zones in the
+        outputs (``hook.keys``).
+    :raises ValueError: If the model has no ACCIS of accim 1.0.0 or later, has already the objects of the SET or of
+        the ATHB (they would set the same thermostats), has not the People objects whose inputs the hook reads, or an
+        argument is not valid.
+    """
+    keys = _model_zones(building, 'the PMV of the hook', _HOOK_SENSOR_PREFIXES, running_mean=False)
+    needed = [name for name, value in (('met', met), ('clo', clo), ('air_speed', air_speed)) if value is None]
+    people = _people_inputs(building, list(keys), needed, hook='the hook of the PMV') if needed else {}
+    hook = PmvSetpointHook(list(keys), pmv_cooling_setpoint=pmv_cooling_setpoint,
+                           pmv_heating_setpoint=pmv_heating_setpoint, met=met, clo=clo, air_speed=air_speed,
+                           tolerance_k=tolerance_k, max_iterations=max_iterations,
+                           temperature_range=temperature_range, tr_mode=tr_mode,
+                           clothing_sources={zone: values['clothing_source'] for zone, values in people.items()},
+                           relative_air_speed=relative_air_speed)
+    hook.keys = dict(keys)
+    hook.people = {zone: dict(values, key=keys[zone]) for zone, values in people.items()}
+    if 'clo' in needed and _needs_comfort_model(building, people):
+        from accim.sim.people import add_thermal_comfort_model
+
+        # It raises its errors before changing anything
+        add_thermal_comfort_model(building, 'Fanger')
+    frequencies = _output_frequencies(building, output_frequencies)
+    _add_hook_objects(building, keys, _SET_SENSORS, _PMV_HOOK_OUTPUTS, frequencies, summed=_PMV_HOOK_SUMMED_OUTPUTS)
+    _add_people_sensors(building, people, needed)
+    _add_zone_output_variables(building, keys, _SET_ZONE_VARIABLES, frequencies)
     return hook
 
 
@@ -2019,7 +2275,8 @@ def set_of_results(results, hook: SetSetpointHook, keys: Optional[Dict[str, str]
         zone (:func:`people_inputs`); by default, ``hook.people`` (set by :func:`apply_set_setpoints` and
         :func:`apply_sun2026_setpoints`).
     :return: A DataFrame with the index of the results and a column ``SET_<zone>`` for each zone (NaN in the rows
-        without the three outputs, or without the inputs of the occupants).
+        without the three outputs, or without the inputs of the occupants). With a hook of the PMV
+        (:class:`PmvSetpointHook`), the values are the PMV of each row, in the columns ``HookPMV_<zone>``.
     :raises ValueError: If the results have not the three outputs of a zone, or, with a hook that reads inputs from the
         People objects, their schedules are not given or the results have not their outputs.
     """
@@ -2050,7 +2307,7 @@ def set_of_results(results, hook: SetSetpointHook, keys: Optional[Dict[str, str]
         if not needed:
             if valid.any():
                 values[valid] = np.asarray(hook.zone_set(air[valid], radiant[valid], humidity[valid]), dtype=float)
-            columns[f'SET_{zone}'] = values
+            columns[f'{hook._index_output}_{zone}'] = values
             continue
         # The inputs of the occupants of each row: those of the hook, or those of the People objects of the zone
         inputs = _people_input_columns(results, zone, people[zone], needed, frequency)
@@ -2066,5 +2323,5 @@ def set_of_results(results, hook: SetSetpointHook, keys: Optional[Dict[str, str]
                 values[rows] = np.asarray(_occupant_set(
                     hook, air[rows], radiant[rows], air_speed[rows], humidity[rows], met[rows], clo[rows], position),
                     dtype=float)
-        columns[f'SET_{zone}'] = values
+        columns[f'{hook._index_output}_{zone}'] = values
     return pd.DataFrame(columns, index=results.index)

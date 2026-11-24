@@ -3754,3 +3754,122 @@ la documentación lo explica.
 
 **Los tests**: `tests/core/test_indoor_adaptation_study.py` comprueba los casos del estudio y las marcas de `--list`,
 sin simular; los cuatro casos se probaron con dos días de julio del modelo de ejemplo.
+
+## 82. El estudio de validación de F3 en modo mixto: los ganchos en modo mixto y el gancho del PMV
+
+El 23 y el 24 de noviembre, en la sesión de Claude Science sobre el artículo con Ruiji Sun, el autor decidió que el
+estudio tenga cinco casos (las consignas PMV ±0.5, 20/26 °C fijos, EN 16798-1, ASHRAE 55 y el modelo SET causal), que
+todos se simulen en modo mixto con el control de ventilación 2, que la consigna de ventilación de los casos sin
+temperatura de confort propia sea el punto medio de sus dos consignas, y que las consignas PMV salgan de un gancho nuevo,
+con los termostatos de Fanger de `apply_pmv_setpoints` como plan alternativo (`notes/decisions.md`). Claude Science hizo
+los cambios y los dejó en el árbol de trabajo, sin commit.
+
+**Los ganchos en modo mixto** (`accim/sim/ems/hook_setpoints.py`). Hasta ahora `_model_zones` lanzaba un `ValueError`
+si el modelo tenía el programa SetVST. Casi todo el EMS del modo mixto ya seguía las consignas del gancho, porque
+`ApplyHookSetpoints_<zone>` corre justo después de SetAST: la consigna de refrigeración por debajo de la cual abren las
+ventanas (`roundedACST`), la temperatura exterior mínima (`roundedAHST - MinOToffset`) y, con los controles de
+ventilación 1 y 3, la consigna de ventilación (`roundedAHST + VSToffset`). Faltaba la consigna de ventilación de los
+controles 0 y 2, que SetVST toma de la temperatura de confort del estándar de la zona. En los modelos en modo mixto,
+`ApplyHookSetpoints_<zone>` pone ahora `HookVST_<zone>` a 1 cuando el gancho ha dado consignas en el paso (a 0 si no),
+y el programa nuevo `ApplyHookVST_<zone>`, que `RunACCIS_<zone>` ejecuta justo después de SetVST, pone entonces la
+consigna de ventilación en `(roundedACST + roundedAHST)/2 + VSToffset`, como hace SetVST con el estándar 0 y fuera de
+los límites de aplicabilidad. `program_lines(zone, mixed_mode)` e `init_program_lines(zones, mixed_mode)` solo añaden
+esas líneas con `mixed_mode=True`, así que los programas de la climatización completa son los de antes.
+
+**El gancho del PMV** (`accim/sim/comfort_hooks.py`). `PmvSetpointHook` es una subclase de `SetSetpointHook` por
+bisección: `SetSetpointHook` tiene ahora el método `_index` (el SET), que la bisección invierte, y los nombres de sus
+salidas como atributos de la clase (`_index_output`, `_saturated_output`); el gancho del PMV sustituye el índice por el
+PMV de pythermalcomfort (`fanger_pmv`, con la velocidad relativa del aire salvo `relative_air_speed=False`) y las
+salidas por `HookPMV_<zone>` y `HookPMVsaturated_<zone>`, y comparte los sensores del gancho del SET, de modo que un
+modelo no puede tener los dos. `apply_pmv_hook_setpoints` prepara el modelo como `apply_set_setpoints`. `_occupant_set`
+y `set_of_results` usan el índice del gancho, así que `set_of_results` da el PMV de cada fila con un gancho del PMV.
+
+**El script** (`tools/indoor_adaptation_study.py`). El caso `i_pmv`; `STUDY_CASES` con los cinco casos; `AddAccis` con
+`--script-type` (`vrf_mm` por defecto), `--hvac-mode`, `--ventilation-control`, `--ventilation-setpoint-offset`,
+`--min-outdoor-temp-offset` y `--max-wind-speed` (`accis_arguments`); la temperatura de confort del estándar de las
+consignas fijas pasa a ser su punto medio, 23 °C, que es su consigna de ventilación; `block_zone_hierarchy` da a `Table`
+un bloque, 'Building', con las zonas ocupadas cuyos nombres no siguen el patrón bloque:zona (con la oficina pequeña del
+DOE y `--script-type ex_ac` los indicadores aún no salen: `TODO.md`); y `indicators.csv` tiene la electricidad de todo
+el sistema, las horas de ventilación y el PMV de las horas ocupadas, con el PMV de referencia (el de pythermalcomfort,
+como lo calcula el gancho) y con el del modelo de Fanger de EnergyPlus.
+
+**Los tests**: `tests/core/test_comfort_hooks.py` comprueba los modelos en modo mixto, el EMS del modo mixto con el
+intérprete de Erl para los cuatro controles de ventilación, el gancho del PMV y `apply_pmv_hook_setpoints`; se quitan
+las dos comprobaciones del `ValueError` del modo mixto. `tests/core/test_indoor_adaptation_study.py` comprueba los cinco
+casos, los argumentos del modo mixto y los bloques. Los tests que simulan con EnergyPlus no se pudieron ejecutar en el
+entorno de Claude Science y quedan por ejecutar antes del commit (`DEVLOG.md`); en su lugar se simularon una semana de
+enero y otra de julio de los cinco casos con el modelo del edificio del estudio en Sevilla (`notes/decisions.md`).
+
+## 83. El estudio en modo mixto, comprobado con EnergyPlus, y los indicadores de los modelos sin bloque:zona
+
+El mismo 24 de noviembre, una sesión de Claude Code en el servidor hizo lo que la sesión de Claude Science (sección 82)
+no pudo hacer en su entorno: ejecutar los tests que simulan con EnergyPlus, añadir un test con EnergyPlus de los ganchos
+en modo mixto, hacer que salgan los indicadores de los modelos cuyas zonas no siguen el patrón bloque:zona y construir
+la documentación. No reabrió las decisiones del autor, no cambió los valores por defecto del script, no ejecutó las
+simulaciones del estudio y no hizo el commit, que lleva también los cambios de la sección 82, hasta que el autor lo
+pidió.
+
+**Los tests que simulan.** Los cinco archivos de los ganchos y del estudio pasan enteros (99 tests, los 15 que simulan
+entre ellos) con los cambios de la sección 82. La batería completa se ejecutó tres veces, cada una en un árbol de
+trabajo aparte de `5032816`: con el propio commit (2263 pasan y 4 se omiten: el de EnergyPlus 26.1, que no está
+instalado, y los tres de `test_morphing.py` que necesitan el jar del Future Weather Generator), con los once archivos
+del 24 de noviembre (2276 pasan y se omiten los mismos 4) y con los de esta sección (2284 pasan y se omiten los mismos
+4). Ningún test falla por los cambios del 24 de noviembre, así que no hubo nada que corregir en ellos.
+
+**Los ganchos en modo mixto, con EnergyPlus** (`tests/core/test_comfort_hooks.py`). El test nuevo,
+`test_the_windows_of_mixed_mode_follow_the_setpoints_of_the_hook_in_energyplus`, simula dos días de julio del modelo de
+ejemplo en Sevilla con `vrf_mm`, el modo HVAC 2 y un desplazamiento de la consigna de ventilación de −0.5 K, con los
+ganchos del estándar 24, del PMV y del ATHB y con los controles de ventilación 2 y 1 (seis simulaciones, de 25 a 60 s
+cada una). Comprueba lo que deciden los programas EMS del modo mixto, paso a paso, con los valores que leen sus
+sensores (el test los copia a salidas, porque los sensores de las baterías leen el último paso de sistema del paso
+anterior y las salidas son medias del paso):
+
+- El gancho da sus consignas en todos los pasos, y la consigna de ventilación es el punto medio de las dos consignas de
+  la zona más el desplazamiento con el control 2 (y no la temperatura de confort del estándar de la zona) y la consigna
+  de calefacción más el desplazamiento con el control 1.
+- Las horas de ventilación de cada paso son exactamente las que decide `ApplyAST_<zone>` (zona ocupada, baterías
+  apagadas, temperatura operativa por encima de la consigna de ventilación, por debajo de la de refrigeración y por
+  encima de la exterior, y los límites de temperatura exterior y de viento). Por tanto la zona no ventila por encima de
+  la consigna de refrigeración del gancho ni con una batería encendida, y en cada simulación hay pasos ocupados de las
+  dos clases.
+- La zona ventila en algunos pasos (de 21 a 92 de sus 144 pasos ocupados), y en ellos, y solo en ellos, EnergyPlus abre
+  sus ventanas: 13.6 renovaciones por hora o más, frente a 0.28 como mucho en los demás.
+
+Los días son los que hacen que las zonas de cada gancho ventilen y se refrigeren: 2 y 3 de julio para el estándar 24 y
+el ATHB, y 4 y 5 de julio, más frescos, para el PMV, cuya consigna de refrigeración ronda los 27 °C (el 2 y el 3 de
+julio su sistema refrigera en todos los pasos ocupados menos el primero de cada día y las ventanas no se abren nunca).
+Para comprobar que el test detecta un fallo se anuló el programa `ApplyHookVST_<zone>`: el test del control 2 falla y
+el del control 1 pasa.
+
+**Una medida para la decisión pendiente del autor.** Mientras una zona ventila, `ApplyAST_<zone>` no toca su
+termostato, que conserva las consignas del último paso sin ventilación. Con las consignas PMV (consignas de calefacción
+de 24.0 a 25.7 °C y aire exterior de 16 a 25 °C mientras las zonas ventilan), toda la calefacción de esos dos días de
+julio (7.7 y 9.3 kWh en las dos zonas con el control 2; 41.5 y 53.4 kWh con el control 1) está en los pasos con las
+ventanas abiertas (del 92 al 94 %) y en el paso siguiente a uno de ellos, en el que el EMS ve la batería encendida y
+cierra las ventanas. Con el estándar 24 y el ATHB, cuyas consignas de calefacción no pasan de 20.4 °C, no hay
+calefacción. Es el orden dentro de la hora que los resultados horarios del piloto de la sección 82 no dejaban ver.
+
+**Los indicadores de los modelos sin el patrón bloque:zona** (`accim/data/postprocessing/indoor_adaptation.py`). Con la
+oficina pequeña del DOE (`RefBldgSmallOfficeNew2004_Chicago.idf`, `--script-type ex_ac`), `table_indicators` se paraba
+con `pythermalcomfort_set='people'` porque `Table` nombra las zonas con su bloque ('BUILDING:CORE_ZN') y el modelo y el
+CSV las tienen por su nombre ('CORE_ZN'). La función nueva `_output_key` busca primero el nombre de la tabla y, si no
+está, el nombre sin el bloque, tanto entre los objetos People del modelo como entre las columnas del CSV. Para las
+zonas con el patrón bloque:zona no cambia nada: `indicators.csv` de dos días de julio del modelo de ejemplo (los cinco
+casos del estudio) es idéntico byte a byte antes y después, y también los cinco modelos y los cinco CSV.
+
+**El script simula el periodo pedido** (`tools/indoor_adaptation_study.py`). Arreglado lo anterior, `indicators.csv` de
+la oficina del DOE salió, pero con las 48 horas de sus dos días de diseño (21 de enero y 21 de julio) en lugar del 15 y
+el 16 de julio: los archivos de ejemplo de EnergyPlus solo simulan los periodos de dimensionado. La función nueva
+`simulate_run_periods()` hace que el modelo simule los periodos del archivo climático y no los de dimensionado (los
+cálculos de dimensionado no cambian); un modelo que ya lo hace, como el de ejemplo, no se toca. Con ella, los
+resultados de la oficina son los del 15 y el 16 de julio (calefacción nula y 159, 138 y 235 kWh de refrigeración en los
+tres casos probados).
+
+**Los tests sin EnergyPlus**: `tests/core/test_people_set_inputs.py` comprueba los indicadores de una tabla hecha con
+`block_zone_hierarchy` (un modelo con las zonas Core_ZN y Perimeter_ZN_1), con las entradas de los objetos People y con
+entradas dadas, y falla con el código anterior; `tests/core/test_indoor_adaptation_study.py` comprueba
+`simulate_run_periods()`.
+
+**La documentación** se construye con los mismos 47 avisos que en `5032816`, ninguno del uso detallado; la sección
+4.9.4 y las referencias a `pmv-hook-setpoints`, `set-setpoints` y `setpoint-limits` se resuelven. Las secciones 4.1.2 y
+4.7.6 recogen lo anterior.

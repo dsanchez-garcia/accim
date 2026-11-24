@@ -35,6 +35,175 @@ Recommended flow: track active work in `TODO.md`, move completed outcomes to `DE
 
 ## Entries
 
+### 2026-11-24
+#### [done] The study in mixed mode with EnergyPlus: its tests, the hooks in mixed mode and the indicators of the tables made with `block_zone_hierarchy` (branch `v1.2.0`)
+- Context: the entry below (Claude Science, in the working tree, without a commit) left four things for the repository:
+  the tests that simulate with EnergyPlus (15 of the 99 of the five files of the hooks and the study), a test with
+  EnergyPlus of the hooks in mixed mode, the indicators of the models whose zones have not the pattern block:zone, and
+  the documentation build. A session of Claude Code on the server did them, by instruction of the author: without
+  reopening the decisions of 2026-11-24, without changing the defaults of the script and without the simulations of
+  the study; it committed this entry and the one below when the author asked for it, after its report.
+- Changes: `tests/core/test_comfort_hooks.py`: a test with EnergyPlus of the hooks in mixed mode,
+  `test_the_windows_of_mixed_mode_follow_the_setpoints_of_the_hook_in_energyplus` (six simulations: the hooks of
+  comfort standard 24, of the PMV and of the ATHB, each with the ventilation controls 2 and 1), with
+  `_mixed_mode_model` (the sample model with `vrf_mm`, HVAC mode 2 and an offset of the ventilation setpoint of −0.5 K,
+  `VST_OFFSET`, at timestep frequency, with the flag `HookVST_<zone>` as an output and the copies of the values that
+  the sensors of the ACCIS and of the hook read at the beginning of each timestep) and `_hook_setpoints`.
+  `accim/data/postprocessing/indoor_adaptation.py`: `_output_key`, with which
+  `table_indicators(pythermalcomfort_set=...)` finds the People objects and the outputs of the zones that `Table` names
+  with a block of `block_zone_hierarchy` by their names without it (their names in the table first, so nothing changes
+  for the zones named block:zone). `tools/indoor_adaptation_study.py`: `simulate_run_periods()`, with which the models
+  simulate the run periods of the weather file and not their sizing periods, and its docstring.
+  `tests/core/test_people_set_inputs.py` (`test_the_indicators_of_the_tables_made_with_block_zone_hierarchy`, without
+  EnergyPlus: a model with the zones Core_ZN and Perimeter_ZN_1) and `tests/core/test_indoor_adaptation_study.py`
+  (`test_the_models_simulate_the_run_periods_and_not_the_sizing_periods`). Sections 4.1.2 and 4.7.6 of the detailed
+  use.
+- The tests that simulate (EnergyPlus 25.1, Python 3.14.3, pythermalcomfort 4.8.1, numba 0.68.1):
+  - The five files (`test_comfort_hooks.py`, `test_sun2026_set.py`, `test_indoor_adaptation_study.py`,
+    `test_missing_hook.py` and `test_people_set_inputs.py`) on the working tree as Claude Science left it: 99 passed
+    (12 min 48 s), the 15 that simulate among them.
+  - The whole suite, `py -m pytest tests/core tests/parametric_and_optimisation -q -p no:cacheprovider`, in worktrees
+    of `5032816` (several runs at the same time, so the times are longer than those of a run alone): the commit itself,
+    2263 passed and 4 skipped (54 min 27 s; the test of EnergyPlus 26.1, not installed, and the three of
+    `test_morphing.py` that need the jar of the Future Weather Generator in `ACCIM_FWG_JAR`); with the 11 files of
+    2026-11-24, 2276 passed and the same 4 skipped (53 min 16 s): the 2266 tests that both runs have give the same
+    outcome, and 14 are new (one of them a test of before with another name, `test_apply_athb_setpoints_needs_the_accis`,
+    without its check of the `ValueError` of mixed mode); with the files of this entry, 2284 passed and the same 4
+    skipped (55 min 21 s): the eight new tests, and no other outcome changed (that run had the test of the hooks in
+    mixed mode before a variable of it was renamed; its six simulations passed again after it, below). No test fails
+    with the changes of 2026-11-24, so nothing was fixed in them.
+- The hooks in mixed mode with EnergyPlus, measured in the six simulations of the new test (two days of July in
+  Seville, 288 timesteps of each of the two zones, 144 of them occupied; 25 to 60 s each):
+  - The days are those in which the zones of each hook both ventilate and are cooled while they are occupied: 2 and 3
+    July (up to 34 and 29 °C outdoors) with comfort standard 24 and the ATHB, and 4 and 5 July (up to 24.6 and 26 °C)
+    with the PMV. On 2 and 3 July, the VRF systems of the zones with the PMV setpoints cool in 142 of their 144
+    occupied timesteps (all but the first one of each day), and their windows never open, as in the week of July of
+    the entry below; and on 15 to 17 July no zone ventilates with comfort standard 24 either (its systems cool in all
+    the occupied timesteps). The zones have no occupants on 6 and 7 July (a weekend of the run period).
+  - The hook gave its setpoints in every timestep (`HookVST_<zone>` is 1 in the 288); the setpoints without the
+    tolerance are those of its bisection with the values that its sensors read (within 1e-6 K, every 25 timesteps),
+    and those of the thermostats are 0.1 K within them. The ventilation setpoint is the midpoint of the two setpoints
+    of the zone plus the offset with the ventilation control 2 (within 4e-15 K; 0.39 K or more away from the comfort
+    temperature of the comfort standard of the zone plus the offset, in every timestep) and the heating setpoint plus
+    the offset with 1 (exactly), and the minimum outdoor temperature is the heating setpoint minus 50 K.
+  - The ventilation hours of each timestep of each zone are those that `ApplyAST_<zone>` decides with those setpoints
+    and the copies of its sensors (occupied, the two coils off, the operative temperature above the ventilation
+    setpoint, below the cooling setpoint and above the outdoor temperature, the outdoor temperature above the minimum
+    and the wind speed up to the maximum): no timestep differs in the six simulations. The zones of comfort standard
+    24 ventilate in 80 and 91 of their 144 occupied timesteps with the ventilation control 2 and in 89 and 92 with 1;
+    those of the PMV, in 21 and 25, and in 67 and 87; those of the ATHB, in 56 and 32, and in 62 and 38. Each zone has
+    18 to 99 occupied timesteps with its operative temperature at or above the cooling setpoint of its thermostat and
+    50 to 110 with a coil on, none of them with ventilation. The air change rate through the windows of a zone (*AFN
+    Zone Ventilation Air Change Rate*) is 13.6 ach or more in its timesteps with ventilation hours and 0.28 ach at most
+    in the others. The output *AFN Surface Venting Window or Door Opening Factor* of the three windows of each zone
+    is above 0 in the timesteps with ventilation hours, and only in them (1 with the ventilation control 1, 0.25 to
+    0.97 with 2), in the six simulations: with the sample model and timestep outputs, it does show the opening that
+    the EMS sets (the test does not use it, as the instructions of the session asked).
+  - The values that the sensors read are not always the outputs of the previous row: the sensors of the coils read
+    those of the last system timestep of the previous timestep, and the outputs are the means of the timestep (in an
+    exploratory run of the PMV setpoints from 4 to 6 July, the heating coil of a zone was on in 9 rows by its output
+    and in 8 by its sensor). So the test copies the sensors, as those of the hooks do since 2026-11-19.
+  - Checked by breaking the code: with a program `ApplyHookVST_<zone>` that does nothing, the test of the ATHB with
+    the ventilation control 2 fails (the ventilation setpoint of its first zone differs in 287 of its 288 timesteps, by
+    up to 2.1 K) and that with 1 passes.
+  - For the decision of the author on the limits of the ventilation (the entry of block F of `TODO.md`): while a zone
+    ventilates, `ApplyAST_<zone>` does not set its thermostat, which keeps the setpoints of the last timestep without
+    ventilation (in all the timesteps with ventilation of the six simulations: 100 and −100 °C, those of the timesteps
+    without occupants, or those of the last occupied timestep without ventilation). With the PMV setpoints (heating
+    setpoints of 24.0 to 25.7 °C with the 0.5 clo of the model, and the outdoor air at 16.1 to 25.0 °C while the zones
+    ventilate), the heating coils of the two zones give 7.7 and 9.3 kWh in the two days of July with the ventilation
+    control 2 and 41.5 and 53.4 kWh with 1, all of it in the timesteps with the windows open (92 to 94 %: 16 of 21 and
+    20 of 25 of them with the ventilation control 2, and 29 of 67 and 30 of 87 with 1) and in the timestep after one
+    of them (2 and 2, and 21 and 21 timesteps), in which the EMS reads the coil on and closes the windows; none in any
+    other timestep. With comfort standard 24 and the ATHB (heating setpoints of 20.4 °C at most) the heating coils do
+    not work. This is the order within the hour that the hourly results of the entry below could not show: the system
+    heats while the windows are open, and in the timestep in which they close.
+- The indicators of the models whose zones have not the pattern block:zone, with the small office of the DOE
+  (`RefBldgSmallOfficeNew2004_Chicago.idf` of EnergyPlus 25.1 and its weather file of Chicago, `--begin 7/15 --end
+  7/16 --cases ii_en16798,iii_model,i_pmv --script-type ex_ac`):
+  - Reproduced: `ValueError: The zones ['BUILDING:CORE_ZN', 'BUILDING:PERIMETER_ZN_1', ...] of the table have no People
+    objects in the model of the simulation`. `Table` names the zones with their block, `people_inputs` gives them by
+    the key of their outputs ('Core_ZN'), and `set_of_results` looked for the columns of the CSV file by the names of
+    the table. With `_output_key`, the run ends and writes `indicators.csv`: no other error followed.
+  - But its 48 rows were those of the design days (24 of 21 January and 24 of 21 July), not of 15 and 16 July: the
+    example files of EnergyPlus simulate their sizing periods only (`SimulationControl`: Yes for the sizing periods
+    and No for the run periods of the weather file), and the script only set the dates of the run period (483, 428
+    and 600 kWh of the heating coils of the three cases, all the occupied hours above the seasonal range). With
+    `simulate_run_periods()`, the 48 rows are those of 15 and 16 July: 0.0 kWh of the heating coils, 159.4, 137.7 and
+    235.3 kWh of the cooling coils and 64.0, 43.8 and 83.1 kWh of the HVAC system (EN 16798-1, the causal SET model
+    and the PMV setpoints), 90 occupied hours of the five zones, 3, 7 and 4 of them outside their own setpoints, a mean
+    PMV of pythermalcomfort of 0.75, 0.84 and 0.45, and a mean SET of pythermalcomfort of 27.7, 28.0 and 26.7 °C (that
+    of the Pierce model: 27.8, 28.0 and 26.8 °C).
+  - Nothing changes for the models whose zones are named block:zone: `indicators.csv` of two days of July of the sample
+    model (`--epw Seville_Present.epw --begin 7/15 --end 7/16`, the five cases of `--cases study` in mixed mode) is
+    identical byte for byte before the two changes and after them (2213 bytes, SHA-256 `5e481e5f...cec01251`), and so
+    are the five models and the five CSV files of the simulations. In those two days, the cooling coils give 157.7
+    (`i_pmv`), 168.1 (`i_fixed`), 104.0 (`ii_en16798`), 106.6 (`ii_ashrae55`) and 156.2 kWh (`iii_model`), with 0, 0,
+    6.2, 6.8 and 0 ventilation hours.
+  - The new test fails with the code of before (the zones looked for by their names in the table only), with that
+    error, and the tests of the models named block:zone pass with both.
+- The documentation: built as `dist_build_docs.bat` does, without regenerating the pages of the API (`sphinx-apidoc`
+  would only swap two modules of `accim.sim.rst` that these changes do not touch): 47 warnings (59 lines in
+  `sphinx_warnings.txt`), the same lines as with `5032816` (built in its worktree) but for the paths, none of the
+  detailed use. Section 4.9.4 is in the page with its label, and the references to `pmv-hook-setpoints` (1),
+  `set-setpoints` (20) and `setpoint-limits` (12) are links with the titles of their sections; no `{ref}` is left as
+  text. The folder of the build must be in the drive of the sources: with the sources in D: and the build in C:,
+  nbsphinx stops (`ValueError: path is on mount 'C:', start on mount 'D:'`).
+- Corrected in the entry below: its two days of the small office of the DOE were its two design days, not 15 and 16
+  July (noted there).
+- Files: `tests/core/test_comfort_hooks.py`, `accim/data/postprocessing/indoor_adaptation.py`,
+  `tools/indoor_adaptation_study.py`, `tests/core/test_people_set_inputs.py`,
+  `tests/core/test_indoor_adaptation_study.py`, `docs/source/4_detailed use.md`, `TODO.md`, `CHANGELOG.md`,
+  `CAMBIOS_CODIGO_v1.2.0.md`, `notes/work-log.md`.
+- Verification: the runs above; the six new tests with EnergyPlus alone, 6 passed (3 min 52 s); and the five files
+  of the hooks and the study on the working tree at the end, 107 passed (15 min 57 s; the 99 of before, the six with
+  EnergyPlus and the two without it).
+- Next step: the decisions of the author on what the pilot showed (the occupancy of the model and the limits of the
+  ventilation, with the heating of the zones that ventilate measured above); the simulations of the study.
+
+#### [done] The validation study of F3 in mixed mode: the hooks in mixed mode, the hook of the PMV and the case `i_pmv` (branch `v1.2.0`, committed with the entry above)
+- Context: in the session of Claude Science on the article with Ruiji Sun, the author decided five cases for the study
+  (the PMV setpoints among them), mixed mode in all of them with the ventilation control 2, the midpoint of the
+  setpoints as the ventilation setpoint of the cases without a comfort temperature, and a hook for the PMV setpoints,
+  with the Fanger thermostats as the alternative (`notes/decisions.md`, 2026-11-24). Claude Science made the changes
+  in a copy of the repository and saved the files in the working tree without a commit, as the author asked.
+- Changes: `accim/sim/ems/hook_setpoints.py`: in mixed mode, `HookVST_<zone>` and the program `ApplyHookVST_<zone>`
+  after SetVST (the midpoint of the setpoints of the hook as the ventilation setpoint, with the ventilation controls 0
+  and 2); the programs of full air-conditioning do not change. `accim/sim/comfort_hooks.py`: the hooks no longer raise
+  in mixed mode; `fanger_pmv`, `PmvSetpointHook`, `apply_pmv_hook_setpoints`, `pmv_hook_zone_outputs`;
+  `SetSetpointHook._index` and the names of its outputs as attributes; `set_of_results` with the index of the hook.
+  `tools/indoor_adaptation_study.py`: the case `i_pmv`, five cases in `--cases study`, the arguments of mixed mode
+  (`--script-type`, `--hvac-mode`, `--ventilation-control`, `--ventilation-setpoint-offset`,
+  `--min-outdoor-temp-offset`, `--max-wind-speed`), the midpoint as the comfort temperature of the fixed setpoints,
+  `block_zone_hierarchy` for `Table` (the occupied zones without the pattern block:zone), and the indicators of the
+  electricity of the HVAC system, the ventilation hours and the PMV. Section 4.9.4 of the detailed use, and paragraphs
+  of 4.1.2, 4.7.6, 4.9.1 and 4.9.2.
+- Files: `accim/sim/ems/hook_setpoints.py`, `accim/sim/comfort_hooks.py`, `tools/indoor_adaptation_study.py`,
+  `tests/core/test_comfort_hooks.py`, `tests/core/test_indoor_adaptation_study.py`, `docs/source/4_detailed use.md`,
+  `notes/decisions.md`, `TODO.md`, `CHANGELOG.md`, `CAMBIOS_CODIGO_v1.2.0.md`.
+- Verification: in the sandbox of Claude Science (Windows, Python 3.12, pythermalcomfort 4.8.1, EnergyPlus 25.1),
+  `tests/core/test_comfort_hooks.py`, `test_sun2026_set.py`, `test_indoor_adaptation_study.py`, `test_missing_hook.py`
+  and `test_people_set_inputs.py` have 99 tests: 84 passed (82 with `-k "not in_energyplus and not both_backends and not
+  run_period_only and not is_that_of_the_hook"`, and the 2 of `ventilation_setpoint_of_the_heating_setpoint`, which that
+  filter also leaves out). The other 15 simulate: they fail there before and after the changes with `PermissionError:
+  [WinError 5]` in `multiprocessing.Pipe` (the sandbox denies the named pipes of the processes of `run_simulations`), so
+  they were **not run**. Instead, the script ran in series (`--processes 0`) the five cases in mixed mode with the model
+  of the building of the study in Seville, 15–21 January and 15–21 July (about 14 minutes each week): the simulations
+  end, the ventilation setpoints are the midpoints and the PMV of the hook is that of pythermalcomfort with the outputs
+  of each hour (the numbers are in `notes/decisions.md`). That the windows do not open while the coils work nor above
+  the cooling setpoint of the hook was checked with the Erl interpreter
+  (`test_the_windows_of_mixed_mode_follow_the_setpoints_of_the_hook`), not in these hourly results, in which an hour can
+  have timesteps with the windows open and timesteps with the coils on. With the small office of the DOE
+  (`RefBldgSmallOfficeNew2004_Chicago.idf` of EnergyPlus 25.1, `--script-type ex_ac`, three cases, two days), the
+  simulations end and `Table` takes its occupied zones as one block, but the indicators stop in
+  `table_indicators(pythermalcomfort_set='people')`, which does not find the People objects of the zones that `Table`
+  names with their block ('BUILDING:CORE_ZN'): **not solved**. (Corrected by the entry above, of the same day: those
+  two days were the two design days of the model, 21 January and 21 July, not 15 and 16 July, since the example file
+  simulates its sizing periods only; and the indicators are solved there.)
+- Next step: the author runs the tests that simulate and reviews the diff before the commit; a test with EnergyPlus of
+  the hooks in mixed mode; the indicators of the models whose zones have not the pattern block:zone, as the small office
+  of the DOE; the decisions of the author on what the pilot showed (the entry of block F of `TODO.md`).
+
 ### 2026-11-22
 #### [done] The validation study of F3 narrowed: the case `iii_model` and `--cases study` (branch `v1.2.0`)
 - Context: on 2026-11-19, in the session of Claude Science on the article with Ruiji Sun, the author decided to narrow

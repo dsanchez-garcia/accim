@@ -15,6 +15,29 @@ This log is a lightweight, session-scoped complement to the repository's
 existing tracking files — it does not replace them (see
 [[decisions.md#2026-09-13 — `notes/work-log.md` complements, not replaces, existing tracking files|the related decision]]).
 
+## 2026-11-24 — What the session of Claude Science of 2026-11-24 left for the repository (branch `v1.2.0`, on the server)
+
+- **Objective**: the author asked for what the sandbox of Claude Science could not do with its uncommitted changes (the
+  hooks in mixed mode, the hook of the PMV, five cases of the study): the tests that simulate, a test with EnergyPlus
+  of the hooks in mixed mode, the indicators of the models whose zones have not the pattern block:zone, and the docs
+  build; without reopening the decisions of that day ([[decisions.md]]), and without a commit until the author asked
+  for it.
+- **Affected files**: `tests/core/test_comfort_hooks.py`, `accim/data/postprocessing/indoor_adaptation.py`,
+  `tools/indoor_adaptation_study.py`, `tests/core/test_people_set_inputs.py`,
+  `tests/core/test_indoor_adaptation_study.py`, sections 4.1.2 and 4.7.6 of the detailed use, [[../TODO.md]],
+  [[../DEVLOG.md]], `CHANGELOG.md`, `CAMBIOS_CODIGO_v1.2.0.md`.
+- **Finding or decision**: no test fails because of the changes of 2026-11-24. With EnergyPlus, the windows of mixed
+  mode follow the setpoints of the hooks, timestep by timestep (six simulations of the sample model); while a zone
+  ventilates its thermostat keeps its setpoints, and with the PMV setpoints all the heating of two days of July is in
+  the timesteps with the windows open or right after one (for the decision of the author on the limits of the
+  ventilation). `table_indicators` finds the zones that `Table` names with a block of `block_zone_hierarchy`; and the
+  study script makes the models simulate the run period, since the small office of the DOE simulated its design days
+  only.
+- **Validation**: the five files of the hooks and the study, 99 passed; the whole suite at `5032816`, with the files
+  of 2026-11-24 and with those of this entry ([[../DEVLOG.md]]); `indicators.csv` of two days of the sample model,
+  identical before and after; the docs build, with the warnings of `5032816`.
+- **Next step**: the decisions of the author on what the pilot showed, and the simulations of the study.
+
 ## 2026-11-22 — What the session of Claude Science of 2026-11-19 left for the repository (branch `v1.2.0`)
 
 - **Objective**: the author asked what was left; the session of Claude Science on the article with Ruiji Sun had left

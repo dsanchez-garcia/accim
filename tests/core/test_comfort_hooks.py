@@ -463,11 +463,10 @@ def test_apply_athb_setpoints_with_the_people_objects(tmp_path):
 
 
 @needs_idd
-def test_apply_athb_setpoints_needs_the_accis_with_full_air_conditioning(tmp_path):
+def test_apply_athb_setpoints_needs_the_accis(tmp_path):
     from accim.sim.accis import load_idf
 
-    with pytest.raises(ValueError, match='need full air-conditioning'):
-        ch.apply_athb_setpoints(_model(tmp_path, script_type='vrf_mm'))
+    # In mixed mode, the hooks prepare the models too since 2026-11-24 (the tests of mixed mode below)
     shutil.copy(SAMPLE_IDF, tmp_path / 'input.idf')
     with pytest.raises(ValueError, match='need the ACCIS of accim 1.0.0 or later'):
         ch.apply_athb_setpoints(load_idf(tmp_path / 'input.idf'))
@@ -630,6 +629,249 @@ def test_the_minimum_and_maximum_bound_the_setpoints_of_the_hook():
     # the tolerance (0.1 K), as the setpoints of the hook (finding A19 of the self-audit of 2026-11-11)
     assert (hooked['AHST_Act_Zone1'], hooked['ACST_Act_Zone1']) == (23.0 + 0.1, 25.0 + -0.1)
     assert (hooked['AHSTnoTol_Zone1'], hooked['ACSTnoTol_Zone1']) == (23.0, 25.0)
+
+
+# Mixed mode (decision of the author of 2026-11-24, ``notes/decisions.md``) ------------------------------------------
+
+@needs_idd
+def test_the_hooks_prepare_the_models_in_mixed_mode(tmp_path):
+    from accim.sim.ems import hook_setpoints as hs
+
+    idf = _model(tmp_path, script_type='vrf_mm')
+    hook = ch.apply_set_setpoints(idf, set_cooling_setpoint=27, set_heating_setpoint=21, met=1.1, clo=0.5,
+                                  air_speed=0.1, method='bisection')
+    assert sorted(hook.zones) == ZONES
+    declared = {str(name).upper() for g in idf.idfobjects['EnergyManagementSystem:GlobalVariable']
+                for name in g.fieldvalues[1:]}
+    for zone in ZONES:
+        # The program of the setpoints tells that of the ventilation setpoint whether the hook gave them, and the
+        # latter runs right after SetVST
+        assert _program_lines(idf, f'ApplyHookSetpoints_{zone}') == hs.program_lines(zone, mixed_mode=True)
+        assert _program_lines(idf, f'ApplyHookVST_{zone}') == hs.ventilation_program_lines(zone)
+        assert f'HookVST_{zone}'.upper() in declared
+        run = _program_lines(idf, f'RunACCIS_{zone}')
+        assert run[run.index('run SetAST') + 1] == f'run ApplyHookSetpoints_{zone}'
+        assert run[run.index('run SetVST') + 1] == f'run ApplyHookVST_{zone}'
+    assert sorted(_program_lines(idf, 'InitHookSetpoints')) == sorted(hs.init_program_lines(ZONES, mixed_mode=True))
+    # Written again, the objects are not repeated
+    counts = {kind: len(idf.idfobjects[kind]) for kind in ('EnergyManagementSystem:Program',
+                                                          'EnergyManagementSystem:GlobalVariable')}
+    hs.set_hook_setpoints_code(idf, ZONES)
+    assert {kind: len(idf.idfobjects[kind]) for kind in counts} == counts
+    assert _program_lines(idf, f'RunACCIS_{ZONES[0]}').count(f'run ApplyHookVST_{ZONES[0]}') == 1
+    # With full air-conditioning, the programs are those of before: no program of the ventilation setpoint
+    (tmp_path / 'ac').mkdir()
+    other = _model(tmp_path / 'ac')
+    ch.apply_set_setpoints(other, set_cooling_setpoint=27, set_heating_setpoint=21, met=1.1, clo=0.5, air_speed=0.1,
+                           method='bisection')
+    for zone in ZONES:
+        assert _program_lines(other, f'ApplyHookVST_{zone}') is None
+        assert _program_lines(other, f'ApplyHookSetpoints_{zone}') == hs.program_lines(zone)
+        assert 'HookVST' not in ' '.join(_program_lines(other, 'InitHookSetpoints'))
+
+
+def _mixed_mode_erl(ventilation_control):
+    """The programs of the ACCIS of one zone, Zone1, in mixed mode (INT EN16798, category II, comfort mode 3, a
+    tolerance of the setpoints of 0.1, HVAC mode 2, no offsets and no limits of the outdoor temperature and the wind
+    that matter), with the programs that give the setpoints of a hook and its ventilation setpoint to the zone, at the
+    beginning of an environment; compiled by the Erl interpreter."""
+    from types import SimpleNamespace
+
+    from accim.sim.ems import hook_setpoints as hs
+    from accim.sim.ems.erl import ErlProgramSet, variables_in_programs
+    from accim.sim.ems.inputs import input_lines, input_values
+    from accim.sim.ems.programs import accis_programs
+
+    model = SimpleNamespace(ems_names=['Zone1'], ems_zones=['Zone1'], is_mixed_mode=True, windows=[], window_zones=[],
+                            script_type='vrf_mm')
+    programs = dict(accis_programs(model))
+    values = input_values(dict(comfort_standard=1, category=2, comfort_mode=3, setpoint_tolerance=0.1, hvac_mode=2,
+                               ventilation_control=ventilation_control, ventilation_setpoint_offset=0,
+                               min_outdoor_temp_offset=50, max_wind_speed=50))
+    programs['SetInputData_Zone1'] = input_lines(values, mixed_mode=True)
+    programs['ApplyHookSetpoints_Zone1'] = hs.program_lines('Zone1', mixed_mode=True)
+    programs['ApplyHookVST_Zone1'] = hs.ventilation_program_lines('Zone1')
+    programs['InitHookSetpoints'] = hs.init_program_lines(['Zone1'], mixed_mode=True)
+    run = list(programs['RunACCIS_Zone1'])
+    run.insert(run.index('run SetAST') + 1, 'run ApplyHookSetpoints_Zone1')
+    run.insert(run.index('run SetVST') + 1, 'run ApplyHookVST_Zone1')
+    programs['RunACCIS_Zone1'] = run
+    erl = ErlProgramSet(programs, global_variables=set().union(*variables_in_programs(programs).values()))
+    erl.strict = True
+    erl.run('InitASTvariables')
+    erl.run('InitHookSetpoints')
+    return erl
+
+
+def _mixed_mode_timestep(erl, setpoints=None, operative=25.0, cooling_coil=0.0):
+    """A timestep of the ACCIS of Zone1 in mixed mode, occupied, with 20 °C outdoors and a running mean of 20 °C, in
+    which a hook gives it some setpoints (heating, cooling), or none."""
+    for name, value in dict(RMOT=20.0, PMOT=20.0, DayOfYear=180.0, CurrentTime=12.0, ZoneTimeStep=0.25,
+                            Zone1_OpT=operative, Occ_count_Zone1=1.0, Zone1_CoolCoil=cooling_coil, Zone1_HeatCoil=0.0,
+                            Zone1_WindSpeed=2.0, Zone1_OutT=20.0, DesignDay=0.0).items():
+        erl.set(name, value)
+    if setpoints is not None:
+        erl.set('HookAHST_Zone1', setpoints[0])
+        erl.set('HookACST_Zone1', setpoints[1])
+        erl.set('HookSetpoints_Zone1', 1.0)
+    erl.run('RunACCIS_Zone1')
+    return erl.get('VST'), erl.get('Ventilates_HVACmode2_Zone1')
+
+
+@pytest.mark.parametrize('ventilation_control', [0, 2])
+def test_the_windows_of_mixed_mode_follow_the_setpoints_of_the_hook(ventilation_control):
+    erl = _mixed_mode_erl(ventilation_control)
+    # Without the hook: the ventilation setpoint is the comfort temperature of INT EN16798 (0.33·20 + 18.8 = 25.4 °C),
+    # so a zone at 25 °C does not ventilate
+    assert _mixed_mode_timestep(erl) == (pytest.approx(25.4), 0)
+    # With the setpoints 22 and 26 °C of a hook: the midpoint of the setpoints of the thermostats (22.1 and 25.9 °C,
+    # with the tolerance), above which the zone ventilates while its HVAC system is off...
+    assert _mixed_mode_timestep(erl, setpoints=(22.0, 26.0)) == (pytest.approx(24.0, abs=1e-3), 1)
+    # ... and not while it cools, nor above the cooling setpoint of the hook
+    assert _mixed_mode_timestep(erl, setpoints=(22.0, 26.0), cooling_coil=500.0)[1] == 0
+    assert _mixed_mode_timestep(erl, setpoints=(22.0, 26.0), operative=26.5)[1] == 0
+    # In the next timestep without the hook, the ventilation setpoint is that of the ACCIS again
+    assert _mixed_mode_timestep(erl) == (pytest.approx(25.4), 0)
+
+
+@pytest.mark.parametrize('ventilation_control', [1, 3])
+def test_the_ventilation_setpoint_of_the_heating_setpoint_is_that_of_the_hook(ventilation_control):
+    # With the ventilation controls 1 and 3, SetVST takes the heating setpoint of the zone, which is that of the hook
+    erl = _mixed_mode_erl(ventilation_control)
+    assert _mixed_mode_timestep(erl) == (pytest.approx(21.5, abs=1e-3), 1)
+    assert _mixed_mode_timestep(erl, setpoints=(22.0, 26.0)) == (pytest.approx(22.1), 1)
+    assert _mixed_mode_timestep(erl, setpoints=(22.0, 26.0), operative=22.05)[1] == 0
+
+
+# The PMV of Fanger as temperature setpoints (decision of the author of 2026-11-24) ----------------------------------
+
+def test_the_pmv_of_pythermalcomfort():
+    pmv_ppd_iso = pythermalcomfort_models().pmv_ppd_iso
+    for air, radiant, speed, humidity, met, clo in ((25, 25, 0.1, 50, 1.1, 0.5), (22, 24, 0.3, 40, 1.2, 1.0),
+                                                     (28, 27, 0.8, 60, 1.0, 0.4)):
+        expected = float(pmv_ppd_iso(tdb=air, tr=radiant, vr=speed, rh=humidity, met=met, clo=clo,
+                                     limit_inputs=False, round_output=False).pmv)
+        assert ch.fanger_pmv(air, radiant, speed, humidity, met, clo) == expected
+    assert ch.fanger_pmv(np.array([20.0, 28.0]), 25.0, 0.1, 50, 1.1, 0.5).shape == (2,)
+
+
+def test_the_bisection_of_the_pmv_brackets_its_setpoints():
+    pythermalcomfort_models()
+    hook = ch.PmvSetpointHook(['Z'], met=1.1, clo=0.5, air_speed=0.1, tr_mode='equal_air')
+    assert (hook.pmv_heating_setpoint, hook.pmv_cooling_setpoint) == (-0.5, 0.5)
+    assert hook.method == 'bisection' and hook.table is None and hook.temperature_range == (10.0, 30.0)
+    for humidity in (30, 50, 70):
+        heating, cooling = hook.operative_temperatures(humidity)
+        assert 10 < heating < cooling < 30
+        # The PMV grows with the operative temperature, and the setpoint is the middle of an interval of 0.05 K or
+        # less in which it crosses the setpoint of the PMV
+        for temperature, target in ((heating, -0.5), (cooling, 0.5)):
+            below = hook.zone_pmv(temperature - 0.03, temperature - 0.03, humidity)
+            above = hook.zone_pmv(temperature + 0.03, temperature + 0.03, humidity)
+            assert below <= target <= above
+    # With the mean radiant temperature of the zone, the unknown is the air temperature, and the setpoints are the
+    # operative temperatures
+    zone = ch.PmvSetpointHook(['Z'], met=1.1, clo=0.5, air_speed=0.1)
+    assert zone.tr_mode == 'zone'
+    for operative, target in zip(zone.operative_temperatures(50, 27.0), (-0.5, 0.5)):
+        air = 2 * operative - 27.0
+        assert zone.zone_pmv(air - 0.03, 27.0, 50) <= target <= zone.zone_pmv(air + 0.03, 27.0, 50)
+    wide = ch.PmvSetpointHook(['Z'], pmv_cooling_setpoint=9, pmv_heating_setpoint=-9, met=1.1, clo=0.5,
+                              air_speed=0.1, tr_mode='equal_air')
+    assert wide.operative_temperatures(50) == (10.0, 30.0) and wide.saturated(10.0, 30.0)
+
+
+def test_the_pmv_hook_sets_the_setpoints_and_its_outputs():
+    pythermalcomfort_models()
+    hook = ch.PmvSetpointHook(ZONES, met=1.1, clo=0.5, air_speed=0.1)
+    controller = _Controller({'SET_RH_Block1_Zone1': 55.0, 'SET_MAT_Block1_Zone1': 25.5, 'SET_MRT_Block1_Zone1': 26.5,
+                              'SET_RH_Block1_Zone2': 35.5, 'ZoneTimeStep': 0.25})
+    hook(controller, CALLING_POINT)
+    assert _given(controller, 'Block1_Zone1') == hook.operative_temperatures(55.0, 26.5)
+    # Without the mean radiant temperature of the zone, it gives no setpoints (and tells the EMS so)
+    assert _given(controller, 'Block1_Zone2') is None and controller.get('HookSetpoints_Block1_Zone2') == -1
+    # The PMV of the zone, with the relative air speed, in its own output (not in that of the SET)
+    assert controller.get('HookPMV_Block1_Zone1') == ch.fanger_pmv(25.5, 26.5, ch.relative_air_speed(0.1, 1.1), 55.0,
+                                                                    1.1, 0.5)
+    assert controller.get('SET_Block1_Zone1') is None
+    assert controller.get('HookPMVsaturated_Block1_Zone1') == 0.0
+    # With the inputs of the People objects (the default)
+    people = ch.PmvSetpointHook(['Block1_Zone1'])
+    controller = _Controller({'SET_RH_Block1_Zone1': 55.0, 'SET_MAT_Block1_Zone1': 25.5, 'SET_MRT_Block1_Zone1': 26.5,
+                              'SET_Act_Block1_Zone1': 110.7, 'SET_Clo_Block1_Zone1': 1.0,
+                              'SET_Vel_Block1_Zone1': 0.137, 'ZoneTimeStep': 0.25})
+    people(controller, CALLING_POINT)
+    met = 110.7 / ch.MET_ACTIVITY_LEVEL
+    assert _given(controller, 'Block1_Zone1') == people.operative_temperatures(55.0, 26.5, met, 1.0, 0.137)
+    assert controller.get('HookPMV_Block1_Zone1') == people.zone_pmv(25.5, 26.5, 55.0, met, 1.0, 0.137)
+    # The setpoints at a limit of the range are reported, and the hook warns of them after the simulation
+    narrow = ch.PmvSetpointHook(['Block1_Zone1'], met=1.1, clo=0.5, air_speed=0.1, temperature_range=(25.0, 26.0))
+    narrow(controller, CALLING_POINT)
+    assert controller.get('HookPMVsaturated_Block1_Zone1') == 0.25
+    narrow.saturated_hours = {'Block1_Zone1': 0.25}
+    with pytest.warns(UserWarning, match='The setpoints of the PMV were at a limit'):
+        narrow.finish()
+    with pytest.raises(ValueError, match='must be lower than pmv_cooling_setpoint'):
+        ch.PmvSetpointHook(['Z'], pmv_cooling_setpoint=0.5, pmv_heating_setpoint=0.5)
+    with pytest.warns(UserWarning, match='ISO 7730'):
+        ch.PmvSetpointHook(['Z'], met=0.5, clo=0.5, air_speed=0.1)
+    copy = pickle.loads(pickle.dumps(hook))
+    assert isinstance(copy, ch.PmvSetpointHook) and copy.pmv_cooling_setpoint == 0.5 and copy.zones == ZONES
+    # With the air speed itself, as the Fanger model of EnergyPlus, instead of the relative one
+    still = ch.PmvSetpointHook(['Z'], met=1.2, clo=0.5, air_speed=0.2, relative_air_speed=False)
+    assert still.zone_pmv(25.0, 25.0, 50.0) == ch.fanger_pmv(25.0, 25.0, 0.2, 50.0, 1.2, 0.5)
+    assert hook.relative_air_speed and still.zone_pmv(25.0, 25.0, 50.0) > ch.fanger_pmv(
+        25.0, 25.0, ch.relative_air_speed(0.2, 1.2), 50.0, 1.2, 0.5)
+    with pytest.raises(ValueError, match='relative_air_speed must be True or False'):
+        ch.PmvSetpointHook(['Z'], relative_air_speed=1)
+
+
+def test_the_pmv_of_the_results_of_a_simulation():
+    pythermalcomfort_models()
+    # The PMV of each row of the results, with the inputs of the hook: set_of_results with a hook of the PMV
+    results = pd.DataFrame({'BLOCK1:ZONE1:Zone Mean Air Temperature [C](Hourly)': [25.5, 21.0, np.nan],
+                            'BLOCK1:ZONE1:Zone Mean Radiant Temperature [C](Hourly)': [26.5, 22.0, 24.0],
+                            'BLOCK1:ZONE1:Zone Air Relative Humidity [%](Hourly)': [55.0, 40.0, 50.0]})
+    hook = ch.PmvSetpointHook(['Block1_Zone1'], met=1.1, clo=0.5, air_speed=0.1)
+    found = ch.set_of_results(results, hook)
+    assert list(found.columns) == ['HookPMV_Block1_Zone1']
+    assert found['HookPMV_Block1_Zone1'][:2].tolist() == pytest.approx(
+        [hook.zone_pmv(25.5, 26.5, 55.0), hook.zone_pmv(21.0, 22.0, 40.0)])
+    assert np.isnan(found['HookPMV_Block1_Zone1'][2])
+    # And that of a hook of the SET is still its SET
+    set_hook = ch.SetSetpointHook(['Block1_Zone1'], set_cooling_setpoint=27.0, set_heating_setpoint=21.0, met=1.1,
+                                  clo=0.5, air_speed=0.1, method='bisection')
+    assert list(ch.set_of_results(results, set_hook).columns) == ['SET_Block1_Zone1']
+
+
+@needs_idd
+@pytest.mark.parametrize('script_type', ['vrf_ac', 'vrf_mm'])
+def test_apply_pmv_hook_setpoints_prepares_the_model(tmp_path, script_type):
+    idf = _model(tmp_path, script_type=script_type)
+    hook = ch.apply_pmv_hook_setpoints(idf)
+    assert isinstance(hook, ch.PmvSetpointHook) and sorted(hook.zones) == ZONES and hook.tr_mode == 'zone'
+    assert hook.keys == {'Block1_Zone1': 'Block1:Zone1', 'Block1_Zone2': 'Block1:Zone2'}
+    assert (hook.met, hook.clo, hook.air_speed) == (None, None, None) and sorted(hook.people) == ZONES
+    sensors = {s.Name for s in idf.idfobjects['EnergyManagementSystem:Sensor']}
+    ems_outputs = {o.Name: o for o in idf.idfobjects['EnergyManagementSystem:OutputVariable']}
+    requested = {(o.Key_Value, o.Variable_Name, o.Reporting_Frequency) for o in idf.idfobjects['Output:Variable']}
+    for zone in ZONES:
+        # The sensors of the hooks of the SET, with those of the schedules of the People objects
+        assert {f'{prefix}_{zone}' for prefix in ('SET_MAT', 'SET_MRT', 'SET_RH', 'SET_Act', 'SET_Clo',
+                                                  'SET_Vel')} <= sensors
+        pmv, saturated = (ems_outputs[name] for name in ch.pmv_hook_zone_outputs(zone))
+        assert (pmv.Name, pmv.Type_of_Data_in_Variable) == (f'HookPMV_{zone}', 'Averaged')
+        assert (saturated.Name, saturated.Type_of_Data_in_Variable, saturated.Units) == (f'HookPMVsaturated_{zone}',
+                                                                                         'Summed', 'H')
+        assert ('*', f'HookPMV_{zone}', 'Hourly') in requested
+        assert (hook.keys[zone], 'Zone Mean Radiant Temperature', 'Hourly') in requested
+        assert f'SET_{zone}' not in ems_outputs
+        assert (_program_lines(idf, f'ApplyHookVST_{zone}') is not None) == (script_type == 'vrf_mm')
+    # The hooks of the SET and of the ATHB would set the same thermostats
+    with pytest.raises(ValueError, match='already has the setpoints of the ATHB or of the SET'):
+        ch.apply_set_setpoints(idf, set_cooling_setpoint=27, set_heating_setpoint=21, met=1.1, clo=0.5, air_speed=0.1)
+    with pytest.raises(ValueError, match='already has the setpoints of the ATHB or of the SET'):
+        ch.apply_pmv_hook_setpoints(idf)
 
 
 # EnergyPlus ---------------------------------------------------------------------------------------------------------
@@ -1196,10 +1438,6 @@ def test_apply_set_setpoints_prepares_the_model(tmp_path):
         ch.apply_athb_setpoints(idf)
     with pytest.raises(ValueError, match='already has the setpoints of the ATHB or of the SET'):
         ch.apply_set_setpoints(idf, set_cooling_setpoint=27, set_heating_setpoint=21, met=1.1, clo=0.5, air_speed=0.1)
-    with pytest.raises(ValueError, match='The setpoints of the SET need full air-conditioning'):
-        (tmp_path / 'mm').mkdir()
-        ch.apply_set_setpoints(_model(tmp_path / 'mm', script_type='vrf_mm'), set_cooling_setpoint=27,
-                               set_heating_setpoint=21, met=1.1, clo=0.5, air_speed=0.1)
     # With the bisection, the output of the SET of each zone, at the frequencies given
     (tmp_path / 'bisection').mkdir()
     other = _model(tmp_path / 'bisection')
@@ -1389,3 +1627,181 @@ def test_the_setpoints_of_a_hook_are_the_same_with_both_backends(tmp_path, monke
         within = (operative <= 26.5) & (operative >= 21.5)
         clear = (np.minimum(np.abs(operative - 21.5), np.abs(operative - 26.5)) > 1e-3).to_numpy()
         assert (comfortable[clear] == (within & occupied)[clear]).all()
+
+
+# Mixed mode with EnergyPlus (decision of the author of 2026-11-24; its programs with the Erl interpreter are above) ---
+
+#: The offset of the ventilation setpoint of the models in mixed mode of the tests with EnergyPlus (K): not 0, so that
+#: the tests tell the ventilation setpoint with the offset from that without it
+VST_OFFSET = -0.5
+#: The limits of the ventilation of those models, those of AddAccis by default: the windows open with the outdoor
+#: temperature above the heating setpoint minus the first one (K), and with the wind speed up to the second one (m/s)
+MIN_OUTDOOR_TEMP_OFFSET, MAX_WIND_SPEED = 50, 50
+#: The sensors of the ACCIS that the program ApplyAST_<zone> of mixed mode reads with the VRF systems of accim
+#: (accim.sim.ems.program_lines.APPLY_AST_MIXED_MODE), by the names of their copies in those models
+_MIXED_MODE_SENSORS = {'OpT': '{zone}_OpT', 'OutT': '{zone}_OutT', 'Wind': '{zone}_WindSpeed',
+                       'Cool': '{zone}_CoolCoil', 'Heat': '{zone}_HeatCoil', 'Occ': 'Occ_count_{zone}'}
+
+
+def _mixed_mode_model(folder, monkeypatch, setpoints, ventilation_control, begin, end):
+    """The output IDF of AddAccis of the sample model in mixed mode (the VRF systems of accim, 'vrf_mm', HVAC mode 2,
+    INT EN16798, category II, comfort mode 3, an offset of the ventilation setpoint of :data:`VST_OFFSET` and the
+    limits of the outdoor temperature and the wind speed of AddAccis by default) from ``begin`` to ``end`` ((month,
+    day)), with the setpoints of a hook ('sun2026', 'pmv' or 'athb', with its defaults) and the outputs at timestep
+    frequency: also, for each zone, the flag ``HookVST_<zone>`` of the EMS (1 in the timesteps in which the hook gave
+    its setpoints, accim.sim.ems.hook_setpoints) and the copies ``Copy<name>_<zone>`` of the values that the sensors
+    of the ACCIS (:data:`_MIXED_MODE_SENSORS`) and those of the hook read at the beginning of each timestep (as
+    :func:`_copy_sensors`); return its path and the hook."""
+    from accim.sim.accis import AddAccis, load_idf
+    from accim.sim.ems.programs import add_program
+
+    folder.mkdir(parents=True)
+    shutil.copy(SAMPLE_IDF, folder / 'TestModel.idf')
+    model = load_idf(folder / 'TestModel.idf')
+    run_period = model.idfobjects['RunPeriod'][0]
+    run_period.Begin_Month, run_period.Begin_Day_of_Month = begin
+    run_period.End_Month, run_period.End_Day_of_Month = end
+    model.save()
+    monkeypatch.chdir(folder)
+    with warnings.catch_warnings():
+        warnings.simplefilter('ignore')
+        AddAccis(script_type='vrf_mm', supply_air_temp_input_method='temperature difference', output_type='standard',
+                 output_frequencies=['timestep'], keep_existing_outputs=False, energyplus_version='auto',
+                 setpoint_type='temperature', comfort_standard=[1], category=[2], comfort_mode=[3], hvac_mode=[2],
+                 ventilation_control=[ventilation_control], ventilation_setpoint_offset=[VST_OFFSET],
+                 min_outdoor_temp_offset=[MIN_OUTDOOR_TEMP_OFFSET], max_wind_speed=[MAX_WIND_SPEED], confirm=True,
+                 verbose=False)
+    [path] = folder.glob('TestModel[[]*.idf')
+    idf = load_idf(path)
+    if setpoints == 'athb':
+        hook = ch.apply_athb_setpoints(idf, output_frequencies=['timestep'])
+        hook_sensors = {'RH': 'ATHB_RH_{zone}', 'RMOT': 'RMOT'}
+    else:
+        apply = {'sun2026': ch.apply_sun2026_setpoints, 'pmv': ch.apply_pmv_hook_setpoints}[setpoints]
+        hook = apply(idf, output_frequencies=['timestep'])
+        hook_sensors = {name: f'SET_{name}_{{zone}}' for name in ('RH', 'MRT', 'Act', 'Clo', 'Vel')}
+    for zone in ZONES:
+        copies = {f'Copy{name}_{zone}': sensor.format(zone=zone)
+                  for name, sensor in {**_MIXED_MODE_SENSORS, **hook_sensors}.items()}
+        idf.newidfobject('EnergyManagementSystem:GlobalVariable',
+                         **{f'Erl_Variable_{n}_Name': copy for n, copy in enumerate(copies, start=1)})
+        add_program(idf, f'CopySensors_{zone}', [f'set {copy} = {sensor}' for copy, sensor in copies.items()])
+        idf.newidfobject('EnergyManagementSystem:ProgramCallingManager', Name=f'CopySensors_{zone}',
+                         EnergyPlus_Model_Calling_Point='BeginTimestepBeforePredictor',
+                         Program_Name_1=f'CopySensors_{zone}')
+        for name in (*copies, f'HookVST_{zone}'):
+            idf.newidfobject('EnergyManagementSystem:OutputVariable', Name=name, EMS_Variable_Name=name,
+                             Type_of_Data_in_Variable='Averaged', Update_Frequency='ZoneTimestep', Units='')
+            idf.newidfobject('Output:Variable', Key_Value='*', Variable_Name=name, Reporting_Frequency='Timestep')
+    idf.saveas(str(folder / 'mixed.idf'))
+    path.unlink()
+    (folder / 'TestModel.idf').unlink()
+    return folder / 'mixed.idf', hook
+
+
+def _hook_setpoints(hook, copied, row):
+    """The setpoints (heating, cooling) of a hook of :func:`_mixed_mode_model` in a timestep, without the tolerance:
+    those of its bisection with the values that its sensors read (their copies)."""
+    if isinstance(hook, ch.AthbSetpointHook):
+        return hook.operative_temperatures(copied['RH'][row], copied['RMOT'][row])
+    return hook.operative_temperatures(copied['RH'][row], copied['MRT'][row],
+                                       copied['Act'][row] / ch.MET_ACTIVITY_LEVEL, copied['Clo'][row],
+                                       copied['Vel'][row])
+
+
+@needs_energyplus
+@pytest.mark.parametrize('ventilation_control', [2, 1])
+@pytest.mark.parametrize('setpoints, begin, end', [('sun2026', (7, 2), (7, 3)), ('pmv', (7, 4), (7, 5)),
+                                                    ('athb', (7, 2), (7, 3))])
+def test_the_windows_of_mixed_mode_follow_the_setpoints_of_the_hook_in_energyplus(tmp_path, monkeypatch, setpoints,
+                                                                                    begin, end, ventilation_control):
+    # Two days of July in Seville of the sample model in mixed mode with the setpoints of each hook and the ventilation
+    # controls 2 and 1: the programs of mixed mode (SetVST, ApplyHookVST_<zone> and ApplyAST_<zone>) decide with the
+    # setpoints of the hook, timestep by timestep, with the values that their sensors read. The days of each hook are
+    # two in which its zones both ventilate and are cooled while they are occupied: 2 and 3 July (up to 34 and 29 °C
+    # outdoors) with the causal SET model and the ATHB, and 4 and 5 July, cooler (up to 24.6 and 26 °C), with the PMV,
+    # whose cooling setpoint is about 27 °C: on 2 and 3 July, its VRF systems cool in all the occupied timesteps but
+    # the first one of each day, and its windows never open (measured on 2026-11-24)
+    from accim.sim.energyplus_api import run_simulations
+
+    pythermalcomfort_models()
+    model, hook = _mixed_mode_model(tmp_path / 'model', monkeypatch, setpoints, ventilation_control, begin, end)
+    [result] = run_simulations([(model, EPW, {'output_directory': tmp_path / 'api', 'output_prefix': 'run'})],
+                               processes=1, before_programs=[hook])
+    assert result.success, result.error
+    results = pd.read_csv(tmp_path / 'api' / 'run.csv')
+    assert len(results) == 2 * 24 * STEPS
+    columns = list(results.columns)
+
+    def column(start):
+        return results[next(c for c in columns if c.upper().startswith(start.upper()))].to_numpy(dtype=float)
+
+    for zone in ZONES:
+        key = zone.replace('_', ':').upper()
+        copied = {name: column(f'EMS:Copy{name}_{zone} [')
+                  for name in (*_MIXED_MODE_SENSORS, *(('RH', 'RMOT') if setpoints == 'athb'
+                                                       else ('RH', 'MRT', 'Act', 'Clo', 'Vel')))}
+        # The setpoints of the zone that the programs of mixed mode read (roundedAHST and roundedACST: those of the
+        # thermostats, with the tolerance of the setpoints of the ACCIS, 0.1 K) and those without the tolerance
+        heating = column(f'EMS:Adaptive Heating Setpoint Temperature_{zone} [')
+        cooling = column(f'EMS:Adaptive Cooling Setpoint Temperature_{zone} [')
+        heating_no_tolerance = column(f'EMS:Adaptive Heating Setpoint Temperature_No Tolerance_{zone} [')
+        cooling_no_tolerance = column(f'EMS:Adaptive Cooling Setpoint Temperature_No Tolerance_{zone} [')
+        ventilation_setpoint = column(f'EMS:Ventilation Setpoint Temperature_{zone} [')
+        minimum_outdoor = column(f'EMS:Minimum Outdoor Temperature for ventilation_{zone} [')
+        # (a) The hook gave its setpoints to the zone in every timestep (the flag of ApplyHookSetpoints_<zone>): those
+        # without the tolerance are those of its bisection with the values that its sensors read (every 25 timesteps),
+        # and those of the thermostats are 0.1 K within them (and rounded)
+        assert (column(f'EMS:HookVST_{zone} [') == 1).all()
+        rows = list(range(0, len(results), 25))
+        expected = np.array([_hook_setpoints(hook, copied, row) for row in rows])
+        np.testing.assert_allclose(heating_no_tolerance[rows], expected[:, 0], rtol=0, atol=1e-6)
+        np.testing.assert_allclose(cooling_no_tolerance[rows], expected[:, 1], rtol=0, atol=1e-6)
+        np.testing.assert_allclose(heating - heating_no_tolerance, 0.1, rtol=0, atol=1.1e-4)
+        np.testing.assert_allclose(cooling_no_tolerance - cooling, 0.1, rtol=0, atol=1.1e-4)
+        # So the ventilation setpoint is, with the ventilation control 2, the midpoint of the two setpoints of the zone
+        # plus the offset (ApplyHookVST_<zone>), and not the comfort temperature of the comfort standard of the zone
+        # plus the offset (SetVST, without the hook: 0.39 K away from it or more in every timestep, measured on
+        # 2026-11-24); and, with the ventilation control 1, the heating setpoint plus the offset (SetVST). The minimum
+        # outdoor temperature is the heating setpoint minus its offset
+        if ventilation_control == 2:
+            np.testing.assert_allclose(ventilation_setpoint, (cooling + heating) / 2 + VST_OFFSET, rtol=0, atol=1e-9)
+            comfort = column(f'EMS:Comfort Temperature_{zone} [')
+            assert np.abs(ventilation_setpoint - (comfort + VST_OFFSET)).min() > 0.25
+        else:
+            np.testing.assert_allclose(ventilation_setpoint, heating + VST_OFFSET, rtol=0, atol=1e-9)
+        np.testing.assert_allclose(minimum_outdoor, heating - MIN_OUTDOOR_TEMP_OFFSET, rtol=0, atol=1e-9)
+        # (b) The zone ventilates in a timestep (ApplyAST_<zone> counts its ventilation hours, and
+        # SetWindowOperation_<window> opens its windows) if it is occupied, its coils were off, and its operative
+        # temperature is above the ventilation setpoint, below the cooling setpoint and above the outdoor temperature,
+        # with the outdoor temperature above the minimum and the wind speed up to the maximum; and only then
+        hours = column(f'EMS:Ventilation Hours_{zone} [')
+        ventilated = hours > 0
+        occupied = copied['Occ'] > 0
+        hvac_off = (copied['Cool'] == 0) & (copied['Heat'] == 0)
+        decided = (occupied & hvac_off & (copied['OpT'] > ventilation_setpoint) & (copied['OpT'] < cooling)
+                   & (copied['OutT'] < copied['OpT']) & (copied['OutT'] > minimum_outdoor)
+                   & (copied['Wind'] <= MAX_WIND_SPEED))
+        assert (ventilated == decided).all()
+        # So it does not ventilate in the timesteps whose operative temperature is not below the cooling setpoint of
+        # the thermostat (that of the hook minus the tolerance, so those above the cooling setpoint of the hook are
+        # among them), nor in those whose coils were on; the zone has occupied timesteps of both kinds (18 to 99 and 50
+        # to 110 of its 144, measured on 2026-11-24)
+        warm = copied['OpT'] >= cooling
+        conditioned = ~hvac_off
+        assert (occupied & warm).any() and not ventilated[warm].any()
+        assert (occupied & conditioned).any() and not ventilated[conditioned].any()
+        # (c) And it ventilates in some timesteps (21 to 92 of its 144 occupied ones), in which, and only in which,
+        # EnergyPlus opens its windows: the air change rate through the openings of its AirflowNetwork is above 1 ach in
+        # them (13.6 ach or more), and below it in the others (0.28 ach at most: the cracks)
+        assert ventilated.any()
+        np.testing.assert_allclose(hours[ventilated], 1 / STEPS, rtol=0, atol=1e-9)
+        air_changes = column(f'{key}:AFN Zone Ventilation Air Change Rate [')
+        assert air_changes[ventilated].min() > 1 > air_changes[~ventilated].max()
+        # The thermostats get the setpoints of the hook, with the tolerance, in the occupied timesteps without
+        # ventilation (ApplyAST_<zone> does not set them while the zone ventilates)
+        closed = occupied & ~ventilated
+        np.testing.assert_allclose(column(f'AHST_SCH_{zone}:Schedule Value')[closed], heating[closed], rtol=0,
+                                   atol=1e-4)
+        np.testing.assert_allclose(column(f'ACST_SCH_{zone}:Schedule Value')[closed], cooling[closed], rtol=0,
+                                   atol=1e-4)

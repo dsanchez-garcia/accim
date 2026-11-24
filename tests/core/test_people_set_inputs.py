@@ -253,15 +253,15 @@ INPUTS = {
 SPEED = np.where(FIRST_DAY, 0.1, 0.6)
 
 
-def _people_table(tmp_path, monkeypatch, schedules=True):
-    columns, zones = _indicator_columns(MODEL)
-    conditions = _add_set_conditions(columns, MODEL, {zone: data['top'] for zone, data in zones.items()})
+def _people_table(tmp_path, monkeypatch, schedules=True, model=MODEL):
+    columns, zones = _indicator_columns(model)
+    conditions = _add_set_conditions(columns, model, {zone: data['top'] for zone, data in zones.items()})
     if schedules:
         for number, values in enumerate(INPUTS.values(), start=1):
             columns[f'ACT {number}:Schedule Value [](Hourly)'] = list(values['met'] * ch.MET_ACTIVITY_LEVEL)
             columns[f'CLO {number}:Schedule Value [](Hourly)'] = list(values['clo'])
         columns['VEL:Schedule Value [](Hourly)'] = list(SPEED)
-    table = _indicator_table(tmp_path, monkeypatch, MODEL, columns, indoor_adaptation_indicators=False)
+    table = _indicator_table(tmp_path, monkeypatch, model, columns, indoor_adaptation_indicators=False)
     monkeypatch.setattr(ch, 'standard_effective_temperature', _fake_set)
     return table, conditions
 
@@ -361,6 +361,53 @@ def test_the_indicators_with_the_fans_that_the_occupants_control(tmp_path, monke
                             r"\['air_speed_cooling'\]")):
         with pytest.raises(ValueError, match=message):
             ia.table_indicators(df, occupied, pythermalcomfort_set=value)
+
+
+#: A model whose zones have not the pattern block:zone of DesignBuilder, as the prototypes of the DOE (the small office:
+#: Core_ZN, Perimeter_ZN_1...): with ``block_zone_hierarchy``, Table names them with their block, 'BUILDING:CORE_ZN'
+#: and 'BUILDING:PERIMETER_ZN_1', while their People objects and the outputs of the CSV file have the names of the
+#: zones. Its zones have the data of the zones of :data:`MODEL` ('zone_names': those of ZONE_DATA and INPUTS), in
+#: their order
+OFFICE = dict(building=_FakeIDF(*_zone('Core_ZN'), *_zone('Perimeter_ZN_1'), _people('Core_ZN', 1),
+                                _people('Perimeter_ZN_1', 2)),
+              hierarchy={'Building': ['Core_ZN', 'Perimeter_ZN_1']}, zone_names=MODEL['zone_names'])
+
+
+def test_the_indicators_of_the_tables_made_with_block_zone_hierarchy(tmp_path, monkeypatch):
+    # Until 2026-11-24, the indicators of such a table stopped with the inputs of the People objects ("The zones
+    # ['BUILDING:CORE_ZN', ...] of the table have no People objects in the model of the simulation", found with the
+    # small office of the DOE), and had NaN with the inputs given: the zones were looked for, in the model and in the
+    # CSV file, by their names in the table
+    table, conditions = _people_table(tmp_path, monkeypatch, model=OFFICE)
+    df, occupied = table.df, table.occupied_zone_list
+    assert occupied == ['BUILDING:CORE_ZN', 'BUILDING:PERIMETER_ZN_1']
+    (tmp_path / MODEL_NAME).write_text('', encoding='utf-8')
+    default = ia.table_indicators(df, occupied)
+    found = ia.table_indicators(df, occupied, pythermalcomfort_set='people')
+    pd.testing.assert_frame_equal(found[list(default.columns)], default)
+    row = found.iloc[0]
+    for zone, data in zip(occupied, OFFICE['zone_names']):
+        for title, value in _band(_set_of_zone(conditions, data), OCCUPIED).items():
+            assert row[f'{zone}_{title}'] == pytest.approx(value), (zone, title)
+    # With the inputs given, the outputs of each zone are those of its name in the CSV file too (no model is read)
+    (tmp_path / MODEL_NAME).unlink()
+    given = {'met': 1.1, 'clo': 0.6, 'air_speed': 0.2}
+    with warnings.catch_warnings():
+        warnings.simplefilter('error')
+        row = ia.table_indicators(df, occupied, pythermalcomfort_set=given).iloc[0]
+    for zone, data in zip(occupied, OFFICE['zone_names']):
+        for title, value in _band(_set_of_zone(conditions, data, met=1.1, clo=0.6, speed=0.2), OCCUPIED).items():
+            assert row[f'{zone}_{title}'] == pytest.approx(value), (zone, title)
+    # A zone of the table is that of its own name first, and then that of its name without its block
+    assert ia._output_key('Block1:Zone1', {'BLOCK1:ZONE1', 'ZONE1'}) == 'Block1:Zone1'
+    assert ia._output_key('BUILDING:CORE_ZN', {'CORE_ZN'}) == 'CORE_ZN'
+    assert ia._output_key('BUILDING:FLOOR:1:CORE', {'FLOOR:1:CORE'}) == 'FLOOR:1:CORE'
+    assert ia._output_key('CORE_ZN', {'PERIMETER_ZN_1'}) is None and ia._output_key('BUILDING:ATTIC', {'CORE_ZN'}) is None
+    # A zone of the table without People objects in the model, with its block
+    (tmp_path / MODEL_NAME).write_text('', encoding='utf-8')
+    with pytest.raises(ValueError, match=r"The zones \['BUILDING:ATTIC'\] of the table have no People objects"):
+        ia._pythermalcomfort_set_of_rows(df, df['Source'].iloc[0], ia._pythermalcomfort_hook('people', occupied)[0],
+                                         ['BUILDING:CORE_ZN', 'BUILDING:ATTIC'])
 
 
 def test_the_errors_of_the_indicators_with_the_inputs_of_the_people_objects(tmp_path, monkeypatch):
